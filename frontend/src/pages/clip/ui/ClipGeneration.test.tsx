@@ -35,7 +35,7 @@ const preparationFixture = vi.hoisted(() => ({
   refused: false,
   runs: 0,
   qualified: true,
-  profile: 'clip-browser-analysis-v1',
+  profile: 'clip-browser-analysis-v2',
 }))
 
 // Qualified test readiness exercises the browser port without qualifying production.
@@ -88,7 +88,7 @@ afterEach(() => {
   preparationFixture.refused = false
   preparationFixture.runs = 0
   preparationFixture.qualified = true
-  preparationFixture.profile = 'clip-browser-analysis-v1'
+  preparationFixture.profile = 'clip-browser-analysis-v2'
   discardClipStorylineQueues()
   initializeI18n('ko')
 })

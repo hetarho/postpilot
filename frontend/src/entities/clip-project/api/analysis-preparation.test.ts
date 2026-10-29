@@ -13,7 +13,7 @@ function response() {
     expiresAt: '2026-10-07T12:00:00Z',
     originalMeasurementProvenance: 'browser_client',
     profile: {
-      version: 'clip-browser-analysis-v1',
+      version: 'clip-browser-analysis-v2',
       intervalMs: 60_000,
       longEdge: 720,
       framesPerSecond: 15,
@@ -23,7 +23,7 @@ function response() {
       audioCodec: 'aac',
       audioRate: 48_000,
       audioChannels: 1,
-      audioBitrate: 64_000,
+      audioBitrate: 96_000,
       qualified: false,
     },
     copies: [
@@ -54,13 +54,19 @@ describe('browser analysis authorization metadata', () => {
     })
     expect(result.copies[0]).not.toHaveProperty('$typeName')
   })
-  it.each(['profile', 'provenance', 'duration', 'bytes', 'coverage', 'state'])(
+  it.each(['profile', 'v1', 'audio', 'provenance', 'duration', 'bytes', 'coverage', 'state'])(
     'rejects forged %s',
     (field) => {
       const value = response()
       switch (field) {
         case 'profile':
           value.profile!.version = 'other-profile'
+          break
+        case 'v1':
+          value.profile!.version = 'clip-browser-analysis-v1'
+          break
+        case 'audio':
+          value.profile!.audioBitrate = 64_000
           break
         case 'provenance':
           value.originalMeasurementProvenance = 'native_original'

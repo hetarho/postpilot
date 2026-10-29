@@ -22,7 +22,7 @@
     ]
   },
   "analysisPreparation": {
-    "profile": "clip-browser-analysis-v1",
+    "profile": "clip-browser-analysis-v2",
     "qualified": false,
     "enabled": false,
     "missingGates": [

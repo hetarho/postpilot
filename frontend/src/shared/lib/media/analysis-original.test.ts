@@ -60,7 +60,7 @@ const limits = {
   fps: 15,
   longEdge: 720,
   videoBitrates: [900000, 650000],
-  audioBitrate: 64000,
+  audioBitrate: 96000,
   audioRate: 48000,
   decoderReserveFrames: 48,
   decoderReserveBytes: 1073741824,

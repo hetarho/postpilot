@@ -9,7 +9,8 @@ export const ANALYSIS_PREPARATION_LIMITS = {
   fps: 15,
   maxCopyBytes: 8 * 1024 * 1024,
   videoBitrates: [900_000, 650_000],
-  audioBitrate: 64_000,
+  // Windows Media Foundation encodes AAC only at 96/128/160/192 kbps (CLIP-204).
+  audioBitrate: 96_000,
   audioRate: 48_000,
   maxFileBytes: 2 * 1024 * 1024 * 1024,
   maxReadBytes: 4 * 1024 * 1024,

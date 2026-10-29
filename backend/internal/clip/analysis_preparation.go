@@ -16,7 +16,7 @@ const (
 	AnalysisPixelFormat                       = "yuv420p"
 	AnalysisAudioCodec                        = "aac"
 	AnalysisAudioChannels                     = 1
-	BrowserAnalysisProfileVersion             = "clip-browser-analysis-v1"
+	BrowserAnalysisProfileVersion             = "clip-browser-analysis-v2"
 	BrowserOriginalProvenance                 = "browser_client"
 	AnalysisCopyProvenance                    = "server_copy_decode"
 	AnalysisVerificationRenderer              = "analysis-verifier-v1"
@@ -31,6 +31,11 @@ const (
 	AnalysisVerificationAllocationBytes       = 16 << 20
 	AnalysisPreparationMaxCopies              = 49
 )
+
+// Browser copies encode AAC at the lowest rate the Windows Media Foundation
+// encoder accepts (96/128/160/192 kbps), above the server copy's MediaConfig
+// AudioBitrate (CLIP-204).
+const BrowserAnalysisAudioBitrate = 96000
 
 var (
 	ErrAnalysisPreparationState      = errors.New("analysis preparation is no longer live")

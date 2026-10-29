@@ -1,4 +1,4 @@
-export const CLIP_BROWSER_ANALYSIS_PROFILE = 'clip-browser-analysis-v1'
+export const CLIP_BROWSER_ANALYSIS_PROFILE = 'clip-browser-analysis-v2'
 export type ClipAnalysisPreparationRoute = 'browser' | 'server'
 
 export interface ClipAnalysisOriginalMeasurement {

@@ -1,0 +1,684 @@
+{
+  "version": 1,
+  "measured": "261029",
+  "qualification": false,
+  "task": "T716",
+  "scope": "Technical encoder/verifier evidence only. No provider call, semantic review, readiness activation or distribution approval; CLIP-205/T603 gates stay closed.",
+  "device": {
+    "os": "Windows 11 Pro 10.0.26200",
+    "cpu": "Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz",
+    "logicalCores": 16,
+    "memoryBytes": 34255515648,
+    "gpu": "ANGLE (NVIDIA, NVIDIA GeForce RTX 2080 Ti (0x00001E04) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+    "integratedGpu": false,
+    "note": "Discrete NVIDIA desktop; does not satisfy the physical_windows_integrated_gpu or lower_resource_device gates."
+  },
+  "browsers": {
+    "chromeInstalled": "155.0.8059.41",
+    "edgeInstalled": "156.0.4314.50",
+    "driver": "playwright-core 1.63.0 from Windows node v24.22.1, fresh temporary profile",
+    "ownerProfile": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+  },
+  "aacEncoderSupport": {
+    "method": "AudioEncoder.isConfigSupported({codec: mp4a.40.2})",
+    "chrome155": {
+      "supportedKbps": [
+        96,
+        128,
+        160,
+        192
+      ],
+      "refusedKbps": [
+        32,
+        64,
+        256
+      ],
+      "channels": [
+        1,
+        2
+      ],
+      "sampleRates": [
+        44100,
+        48000
+      ],
+      "note": "identical for mono/stereo and 44.1/48 kHz"
+    },
+    "edge156": {
+      "64kbpsMono": false,
+      "note": "same refusal at 64 kbps"
+    },
+    "ownerEverydayChrome155": {
+      "aac64kMono": false,
+      "aac64kStereo": false,
+      "opus64kMono": true,
+      "h264Constant": true
+    },
+    "platformAudioEncoderFeatureFlag": "enabling it did not change the result",
+    "videoH264": "all 24 tested avc1 baseline/main/high configs supported, constant and variable bitrate"
+  },
+  "corpus": {
+    "basis": "operator_owned",
+    "sources": 11,
+    "description": "owner phone HEVC HLG originals of one restaurant visit, 2.8-6.0 s each, 1920x1440 or 1920x1080 with rotation; private, kept outside the repository"
+  },
+  "runs": {
+    "profileV1_64kbps_withAudio": {
+      "result": "every source refused",
+      "error": "CLIP_ANALYSIS_ENCODER_UNSUPPORTED"
+    },
+    "profileV1_64kbps_audioFreeStreamCopies": {
+      "passed": 11,
+      "goVerifierPassed": 11,
+      "cases": [
+        {
+          "case": "case-01",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4832,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4832,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 901411.6666666667
+          },
+          "measuredMs": 1749,
+          "encodedMs": 1902,
+          "wallMs": 3704,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-02",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 6029,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 6029,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 931916
+          },
+          "measuredMs": 1205,
+          "encodedMs": 1287,
+          "wallMs": 2532,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-03",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4155,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4155,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 900795.4838709679
+          },
+          "measuredMs": 901,
+          "encodedMs": 1071,
+          "wallMs": 1993,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-04",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4281,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4281,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 942545.625
+          },
+          "measuredMs": 729,
+          "encodedMs": 1112,
+          "wallMs": 1862,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-05",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 2755,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 2755,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 933620.487804878
+          },
+          "measuredMs": 638,
+          "encodedMs": 864,
+          "wallMs": 1506,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-06",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 5185,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 5185,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 926030.7692307692
+          },
+          "measuredMs": 848,
+          "encodedMs": 1171,
+          "wallMs": 2041,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-07",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 5923,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 5923,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 915570.3370786518
+          },
+          "measuredMs": 1032,
+          "encodedMs": 1229,
+          "wallMs": 2293,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-08",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4226,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4226,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 941794.2857142857
+          },
+          "measuredMs": 755,
+          "encodedMs": 1065,
+          "wallMs": 1832,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-09",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 5029,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 5029,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 908542.4
+          },
+          "measuredMs": 836,
+          "encodedMs": 1184,
+          "wallMs": 2037,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-10",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 3913,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 3913,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 912557.2881355932
+          },
+          "measuredMs": 665,
+          "encodedMs": 916,
+          "wallMs": 1589,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-11",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1080,
+            "height": 1920,
+            "durationMs": 3896,
+            "hasAudio": false,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 404,
+            "height": 720,
+            "durationMs": 3896,
+            "hasAudio": false,
+            "actualAudioBitrate": 0,
+            "actualVideoBitrate": 893814.9152542372
+          },
+          "measuredMs": 930,
+          "encodedMs": 1272,
+          "wallMs": 2205,
+          "peakDecodedFrames": 10,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        }
+      ]
+    },
+    "profileV2_96kbps_withAudio": {
+      "passed": 11,
+      "goVerifierPassed": 11,
+      "cases": [
+        {
+          "case": "case-01",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4832,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4832,
+            "hasAudio": true,
+            "actualAudioBitrate": 96211.92052980133,
+            "actualVideoBitrate": 901411.6666666667
+          },
+          "measuredMs": 1663,
+          "encodedMs": 4325,
+          "wallMs": 6020,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-02",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 6029,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 6029,
+            "hasAudio": true,
+            "actualAudioBitrate": 96132.69198872118,
+            "actualVideoBitrate": 931916
+          },
+          "measuredMs": 1150,
+          "encodedMs": 2758,
+          "wallMs": 3997,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-03",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4155,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4155,
+            "hasAudio": true,
+            "actualAudioBitrate": 96490.97472924188,
+            "actualVideoBitrate": 900795.4838709679
+          },
+          "measuredMs": 1417,
+          "encodedMs": 2862,
+          "wallMs": 4306,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-04",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4281,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4281,
+            "hasAudio": true,
+            "actualAudioBitrate": 96390.56295258118,
+            "actualVideoBitrate": 942545.625
+          },
+          "measuredMs": 823,
+          "encodedMs": 2096,
+          "wallMs": 2934,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-05",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 2755,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 2755,
+            "hasAudio": true,
+            "actualAudioBitrate": 96638.8384754991,
+            "actualVideoBitrate": 933620.487804878
+          },
+          "measuredMs": 587,
+          "encodedMs": 1499,
+          "wallMs": 2117,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-06",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 5185,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 5185,
+            "hasAudio": true,
+            "actualAudioBitrate": 96376.47058823529,
+            "actualVideoBitrate": 926030.7692307692
+          },
+          "measuredMs": 816,
+          "encodedMs": 2198,
+          "wallMs": 3043,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-07",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 5923,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 5923,
+            "hasAudio": true,
+            "actualAudioBitrate": 96124.26135404356,
+            "actualVideoBitrate": 915570.3370786518
+          },
+          "measuredMs": 901,
+          "encodedMs": 2492,
+          "wallMs": 3438,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-08",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 4226,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 4226,
+            "hasAudio": true,
+            "actualAudioBitrate": 96439.18599148131,
+            "actualVideoBitrate": 941794.2857142857
+          },
+          "measuredMs": 818,
+          "encodedMs": 2042,
+          "wallMs": 2902,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-09",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 5029,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 5029,
+            "hasAudio": true,
+            "actualAudioBitrate": 96108.17259892623,
+            "actualVideoBitrate": 908542.4
+          },
+          "measuredMs": 899,
+          "encodedMs": 2204,
+          "wallMs": 3128,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-10",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1440,
+            "height": 1920,
+            "durationMs": 3913,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 540,
+            "height": 720,
+            "durationMs": 3913,
+            "hasAudio": true,
+            "actualAudioBitrate": 96302.58113979045,
+            "actualVideoBitrate": 912557.2881355932
+          },
+          "measuredMs": 733,
+          "encodedMs": 1830,
+          "wallMs": 2579,
+          "peakDecodedFrames": 18,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        },
+        {
+          "case": "case-11",
+          "original": {
+            "codec": "hevc",
+            "transfer": "arib-std-b67",
+            "primaries": "bt2020",
+            "width": 1080,
+            "height": 1920,
+            "durationMs": 3896,
+            "hasAudio": true,
+            "cadenceVerified": false
+          },
+          "copy": {
+            "width": 404,
+            "height": 720,
+            "durationMs": 3896,
+            "hasAudio": true,
+            "actualAudioBitrate": 96197.12525667352,
+            "actualVideoBitrate": 893814.9152542372
+          },
+          "measuredMs": 1092,
+          "encodedMs": 2366,
+          "wallMs": 3481,
+          "peakDecodedFrames": 9,
+          "liveDecodedFrames": 0,
+          "liveAudioData": 0
+        }
+      ]
+    }
+  },
+  "verifier": {
+    "test": "backend/internal/clip/diagnostic/analysisquality TestLocalVerifierExistingAuthorizedSyntheticCopy",
+    "image": "postpilot-media-worker:latest (dev, Go 1.26, ffmpeg 9.0.1)",
+    "checks": "packet EOF scan, full frame/sample decode, AAC priming/tail bounds, H.264/AAC mono 48 kHz, 15 fps, square pixels, duration within one frame"
+  },
+  "visualCheck": "Agent inspection of mid-frames: portrait rotation applied, HLG rendered as natural SDR, signage legible at 720 long edge. Not a human review.",
+  "finalRender": "Browser final render uses AAC stereo 48 kHz 192 kbps (CLIP_BROWSER_RENDER), which this Windows encoder accepts; final-render qualification was not run here.",
+  "lockfileSHA256": "94a980b07aef292a1d96bd52a3187a8a516ca8a02305990e496c3e28797214c5"
+}

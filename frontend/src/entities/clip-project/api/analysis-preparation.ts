@@ -44,7 +44,7 @@ export function toClipAnalysisPreparation(
     profile.audioCodec !== 'aac' ||
     profile.audioRate !== 48_000 ||
     profile.audioChannels !== 1 ||
-    profile.audioBitrate !== 64_000 ||
+    profile.audioBitrate !== 96_000 ||
     response.copies.length > 49 ||
     response.progress < 0 ||
     response.progress > 1000

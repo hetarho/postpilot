@@ -104,3 +104,15 @@ func TestAnalysisCopyVerdictRejectsForgedBoundsAndCoverage(t *testing.T) {
 		t.Fatal("native role profile verified copies")
 	}
 }
+
+// Windows Media Foundation refuses AAC below 96 kbps, so the browser profile
+// carries its own rate rather than the server copy's (CLIP-204).
+func TestBrowserAnalysisProfileAudioNeverBelowServerCopy(t *testing.T) {
+	cfg := DefaultMediaConfig(Environment{})
+	if BrowserAnalysisProfileVersion != "clip-browser-analysis-v2" || BrowserAnalysisAudioBitrate != 96000 || cfg.AudioBitrate != 64000 || BrowserAnalysisAudioBitrate < cfg.AudioBitrate {
+		t.Fatal("browser analysis profile audio drifted", BrowserAnalysisProfileVersion, BrowserAnalysisAudioBitrate, cfg.AudioBitrate)
+	}
+	if BrowserAnalysisQualified(BrowserAnalysisProfileVersion) {
+		t.Fatal("a profile change opened semantic qualification")
+	}
+}

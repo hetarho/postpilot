@@ -44,7 +44,7 @@ const preparation: ClipAnalysisPreparation = {
   expiresAt: '2099-01-01T00:00:00Z',
   originalMeasurementProvenance: 'browser_client',
   profile: {
-    version: 'clip-browser-analysis-v1',
+    version: 'clip-browser-analysis-v2',
     intervalMs: 60000,
     longEdge: 720,
     framesPerSecond: 15,
@@ -54,7 +54,7 @@ const preparation: ClipAnalysisPreparation = {
     audioCodec: 'aac',
     audioRate: 48000,
     audioChannels: 1,
-    audioBitrate: 64000,
+    audioBitrate: 96000,
     qualified: true,
   },
   copies: [slot, { ...slot, slot: 's-1', ordinal: 1, offsetMs: 60000, durationMs: 1000 }],
@@ -109,7 +109,7 @@ function artifact(durationMs = 60000, hasAudio = true): AnalysisCopyArtifact {
       hasAudio,
       targetVideoBitrate: 900000,
       actualVideoBitrate: 800000,
-      actualAudioBitrate: hasAudio ? 64000 : 0,
+      actualAudioBitrate: hasAudio ? 96000 : 0,
     },
   }
 }
@@ -199,7 +199,7 @@ describe('page-owned browser analysis preparation', () => {
     expect(h.ports.begin).toHaveBeenCalledWith(
       expect.objectContaining({
         originals: [original],
-        profileVersion: 'clip-browser-analysis-v1',
+        profileVersion: 'clip-browser-analysis-v2',
       }),
       expect.any(AbortSignal),
     )
