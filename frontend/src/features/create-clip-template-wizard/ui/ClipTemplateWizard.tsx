@@ -390,13 +390,10 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure }
           title: t('headings', { ns: 'clipWizard' }),
           help: t('headingHelp', { ns: 'clipWizard' }),
           back,
+          next,
           children: (
             <div className="space-y-6">
-              <HeadingSuggestions
-                operation={headings}
-                count={selected.length}
-                onOwnWords={() => send({ type: 'next' })}
-              />
+              <HeadingSuggestions operation={headings} count={selected.length} />
               {selected.map((stage) => (
                 <div key={stage.id}>
                   <FieldLabel htmlFor={`${id}-${stage.id}`}>

@@ -381,7 +381,7 @@ async function finishClipWizard(user: ReturnType<typeof userEvent.setup>, name: 
   }
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '영상의 디자인을 골라요' })
   await user.click(screen.getByRole('button', { name: '다음' }))

@@ -93,3 +93,5 @@ export {
 export type { RoleKey, TargetNode, SectionContent } from './config/target-catalog'
 export { useWizardHeadingSuggestions } from './api/useWizardHeadingSuggestions'
 export type { WizardHeadingSuggestionsOperation } from './api/useWizardHeadingSuggestions'
+
+export { WizardHeadingSuggestions, WizardHeadingChoices } from './ui/WizardHeadingSuggestions'

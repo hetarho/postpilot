@@ -28,7 +28,7 @@ it('creates a 카페 video template end to end', async () => {
   const hook = screen.getByLabelText('훅 (첫 장면) 단계 이름')
   await user.clear(hook)
   await user.type(hook, '처음 만난 카페')
-  await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   for (;;) {
     const heading = await screen.findByRole('heading', {
       level: 2,
@@ -127,11 +127,32 @@ it('requests one clip heading batch and keeps manual stage names until an explic
   const field = screen.getByLabelText('훅 (첫 장면) 단계 이름')
   await user.clear(field)
   await user.type(field, '내 첫 장면')
-  await user.dblClick(screen.getByRole('button', { name: '제목 제안 받기' }))
+  expect(screen.queryByRole('button', { name: '내 말로 쓰기' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '제목 제안 받기' }))
+  const sheet = await screen.findByRole('dialog', { name: '제목 제안 받기' })
+  expect(starts).toHaveLength(0)
+  const style = within(sheet).getByLabelText('원하는 스타일을 말씀해주세요')
+  await user.click(
+    within(sheet).getByRole('button', { name: '짧고 담백하게, 명사로 끝나는 소제목으로 만들어줘' }),
+  )
+  expect(style).toHaveValue('짧고 담백하게, 명사로 끝나는 소제목으로 만들어줘')
+  await user.clear(style)
+  await user.type(style, '장면마다 짧고 궁금한 질문으로')
+  await user.keyboard('{Escape}')
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(starts).toHaveLength(0)
+  expect(field).toHaveValue('내 첫 장면')
+  await user.click(screen.getByRole('button', { name: '제목 제안 받기' }))
+  const reopened = await screen.findByRole('dialog', { name: '제목 제안 받기' })
+  expect(within(reopened).getByLabelText('원하는 스타일을 말씀해주세요')).toHaveValue(
+    '장면마다 짧고 궁금한 질문으로',
+  )
+  await user.dblClick(within(reopened).getByRole('button', { name: '제안 받기' }))
   await screen.findByRole('button', { name: '훅 (첫 장면) 후보 하나' })
   expect(starts).toHaveLength(1)
   expect(starts[0]).toMatchObject({
     targetKind: 'clip',
+    styleRequest: '장면마다 짧고 궁금한 질문으로',
     targetPath: ['카페', '디저트·베이커리'],
     writeModel: { providerId: 'p', modelId: 'w' },
   })
@@ -164,7 +185,7 @@ it('shows the live preview from the stages step on, none on the target questions
   expect(stages().getAllByRole('listitem')).toHaveLength(6)
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '내 말로 쓰기' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { level: 2, name: /단계$/ })
   const hook = screen.getByLabelText('단계 이름')
   await user.clear(hook)

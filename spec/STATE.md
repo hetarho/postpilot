@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| vhn1 | ihaelam-ui-MacBookPro | pair | 2026-10-29T15:41Z | 2026-10-29T15:41Z | - |
-
 ## inbox
 - 261029 decided CLIP-221: how does the video-template wizard's live preview show a stage name or order the clip frame never draws? → an ordered stage list above the frame marks the stage whose step is on screen, as the post wizard marks its section (alt: the frame alone, so renaming or reordering stages changes nothing visible | draw stage names into the sample clip as captions)
 - 261029 decided CLIP-221: does the live preview offer the design selection on every step? → before the design step it draws the draft's presets and caption styles without offering them, and the design step's content is the same preview with them offered (alt: offer presets and styles on every step, breaking one question per screen | hide the design until the design step, so the preview draws defaults the owner never chose)
@@ -133,7 +128,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T719 | Align video stage-name suggestions with the blog heading UI | CLIP TMPL ARCH | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -142,11 +136,15 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Implement T719: align the video-template stage-name UI with the blog wizard, then verify, commit and push main.
-- T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. Owner: confirm CI run 40836194942 and look at it at lg and on a phone; report reports/261029-vtp1.md.
+- T719 complete: blog and video stage headings share the style-request sheet and ordinary Next action; task result records checks and the session owns final pre-push/CI verification.
+- T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 T719 setup regression correction: the shared helper now uses Next; all 23 setup tests and file ESLint/Prettier pass. The full pre-push suite is rerun on the amended candidate.
+- 261030 T719 pre-push: full FE suite found 2 setup tests still using the old continue label (4504 passed). Update the shared setup-test helper to Next and verify the setup consumer before the final gate.
+- 261030 T719 done: shared heading style-request sheet and choices for post/video; ordinary Next on video headings. Node 24.18.0: 28 files/298 tests, typecheck, lint/format/FSD/style/managed-skill checks pass. Full frontend pre-push gate follows on the committed candidate; unchanged backend/generation/deploy evidence is reused from bb21f128.
+- 261030 T719 starts (vhn1) at 0f5995bf; the planning push passed the full pinned-Node frontend gate and reused identical backend/generation/deploy inputs from bb21f128.
 - 261030 create-task CLIP-213 TMPL-71/73 → T719: use one heading-suggestion sheet for post and video wizards; accepted the matching inbox suggestion. T718 is already archived done; removed its stale doing row.
 - 261029 pushed f8e4ad6e (CLIP r66, T718, report vtp1): pre-push FE gate on e5111a90 passed (568/4506, build, lints); CI run 40836194942 jobs completed with no failed step, conclusion unreadable over public HTML (gh not logged in); Deploy backend/Verify media not triggered.
 - 261029 T718 done: ClipWizardPreview beside the video wizard's steps (lg aside, phone WizardPreviewDock moved to shared/ui); CompositionPreview draws handed-in presets read-only without a change handler; related vitest 323 files/2662 tests, lint, lint:fsd, tsc -b pass.
@@ -163,7 +161,3 @@
 - 261029 T716 starts at 6916bfcb (w11c): browser analysis AAC 96 kbps under profile v2; native copies stay 64 kbps.
 - 261029 create-task CLIP r65: T716 browser analysis audio 96 kbps, profile v2, server native copies unchanged at 64 kbps.
 - 261029 update-ssot CLIP r65: CLIP-204✎ browser copy AAC bitrate accepted by every supported platform encoder and never below the server copy's. Windows Chrome 155 (owner profile too) and Edge 156 refuse 64 kbps AAC, so every source with sound failed browser analysis with CLIP_ANALYSIS_ENCODER_UNSUPPORTED; 96 kbps copies of 11 owner HLG HEVC originals encode there and pass the production Go verifier.
-- 261029 browser media re-verification start (delegated): owner asks whether the failed browser analysis delegation was redone and whether the agent can check the browser analysis and render steps itself. Run the existing analysis-copy and render diagnostics in this Windows PC's installed Chrome 155 (RTX 2080 Ti) on 11 owner HLG HEVC originals and verify the copies with the production Go verifier; no provider call, gate change or deploy.
-- 261029 pushed e6ca39dc (clip fixes 357c0d55..306a169a): CI 40790451412, Deploy backend 40790451348 (build, rollout, health, ranged GET, CORS, R2) and Verify media 40790884224 success; live postpilot bundle carries the browser-render refusal copy. Local gates: FE 566/4497, backend 89 packages + vet/build/gofmt, lint/FSD/style/spec/dev/build, native media-smoke 41 PASS; amd64 deploy/media-release images were left to the remote runs. Paid live work: 8 Gemini 3.8 Flash observations + 2 writing calls under the owner's USD0.30 cap (≈USD0.02, estimated from the T709 per-observation cost).
-- 261029 fix clip source colour on the server route: CLIP-219's PQ refusal lived only in browser decoding, so T707's server preparation admitted PQ/uncovered colour; the native probe now refuses what the browser refuses (SDR and HLG admitted) before any work.
-- 261029 fix clip caption edit: retyping a caption so its AI accent keyword no longer appears held the whole ② edit unsaved behind 이 문구의 내용·위치·시간을 확인해 주세요; the text field now drops a keyword the new text does not carry, as the composer does.

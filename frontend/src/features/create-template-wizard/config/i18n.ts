@@ -48,18 +48,6 @@ export const i18n = {
         running: '소제목을 제안하는 중이에요. 다른 단계로 이동해도 괜찮아요.',
         choices: '{{name}} 추천 소제목',
         retryRead: '결과 다시 불러오기',
-        sheet: {
-          label: '원하는 스타일을 말씀해주세요',
-          placeholder: '자유롭게 적거나 아래 예시를 눌러 보세요',
-          examplesLabel: '이렇게 말해 보세요',
-          examples: [
-            '이모지를 포함해서 20대 여성을 타겟팅할 수 있는 소제목으로 만들어줘',
-            '짧고 담백하게, 명사로 끝나는 소제목으로 만들어줘',
-            '읽고 싶어지게 궁금증을 남기는 질문형으로 만들어줘',
-            '친구에게 말하듯 친근한 반말로 만들어줘',
-          ],
-          send: '제안 받기',
-        },
       },
       section: {
         title: '“{{heading}}” 부분',
@@ -159,18 +147,6 @@ export const i18n = {
         running: 'Suggesting headings. You can move to another step.',
         choices: 'Heading suggestions for {{name}}',
         retryRead: 'Load the result again',
-        sheet: {
-          label: 'Tell us the style you want',
-          placeholder: 'Write freely or tap an example below',
-          examplesLabel: 'Try saying',
-          examples: [
-            'Headings with emoji that speak to women in their twenties',
-            'Short and plain, ending in a noun',
-            'Questions that make readers curious',
-            'Casual, like talking to a friend',
-          ],
-          send: 'Suggest',
-        },
       },
       section: {
         title: 'The “{{heading}}” part',
