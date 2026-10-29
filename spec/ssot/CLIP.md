@@ -472,3 +472,4 @@
 
 ## chg
 - r66 261029 CLIP-213✎ template preview at the last (design) step only→the wizard's live preview beside every step from stages on; CLIP-221+ wizard live preview (stage list marking the on-screen stage, design shown read-only before the design step; lg right, else 미리보기 sheet)
+- r65 261029 CLIP-204✎ browser copy audio bitrate unstated (64 kbps, refused on Windows)→accepted by every supported platform encoder and never below the server copy's (96 kbps)
