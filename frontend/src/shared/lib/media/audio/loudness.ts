@@ -132,7 +132,69 @@ export function truePeak48k(channels: readonly Float32Array[]) {
   return 20 * Math.log10(peak)
 }
 
-/** One linear gain. A peak-limited shortfall remains measurable for the output verdict. */
+/** A peak-bound mix reaches the target the way loudnorm's dynamic fallback does
+ * (CDS-35): an offline stereo-linked lookahead limiter, then re-measurement. */
+const LIMITER = {
+  lookaheadFrames: 72, // 1.5 ms at 48 kHz
+  releaseFrames: 4800, // 100 ms recovery time constant
+  marginDB: 1, // first sample-peak limit below the true-peak ceiling
+  headroomDB: 0.5, // true-peak room left for AAC overshoot
+  toleranceLU: 0.5,
+  passes: 4,
+} as const
+
+function scale(channels: Float32Array[], gain: number) {
+  for (const channel of channels)
+    for (let index = 0; index < channel.length; index++) channel[index] *= gain
+}
+
+/** Each sample's gain is the trailing average of the forward-window minimum of
+ * the required gain, so every sample peak lands at or below the limit. */
+function limitPeaks(channels: Float32Array[], limit: number, envelope: Float32Array) {
+  const length = channels[0].length,
+    window = LIMITER.lookaheadFrames
+  const required = (index: number) => {
+    let peak = 0
+    for (const channel of channels) peak = Math.max(peak, Math.abs(channel[index]))
+    return peak > limit ? limit / peak : 1
+  }
+  // Monotonic ring deque over [index, index + window), filled from the end.
+  const capacity = window + 1,
+    indices = new Int32Array(capacity),
+    values = new Float64Array(capacity)
+  let head = 0,
+    size = 0
+  for (let index = length - 1; index >= 0; index--) {
+    const value = required(index)
+    while (size && values[(head + size - 1) % capacity] >= value) size--
+    indices[(head + size) % capacity] = index
+    values[(head + size) % capacity] = value
+    size++
+    while (indices[head] >= index + window) {
+      head = (head + 1) % capacity
+      size--
+    }
+    envelope[index] = values[head]
+  }
+  // Recovery never outruns the window minimum, which keeps every peak limited.
+  const recovery = 1 - Math.exp(-1 / LIMITER.releaseFrames)
+  for (let index = 1; index < length; index++)
+    envelope[index] = Math.min(
+      envelope[index],
+      envelope[index - 1] + (1 - envelope[index - 1]) * recovery,
+    )
+  const trailing = new Float64Array(window).fill(1)
+  let sum = window
+  for (let index = 0; index < length; index++) {
+    sum += envelope[index] - trailing[index % window]
+    trailing[index % window] = envelope[index]
+    const gain = Math.min(1, sum / window)
+    for (const channel of channels) channel[index] *= gain
+  }
+}
+
+/** One linear gain whenever it reaches the target under the ceiling; otherwise
+ * the limiter path, re-measured until the loudness is within tolerance. */
 export function normalizeLoudness48k(
   channels: Float32Array[],
   targetLUFS: number,
@@ -141,15 +203,47 @@ export function normalizeLoudness48k(
   const before = integratedLoudness48k(channels)
   const peak = truePeak48k(channels)
   if (!Number.isFinite(before))
-    return { loudnessLUFS: undefined, truePeakDBTP: peak, silent: true, gain: 1 }
-  const gainDB = Math.min(targetLUFS - before, ceilingDBTP - peak)
-  const gain = 10 ** (gainDB / 20)
-  for (const channel of channels)
-    for (let index = 0; index < channel.length; index++) channel[index] *= gain
-  return {
-    loudnessLUFS: integratedLoudness48k(channels),
-    truePeakDBTP: peak + gainDB,
-    silent: false,
-    gain,
+    return { loudnessLUFS: undefined, truePeakDBTP: peak, silent: true, gain: 1, limited: false }
+  if (targetLUFS - before <= ceilingDBTP - peak) {
+    const gainDB = targetLUFS - before
+    const gain = 10 ** (gainDB / 20)
+    scale(channels, gain)
+    return {
+      loudnessLUFS: integratedLoudness48k(channels),
+      truePeakDBTP: peak + gainDB,
+      silent: false,
+      gain,
+      limited: false,
+    }
   }
+  const envelope = new Float32Array(channels[0].length)
+  let loudness = before,
+    truePeak = peak,
+    gain = 1,
+    limit = ceilingDBTP - LIMITER.marginDB
+  for (let pass = 0; pass < LIMITER.passes; pass++) {
+    const step = 10 ** ((targetLUFS - loudness) / 20)
+    scale(channels, step)
+    gain *= step
+    limitPeaks(channels, 10 ** (limit / 20), envelope)
+    loudness = integratedLoudness48k(channels)
+    truePeak = truePeak48k(channels)
+    const over = truePeak - (ceilingDBTP - LIMITER.headroomDB)
+    if (over > 0) limit -= over
+    else if (Math.abs(loudness - targetLUFS) <= LIMITER.toleranceLU) break
+  }
+  return { loudnessLUFS: loudness, truePeakDBTP: truePeak, silent: false, gain, limited: true }
+}
+
+/** CDS-35's final mix: a loudness range beyond its ceiling is refused before any gain. */
+export function normalizeMix48k(
+  channels: Float32Array[],
+  targetLUFS: number,
+  ceilingDBTP: number,
+  rangeCeilingLU: number,
+) {
+  const loudnessRangeLU = loudnessRange48k(channels)
+  if (!Number.isFinite(loudnessRangeLU) || loudnessRangeLU > rangeCeilingLU)
+    throw new Error('AUDIO_LOUDNESS_RANGE_UNSUPPORTED')
+  return { loudnessRangeLU, ...normalizeLoudness48k(channels, targetLUFS, ceilingDBTP) }
 }

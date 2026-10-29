@@ -1,4 +1,4 @@
-import { normalizeLoudness48k, loudnessRange48k } from './loudness'
+import { normalizeMix48k } from './loudness'
 import { stretchStereo } from './stretch'
 import { verifyEncodedAudio } from './verify-encoded'
 import { waitAudioCodecCapacity, drainAudioCodec } from './codec-queue'
@@ -126,13 +126,9 @@ async function process(request: AudioWorkerRequest) {
       result.map((channel) => channel.buffer),
     )
   } else if (request.kind === 'normalize') {
-    const loudnessRangeLU = loudnessRange48k(request.channels)
-    if (!Number.isFinite(loudnessRangeLU) || loudnessRangeLU > request.rangeCeiling)
-      throw new Error('AUDIO_LOUDNESS_RANGE_UNSUPPORTED')
     const result = {
       channels: request.channels,
-      loudnessRangeLU,
-      ...normalizeLoudness48k(request.channels, request.target, request.ceiling),
+      ...normalizeMix48k(request.channels, request.target, request.ceiling, request.rangeCeiling),
     }
     controller.signal.throwIfAborted()
     send(

@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "measured": "261029",
+  "qualification": false,
+  "scope": "Production browser final-render path (freezeBrowserComposition, renderBrowserVideo, renderBrowserAudio, MP4 mux, measureMp4Output, browserRenderVerdict) driven by a private diagnostic entry over owner originals. Not the comparison runner matrix; no human review; readiness stays closed (T604).",
+  "device": {
+    "os": "Windows 11 Pro 10.0.26200",
+    "cpu": "Intel(R) Core(TM) i7-10700 CPU @ 2.90GHz",
+    "logicalCores": 16,
+    "memoryBytes": 34255515648,
+    "gpu": "NVIDIA GeForce RTX 2080 Ti (ANGLE D3D11), discrete",
+    "browser": "Chrome 155.0.8059.41"
+  },
+  "plan": {
+    "ratio": "vertical 1080x1920",
+    "cuts": "4 owner HLG HEVC originals x 4000 ms at 1.0x, no transitions",
+    "durationMs": 16000,
+    "caption": "one fixed lower_mid caption with a keyword accent"
+  },
+  "findings": [
+    {
+      "id": "opaque-frame",
+      "before": "every render failed: VideoFrame.allocationSize refuses null-format (D3D11 HEVC) frames even with {format:'RGBA'}",
+      "fix": "range-video.ts bounds a null-format frame by its coded RGBA reservation without any size query",
+      "after": "3/3 renders pass the production verdict"
+    },
+    {
+      "id": "source-audio-loudness",
+      "result": "render with source sound refused: CLIP_BROWSER_AUDIO_AUDIO",
+      "measured": {
+        "normalizedIntegratedLUFS": -20.93,
+        "encodedIntegratedLUFS": -20.97,
+        "encodedTruePeakDBTP": -1.54,
+        "loudnessRangeLU": 7.81,
+        "target": {
+          "I": -16,
+          "TP": -1.5,
+          "LRA": 11
+        }
+      },
+      "cause": "normalizeLoudness48k applies one linear gain capped by the true-peak ceiling and has no dynamic fallback, so transient-heavy phone audio stops about 5 LU short; the server loudnorm pass falls back to dynamic mode and reaches the target",
+      "followUp": "T717",
+      "fix": "T717: normalizeLoudness48k keeps the one-gain path where the ceiling does not bind and otherwise applies an offline stereo-linked lookahead limiter (1.5 ms lookahead, 100 ms release) with re-measurement",
+      "after": {
+        "renders": [
+          {
+            "label": "export-bold-sound-cold",
+            "verdictPassed": true,
+            "encodedIntegratedLUFS": -16.21,
+            "encodedTruePeakDBTP": -2.29,
+            "wallMs": 10940,
+            "phases": {
+              "freeze": 4,
+              "audio": 5548,
+              "video": 4718,
+              "measure": 521,
+              "save": 141
+            }
+          },
+          {
+            "label": "export-bold-sound-warm",
+            "verdictPassed": true,
+            "encodedIntegratedLUFS": -16.21,
+            "encodedTruePeakDBTP": -2.29,
+            "wallMs": 8740,
+            "phases": {
+              "freeze": 1,
+              "audio": 4147,
+              "video": 4044,
+              "measure": 415,
+              "save": 127
+            }
+          },
+          {
+            "label": "export-ember-silent",
+            "verdictPassed": true,
+            "encodedIntegratedLUFS": null,
+            "encodedTruePeakDBTP": null,
+            "wallMs": 5015,
+            "phases": {
+              "freeze": 1,
+              "audio": 0,
+              "video": 4844,
+              "measure": 36,
+              "save": 129
+            }
+          }
+        ],
+        "listening": "not reviewed by a person; the limiter changes transient dynamics the way loudnorm dynamic mode does"
+      }
+    }
+  ],
+  "runs": [
+    {
+      "label": "export-bold-silent-cold",
+      "captionStyle": "bold",
+      "sourceAudio": false,
+      "durationMs": 16000,
+      "frameCount": 480,
+      "completed": 480,
+      "fileBytes": 16516286,
+      "wallMs": 5241,
+      "phases": {
+        "freeze": 4,
+        "audio": 1,
+        "video": 5006,
+        "measure": 60,
+        "save": 156
+      },
+      "verdictPassed": true,
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640032",
+        "videoFrames": 480,
+        "videoDurationUs": 16000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "packetResources": {
+        "peakPackets": 4,
+        "peakBytes": 511118
+      },
+      "jsHeap": {
+        "usedJSHeapSize": 88017005,
+        "totalJSHeapSize": 95178745
+      }
+    },
+    {
+      "label": "export-bold-silent-warm",
+      "captionStyle": "bold",
+      "sourceAudio": false,
+      "durationMs": 16000,
+      "frameCount": 480,
+      "completed": 480,
+      "fileBytes": 16516286,
+      "wallMs": 4507,
+      "phases": {
+        "freeze": 1,
+        "audio": 0,
+        "video": 4294,
+        "measure": 46,
+        "save": 160
+      },
+      "verdictPassed": true,
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640032",
+        "videoFrames": 480,
+        "videoDurationUs": 16000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 511118
+      },
+      "jsHeap": {
+        "usedJSHeapSize": 91184202,
+        "totalJSHeapSize": 98333970
+      }
+    },
+    {
+      "label": "export-ember-silent",
+      "captionStyle": "ember",
+      "sourceAudio": false,
+      "durationMs": 16000,
+      "frameCount": 480,
+      "completed": 480,
+      "fileBytes": 16503486,
+      "wallMs": 5171,
+      "phases": {
+        "freeze": 1,
+        "audio": 0,
+        "video": 4987,
+        "measure": 36,
+        "save": 143
+      },
+      "verdictPassed": true,
+      "output": {
+        "width": 1080,
+        "height": 1920,
+        "codec": "avc1.640032",
+        "videoFrames": 480,
+        "videoDurationUs": 16000000,
+        "presentationValid": true,
+        "hasAudio": false,
+        "audioCodec": "",
+        "audioRate": 0
+      },
+      "packetResources": {
+        "peakPackets": 2,
+        "peakBytes": 511118
+      },
+      "jsHeap": {
+        "usedJSHeapSize": 89495612,
+        "totalJSHeapSize": 92056872
+      }
+    }
+  ],
+  "output": {
+    "probe": "h264 High 1080x1920 30/1, 480 frames, 16.000 s, sRGB transfer / bt709 primaries; full ffmpeg 9.0.1 decode passes",
+    "visualCheck": "Agent inspection of frames at 2 s and 10 s: HLG renders as natural SDR, bold caption legible; ember caption over warm orange food has weak contrast on its first line. Not a human review."
+  }
+}

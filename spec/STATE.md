@@ -127,7 +127,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T717 | Reach the clip loudness target on transient-heavy audio in the browser | CDS CLIP ARCH | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -136,7 +135,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- implement-task T717: browser loudness limiter so source-sound renders reach CDS-35 on real phone audio.
+- T717 done locally: a peak-bound browser mix is limited to −16 LUFS; 4 owner HLG cuts with source sound render in Windows Chrome at −16.21 LUFS / −2.29 dBTP and pass browserRenderVerdict. Needs a person to listen before any render qualification (T604 stays closed).
 - T716 done locally: browser analysis copies at AAC 96 kbps (clip-browser-analysis-v2) prepare from owner HLG originals with sound in Windows Chrome 155 and pass the production Go verifier; push with the session batch after the ARCH-31 gate. T603 semantic gates stay closed.
 - Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally and shipped at e6ca39dc (CI, Deploy backend incl. post-deploy checks and Verify media green). Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
 - TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; the later backend push e6ca39dc ran the post-deploy storage/CORS/R2 checks and Verify media green, closing the T710 parked deploy gap.
@@ -144,6 +143,8 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 T717 done: normalizeLoudness48k limits peak-bound mixes (1.5 ms lookahead, 100 ms release, re-measured); normalizeMix48k owns the 11 LU range refusal; audio/render/video FE tests pass and the owner-cut Windows render with sound passes the verdict.
+- 261029 T717 starts (w11c): linear gain first, offline lookahead limiter only where the ceiling binds.
 - 261029 update-ssot CDS r37 + create-task T717: CDS-35✎ a peak-bound mix is dynamically limited to the target in either render kind. Windows Chrome render of 4 owner HLG cuts with source sound normalized to −20.93 LUFS at the −1.54 dBTP ceiling and was refused (CLIP_BROWSER_AUDIO_AUDIO); the server loudnorm pass would have switched to dynamic mode.
 - 261029 fix media opaque frames: Windows Chrome refuses VideoFrame.allocationSize for null-format (D3D11 HEVC) frames even with an RGBA layout, so every browser final render of phone HEVC failed; range-video bounds such a frame by its coded RGBA reservation without a size query. 4 owner HLG cuts then render 1080x1920/30 fps/480 frames and pass browserRenderVerdict.
 - 261029 T716 done: server/client analysis profile v2 with 96 kbps browser AAC; 11/11 Windows Chrome copies of owner HLG originals with sound pass the Go verifier; affected FE (45 files/427 tests across two runs) and BE clip packages pass.

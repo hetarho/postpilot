@@ -2,6 +2,7 @@ import { expect, it } from 'vitest'
 import {
   integratedLoudness48k,
   normalizeLoudness48k,
+  normalizeMix48k,
   truePeak48k,
   loudnessRange48k,
 } from './loudness'
@@ -27,16 +28,36 @@ it('gates silence around programme material and leaves digital silence unchanged
   expect(integratedLoudness48k([padded])).toBeGreaterThan(-24)
   const silent = new Float32Array(48000)
   const result = normalizeLoudness48k([silent, silent.slice()], -16, -1.5)
-  expect(result).toMatchObject({ silent: true, loudnessLUFS: undefined, gain: 1 })
+  expect(result).toMatchObject({ silent: true, loudnessLUFS: undefined, gain: 1, limited: false })
   expect(silent.every((value) => value === 0)).toBe(true)
 })
-it('preserves the peak ceiling instead of compressing a high-crest signal', () => {
-  const input = tone()
-  input[48000] = 0.99
-  const result = normalizeLoudness48k([input], -16, -1.5)
-  expect(result.truePeakDBTP).toBeCloseTo(-1.5, 6)
-  expect(result.loudnessLUFS!).toBeLessThan(-17)
-  expect(truePeak48k([input])).toBeLessThanOrEqual(-1.499)
+it('limits a transient-heavy mix to the target where one gain stops at the ceiling', () => {
+  // Speech-level programme with near-full-scale clicks, as on dishes or doors.
+  const clicked = () => {
+    const input = Float32Array.from(
+      { length: 6 * 48000 },
+      (_, i) => 0.02 * Math.sin((2 * Math.PI * 1000 * i) / 48000),
+    )
+    for (let at = 6000; at < input.length; at += 12000) input[at] = 0.99
+    return input
+  }
+  const channels = [clicked(), clicked()]
+  const before = integratedLoudness48k(channels)
+  expect(-16 - before).toBeGreaterThan(-1.5 - truePeak48k(channels))
+  const result = normalizeLoudness48k(channels, -16, -1.5)
+  expect(result.limited).toBe(true)
+  expect(Math.abs(result.loudnessLUFS! + 16)).toBeLessThanOrEqual(0.5)
+  expect(result.truePeakDBTP).toBeLessThanOrEqual(-2)
+  expect(integratedLoudness48k(channels)).toBeCloseTo(result.loudnessLUFS!, 6)
+  expect(truePeak48k(channels)).toBeCloseTo(result.truePeakDBTP, 6)
+})
+it('keeps the one-gain path untouched when the ceiling does not bind', () => {
+  const channels = [tone(), tone()]
+  const expected = channels.map((channel) => channel.slice())
+  const result = normalizeLoudness48k(channels, -16, -1.5)
+  expect(result.limited).toBe(false)
+  for (const channel of expected) for (let i = 0; i < channel.length; i++) channel[i] *= result.gain
+  expect(channels).toEqual(expected)
 })
 
 it.each([
@@ -67,4 +88,16 @@ it('does not mistake a global gain for dynamic-range normalization', () => {
   expect(before).toBeGreaterThan(19)
   expect(loudnessRange48k([input, input])).toBeCloseTo(before, 2)
   expect(loudnessRange48k([new Float32Array(48000)])).toBe(0)
+})
+it('refuses a mix wider than the loudness range ceiling before applying any gain', () => {
+  const input = Float32Array.from(
+    { length: 40 * 48000 },
+    (_, index) =>
+      (index < 20 * 48000 ? 0.01 : 0.1) * Math.sin((2 * Math.PI * 1000 * index) / 48000),
+  )
+  const sample = input[30 * 48000 + 12]
+  expect(() => normalizeMix48k([input, input.slice()], -16, -1.5, 11)).toThrow(
+    'AUDIO_LOUDNESS_RANGE_UNSUPPORTED',
+  )
+  expect(input[30 * 48000 + 12]).toBe(sample)
 })

@@ -32,6 +32,8 @@ export interface AudioNormalization {
   truePeakDBTP: number
   silent: boolean
   gain: number
+  /** One gain could not reach the target under the ceiling; peaks were limited (CDS-35). */
+  limited: boolean
 }
 export type AudioOperation =
   | {
