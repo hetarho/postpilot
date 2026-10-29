@@ -138,7 +138,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. Owner: look at it at lg and on a phone; report reports/261029-vtp1.md.
+- T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. Owner: confirm CI run 40836194942 and look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 - Clip fixes 357c0d55..306a169a (render-kind gate, polled cancellation, SDR-labelled HLG export, caption keyword edit, server-route colour refusal) were measured on 8 real HLG HEVC phone originals locally and shipped at e6ca39dc (CI, Deploy backend incl. post-deploy checks and Verify media green). Open: while browser final rendering is unqualified (T604) a non-Max account has no render path at all (Max-only server exports, CLIP-193) — owner decision; the on-purpose identity-smoke baseline's container digest moves with the SDR label (sampled frames unchanged) and needs re-recording on its CI host; a PQ source is refused with the generic CLIP_INVALID_MEDIA message, not a colour-named one.
 - TMPL r29–r31 (T710–T715) shipped: CI green at 2441146f and 9921568a; the later backend push e6ca39dc ran the post-deploy storage/CORS/R2 checks and Verify media green, closing the T710 parked deploy gap.
@@ -146,6 +146,7 @@
 - T697 deployment/CORS/media gates passed at177b377a; deployed browser preview now reads8 real retained R2 originals without a range failure. Full public browser-generation qualification remains gated by T603/T604.
 
 ## log
+- 261029 pushed f8e4ad6e (CLIP r66, T718, report vtp1): pre-push FE gate on e5111a90 passed (568/4506, build, lints); CI run 40836194942 jobs completed with no failed step, conclusion unreadable over public HTML (gh not logged in); Deploy backend/Verify media not triggered.
 - 261029 T718 done: ClipWizardPreview beside the video wizard's steps (lg aside, phone WizardPreviewDock moved to shared/ui); CompositionPreview draws handed-in presets read-only without a change handler; related vitest 323 files/2662 tests, lint, lint:fsd, tsc -b pass.
 - 261029 T718 starts (vtp1)
 - 261029 create-task CLIP r66 → T718: WizardPreviewDock moves to shared UI, ClipWizardPreview (stage list + CompositionPreview, design read-only before the design step), wizard layout mirrors TMPL-75.
