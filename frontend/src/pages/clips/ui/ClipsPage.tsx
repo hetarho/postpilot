@@ -309,7 +309,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
           )
         })}
       </ul>
-      <ChannelActions channel={channel} />
+      <ChannelActions channel={channel} section="work" className="action-list-inset mt-auto" />
     </main>
   )
 }

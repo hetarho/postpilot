@@ -666,18 +666,24 @@ describe('the Naver Blog channel', () => {
     expect(screen.getByRole('heading', { level: 1, name: '네이버 블로그' })).toHaveClass('sr-only')
     expect(screen.queryByText('글 작업 내역', { selector: 'h1, h2, p' })).toBeNull()
 
+    // The creation menu: 새 글쓰기 alone nearest the button, the other creations above it.
     await user.click(screen.getByRole('button', { name: '새 글' }))
-    const menu = screen.getByRole('menu', { name: '네이버 블로그 메뉴' })
+    const menu = screen.getByRole('menu', { name: '네이버 블로그 만들기' })
+    const [others, current] = within(menu).getAllByRole('group')
     expect(
-      within(menu)
+      within(others)
         .getAllByRole('menuitem')
         .map((item) => [item.textContent, item.getAttribute('href')]),
     ).toEqual([
-      ['글 템플릿', '/templates'],
-      ['글 지침', '/guidelines'],
-      ['말투', '/voices'],
-      ['새 글 쓰기', '/posts/new'],
+      ['새 템플릿', '/templates/new'],
+      ['새 말투', '/voices?new=1'],
+      ['새 지침', '/guidelines?new=1'],
     ])
+    expect(
+      within(current)
+        .getAllByRole('menuitem')
+        .map((item) => [item.textContent, item.getAttribute('href')]),
+    ).toEqual([['새 글쓰기', '/posts/new']])
   })
 
   it('replaces the old /posts address with the channel, keeping its narrowing', async () => {

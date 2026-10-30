@@ -1,19 +1,12 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '@/entities/clip-project'
 import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
-import {
-  ActionBar,
-  Badge,
-  Button,
-  Notice,
-  Typography,
-  buttonStyles,
-  pageStyles,
-  typographyStyles,
-} from '@/shared/ui'
+import { ChannelActions } from '@/widgets/channel-actions'
+import { Badge, Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** The video-template directory, in the shape the post-template directory already has (CLIP-42):
  *  the same rows, the same usage badge, the same failure and empty treatments, and one docked CTA. */
@@ -23,6 +16,11 @@ export function VideoTemplatesPage() {
   const ownerId = user?.id ?? ''
   const { templates, isPending, isFetching, isError, refetch } = useClipTemplates(ownerId)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
+  // Both clip channels share this directory; the address names the one it was opened from.
+  const search = useSearch({ strict: false }) as { channel?: unknown }
+  const channel = CLIP_CHANNELS.includes(search.channel as ClipChannel)
+    ? (search.channel as ClipChannel)
+    : DEFAULT_CLIP_CHANNEL
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
@@ -123,21 +121,9 @@ export function VideoTemplatesPage() {
             </section>
           )}
 
-          {/* One instance, docked at every width: the thumb is why it is full-bleed on a phone,
-              and a list that scrolls is why it stays docked above one (THEME-24). */}
-          <ActionBar
-            dock="list"
-            ariaLabel={t('directory.newDockAria', { ns: 'clips' })}
-            className="mt-auto"
-          >
-            <Link
-              to="/video-templates/new"
-              search={({ channel }) => ({ channel })}
-              className={buttonStyles({ variant: 'cta' })}
-            >
-              {t('directory.create', { ns: 'clips' })}
-            </Link>
-          </ActionBar>
+          {/* The channel's creation menu is the page's one dock, 새 템플릿 nearest the thumb
+              (THEME-67). */}
+          <ChannelActions channel={channel} section="templates" />
         </>
       )}
     </main>

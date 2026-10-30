@@ -27,11 +27,16 @@ describe('video template workflow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('영상 템플릿을 불러오지 못했어요.')
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
-  it('badges how many clips each template is used by, and docks one CTA', async () => {
-    mount('/video-templates')
+  it('badges how many clips each template is used by, and docks the channel creation menu', async () => {
+    mount('/video-templates?channel=instagram_clip')
     const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
     expect(region.getByText('클립 2개')).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: '새 영상 템플릿' })).toHaveLength(1)
+    expect(screen.queryByRole('link', { name: '새 영상 템플릿' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: '새 템플릿' }))
+    expect(screen.getAllByRole('menuitem').at(-1)).toHaveAttribute(
+      'href',
+      '/video-templates/new?channel=instagram_clip',
+    )
   })
   it("heads the detail with the template's own name, and the create screen with its own", async () => {
     const editing = mount('/video-templates/owned')

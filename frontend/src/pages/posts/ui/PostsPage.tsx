@@ -380,7 +380,7 @@ export function PostsPage() {
           )}
         </div>
       )}
-      <ChannelActions />
+      <ChannelActions section="work" className="action-list-inset mt-auto" />
     </main>
   )
 }

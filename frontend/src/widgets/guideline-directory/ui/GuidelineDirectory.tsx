@@ -33,7 +33,6 @@ import {
   StopDefaultGuidelineButton,
 } from '@/features/toggle-default-guideline'
 import {
-  ActionBar,
   Badge,
   Button,
   Disclosure,
@@ -59,11 +58,15 @@ export function GuidelineDirectory({
   kind,
   createOpen = false,
   onCreateClosed,
+  dock,
 }: {
   kind: GuidelineKind
-  /** Open an empty new guideline once, as the screen mounts (TMPL-61's 지침 만들기). */
+  /** Open an empty new guideline — as the screen mounts (TMPL-61's 지침 만들기) or when the
+   *  channel's creation menu asks for 새 지침 on this screen (THEME-67). */
   createOpen?: boolean
   onCreateClosed?: () => void
+  /** The page's one dock: the channel's creation menu (THEME-67). */
+  dock?: ReactNode
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
@@ -92,6 +95,17 @@ export function GuidelineDirectory({
     kind: kind === 'clip' ? 'video-guideline' : 'post-guideline',
   })
   const { t: authoringText } = useTranslation('authoring')
+  // The creation menu can ask for 새 지침 while this screen is already open: a request arriving
+  // after mount opens an empty AI-authored one, as one present at mount does.
+  const [createRequest, setCreateRequest] = useState(createOpen)
+  if (createOpen !== createRequest) {
+    setCreateRequest(createOpen)
+    if (createOpen) {
+      setCreationSession(undefined)
+      setCreateMethod('ai')
+      setAuthoringOpen(true)
+    }
+  }
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
@@ -121,6 +135,47 @@ export function GuidelineDirectory({
 
       {!isError && !isPending && (
         <>
+          {/* 새 지침 itself is the channel's creation menu (THEME-67); the 기본 지침 sheet and
+              writing one directly stay on the page, above the list (GUIDE-44). */}
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCreationSession(undefined)
+                setCreateMethod('direct')
+                setAuthoringOpen(true)
+              }}
+            >
+              {t(
+                kind === 'clip'
+                  ? 'authoringState.createVideoDirect'
+                  : 'authoringState.createDirect',
+                { ns: 'guidelines' },
+              )}
+            </Button>
+            <AuthoringSheet
+              open={authoringOpen}
+              onOpenChange={(open) => {
+                setAuthoringOpen(open)
+                if (!open) onCreateClosed?.()
+              }}
+              ownerId={ownerId}
+              kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
+              sessionId={creationSession}
+              startFromSaved={!creationSession}
+              initialMethod={createMethod}
+              renderDirectEditor={(props) => (
+                <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
+              )}
+              onSaved={(saved) => {
+                setSavedOutcome({ ownerId, ref: saved })
+                refetch()
+                setAuthoringOpen(false)
+                onCreateClosed?.()
+              }}
+            />
+          </div>
           {summaries.isPending && (
             <Typography variant="body" role="status" className="mt-6">
               {t('authoringState.checking', { ns: 'guidelines' })}
@@ -225,62 +280,7 @@ export function GuidelineDirectory({
           )}
           <CandidateSection ownerId={ownerId} kind={kind} />
 
-          {/* The page is the list; authoring happens behind these triggers, the shape every
-              sibling directory uses (GUIDE-20, THEME-24). `mt-auto` puts the bar below a short
-              list and `sticky` keeps it in reach once the list is long enough to scroll. */}
-          <ActionBar
-            dock="list"
-            ariaLabel={t('create.dockAria', { ns: 'guidelines' })}
-            className="mt-auto flex flex-wrap items-center justify-end gap-3"
-          >
-            <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-            <Button
-              variant="cta"
-              onClick={() => {
-                setCreationSession(undefined)
-                setCreateMethod('ai')
-                setAuthoringOpen(true)
-              }}
-            >
-              {authoringText(kind === 'clip' ? 'host.createVideoGuide' : 'host.createGuide')}
-            </Button>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setCreationSession(undefined)
-                setCreateMethod('direct')
-                setAuthoringOpen(true)
-              }}
-            >
-              {t(
-                kind === 'clip'
-                  ? 'authoringState.createVideoDirect'
-                  : 'authoringState.createDirect',
-                { ns: 'guidelines' },
-              )}
-            </Button>
-            <AuthoringSheet
-              open={authoringOpen}
-              onOpenChange={(open) => {
-                setAuthoringOpen(open)
-                if (!open) onCreateClosed?.()
-              }}
-              ownerId={ownerId}
-              kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
-              sessionId={creationSession}
-              startFromSaved={!creationSession}
-              initialMethod={createMethod}
-              renderDirectEditor={(props) => (
-                <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
-              )}
-              onSaved={(saved) => {
-                setSavedOutcome({ ownerId, ref: saved })
-                refetch()
-                setAuthoringOpen(false)
-                onCreateClosed?.()
-              }}
-            />
-          </ActionBar>
+          {dock}
         </>
       )}
     </main>

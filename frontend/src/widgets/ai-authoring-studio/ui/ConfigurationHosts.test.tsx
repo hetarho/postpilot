@@ -41,13 +41,14 @@ describe('configuration authoring entrypoints', () => {
     {
       route: '/guidelines',
       title: '지침',
-      trigger: 'AI로 지침 만들기',
+      // 새 지침 is the channel creation menu's (THEME-67), opening the AI draft.
+      trigger: '새 지침',
       goal: '글을 쓸 때 어떤 점을 지키면 좋을까요?',
     },
     {
       route: '/video-guidelines',
       title: '영상 지침',
-      trigger: 'AI로 영상 지침 만들기',
+      trigger: '새 지침',
       goal: '영상 속 문구를 어떻게 쓰면 좋을까요?',
     },
     {
@@ -66,6 +67,8 @@ describe('configuration authoring entrypoints', () => {
     expect(primary).toBeInTheDocument()
     expect(calls).not.toContain('GetLatestAuthoringSession')
     await user.click(primary)
+    if (entry.route !== '/voices')
+      await user.click(screen.getByRole('menuitem', { name: entry.trigger }))
     const dialog = await screen.findByRole('dialog')
     expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
     if (entry.route === '/voices')

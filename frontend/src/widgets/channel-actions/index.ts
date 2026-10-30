@@ -1,1 +1,1 @@
-export { ChannelActions } from './ui/ChannelActions'
+export { ChannelActions, type ChannelSection } from './ui/ChannelActions'

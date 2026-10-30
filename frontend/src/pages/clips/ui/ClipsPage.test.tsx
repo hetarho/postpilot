@@ -268,18 +268,23 @@ it('opens a clip channel on its history with no visible heading and its own menu
   expect(await screen.findByRole('heading', { level: 1, name: '인스타 클립' })).toHaveClass(
     'sr-only',
   )
-  await user.click(screen.getByRole('button', { name: '새 클립' }))
-  const menu = screen.getByRole('menu', { name: '인스타 클립 메뉴' })
+  await user.click(screen.getByRole('button', { name: '새 영상' }))
+  const menu = screen.getByRole('menu', { name: '인스타 클립 만들기' })
+  const [others, current] = within(menu).getAllByRole('group')
   expect(
-    within(menu)
+    within(others)
       .getAllByRole('menuitem')
       .map((item) => [item.textContent, item.getAttribute('href')]),
   ).toEqual([
-    ['영상 템플릿', '/video-templates?channel=instagram_clip'],
-    ['영상 지침', '/video-guidelines?channel=instagram_clip'],
-    ['말투', '/voices?channel=instagram_clip'],
-    ['새 클립 만들기', '/clips/new?channel=instagram_clip'],
+    ['새 템플릿', '/video-templates/new?channel=instagram_clip'],
+    ['새 말투', '/voices?new=1&channel=instagram_clip'],
+    ['새 지침', '/video-guidelines?new=1&channel=instagram_clip'],
   ])
+  expect(
+    within(current)
+      .getAllByRole('menuitem')
+      .map((item) => [item.textContent, item.getAttribute('href')]),
+  ).toEqual([['새 영상 만들기', '/clips/new?channel=instagram_clip']])
 })
 
 it.each([

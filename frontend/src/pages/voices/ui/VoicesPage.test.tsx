@@ -29,9 +29,11 @@ const activeRows = async () => (await within(screen.getByRole('main')).findAllBy
 const deletedGroup = async () =>
   within((await screen.findByText(/삭제된 말투 \d+개/)).closest('details')!)
 
-/** The sheet is mounted only while open, so every creation flow starts by opening it. */
+/** The sheet is mounted only while open, so every creation flow starts by opening it — from the
+ *  channel's creation menu, where 새 말투 stands alone nearest the button (THEME-67). */
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '새 말투 만들기' }))
+  await user.click(await screen.findByRole('button', { name: '새 말투' }))
+  await user.click(screen.getByRole('menuitem', { name: '새 말투' }))
   return within(await screen.findByRole('dialog'))
 }
 
@@ -60,9 +62,10 @@ describe('the voice directory', () => {
     expect(screen.queryByRole('button', { name: /삭제$/ })).not.toBeInTheDocument()
     expect(screen.queryByText('한국어')).not.toBeInTheDocument()
 
-    // Both creation methods live in the dock, outside the saved voices.
+    // 새 말투 is the channel creation menu; the AI method sits above the list, outside the saved
+    // voices.
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '새 말투 만들기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투' })).toHaveAttribute('aria-haspopup', 'menu')
     expect(
       screen
         .getAllByRole('button', { name: 'AI 말투 추천받기' })
@@ -160,7 +163,22 @@ describe('the voice directory', () => {
         '아직 말투가 없어요. 직접 쓴 글이나 문항 답으로 나만의 말투를 만들어 보세요.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '새 말투 만들기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투' })).toBeInTheDocument()
+  })
+
+  // THEME-67: `?new=1` — the channel menu's 새 말투 — opens the sheet at once, and closing it
+  // keeps the channel the section was opened under.
+  it('opens the creation sheet from ?new=1 and drops the request on close', async () => {
+    const user = userEvent.setup()
+    const { router } = renderAppAt('/voices?new=1&channel=instagram_clip', {
+      user: USER,
+      voice: { voices: VOICES },
+    })
+    const sheet = within(await screen.findByRole('dialog'))
+    expect(sheet.getByLabelText('말투 이름')).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(router.state.location.search).toEqual({ channel: 'instagram_clip' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   // VOICE-10, VOICE-53: the sheet holds the name and its count alone, starts no job and lands on

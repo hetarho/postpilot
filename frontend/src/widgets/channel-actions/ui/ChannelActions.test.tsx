@@ -12,12 +12,12 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-// THEME-67: opening the menu is free; its creation item is the channel's creation entry, so the
-// new post or clip comes back to the channel it was started from (THEME-58).
+// THEME-67: opening the menu is free; 새 글 / 새 영상 is the channel's creation entry, so the new
+// post or clip comes back to the channel it was started from (THEME-58).
 it.each([
-  ['/naver-blog', '새 글', '새 글 쓰기', '/posts/new', '네이버 블로그로 돌아가기'],
-  ['/naver-clip', '새 클립', '새 클립 만들기', '/clips/new', '네이버 클립으로 돌아가기'],
-  ['/insta-clip', '새 클립', '새 클립 만들기', '/clips/new', '인스타 클립으로 돌아가기'],
+  ['/naver-blog', '새 글', '새 글쓰기', '/posts/new', '네이버 블로그로 돌아가기'],
+  ['/naver-clip', '새 영상', '새 영상 만들기', '/clips/new', '네이버 클립으로 돌아가기'],
+  ['/insta-clip', '새 영상', '새 영상 만들기', '/clips/new', '인스타 클립으로 돌아가기'],
 ] as const)(
   'starts creation from %s and keeps the channel as its origin',
   async (path, trigger, action, creation, back) => {
@@ -35,17 +35,46 @@ it.each([
   },
 )
 
-it("opens 말투 as the channel's own section", async () => {
-  const user = userEvent.setup()
-  const view = renderAppAt('/insta-clip', { user: { id: 'alice' } })
-  await user.click(await screen.findByRole('button', { name: '새 클립' }))
-  await user.click(screen.getByRole('menuitem', { name: '말투' }))
-  await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices'))
-  expect(view.router.state.location.search).toMatchObject({ channel: 'instagram_clip' })
-  const sections = await screen.findByRole('navigation', { name: '채널 메뉴' })
-  expect(within(sections).getByRole('link', { name: '말투' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
-  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
-})
+// The current section's creation stands alone nearest the button; the other three keep the
+// section order above it.
+it.each([
+  ['/voices', '새 말투', ['새 글쓰기', '새 템플릿', '새 지침'], '/voices?new=1'],
+  [
+    '/video-guidelines?channel=naver_clip',
+    '새 지침',
+    ['새 영상 만들기', '새 템플릿', '새 말투'],
+    '/video-guidelines?new=1&channel=naver_clip',
+  ],
+  [
+    '/video-templates?channel=instagram_clip',
+    '새 템플릿',
+    ['새 영상 만들기', '새 말투', '새 지침'],
+    '/video-templates/new?channel=instagram_clip',
+  ],
+] as const)(
+  'orders the menu on %s with its own creation last',
+  async (path, label, others, href) => {
+    const user = userEvent.setup()
+    renderAppAt(path, { user: { id: 'alice' } })
+    await user.click(await screen.findByRole('button', { name: label }))
+    const [above, nearest] = within(screen.getByRole('menu')).getAllByRole('group')
+    expect(
+      within(above)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(others)
+    expect(within(nearest).getByRole('menuitem', { name: label })).toHaveAttribute('href', href)
+  },
+)
+
+it.each(['/posts/new', '/clips/new?channel=naver_clip'])(
+  'keeps the creation menu off the writing screen %s',
+  async (path) => {
+    renderAppAt(path, { user: { id: 'alice' } })
+    await screen.findByRole('navigation', { name: '주요' })
+    await waitFor(() =>
+      expect(document.querySelector('[data-action-bar="list"] [aria-haspopup="menu"]')).toBeNull(),
+    )
+    expect(screen.queryByRole('navigation', { name: '채널 메뉴' })).toBeNull()
+  },
+)

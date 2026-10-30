@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { useEffect, useState } from 'react'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { CLIP_CHANNELS, type ClipChannel } from '@/entities/clip-project'
 import { useSession } from '@/entities/session'
 import {
   useVoices,
@@ -12,31 +13,44 @@ import {
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
+import { ChannelActions } from '@/widgets/channel-actions'
 import { RestoreVoiceButton } from '@/features/restore-voice'
-import {
-  ActionBar,
-  Badge,
-  Button,
-  Notice,
-  Typography,
-  typographyStyles,
-  pageStyles,
-} from '@/shared/ui'
+import { Badge, Button, Notice, Typography, typographyStyles, pageStyles } from '@/shared/ui'
 
 /** 내 글's row: two stacked lines on a phone, one line on the desk, the whole row one link
  *  (VOICE-52, POST-43). */
 const rowClass =
   'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
 
-/** The account's voices (VOICE-52): one list in 내 글's row shape and explicit creation paths.
- *  Every lifecycle action lives on the voice's own title row, so a row here is nothing
- *  but a way into one voice. */
+/** The account's voices (VOICE-52): the 말투 section every channel shares, one list in 내 글's row
+ *  shape and explicit creation paths. 새 말투 comes from the channel's creation menu (`?new=1`);
+ *  the other creation paths sit above the list. Every lifecycle action lives on the voice's own
+ *  title row, so a row here is nothing but a way into one voice. */
 export function VoicesPage() {
   const { t } = useTranslation(['voices', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
   const [authoringOpen, setAuthoringOpen] = useState(false)
+  const search = useSearch({ strict: false }) as { new?: unknown; channel?: unknown }
+  const channel = CLIP_CHANNELS.includes(search.channel as ClipChannel)
+    ? (search.channel as ClipChannel)
+    : undefined
+  const navigate = useNavigate()
+  // `?new=1` is the channel menu's 새 말투 (THEME-67): it opens the sheet and is dropped from the
+  // address at once, so closing the sheet, or the sheet's own move to the new voice, needs no
+  // second navigation back here.
+  const requested = search.new === 1 || search.new === '1'
+  const [createOpen, setCreateOpen] = useState(requested)
+  const [request, setRequest] = useState(requested)
+  if (requested !== request) {
+    setRequest(requested)
+    if (requested) setCreateOpen(true)
+  }
+  useEffect(() => {
+    if (requested)
+      void navigate({ to: '/voices', search: channel ? { channel } : {}, replace: true })
+  }, [requested, channel, navigate])
   const { t: authoringText } = useTranslation('authoring')
 
   return (
@@ -51,6 +65,28 @@ export function VoicesPage() {
     >
       <div className="px-4 sm:px-6 lg:px-8">
         <Typography variant="display">{t('title', { ns: 'voices' })}</Typography>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button variant="secondary" onClick={() => setAuthoringOpen(true)}>
+            {authoringText('host.createVoice')}
+          </Button>
+          <AIAuthoringSheet
+            open={authoringOpen}
+            onOpenChange={setAuthoringOpen}
+            ownerId={ownerId}
+            kind="writing-voice"
+            onSaved={() => {
+              refetch()
+              setAuthoringOpen(false)
+            }}
+          />
+          <details>
+            <summary className="text-content-secondary min-h-11 cursor-pointer py-3">
+              {authoringText('host.legacyVoice')}
+            </summary>
+            <GeneratedWritingVoicesSheet ownerId={ownerId} />
+          </details>
+        </div>
+        <CreateVoiceSheet ownerId={ownerId} open={createOpen} onOpenChange={setCreateOpen} />
       </div>
 
       {isError && (
@@ -113,35 +149,13 @@ export function VoicesPage() {
             </details>
           )}
 
-          {/* One instance at every width: the trigger owns the sheet's open state. It docks at
-              every width — `mt-auto` puts it below a short list, `sticky` keeps it there once
-              the list is long enough to scroll (THEME-24). */}
-          <ActionBar
-            dock="list"
-            ariaLabel={t('create.dockAria', { ns: 'voices' })}
-            className="action-list-inset mt-auto flex flex-wrap items-center justify-end gap-3"
-          >
-            <CreateVoiceSheet ownerId={ownerId} />
-            <Button variant="cta" onClick={() => setAuthoringOpen(true)}>
-              {authoringText('host.createVoice')}
-            </Button>
-            <AIAuthoringSheet
-              open={authoringOpen}
-              onOpenChange={setAuthoringOpen}
-              ownerId={ownerId}
-              kind="writing-voice"
-              onSaved={() => {
-                refetch()
-                setAuthoringOpen(false)
-              }}
-            />
-            <details>
-              <summary className="text-content-secondary min-h-11 cursor-pointer py-3">
-                {authoringText('host.legacyVoice')}
-              </summary>
-              <GeneratedWritingVoicesSheet ownerId={ownerId} />
-            </details>
-          </ActionBar>
+          {/* The channel's creation menu is the page's one dock, 새 말투 nearest the thumb
+              (THEME-67). */}
+          <ChannelActions
+            channel={channel}
+            section="voices"
+            className="action-list-inset mt-auto"
+          />
         </>
       )}
     </main>

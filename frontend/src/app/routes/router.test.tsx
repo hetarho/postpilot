@@ -241,13 +241,16 @@ describe('logout', () => {
   })
 })
 
-// TMPL-24: templates are reached from the Naver Blog channel's floating action menu.
+// TMPL-24: templates are the Naver Blog channel's 템플릿 section.
 describe('the template management route', () => {
-  it('opens templates from the Naver Blog channel menu', async () => {
+  it('opens templates from the Naver Blog section tabs', async () => {
     const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
     await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
-    await userEvent.click(screen.getByRole('button', { name: '새 글' }))
-    await userEvent.click(screen.getByRole('menuitem', { name: '글 템플릿' }))
+    await userEvent.click(
+      within(screen.getByRole('navigation', { name: '채널 메뉴' })).getByRole('link', {
+        name: '템플릿',
+      }),
+    )
     await screen.findByRole('heading', { level: 1, name: '템플릿' })
     expect(router.state.location.pathname).toBe('/templates')
   })
@@ -382,15 +385,15 @@ describe('About consumes the shared locale and theme runtimes', () => {
   })
 })
 
-// GUIDE-20: guidelines follow templates in the Naver Blog channel's floating action menu.
+// GUIDE-20: guidelines are the Naver Blog channel's 지침 section, after templates and 말투.
 describe('the guideline management route', () => {
-  it('opens guidelines after templates in the Naver Blog channel menu', async () => {
+  it('opens guidelines from the Naver Blog section tabs', async () => {
     const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
     await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
-    await userEvent.click(screen.getByRole('button', { name: '새 글' }))
-    const items = screen.getAllByRole('menuitem').map((item) => item.getAttribute('href'))
-    expect(items.indexOf('/guidelines')).toBe(items.indexOf('/templates') + 1)
-    await userEvent.click(screen.getByRole('menuitem', { name: '글 지침' }))
+    const sections = within(screen.getByRole('navigation', { name: '채널 메뉴' }))
+    const hrefs = sections.getAllByRole('link').map((item) => item.getAttribute('href'))
+    expect(hrefs.indexOf('/guidelines')).toBe(hrefs.indexOf('/templates') + 2)
+    await userEvent.click(sections.getByRole('link', { name: '지침' }))
     await screen.findByRole('heading', { level: 1, name: '지침' })
     expect(router.state.location.pathname).toBe('/guidelines')
   })

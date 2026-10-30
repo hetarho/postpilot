@@ -4,16 +4,8 @@ import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { useTemplates, type Template } from '@/entities/template'
 import { DeleteTemplateButton } from '@/features/delete-template'
-import {
-  ActionBar,
-  Badge,
-  Button,
-  Notice,
-  Typography,
-  buttonStyles,
-  pageStyles,
-  typographyStyles,
-} from '@/shared/ui'
+import { ChannelActions } from '@/widgets/channel-actions'
+import { Badge, Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** The account's 템플릿 (TMPL-24): a list, and the one action that adds to it. Composition only —
  *  every action is its own feature, and a row is the way into one template.
@@ -126,17 +118,9 @@ export function TemplatesPage() {
             </section>
           )}
 
-          {/* One instance, docked at every width: the thumb is why it is full-bleed on a phone,
-              and a list that scrolls is why it stays docked above one (THEME-24). */}
-          <ActionBar
-            dock="list"
-            ariaLabel={t('page.newDockAria', { ns: 'templates' })}
-            className="mt-auto"
-          >
-            <Link to="/templates/new" className={buttonStyles({ variant: 'cta' })}>
-              {t('page.new', { ns: 'templates' })}
-            </Link>
-          </ActionBar>
+          {/* The channel's creation menu is the page's one dock, 새 템플릿 nearest the thumb
+              (THEME-67). */}
+          <ChannelActions section="templates" />
         </>
       )}
     </main>
