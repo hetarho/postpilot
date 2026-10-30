@@ -154,6 +154,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 pushed f1c8e693 (T727, report tpv): CI 41009408074 frontend and backend jobs completed with no failed step; conclusion unreadable over public HTML (gh not logged in); no Deploy backend or Verify media path touched.
 - 261030 tpv final gate at f2694dea: FE suite 568 files/4532 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c reused; report reports/261030-tpv.md.
 - 261030 T727 done: template preview frame first with part switch and choice-driven scrubber, presets renamed; 26 test files/349 tests, tsc, eslint/prettier, steiger, lint:style and a Windows Chrome probe pass.
 - 261030 T727 starts (tpv) at c20a5f37; template preview parts and preset names.
