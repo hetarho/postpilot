@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| tpv | DESKTOP-VKPLS8P | autopilot | 2026-10-30T05:19Z | 2026-10-30T05:19Z | T727 |
+| tpv | DESKTOP-VKPLS8P | autopilot | 2026-10-30T05:19Z | 2026-10-30T05:20Z | T727 |
 
 ## inbox
 - 261030 decided CDS-70 CLIP-111: remove the A/B starting intro/outro designs → drop the candidate letters from the names (심플 제목 · 위아래 가로선 · 가로선 구분 · 점수 강조), keeping the presets and their ids a/b/e (alt: delete presets a/b/e and migrate stored selections | keep the lettered names)
