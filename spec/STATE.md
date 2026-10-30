@@ -12,7 +12,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | dgc | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:11Z | 2026-10-30T02:11Z | - |
-| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T03:20Z | T723 |
+| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T03:45Z | T724 |
 
 ## inbox
 - 261030 decided THEME-38 VOICE-52: where does 말투 live once it is a channel section? → one /voices section shared by all three channels, the URL carrying a clip channel (none ⇒ 네이버 블로그), and 내 설정 no longer lists it (alt: keep it in 내 설정 too | a per-channel copy) — one home keeps one parent and one back link.
@@ -151,7 +151,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T724 | Channel section tabs and the shared 말투 section | THEME VOICE | - | todo |
+| T724 | Channel section tabs and the shared 말투 section | THEME VOICE | - | doing@261030.chl |
 | T725 | Creation-only channel menu on every section list page | THEME GUIDE VOICE CLIP | T724 | todo |
 
 ## next
