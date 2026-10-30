@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r35 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
+> r36 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -200,14 +200,16 @@
   - use strong primary/secondary text contrast and spacing to separate price, action, benefits and the lower production comparison; supporting copy recedes without losing AA contrast, and the recommended state has a text label as well as a visual mark
   - post and clip estimates live below the cards with inline condition controls (→QUOTA-41); both themes, reduced motion, readable surface pairs, keyboard access and 320 px reflow remain supported
 - THEME-38 [o] the shell's primary navigation has exactly three channel links, visibly labelled 블로그 · 클립 · 인스타, opening 네이버 블로그 · 네이버 클립 · 인스타 클립 respectively; 내 설정 is reached through the named account menu ← the owner works per channel from the start, and each channel's output differs
-  - each channel holds 만들기 · 기록 · 템플릿 · 지침: 네이버 블로그 its posts, post templates and 지침; each clip channel its own clips plus the video templates and 영상 지침 the two clip channels share
+  - a channel opens straight onto its own history with no page heading, the marked channel link naming it; its floating action menu (→!THEME-67) holds the rest of the channel ← the history is what the owner comes back to, and one thumb-reach menu replaces an intermediate page of links
+  - 네이버 블로그's menu: 새 글 쓰기 · 글 템플릿 · 글 지침 · 말투; each clip channel's menu: 새 클립 만들기 · the 영상 템플릿 and 영상 지침 the two clip channels share · 말투
+  - 말투 remains a 내 설정 destination; the menu's 말투 item is a shortcut carrying the channel as its contextual return (→THEME-58)
   - links to shared clip destinations carry their channel in the URL so new tabs, copied links and reload preserve location and return; a direct link with no valid origin uses 네이버 클립 (→!THEME-58)
   - 내 설정 holds 말투 · 기억 · 내레이션 목소리 · AI 모델 · 계정 · 결제 and a 고급 group holding 작성 테스트 with its test history and retained comparison records; no comparison or leaderboard destination stands outside 고급
-  - channels and 내 설정 are sibling destinations whose breadcrumbs start at themselves; the brand returns home (→THEME-47)
+  - channels and 내 설정 are sibling top-level destinations; the brand returns home (→THEME-47)
   - creating a post/clip and later minting its address preserve its creation context instead of implying arrival from history
   - one measured shared top-chrome clearance accounts for the actual sticky shell rows, independently of final navigation arrangement
-  - all three links remain visible without opening a menu at every width, including home, setup and creation; desktop places them beside the brand and phones use one compact row below the main header
-  - the current channel remains marked through its child routes with aria-current and a visible shape as well as colour; home and settings do not imply a selected channel
+  - all three links remain visible without opening a menu at every width, including home, setup and creation; desktop places them beside the brand and phones place them in the main header row between the brand and the account menu, with no second shell row
+  - the current channel remains marked through its child routes with aria-current and an underline indicator as well as colour, never a background fill; home and settings do not imply a selected channel
 - THEME-39 [o] one shape for every surface that drives an object through a lifecycle, whatever the object produces ← two shapes for one job make one product read as two apps
   - the lifecycle is a `SegmentedControl` step bar derived from persisted domain lifecycle state, including explicit domain finalization where defined, with no presentation-only step state, standing first under the page's top row — or riding the top row itself in the control's `steps` shape, the station names as text with the current one told by colour alone and no plane under them, where the row has the room (→CLIP-36; a pill row between two controls reads as three more buttons) —, with every step selectable unless the domain defines irreversible finalization, no step change starting anything or altering state, and an unreached step saying what it waits for and offering the way to the step that produces it
   - the steps are panels of ONE mounted page, so a step change cannot remount a save queue, a job poll or an upload session
@@ -256,14 +258,15 @@
   - action guidance, provenance and recovery explanations never use metadata size; meta is reserved for brief progress/count/time information
   - sizes, line height, readable measure and group spacing are defined by shared roles, not per-screen raw font utilities; zoom/reflow preserves content and actor lifetime
 
-- THEME-58 [o] every authenticated route has visible location; child routes have a deterministic parent or contextual return.
-  - first-use setup is a focused process without structural breadcrumbs; its current step and progress communicate location
-  - on phones, the current location occupies the center of the main header row; structural ancestors remain accessible through a named disclosure rather than an additional persistent breadcrumb row
+- THEME-58 [o] every authenticated route has visible location with no breadcrumb at any width; child routes have a deterministic parent or contextual return.
+  - a channel's history shows its location through the marked channel link alone (→THEME-38); every other route names itself in its own page heading or workspace title
+  - every child route has exactly one back link at the top of its content naming where it returns; a page whose own top row carries that link (editor, clip workspace, writing tests) shows no second one
+  - first-use setup is a focused process without a back link into structure; its current step and progress communicate location
   - top-level destinations have no implicit return; moving between sibling destinations does not establish a parent or overwrite a child origin
-  - child breadcrumbs show structural ancestry; a contextual return names its actual destination and never changes that ancestry
+  - the back link names its actual destination: a validated contextual return when there is one, otherwise the structural parent; a contextual return never changes the route's structural parent
   - automatic return context comes only from structural ancestors; explicit workflow origins may cross destinations when validated, including an owned source post
   - test results opened directly return to writing tests; results opened from test history retain that filtered history; retained comparison records use test history as their named parent
-  - creation returns to its originating creation destination, not an unconditional post/clip list; history-opened work returns to that history context
+  - creation returns to its originating creation destination (home or the channel); work opened from a channel's history returns to that history with its filters and scroll position
   - preserve safe internal entry route, filters and relevant scroll position through autosave minting, reload, child settings and test review
   - direct links with no valid origin use a named domain parent or home; reject external, malformed, deleted-target and other-owner return contexts
   - navigation alone never starts AI, publishes changes or cancels work; existing flush/unsaved-change rules still apply
@@ -293,6 +296,14 @@
 - THEME-65 [?] whether and when 인스타 게시물 (a photo set with a caption and hashtags) joins the channels; until it is decided the navigation shows no entry for it ← an entry that leads nowhere reads as a broken product
 - THEME-66 [o] a guided flow — the template wizard (→TMPL-71 →CLIP-213) and the learning chat (→VOICE-65) — speaks to the owner in plain words: each screen asks one question, explains its choices in the owner's terms (보통 이렇게 구성돼요) and shows where the owner is, under THEME-48–57 ← a first-time 체험단 creator should be guided, not handed a builder
 
+- THEME-67 [o] a channel's floating action menu (→THEME-38) is one button that opens a stacked menu above itself ← the list keeps the screen while every other channel action stays one thumb-reach tap away
+  - closed, it is one extended button labelled with the channel's creation (+ 새 글 · + 새 클립) in THEME-24's list add-action dock place: lower band, right-aligned at every width, floating on its own shadow with no plane
+  - open, a scrim dims the page, the button turns into a close (×) control in the same place, and the menu stands above it in two groups: the channel's settings destinations (템플릿 · 지침 · 말투) first, its creation nearest the button
+  - each item is an icon plus a label at the 44 px pointer floor; each group is one compact raised menu surface, not a card (→THEME-13)
+  - the close control, the scrim, Escape and choosing an item close it; focus moves to the first item on open and back to the button on close; the button exposes its expanded state
+  - reduced motion removes movement; both themes, keyboard, 200% zoom and 320 px reflow remain supported
+  - opening the menu creates no record or AI work; its creation item is the channel's creation entry (→THEME-58)
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes
@@ -303,4 +314,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
--
+- r36 261030 THEME-38✎ a channel opens on a page of 만들기 · 기록 · 템플릿 · 지침 links→straight onto its history with no heading, the rest in a floating action menu that adds a 말투 shortcut; phone channel links in a row below the main header→in the main header row; current-channel shape+colour→underline, never a background fill; THEME-58✎ breadcrumbs (desktop row, phone header disclosure)→none, one back link on child routes; THEME-67+ floating action menu

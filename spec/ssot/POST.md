@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r42 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r43 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -60,10 +60,10 @@
   - SDK request/response checksums are turned off ← R2 lacks the full-object CRC32 form
   - local development runs MinIO with the same four variables and path-style addressing
   - the server refuses to boot without `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET`, naming the missing one, checked before the listener but outside `config.Load` ← `api adduser` must work on a fresh box before a bucket exists
-- POST-43 [o] the Naver Blog channel launches new writing and holds its compact operational history (→THEME-38 →THEME-47), supporting unfinished work, failures, test-result follow-ups and export artifacts without presenting a blog archive.
-  - /posts and /posts/$slug remain valid owner-scoped addresses with search/status filtering, incremental loading and existing not-found/outage handling
+- POST-43 [o] the Naver Blog channel opens on its compact operational history (→THEME-38 →THEME-47), supporting unfinished work, failures, test-result follow-ups and export artifacts without presenting a blog archive; new writing starts from the channel's floating action menu (→THEME-67).
+  - /naver-blog carries the history's search/status filtering, incremental loading and existing not-found/outage handling; /posts stays a valid address that replaces itself with /naver-blog, keeping its filters; /posts/$slug stays the owner-scoped post address
   - /posts/new is an unminted creation whose context survives its address replacement; the editor has no unconditional post-list button
-  - history is the channel's secondary information surface, not the mandatory route into creation or a primary old-article browsing destination
+  - the history has no heading of its own; with no posts it points to the menu's 새 글 쓰기, never an extra creation button of its own
 - POST-44 [o] the editor presents generated/refining/finished lifecycle steps from persisted post status/storyline, alongside or below the visible location/contextual-return row. Reachable steps change no status and start no work; unreached panels explain their prerequisite. New unminted drafts have no lifecycle bar, and one mounted editor preserves title/memo/autosave/caret through step and address changes.
 - POST-45 [o] the editor reports its own state in exactly one region at the page top (`pages/editor/ui/EditorStatus.tsx`):
   - a 2px `shared/ui/progress-bar` pinned along the top edge while a job runs — determinate where the stage reports a ratio, indeterminate otherwise, zero layout height, `sticky` below every sticky chrome row through the `top-chrome` token (→THEME-38)
@@ -244,5 +244,6 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r43 261030 POST-43✎ the channel launches writing and holds a secondary history at /posts→opens on its history at /naver-blog (/posts replaces itself there with its filters), no history heading, new writing from the floating action menu
 - r41 261015 POST-117+ 체험단 글 switch (new posts on, earlier posts off); POST-118+ advertiser guide (free text + counted items); POST-119+ pre-submission checklist; POST-120+ 이 체험으로 클립 만들기; POST-112✎ three→four origin categories (+ 광고주 요청, own color); POST-114✎ wording; POST-43✎ POST-64✎ home/history→Naver Blog channel; POST-54✎ POST-62✎ ① and ③ order; POST-107✎ Tistory/site/Markdown no-rotation line removed with those exports
 - r42 261015 POST-120✎ seeds a new clip→seeds it and links the post as its story (→CLIP-215)

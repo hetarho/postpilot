@@ -12,8 +12,13 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | dgc | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:11Z | 2026-10-30T02:11Z | - |
+| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T02:42Z | - |
 
 ## inbox
+- 261030 decided THEME-58: with the breadcrumb removed at every width, how does a child route show its way back? → one back link at the top of its content naming its actual destination; editor, clip workspace and writing tests keep their own top-row link instead (alt: browser back only | keep the desktop breadcrumb row) — THEME-58's deterministic return survives without a second navigation row.
+- 261030 decided POST-43 CLIP-41: what happens to /posts and /clips?channel= once the channel itself is the history? → they replace themselves with /naver-blog, /naver-clip or /insta-clip keeping their filters (alt: both addresses render the same list | drop them) — bookmarks and old return links keep working with one canonical address.
+- 261030 decided THEME-67: does desktop get the same floating action menu? → yes, at every width in THEME-24's add-action dock place (alt: inline buttons above the list on desktop) — THEME-24 already keeps a list's add action docked at every width.
+- 261030 decided THEME-38: where does the menu's 말투 item lead? → the existing 내 설정 말투 page with the channel as contextual return (alt: a per-channel copy of 말투) — 말투 is shared by every channel.
 - 261030 decided THEME-38: visible channel labels and placement? → 블로그 · 클립 · 인스타 beside the brand on desktop, in one persistent row on phones; settings stays in the account menu (alt: hamburger-only | four primary destinations) — immediate channel discovery with room for the current location.
 - 261030 decided THEME-38: shared video settings context? → channel in links and child links (alt: only remembered browser context) — new tabs, copied links and reload retain Instagram.
 - 261029 decided CLIP-221: how does the video-template wizard's live preview show a stage name or order the clip frame never draws? → an ordered stage list above the frame marks the stage whose step is on screen, as the post wizard marks its section (alt: the frame alone, so renaming or reordering stages changes nothing visible | draw stage names into the sample clip as captions)
@@ -94,7 +99,7 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 42 | 42 | - | 0 |
+| POST | 43 | 43 | - | 0 |
 | VOICE | 17 | 17 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
@@ -102,10 +107,10 @@
 | GUIDE | 23 | 23 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
-| THEME | 35 | 35 | - | 2 |
+| THEME | 36 | 36 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 66 | 66 | - | 2 |
+| CLIP | 67 | 67 | - | 2 |
 | CDS | 37 | 37 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -136,6 +141,9 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
+| T721 | Shared floating action menu | THEME | - | todo |
+| T722 | Channels open on their history with the floating action menu | THEME POST CLIP | T721 | todo |
+| T723 | Breadcrumb-free shell with header channel links | THEME | T722 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -143,11 +151,15 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- implement-task T721 (chl), then T722 and T723: floating action menu, channels open on their history, breadcrumb-free shell.
 - T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
 - T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 create-task THEME r36 POST r43 CLIP r67 → T721 floating action menu, T722 channel history landing (+/posts, /clips redirects), T723 breadcrumb-free shell with header channel links.
+- 261030 update-ssot THEME r36 POST r43 CLIP r67 (chl): THEME-38✎ THEME-58✎ THEME-67+ POST-43✎ CLIP-3✎ CLIP-41✎ channels open on their history, floating action menu (+말투), no breadcrumb, phone links in the header row, underline current mark.
+- 261030 update-ssot THEME start (chl, autopilot): channels open on their history with a floating action menu, no breadcrumb, phone channel links in the header row.
 - 261030 fix dev stack startup: the Go compile cache is a named volume shared by backend and media-worker, and Dockerfile.dev copies only the health client, so a source edit no longer recreates both containers into a cold compile (API 35 s → 2.8 s, worker 21 s → 1.6–2.0 s across recreated containers; image manifest unchanged by a source edit); deploy/media_dev_test.py 5 tests pass.
 - 261030 nux final gate at b6b894c1: 568 files/4509 tests and all FE CI-equivalent checks pass; unchanged backend/generation/deploy evidence reused from bb21f128.
 - 261030 fix editor inspection: compact secondary technical action on new/saved posts; 3 affected test files/18 tests, file lint/format, type/build and 8 browser compositions pass.
@@ -165,6 +177,3 @@
 - 261029 T718 starts (vtp1)
 - 261029 create-task CLIP r66 → T718: WizardPreviewDock moves to shared UI, ClipWizardPreview (stage list + CompositionPreview, design read-only before the design step), wizard layout mirrors TMPL-75.
 - 261029 update-ssot CLIP r66: CLIP-213✎ CLIP-221+ the video-template wizard shows the live template preview beside every step from stages on, as the post wizard does (TMPL-75); before it showed only at the design step.
-- 261029 update-ssot CLIP start (vtp1): video-template wizard preview
-- 261029 pushed a4fe7473 (T716, opaque-frame fix, CDS r37/T717, report): CI 40820598127, Deploy backend 40820598139 and Verify media 40821077720 success; live preview.worker/video.worker bytes match the verified build and carry clip-browser-analysis-v2. Local gate: FE CI equivalent (566/4501), backend 87 packages plus attributed quality/store reruns, Compose, native amd64 images, worker smoke and media-release both layouts.
-- 261029 T717 done: normalizeLoudness48k limits peak-bound mixes (1.5 ms lookahead, 100 ms release, re-measured); normalizeMix48k owns the 11 LU range refusal; audio/render/video FE tests pass and the owner-cut Windows render with sound passes the verdict.
