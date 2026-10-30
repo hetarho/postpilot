@@ -11,7 +11,6 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| dgc | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:11Z | 2026-10-30T02:11Z | - |
 | chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T02:54Z | T722 |
 
 ## inbox
@@ -161,6 +160,7 @@
 - 261030 update-ssot THEME r36 POST r43 CLIP r67 (chl): THEME-38✎ THEME-58✎ THEME-67+ POST-43✎ CLIP-3✎ CLIP-41✎ channels open on their history, floating action menu (+말투), no breadcrumb, phone links in the header row, underline current mark.
 - 261030 update-ssot THEME start (chl, autopilot): channels open on their history with a floating action menu, no breadcrumb, phone channel links in the header row.
 - 261030 fix dev stack startup: the Go compile cache is a named volume shared by backend and media-worker, and Dockerfile.dev copies only the health client, so a source edit no longer recreates both containers into a cold compile (API 35 s → 2.8 s, worker 21 s → 1.6–2.0 s across recreated containers; image manifest unchanged by a source edit); deploy/media_dev_test.py 5 tests pass.
+- 261030 pushed 74b71784 (dev compile-cache fix d096f06c, report dgc): batch gate at d096f06c passed (dev/deploy tests, Compose, native deployable images, worker smoke, media-release both layouts); CI 40992574798, Deploy backend 40992574758 and Verify media 40992950875 jobs all completed with no failed step, conclusion unreadable over public HTML (gh not logged in).
 - 261030 nux final gate at b6b894c1: 568 files/4509 tests and all FE CI-equivalent checks pass; unchanged backend/generation/deploy evidence reused from bb21f128.
 - 261030 fix editor inspection: compact secondary technical action on new/saved posts; 3 affected test files/18 tests, file lint/format, type/build and 8 browser compositions pass.
 - 261030 T720 done: persistent Blog/Clip/Instagram navigation, account settings entry and shared video URLs; affected tests, lint/format/type/build and 60 browser combinations plus draft/caret continuity pass.
@@ -175,5 +175,3 @@
 - 261029 pushed f8e4ad6e (CLIP r66, T718, report vtp1): pre-push FE gate on e5111a90 passed (568/4506, build, lints); CI run 40836194942 jobs completed with no failed step, conclusion unreadable over public HTML (gh not logged in); Deploy backend/Verify media not triggered.
 - 261029 T718 done: ClipWizardPreview beside the video wizard's steps (lg aside, phone WizardPreviewDock moved to shared/ui); CompositionPreview draws handed-in presets read-only without a change handler; related vitest 323 files/2662 tests, lint, lint:fsd, tsc -b pass.
 - 261029 T718 starts (vtp1)
-- 261029 create-task CLIP r66 → T718: WizardPreviewDock moves to shared UI, ClipWizardPreview (stage list + CompositionPreview, design read-only before the design step), wizard layout mirrors TMPL-75.
-- 261029 update-ssot CLIP r66: CLIP-213✎ CLIP-221+ the video-template wizard shows the live template preview beside every step from stages on, as the post wizard does (TMPL-75); before it showed only at the design step.
