@@ -1,5 +1,5 @@
 # CDS clip output design system
-> r37 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
+> r38 | Shared browser/server composition, bundled typography and animated-caption quality, with deterministic output-time motion, local original-based contrast and independently qualified analysis-copy quality.
 
 ## decisions
 - CDS-1 [o] intro/outro are the project's enabled regions filled from its slots, optionally seeded by a template; disclosure remains template-declared; narration follows the storyline or owner instruction under 영상 지침, with no compulsory business, location, price, menu or minimum fact count; visual legibility remains required (→CLIP-60 →CLIP-68 →CLIP-186 →GUIDE-42 →GUIDE-52)
@@ -140,17 +140,17 @@
 - CDS-68 [o] every cut uses exactly one CLIP-98 fixed playback rate; a slow rate is valid only when verified source cadence can produce the 30 fps output without synthesized or interpolated frames, and an unsuitable rate is identified before rendering rather than changed to 1x
 
 - CDS-70 [o] the three text regions use fixed visual treatments, with intro/outro independently enabled under CLIP-111
-  - intro: A 크기만 (→CDS-75), B 위아래 가로선 (→CDS-71), 매거진 커버 (→CDS-89), 명조 매거진 (→CDS-90), 프레임 박스 (→CDS-91), 큰 외곽선 글자 (→CDS-92), 로어서드 (→CDS-93), 주아 스티커 (→CDS-94)
-  - outro: B 가로선 구분 (→CDS-76), E 점수 강조 (→CDS-72), 엔딩 크레딧 (→CDS-95), 세로 막대 로어서드 (→CDS-96), 칩 줄 (→CDS-97), 세 줄 목록 (→CDS-98), 원형 도장 (→CDS-99)
+  - intro: 심플 제목 (→CDS-75), 위아래 가로선 (→CDS-71), 매거진 커버 (→CDS-89), 명조 매거진 (→CDS-90), 프레임 박스 (→CDS-91), 큰 외곽선 글자 (→CDS-92), 로어서드 (→CDS-93), 주아 스티커 (→CDS-94)
+  - outro: 가로선 구분 (→CDS-76), 점수 강조 (→CDS-72), 엔딩 크레딧 (→CDS-95), 세로 막대 로어서드 (→CDS-96), 칩 줄 (→CDS-97), 세 줄 목록 (→CDS-98), 원형 도장 (→CDS-99)
   - presets fix geometry, type, colour and decoration under CDS-88; project slots supply text under CLIP-147; captions follow CDS-80 with CDS-25 as default
-- CDS-71 [o] intro B 위아래 가로선 is two centred slots between two hairlines, the block centred at y 969: `rule.hair`, a 43 px gap, slot 1 `t.hook` 84 Paperlogy white with `shadow.text`, a 46 px gap, `rule.hair`, a 50 px gap, slot 2 `t.label` 36 `text.muted` +0.02em with `shadow.text`; neither slot carries a stroke
-- CDS-72 [o] outro E 점수 강조 is three centred slots around one white bar, the block centred at y 961: slot 1 `t.label` 36 `text.muted` +0.08em, a 31 px gap, slot 2 `t.display` 132 Paperlogy white +0.04em, a 42 px gap, `rule.bar`, a 42 px gap, slot 3 `t.caption` 44 white α0.8; slots 1 and 3 carry `stroke.small`, slot 2 `stroke.text`, all three `shadow.text`
+- CDS-71 [o] intro 위아래 가로선 is two centred slots between two hairlines, the block centred at y 969: `rule.hair`, a 43 px gap, slot 1 `t.hook` 84 Paperlogy white with `shadow.text`, a 46 px gap, `rule.hair`, a 50 px gap, slot 2 `t.label` 36 `text.muted` +0.02em with `shadow.text`; neither slot carries a stroke
+- CDS-72 [o] outro 점수 강조 is three centred slots around one white bar, the block centred at y 961: slot 1 `t.label` 36 `text.muted` +0.08em, a 31 px gap, slot 2 `t.display` 132 Paperlogy white +0.04em, a 42 px gap, `rule.bar`, a 42 px gap, slot 3 `t.caption` 44 white α0.8; slots 1 and 3 carry `stroke.small`, slot 2 `stroke.text`, all three `shadow.text`
 - CDS-73 [o] a disabled intro/outro draws neither text nor decoration; an enabled slot whose final text is empty omits that slot, its preceding gap and its bound decoration
   - remaining slots keep their order and gaps around the anchor; block decoration stays while any slot draws, and an all-empty block renders nothing
   - empty content and unfinished generation are distinguished in the editor under CLIP-187, never by placeholder words in the video (→CDS-87 →CLIP-68)
 - CDS-74 [o] automatic placement uses the CENTER column only; an owner placement is free inside the safe area and no anchor column binds it (→CDS-12 →CDS-38 →CDS-82)
-- CDS-75 [o] intro A 크기만 is two centred slots with no rule, the block centred at y 942: slot 1 `t.headline` 96 Paperlogy white with `stroke.text` and `shadow.text`, a 48 px gap, slot 2 `t.label` 36 `text.muted` +0.02em with `stroke.small` and `shadow.text`
-- CDS-76 [o] outro B 가로선 구분 is two centred slots divided by one hairline, the block centred at y 938: slot 1 `t.hook` 84 Paperlogy white with `shadow.text`, a 46 px gap, `rule.hair`, a 44 px gap, slot 2 `t.body` 56 Wanted Sans 700 white with `stroke.small` and `shadow.text`
+- CDS-75 [o] intro 심플 제목 is two centred slots with no rule, the block centred at y 942: slot 1 `t.headline` 96 Paperlogy white with `stroke.text` and `shadow.text`, a 48 px gap, slot 2 `t.label` 36 `text.muted` +0.02em with `stroke.small` and `shadow.text`
+- CDS-76 [o] outro 가로선 구분 is two centred slots divided by one hairline, the block centred at y 938: slot 1 `t.hook` 84 Paperlogy white with `shadow.text`, a 46 px gap, `rule.hair`, a 44 px gap, slot 2 `t.body` 56 Wanted Sans 700 white with `stroke.small` and `shadow.text`
 - CDS-77 [o] a region slot overflows when its text is still wider than its width at its floor after CDS-86 or holds a character its preset's face lacks: a generated slot is shortened under CDS-55 and omitted with a CLIP-108 notice when no grounded shorter text fits, while an authored or answer-bound slot is identified under CDS-64 before generation
 - CDS-78 [o] no publishing platform's feed UI is assumed: safe areas, anchors and centring stay symmetric on every ratio, and a platform-specific inset or upload requirement belongs to a delivery profile rather than to these constants (→CLIP-115)
 - CDS-79 [o] a region block keeps its 9:16 sizes, gaps and decoration on every ratio: a centred block's centre and an edge-anchored block's top edge move to the same fraction of canvas height they hold on 9:16, a bottom edge sits on the ratio's BOTTOM anchor, a left-set block starts at the ratio's LEFT anchor, and every width fits the ratio's copy measure (→CDS-46 →CDS-86 →CDS-87) ← scaling the baselines by canvas height while the type keeps its 9:16 size collapses the 1:1 outro block into itself
@@ -222,6 +222,7 @@
 - worked SVG for each region and component, the measurement method and the research sources behind the ← reasons: `docs/design/clip-output-design-spec-v1.md`
 
 ## chg
+- r38 261030 CDS-70✎ CDS-71✎ CDS-72✎ CDS-75✎ CDS-76✎ preset names A 크기만→심플 제목, B 위아래 가로선→위아래 가로선, B 가로선 구분→가로선 구분, E 점수 강조→점수 강조
 - r34 261015 CDS-49✎ 9:16 default with 16:9/1:1 for horizontal or square placements→9:16 for every new project, 16:9/1:1 kept for projects created with them
 - r35 261015 CDS-52✎ V12 untagged colour→SDR BT.709 limited range, tagged (→CLIP-219)
 - r36 261015 CDS-52✎ V12 SDR BT.709 limited range, tagged→no colour-tag requirement

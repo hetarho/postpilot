@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r69 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r70 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -167,7 +167,7 @@
 - CLIP-109 [o] notices accompany the result: one naming a cut or a caption rides in that item's own sheet, one naming neither is reached from the info control beside the preview, and the finalization dialog lists the unresolved ones (→CLIP-53 →CLIP-75 →CLIP-148); a notice clears when the owner's own edit removes its cause, and no notice blocks editing, rendering, download or finalization ← whether a narrowed clip is publishable is the owner's judgement, not the server's
 - CLIP-110 [?] whether a clip whose notices show substantially reduced content offers a credit-free rerender rather than only a normal paid retry
 - CLIP-111 [o] ① independently offers 사용 안 함 or a preset for each of intro and outro; choosing a preset enables that region even if the template has no entry, and choosing 사용 안 함 disables it without deleting its slot draft (→CLIP-189)
-  - intro: A 크기만, B 위아래 가로선, 매거진 커버, 명조 매거진, 프레임 박스, 큰 외곽선 글자, 로어서드, 주아 스티커; outro: B 가로선 구분, E 점수 강조, 엔딩 크레딧, 세로 막대 로어서드, 칩 줄, 세 줄 목록, 원형 도장 (→CDS-70)
+  - intro: 심플 제목, 위아래 가로선, 매거진 커버, 명조 매거진, 프레임 박스, 큰 외곽선 글자, 로어서드, 주아 스티커; outro: 가로선 구분, 점수 강조, 엔딩 크레딧, 세로 막대 로어서드, 칩 줄, 세 줄 목록, 원형 도장 (→CDS-70)
   - a new project with no template starts with both regions off; a template seeds them under CLIP-168; existing projects follow CLIP-190
   - ① also selects the AI caption style set under CLIP-142; preset changes preserve slot content under CLIP-189
 - CLIP-112 [o] the body is an ordered outline read start to end: each entry is a named composition stage, a visible text entry in one of the three regions — intro, caption or outro — holding generated, fixed or answer-bound text, the disclosure badge, or an invisible field or group; order is the only position an entry declares — no interval, no preset, no slot count and no style — and the writer places each visible entry in that order over the resolved flow, keeping fixed text exact (→CLIP-65 →CLIP-134 →CLIP-141 →CLIP-147)
@@ -422,6 +422,10 @@
   - it lists the checked stages in order by their names above the frame and marks the stage whose step is on screen ← stages are not drawn on the clip (→CLIP-141), so a renamed or reordered stage would otherwise change nothing visible
   - before the design step it draws the draft's design selection without offering it ← the presets and caption styles are the design step's one question (→TMPL-71)
   - the design step's content is that preview with the design selection offered on it, and the step shows no second preview
+- CLIP-222 [o] the template preview leads with its frame and moves the scrubber to the part a choice shows (→!CLIP-169 →!CLIP-170 →CLIP-171 →CLIP-221) ← one frame shows one instant, so a choice is seen only while the frame stands at the part it changes
+  - the frame, its part switch and the scrubber stand first in the preview, above the ratio, the design selection and the sample duration
+  - an 인트로 · 자막 · 아웃트로 switch moves the scrubber to that part's first instant and marks the part the scrubber is in; a part the illustration does not draw is not offered, and fewer than two parts show no switch
+  - choosing an intro preset moves to the intro, an outro preset to the outro, and adding a caption style to the first caption drawn in that style; removing a style moves to the first caption; a choice whose part is not drawn leaves the scrubber where it is
 
 ## flow
 - create: 네이버 클립 | 인스타 클립 → choose title and optional template (9:16) → arrange sources and explicitly retain any original sound → optionally link a post (글 연결) → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
@@ -471,6 +475,7 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r70 261030 CLIP-111✎ preset names A 크기만→심플 제목, B 위아래 가로선→위아래 가로선, B 가로선 구분→가로선 구분, E 점수 강조→점수 강조; CLIP-222+ template preview leads with its frame, an 인트로 · 자막 · 아웃트로 switch and design choices move the scrubber to the part they show
 - r69 261030 CLIP-3✎ CLIP-41✎ creation from the channel creation menu→from the 영상 section's 새 영상 button
 - r68 261030 CLIP-3✎ creation the first floating-menu item→새 영상 in the channel creation menu, the history being the 영상 section
 - r67 261030 CLIP-3✎ creation entry + 기록 as secondary history→the channel opens on its clips' history, creation in the floating action menu; CLIP-41✎ history at /clips?channel=, no docked New clip→at /naver-clip · /insta-clip with no heading, /clips?channel= replaces itself there, creation only from the floating action menu

@@ -9,6 +9,8 @@
 - push: main
 
 ## inbox
+- 261030 decided CDS-70 CLIP-111: remove the A/B starting intro/outro designs → drop the candidate letters from the names (심플 제목 · 위아래 가로선 · 가로선 구분 · 점수 강조), keeping the presets and their ids a/b/e (alt: delete presets a/b/e and migrate stored selections | keep the lettered names)
+- 261030 decided CLIP-222: captions, intro and outro unseen in the template preview → frame first, an 인트로 · 자막 · 아웃트로 switch, and design choices move the scrubber to their part (alt: three fixed frames side by side | autoplay the scrubber)
 - 261030 decided THEME-38 VOICE-52: where does 말투 live once it is a channel section? → one /voices section shared by all three channels, the URL carrying a clip channel (none ⇒ 네이버 블로그), and 내 설정 no longer lists it (alt: keep it in 내 설정 too | a per-channel copy) — one home keeps one parent and one back link.
 - 261030 decided THEME-38: which pages show the section tab row? → the four section list pages only; editor, clip workspace, wizards and a voice's own pages show the main row only (alt: every channel page) — no extra chrome while writing or editing, matching the creation menu's pages.
 - 261030 decided THEME-67: what does 새 말투 / 새 지침 open? → the section page with its creation sheet open (`?new=1`); other creation choices (AI 말투, 기본 지침, 직접 작성) sit in the page above the list (alt: keep them in a second dock, which THEME-24 forbids beside the menu)
@@ -106,8 +108,8 @@
 | THEME | 38 | 38 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 69 | 69 | - | 2 |
-| CDS | 37 | 37 | - | 1 |
+| CLIP | 70 | 70 | - | 2 |
+| CDS | 38 | 38 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
 | QUAL | 8 | 8 | - | 0 |
@@ -136,6 +138,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T727 | Lead the template preview with its frame and move it to the part a choice shows | CLIP CDS | - | todo |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -144,6 +147,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- implement-task T727 (tpv): template preview leads with its frame, 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber; preset names without A/B/E.
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T721–T725 complete (chl): channels open on their history, section tab row (글/영상 · 템플릿 · 말투 · 지침) under a one-row header without breadcrumb, creation-only menu with the current section's creation nearest the button; 말투 is a channel section. Final gate at 11fd0238: 569 files/4530 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
@@ -151,6 +155,8 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 create-task CLIP r70 CDS r38 → T727 template preview parts and preset names.
+- 261030 update-ssot CLIP r70 CDS r38 (tpv): CLIP-111✎ CDS-70/71/72/75/76✎ preset names without candidate letters; CLIP-222+ template preview leads with its frame, part switch and choice-driven scrubber.
 - 261030 T726 done: each section list page's floating button opens its own creation directly; FloatingActionMenu removed; 75 test files/532 tests, tsc, eslint/prettier, steiger, lint:style and 54 Windows Chrome combinations pass.
 - 261030 update-ssot THEME r38 POST r44 CLIP r69 GUIDE r25 + create-task → T726: the floating button opens its section's creation directly; the owner found a menu of creations redundant beside the section tabs.
 - 261030 chl final gate at 11fd0238: FE suite 569 files/4530 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c (dgc gate) reused.
