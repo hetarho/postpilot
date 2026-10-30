@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T04:53Z | 2026-10-30T04:54Z | T726 |
-
 ## inbox
 - 261030 decided THEME-38 VOICE-52: where does 말투 live once it is a channel section? → one /voices section shared by all three channels, the URL carrying a clip channel (none ⇒ 네이버 블로그), and 내 설정 no longer lists it (alt: keep it in 내 설정 too | a per-channel copy) — one home keeps one parent and one back link.
 - 261030 decided THEME-38: which pages show the section tab row? → the four section list pages only; editor, clip workspace, wizards and a voice's own pages show the main row only (alt: every channel page) — no extra chrome while writing or editing, matching the creation menu's pages.
@@ -149,7 +144,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- implement-task T726 (chl): the section list pages' floating button opens the current section's creation directly, no menu.
+- T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T721–T725 complete (chl): channels open on their history, section tab row (글/영상 · 템플릿 · 말투 · 지침) under a one-row header without breadcrumb, creation-only menu with the current section's creation nearest the button; 말투 is a channel section. Final gate at 11fd0238: 569 files/4530 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
 - T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
