@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| tpv | DESKTOP-VKPLS8P | autopilot | 2026-10-30T05:19Z | 2026-10-30T05:20Z | T727 |
-
 ## inbox
 - 261030 decided CDS-70 CLIP-111: remove the A/B starting intro/outro designs → drop the candidate letters from the names (심플 제목 · 위아래 가로선 · 가로선 구분 · 점수 강조), keeping the presets and their ids a/b/e (alt: delete presets a/b/e and migrate stored selections | keep the lettered names)
 - 261030 decided CLIP-222: captions, intro and outro unseen in the template preview → frame first, an 인트로 · 자막 · 아웃트로 switch, and design choices move the scrubber to their part (alt: three fixed frames side by side | autoplay the scrubber)
@@ -151,7 +146,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- T727 complete (tpv): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
+- T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T721–T725 complete (chl): channels open on their history, section tab row (글/영상 · 템플릿 · 말투 · 지침) under a one-row header without breadcrumb, creation-only menu with the current section's creation nearest the button; 말투 is a channel section. Final gate at 11fd0238: 569 files/4530 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
@@ -159,6 +154,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 tpv final gate at f2694dea: FE suite 568 files/4532 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c reused; report reports/261030-tpv.md.
 - 261030 T727 done: template preview frame first with part switch and choice-driven scrubber, presets renamed; 26 test files/349 tests, tsc, eslint/prettier, steiger, lint:style and a Windows Chrome probe pass.
 - 261030 T727 starts (tpv) at c20a5f37; template preview parts and preset names.
 - 261030 create-task CLIP r70 CDS r38 → T727 template preview parts and preset names.
