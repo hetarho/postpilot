@@ -142,7 +142,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
-| T726 | Direct creation button on each section list page | THEME POST CLIP GUIDE | - | doing@261030.chl |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -157,6 +156,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 T726 done: each section list page's floating button opens its own creation directly; FloatingActionMenu removed; 75 test files/532 tests, tsc, eslint/prettier, steiger, lint:style and 54 Windows Chrome combinations pass.
 - 261030 update-ssot THEME r38 POST r44 CLIP r69 GUIDE r25 + create-task → T726: the floating button opens its section's creation directly; the owner found a menu of creations redundant beside the section tabs.
 - 261030 chl final gate at 11fd0238: FE suite 569 files/4530 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c (dgc gate) reused.
 - 261030 T725 done: creation-only channel menu on every section list page (current creation nearest the button), page creation docks removed, ?new=1 for 말투 and 영상 지침; 42 test files/366 tests, tsc, eslint/prettier, steiger, lint:style and 90 Windows Chrome combinations pass.

@@ -1,18 +1,25 @@
 import { useTranslation } from 'react-i18next'
-import { Clapperboard, LayoutTemplate, ListChecks, MessageSquareQuote, PenLine } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { rememberPostEntry } from '@/entities/post'
 import { clipChannelPath, rememberClipEntry, type ClipChannel } from '@/entities/clip-project'
-import { FloatingActionMenu, type FloatingActionItem } from '@/shared/ui'
+import {
+  ActionBar,
+  buttonStyles,
+  useNavigationContext,
+  type NavigationLinkProps,
+} from '@/shared/ui'
 
 /** The channel section a page lists — the same four keys as the shell's section tab row. */
 export type ChannelSection = 'work' | 'templates' | 'voices' | 'guidelines'
-const SECTION_ORDER: readonly ChannelSection[] = ['work', 'templates', 'voices', 'guidelines']
 
-/** A channel's creation menu (THEME-67): every creation of the channel, the current section's
- *  alone nearest the thumb and the other three above it in section order. Each item opens its
+function NativeLink(props: NavigationLinkProps) {
+  return <a {...props} />
+}
+
+/** A section list page's one creation (THEME-67): a floating button that opens this section's
  *  creation directly — the editor, the clip workspace, the template wizard or the section's own
- *  creation sheet (`?new=1`). */
+ *  creation sheet (`?new=1`). The other sections' creations are one section tab away. */
 export function ChannelActions({
   channel,
   section,
@@ -26,6 +33,14 @@ export function ChannelActions({
 }) {
   const { t } = useTranslation('channel')
   const { user } = useSession()
+  const Link = useNavigationContext()?.Link ?? NativeLink
+  const clip = channel ? `channel=${channel}` : ''
+  const href = {
+    work: channel ? `/clips/new?${clip}` : '/posts/new',
+    templates: channel ? `/video-templates/new?${clip}` : '/templates/new',
+    voices: channel ? `/voices?new=1&${clip}` : '/voices?new=1',
+    guidelines: channel ? `/video-guidelines?new=1&${clip}` : '/guidelines?new=1',
+  }[section]
   // A new post or clip keeps the channel as its origin, so the editor and the clip workspace
   // come back here.
   const rememberCreation = () => {
@@ -44,53 +59,16 @@ export function ChannelActions({
         scrollY: window.scrollY,
       })
   }
-  const clip = channel ? `channel=${channel}` : ''
-  const items: Record<ChannelSection, FloatingActionItem> = {
-    work: channel
-      ? {
-          id: 'work',
-          label: t('create.video'),
-          icon: Clapperboard,
-          href: `/clips/new?${clip}`,
-          onSelect: rememberCreation,
-        }
-      : {
-          id: 'work',
-          label: t('create.post'),
-          icon: PenLine,
-          href: '/posts/new',
-          onSelect: rememberCreation,
-        },
-    templates: {
-      id: 'templates',
-      label: t('create.template'),
-      icon: LayoutTemplate,
-      href: channel ? `/video-templates/new?${clip}` : '/templates/new',
-    },
-    voices: {
-      id: 'voices',
-      label: t('create.voice'),
-      icon: MessageSquareQuote,
-      href: channel ? `/voices?new=1&${clip}` : '/voices?new=1',
-    },
-    guidelines: {
-      id: 'guidelines',
-      label: t('create.guideline'),
-      icon: ListChecks,
-      href: channel ? `/video-guidelines?new=1&${clip}` : '/guidelines?new=1',
-    },
-  }
-  const menu = !channel ? 'naverBlog' : channel === 'instagram_clip' ? 'instaClip' : 'naverClip'
   return (
-    <FloatingActionMenu
-      label={t(`button.${section === 'work' && channel ? 'video' : section}`)}
-      closeLabel={t('close')}
-      menuLabel={t(`menu.${menu}`)}
-      groups={[
-        SECTION_ORDER.filter((key) => key !== section).map((key) => items[key]),
-        [items[section]],
-      ]}
-      className={className}
-    />
+    <ActionBar dock="list" className={className}>
+      <Link
+        href={href}
+        onClick={section === 'work' ? rememberCreation : undefined}
+        className={buttonStyles({ variant: 'cta', className: 'rounded-full' })}
+      >
+        <Plus aria-hidden="true" className="size-5 shrink-0" />
+        {t(`button.${section === 'work' && channel ? 'video' : section}`)}
+      </Link>
+    </ActionBar>
   )
 }

@@ -27,13 +27,12 @@ describe('video template workflow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('영상 템플릿을 불러오지 못했어요.')
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
-  it('badges how many clips each template is used by, and docks the channel creation menu', async () => {
+  it('badges how many clips each template is used by, and docks its creation button', async () => {
     mount('/video-templates?channel=instagram_clip')
     const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
     expect(region.getByText('클립 2개')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '새 영상 템플릿' })).toBeNull()
-    await userEvent.click(screen.getByRole('button', { name: '새 템플릿' }))
-    expect(screen.getAllByRole('menuitem').at(-1)).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
       'href',
       '/video-templates/new?channel=instagram_clip',
     )

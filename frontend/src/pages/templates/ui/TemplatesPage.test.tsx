@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { FakeTemplateRow, FakeTemplatesOptions } from '@/test/templates'
@@ -56,18 +56,11 @@ describe('the template directory', () => {
     expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
-    // The add action is the channel's creation menu, 새 템플릿 alone nearest the button
-    // (THEME-67).
-    fireEvent.click(screen.getByRole('button', { name: '새 템플릿' }))
-    const menu = screen.getByRole('menu', { name: '네이버 블로그 만들기' })
-    const [others, current] = within(menu).getAllByRole('group')
-    expect(within(current).getByRole('menuitem')).toHaveAttribute('href', '/templates/new')
-    expect(
-      within(others)
-        .getAllByRole('menuitem')
-        .map((item) => item.getAttribute('href')),
-    ).toEqual(['/posts/new', '/voices?new=1', '/guidelines?new=1'])
-    fireEvent.keyDown(document, { key: 'Escape' })
+    // The add action is the section's one creation button, straight to the wizard (THEME-67).
+    expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
+      'href',
+      '/templates/new',
+    )
 
     // A12: the shell prepares model defaults; the list calls no AI and enqueues nothing ([I5]).
     const allowed = [
@@ -93,7 +86,7 @@ describe('the template directory', () => {
       expect(page).not.toContain(syntax)
     }
     // The add action is still the way out of an empty list.
-    expect(screen.getByRole('button', { name: '새 템플릿' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '새 템플릿' })).toBeInTheDocument()
   })
 
   // A9: no grammar on the populated list either — a row shows the name and the description.

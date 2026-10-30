@@ -118,8 +118,7 @@ export function TemplatesPage() {
             </section>
           )}
 
-          {/* The channel's creation menu is the page's one dock, 새 템플릿 nearest the thumb
-              (THEME-67). */}
+          {/* The section's creation button is the page's one dock (THEME-67). */}
           <ChannelActions section="templates" />
         </>
       )}

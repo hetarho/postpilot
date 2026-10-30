@@ -62,10 +62,10 @@ export function GuidelineDirectory({
 }: {
   kind: GuidelineKind
   /** Open an empty new guideline — as the screen mounts (TMPL-61's 지침 만들기) or when the
-   *  channel's creation menu asks for 새 지침 on this screen (THEME-67). */
+   *  section's 새 지침 button asks for one on this screen (THEME-67). */
   createOpen?: boolean
   onCreateClosed?: () => void
-  /** The page's one dock: the channel's creation menu (THEME-67). */
+  /** The page's one dock: the section's creation button (THEME-67). */
   dock?: ReactNode
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
@@ -95,7 +95,7 @@ export function GuidelineDirectory({
     kind: kind === 'clip' ? 'video-guideline' : 'post-guideline',
   })
   const { t: authoringText } = useTranslation('authoring')
-  // The creation menu can ask for 새 지침 while this screen is already open: a request arriving
+  // The 새 지침 button can ask for one while this screen is already open: a request arriving
   // after mount opens an empty AI-authored one, as one present at mount does.
   const [createRequest, setCreateRequest] = useState(createOpen)
   if (createOpen !== createRequest) {
@@ -135,7 +135,7 @@ export function GuidelineDirectory({
 
       {!isError && !isPending && (
         <>
-          {/* 새 지침 itself is the channel's creation menu (THEME-67); the 기본 지침 sheet and
+          {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
               writing one directly stay on the page, above the list (GUIDE-44). */}
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />

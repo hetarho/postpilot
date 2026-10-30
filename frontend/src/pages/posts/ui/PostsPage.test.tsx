@@ -156,10 +156,10 @@ describe('PostsPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/20260828-jeju'))
   })
 
-  it('keeps history secondary and offers no docked new-writing action', async () => {
+  it("offers the 글 section's one creation button and no writing region of its own", async () => {
     renderList()
     await screen.findByText(/아직 글이 없어요/)
-    expect(screen.queryByRole('link', { name: '새 글' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '새 글' })).toHaveLength(1)
     expect(screen.queryByRole('region', { name: '글 작성' })).not.toBeInTheDocument()
   })
 
@@ -397,7 +397,7 @@ describe('PostsPage', () => {
 
     expect(await screen.findByText(/"없는말"에 맞는 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByText(/아직 글이 없어요/)).toBeNull()
-    expect(screen.queryByRole('link', { name: '새 글' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: '새 글' })).toHaveLength(1)
 
     await user.click(screen.getByRole('button', { name: '초기화' }))
 
@@ -656,34 +656,18 @@ describe('PostsPage paging (POST-90..92)', () => {
   })
 })
 
-// THEME-38, POST-43: the channel opens straight onto its history — no visible heading, the
-// channel's other actions in its floating action menu — and the old address lands here.
+// THEME-38, POST-43: the channel opens straight onto its history — no visible heading, its 새 글
+// button the one creation — and the old address lands here.
 describe('the Naver Blog channel', () => {
-  it('opens on its history with no visible heading and the floating action menu', async () => {
-    const user = userEvent.setup()
+  it('opens on its history with no visible heading and its creation button', async () => {
     renderList({ posts: [{ slug: 'jeju', title: '제주 3일', status: 'draft' }] })
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 1, name: '네이버 블로그' })).toHaveClass('sr-only')
     expect(screen.queryByText('글 작업 내역', { selector: 'h1, h2, p' })).toBeNull()
 
-    // The creation menu: 새 글쓰기 alone nearest the button, the other creations above it.
-    await user.click(screen.getByRole('button', { name: '새 글' }))
-    const menu = screen.getByRole('menu', { name: '네이버 블로그 만들기' })
-    const [others, current] = within(menu).getAllByRole('group')
-    expect(
-      within(others)
-        .getAllByRole('menuitem')
-        .map((item) => [item.textContent, item.getAttribute('href')]),
-    ).toEqual([
-      ['새 템플릿', '/templates/new'],
-      ['새 말투', '/voices?new=1'],
-      ['새 지침', '/guidelines?new=1'],
-    ])
-    expect(
-      within(current)
-        .getAllByRole('menuitem')
-        .map((item) => [item.textContent, item.getAttribute('href')]),
-    ).toEqual([['새 글쓰기', '/posts/new']])
+    // The 글 section's one creation opens the editor directly (THEME-67).
+    expect(screen.getByRole('link', { name: '새 글' })).toHaveAttribute('href', '/posts/new')
+    expect(screen.queryByRole('menu')).toBeNull()
   })
 
   it('replaces the old /posts address with the channel, keeping its narrowing', async () => {

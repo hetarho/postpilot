@@ -23,7 +23,7 @@ const rowClass =
   'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
 
 /** The account's voices (VOICE-52): the 말투 section every channel shares, one list in 내 글's row
- *  shape and explicit creation paths. 새 말투 comes from the channel's creation menu (`?new=1`);
+ *  shape and explicit creation paths. 새 말투 comes from the section's creation button (`?new=1`);
  *  the other creation paths sit above the list. Every lifecycle action lives on the voice's own
  *  title row, so a row here is nothing but a way into one voice. */
 export function VoicesPage() {
@@ -37,7 +37,7 @@ export function VoicesPage() {
     ? (search.channel as ClipChannel)
     : undefined
   const navigate = useNavigate()
-  // `?new=1` is the channel menu's 새 말투 (THEME-67): it opens the sheet and is dropped from the
+  // `?new=1` is the section's 새 말투 button (THEME-67): it opens the sheet and is dropped from the
   // address at once, so closing the sheet, or the sheet's own move to the new voice, needs no
   // second navigation back here.
   const requested = search.new === 1 || search.new === '1'
@@ -149,8 +149,7 @@ export function VoicesPage() {
             </details>
           )}
 
-          {/* The channel's creation menu is the page's one dock, 새 말투 nearest the thumb
-              (THEME-67). */}
+          {/* The section's creation button is the page's one dock (THEME-67). */}
           <ChannelActions
             channel={channel}
             section="voices"

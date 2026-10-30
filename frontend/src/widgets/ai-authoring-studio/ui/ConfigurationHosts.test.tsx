@@ -41,7 +41,6 @@ describe('configuration authoring entrypoints', () => {
     {
       route: '/guidelines',
       title: '지침',
-      // 새 지침 is the channel creation menu's (THEME-67), opening the AI draft.
       trigger: '새 지침',
       goal: '글을 쓸 때 어떤 점을 지키면 좋을까요?',
     },
@@ -62,13 +61,14 @@ describe('configuration authoring entrypoints', () => {
     const calls: string[] = []
     renderAppAt(entry.route, { user: { id: 'alice' }, calls, existingSetup: true })
     await screen.findByRole('heading', { level: 1, name: entry.title })
-    const triggers = await screen.findAllByRole('button', { name: entry.trigger })
+    // 새 지침 is the section's creation button, a link to its own `?new=1` (THEME-67).
+    const triggers = await screen.findAllByRole(entry.route === '/voices' ? 'button' : 'link', {
+      name: entry.trigger,
+    })
     const primary = triggers.find((button) => !button.closest('details'))!
     expect(primary).toBeInTheDocument()
     expect(calls).not.toContain('GetLatestAuthoringSession')
     await user.click(primary)
-    if (entry.route !== '/voices')
-      await user.click(screen.getByRole('menuitem', { name: entry.trigger }))
     const dialog = await screen.findByRole('dialog')
     expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
     if (entry.route === '/voices')

@@ -281,8 +281,7 @@ it('retains the Instagram location through shared templates, child navigation, r
   )
   await screen.findByRole('heading', { name: '영상 템플릿', level: 1 })
   expect(backHref()).toBeUndefined()
-  await userEvent.click(await screen.findByRole('button', { name: '새 템플릿' }))
-  await userEvent.click(screen.getByRole('menuitem', { name: '새 템플릿' }))
+  await userEvent.click(await screen.findByRole('link', { name: '새 템플릿' }))
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
   expect(backHref()).toBe('/video-templates?channel=instagram_clip')
   const address = view.router.state.location.href
@@ -344,12 +343,10 @@ it.each([
   expect(backHref()).toBeUndefined()
   const nav = screen.getByRole('navigation', { name: '주요' })
   expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute('aria-current', 'page')
-  // The creation menu keeps the channel in every creation it offers (THEME-67).
-  await userEvent.click(
-    await screen.findByRole('button', { name: section === '템플릿' ? '새 템플릿' : '새 지침' }),
-  )
-  for (const item of screen.getAllByRole('menuitem'))
-    expect(item.getAttribute('href')).toContain('channel=instagram_clip')
+  // The section's creation button keeps the channel (THEME-67).
+  expect(
+    await screen.findByRole('link', { name: section === '템플릿' ? '새 템플릿' : '새 지침' }),
+  ).toHaveAttribute('href', expect.stringContaining('channel=instagram_clip'))
   expect(paidActions(calls)).toEqual([])
 })
 

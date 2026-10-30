@@ -260,31 +260,19 @@ it("lists one channel's clips", async () => {
   expect(screen.queryByRole('link', { name: /Naver only/ })).not.toBeInTheDocument()
 })
 
-// THEME-38, CLIP-41: the channel opens straight onto its history with the floating action menu,
-// and the old shared address lands on the channel it named.
-it('opens a clip channel on its history with no visible heading and its own menu', async () => {
-  const user = userEvent.setup()
+// THEME-38, CLIP-41: the channel opens straight onto its history with its 새 영상 button, and the
+// old shared address lands on the channel it named.
+it('opens a clip channel on its history with no visible heading and its creation button', async () => {
   renderAppAt('/insta-clip', { user: { id: 'alice' }, clips: { projects: [] } })
   expect(await screen.findByRole('heading', { level: 1, name: '인스타 클립' })).toHaveClass(
     'sr-only',
   )
-  await user.click(screen.getByRole('button', { name: '새 영상' }))
-  const menu = screen.getByRole('menu', { name: '인스타 클립 만들기' })
-  const [others, current] = within(menu).getAllByRole('group')
-  expect(
-    within(others)
-      .getAllByRole('menuitem')
-      .map((item) => [item.textContent, item.getAttribute('href')]),
-  ).toEqual([
-    ['새 템플릿', '/video-templates/new?channel=instagram_clip'],
-    ['새 말투', '/voices?new=1&channel=instagram_clip'],
-    ['새 지침', '/video-guidelines?new=1&channel=instagram_clip'],
-  ])
-  expect(
-    within(current)
-      .getAllByRole('menuitem')
-      .map((item) => [item.textContent, item.getAttribute('href')]),
-  ).toEqual([['새 영상 만들기', '/clips/new?channel=instagram_clip']])
+  // The 영상 section's one creation opens the clip workspace in this channel (THEME-67).
+  expect(screen.getByRole('link', { name: '새 영상' })).toHaveAttribute(
+    'href',
+    '/clips/new?channel=instagram_clip',
+  )
+  expect(screen.queryByRole('menu')).toBeNull()
 })
 
 it.each([
