@@ -177,7 +177,3 @@
 - 261030 T719 pre-push: full FE suite found 2 setup tests still using the old continue label (4504 passed). Update the shared setup-test helper to Next and verify the setup consumer before the final gate.
 - 261030 T719 done: shared heading style-request sheet and choices for post/video; ordinary Next on video headings. Node 24.18.0: 28 files/298 tests, typecheck, lint/format/FSD/style/managed-skill checks pass. Full frontend pre-push gate follows on the committed candidate; unchanged backend/generation/deploy evidence is reused from bb21f128.
 - 261030 T719 starts (vhn1) at 0f5995bf; the planning push passed the full pinned-Node frontend gate and reused identical backend/generation/deploy inputs from bb21f128.
-- 261030 create-task CLIP-213 TMPL-71/73 → T719: use one heading-suggestion sheet for post and video wizards; accepted the matching inbox suggestion. T718 is already archived done; removed its stale doing row.
-- 261029 pushed f8e4ad6e (CLIP r66, T718, report vtp1): pre-push FE gate on e5111a90 passed (568/4506, build, lints); CI run 40836194942 jobs completed with no failed step, conclusion unreadable over public HTML (gh not logged in); Deploy backend/Verify media not triggered.
-- 261029 T718 done: ClipWizardPreview beside the video wizard's steps (lg aside, phone WizardPreviewDock moved to shared/ui); CompositionPreview draws handed-in presets read-only without a change handler; related vitest 323 files/2662 tests, lint, lint:fsd, tsc -b pass.
-- 261029 T718 starts (vtp1)
