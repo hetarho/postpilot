@@ -75,9 +75,14 @@ services:
           path: ./backend/internal/clip/design
     ports:
       - "7678:8080"
+    # The compile cache is a volume, shared with media-worker (the go command is safe
+    # for concurrent invocations on one cache). Left in the container it vanished with
+    # every recreated container, so each start compiled the API from nothing: 35 s cold
+    # against 2 s warm, and the worker paid its own 21 s after that.
     volumes:
       - ./backend:/app
       - backend_go_mod:/go/pkg/mod
+      - backend_go_build:/root/.cache/go-build
       - backend_tmp:/app/tmp
       - backend_data:/app/data
     depends_on:
@@ -99,10 +104,11 @@ services:
       CLIP_WORK_ROOT: /var/lib/postpilot-media/work
       CLIP_ENCODE_THREADS: "6"
       CLIP_DECODE_THREADS: "8"
-    # Code and module caches are shareable. SQLite, API env and scratch space are not.
+    # Code, module and compile caches are shareable. SQLite, API env and scratch space are not.
     volumes:
       - ./backend:/app
       - backend_go_mod:/go/pkg/mod
+      - backend_go_build:/root/.cache/go-build
       - media_worker_build:/app/tmp
       - media_worker_work:/var/lib/postpilot-media
     stop_grace_period: 45s
@@ -159,6 +165,7 @@ services:
 
 volumes:
   backend_go_mod:
+  backend_go_build:
   backend_tmp:
   media_worker_build:
   media_worker_work:

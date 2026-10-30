@@ -21,7 +21,11 @@ RUN go install github.com/air-verse/air@latest
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY . .
+# Only what the baked-in health client needs. The source tree arrives through the
+# ./backend bind mount; copying it here made every edit a new image, and a new image
+# recreates both containers.
+COPY cmd/media-health/ ./cmd/media-health/
+COPY build/HEALTH.md ./build/
 RUN printf '%s  %s\n' 'daf3614e0406f67ae6323c902db3f953a1effb199142362a039e7526dfb9368b' "$(go env GOROOT)/lib/fips140/v1.0.0-c2097c7c.zip" | sha256sum -c - \
     && GOFIPS140=v1.0.0-c2097c7c CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /usr/local/bin/media-health ./cmd/media-health \
     && mkdir -p /usr/share/postpilot-health \

@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| dgc | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:11Z | 2026-10-30T02:11Z | - |
+
 ## inbox
 - 261030 decided THEME-38: visible channel labels and placement? → 블로그 · 클립 · 인스타 beside the brand on desktop, in one persistent row on phones; settings stays in the account menu (alt: hamburger-only | four primary destinations) — immediate channel discovery with room for the current location.
 - 261030 decided THEME-38: shared video settings context? → channel in links and child links (alt: only remembered browser context) — new tabs, copied links and reload retain Instagram.
@@ -143,6 +148,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 fix dev stack startup: the Go compile cache is a named volume shared by backend and media-worker, and Dockerfile.dev copies only the health client, so a source edit no longer recreates both containers into a cold compile (API 35 s → 2.8 s, worker 21 s → 1.6–2.0 s across recreated containers; image manifest unchanged by a source edit); deploy/media_dev_test.py 5 tests pass.
 - 261030 nux final gate at b6b894c1: 568 files/4509 tests and all FE CI-equivalent checks pass; unchanged backend/generation/deploy evidence reused from bb21f128.
 - 261030 fix editor inspection: compact secondary technical action on new/saved posts; 3 affected test files/18 tests, file lint/format, type/build and 8 browser compositions pass.
 - 261030 T720 done: persistent Blog/Clip/Instagram navigation, account settings entry and shared video URLs; affected tests, lint/format/type/build and 60 browser combinations plus draft/caret continuity pass.
@@ -162,4 +168,3 @@
 - 261029 update-ssot CLIP start (vtp1): video-template wizard preview
 - 261029 pushed a4fe7473 (T716, opaque-frame fix, CDS r37/T717, report): CI 40820598127, Deploy backend 40820598139 and Verify media 40821077720 success; live preview.worker/video.worker bytes match the verified build and carry clip-browser-analysis-v2. Local gate: FE CI equivalent (566/4501), backend 87 packages plus attributed quality/store reruns, Compose, native amd64 images, worker smoke and media-release both layouts.
 - 261029 T717 done: normalizeLoudness48k limits peak-bound mixes (1.5 ms lookahead, 100 ms release, re-measured); normalizeMix48k owns the 11 LU range refusal; audio/render/video FE tests pass and the owner-cut Windows render with sound passes the verdict.
-- 261029 T717 starts (w11c): linear gain first, offline lookahead limiter only where the ceiling binds.

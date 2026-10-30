@@ -55,6 +55,9 @@ class MediaDevTest(unittest.TestCase):
         self.assertNotIn('backend_data:/app/data', worker['volumes'])
         self.assertNotIn('backend_tmp:/app/tmp', worker['volumes'])
         self.assertIn('media_worker_work:/var/lib/postpilot-media', worker['volumes'])
+        # A container-local compile cache dies with every recreated container.
+        for service in (api, worker):
+            self.assertIn('backend_go_build:/root/.cache/go-build', service['volumes'])
         self.assertFalse(any(k.startswith(('R2_', 'DB_', 'PROVIDERS')) for k in worker['environment']))
         self.assertEqual(api['environment']['MEDIA_STORAGE_ENDPOINT'], 'http://minio:9000')
         self.assertEqual(api['environment']['MEDIA_INTERNAL_ADDR'], ':9000')
@@ -68,6 +71,13 @@ class MediaDevTest(unittest.TestCase):
         self.assertEqual(api['develop']['watch'], worker['develop']['watch'])
         watched = {r['path'] for r in worker['develop']['watch'] if r['action'] == 'rebuild'}
         self.assertTrue({'./backend/assets', './backend/build', './backend/internal/clip/overlay', './backend/internal/clip/design'} <= watched)
+
+    def test_dev_image_does_not_bake_in_the_mounted_source_tree(self):
+        # The bind mount carries the source; a copied tree turns every edit into a new image.
+        lines = (ROOT / 'backend/Dockerfile.dev').read_text().splitlines()
+        sources = [line.split()[1:-1] for line in lines if line.startswith('COPY ') and '--from=' not in line]
+        self.assertFalse(any(path in ('.', './') for paths in sources for path in paths))
+        self.assertIn(['cmd/media-health/'], sources)
 
     @unittest.skipUnless(shutil.which('docker'), 'Docker Compose is not installed')
     def test_actual_compose_resolves_both_cpu_services_with_fixture_credentials(self):
