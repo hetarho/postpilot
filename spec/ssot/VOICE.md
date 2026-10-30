@@ -1,5 +1,5 @@
 # VOICE voices
-> r17 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
+> r18 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -55,7 +55,7 @@
 - VOICE-47 [o] the projection tells the model to write in these habits without copying an excerpt's phrases or facts, and to follow the measured ending mix; zero excerpts is valid; no run of identical endings is voice text — it is a 원칙 (→GEN-75)
 - VOICE-50 [o] provider work freezes the explicit owned voice/accepted profile before enqueue; analysis freezes owned material revisions, writing/revision freeze the assigned voice or absence, and tests freeze every selected entrant profile under MODEL-30. Retries use the admitted snapshot and never follow a later post assignment. Existing queue ownership guards still apply.
 - VOICE-51 [o] no third-party sentence, Korean morphology, vector, embedding, SDK, Python, CGO, sidecar or model dependency: segmentation, counting, ending buckets, the readiness meter and excerpt retrieval use the Go standard library ← keeps the static SPA + distroless Go deployment and makes unit tests deterministic
-- VOICE-52 [o] /voices in 내 설정 (→THEME-38) lists named owned styles with personal/synthetic provenance, default marker, learning/usable state, last analysis and pending-material/EDIT state.
+- VOICE-52 [o] /voices, the 말투 section every channel shares (→THEME-38), lists named owned styles with personal/synthetic provenance, default marker, learning/usable state, last analysis and pending-material/EDIT state.
   - use the shared settings-row language rather than inheriting operational post-history behavior
   - personal learning, explicit AI creation and unified actual-writing test entry are named distinct actions; tombstones remain in a closed restore disclosure
 - VOICE-53 [o] `새 말투 만들기` — on the list and in a post's voice picker (→POST-101) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
@@ -148,4 +148,5 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
+- r18 261030 VOICE-52✎ /voices in 내 설정→the 말투 section shared by every channel; its creation comes from the channel creation menu (`?new=1` opens 새 말투 만들기)
 - r17 261015 VOICE-76+ AI 말투 grown toward the owner's voice through the chat; VOICE-65✎ ten-question questionnaire sessions→scripted learning chat (no model call); VOICE-60✎ question wording→casual chat situations framing a scene for others; VOICE-66✎ VOICE-71✎ VOICE-4✎ VOICE-32✎ setup methods ten questions→대화하기; VOICE-52✎ writing settings→내 설정; VOICE-47✎ ending run 기본 지침→원칙

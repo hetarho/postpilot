@@ -15,10 +15,12 @@
 | chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T03:20Z | T723 |
 
 ## inbox
+- 261030 decided THEME-38 VOICE-52: where does 말투 live once it is a channel section? → one /voices section shared by all three channels, the URL carrying a clip channel (none ⇒ 네이버 블로그), and 내 설정 no longer lists it (alt: keep it in 내 설정 too | a per-channel copy) — one home keeps one parent and one back link.
+- 261030 decided THEME-38: which pages show the section tab row? → the four section list pages only; editor, clip workspace, wizards and a voice's own pages show the main row only (alt: every channel page) — no extra chrome while writing or editing, matching the creation menu's pages.
+- 261030 decided THEME-67: what does 새 말투 / 새 지침 open? → the section page with its creation sheet open (`?new=1`); other creation choices (AI 말투, 기본 지침, 직접 작성) sit in the page above the list (alt: keep them in a second dock, which THEME-24 forbids beside the menu)
 - 261030 decided THEME-58: with the breadcrumb removed at every width, how does a child route show its way back? → one back link at the top of its content naming its actual destination; editor, clip workspace and writing tests keep their own top-row link instead (alt: browser back only | keep the desktop breadcrumb row) — THEME-58's deterministic return survives without a second navigation row.
 - 261030 decided POST-43 CLIP-41: what happens to /posts and /clips?channel= once the channel itself is the history? → they replace themselves with /naver-blog, /naver-clip or /insta-clip keeping their filters (alt: both addresses render the same list | drop them) — bookmarks and old return links keep working with one canonical address.
 - 261030 decided THEME-67: does desktop get the same floating action menu? → yes, at every width in THEME-24's add-action dock place (alt: inline buttons above the list on desktop) — THEME-24 already keeps a list's add action docked at every width.
-- 261030 decided THEME-38: where does the menu's 말투 item lead? → the existing 내 설정 말투 page with the channel as contextual return (alt: a per-channel copy of 말투) — 말투 is shared by every channel.
 - 261030 decided THEME-38: visible channel labels and placement? → 블로그 · 클립 · 인스타 beside the brand on desktop, in one persistent row on phones; settings stays in the account menu (alt: hamburger-only | four primary destinations) — immediate channel discovery with room for the current location.
 - 261030 decided THEME-38: shared video settings context? → channel in links and child links (alt: only remembered browser context) — new tabs, copied links and reload retain Instagram.
 - 261029 decided CLIP-221: how does the video-template wizard's live preview show a stage name or order the clip frame never draws? → an ordered stage list above the frame marks the stage whose step is on screen, as the post wizard marks its section (alt: the frame alone, so renaming or reordering stages changes nothing visible | draw stage names into the sample clip as captions)
@@ -100,17 +102,17 @@
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 43 | 43 | - | 0 |
-| VOICE | 17 | 17 | - | 0 |
+| VOICE | 18 | 18 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 31 | 31 | - | 0 |
-| GUIDE | 23 | 23 | - | 0 |
+| GUIDE | 24 | 24 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
-| THEME | 36 | 36 | - | 2 |
+| THEME | 37 | 37 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 67 | 67 | - | 2 |
+| CLIP | 68 | 68 | - | 2 |
 | CDS | 37 | 37 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -149,9 +151,11 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T724 | Channel section tabs and the shared 말투 section | THEME VOICE | - | todo |
+| T725 | Creation-only channel menu on every section list page | THEME GUIDE VOICE CLIP | T724 | todo |
 
 ## next
-- implement-task T721 (chl), then T722 and T723: floating action menu, channels open on their history, breadcrumb-free shell.
+- implement-task T724 (chl), then T725: channel section tabs with a shared 말투 section, creation-only menu on every section list page.
 - T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
 - T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
@@ -172,8 +176,8 @@
 - 261030 T719 done: shared heading style-request sheet and choices for post/video; ordinary Next on video headings. Node 24.18.0: 28 files/298 tests, typecheck, lint/format/FSD/style/managed-skill checks pass. Full frontend pre-push gate follows on the committed candidate; unchanged backend/generation/deploy evidence is reused from bb21f128.
 - 261030 T719 starts (vhn1) at 0f5995bf; the planning push passed the full pinned-Node frontend gate and reused identical backend/generation/deploy inputs from bb21f128.
 - 261030 create-task CLIP-213 TMPL-71/73 → T719: use one heading-suggestion sheet for post and video wizards; accepted the matching inbox suggestion. T718 is already archived done; removed its stale doing row.
+- 261030 update-ssot THEME r37 VOICE r18 GUIDE r24 CLIP r68 + create-task → T724 section tabs (말투 shared by all channels, out of 내 설정), T725 creation-only menu on every section list page; the owner found the history-only menu of destinations awkward.
 - 261029 pushed f8e4ad6e (CLIP r66, T718, report vtp1): pre-push FE gate on e5111a90 passed (568/4506, build, lints); CI run 40836194942 jobs completed with no failed step, conclusion unreadable over public HTML (gh not logged in); Deploy backend/Verify media not triggered.
 - 261029 T718 done: ClipWizardPreview beside the video wizard's steps (lg aside, phone WizardPreviewDock moved to shared/ui); CompositionPreview draws handed-in presets read-only without a change handler; related vitest 323 files/2662 tests, lint, lint:fsd, tsc -b pass.
 - 261029 T718 starts (vtp1)
 - 261029 create-task CLIP r66 → T718: WizardPreviewDock moves to shared UI, ClipWizardPreview (stage list + CompositionPreview, design read-only before the design step), wizard layout mirrors TMPL-75.
-- 261029 update-ssot CLIP r66: CLIP-213✎ CLIP-221+ the video-template wizard shows the live template preview beside every step from stages on, as the post wizard does (TMPL-75); before it showed only at the design step.

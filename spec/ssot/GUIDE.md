@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r23 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r24 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -113,7 +113,7 @@
   - a 원칙 has no in-use state and appears in no sheet
 - GUIDE-44 [o] `/video-guidelines` (nav 영상 지침, the destination both clip channels share under THEME-38, lazily split) is `/guidelines` for the 영상 지침 kind:
   - the same one list of closed rows (→GUIDE-20), open rows (→GUIDE-47) and 기본 지침 sheet (→GUIDE-48), an owner row's scope badge reading `전역`, `영상 템플릿` or `적용 대상 없음` and its open row carrying the video-template-name chips
-  - its dock holds `기본 지침` and `새 영상 지침`, whose Sheet's scope control offers 전역 / 특정 영상 템플릿
+  - the channel creation menu's 새 지침 opens its new-guideline Sheet (`?new=1`), whose scope control offers 전역 / 특정 영상 템플릿; `기본 지침` and the direct-writing choice sit in the page above the list, not in a dock (→THEME-67)
   - below the list the `영상 지침 후보` disclosure behaving as GUIDE-22, GUIDE-23 and GUIDE-27 describe, each candidate linking the clip it came from (plain text once that clip is gone)
   - its queries are keyed `(accountId, 'video-guidelines')` and `(accountId, 'video-guideline-candidates')` with `staleTime: 0` and `refetchOnMount: 'always'`, and a video template rename or delete marks the list stale
 - GUIDE-45 [o] after a completed clip revision request (→CLIP-131), ②'s composer offers `영상 지침으로 저장`, which opens the standard create seeded with that request, offering 전역 (default) and the project's video template when it has one, as `지침으로 저장` does for a post (→GUIDE-21)
@@ -172,5 +172,6 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r24 261030 GUIDE-44✎ dock with 기본 지침 + 새 영상 지침→새 지침 from the channel creation menu (`?new=1`), 기본 지침 and direct writing in the page
 - r22 261015 GUIDE-51+ GUIDE-52+ GUIDE-53+ GUIDE-54+ 원칙 tier always applied and read-only; GUIDE-16✎ one switchable 기본 지침 tier→원칙 + 기본 지침; GUIDE-41✎ 14 기본 지침→7 (재료에 있는 사실만, 메모의 이름으로, 관찰을 나열하지 않기, 제목·태그 규칙, 종결어미, 자연스러운 한국어 문체 and the impression and chronology halves moved to GUIDE-51; 내 감상은 지키고 맛은 재료로 살리기→맛은 재료로 살리기); GUIDE-42✎ 입력한 사실만 and 감상은 내가 쓴 것만 moved to GUIDE-52; GUIDE-1✎ GUIDE-14✎ GUIDE-15✎ GUIDE-17✎ GUIDE-19✎ GUIDE-37✎ GUIDE-43✎ GUIDE-48✎ 원칙 first and above owner rules; GUIDE-18✎ enabled stock rules→원칙 + enabled 기본 지침; GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ writing/video settings→Naver Blog channel / shared clip channels
 - r23 261015 GUIDE-42✎ +글의 표현 살리기 (a linked post's wording in captions); 끝에서 정보 정리 entered information→+the owner's verdict when given; GUIDE-52✎ 입력한 사실만 and 감상은 내가 쓴 것만 entered facts, instruction and storyline→+the linked post
