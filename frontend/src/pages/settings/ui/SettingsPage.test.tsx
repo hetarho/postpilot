@@ -6,13 +6,12 @@ afterEach(() => {
   cleanup()
   localStorage.clear()
 })
-it('groups personal and account settings with tests under advanced, leaving templates and guidelines in channels', async () => {
+it('groups personal and account settings with tests under advanced, leaving 말투, templates and guidelines in channels', async () => {
   renderAppAt('/settings', { user: { id: 'mobile-settings' } })
   const heading = await screen.findByRole('heading', { name: '내 설정', level: 1 })
   const main = heading.closest('main')!
   const links = within(main).getAllByRole('link')
   expect(links.map((link) => link.getAttribute('href'))).toEqual([
-    '/voices',
     '/memories',
     '/spoken-voices',
     '/ai-models',

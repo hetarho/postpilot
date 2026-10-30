@@ -7,6 +7,40 @@ export const CHANNEL_DESTINATIONS = [
   { to: '/insta-clip', labelKey: 'instagram' },
 ] as const
 const DESTINATIONS = [...CHANNEL_DESTINATIONS, { to: '/settings' }] as const
+/** A channel's four sections (THEME-38), keyed by their list pages. Sections are siblings: each
+ *  list page is top-level within its channel, with no back link and no recorded return. */
+export type ChannelSection = 'work' | 'templates' | 'voices' | 'guidelines'
+const SECTION_PATHS: Readonly<Record<string, ChannelSection>> = {
+  '/naver-blog': 'work',
+  '/naver-clip': 'work',
+  '/insta-clip': 'work',
+  '/templates': 'templates',
+  '/video-templates': 'templates',
+  '/voices': 'voices',
+  '/guidelines': 'guidelines',
+  '/video-guidelines': 'guidelines',
+}
+export function currentSection(pathname: string): ChannelSection | undefined {
+  const path = navigationPathname(pathname)
+  return Object.hasOwn(SECTION_PATHS, path) ? SECTION_PATHS[path] : undefined
+}
+/** The section tab row of 네이버 블로그 (no channel) or of one clip channel, whose shared 템플릿,
+ *  말투 and 지침 carry the channel in their address. */
+export function channelSections(channel?: ClipChannel): { key: ChannelSection; href: string }[] {
+  if (!channel)
+    return [
+      { key: 'work', href: '/naver-blog' },
+      { key: 'templates', href: '/templates' },
+      { key: 'voices', href: '/voices' },
+      { key: 'guidelines', href: '/guidelines' },
+    ]
+  return [
+    { key: 'work', href: clipChannelPath(channel) },
+    { key: 'templates', href: `/video-templates?channel=${channel}` },
+    { key: 'voices', href: `/voices?channel=${channel}` },
+    { key: 'guidelines', href: `/video-guidelines?channel=${channel}` },
+  ]
+}
 export type PrimaryDestination = (typeof DESTINATIONS)[number]['to']
 export type LocationKey = keyof typeof navigationI18n.ko.location
 export interface LocationAncestor {
@@ -36,12 +70,15 @@ export function navigationChannelFromHref(href: string): ClipChannel | undefined
 }
 function structuralLocation(
   path: string,
-  channel: ClipChannel,
+  channel: ClipChannel | undefined,
 ): Omit<RouteLocation, 'destination'> {
   const clipHub: LocationAncestor = {
-    href: clipChannelPath(channel),
+    href: clipChannelPath(channel ?? 'naver_clip'),
     key: channel === 'instagram_clip' ? 'instaClip' : 'naverClip',
   }
+  // 말투 is the section every channel shares: a clip channel in its address places it under that
+  // channel, and none under 네이버 블로그 (THEME-38).
+  const voicesHub = channel ? clipHub : NAVER_BLOG
   if (path === '/') return { current: 'creation', ancestors: [] }
   if (path === '/naver-blog') return { current: 'naverBlog', ancestors: [] }
   if (path === '/naver-clip') return { current: 'naverClip', ancestors: [] }
@@ -67,10 +104,13 @@ function structuralLocation(
   if (/^\/tests\/[^/]+$/.test(path))
     return { current: 'test', ancestors: [MY_SETTINGS, ADVANCED, TESTS] }
   if (path === '/settings') return { current: 'settings', ancestors: [] }
-  if (path === '/voices') return { current: 'voices', ancestors: [MY_SETTINGS, PERSONAL] }
+  if (path === '/voices') return { current: 'voices', ancestors: [voicesHub] }
   if (path.startsWith('/voices/')) {
     const root = path.split('/').slice(0, 3).join('/')
-    const parents = [MY_SETTINGS, PERSONAL, { href: '/voices', key: 'voices' as const }]
+    const parents = [
+      voicesHub,
+      { href: channel ? `/voices?channel=${channel}` : '/voices', key: 'voices' as const },
+    ]
     const tail = path.split('/')[3]
     return tail
       ? {
@@ -142,10 +182,7 @@ function structuralLocation(
 export function routeLocation(pathname: string, channel?: ClipChannel): RouteLocation {
   const path = navigationPathname(pathname)
   const canonicalPath = path === '/ai-models/compare' ? '/tests' : path
-  const location = structuralLocation(
-    canonicalPath,
-    channel ?? navigationChannelFromHref(pathname) ?? 'naver_clip',
-  )
+  const location = structuralLocation(canonicalPath, channel ?? navigationChannelFromHref(pathname))
   const root = location.ancestors[0]?.href ?? canonicalPath
   const destination = DESTINATIONS.find((item) => item.to === root)?.to
   return { ...location, destination }
@@ -159,7 +196,8 @@ export function navigationPathname(href: string): string {
 export function isTopLevelDestination(pathname: string): boolean {
   return (
     navigationPathname(pathname) === '/' ||
-    DESTINATIONS.some((item) => item.to === navigationPathname(pathname))
+    DESTINATIONS.some((item) => item.to === navigationPathname(pathname)) ||
+    currentSection(pathname) !== undefined
   )
 }
 export function isStructuralNavigationEntry(

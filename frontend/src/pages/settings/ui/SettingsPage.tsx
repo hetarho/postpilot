@@ -6,10 +6,7 @@ import { Typography, typographyStyles, pageStyles } from '@/shared/ui'
 const GROUPS = [
   {
     key: 'personal',
-    links: [
-      ['/voices', 'voices'],
-      ['/memories', 'memories'],
-    ],
+    links: [['/memories', 'memories']],
   },
   { key: 'spoken', links: [['/spoken-voices', 'spokenVoices']] },
   {

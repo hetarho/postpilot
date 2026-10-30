@@ -217,7 +217,7 @@ it('does not propagate a sibling visit into a settings child origin', async () =
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   await act(() => view.router.navigate({ to: '/templates' }))
   await screen.findByRole('heading', { name: '템플릿', level: 1 })
-  expect(backHref()).toBe('/naver-blog')
+  expect(backHref()).toBeUndefined()
   expect(readNavigationEntry('alice', '/templates')?.path).not.toBe('/library')
   expect(screen.queryByRole('link', { name: '돌아가기' })).toBeNull()
   expect(paidActions(view.procedures)).toEqual([])
@@ -277,7 +277,7 @@ it('retains the Instagram location through shared templates, child navigation, r
   await userEvent.click(screen.getByRole('button', { name: '새 클립' }))
   await userEvent.click(screen.getByRole('menuitem', { name: '영상 템플릿' }))
   await screen.findByRole('heading', { name: '영상 템플릿', level: 1 })
-  expect(backHref()).toBe('/insta-clip')
+  expect(backHref()).toBeUndefined()
   await userEvent.click(
     await within(screen.getByRole('main')).findByRole('link', { name: '새 영상 템플릿' }),
   )
@@ -292,10 +292,11 @@ it('retains the Instagram location through shared templates, child navigation, r
   expect(backHref()).toBe('/video-templates?channel=instagram_clip')
   expect(backLink()).toHaveTextContent('영상 템플릿')
   await userEvent.click(backLink()!)
+  // Back on a section list page: the section row marks it and there is no way back further.
   await waitFor(() =>
     expect(reopened.router.state.location.href).toBe('/video-templates?channel=instagram_clip'),
   )
-  expect(backHref()).toBe('/insta-clip')
+  expect(backHref()).toBeUndefined()
   expect(paidActions(calls)).toEqual([])
 })
 
@@ -321,7 +322,7 @@ it('keeps a directly opened Instagram project channel when visiting shared video
   await screen.findByRole('link', { name: '인스타 클립으로 돌아가기' })
   await act(() => view.router.navigate({ to: '/video-guidelines' }))
   await screen.findByRole('heading', { name: '영상 지침', level: 1 })
-  expect(backHref()).toBe('/insta-clip')
+  expect(backHref()).toBeUndefined()
   expect(paidActions(calls)).toEqual([])
 })
 
@@ -337,7 +338,7 @@ it.each(['영상 템플릿', '영상 지침'])(
     sessionStorage.clear()
     renderAppAt(href, { transport: view.transport })
     await screen.findByRole('heading', { name: heading, level: 1 })
-    expect(backHref()).toBe('/insta-clip')
+    expect(backHref()).toBeUndefined()
     const nav = screen.getByRole('navigation', { name: '주요' })
     expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute(
       'aria-current',
@@ -351,3 +352,56 @@ it.each(['영상 템플릿', '영상 지침'])(
     expect(paidActions(calls)).toEqual([])
   },
 )
+
+it.each([
+  ['/templates', '블로그', '템플릿', ['/naver-blog', '/templates', '/voices', '/guidelines']],
+  [
+    '/voices?channel=instagram_clip',
+    '인스타',
+    '말투',
+    [
+      '/insta-clip',
+      '/video-templates?channel=instagram_clip',
+      '/voices?channel=instagram_clip',
+      '/video-guidelines?channel=instagram_clip',
+    ],
+  ],
+  ['/voices', '블로그', '말투', ['/naver-blog', '/templates', '/voices', '/guidelines']],
+] as const)(
+  'places the %s section under its channel as a sibling with no way back',
+  async (path, channel, section, hrefs) => {
+    const view = renderAppAt(path, { user: { id: 'alice' } })
+    const sections = await screen.findByRole('navigation', { name: '채널 메뉴' })
+    expect(
+      within(sections)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(hrefs)
+    expect(within(sections).getByRole('link', { name: section })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(
+      within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {
+        name: channel,
+      }),
+    ).toHaveAttribute('aria-current', 'page')
+    expect(backHref()).toBeUndefined()
+    await userEvent.click(within(sections).getAllByRole('link')[0])
+    await waitFor(() => expect(view.router.state.location.pathname).toBe(hrefs[0]))
+    expect(readNavigationEntry('alice', hrefs[0])).toBeUndefined()
+  },
+)
+
+it('returns a voice page opened from an Instagram 말투 list to that list', async () => {
+  const view = renderAppAt('/voices?channel=instagram_clip', { user: { id: 'alice' } })
+  await screen.findByRole('navigation', { name: '채널 메뉴' })
+  await act(() =>
+    view.router.navigate({ to: '/voices/$voiceId', params: { voiceId: 'voice-default' } }),
+  )
+  await waitFor(() => expect(backHref()).toBe('/voices?channel=instagram_clip'))
+  expect(screen.queryByRole('navigation', { name: '채널 메뉴' })).toBeNull()
+  expect(
+    within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', { name: '인스타' }),
+  ).toHaveAttribute('aria-current', 'page')
+})

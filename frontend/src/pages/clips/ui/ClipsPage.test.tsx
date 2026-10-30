@@ -277,7 +277,7 @@ it('opens a clip channel on its history with no visible heading and its own menu
   ).toEqual([
     ['영상 템플릿', '/video-templates?channel=instagram_clip'],
     ['영상 지침', '/video-guidelines?channel=instagram_clip'],
-    ['말투', '/voices?entry=%2Finsta-clip'],
+    ['말투', '/voices?channel=instagram_clip'],
     ['새 클립 만들기', '/clips/new?channel=instagram_clip'],
   ])
 })

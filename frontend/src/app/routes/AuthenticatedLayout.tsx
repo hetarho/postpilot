@@ -30,7 +30,9 @@ import {
   rememberNavigationEntry,
 } from '../model/navigation-entry'
 import {
+  channelSections,
   currentDestination,
+  currentSection,
   CHANNEL_DESTINATIONS,
   isStructuralNavigationEntry,
   isTopLevelDestination,
@@ -109,14 +111,18 @@ export function AuthenticatedLayout() {
   const origin =
     explicit ?? (stored && accessibleParent(entryHref(stored)) ? entryHref(stored) : undefined)
   const storedChannel = stored?.filters.channel
+  // 말투's list page belongs to the channel its own address names, and to 네이버 블로그 without
+  // one, so a reload or a shared link lands under the same channel (THEME-38).
   const channel =
-    clipQuery.data?.channel ??
-    navigationChannelFromHref(location.href) ??
-    (storedChannel === 'instagram_clip' || storedChannel === 'naver_clip'
-      ? storedChannel
-      : undefined) ??
-    (origin ? navigationChannelFromHref(origin) : undefined) ??
-    clipReturn?.channel
+    pathname === '/voices'
+      ? navigationChannelFromHref(location.href)
+      : (clipQuery.data?.channel ??
+        navigationChannelFromHref(location.href) ??
+        (storedChannel === 'instagram_clip' || storedChannel === 'naver_clip'
+          ? storedChannel
+          : undefined) ??
+        (origin ? navigationChannelFromHref(origin) : undefined) ??
+        clipReturn?.channel)
   const channelRef = useRef(channel)
   useLayoutEffect(() => {
     channelRef.current = channel
@@ -289,6 +295,13 @@ export function AuthenticatedLayout() {
     returnTo: returnHref && returnName ? { href: returnHref, label: returnName } : undefined,
     Link: NavigationLink,
   }
+  const section = currentSection(pathname)
+  const sectionChannel =
+    current === '/insta-clip'
+      ? 'instagram_clip'
+      : current === '/naver-clip'
+        ? 'naver_clip'
+        : undefined
   const backLink =
     !setup &&
     !ownReturn &&
@@ -359,6 +372,33 @@ export function AuthenticatedLayout() {
               />
             </div>
           </div>
+          {/* A channel's four sections, on their list pages only: deeper pages keep the main row
+              alone (THEME-38). */}
+          {section && (
+            <nav
+              aria-label={t('sections')}
+              className="mx-auto flex w-full max-w-7xl gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8"
+            >
+              {channelSections(sectionChannel).map(({ key, href }) => (
+                <Link
+                  key={key}
+                  to={href}
+                  aria-current={section === key ? 'page' : undefined}
+                  className={typographyStyles({
+                    variant: 'label',
+                    className: clsx(
+                      'inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm px-2 whitespace-nowrap lg:px-3',
+                      section === key
+                        ? 'text-link-fg-current underline decoration-2 underline-offset-8'
+                        : 'text-content-secondary hover:text-content-primary',
+                    ),
+                  })}
+                >
+                  {t(`section.${key === 'work' && sectionChannel ? 'video' : key}`)}
+                </Link>
+              ))}
+            </nav>
+          )}
         </header>
         <div className="flex min-w-0 flex-1 flex-col">
           {backLink && (

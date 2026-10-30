@@ -33,7 +33,8 @@ it.each([
   ['/clips/new?channel=instagram_clip', '/insta-clip'],
   ['/posts/example', '/naver-blog'],
   ['/clips/example', '/naver-clip'],
-  ['/voices/example/materials', '/settings'],
+  ['/voices/example/materials', '/naver-blog'],
+  ['/memories', '/settings'],
   ['/tests', '/settings'],
   ['/tests/history', '/settings'],
   ['/tests/test', '/settings'],
@@ -45,10 +46,13 @@ it('places every post and clip under its channel and exposes deterministic hiera
   expect(currentDestination('/clips/minted')).toBe('/naver-clip')
   expect(currentDestination('/clips/minted', 'instagram_clip')).toBe('/insta-clip')
   expect(routeLocation('/voices/voice/materials').ancestors.map((x) => x.href)).toEqual([
-    '/settings',
-    '/settings#settings-personal',
+    '/naver-blog',
     '/voices',
     '/voices/voice',
+  ])
+  expect(routeLocation('/voices/voice', 'instagram_clip').ancestors.map((x) => x.href)).toEqual([
+    '/insta-clip',
+    '/voices?channel=instagram_clip',
   ])
   expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual([
     '/settings',
@@ -128,8 +132,8 @@ it('retains settings parent access and filters across child navigation and histo
   viewport(true)
   const { router } = renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
   await screen.findByRole('heading', { name: '내 설정' })
-  await act(() => router.navigate({ to: '/voices' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/voices'))
+  await act(() => router.navigate({ to: '/memories' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/memories'))
   // One back link, named by where it leads: the settings page the owner came from.
   const back = within(screen.getByRole('navigation', { name: '돌아가기' })).getByRole('link')
   expect(back).toHaveAccessibleName('내 설정')
@@ -154,14 +158,14 @@ it('retains a settings origin through reload and restores its document position 
   vi.spyOn(document.documentElement, 'scrollHeight', 'get').mockReturnValue(2400)
   const view = renderAppAt('/settings', { user: { id: 'alice' }, calls })
   await screen.findByRole('heading', { name: '내 설정' })
-  await act(() => view.router.navigate({ to: '/voices' }))
-  await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices'))
-  expect(readNavigationEntry('alice', '/voices')).toMatchObject({
+  await act(() => view.router.navigate({ to: '/memories' }))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/memories'))
+  expect(readNavigationEntry('alice', '/memories')).toMatchObject({
     path: '/settings',
     scrollY: 480,
   })
   view.unmount()
-  const reopened = renderAppAt('/voices', { transport: view.transport })
+  const reopened = renderAppAt('/memories', { transport: view.transport })
   await userEvent.click(
     within(await screen.findByRole('navigation', { name: '돌아가기' })).getByRole('link', {
       name: '내 설정',

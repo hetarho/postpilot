@@ -611,7 +611,7 @@ describe('theme preferences in the real route tree', () => {
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  it('keeps the phone header to one row with the channel links and gives a child one back link', async () => {
+  it('keeps the phone main row whole and puts a channel section row under it', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
@@ -631,16 +631,22 @@ describe('theme preferences in the real route tree', () => {
     expect(navigation.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
       0,
     )
+    const sections = within(header).getByRole('navigation', { name: '채널 메뉴' })
+    expect(
+      within(sections)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['글', '템플릿', '말투', '지침'])
+    expect(within(sections).getByRole('link', { name: '템플릿' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
     expect(within(header).queryByRole('navigation', { name: '현재 위치' })).toBeNull()
     expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
     expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
-    const back = within(screen.getByRole('navigation', { name: '돌아가기' })).getByRole('link')
-    expect(header).not.toContainElement(back)
-    expect(back).toHaveAccessibleName('네이버 블로그')
-    expect(back).toHaveAttribute('href', '/naver-blog')
-    await user.click(back)
-    await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
     expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
+    await user.click(within(sections).getByRole('link', { name: '글' }))
+    await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
     expect(within(navigation).getByRole('link', { name: '블로그' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -898,7 +904,7 @@ describe('retired publishing route', () => {
   it('keeps voice and model settings for the free tier', async () => {
     renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
     await screen.findByRole('heading', { level: 1, name: '내 설정' })
-    for (const destination of ['/voices', '/memories', '/spoken-voices', '/ai-models']) {
+    for (const destination of ['/memories', '/spoken-voices', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }
   })

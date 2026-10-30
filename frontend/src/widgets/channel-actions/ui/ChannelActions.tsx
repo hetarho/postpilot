@@ -6,12 +6,11 @@ import { clipChannelPath, rememberClipEntry, type ClipChannel } from '@/entities
 import { FloatingActionMenu, type FloatingActionItem } from '@/shared/ui'
 
 /** A channel's floating action menu (THEME-38, THEME-67): its settings destinations above, its
- *  creation nearest the thumb. 말투 stays a 내 설정 page; the item carries the channel as its
- *  explicit entry so that page offers the way back here (THEME-58). */
+ *  creation nearest the thumb. 말투 is the section every channel shares, so its link carries a
+ *  clip channel. */
 export function ChannelActions({ channel }: { channel?: ClipChannel }) {
   const { t } = useTranslation('channel')
   const { user } = useSession()
-  const path = channel ? clipChannelPath(channel) : '/naver-blog'
   const menu = !channel ? 'naverBlog' : channel === 'instagram_clip' ? 'instaClip' : 'naverClip'
   // Creation keeps the channel as its origin, so the editor and the clip workspace come back here.
   const rememberCreation = () => {
@@ -34,7 +33,7 @@ export function ChannelActions({ channel }: { channel?: ClipChannel }) {
     id: 'voices',
     label: t('voices'),
     icon: MessageSquareQuote,
-    href: `/voices?entry=${encodeURIComponent(path)}`,
+    href: channel ? `/voices?channel=${channel}` : '/voices',
   }
   const settings: FloatingActionItem[] = channel
     ? [

@@ -35,14 +35,17 @@ it.each([
   },
 )
 
-it('opens 말투 with the channel as its contextual return', async () => {
+it("opens 말투 as the channel's own section", async () => {
   const user = userEvent.setup()
   const view = renderAppAt('/insta-clip', { user: { id: 'alice' } })
   await user.click(await screen.findByRole('button', { name: '새 클립' }))
   await user.click(screen.getByRole('menuitem', { name: '말투' }))
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices'))
-  expect(view.router.state.location.search).toMatchObject({ entry: '/insta-clip' })
-  const back = within(await screen.findByRole('navigation', { name: '돌아가기' })).getByRole('link')
-  expect(back).toHaveAccessibleName('인스타 클립')
-  expect(back).toHaveAttribute('href', '/insta-clip')
+  expect(view.router.state.location.search).toMatchObject({ channel: 'instagram_clip' })
+  const sections = await screen.findByRole('navigation', { name: '채널 메뉴' })
+  expect(within(sections).getByRole('link', { name: '말투' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
 })

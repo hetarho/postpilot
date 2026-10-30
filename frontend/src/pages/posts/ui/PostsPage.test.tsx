@@ -675,7 +675,7 @@ describe('the Naver Blog channel', () => {
     ).toEqual([
       ['글 템플릿', '/templates'],
       ['글 지침', '/guidelines'],
-      ['말투', '/voices?entry=%2Fnaver-blog'],
+      ['말투', '/voices'],
       ['새 글 쓰기', '/posts/new'],
     ])
   })

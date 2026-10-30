@@ -142,7 +142,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
-| T724 | Channel section tabs and the shared 말투 section | THEME VOICE | - | doing@261030.chl |
 | T725 | Creation-only channel menu on every section list page | THEME GUIDE VOICE CLIP | T724 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -157,6 +156,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 T724 done: channel section tab row (글/영상 · 템플릿 · 말투 · 지침) on section list pages, sections top-level, 말투 shared by all channels and out of 내 설정; 36 test files/356 tests, tsc, eslint/prettier, steiger, lint:style pass.
 - 261030 update-ssot THEME r37 VOICE r18 GUIDE r24 CLIP r68 + create-task → T724 section tabs (말투 shared by all channels, out of 내 설정), T725 creation-only menu on every section list page; the owner found the history-only menu of destinations awkward.
 - 261030 fix lint:retirement: the legacy publishing redirect check follows the post list to /naver-blog (POST-43, T722); check and its test pass.
 - 261030 T723 done: one-row header with underline-only channel tabs, no breadcrumb, one back link on child routes; 16 files/186 tests, tsc, eslint/prettier, steiger, lint:style and 60 Windows Chrome combinations pass.
