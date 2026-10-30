@@ -69,11 +69,11 @@ describe('① chooses the design, the caption styles and an optional template', 
     // Every preset of each region is offered (CLIP-111, CDS-70).
     expect(within(intro).getAllByRole('radio')).toHaveLength(8)
     expect(within(outro).getAllByRole('radio')).toHaveLength(7)
-    expect(within(intro).getByRole('radio', { name: 'B 위아래 가로선' })).toHaveAttribute(
+    expect(within(intro).getByRole('radio', { name: '위아래 가로선' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
-    expect(within(outro).getByRole('radio', { name: 'E 점수 강조' })).toHaveAttribute(
+    expect(within(outro).getByRole('radio', { name: '점수 강조' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
@@ -154,22 +154,22 @@ describe('① chooses the design, the caption styles and an optional template', 
       .setup()
       .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
-    await user.click(within(intro).getByRole('radio', { name: 'A 크기만' }))
+    await user.click(within(intro).getByRole('radio', { name: '심플 제목' }))
     await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('a'), { timeout: 4000 })
-    expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
+    expect(within(intro).getByRole('radio', { name: '심플 제목' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
     // Only the chosen tile is a tab stop, and the arrows move focus and the
     // choice together.
-    expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute('tabindex', '0')
+    expect(within(intro).getByRole('radio', { name: '심플 제목' })).toHaveAttribute('tabindex', '0')
     expect(within(intro).getByRole('radio', { name: '주아 스티커' })).toHaveAttribute(
       'tabindex',
       '-1',
     )
     await user.keyboard('{ArrowRight}')
     await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('b'), { timeout: 4000 })
-    expect(within(intro).getByRole('radio', { name: 'B 위아래 가로선' })).toHaveFocus()
+    expect(within(intro).getByRole('radio', { name: '위아래 가로선' })).toHaveFocus()
     await user.keyboard('{ArrowLeft}{ArrowLeft}')
     await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('sticker'), { timeout: 4000 })
     const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
@@ -217,7 +217,7 @@ describe('① chooses the design, the caption styles and an optional template', 
       'aria-checked',
       'true',
     )
-    expect(within(outro).getByRole('radio', { name: 'E 점수 강조' })).toHaveAttribute(
+    expect(within(outro).getByRole('radio', { name: '점수 강조' })).toHaveAttribute(
       'aria-checked',
       'true',
     )
@@ -271,23 +271,23 @@ it('opens the phone gallery explicitly and retains the selected design and curre
   expect(toggle).toHaveAttribute('aria-expanded', 'false')
   expect(screen.queryByRole('radiogroup', { name: '인트로 디자인' })).not.toBeInTheDocument()
   expect(
-    screen.getByText(/인트로 B 위아래 가로선.*아웃트로 E 점수 강조.*자막 스타일 1종/),
+    screen.getByText(/인트로 위아래 가로선.*아웃트로 점수 강조.*자막 스타일 1종/),
   ).toBeInTheDocument()
   const request = screen.getByLabelText('클립에 담고 싶은 내용 (선택)')
   await user.type(request, '모바일에서 입력하던 요청')
   await user.click(toggle)
   await user.click(
     within(screen.getByRole('radiogroup', { name: '인트로 디자인' })).getByRole('radio', {
-      name: 'A 크기만',
+      name: '심플 제목',
     }),
   )
   await user.click(toggle)
   expect(request).toHaveValue('모바일에서 입력하던 요청')
-  expect(screen.getByText(/인트로 A 크기만.*아웃트로 E 점수 강조/)).toBeInTheDocument()
+  expect(screen.getByText(/인트로 심플 제목.*아웃트로 점수 강조/)).toBeInTheDocument()
   await user.click(toggle)
   expect(
     within(screen.getByRole('radiogroup', { name: '인트로 디자인' })).getByRole('radio', {
-      name: 'A 크기만',
+      name: '심플 제목',
     }),
   ).toHaveAttribute('aria-checked', 'true')
   await waitFor(() =>

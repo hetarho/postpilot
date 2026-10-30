@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it } from 'vitest'
 import { chooseOption } from '@/test/listbox'
@@ -84,4 +84,90 @@ it('advances the sample captions in the template’s styles as the scrubber move
   expect(shown()).toEqual(['샘플 자막 2', 'glitch'])
   fireEvent.change(time, { target: { value: '8000' } })
   expect(shown()).toEqual(['샘플 자막 3', 'neon'])
+})
+
+// CLIP-222: one frame shows one instant, so the frame leads the preview and a part switch or a
+// design choice moves the scrubber to the part it shows.
+const framed = parseClipComposition(
+  '<clip version="1"><text id="opening" kind="fixed" role="hook" basis="output-start"><row>연남동</row></text>' +
+    '<text id="closing" kind="fixed" role="ending" basis="output-end"><row>다시 올 집</row></text></clip>',
+)
+const scrubbedTo = () =>
+  Number(screen.getByRole<HTMLInputElement>('slider', { name: /확인할 시점/ }).value)
+
+it('leads with the frame above the design selection', () => {
+  const view = render(<CompositionPreview document={framed} />)
+  const order = [
+    screen.getByRole('tablist', { name: '미리볼 부분' }),
+    view.container.querySelector('svg[role="img"]')!,
+    screen.getByRole('slider', { name: /확인할 시점/ }),
+    screen.getByRole('combobox', { name: /^화면 비율/ }),
+    screen.getByRole('combobox', { name: /^인트로 디자인/ }),
+    screen.getByRole('combobox', { name: /^아웃트로 디자인/ }),
+    screen.getByRole('slider', { name: /예시 영상 길이/ }),
+  ]
+  for (let i = 1; i < order.length; i++)
+    expect(order[i - 1].compareDocumentPosition(order[i])).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+})
+
+it('moves the scrubber with the part switch and marks the part on screen', async () => {
+  const user = userEvent.setup()
+  const view = render(<CompositionPreview document={framed} />)
+  const parts = within(screen.getByRole('tablist', { name: '미리볼 부분' }))
+  expect(parts.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+    '인트로',
+    '자막',
+    '아웃트로',
+  ])
+  expect(parts.getByRole('tab', { name: '인트로' })).toHaveAttribute('aria-selected', 'true')
+  await user.click(parts.getByRole('tab', { name: '자막' }))
+  expect(scrubbedTo()).toBe(2500)
+  expect(view.container.querySelector('[data-role="caption"]')).toHaveTextContent('샘플 자막 1')
+  expect(parts.getByRole('tab', { name: '자막' })).toHaveAttribute('aria-selected', 'true')
+  await user.click(parts.getByRole('tab', { name: '아웃트로' }))
+  expect(view.container.querySelector('[data-region="outro"]')).toBeInTheDocument()
+  expect(view.container.querySelector('[data-role="caption"]')).not.toBeInTheDocument()
+  // Moving the scrubber by hand moves the mark with it.
+  fireEvent.change(screen.getByRole('slider', { name: /확인할 시점/ }), {
+    target: { value: '1000' },
+  })
+  expect(parts.getByRole('tab', { name: '인트로' })).toHaveAttribute('aria-selected', 'true')
+})
+
+it('offers no part switch when only captions are drawn', () => {
+  render(<CompositionPreview document={parseClipComposition('<clip version="1"/>')} />)
+  expect(screen.queryByRole('tablist', { name: '미리볼 부분' })).not.toBeInTheDocument()
+})
+
+it('moves to the part a design choice shows', async () => {
+  const user = userEvent.setup()
+  const view = render(<CompositionPreview document={framed} captionStyles={['neon']} />)
+  await chooseOption(user, screen.getByRole('combobox', { name: /^아웃트로 디자인/ }), '칩 줄')
+  expect(view.container.querySelector('[data-region="outro"]')).toHaveAttribute(
+    'data-preset',
+    'chips',
+  )
+  await chooseOption(user, screen.getByRole('combobox', { name: /^인트로 디자인/ }), '매거진 커버')
+  expect(scrubbedTo()).toBe(0)
+  expect(view.container.querySelector('[data-region="intro"]')).toHaveAttribute(
+    'data-preset',
+    'cover',
+  )
+  // Caption styles are chosen outside the preview: the frame stands at the first caption in a
+  // style just added, and at the first caption when one is removed.
+  view.rerender(<CompositionPreview document={framed} captionStyles={['neon', 'glitch']} />)
+  const caption = () => view.container.querySelector('[data-role="caption"]')
+  expect(caption()).toHaveAttribute('data-caption-style', 'glitch')
+  expect(caption()).toHaveTextContent('샘플 자막 2')
+  view.rerender(<CompositionPreview document={framed} captionStyles={['glitch']} />)
+  expect(scrubbedTo()).toBe(2500)
+  expect(caption()).toHaveTextContent('샘플 자막 1')
+  // A choice whose part the outline does not draw leaves the scrubber where it is.
+  const captionsOnly = parseClipComposition('<clip version="1"/>')
+  view.rerender(<CompositionPreview document={captionsOnly} captionStyles={['glitch']} />)
+  fireEvent.change(screen.getByRole('slider', { name: /확인할 시점/ }), {
+    target: { value: '9000' },
+  })
+  await chooseOption(user, screen.getByRole('combobox', { name: /^인트로 디자인/ }), '로어서드')
+  expect(scrubbedTo()).toBe(9000)
 })

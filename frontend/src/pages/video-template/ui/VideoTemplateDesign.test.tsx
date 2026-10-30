@@ -31,7 +31,7 @@ describe('separate retained video template design', () => {
       '인트로 디자인 매거진 커버',
     )
     expect(preview.getByRole('combobox', { name: /^아웃트로 디자인/ })).toHaveAccessibleName(
-      '아웃트로 디자인 E 점수 강조',
+      '아웃트로 디자인 점수 강조',
     )
     expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
     expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()

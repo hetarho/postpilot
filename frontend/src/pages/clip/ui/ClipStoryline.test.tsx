@@ -395,7 +395,7 @@ it('writes the slots on ② before any template, storyline or plan', async () =>
   await mount(bare(), { regionWrites, templates: [] }, {}, 'tab')
   await userEvent.click(screen.getByRole('tab', { name: '수정' }))
   expect(heading()).toHaveAttribute('aria-expanded', 'true')
-  expect(block('인트로').getByText('A 크기만')).toBeVisible()
+  expect(block('인트로').getByText('심플 제목')).toBeVisible()
   // The renderer's own numbered drawing of the chosen preset, as ① shows it (CLIP-165).
   await waitFor(() =>
     expect(
@@ -436,7 +436,7 @@ it('turns a region off and on from ①, keeping its slots', async () => {
   await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
-  expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
+  expect(within(intro).getByRole('radio', { name: '심플 제목' })).toHaveAttribute(
     'aria-checked',
     'true',
   )
@@ -446,7 +446,7 @@ it('turns a region off and on from ①, keeping its slots', async () => {
   )
   await userEvent.click(within(intro).getByRole('radio', { name: '사용 안 함' }))
   await waitFor(() => expect(regionWrites.at(-1)?.intro?.enabled).toBe(false), AUTOSAVE)
-  await userEvent.click(within(outro).getByRole('radio', { name: 'B 가로선 구분' }))
+  await userEvent.click(within(outro).getByRole('radio', { name: '가로선 구분' }))
   await waitFor(() => expect(regionWrites.at(-1)?.outro?.enabled).toBe(true), AUTOSAVE)
   expect(
     regionWrites.flatMap((write) => [write.intro, write.outro]).flatMap((r) => r?.slots ?? []),
@@ -484,7 +484,7 @@ it('shows the server’s seed when ① chooses a template, the owner’s words k
   await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '여행')
   await waitFor(
     () =>
-      expect(within(intro).getByRole('radio', { name: 'A 크기만' })).toHaveAttribute(
+      expect(within(intro).getByRole('radio', { name: '심플 제목' })).toHaveAttribute(
         'aria-checked',
         'true',
       ),

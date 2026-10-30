@@ -122,7 +122,7 @@ it('opens phone appearance details on a finalized clip while retaining disabled 
   ))
     expect(control).toBeDisabled()
   const selected = within(intro).getByRole('radio', { checked: true })
-  await user.click(within(intro).getByRole('radio', { name: 'B 위아래 가로선' }))
+  await user.click(within(intro).getByRole('radio', { name: '위아래 가로선' }))
   expect(selected).toHaveAttribute('aria-checked', 'true')
   await user.click(toggle)
   expect(screen.getByLabelText('클립 제목')).toBeDisabled()
