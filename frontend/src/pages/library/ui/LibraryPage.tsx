@@ -13,8 +13,8 @@ export function LibraryPage() {
       <ul className="divide-divider mt-6 divide-y">
         {(
           [
-            { to: '/posts', key: 'posts', Icon: FileText },
-            { to: '/clips', key: 'clips', Icon: Film },
+            { to: '/naver-blog', key: 'posts', Icon: FileText },
+            { to: '/naver-clip', key: 'clips', Icon: Film },
           ] as const
         ).map(({ to, key, Icon }) => (
           <li key={key}>

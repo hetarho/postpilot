@@ -16,6 +16,7 @@ import { useSession } from '@/entities/session'
 import { matchedTags, PostListControls, type PostNarrowing } from '@/features/filter-posts'
 import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
+import { ChannelActions } from '@/widgets/channel-actions'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
@@ -79,7 +80,7 @@ export function PostsPage() {
   const historyFilters = new URLSearchParams()
   if (narrowing.q) historyFilters.set('q', narrowing.q)
   if (narrowing.status) historyFilters.set('status', narrowing.status)
-  const historyEntry = `/posts${historyFilters.size ? '?' + historyFilters : ''}`
+  const historyEntry = `/naver-blog${historyFilters.size ? '?' + historyFilters : ''}`
   const settledQ = useSettledValue(narrowing.q ?? '', POSTS_SEARCH_DEBOUNCE_MS)
   const list = usePostList({ q: settledQ, status: narrowing.status })
   useHistoryScrollReturn(user?.id ?? '', narrowing, settledQ, list)
@@ -92,7 +93,7 @@ export function PostsPage() {
   // carrying `?q=`.
   const narrow = (next: PostNarrowing) =>
     void navigate({
-      to: '/posts',
+      to: '/naver-blog',
       search: { q: next.q?.trim() === '' ? undefined : next.q, status: next.status },
       replace: true,
     })
@@ -115,7 +116,7 @@ export function PostsPage() {
   const remember = (post: PostListItem) => {
     if (!user?.id) return
     rememberPostEntry(user.id, {
-      path: '/posts',
+      path: '/naver-blog',
       section: 'posts',
       filters: {
         ...(narrowing.q ? { q: narrowing.q } : {}),
@@ -139,21 +140,17 @@ export function PostsPage() {
       className={pageStyles({
         width: 'wide',
         gutters: false,
-        // Below the desk the group row is what names this place, and it is chrome stuck to the
-        // top of the viewport — the page's own top padding under it is a second gap between a
-        // title and the first control, which put the search a thumb-swipe below 내 글 (THEME-38).
-        // The desk, where the row is a rail and the heading is the page's own, keeps `py-8`.
         className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
       })}
     >
-      <div className="px-4 sm:px-6 lg:px-8">
-        <Typography variant="display">{t('list.mine', { ns: 'posts' })}</Typography>
-      </div>
+      {/* The channel opens straight onto this list: the marked channel link names the place, so
+          the heading is for assistive technology only (THEME-38, POST-43). */}
+      <h1 className="sr-only">{t('list.mine', { ns: 'posts' })}</h1>
 
       {/* On the screen at every post count (POST-68): a search that appears at some number of
           posts is a second layout for the same page, and the count it would appear at is exactly
           where someone starts needing it. */}
-      <div className="px-4 sm:px-6 lg:mt-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
         <PostListControls narrowing={narrowing} onChange={narrow} />
       </div>
 
@@ -383,6 +380,7 @@ export function PostsPage() {
           )}
         </div>
       )}
+      <ChannelActions />
     </main>
   )
 }

@@ -7,7 +7,7 @@ export const legacyPublishingAgentsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/publishing-agents',
   beforeLoad: () => {
-    throw redirect({ to: '/posts', replace: true })
+    throw redirect({ to: '/naver-blog', replace: true })
   },
 })
 

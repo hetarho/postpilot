@@ -5,7 +5,7 @@ import {
 } from '@/shared/lib/navigation'
 
 export interface PostEntry {
-  path: '/naver-blog' | '/posts'
+  path: '/naver-blog'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
@@ -27,6 +27,12 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
   return createReturnContextStore(ownerId, scoped, {
     isAccessible: (path) => ['/naver-blog', '/posts', '/', '/library'].includes(path),
   })
+}
+
+/** The channel opens on its own history (POST-43), so history and creation share one address and
+ *  the section tells them apart. A `/posts` entry stored before that still names the history. */
+function isPostHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'>): boolean {
+  return entry.section === 'posts' || entry.path === '/posts'
 }
 
 function browserStorage(): NavigationStorage | undefined {
@@ -63,14 +69,14 @@ export function readPostReturnContext(
   if (!storage) return undefined
   const entry = store(ownerId, storage, slug ?? 'new').read() ?? store(ownerId, storage).read()
   if (!entry || entry.targetId !== (slug ?? 'new')) return undefined
-  return entry.path === '/' || entry.path === '/library'
-    ? { ...entry, path: '/naver-blog', section: 'naverBlog', filters: {} }
-    : entry
+  if (entry.path === '/' || entry.path === '/library')
+    return { ...entry, path: '/naver-blog', section: 'naverBlog', filters: {} }
+  return entry.path === '/posts' ? { ...entry, path: '/naver-blog', section: 'posts' } : entry
 }
 
 export function postReturnDestination(ownerId: string, slug?: string, storage = browserStorage()) {
   const entry = readPostReturnContext(ownerId, slug, storage)
-  const path = (entry?.path ?? (slug ? '/posts' : '/naver-blog')) as PostEntry['path']
+  const path: PostEntry['path'] = '/naver-blog'
   const search = Object.fromEntries(
     Object.entries(entry?.filters ?? {}).filter(([key]) => key === 'q' || key === 'status'),
   )
@@ -86,7 +92,7 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
 export function retainMintedPostEntry(ownerId: string, slug: string) {
   const entry = readPostReturnContext(ownerId)
   return rememberPostEntry(ownerId, {
-    path: (entry?.path ?? '/naver-blog') as PostEntry['path'],
+    path: '/naver-blog',
     section: entry?.section ?? 'naverBlog',
     filters: entry?.filters ?? {},
     scrollY: entry?.scrollY ?? 0,
@@ -97,7 +103,7 @@ export function retainMintedPostEntry(ownerId: string, slug: string) {
 export function markPostHistoryReturn(ownerId: string, slug: string) {
   const storage = browserStorage()
   const entry = readPostReturnContext(ownerId, slug, storage)
-  if (!storage || !entry || entry.path !== '/posts') return false
+  if (!storage || !entry || !isPostHistoryEntry(entry)) return false
   return store(ownerId, storage).write({
     ...entry,
     filters: { ...entry.filters, restoreScroll: 'true' },
@@ -108,7 +114,9 @@ export function readPostHistoryReturn(ownerId: string) {
   const storage = browserStorage()
   if (!storage) return undefined
   const entry = store(ownerId, storage).read()
-  return entry?.path === '/posts' && entry.filters.restoreScroll === 'true' ? entry : undefined
+  return entry && isPostHistoryEntry(entry) && entry.filters.restoreScroll === 'true'
+    ? entry
+    : undefined
 }
 
 export function completePostHistoryReturn(ownerId: string) {

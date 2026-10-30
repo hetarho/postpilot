@@ -6,7 +6,7 @@ import { i18n as voicePreparationI18n } from '@/features/prepare-writing-voice/c
 import { i18n as writingCandidatesI18n } from '@/entities/voice-candidate/config/i18n'
 import { i18n as candidateFlowI18n } from '@/features/generate-writing-voices/config/i18n'
 import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
-import { i18n as channelI18n } from '@/pages/channel/config/i18n'
+import { i18n as channelI18n } from '@/widgets/channel-actions/config/i18n'
 import { i18n as homeI18n } from '@/pages/home/config/i18n'
 import { i18n as libraryI18n } from '@/pages/library/config/i18n'
 import { i18n as settingsI18n } from '@/pages/settings/config/i18n'

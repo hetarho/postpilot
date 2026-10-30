@@ -27,18 +27,18 @@ function createBrokenTransport() {
 describe('session guard', () => {
   // AUTH-24, AUTH-27.
   it('sends an unauthenticated visit to /login, remembering where it was going', async () => {
-    const { router } = renderAppAt('/posts')
+    const { router } = renderAppAt('/naver-blog')
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
-    expect(router.state.location.search).toEqual({ redirect: '/posts' })
+    expect(router.state.location.search).toEqual({ redirect: '/naver-blog' })
     expect(await screen.findByRole('button', { name: '로그인' })).toBeInTheDocument()
   })
 
   it('lets a signed-in visit through and shows the account behind the avatar', async () => {
     const user = userEvent.setup()
-    const { router } = renderAppAt('/posts', { user: { id: 'alice' } })
+    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
     // The header row itself carries no id text; the avatar popover is where the session shows.
     expect(screen.queryByText('alice')).not.toBeInTheDocument()
     await user.click(await screen.findByRole('button', { name: '내 계정' }))
@@ -53,7 +53,7 @@ describe('session guard', () => {
 
   it('asks the server once per unauthenticated load, not once per route', async () => {
     const calls: string[] = []
-    const { router } = renderAppAt('/posts', { calls })
+    const { router } = renderAppAt('/naver-blog', { calls })
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     // The guard asks; the login route then reads that answer from the cache.
@@ -167,7 +167,7 @@ describe('outage', () => {
     ['en', 'Could not complete the request. Please try again.', 'Try again'],
   ] as const)('renders a safe %s route failure without raw prose', async (locale, copy, retry) => {
     initializeI18n(locale)
-    const { router } = renderAppAt('/posts', { transport: createBrokenTransport() })
+    const { router } = renderAppAt('/naver-blog', { transport: createBrokenTransport() })
 
     await waitFor(() => expect(router.state.status).toBe('idle'))
     expect(router.state.location.pathname).not.toBe('/login')
@@ -183,8 +183,8 @@ describe('logout', () => {
   // next navigation exposes.
   it('keeps the user in the app and says so in the open popover when logout fails', async () => {
     const user = userEvent.setup()
-    const { router } = renderAppAt('/posts', { user: { id: 'alice' }, logoutFails: true })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' }, logoutFails: true })
+    await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
 
     await user.click(await screen.findByRole('button', { name: '내 계정' }))
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
@@ -193,7 +193,7 @@ describe('logout', () => {
     const alert = await screen.findByRole('alert')
     expect(alert).toHaveTextContent('로그아웃하지 못했어요')
     expect(screen.getByRole('dialog', { name: '내 계정' })).toContainElement(alert)
-    expect(router.state.location.pathname).toBe('/posts')
+    expect(router.state.location.pathname).toBe('/naver-blog')
   })
 
   // A draft still being retried must not follow the device to the next account: the
@@ -224,10 +224,10 @@ describe('logout', () => {
   // AUTH-13.
   it('ends the session and lands on /login', async () => {
     const user = userEvent.setup()
-    const { router, transport, queryClient } = renderAppAt('/posts', {
+    const { router, transport, queryClient } = renderAppAt('/naver-blog', {
       user: { id: 'alice' },
     })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
 
     await user.click(await screen.findByRole('button', { name: '내 계정' }))
     await user.click(await screen.findByRole('button', { name: '로그아웃' }))
@@ -236,19 +236,18 @@ describe('logout', () => {
     // Navigating back must not find a cached session waiting.
     const { getMeQueryKey } = await import('@/entities/session')
     expect(queryClient.getQueryData(getMeQueryKey(transport))).toBeUndefined()
-    await router.navigate({ to: '/posts' })
+    await router.navigate({ to: '/naver-blog' })
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
   })
 })
 
-// TMPL-24: templates are reached from the Naver Blog channel hub.
+// TMPL-24: templates are reached from the Naver Blog channel's floating action menu.
 describe('the template management route', () => {
-  it('opens templates after history in the Naver Blog hub', async () => {
+  it('opens templates from the Naver Blog channel menu', async () => {
     const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
     await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
-    const labels = hrefs()
-    expect(labels.indexOf('/templates')).toBeGreaterThan(labels.indexOf('/posts'))
-    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: '템플릿' }))
+    await userEvent.click(screen.getByRole('button', { name: '새 글' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: '글 템플릿' }))
     await screen.findByRole('heading', { level: 1, name: '템플릿' })
     expect(router.state.location.pathname).toBe('/templates')
   })
@@ -285,9 +284,9 @@ describe('the public About route', () => {
 
   // A3: making /about public must not have loosened anything else.
   it('leaves the authenticated routes guarded', async () => {
-    const { router } = renderAppAt('/posts')
+    const { router } = renderAppAt('/naver-blog')
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
-    expect(router.state.location.search).toEqual({ redirect: '/posts' })
+    expect(router.state.location.search).toEqual({ redirect: '/naver-blog' })
   })
 
   // A4: the login page reaches About, and About's quiet Login link delegates to the unchanged guard.
@@ -383,14 +382,15 @@ describe('About consumes the shared locale and theme runtimes', () => {
   })
 })
 
-// GUIDE-20: guidelines follow templates in the Naver Blog hub.
+// GUIDE-20: guidelines follow templates in the Naver Blog channel's floating action menu.
 describe('the guideline management route', () => {
-  it('opens guidelines after templates in the Naver Blog hub', async () => {
+  it('opens guidelines after templates in the Naver Blog channel menu', async () => {
     const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
     await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
-    const labels = hrefs()
-    expect(labels.indexOf('/guidelines')).toBeGreaterThan(labels.indexOf('/templates'))
-    await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: '지침' }))
+    await userEvent.click(screen.getByRole('button', { name: '새 글' }))
+    const items = screen.getAllByRole('menuitem').map((item) => item.getAttribute('href'))
+    expect(items.indexOf('/guidelines')).toBe(items.indexOf('/templates') + 1)
+    await userEvent.click(screen.getByRole('menuitem', { name: '글 지침' }))
     await screen.findByRole('heading', { level: 1, name: '지침' })
     expect(router.state.location.pathname).toBe('/guidelines')
   })
@@ -449,10 +449,10 @@ describe('theme preferences in the real route tree', () => {
     },
     {
       surface: 'authenticated',
-      at: '/posts?view=recent#preferences',
+      at: '/naver-blog?view=recent#preferences',
       user: { id: 'alice' },
       readyRole: 'heading' as const,
-      readyName: '글 작업 내역',
+      readyName: '네이버 블로그',
       // The shell reads the balance for its credit control (QUOTA-27), so the authenticated
       // surface also prepares active model defaults; this case pins that the preferences add
       // none of their own.
@@ -512,12 +512,12 @@ describe('theme preferences in the real route tree', () => {
   it('persists an explicit choice across navigation, logout/login, and a fresh app mount', async () => {
     const user = userEvent.setup()
     const theme = createThemeTestEnvironment()
-    const first = renderAppAt('/posts', {
+    const first = renderAppAt('/naver-blog', {
       user: { id: 'alice' },
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '테마' }))
     await user.click(await screen.findByRole('menuitemradio', { name: '어둡게' }))
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
@@ -547,11 +547,11 @@ describe('theme preferences in the real route tree', () => {
     expect(theme.mediaQuery.listenerCount()).toBe(0)
     expect(theme.storageEvents.listenerCount()).toBe(0)
 
-    const reloaded = renderAppAt('/posts', {
+    const reloaded = renderAppAt('/naver-blog', {
       user: { id: 'alice' },
       theme: theme.ports,
     })
-    expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
     await user.click(screen.getByRole('button', { name: '테마' }))
     expect(
@@ -592,13 +592,13 @@ describe('theme preferences in the real route tree', () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const theme = createThemeTestEnvironment()
-    const { router } = renderAppAt('/posts?view=recent#draft', {
+    const { router } = renderAppAt('/naver-blog?view=recent#draft', {
       user: { id: 'alice' },
       calls,
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: 'Writing history' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Naver Blog' })).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('ListPosts'))
     const callsBeforeSelection = [...calls]
     const locationBeforeSelection = router.state.location.href
@@ -616,12 +616,12 @@ describe('theme preferences in the real route tree', () => {
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
     const calls: string[] = []
-    renderAppAt('/posts', { user: { id: 'alice' }, calls })
+    renderAppAt('/templates', { user: { id: 'alice' }, calls })
 
-    expect(await screen.findByRole('heading', { name: '글 작업 내역' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '템플릿', level: 1 })).toBeInTheDocument()
     const header = screen.getByRole('banner')
     const location = within(header).getByRole('navigation', { name: '현재 위치' })
-    const disclosure = within(location).getByRole('button', { name: '현재 위치: 글 작업 내역' })
+    const disclosure = within(location).getByRole('button', { name: '현재 위치: 글 템플릿' })
     const account = screen.getByRole('button', { name: '내 계정' })
     const navigation = within(header).getByRole('navigation', { name: '주요' })
     expect(
@@ -633,7 +633,7 @@ describe('theme preferences in the real route tree', () => {
     expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
     expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     await user.click(disclosure)
-    const hierarchy = screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })
+    const hierarchy = screen.getByRole('dialog', { name: '현재 위치: 글 템플릿' })
     expect(within(hierarchy).getByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
       'href',
       '/naver-blog',
@@ -642,7 +642,7 @@ describe('theme preferences in the real route tree', () => {
     expect(disclosure).toHaveFocus()
     await user.click(disclosure)
     await user.click(
-      within(screen.getByRole('dialog', { name: '현재 위치: 글 작업 내역' })).getByRole('link', {
+      within(screen.getByRole('dialog', { name: '현재 위치: 글 템플릿' })).getByRole('link', {
         name: '네이버 블로그',
       }),
     )
@@ -692,7 +692,7 @@ describe('localized registered-route smoke', () => {
   const copy = {
     ko: {
       login: '로그인',
-      posts: '글 작업 내역',
+      posts: '네이버 블로그',
       voices: '말투',
       templates: '템플릿',
       guidelines: '지침',
@@ -705,7 +705,7 @@ describe('localized registered-route smoke', () => {
     },
     en: {
       login: 'Log in',
-      posts: 'Writing history',
+      posts: 'Naver Blog',
       voices: 'Voices',
       templates: 'Templates',
       guidelines: 'Guidelines',
@@ -747,13 +747,20 @@ describe('localized registered-route smoke', () => {
           name: locale === 'ko' ? /내가 겪은 것만으로/ : /Your own experience/,
           signedIn: true,
         },
-        { path: '/posts', role: 'heading', name: text.posts, signedIn: true },
+        { path: '/naver-blog', role: 'heading', name: text.posts, signedIn: true },
+        {
+          path: '/posts',
+          role: 'heading',
+          name: text.posts,
+          signedIn: true,
+          expectedPath: '/naver-blog',
+        },
         {
           path: '/publishing-agents',
           role: 'heading',
           name: text.posts,
           signedIn: true,
-          expectedPath: '/posts',
+          expectedPath: '/naver-blog',
         },
         { path: '/voices', role: 'heading', name: text.voices, signedIn: true },
         { path: '/templates', role: 'heading', name: text.templates, signedIn: true },
@@ -853,7 +860,7 @@ describe('localized registered-route smoke', () => {
     async (width) => {
       Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
       window.dispatchEvent(new Event('resize'))
-      renderAppAt('/posts', { user: { id: 'alice' } })
+      renderAppAt('/naver-blog', { user: { id: 'alice' } })
 
       const main = await screen.findByRole('main')
       const shell = main.parentElement
@@ -877,9 +884,9 @@ describe('retired publishing route', () => {
     const { router } = renderAppAt('/publishing-agents', { user: account, calls })
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: '글 작업 내역' }),
+      await screen.findByRole('heading', { level: 1, name: '네이버 블로그' }),
     ).toBeInTheDocument()
-    expect(router.state.location.pathname).toBe('/posts')
+    expect(router.state.location.pathname).toBe('/naver-blog')
     expect(hrefs()).not.toContain('/publishing-agents')
     expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
   })

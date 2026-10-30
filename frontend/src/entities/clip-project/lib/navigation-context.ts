@@ -7,7 +7,7 @@ import {
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 
 export interface ClipEntry {
-  path: '/naver-clip' | '/insta-clip' | '/clips'
+  path: '/naver-clip' | '/insta-clip'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
@@ -22,6 +22,19 @@ export interface ClipReturnDestination {
   href: string
   section: string
   scrollY: number
+}
+/** Each clip channel opens on its own history (CLIP-41), so history and creation share the
+ *  channel's address and the section tells them apart. A `/clips` entry stored before that still
+ *  names the history. */
+export function isClipHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'>): boolean {
+  return entry.section === 'clips' || entry.path === '/clips'
+}
+function storedChannel(entry: ReturnContext | undefined): ClipChannel {
+  return CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
+    ? (entry!.filters.channel as ClipChannel)
+    : entry?.path === '/insta-clip'
+      ? 'instagram_clip'
+      : DEFAULT_CLIP_CHANNEL
 }
 function browserStorage(): NavigationStorage | undefined {
   try {
@@ -71,13 +84,15 @@ export function readClipReturnContext(
   if (!storage) return undefined
   const entry = store(ownerId, storage, clipId ?? 'new').read() ?? store(ownerId, storage).read()
   if (entry?.targetId !== (clipId ?? 'new')) return undefined
-  return entry.path === '/' || entry.path === '/library'
-    ? {
-        ...entry,
-        path: clipChannelPath(
-          entry.filters.channel === 'instagram_clip' ? 'instagram_clip' : DEFAULT_CLIP_CHANNEL,
-        ),
-      }
+  if (entry.path === '/' || entry.path === '/library')
+    return {
+      ...entry,
+      path: clipChannelPath(
+        entry.filters.channel === 'instagram_clip' ? 'instagram_clip' : DEFAULT_CLIP_CHANNEL,
+      ),
+    }
+  return entry.path === '/clips'
+    ? { ...entry, path: clipChannelPath(storedChannel(entry)), section: 'clips' }
     : entry
 }
 export function clipReturnDestination(
@@ -87,30 +102,23 @@ export function clipReturnDestination(
   channel?: ClipChannel,
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
-  const storedChannel = CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
-    ? (entry!.filters.channel as ClipChannel)
-    : entry?.path === '/insta-clip'
-      ? 'instagram_clip'
-      : DEFAULT_CLIP_CHANNEL
-  const currentChannel = channel ?? storedChannel
-  const path: ClipEntry['path'] =
-    (entry?.path ?? (clipId ? '/clips' : undefined)) === '/clips'
-      ? '/clips'
-      : clipChannelPath(currentChannel)
+  const currentChannel = channel ?? storedChannel(entry)
+  // The channel's address carries the channel; a history entry adds its own narrowing. A clip
+  // moved to the other channel returns to that channel's history (CLIP-209).
+  const path = clipChannelPath(currentChannel)
+  const history = entry ? isClipHistoryEntry(entry) : !!clipId
   const filters: Record<string, string> = {}
-  if (path === '/clips') {
+  if (history) {
     if (entry?.filters.q) filters.q = entry.filters.q
     if (entry?.filters.status && ['draft', 'refining', 'finished'].includes(entry.filters.status))
       filters.status = entry.filters.status
-    if (currentChannel !== DEFAULT_CLIP_CHANNEL || entry?.filters.channel)
-      filters.channel = currentChannel
   }
   const query = new URLSearchParams(filters).toString()
   return {
     channel: currentChannel,
     path,
     href: query ? `${path}?${query}` : path,
-    section: entry?.section ?? (path === '/clips' ? 'clips' : currentChannel),
+    section: entry?.section ?? (history ? 'clips' : currentChannel),
     scrollY: entry?.scrollY ?? 0,
   }
 }
@@ -125,13 +133,11 @@ export function retainMintedClipEntry(
   return rememberClipEntry(
     ownerId,
     {
-      path: (entry?.path === '/clips'
-        ? '/clips'
-        : clipChannelPath(
-            entry?.filters.channel === 'instagram_clip' || entry?.path === '/insta-clip'
-              ? 'instagram_clip'
-              : DEFAULT_CLIP_CHANNEL,
-          )) as ClipEntry['path'],
+      path: clipChannelPath(
+        entry?.filters.channel === 'instagram_clip' || entry?.path === '/insta-clip'
+          ? 'instagram_clip'
+          : DEFAULT_CLIP_CHANNEL,
+      ),
       section: entry?.section ?? 'naver_clip',
       filters: entry?.filters ?? {},
       scrollY: entry?.scrollY ?? 0,
@@ -146,7 +152,7 @@ export function markClipHistoryReturn(
   storage = browserStorage(),
 ): boolean {
   const entry = readClipReturnContext(ownerId, clipId, storage)
-  if (!storage || !entry || entry.path !== '/clips') return false
+  if (!storage || !entry || !isClipHistoryEntry(entry)) return false
   return store(ownerId, storage).write({
     ...entry,
     filters: { ...entry.filters, restoreScroll: 'true' },
@@ -158,7 +164,9 @@ export function readClipHistoryReturn(
 ): ReturnContext | undefined {
   if (!storage) return undefined
   const entry = store(ownerId, storage).read()
-  return entry?.path === '/clips' && entry.filters.restoreScroll === 'true' ? entry : undefined
+  return entry && isClipHistoryEntry(entry) && entry.filters.restoreScroll === 'true'
+    ? entry
+    : undefined
 }
 export function completeClipHistoryReturn(ownerId: string, storage = browserStorage()): void {
   const entry = readClipHistoryReturn(ownerId, storage)
@@ -174,7 +182,7 @@ export function forgetClipEntry(ownerId: string, clipId: string, storage = brows
   store(ownerId, storage, clipId).clear()
   const current = store(ownerId, storage).read()
   if (current?.targetId !== clipId) return
-  if (current.path === '/clips' && current.filters.restoreScroll === 'true') {
+  if (isClipHistoryEntry(current) && current.filters.restoreScroll === 'true') {
     const history = { ...current }
     delete history.targetId
     store(ownerId, storage).write(history)

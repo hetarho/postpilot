@@ -3,14 +3,17 @@ import { postReviewSearchSchema, testRecordSearchSchema } from '@/pages/model-ex
 import { editorSearchSchema } from '@/pages/editor'
 import { postsSearchSchema } from '@/pages/posts'
 import { NewDraftPage, PostEditorPage } from '@/pages/editor'
-import { PostsPage } from '@/pages/posts'
 import { authenticatedRoute } from './tree'
 
+/** The post history moved onto the channel itself (POST-43); a bookmark or an old return link
+ *  lands there with its narrowing. */
 export const postsRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/posts',
   validateSearch: postsSearchSchema,
-  component: PostsPage,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/naver-blog', search, replace: true })
+  },
 })
 
 // A static segment outranks '$slug', so this route — not the editor below — is what
@@ -43,7 +46,7 @@ export const postExperimentRoute = createRoute({
     if (search.status) filters.set('status', search.status)
     const entry =
       search.entry ??
-      (search.from === 'posts' ? `/posts${filters.size ? '?' + filters : ''}` : undefined)
+      (search.from === 'posts' ? `/naver-blog${filters.size ? '?' + filters : ''}` : undefined)
     throw redirect({
       to: '/tests/records/$id',
       params: { id: params.id },

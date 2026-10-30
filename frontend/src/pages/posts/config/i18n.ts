@@ -6,9 +6,9 @@ export const i18n = {
   ko: {
     new: '새 글',
     list: {
-      mine: '글 작업 내역',
+      mine: '네이버 블로그',
       loadFailed: '목록을 불러오지 못했어요.',
-      empty: '아직 글이 없어요. 홈에서 새 글을 시작할 수 있어요.',
+      empty: '아직 글이 없어요. 아래 + 새 글에서 시작할 수 있어요.',
       writingAria: '글 작성',
       state: { generating: 'AI 생성 중', failed: 'AI 결과 오류', review: 'AI 결과 확인' },
       history: {
@@ -42,9 +42,9 @@ export const i18n = {
   en: {
     new: 'New post',
     list: {
-      mine: 'Writing history',
+      mine: 'Naver Blog',
       loadFailed: 'Could not load the post list.',
-      empty: 'There are no posts yet. Start a new post from Home.',
+      empty: 'There are no posts yet. Start one from + New post below.',
       writingAria: 'Write a post',
       state: { generating: 'AI generation', failed: 'AI result error', review: 'Review AI result' },
       history: {

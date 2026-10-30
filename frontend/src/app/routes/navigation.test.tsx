@@ -40,9 +40,10 @@ it.each([
   ['/ai-models/compare', '/settings'],
   ['/billing', '/settings'],
 ] as const)('resolves %s to %s', (path, section) => expect(currentDestination(path)).toBe(section))
-it('keeps minted creation distinct from a direct history record and exposes deterministic hierarchy', () => {
-  expect(currentDestination('/posts/minted', true)).toBe('/naver-blog')
-  expect(currentDestination('/clips/minted', true)).toBe('/naver-clip')
+it('places every post and clip under its channel and exposes deterministic hierarchy', () => {
+  expect(currentDestination('/posts/minted')).toBe('/naver-blog')
+  expect(currentDestination('/clips/minted')).toBe('/naver-clip')
+  expect(currentDestination('/clips/minted', 'instagram_clip')).toBe('/insta-clip')
   expect(routeLocation('/voices/voice/materials').ancestors.map((x) => x.href)).toEqual([
     '/settings',
     '/settings#settings-personal',
@@ -58,8 +59,8 @@ it('keeps minted creation distinct from a direct history record and exposes dete
 it('shows primary destinations and current section on desktop without a hamburger or modal', async () => {
   viewport(true)
   const calls: string[] = []
-  renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })
-  await screen.findByRole('heading', { name: '글 작업 내역' })
+  renderAppAt('/naver-blog', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })
+  await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   const nav = screen.getByRole('navigation', { name: '주요' })
   expect(
     within(nav)
@@ -69,7 +70,7 @@ it('shows primary destinations and current section on desktop without a hamburge
   expect(within(nav).getByRole('link', { name: '블로그' })).toHaveAttribute('aria-current', 'page')
   expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
   expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull()
-  expect(screen.getByRole('navigation', { name: '현재 위치' })).toHaveTextContent('글 작업 내역')
+  expect(screen.getByRole('navigation', { name: '현재 위치' })).toHaveTextContent('네이버 블로그')
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
 it.each([false, true])(
@@ -187,10 +188,9 @@ it('derives named child locations and unknown-route behavior from the same hiera
     expect(routeLocation(path).destination).toBe(path)
   }
   expect(currentDestination('/setup')).toBeUndefined()
-  expect(routeLocation('/posts/minted', true).ancestors.map((x) => x.href)).toEqual(['/naver-blog'])
-  expect(routeLocation('/posts/minted').ancestors.map((x) => x.href)).toEqual([
-    '/naver-blog',
-    '/posts',
+  expect(routeLocation('/posts/minted').ancestors.map((x) => x.href)).toEqual(['/naver-blog'])
+  expect(routeLocation('/clips/minted', 'instagram_clip').ancestors.map((x) => x.href)).toEqual([
+    '/insta-clip',
   ])
   expect(routeLocation('/admin/models')).toMatchObject({
     current: 'adminModels',

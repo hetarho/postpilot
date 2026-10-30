@@ -23,9 +23,9 @@ describe('registerAuthRedirect', () => {
   // The route guard only runs on navigation, so a session that dies while the user sits
   // on a screen has to be caught here.
   it('sends the user to /login when a session dies mid-use', async () => {
-    const { router, transport, queryClient, expireSession } = setup('/posts', { id: 'alice' })
+    const { router, transport, queryClient, expireSession } = setup('/naver-blog', { id: 'alice' })
     await router.load()
-    expect(router.state.location.pathname).toBe('/posts')
+    expect(router.state.location.pathname).toBe('/naver-blog')
     expect(queryClient.getQueryData(getMeQueryKey(transport))).toBeDefined()
 
     // The event only means anything if the session really is gone server-side; with a
@@ -35,7 +35,7 @@ describe('registerAuthRedirect', () => {
     emitUnauthenticated()
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
-    expect(router.state.location.search).toEqual({ redirect: '/posts' })
+    expect(router.state.location.search).toEqual({ redirect: '/naver-blog' })
     // The stale session must go, or the guard would wave the user straight back through.
     expect(queryClient.getQueryData(getMeQueryKey(transport))).toBeUndefined()
     off()
@@ -100,7 +100,7 @@ describe('registerAuthRedirect', () => {
   )
 
   it('stops listening once unregistered', async () => {
-    const { router, transport, queryClient, expireSession } = setup('/posts', { id: 'alice' })
+    const { router, transport, queryClient, expireSession } = setup('/naver-blog', { id: 'alice' })
     await router.load()
 
     const off = registerAuthRedirect({ router, queryClient, transport })
@@ -109,6 +109,6 @@ describe('registerAuthRedirect', () => {
     emitUnauthenticated()
     await new Promise((resolve) => setTimeout(resolve, 20))
 
-    expect(router.state.location.pathname).toBe('/posts')
+    expect(router.state.location.pathname).toBe('/naver-blog')
   })
 })

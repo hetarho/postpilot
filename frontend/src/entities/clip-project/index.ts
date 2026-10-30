@@ -9,6 +9,7 @@ export {
   readClipHistoryReturn,
   completeClipHistoryReturn,
   forgetClipEntry,
+  isClipHistoryEntry,
   type ClipEntry,
   type ClipReturnDestination,
 } from './lib/navigation-context'

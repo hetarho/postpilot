@@ -2,6 +2,8 @@ import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   clipChannel,
+  clipChannelPath,
+  isClipHistoryEntry,
   readClipReturnContext,
   rememberClipEntry,
   serialClipWrite,
@@ -41,10 +43,10 @@ export function MoveClipChannel({
         mutation.mutateAsync({ id: project.id, channel: next }),
       )
       const entry = readClipReturnContext(ownerId, project.id)
-      if (entry?.path === '/clips')
+      if (entry && isClipHistoryEntry(entry))
         rememberClipEntry(ownerId, {
           ...entry,
-          path: '/clips',
+          path: clipChannelPath(clipChannel(moved.channel)),
           filters: { ...entry.filters, channel: clipChannel(moved.channel) },
         })
     } catch (error) {

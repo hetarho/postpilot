@@ -147,7 +147,7 @@ describe('pending gift hand-back', () => {
 
   it('sends a fresh pending gift back to its page once', async () => {
     localStorage.setItem(PENDING, JSON.stringify({ token: 'tok-1', savedAt: Date.now() }))
-    const { router } = renderAppAt('/posts', {
+    const { router } = renderAppAt('/naver-blog', {
       user: { id: 'alice' },
       plans: PAID_PLAN,
       vouchers: { vouchers: [{ token: 'tok-1' }] },
@@ -162,10 +162,10 @@ describe('pending gift hand-back', () => {
       PENDING,
       JSON.stringify({ token: 'tok-1', savedAt: Date.now() - 2 * 24 * 60 * 60 * 1000 }),
     )
-    const { router } = renderAppAt('/posts', { user: { id: 'alice' } })
+    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
 
     await screen.findByRole('button', { name: '내 계정' })
-    expect(router.state.location.pathname).toBe('/posts')
+    expect(router.state.location.pathname).toBe('/naver-blog')
     expect(localStorage.getItem(PENDING)).toBeNull()
   })
 })

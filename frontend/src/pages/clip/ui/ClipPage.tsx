@@ -65,10 +65,7 @@ export function ClipPage() {
   )
   const returnTo = {
     href: destination.href,
-    label: t(
-      destination.path === '/clips' ? 'navigation.returnHistory' : 'navigation.returnCreation',
-      { channel: t(`channel.${destination.channel}`) },
-    ),
+    label: t('navigation.returnCreation', { channel: t(`channel.${destination.channel}`) }),
     onReturn: async () => {
       if (clipId) markClipHistoryReturn(ownerId, clipId)
       await navigate({ href: destination.href })

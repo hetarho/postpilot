@@ -16,8 +16,6 @@ const STABLE_PARENTS = new Set([
   '/naver-blog',
   '/naver-clip',
   '/insta-clip',
-  '/posts',
-  '/clips',
   '/tests',
   '/tests/history',
   '/voices',

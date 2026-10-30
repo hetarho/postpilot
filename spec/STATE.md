@@ -140,7 +140,6 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
-| T722 | Channels open on their history with the floating action menu | THEME POST CLIP | T721 | doing@261030.chl |
 | T723 | Breadcrumb-free shell with header channel links | THEME | T722 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -155,6 +154,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 T722 done: channels open on their history (no visible heading) with the floating action menu; /posts and /clips redirect with their narrowing; full FE suite 569 files/4521 tests, tsc, eslint/prettier, steiger, lint:style pass.
 - 261030 T721 done: shared FloatingActionMenu (list dock, scrim, × in place, grouped link menu, menu-button keys); 19 unit test files/190 tests, tsc, eslint/prettier, lint:style, steiger pass.
 - 261030 create-task THEME r36 POST r43 CLIP r67 → T721 floating action menu, T722 channel history landing (+/posts, /clips redirects), T723 breadcrumb-free shell with header channel links.
 - 261030 update-ssot THEME r36 POST r43 CLIP r67 (chl): THEME-38✎ THEME-58✎ THEME-67+ POST-43✎ CLIP-3✎ CLIP-41✎ channels open on their history, floating action menu (+말투), no breadcrumb, phone links in the header row, underline current mark.

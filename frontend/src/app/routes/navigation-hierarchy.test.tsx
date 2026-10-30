@@ -279,7 +279,8 @@ it('retains the Instagram location through shared templates, child navigation, r
   const calls: string[] = []
   const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, calls })
   await screen.findByRole('heading', { name: '인스타 클립', level: 1 })
-  await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: '템플릿' }))
+  await userEvent.click(screen.getByRole('button', { name: '새 클립' }))
+  await userEvent.click(screen.getByRole('menuitem', { name: '영상 템플릿' }))
   await screen.findByRole('heading', { name: '영상 템플릿', level: 1 })
   expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
   await userEvent.click(
@@ -321,33 +322,36 @@ it('keeps a directly opened Instagram project channel when visiting shared video
       ],
     },
   })
-  await screen.findByRole('link', { name: '인스타 클립 기록으로 돌아가기' })
+  await screen.findByRole('link', { name: '인스타 클립으로 돌아가기' })
   await act(() => view.router.navigate({ to: '/video-guidelines' }))
   await screen.findByRole('heading', { name: '영상 지침', level: 1 })
   expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
   expect(paidActions(calls)).toEqual([])
 })
 
-it.each([
-  ['템플릿', '영상 템플릿'],
-  ['지침', '영상 지침'],
-])('keeps Instagram when its %s link opens in a fresh tab', async (linkName, heading) => {
-  const calls: string[] = []
-  const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, calls })
-  const main = await screen.findByRole('main')
-  const href = within(main).getByRole('link', { name: linkName }).getAttribute('href')!
-  expect(href).toContain('channel=instagram_clip')
-  view.unmount()
-  sessionStorage.clear()
-  renderAppAt(href, { transport: view.transport })
-  await screen.findByRole('heading', { name: heading, level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
-  const nav = screen.getByRole('navigation', { name: '주요' })
-  expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute('aria-current', 'page')
-  if (linkName === '템플릿') {
-    expect(
-      await within(screen.getByRole('main')).findByRole('link', { name: '새 영상 템플릿' }),
-    ).toHaveAttribute('href', '/video-templates/new?channel=instagram_clip')
-  }
-  expect(paidActions(calls)).toEqual([])
-})
+it.each(['영상 템플릿', '영상 지침'])(
+  'keeps Instagram when its menu %s item opens in a fresh tab',
+  async (heading) => {
+    const calls: string[] = []
+    const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, calls })
+    await userEvent.click(await screen.findByRole('button', { name: '새 클립' }))
+    const href = screen.getByRole('menuitem', { name: heading }).getAttribute('href')!
+    expect(href).toContain('channel=instagram_clip')
+    view.unmount()
+    sessionStorage.clear()
+    renderAppAt(href, { transport: view.transport })
+    await screen.findByRole('heading', { name: heading, level: 1 })
+    expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+    const nav = screen.getByRole('navigation', { name: '주요' })
+    expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    if (heading === '영상 템플릿') {
+      expect(
+        await within(screen.getByRole('main')).findByRole('link', { name: '새 영상 템플릿' }),
+      ).toHaveAttribute('href', '/video-templates/new?channel=instagram_clip')
+    }
+    expect(paidActions(calls)).toEqual([])
+  },
+)

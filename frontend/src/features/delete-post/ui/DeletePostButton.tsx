@@ -48,7 +48,7 @@ export function DeletePostButton({
     if (returnTo) {
       await navigate({ href: returnTo.href })
       window.requestAnimationFrame(() => window.scrollTo(0, returnTo.scrollY))
-    } else await navigate({ to: '/posts' })
+    } else await navigate({ to: '/naver-blog' })
   }
 
   return (

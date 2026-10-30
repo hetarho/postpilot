@@ -5,17 +5,20 @@ import { useTranslation } from 'react-i18next'
 import {
   clipState,
   clipChannel,
+  clipChannelPath,
   clipStateLabel,
   type ClipProject,
   useClipProjects,
   rememberClipEntry,
   readClipHistoryReturn,
   completeClipHistoryReturn,
+  type ClipChannel,
 } from '@/entities/clip-project'
 import { useClipTemplates } from '@/entities/clip-template'
 import { isTerminal, progressLabel } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { ClipListControls, narrowClips, type ClipNarrowing } from '@/features/filter-clips'
+import { ChannelActions } from '@/widgets/channel-actions'
 import { appFailureFromConnect } from '@/shared/api'
 import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
@@ -63,11 +66,11 @@ function stateTone(state: ReturnType<typeof clipState>): BadgeTone {
   return 'neutral'
 }
 
-/** The way back to unfinished clips. The server returns only the acting user's projects (CLIP-2);
- *  the search and the status filter narrow that one answer here in the browser, reading and
- *  writing the URL so the narrowing survives opening a project, coming back, a reload and a
- *  shared link (CLIP-41). */
-export function ClipsPage() {
+/** A clip channel's own page: the way back to its unfinished clips (CLIP-3, CLIP-41). The server
+ *  returns only the acting user's projects (CLIP-2); the channel comes from the address, and the
+ *  search and the status filter narrow that one answer here in the browser, reading and writing
+ *  the URL so the narrowing survives opening a project, coming back, a reload and a shared link. */
+function ClipsPage({ channel }: { channel: ClipChannel }) {
   const { t } = useTranslation(['clips', 'common'])
   // The app registers the fragment centrally. Slice defaults keep the
   // history usable before that wiring lands and still follow the selected UI language.
@@ -76,7 +79,9 @@ export function ClipsPage() {
   const { user } = useSession()
   const projects = useClipProjects(user?.id ?? '')
   const templates = useClipTemplates(user?.id ?? '')
-  const narrowing: ClipNarrowing = useSearch({ strict: false })
+  const search: Omit<ClipNarrowing, 'channel'> = useSearch({ strict: false })
+  const narrowing: ClipNarrowing = { q: search.q, status: search.status, channel }
+  const path = clipChannelPath(channel)
   const navigate = useNavigate()
   useEffect(() => {
     if (projects.isPending || projects.isError || !user?.id) return
@@ -91,12 +96,12 @@ export function ClipsPage() {
   const remember = (targetId: string) => {
     if (!user?.id) return
     rememberClipEntry(user.id, {
-      path: '/clips',
+      path,
       section: 'clips',
       scrollY: window.scrollY,
       targetId,
       filters: {
-        ...(narrowing.channel ? { channel: narrowing.channel } : {}),
+        channel,
         ...(narrowing.q ? { q: narrowing.q } : {}),
         ...(narrowing.status ? { status: narrowing.status } : {}),
       },
@@ -106,17 +111,14 @@ export function ClipsPage() {
   // instead of "the screen I came from". An emptied field drops the param rather than carrying `?q=`.
   const narrow = (next: ClipNarrowing) =>
     void navigate({
-      to: '/clips',
+      to: path,
       search: {
-        channel: next.channel ?? narrowing.channel,
         q: next.q?.trim() === '' ? undefined : next.q,
         status: next.status,
       },
       replace: true,
     })
-  const listed = (projects.data ?? []).filter(
-    (project) => clipChannel(project.channel) === clipChannel(narrowing.channel),
-  )
+  const listed = (projects.data ?? []).filter((project) => clipChannel(project.channel) === channel)
   const narrowed = narrowClips(listed, narrowing)
   const noMatch = !projects.isPending && !projects.isError && listed.length > 0 && !narrowed.length
   const statusLabel = narrowing.status ? clipStateLabel(narrowing.status) : ''
@@ -133,18 +135,18 @@ export function ClipsPage() {
       className={pageStyles({
         width: 'wide',
         gutters: false,
-        // The group row above already names this place below the desk, so the page's own top
-        // padding under it would only push the search away from that name (THEME-38).
         className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
       })}
     >
-      <div className="px-4 sm:px-6 lg:px-8">
-        <Typography variant="display">{historyText('title')}</Typography>
-      </div>
+      {/* The channel opens straight onto this list: the marked channel link names the place, so
+          the heading is for assistive technology only (THEME-38, CLIP-41). */}
+      <h1 className="sr-only">
+        {historyText(channel === 'instagram_clip' ? 'instaClip' : 'naverClip')}
+      </h1>
 
       {/* On the screen at every project count: a search that appears at some number of projects
           is a second layout for the same page. */}
-      <div className="px-4 sm:px-6 lg:mt-6 lg:px-8">
+      <div className="px-4 sm:px-6 lg:px-8">
         <ClipListControls narrowing={narrowing} onChange={narrow} />
       </div>
 
@@ -187,9 +189,7 @@ export function ClipsPage() {
           role="status"
           className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
         >
-          {projects.isPending
-            ? t('state.loading', { ns: 'common' })
-            : t('project.empty', { ns: 'clips' })}
+          {projects.isPending ? t('state.loading', { ns: 'common' }) : historyText('empty')}
         </Typography>
       )}
 
@@ -309,6 +309,14 @@ export function ClipsPage() {
           )
         })}
       </ul>
+      <ChannelActions channel={channel} />
     </main>
   )
+}
+
+export function NaverClipHistoryPage() {
+  return <ClipsPage channel="naver_clip" />
+}
+export function InstaClipHistoryPage() {
+  return <ClipsPage channel="instagram_clip" />
 }

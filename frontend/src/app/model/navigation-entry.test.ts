@@ -57,9 +57,9 @@ it('refuses external/malformed/unproven record parents and clears unsafe filters
 it('separates root switches from structural and explicit workflow entry', () => {
   const storage = memory()
   for (const target of ['/', '/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
-    expect(rememberNavigationEntry('alice', target, '/posts', 'history', 100, storage, true)).toBe(
-      false,
-    )
+    expect(
+      rememberNavigationEntry('alice', target, '/naver-blog', 'history', 100, storage, true),
+    ).toBe(false)
   expect(rememberNavigationEntry('alice', '/templates/item', '/tests', 'tests', 100, storage)).toBe(
     false,
   )
@@ -77,7 +77,7 @@ it('separates root switches from structural and explicit workflow entry', () => 
     rememberNavigationEntry(
       'alice',
       '/tests/records/result',
-      '/posts?q=food',
+      '/naver-blog?q=food',
       'history',
       100,
       storage,
@@ -85,8 +85,10 @@ it('separates root switches from structural and explicit workflow entry', () => 
     ),
   ).toBe(true)
   expect(entryHref(readNavigationEntry('alice', '/tests/records/result', storage)!)).toBe(
-    '/posts?q=food',
+    '/naver-blog?q=food',
   )
-  expect(navigationParent('/posts#settings-writing')?.path).toBe('/posts')
+  expect(navigationParent('/naver-blog#settings-writing')?.path).toBe('/naver-blog')
+  expect(navigationParent('/posts?q=food')).toBeUndefined()
+  expect(navigationParent('/clips?channel=instagram_clip')).toBeUndefined()
   expect(navigationParent('/settings#settings-unknown')?.path).toBe('/settings')
 })

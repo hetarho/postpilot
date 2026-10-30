@@ -41,7 +41,7 @@ it('keeps the creation parent after the first mint and after reload, then delete
 // that same filtered history.
 it('opens on its status step and retains the actual filtered history parent', async () => {
   rememberPostEntry(USER.id, {
-    path: '/posts',
+    path: '/naver-blog',
     section: 'posts',
     filters: { q: '제주', status: 'review' },
     scrollY: 840,
@@ -55,10 +55,10 @@ it('opens on its status step and retains the actual filtered history parent', as
     'aria-selected',
     'true',
   )
-  const back = screen.getByRole('link', { name: '네이버 블로그 기록으로 돌아가기' })
-  expect(back).toHaveAttribute('href', '/posts?q=%EC%A0%9C%EC%A3%BC&status=review')
+  const back = screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })
+  expect(back).toHaveAttribute('href', '/naver-blog?q=%EC%A0%9C%EC%A3%BC&status=review')
   await userEvent.click(back)
-  await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
   expect(router.state.location.search).toMatchObject({ q: '제주', status: 'review' })
 })
 
@@ -72,8 +72,8 @@ it('flushes the newest memo before contextual return without starting AI', async
     posts: { posts: [{ slug: 'saved' }], draftMaterials },
   })
   await user.type(await screen.findByLabelText('메모'), '떠나기 직전 입력')
-  await user.click(screen.getByRole('link', { name: '네이버 블로그 기록으로 돌아가기' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+  await user.click(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
   expect(draftMaterials.at(-1)?.memo).toBe('떠나기 직전 입력')
   expect(calls).not.toContain('StartGeneration')
 })

@@ -36,7 +36,6 @@ export function navigationChannelFromHref(href: string): ClipChannel | undefined
 }
 function structuralLocation(
   path: string,
-  creationOrigin: boolean,
   channel: ClipChannel,
 ): Omit<RouteLocation, 'destination'> {
   const clipHub: LocationAncestor = {
@@ -47,8 +46,6 @@ function structuralLocation(
   if (path === '/naver-blog') return { current: 'naverBlog', ancestors: [] }
   if (path === '/naver-clip') return { current: 'naverClip', ancestors: [] }
   if (path === '/insta-clip') return { current: 'instaClip', ancestors: [] }
-  if (path === '/posts') return { current: 'posts', ancestors: [NAVER_BLOG] }
-  if (path === '/clips') return { current: 'clips', ancestors: [clipHub] }
   if (
     path.startsWith('/tests/records/') ||
     path.startsWith('/posts/experiments/') ||
@@ -64,22 +61,8 @@ function structuralLocation(
     path === '/tests/history'
   )
     return { current: 'testHistory', ancestors: [MY_SETTINGS, ADVANCED, TESTS] }
-  if (/^\/posts\/[^/]+$/.test(path))
-    return {
-      current: 'post',
-      ancestors:
-        path === '/posts/new' || creationOrigin
-          ? [NAVER_BLOG]
-          : [NAVER_BLOG, { href: '/posts', key: 'posts' }],
-    }
-  if (/^\/clips\/[^/]+$/.test(path))
-    return {
-      current: 'clip',
-      ancestors:
-        path === '/clips/new' || creationOrigin
-          ? [clipHub]
-          : [clipHub, { href: `/clips?channel=${channel}`, key: 'clips' }],
-    }
+  if (/^\/posts\/[^/]+$/.test(path)) return { current: 'post', ancestors: [NAVER_BLOG] }
+  if (/^\/clips\/[^/]+$/.test(path)) return { current: 'clip', ancestors: [clipHub] }
   if (path === '/tests') return { current: 'tests', ancestors: [MY_SETTINGS, ADVANCED] }
   if (/^\/tests\/[^/]+$/.test(path))
     return { current: 'test', ancestors: [MY_SETTINGS, ADVANCED, TESTS] }
@@ -156,28 +139,19 @@ function structuralLocation(
   return { current: 'notFound', ancestors: [] }
 }
 /** One hierarchy supplies visible location and automatic entry eligibility. */
-export function routeLocation(
-  pathname: string,
-  creationOrigin = false,
-  channel?: ClipChannel,
-): RouteLocation {
+export function routeLocation(pathname: string, channel?: ClipChannel): RouteLocation {
   const path = navigationPathname(pathname)
   const canonicalPath = path === '/ai-models/compare' ? '/tests' : path
   const location = structuralLocation(
     canonicalPath,
-    creationOrigin,
     channel ?? navigationChannelFromHref(pathname) ?? 'naver_clip',
   )
   const root = location.ancestors[0]?.href ?? canonicalPath
   const destination = DESTINATIONS.find((item) => item.to === root)?.to
   return { ...location, destination }
 }
-export function currentDestination(
-  pathname: string,
-  creationOrigin = false,
-  channel?: ClipChannel,
-) {
-  return routeLocation(pathname, creationOrigin, channel).destination
+export function currentDestination(pathname: string, channel?: ClipChannel) {
+  return routeLocation(pathname, channel).destination
 }
 export function navigationPathname(href: string): string {
   return href.split(/[?#]/u, 1)[0].replace(/\/+$/u, '') || '/'
@@ -198,7 +172,6 @@ export function isStructuralNavigationEntry(
   if (isTopLevelDestination(targetPath) || targetPath === entryPath) return false
   const location = routeLocation(
     targetPath,
-    false,
     channel ?? navigationChannelFromHref(target) ?? navigationChannelFromHref(entry),
   )
   return (

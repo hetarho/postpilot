@@ -40,9 +40,9 @@ const entries = [
   },
   {
     path: '/posts/experiments/review-1?from=posts&q=Draft&status=draft',
-    back: '/posts?q=Draft&status=draft',
-    ko: '글 작업 내역',
-    en: 'Post work history',
+    back: '/naver-blog?q=Draft&status=draft',
+    ko: '네이버 블로그',
+    en: 'Naver Blog',
   },
 ] as const
 
@@ -80,7 +80,7 @@ it.each(
   ).toEqual(['/settings', '/settings#settings-advanced', '/tests', '/tests/history'])
   await user.keyboard('{Escape}')
   expect(location).not.toBeInTheDocument()
-  if (back.startsWith('/posts')) {
+  if (back.startsWith('/naver-blog')) {
     await user.click(link)
     await waitFor(() => expect(router.state.location.href).toBe(back))
   }
@@ -127,7 +127,7 @@ it('opens a retained paid record from canonical history and returns to the same 
 
 it('carries the narrowed post list through a pending result and back', async () => {
   const user = userEvent.setup()
-  const { router } = renderAppAt('/posts?q=Draft&status=draft', {
+  const { router } = renderAppAt('/naver-blog?q=Draft&status=draft', {
     user: { id: 'alice' },
     posts: { posts },
     experiments: { history },
@@ -135,11 +135,11 @@ it('carries the narrowed post list through a pending result and back', async () 
   const record = await screen.findByRole('link', { name: /Draft/ })
   const recordUrl = new URL(record.getAttribute('href')!, 'https://fixture')
   expect(recordUrl.pathname).toBe('/tests/records/review-1')
-  expect(recordUrl.searchParams.get('entry')).toBe('/posts?q=Draft&status=draft')
+  expect(recordUrl.searchParams.get('entry')).toBe('/naver-blog?q=Draft&status=draft')
   await user.click(record)
   await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/review-1'))
-  await user.click(await screen.findByRole('link', { name: '글 작업 내역' }))
-  await waitFor(() => expect(router.state.location.href).toBe('/posts?q=Draft&status=draft'))
+  await user.click(await screen.findByRole('link', { name: '네이버 블로그' }))
+  await waitFor(() => expect(router.state.location.href).toBe('/naver-blog?q=Draft&status=draft'))
   expect(await screen.findByRole('link', { name: /Draft/ })).toBeInTheDocument()
 })
 
@@ -174,7 +174,7 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
 
 it.each([
   ['/ai-models/experiments/review-1?from=compare&stage=write', '테스트 기록', '/tests/history'],
-  ['/posts/experiments/review-1?from=posts&q=Draft', '글 작업 내역', '/posts?q=Draft'],
+  ['/posts/experiments/review-1?from=posts&q=Draft', '네이버 블로그', '/naver-blog?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {
   let release!: () => void
   const readGate = new Promise<void>((resolve) => {

@@ -88,7 +88,7 @@ function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () =>
           }}
           className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline"
         >
-          {returnTo.path !== '/posts' ? copy.home : copy.history}
+          {copy.home}
         </a>
         {onRetry && (
           <Button variant="ghost" onClick={onRetry} className="underline">

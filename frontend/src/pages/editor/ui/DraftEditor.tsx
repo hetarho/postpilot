@@ -325,7 +325,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
             neighbour and keeps the word. */}
         <a
           href={returnTo.href}
-          aria-label={returnTo.path !== '/posts' ? copy.home : copy.history}
+          aria-label={copy.home}
           onClick={(event) => {
             if (
               event.button !== 0 ||
@@ -355,7 +355,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
           <span className={post ? 'sr-only underline sm:not-sr-only' : 'underline'}>
-            {returnTo.path !== '/posts' ? copy.home : copy.history}
+            {copy.home}
           </span>
         </a>
         <Typography variant="label" as="span">

@@ -94,10 +94,6 @@ export function AuthenticatedLayout() {
         clipQuery.data?.channel ?? navigationChannelFromHref(location.href),
       )
     : undefined
-  const creationOrigin =
-    postReturn?.path === '/naver-blog' ||
-    clipReturn?.path === '/naver-clip' ||
-    clipReturn?.path === '/insta-clip'
   const stored = readNavigationEntry(ownerId, location.href)
   const accessibleParent = (href: string) => {
     const candidate = navigationParent(href)
@@ -126,8 +122,8 @@ export function AuthenticatedLayout() {
   useLayoutEffect(() => {
     channelRef.current = channel
   }, [channel])
-  const current = currentDestination(pathname, creationOrigin, channel)
-  const metadata = routeLocation(pathname, creationOrigin, channel)
+  const current = currentDestination(pathname, channel)
+  const metadata = routeLocation(pathname, channel)
   const sourceSlug =
     pathname === '/tests' || pathname.startsWith('/tests/records/')
       ? typeof search.source === 'string'
@@ -149,7 +145,7 @@ export function AuthenticatedLayout() {
     : parent && returnHref === parent.href
       ? t(`location.${parent.key}`)
       : returnHref
-        ? t(`location.${routeLocation(returnHref, false, channel).current}`)
+        ? t(`location.${routeLocation(returnHref, channel).current}`)
         : undefined
   const immersive = pathname === '/plans'
   const quiet = pathname === '/' || pathname === '/setup'
@@ -223,7 +219,7 @@ export function AuthenticatedLayout() {
               isStructuralNavigationEntry(to, entryHref(inherited), fromChannel)
             ? entryHref(inherited)
             : fromChannel &&
-                currentDestination(from, false, fromChannel) === clipChannelPath(fromChannel) &&
+                currentDestination(from, fromChannel) === clipChannelPath(fromChannel) &&
                 /^\/video-(templates|guidelines)(?:\/|$)/.test(navigationPathname(to))
               ? clipChannelPath(fromChannel)
               : undefined
@@ -240,7 +236,7 @@ export function AuthenticatedLayout() {
           ownerId,
           to,
           scopedEntry,
-          currentDestination(event.fromLocation?.pathname ?? '/', false, fromChannel) ?? '/',
+          currentDestination(event.fromLocation?.pathname ?? '/', fromChannel) ?? '/',
           navigationParent(from) ? window.scrollY : (inherited?.scrollY ?? 0),
           undefined,
           !!explicitFrom,

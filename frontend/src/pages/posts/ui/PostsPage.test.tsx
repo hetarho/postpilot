@@ -16,7 +16,7 @@ const USER = { id: 'alice' }
 /** Renders the list screen through the real route tree, so the row links are the ones the
  *  router actually resolves. */
 function renderList(posts: FakePostsOptions = {}) {
-  return renderAppAt('/posts', { user: USER, posts })
+  return renderAppAt('/naver-blog', { user: USER, posts })
 }
 
 describe('PostsPage', () => {
@@ -75,10 +75,10 @@ describe('PostsPage', () => {
 
     const row = await screen.findByRole('link', { name: /제주 3일/ })
     expect(row).toHaveTextContent('AI 결과 확인')
-    expect(row).toHaveAttribute('href', '/tests/records/experiment-1?entry=%2Fposts')
+    expect(row).toHaveAttribute('href', '/tests/records/experiment-1?entry=%2Fnaver-blog')
     await user.click(row)
     await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/experiment-1'))
-    expect(router.state.location.search.entry).toBe('/posts')
+    expect(router.state.location.search.entry).toBe('/naver-blog')
   })
 
   // POST-25: a row names its voice, and a deleted one says so in words.
@@ -230,13 +230,13 @@ describe('PostsPage', () => {
     expect(within(history).getByText('내보내기 가능')).toBeInTheDocument()
     expect(within(history).getByRole('link', { name: '이전 AI 결과 확인' })).toHaveAttribute(
       'href',
-      '/tests/records/legacy-result?entry=%2Fposts',
+      '/tests/records/legacy-result?entry=%2Fnaver-blog',
     )
   })
 
   it('retains the history narrowing when opening a content-bearing draft', async () => {
     const user = userEvent.setup()
-    const { router } = renderAppAt('/posts?q=제주&status=review', {
+    const { router } = renderAppAt('/naver-blog?q=제주&status=review', {
       user: USER,
       posts: {
         posts: [
@@ -248,7 +248,7 @@ describe('PostsPage', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/jeju'))
     const entry = readPostReturnContext(USER.id, 'jeju')
     expect(entry).toMatchObject({
-      path: '/posts',
+      path: '/naver-blog',
       targetId: 'jeju',
       filters: { q: '제주', status: 'review' },
     })
@@ -353,7 +353,7 @@ describe('PostsPage', () => {
   })
 
   it('honours ?status=published on load', async () => {
-    renderAppAt('/posts?status=published', { user: USER, posts: WITH_PUBLISHED })
+    renderAppAt('/naver-blog?status=published', { user: USER, posts: WITH_PUBLISHED })
 
     expect(await screen.findByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /서울 산책/ })).toBeNull()
@@ -407,7 +407,7 @@ describe('PostsPage', () => {
 
   // POST-67: the URL is the source, so a reload or a shared link starts narrowed.
   it('starts narrowed from the URL', async () => {
-    renderAppAt('/posts?q=제주&status=review', { user: USER, posts: NARROWABLE })
+    renderAppAt('/naver-blog?q=제주&status=review', { user: USER, posts: NARROWABLE })
 
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull()
@@ -482,7 +482,7 @@ describe('PostsPage paging (POST-90..92)', () => {
 
   it('restores an explicit cold-cache return after the page containing its target arrives', async () => {
     rememberPostEntry(USER.id, {
-      path: '/posts',
+      path: '/naver-blog',
       section: 'posts',
       filters: {},
       scrollY: 1400,
@@ -514,7 +514,7 @@ describe('PostsPage paging (POST-90..92)', () => {
 
   it('waits for sufficient rendered history height even when the edited target is on the first page', async () => {
     rememberPostEntry(USER.id, {
-      path: '/posts',
+      path: '/naver-blog',
       section: 'posts',
       filters: {},
       scrollY: 1400,
@@ -646,12 +646,43 @@ describe('PostsPage paging (POST-90..92)', () => {
   // then says the account has no posts.
   it('names the narrowing on an empty account and the emptiness once it is cleared', async () => {
     const user = userEvent.setup()
-    renderAppAt('/posts?q=제주', { user: USER, posts: {} })
+    renderAppAt('/naver-blog?q=제주', { user: USER, posts: {} })
 
     expect(await screen.findByText(/"제주"에 맞는 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByText(/아직 글이 없어요/)).toBeNull()
 
     await user.click(screen.getByRole('button', { name: '초기화' }))
     expect(await screen.findByText(/아직 글이 없어요/)).toBeInTheDocument()
+  })
+})
+
+// THEME-38, POST-43: the channel opens straight onto its history — no visible heading, the
+// channel's other actions in its floating action menu — and the old address lands here.
+describe('the Naver Blog channel', () => {
+  it('opens on its history with no visible heading and the floating action menu', async () => {
+    const user = userEvent.setup()
+    renderList({ posts: [{ slug: 'jeju', title: '제주 3일', status: 'draft' }] })
+    expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: '네이버 블로그' })).toHaveClass('sr-only')
+    expect(screen.queryByText('글 작업 내역', { selector: 'h1, h2, p' })).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '새 글' }))
+    const menu = screen.getByRole('menu', { name: '네이버 블로그 메뉴' })
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => [item.textContent, item.getAttribute('href')]),
+    ).toEqual([
+      ['글 템플릿', '/templates'],
+      ['글 지침', '/guidelines'],
+      ['말투', '/voices?entry=%2Fnaver-blog'],
+      ['새 글 쓰기', '/posts/new'],
+    ])
+  })
+
+  it('replaces the old /posts address with the channel, keeping its narrowing', async () => {
+    const { router } = renderAppAt('/posts?q=제주&status=review', { user: USER, posts: {} })
+    await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
+    expect(router.state.location.search).toEqual({ q: '제주', status: 'review' })
   })
 })

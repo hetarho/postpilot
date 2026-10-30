@@ -67,7 +67,7 @@ it("deletes, ends the post's autosave, then leaves for the list", async () => {
   // The queues have to stop BEFORE the navigation unmounts the editor, or a retry outlives
   // the post it belongs to.
   expect(onDeleted).toHaveBeenCalledBefore(navigate)
-  expect(navigate).toHaveBeenCalledWith({ to: '/posts' })
+  expect(navigate).toHaveBeenCalledWith({ to: '/naver-blog' })
 })
 
 it('explains a running AI job and stays on the editor', async () => {

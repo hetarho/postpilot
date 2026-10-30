@@ -56,24 +56,25 @@ it('opens from filtered history and returns to the same filters and scroll after
   const calls: string[] = []
   const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   vi.spyOn(window, 'scrollY', 'get').mockReturnValue(720)
-  const view = renderAppAt('/clips?q=제주&status=draft', {
+  const view = renderAppAt('/naver-clip?q=제주&status=draft', {
     user: { id: 'alice' },
     clips: { projects: [project], calls },
   })
   await user.click(await screen.findByRole('link', { name: /제주 여행.*초안/ }))
   await screen.findByLabelText('클립 제목')
   expect(readClipReturnContext('alice', 'saved')).toMatchObject({
-    path: '/clips',
+    path: '/naver-clip',
+    section: 'clips',
     filters: { q: '제주', status: 'draft' },
     scrollY: 720,
   })
   view.unmount()
   const reopened = renderAppAt('/clips/saved', { transport: view.transport })
   await screen.findByLabelText('클립 제목')
-  const back = await screen.findByRole('link', { name: '네이버 클립 기록으로 돌아가기' })
-  expect(back).toHaveAttribute('href', '/clips?q=%EC%A0%9C%EC%A3%BC&status=draft')
+  const back = await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })
+  expect(back).toHaveAttribute('href', '/naver-clip?q=%EC%A0%9C%EC%A3%BC&status=draft')
   await user.click(back)
-  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/clips'))
+  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/naver-clip'))
   expect(reopened.router.state.location.search).toMatchObject({ q: '제주', status: 'draft' })
   await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 720))
   expect(calls.filter((call) => /Create|Start|Cancel|Update/.test(call))).toEqual([])
@@ -128,13 +129,13 @@ it('a direct or foreign-owner record uses named history without adopting another
     user: { id: 'bob' },
     clips: { projects: [{ ...project, ownerId: 'bob' }] },
   })
-  const back = await screen.findByRole('link', { name: '네이버 클립 기록으로 돌아가기' })
-  expect(back).toHaveAttribute('href', '/clips')
-  expect(screen.queryByRole('link', { name: '네이버 클립으로 돌아가기' })).not.toBeInTheDocument()
+  const back = await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })
+  expect(back).toHaveAttribute('href', '/naver-clip')
+  expect(screen.getAllByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveLength(1)
 })
 it('freezes the creation origin and ignores late mint navigation after the owner workspace closes', async () => {
   rememberClipEntry('alice', {
-    path: '/clips',
+    path: '/naver-clip',
     section: 'clips',
     filters: { q: '기존 맥락' },
     scrollY: 360,
@@ -175,7 +176,8 @@ it('freezes the creation origin and ignores late mint navigation after the owner
   })
   await waitFor(() =>
     expect(readClipReturnContext('alice', 'clip-1')).toMatchObject({
-      path: '/clips',
+      path: '/naver-clip',
+      section: 'clips',
       filters: { q: '기존 맥락' },
     }),
   )

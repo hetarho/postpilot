@@ -67,11 +67,11 @@ describe('session mutation failures', () => {
     async ({ locale, account, action, message, sessionStillActive }) => {
       initializeI18n(locale)
       const user = userEvent.setup()
-      const { router } = renderAppAt('/posts', {
+      const { router } = renderAppAt('/naver-blog', {
         user: { id: 'alice' },
         logoutFails: true,
       })
-      await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
+      await waitFor(() => expect(router.state.location.pathname).toBe('/naver-blog'))
 
       await user.click(await screen.findByRole('button', { name: account }))
       await user.click(await screen.findByRole('button', { name: action }))
@@ -79,7 +79,7 @@ describe('session mutation failures', () => {
       const alert = await screen.findByRole('alert')
       expect(alert).toHaveTextContent(message)
       expect(alert).toHaveTextContent(sessionStillActive)
-      expect(router.state.location.pathname).toBe('/posts')
+      expect(router.state.location.pathname).toBe('/naver-blog')
       expect(document.body).not.toHaveTextContent('private backend prose')
       expect(document.body).not.toHaveTextContent('[unavailable]')
     },
