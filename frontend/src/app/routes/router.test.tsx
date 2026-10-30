@@ -611,7 +611,7 @@ describe('theme preferences in the real route tree', () => {
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  it('centers the phone location with accessible ancestry and keeps account and balance access at the shell edge', async () => {
+  it('keeps the phone header to one row with the channel links and gives a child one back link', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
@@ -620,8 +620,6 @@ describe('theme preferences in the real route tree', () => {
 
     expect(await screen.findByRole('heading', { name: '템플릿', level: 1 })).toBeInTheDocument()
     const header = screen.getByRole('banner')
-    const location = within(header).getByRole('navigation', { name: '현재 위치' })
-    const disclosure = within(location).getByRole('button', { name: '현재 위치: 글 템플릿' })
     const account = screen.getByRole('button', { name: '내 계정' })
     const navigation = within(header).getByRole('navigation', { name: '주요' })
     expect(
@@ -629,27 +627,23 @@ describe('theme preferences in the real route tree', () => {
         .getAllByRole('link')
         .map((link) => link.textContent),
     ).toEqual(['블로그', '클립', '인스타'])
-    expect(location.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(navigation.parentElement).toContainElement(account)
+    expect(navigation.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
+      0,
+    )
+    expect(within(header).queryByRole('navigation', { name: '현재 위치' })).toBeNull()
     expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
     expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
-    await user.click(disclosure)
-    const hierarchy = screen.getByRole('dialog', { name: '현재 위치: 글 템플릿' })
-    expect(within(hierarchy).getByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
-      'href',
-      '/naver-blog',
-    )
-    await user.keyboard('{Escape}')
-    expect(disclosure).toHaveFocus()
-    await user.click(disclosure)
-    await user.click(
-      within(screen.getByRole('dialog', { name: '현재 위치: 글 템플릿' })).getByRole('link', {
-        name: '네이버 블로그',
-      }),
-    )
+    const back = within(screen.getByRole('navigation', { name: '돌아가기' })).getByRole('link')
+    expect(header).not.toContainElement(back)
+    expect(back).toHaveAccessibleName('네이버 블로그')
+    expect(back).toHaveAttribute('href', '/naver-blog')
+    await user.click(back)
     await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(within(header).getByRole('navigation', { name: '현재 위치' })).toHaveTextContent(
-      '네이버 블로그',
+    expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
+    expect(within(navigation).getByRole('link', { name: '블로그' })).toHaveAttribute(
+      'aria-current',
+      'page',
     )
     await user.click(account)
     const menu = screen.getByRole('dialog', { name: '내 계정' })

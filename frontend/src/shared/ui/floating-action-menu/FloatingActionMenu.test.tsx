@@ -109,7 +109,7 @@ describe('FloatingActionMenu', () => {
       )
     }
     render(
-      <NavigationProvider value={{ current: '블로그', ancestors: [], Link: RouterLink }}>
+      <NavigationProvider value={{ ancestors: [], Link: RouterLink }}>
         <FloatingActionMenu
           label="새 글"
           closeLabel="닫기"

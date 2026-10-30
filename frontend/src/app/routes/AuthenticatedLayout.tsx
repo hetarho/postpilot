@@ -9,14 +9,13 @@ import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { takePendingGift } from '@/features/redeem-voucher'
 import {
-  Breadcrumb,
   Button,
   ContextualReturn,
   Logo,
   NavigationProvider,
   PromoStage,
   Typography,
-  buttonStyles,
+  typographyStyles,
   useMediaQuery,
   type NavigationLinkProps,
 } from '@/shared/ui'
@@ -150,6 +149,13 @@ export function AuthenticatedLayout() {
   const immersive = pathname === '/plans'
   const quiet = pathname === '/' || pathname === '/setup'
   const setup = pathname === '/setup'
+  // The editor, the clip workspace and the writing tests carry their own way back in their top
+  // row; every other child route gets exactly one here (THEME-58).
+  const ownReturn =
+    /^\/(posts|clips)\/[^/]+$/.test(pathname) ||
+    pathname.startsWith('/tests/records/') ||
+    pathname === '/tests' ||
+    (pathname.startsWith('/tests/') && pathname !== '/tests/history')
 
   useEffect(() => {
     const token = takePendingGift()
@@ -276,7 +282,6 @@ export function AuthenticatedLayout() {
   }, [])
 
   const navigationValue = {
-    current: t(`location.${metadata.current}`),
     ancestors: metadata.ancestors.map((item) => ({
       href: item.href,
       label: t(`location.${item.key}`),
@@ -284,6 +289,11 @@ export function AuthenticatedLayout() {
     returnTo: returnHref && returnName ? { href: returnHref, label: returnName } : undefined,
     Link: NavigationLink,
   }
+  const backLink =
+    !setup &&
+    !ownReturn &&
+    !isTopLevelDestination(pathname) &&
+    (navigationValue.ancestors.length > 0 || !!navigationValue.returnTo)
   return (
     <NavigationProvider value={navigationValue}>
       <div
@@ -298,33 +308,34 @@ export function AuthenticatedLayout() {
             immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-base',
           )}
         >
-          <div
-            className={clsx(
-              'min-h-header lg:h-header mx-auto flex w-full max-w-7xl flex-wrap items-center gap-2 px-4 sm:px-6 lg:flex-nowrap lg:px-8',
-            )}
-          >
+          {/* One row at every width (THEME-38): brand, the three channel links, account. The marked
+              channel link is the location of a channel's own page, so no breadcrumb repeats it. */}
+          <div className="h-header mx-auto flex w-full max-w-7xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
             <Link
               to="/"
               aria-label={t('home')}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
             >
-              <Logo className="h-6 max-w-full" />
+              <Logo className="h-5 max-w-full sm:h-6" />
             </Link>
             <nav
               aria-label={t('primary')}
-              className="order-last flex w-full gap-2 pb-2 lg:order-none lg:ml-6 lg:w-auto lg:pb-0"
+              className="flex min-w-0 flex-1 justify-center lg:ml-6 lg:flex-none lg:justify-start lg:gap-2"
             >
               {CHANNEL_DESTINATIONS.map(({ to, labelKey }) => (
                 <Link
                   key={to}
                   to={to}
                   aria-current={current === to ? 'page' : undefined}
-                  className={buttonStyles({
-                    variant: 'ghost',
+                  // A tab marks the current channel by its underline and colour alone, with no
+                  // plane behind it at rest, on hover or when pressed.
+                  className={typographyStyles({
+                    variant: 'label',
                     className: clsx(
-                      'flex-1 lg:flex-none',
-                      current === to &&
-                        'bg-row-bg-active text-link-fg-current underline decoration-2 underline-offset-8',
+                      'inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm px-2 whitespace-nowrap lg:px-3',
+                      current === to
+                        ? 'text-link-fg-current underline decoration-2 underline-offset-8'
+                        : 'text-content-secondary hover:text-content-primary',
                     ),
                   })}
                 >
@@ -332,15 +343,6 @@ export function AuthenticatedLayout() {
                 </Link>
               ))}
             </nav>
-            {!wide && !setup && (
-              <div className="min-w-0 flex-1">
-                <Breadcrumb
-                  key={`${ownerId}:${location.href}`}
-                  ariaLabel={t('locationLabel')}
-                  compact
-                />
-              </div>
-            )}
             <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
               {wide && (
@@ -357,21 +359,16 @@ export function AuthenticatedLayout() {
               />
             </div>
           </div>
-          {wide && pathname !== '/' && !setup && (
-            <div className="mx-auto w-full max-w-7xl px-4 pb-3 sm:px-6 lg:px-8">
-              <Breadcrumb ariaLabel={t('locationLabel')} />
-              {origin &&
-                origin !== parent?.href &&
-                !/^\/(posts|clips)\/[^/]+$/.test(pathname) &&
-                !pathname.startsWith('/tests/records/') &&
-                pathname !== '/tests' &&
-                !(pathname.startsWith('/tests/') && pathname !== '/tests/history') && (
-                  <ContextualReturn />
-                )}
-            </div>
-          )}
         </header>
         <div className="flex min-w-0 flex-1 flex-col">
+          {backLink && (
+            <nav
+              aria-label={t('returnLabel')}
+              className="mx-auto w-full max-w-7xl px-4 pt-2 sm:px-6 lg:px-8"
+            >
+              <ContextualReturn className="-ml-4" />
+            </nav>
+          )}
           {defaults.isError && (
             <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
               <Typography variant="body" role="status">

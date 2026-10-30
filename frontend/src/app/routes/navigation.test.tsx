@@ -70,7 +70,10 @@ it('shows primary destinations and current section on desktop without a hamburge
   expect(within(nav).getByRole('link', { name: '블로그' })).toHaveAttribute('aria-current', 'page')
   expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
   expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull()
-  expect(screen.getByRole('navigation', { name: '현재 위치' })).toHaveTextContent('네이버 블로그')
+  // The marked channel link is the location; no breadcrumb repeats it and a channel has no way
+  // back (THEME-38, THEME-58).
+  expect(screen.queryByRole('navigation', { name: '현재 위치' })).toBeNull()
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
 it.each([false, true])(
@@ -86,7 +89,22 @@ it.each([false, true])(
         .getAllByRole('link')
         .map((link) => link.textContent),
     ).toEqual(['블로그', '클립', '인스타'])
-    expect(within(nav).getByRole('link', { name: '블로그' })).toHaveClass('underline')
+    // The current tab is an underline and colour with no plane behind it (THEME-38).
+    const blog = within(nav).getByRole('link', { name: '블로그' })
+    expect(blog).toHaveClass('underline', 'text-link-fg-current')
+    expect(blog.className).not.toMatch(/\bbg-/)
+    for (const name of ['클립', '인스타']) {
+      const link = within(nav).getByRole('link', { name })
+      expect(link).not.toHaveClass('underline')
+      expect(link.className).not.toMatch(/\bbg-/)
+    }
+    // One header row: the channel links sit beside the brand and the account menu.
+    const banner = screen.getByRole('banner')
+    expect(banner.children).toHaveLength(1)
+    const row = nav.parentElement!
+    expect(row.parentElement).toBe(banner)
+    expect(row).toContainElement(screen.getByRole('button', { name: '내 계정' }))
+    expect(row.querySelector('a[href="/"]')).not.toBeNull()
     expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     await user.click(within(nav).getByRole('link', { name: '인스타' }))
     await screen.findByRole('heading', { name: '인스타 클립', level: 1 })
@@ -112,15 +130,11 @@ it('retains settings parent access and filters across child navigation and histo
   await screen.findByRole('heading', { name: '내 설정' })
   await act(() => router.navigate({ to: '/voices' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/voices'))
-  const breadcrumb = screen.getByRole('navigation', { name: '현재 위치' })
-  expect(within(breadcrumb).getByRole('link', { name: '내 설정' })).toHaveAttribute(
-    'href',
-    '/settings',
-  )
-  expect(within(breadcrumb).getByRole('link', { name: '말투·기억' })).toHaveAttribute(
-    'href',
-    '/settings#settings-personal',
-  )
+  // One back link, named by where it leads: the settings page the owner came from.
+  const back = within(screen.getByRole('navigation', { name: '돌아가기' })).getByRole('link')
+  expect(back).toHaveAccessibleName('내 설정')
+  expect(back).toHaveAttribute('href', '/settings')
+  expect(screen.queryByRole('navigation', { name: '현재 위치' })).toBeNull()
   await act(() => router.navigate({ to: '/settings' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
   expect(
@@ -149,7 +163,7 @@ it('retains a settings origin through reload and restores its document position 
   view.unmount()
   const reopened = renderAppAt('/voices', { transport: view.transport })
   await userEvent.click(
-    within(await screen.findByRole('navigation', { name: '현재 위치' })).getByRole('link', {
+    within(await screen.findByRole('navigation', { name: '돌아가기' })).getByRole('link', {
       name: '내 설정',
     }),
   )

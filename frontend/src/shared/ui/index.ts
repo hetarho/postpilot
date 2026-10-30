@@ -61,7 +61,6 @@ export { useMediaQuery, MD_MEDIA_QUERY } from './media-query/useMediaQuery'
 
 export { choiceStyles } from './choice/choiceStyles'
 export { NavigationProvider } from './navigation/NavigationProvider'
-export { Breadcrumb } from './navigation/Breadcrumb'
 export { ContextualReturn } from './navigation/ContextualReturn'
 export {
   useNavigationContext,

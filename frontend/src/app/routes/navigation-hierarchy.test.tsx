@@ -28,18 +28,18 @@ afterEach(() => {
   sessionStorage.clear()
 })
 
-function breadcrumb() {
-  return within(screen.getByRole('navigation', { name: '현재 위치' }))
+/** The shell's one back link (THEME-58); a page with its own top-row return shows none. */
+function backLink() {
+  const region = screen.queryByRole('navigation', { name: '돌아가기' })
+  return region ? within(region).getByRole('link') : undefined
 }
-function breadcrumbHrefs() {
-  return breadcrumb()
-    .queryAllByRole('link')
-    .map((link) => link.getAttribute('href'))
+function backHref() {
+  return backLink()?.getAttribute('href') ?? undefined
 }
-function expectRoot(label: string) {
-  expect(screen.getByRole('navigation', { name: '현재 위치' })).toHaveTextContent(label)
-  expect(breadcrumbHrefs()).toEqual([])
-  expect(screen.queryByRole('link', { name: '돌아가기' })).not.toBeInTheDocument()
+/** A top-level destination: no location trail and no implicit way back. */
+function expectRoot() {
+  expect(screen.queryByRole('navigation', { name: '현재 위치' })).not.toBeInTheDocument()
+  expect(backHref()).toBeUndefined()
 }
 
 /** Persist the old schema directly so new admission rules cannot hide a stale-cache regression. */
@@ -62,7 +62,7 @@ it('traverses channel hubs and settings as sibling destinations without paid wor
   const user = userEvent.setup()
   const view = renderLegacyModelRoute('/naver-blog', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
-  expectRoot('네이버 블로그')
+  expectRoot()
   for (const [label, pathname, navLabel] of [
     ['네이버 클립', '/naver-clip', '클립'],
     ['인스타 클립', '/insta-clip', '인스타'],
@@ -80,7 +80,7 @@ it('traverses channel hubs and settings as sibling destinations without paid wor
     } else await user.click(primary.getByRole('link', { name: navLabel }))
     await waitFor(() => expect(view.router.state.location.pathname).toBe(pathname))
     await screen.findByRole('heading', { name: label, level: 1 })
-    expectRoot(label)
+    expectRoot()
     if (pathname === '/settings')
       expect(
         primary.queryAllByRole('link').every((link) => !link.hasAttribute('aria-current')),
@@ -101,11 +101,11 @@ it.each([
     legacyEntry(path, '/posts')
     const view = renderLegacyModelRoute(path, { user: { id: 'alice' } })
     await screen.findByRole('heading', { name: label, level: 1 })
-    expectRoot(label)
+    expectRoot()
     view.unmount()
     renderAppAt(path, { transport: view.transport })
     await screen.findByRole('heading', { name: label, level: 1 })
-    expectRoot(label)
+    expectRoot()
     expect(paidActions(view.procedures)).toEqual([])
   },
 )
@@ -113,7 +113,7 @@ it.each([
 it('does not make a generic entry parameter the parent of top-level writing tests', async () => {
   const view = renderLegacyModelRoute('/tests?entry=%2Flibrary', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced'])
+  expect(backHref()).toBeUndefined()
   expect(within(screen.getByRole('main')).queryByRole('link', { name: '작업 내역' })).toBeNull()
   expect(paidActions(view.procedures)).toEqual([])
 })
@@ -125,12 +125,12 @@ it('returns a directly opened result to writing tests without fabricating a hist
     { readableTest: true },
   )
   await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
-  expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced', '/tests'])
+  expect(backHref()).toBeUndefined()
   const back = within(screen.getByRole('main')).getByRole('link', { name: '글쓰기 테스트' })
   expect(back).toHaveAttribute('href', '/tests')
   await userEvent.click(back)
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/tests'))
-  expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced'])
+  expect(backHref()).toBeUndefined()
   expect(paidActions(view.procedures)).toEqual([])
 })
 
@@ -150,7 +150,7 @@ it.each([
   const href = record.getAttribute('href')!
   await userEvent.click(record)
   await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
-  expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced', '/tests'])
+  expect(backHref()).toBeUndefined()
   expect(readNavigationEntry('alice', view.router.state.location.href)?.scrollY).toBe(360)
   view.unmount()
   const reopened = renderAppAt(href, { transport: view.transport })
@@ -176,7 +176,7 @@ it.each([
       { readableTest: true },
     )
     await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
-    expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced', '/tests'])
+    expect(backHref()).toBeUndefined()
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: '글쓰기 테스트' }),
     ).toHaveAttribute('href', '/tests')
@@ -191,7 +191,7 @@ it('keeps an owned source-post return separate from top-level test breadcrumbs',
     { source: true },
   )
   await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced'])
+  expect(backHref()).toBeUndefined()
   expect(within(screen.getByRole('main')).getByRole('link', { name: '글 작성' })).toHaveAttribute(
     'href',
     '/posts/owned-source',
@@ -206,7 +206,7 @@ it('does not offer a source-post return after the source is missing or inaccessi
     { source: true },
   )
   await screen.findByRole('alert')
-  expect(breadcrumbHrefs()).toEqual(['/settings', '/settings#settings-advanced'])
+  expect(backHref()).toBeUndefined()
   expect(within(screen.getByRole('main')).queryByRole('link', { name: '글 작성' })).toBeNull()
   expect(screen.queryByRole('link', { name: '돌아가기' })).toBeNull()
   expect(paidActions(view.procedures)).toEqual([])
@@ -217,7 +217,7 @@ it('does not propagate a sibling visit into a settings child origin', async () =
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   await act(() => view.router.navigate({ to: '/templates' }))
   await screen.findByRole('heading', { name: '템플릿', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/naver-blog'])
+  expect(backHref()).toBe('/naver-blog')
   expect(readNavigationEntry('alice', '/templates')?.path).not.toBe('/library')
   expect(screen.queryByRole('link', { name: '돌아가기' })).toBeNull()
   expect(paidActions(view.procedures)).toEqual([])
@@ -234,12 +234,7 @@ it.each(['/ai-models/experiments/retained', '/posts/experiments/retained'])(
     })
     await screen.findByRole('heading', { name: '이전 유료 비교 기록', level: 1 })
     expect(view.router.state.location.pathname).toBe('/tests/records/retained')
-    expect(breadcrumbHrefs()).toEqual([
-      '/settings',
-      '/settings#settings-advanced',
-      '/tests',
-      '/tests/history',
-    ])
+    expect(backHref()).toBeUndefined()
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
     expect(primary.queryAllByRole('link').every((link) => !link.hasAttribute('aria-current'))).toBe(
       true,
@@ -271,7 +266,7 @@ it.each([
 ])('keeps trailing-slash root %s independent of explicit entry', async (path, label) => {
   const view = renderLegacyModelRoute(`${path}?entry=%2Fposts`, { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: label, level: 1 })
-  expectRoot(label)
+  expectRoot()
   expect(paidActions(view.procedures)).toEqual([])
 })
 
@@ -282,24 +277,25 @@ it('retains the Instagram location through shared templates, child navigation, r
   await userEvent.click(screen.getByRole('button', { name: '새 클립' }))
   await userEvent.click(screen.getByRole('menuitem', { name: '영상 템플릿' }))
   await screen.findByRole('heading', { name: '영상 템플릿', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+  expect(backHref()).toBe('/insta-clip')
   await userEvent.click(
     await within(screen.getByRole('main')).findByRole('link', { name: '새 영상 템플릿' }),
   )
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/insta-clip', '/video-templates?channel=instagram_clip'])
+  expect(backHref()).toBe('/video-templates?channel=instagram_clip')
   const address = view.router.state.location.href
   expect(address).toContain('channel=instagram_clip')
   view.unmount()
   sessionStorage.clear()
   const reopened = renderAppAt(address, { transport: view.transport })
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/insta-clip', '/video-templates?channel=instagram_clip'])
-  await userEvent.click(breadcrumb().getByRole('link', { name: '영상 템플릿' }))
+  expect(backHref()).toBe('/video-templates?channel=instagram_clip')
+  expect(backLink()).toHaveTextContent('영상 템플릿')
+  await userEvent.click(backLink()!)
   await waitFor(() =>
     expect(reopened.router.state.location.href).toBe('/video-templates?channel=instagram_clip'),
   )
-  expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+  expect(backHref()).toBe('/insta-clip')
   expect(paidActions(calls)).toEqual([])
 })
 
@@ -325,7 +321,7 @@ it('keeps a directly opened Instagram project channel when visiting shared video
   await screen.findByRole('link', { name: '인스타 클립으로 돌아가기' })
   await act(() => view.router.navigate({ to: '/video-guidelines' }))
   await screen.findByRole('heading', { name: '영상 지침', level: 1 })
-  expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+  expect(backHref()).toBe('/insta-clip')
   expect(paidActions(calls)).toEqual([])
 })
 
@@ -341,7 +337,7 @@ it.each(['영상 템플릿', '영상 지침'])(
     sessionStorage.clear()
     renderAppAt(href, { transport: view.transport })
     await screen.findByRole('heading', { name: heading, level: 1 })
-    expect(breadcrumbHrefs()).toEqual(['/insta-clip'])
+    expect(backHref()).toBe('/insta-clip')
     const nav = screen.getByRole('navigation', { name: '주요' })
     expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute(
       'aria-current',

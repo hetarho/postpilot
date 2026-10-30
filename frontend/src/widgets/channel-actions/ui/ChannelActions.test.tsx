@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { readClipReturnContext } from '@/entities/clip-project'
@@ -42,9 +42,7 @@ it('opens 말투 with the channel as its contextual return', async () => {
   await user.click(screen.getByRole('menuitem', { name: '말투' }))
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices'))
   expect(view.router.state.location.search).toMatchObject({ entry: '/insta-clip' })
-  await user.click(await screen.findByRole('button', { name: '현재 위치: 말투' }))
-  expect(await screen.findByRole('link', { name: '인스타 클립' })).toHaveAttribute(
-    'href',
-    '/insta-clip',
-  )
+  const back = within(await screen.findByRole('navigation', { name: '돌아가기' })).getByRole('link')
+  expect(back).toHaveAccessibleName('인스타 클립')
+  expect(back).toHaveAttribute('href', '/insta-clip')
 })

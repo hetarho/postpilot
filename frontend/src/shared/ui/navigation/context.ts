@@ -20,9 +20,10 @@ export interface NavigationLinkProps extends Omit<
   children: ReactNode
   className?: string
 }
-/** Router links and autosave/unsaved guards are supplied from above shared. */
+/** Router links and autosave/unsaved guards are supplied from above shared. The route's
+ *  structural ancestors, nearest last, and a validated contextual return decide where its one
+ *  back link leads (THEME-58). */
 export interface NavigationValue {
-  current: string
   ancestors: readonly NavigationDestination[]
   returnTo?: NavigationDestination
   Link?: ComponentType<NavigationLinkProps>

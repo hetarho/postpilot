@@ -65,21 +65,16 @@ it.each(
   expect(router.state.location.pathname).toBe('/tests/records/review-1')
   expect(link).toHaveAttribute('href', back)
   expect(document.querySelector('aside')).toBeNull()
-  const breadcrumb = screen.getByRole('navigation', {
-    name: locale === 'ko' ? '현재 위치' : 'Current location',
-  })
-  expect(within(breadcrumb).queryByRole('link')).not.toBeInTheDocument()
-  await user.click(within(breadcrumb).getByRole('button'))
-  const location = await screen.findByRole('dialog', {
-    name: locale === 'ko' ? /^현재 위치:/ : /^Current location:/,
-  })
+  // The record's own top row carries its one way back; the shell adds no second one and no
+  // location trail (THEME-58).
   expect(
-    within(within(location).getByRole('list'))
-      .getAllByRole('link')
-      .map((item) => item.getAttribute('href')),
-  ).toEqual(['/settings', '/settings#settings-advanced', '/tests', '/tests/history'])
-  await user.keyboard('{Escape}')
-  expect(location).not.toBeInTheDocument()
+    screen.queryByRole('navigation', { name: locale === 'ko' ? '돌아가기' : 'Return' }),
+  ).toBeNull()
+  expect(
+    screen.queryByRole('navigation', {
+      name: locale === 'ko' ? '현재 위치' : 'Current location',
+    }),
+  ).toBeNull()
   if (back.startsWith('/naver-blog')) {
     await user.click(link)
     await waitFor(() => expect(router.state.location.href).toBe(back))
