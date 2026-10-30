@@ -153,6 +153,7 @@
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 fix lint:retirement: the legacy publishing redirect check follows the post list to /naver-blog (POST-43, T722); check and its test pass.
 - 261030 T723 done: one-row header with underline-only channel tabs, no breadcrumb, one back link on child routes; 16 files/186 tests, tsc, eslint/prettier, steiger, lint:style and 60 Windows Chrome combinations pass.
 - 261030 T722 done: channels open on their history (no visible heading) with the floating action menu; /posts and /clips redirect with their narrowing; full FE suite 569 files/4521 tests, tsc, eslint/prettier, steiger, lint:style pass.
 - 261030 T721 done: shared FloatingActionMenu (list dock, scrim, × in place, grouped link menu, menu-button keys); 19 unit test files/190 tests, tsc, eslint/prettier, lint:style, steiger pass.

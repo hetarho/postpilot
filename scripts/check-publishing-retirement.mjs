@@ -144,8 +144,9 @@ if (
   failures.push(`legacy route exceptions changed: ${legacyOccurrences.join(', ') || 'none'}`)
 }
 const legacyRouteSource = read('frontend/src/app/routes/publishing.ts')
-if (!legacyRouteSource.includes("redirect({ to: '/posts', replace: true })")) {
-  failures.push('legacy publishing route no longer redirects directly to /posts')
+// The post list is the Naver Blog channel itself (POST-43).
+if (!legacyRouteSource.includes("redirect({ to: '/naver-blog', replace: true })")) {
+  failures.push('legacy publishing route no longer redirects directly to /naver-blog')
 }
 rejectMatches(
   ['frontend/src/app/routes/publishing.ts'],

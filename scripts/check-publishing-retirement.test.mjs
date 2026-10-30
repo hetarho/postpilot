@@ -32,7 +32,7 @@ function fixture(t) {
   );
   write(
     "frontend/src/app/routes/publishing.ts",
-    "const legacyRoute = '/publishing-agents'; redirect({ to: '/posts', replace: true })",
+    "const legacyRoute = '/publishing-agents'; redirect({ to: '/naver-blog', replace: true })",
   );
   write("README.md", "Manual export only.");
   write("spec/NARRATIVE.md", "Manual export only.");
