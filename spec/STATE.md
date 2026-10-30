@@ -8,6 +8,11 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T04:53Z | 2026-10-30T04:53Z | - |
+
 ## inbox
 - 261030 decided THEME-38 VOICE-52: where does 말투 live once it is a channel section? → one /voices section shared by all three channels, the URL carrying a clip channel (none ⇒ 네이버 블로그), and 내 설정 no longer lists it (alt: keep it in 내 설정 too | a per-channel copy) — one home keeps one parent and one back link.
 - 261030 decided THEME-38: which pages show the section tab row? → the four section list pages only; editor, clip workspace, wizards and a voice's own pages show the main row only (alt: every channel page) — no extra chrome while writing or editing, matching the creation menu's pages.
@@ -95,18 +100,18 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 43 | 43 | - | 0 |
+| POST | 44 | 44 | - | 0 |
 | VOICE | 18 | 18 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 31 | 31 | - | 0 |
-| GUIDE | 24 | 24 | - | 0 |
+| GUIDE | 25 | 25 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 10 | 10 | - | 0 |
-| THEME | 37 | 37 | - | 2 |
+| THEME | 38 | 38 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 68 | 68 | - | 2 |
+| CLIP | 69 | 69 | - | 2 |
 | CDS | 37 | 37 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -137,6 +142,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
+| T726 | Direct creation button on each section list page | THEME POST CLIP GUIDE | - | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -144,12 +150,14 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
+- implement-task T726 (chl): the section list pages' floating button opens the current section's creation directly, no menu.
 - T721–T725 complete (chl): channels open on their history, section tab row (글/영상 · 템플릿 · 말투 · 지침) under a one-row header without breadcrumb, creation-only menu with the current section's creation nearest the button; 말투 is a channel section. Final gate at 11fd0238: 569 files/4530 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 - T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
 - T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
 - Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261030 update-ssot THEME r38 POST r44 CLIP r69 GUIDE r25 + create-task → T726: the floating button opens its section's creation directly; the owner found a menu of creations redundant beside the section tabs.
 - 261030 chl final gate at 11fd0238: FE suite 569 files/4530 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c (dgc gate) reused.
 - 261030 T725 done: creation-only channel menu on every section list page (current creation nearest the button), page creation docks removed, ?new=1 for 말투 and 영상 지침; 42 test files/366 tests, tsc, eslint/prettier, steiger, lint:style and 90 Windows Chrome combinations pass.
 - 261030 T724 done: channel section tab row (글/영상 · 템플릿 · 말투 · 지침) on section list pages, sections top-level, 말투 shared by all channels and out of 내 설정; 36 test files/356 tests, tsc, eslint/prettier, steiger, lint:style pass.
@@ -169,4 +177,3 @@
 - 261030 T720 starts (nux) at a15e7bb0; persistent channel navigation and portable shared-video context.
 - 261030 create-task THEME r35 → T720: persistent channels and URL-carried shared video context; preserve creation, settings and return contracts.
 - 261030 update-ssot THEME start: persistent three-channel navigation and channel-context usability (nux, autopilot).
-- 261030 T719 setup regression correction: the shared helper now uses Next; all 23 setup tests and file ESLint/Prettier pass. The full pre-push suite is rerun on the amended candidate.

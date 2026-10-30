@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r37 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
+> r38 | Shared accessible visual contracts for channel-centered creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -205,7 +205,7 @@
   - a channel opens straight onto its 글/영상 history with no page heading, the marked links naming it
   - the four section list pages show one section tab row directly below the main header row, inside the shell's sticky top chrome; deeper pages (editor, clip workspace, wizards, a voice's own pages, records) show the main row only ← the owner switches between a channel's lists often, never while writing or editing
   - sections are siblings: moving between them sets no return, and their list pages have no back link (→THEME-58)
-  - every section list page carries the channel's creation menu (→!THEME-67)
+  - every section list page carries its section's creation button (→!THEME-67)
   - links to shared clip destinations carry their channel in the URL so new tabs, copied links and reload preserve location and return; a direct link with no valid origin uses 네이버 클립 (→!THEME-58)
   - 내 설정 holds 기억 · 내레이션 목소리 · AI 모델 · 계정 · 결제 and a 고급 group holding 작성 테스트 with its test history and retained comparison records; no comparison or leaderboard destination stands outside 고급
   - channels and 내 설정 are sibling top-level destinations; the brand returns home (→THEME-47)
@@ -299,15 +299,11 @@
 - THEME-65 [?] whether and when 인스타 게시물 (a photo set with a caption and hashtags) joins the channels; until it is decided the navigation shows no entry for it ← an entry that leads nowhere reads as a broken product
 - THEME-66 [o] a guided flow — the template wizard (→TMPL-71 →CLIP-213) and the learning chat (→VOICE-65) — speaks to the owner in plain words: each screen asks one question, explains its choices in the owner's terms (보통 이렇게 구성돼요) and shows where the owner is, under THEME-48–57 ← a first-time 체험단 creator should be guided, not handed a builder
 
-- THEME-67 [o] a channel's creation menu (→THEME-38) is one floating button that opens a stacked menu of the channel's creations above itself ← the list keeps the screen while every creation stays one thumb-reach tap away
-  - it holds creations only: 새 글 (clip channels: 새 영상) · 새 템플릿 · 새 말투 · 새 지침, each opening that creation directly — the editor, the clip workspace, the template wizard, or the section's own creation sheet
+- THEME-67 [o] a section list page's creation is one floating button that opens that section's creation directly — 새 글 (clip channels: 새 영상) · 새 템플릿 · 새 말투 · 새 지침 ← the other sections' creations are one section tab away, so a menu of them adds a step without adding reach
+  - each opens its creation directly: the editor, the clip workspace, the template wizard, or the section's own creation sheet (`?new=1`)
   - it stands on each of the four section list pages at every width and never on the editor, the clip workspace or any other page
-  - closed, it is one extended button labelled with the current section's creation in THEME-24's list add-action dock place: lower band, right-aligned at every width, floating on its own shadow with no plane; a section list page has no other docked creation control
-  - open, a scrim dims the page, the button turns into a close (×) control in the same place, and the menu stands above it in two groups: the other three creations in section order first, the current section's creation alone nearest the button
-  - each item is an icon plus a label at the 44 px pointer floor; each group is one compact raised menu surface, not a card (→THEME-13)
-  - the close control, the scrim, Escape and choosing an item close it; focus moves to the first item on open and back to the button on close; the button exposes its expanded state
-  - reduced motion removes movement; both themes, keyboard, 200% zoom and 320 px reflow remain supported
-  - opening the menu creates no record or AI work; 새 글 / 새 영상 is the channel's creation entry (→THEME-58)
+  - it is one extended button (plus glyph and label) in THEME-24's list add-action dock place: lower band, right-aligned at every width, floating on its own shadow with no plane; a section list page has no other docked creation control
+  - 새 글 / 새 영상 is the channel's creation entry (→THEME-58); pressing it creates no record or AI work until the creation itself does
 
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
@@ -319,5 +315,6 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
+- r38 261030 THEME-67✎ one button opening a menu of the four creations (current nearest)→one button opening the current section's creation directly, no menu; THEME-38✎ list pages carry the creation menu→their section's creation button
 - r37 261030 THEME-38✎ channel = history + floating menu of templates/지침/말투 links→four sections (글/영상 · 템플릿 · 말투 · 지침) with a section tab row under the main header on their list pages; 말투 moved from 내 설정 to a section shared by all channels; THEME-67✎ menu of destinations + creation on the history only→creations only (새 글/영상 · 템플릿 · 말투 · 지침) on every section list page, current section's creation alone nearest the button
 - r36 261030 THEME-38✎ a channel opens on a page of 만들기 · 기록 · 템플릿 · 지침 links→straight onto its history with no heading, the rest in a floating action menu that adds a 말투 shortcut; phone channel links in a row below the main header→in the main header row; current-channel shape+colour→underline, never a background fill; THEME-58✎ breadcrumbs (desktop row, phone header disclosure)→none, one back link on child routes; THEME-67+ floating action menu
