@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T02:54Z | T722 |
+| chl | DESKTOP-VKPLS8P | autopilot | 2026-10-30T02:42Z | 2026-10-30T03:20Z | T723 |
 
 ## inbox
 - 261030 decided THEME-58: with the breadcrumb removed at every width, how does a child route show its way back? → one back link at the top of its content naming its actual destination; editor, clip workspace and writing tests keep their own top-row link instead (alt: browser back only | keep the desktop breadcrumb row) — THEME-58's deterministic return survives without a second navigation row.
@@ -140,7 +140,7 @@
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
-| T723 | Breadcrumb-free shell with header channel links | THEME | T722 | todo |
+| T723 | Breadcrumb-free shell with header channel links | THEME | T722 | doing@261030.chl |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
