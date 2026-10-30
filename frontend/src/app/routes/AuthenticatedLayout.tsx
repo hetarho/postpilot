@@ -41,14 +41,17 @@ import {
 } from './navigation'
 import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
 
-function NavigationLink({ href, children, className }: NavigationLinkProps) {
+function NavigationLink({ href, children, className, onClick, ...rest }: NavigationLinkProps) {
   const navigate = useNavigate()
   return (
     <a
+      {...rest}
       href={href}
       className={className}
       onClick={(event) => {
+        onClick?.(event)
         if (
+          !event.defaultPrevented &&
           event.button === 0 &&
           !event.metaKey &&
           !event.ctrlKey &&

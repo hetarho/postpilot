@@ -17,6 +17,10 @@ export { Menu, type MenuOption } from './menu/Menu'
 export { ActionMenu } from './action-menu/ActionMenu'
 export { Disclosure } from './disclosure/Disclosure'
 export type { ActionMenuItem } from './action-menu/ActionMenu'
+export {
+  FloatingActionMenu,
+  type FloatingActionItem,
+} from './floating-action-menu/FloatingActionMenu'
 export { Meter } from './meter/Meter'
 export { Stepper, type StepperProps } from './stepper/Stepper'
 export { Notice, type NoticeTone } from './notice/Notice'
