@@ -79,8 +79,11 @@ export function ClipProjectForm({
   refusal,
   regions,
   dubbing,
+  initialTemplateId,
 }: {
   ownerId: string
+  /** `/clips/new` only: the video template the new-clip offer's wizard just saved (CLIP-223). */
+  initialTemplateId?: string
   dubbing?: (
     value: NonNullable<ClipProjectDraft['dubbing']>,
     change: (value: NonNullable<ClipProjectDraft['dubbing']>) => void,
@@ -215,6 +218,26 @@ export function ClipProjectForm({
           allowedCaptionStyles: [...template.allowedCaptionStyles],
         }
       : {}
+  }
+  // A handed template is selected once the directory has it, exactly as choosing it would be, and
+  // it is the baseline too: arriving with it is not an unsaved change the leave guard should ask
+  // about. An id the directory lacks leaves 없음.
+  const [handedApplied, setHandedApplied] = useState(false)
+  if (
+    !stored &&
+    initialTemplateId &&
+    !handedApplied &&
+    templates.templates.some((template) => template.id === initialTemplateId)
+  ) {
+    const next = {
+      ...draft,
+      videoTemplateId: initialTemplateId,
+      compositionInputs: emptyCompositionInputs(),
+      ...designOf(initialTemplateId),
+    }
+    setHandedApplied(true)
+    setDraft(next)
+    setBaseline(draftIdentity(next))
   }
   const failure = save.error
   /** `/clips/new`'s one committing action. An existing project has no submit — the queue saves it

@@ -44,6 +44,14 @@ describe('video template workflow', () => {
     mount('/video-templates/new')
     expect(await screen.findByRole('heading', { name: '새 영상 템플릿' })).toBeInTheDocument()
   })
+  it('keeps the structural back link when a new clip’s offer opened the wizard', async () => {
+    // As the post wizard opened with `post=new` does (TMPL-32); 저장 is what returns to the clip.
+    mount('/video-templates/new?channel=instagram_clip&clip=new')
+    expect(await screen.findByRole('link', { name: '영상 템플릿 목록' })).toHaveAttribute(
+      'href',
+      '/video-templates?channel=instagram_clip',
+    )
+  })
   it('requires a session before requesting templates', async () => {
     const calls: string[] = []
     const { router } = renderAppAt('/video-templates', { calls })

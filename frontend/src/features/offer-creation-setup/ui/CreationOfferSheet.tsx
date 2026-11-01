@@ -7,8 +7,9 @@ interface CreationOfferSheetProps {
   kind: CreationOfferKind
   open: boolean
   missing: CreationOfferMissing | undefined
-  onCreateVoice: () => void
-  onContinueVoice: (voiceId: string) => void
+  /** A post's only: a clip is never offered a voice (CLIP-223). */
+  onCreateVoice?: () => void
+  onContinueVoice?: (voiceId: string) => void
   onCreateTemplate: () => void
   /** `이대로 쓰기` / `이대로 만들기`, Escape and the scrim: closed for this creation only. */
   onClose: () => void
@@ -59,7 +60,7 @@ export function CreationOfferSheet({
             <Button
               variant="cta"
               onClick={() =>
-                voice.action === 'continue' ? onContinueVoice(voice.voiceId) : onCreateVoice()
+                voice.action === 'continue' ? onContinueVoice?.(voice.voiceId) : onCreateVoice?.()
               }
             >
               {voice.action === 'continue' ? t('offer.continueVoice') : t('offer.createVoice')}

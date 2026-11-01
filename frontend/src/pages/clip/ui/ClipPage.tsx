@@ -9,6 +9,7 @@ import {
 } from '@/entities/clip-project'
 import { useSession } from '@/entities/session'
 import { ClipProjectForm } from '@/features/edit-clip-project'
+import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
 import { ClipTopRow, ClipStatusLine, ClipWorkspace } from '@/widgets/clip-workspace'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Typography, pageStyles } from '@/shared/ui'
@@ -16,16 +17,32 @@ import { ClipImportFeedback } from './ClipImportFeedback'
 
 /** `/clips/new` — a project that does not exist yet. It has no lifecycle, so it shows no step
  *  bar and no delete: just the settings and the one committing action that mints it, which stays
- *  explicit because the ratio it carries can never be changed again (CLIP-9, CLIP-39). */
+ *  explicit because the ratio it carries can never be changed again (CLIP-9, CLIP-39).
+ *
+ *  An account with no video template opens it on the offer to make one (CLIP-223), so the form
+ *  waits for that directory: the sheet has to stand before anything is typed. */
 function NewClip({
   ownerId,
   channel,
+  handedTemplate,
+  fromSetup,
   returnTo,
 }: {
   ownerId: string
   channel: ClipChannel
+  /** The template the offer's wizard just saved. */
+  handedTemplate?: string
+  fromSetup: boolean
   returnTo: { href: string; label: string; onReturn: () => Promise<void> }
 }) {
+  const { t } = useTranslation('common')
+  const navigate = useNavigate()
+  // Back from the offer's own wizard, or from setup's finish: the owner has just answered it.
+  const offer = useCreationOffer({
+    ownerId,
+    kind: 'clip',
+    suppressed: !!handedTemplate || fromSetup,
+  })
   return (
     <>
       {/* The status region is mounted before there is a project to have a status: a live region
@@ -43,7 +60,25 @@ function NewClip({
           />
         }
       />
-      <ClipProjectForm ownerId={ownerId} channel={channel} />
+      {offer.settled ? (
+        <ClipProjectForm ownerId={ownerId} channel={channel} initialTemplateId={handedTemplate} />
+      ) : (
+        <Typography variant="body" role="status" className="mt-8">
+          {t('state.loading')}
+        </Typography>
+      )}
+      <CreationOfferSheet
+        kind="clip"
+        open={offer.open}
+        missing={offer.missing}
+        onCreateTemplate={() => {
+          offer.close()
+          // 저장 comes back to a new clip in this channel starting from it (CLIP-223).
+          void navigate({ to: '/video-templates/new', search: { channel, clip: 'new' } })
+        }}
+        onClose={offer.close}
+        onDismiss={offer.dismiss}
+      />
     </>
   )
 }
@@ -79,9 +114,11 @@ export function ClipPage() {
     <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-8' })}>
       {!clipId ? (
         <NewClip
-          key={`${ownerId}-${channel}`}
+          key={`${ownerId}-${channel}-${search.template ?? ''}`}
           ownerId={ownerId}
           channel={channel}
+          handedTemplate={search.template}
+          fromSetup={search.from === 'setup'}
           returnTo={returnTo}
         />
       ) : query.data ? (

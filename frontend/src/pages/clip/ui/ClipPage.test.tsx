@@ -193,9 +193,10 @@ describe('clip directory and setup', () => {
     // The page's ONE status region is mounted before there is a project to have a status
     // (CLIP-37), and a draft with no lifecycle shows no step bar and nothing to delete.
     expect(screen.getByRole('status', { name: '클립 상태' })).toBeInTheDocument()
+    // The form follows the template directory read (CLIP-223).
+    expect(await screen.findByRole('button', { name: '클립 만들기' })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '클립 만들기' })).toBeInTheDocument()
   })
   it('keeps every unsaved setup value after a localized save failure', async () => {
     const { router } = mount('/clips/new', { projectSaveFails: true })

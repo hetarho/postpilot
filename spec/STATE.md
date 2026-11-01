@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| nud | ihaelam-ui-MacBookPro | autopilot | 2026-11-01T15:55Z | 2026-11-01T16:02Z | T728 |
+| nud | ihaelam-ui-MacBookPro | autopilot | 2026-11-01T15:55Z | 2026-11-01T16:27Z | T729 |
 
 ## inbox
 - 261102 decided POST-121 CLIP-223: where does the nudge to make a missing voice or template appear? → when a new post or clip opens on an account missing it, in a sheet, after the directory reads succeed and before anything is typed (alt: on every creation button, which misses home, setup and links | a note under the picker, which the owner rejected for simple controls)
@@ -153,14 +153,15 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T729 | Offer a video template when a new clip opens | CLIP POST THEME ARCH | T728 | todo |
 
 ## next
-- implement-task T729 (nud): the new-clip offer to make a video template; T728's new-post offer is done.
+- T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected.
 - T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261102 T729 done: new-clip video-template offer, wizard returns to /clips/new with the template and its design; 80 files/710 tests, tsc, lint, steiger and lint:style pass.
+- 261102 T729 starts (nud) at 6f484cba; new-clip video-template offer.
 - 261102 T728 done: new-post offer sheet (missing voice/template, 이대로 쓰기, 다시 묻지 않기) and the shared offer slice; 54 files/459 tests, tsc, lint, steiger and lint:style pass.
 - 261102 T728 starts (nud) at 05c8d739; new-post offer and the shared offer slice.
 - 261102 create-task POST r45 VOICE r19 CLIP r71 → T728 new-post offer (shared slice), T729 new-clip template offer.
@@ -179,5 +180,3 @@
 - 261030 T724 done: channel section tab row (글/영상 · 템플릿 · 말투 · 지침) on section list pages, sections top-level, 말투 shared by all channels and out of 내 설정; 36 test files/356 tests, tsc, eslint/prettier, steiger, lint:style pass.
 - 261030 update-ssot THEME r37 VOICE r18 GUIDE r24 CLIP r68 + create-task → T724 section tabs (말투 shared by all channels, out of 내 설정), T725 creation-only menu on every section list page; the owner found the history-only menu of destinations awkward.
 - 261030 fix lint:retirement: the legacy publishing redirect check follows the post list to /naver-blog (POST-43, T722); check and its test pass.
-- 261030 T723 done: one-row header with underline-only channel tabs, no breadcrumb, one back link on child routes; 16 files/186 tests, tsc, eslint/prettier, steiger, lint:style and 60 Windows Chrome combinations pass.
-- 261030 T722 done: channels open on their history (no visible heading) with the floating action menu; /posts and /clips redirect with their narrowing; full FE suite 569 files/4521 tests, tsc, eslint/prettier, steiger, lint:style pass.

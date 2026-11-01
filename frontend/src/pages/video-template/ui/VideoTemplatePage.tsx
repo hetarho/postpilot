@@ -12,7 +12,7 @@ import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shar
 
 export function VideoTemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
-  const { session } = useSearch({ strict: false }) as { session?: string }
+  const { session, clip } = useSearch({ strict: false }) as { session?: string; clip?: 'new' }
   const { t } = useTranslation(['clips', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -54,6 +54,7 @@ export function VideoTemplatePage() {
       ownerId={ownerId}
       stored={stored}
       sessionId={session}
+      returnToNewClip={!stored && clip === 'new'}
       onPublished={refetch}
     />
   )
@@ -62,15 +63,33 @@ function VideoTemplateHost({
   ownerId,
   stored,
   sessionId,
+  returnToNewClip,
   onPublished,
 }: {
   ownerId: string
   stored?: ClipTemplate
   sessionId?: string
+  /** A new clip's offer opened this creation (CLIP-223). */
+  returnToNewClip: boolean
   onPublished: () => void
 }) {
   const { t } = useTranslation(['clips', 'authoring', 'common'])
   const navigate = useNavigate()
+  // A new template opens its own page, unless a new clip's offer sent the owner here: then 저장
+  // goes back to a new clip in that channel starting from it.
+  const openCreated = (templateId: string) =>
+    returnToNewClip
+      ? navigate({
+          to: '/clips/new',
+          search: ({ channel }) => ({ channel, template: templateId }),
+          replace: true,
+        })
+      : navigate({
+          to: '/video-templates/$templateId',
+          params: { templateId },
+          search: ({ channel }) => ({ channel }),
+          replace: true,
+        })
   const [method, setMethod] = useState<'ai' | 'direct' | 'design' | null>(sessionId ? 'ai' : null)
   const [activeSession, setActiveSession] = useState(sessionId)
   const [published, setPublished] = useState<AuthoringSavedRef>()
@@ -110,12 +129,7 @@ function VideoTemplateHost({
             ownerId={ownerId}
             onSaved={(templateId) => {
               onPublished()
-              void navigate({
-                to: '/video-templates/$templateId',
-                params: { templateId },
-                search: ({ channel }) => ({ channel }),
-                replace: true,
-              })
+              void openCreated(templateId)
             }}
           />
         </div>
@@ -289,13 +303,7 @@ function VideoTemplateHost({
             setPublished(saved)
             onPublished()
             if (stored) setMethod(null)
-            else
-              void navigate({
-                to: '/video-templates/$templateId',
-                params: { templateId: saved.id },
-                search: ({ channel }) => ({ channel }),
-                replace: true,
-              })
+            else void openCreated(saved.id)
           }}
           className="mt-8"
         />
