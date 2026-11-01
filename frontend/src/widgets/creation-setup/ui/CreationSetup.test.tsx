@@ -185,6 +185,30 @@ it('skips optional setup without entity writes and finishes at the explicitly ch
   expect(calls.filter((call) => /Create|Start|Analyze|Save/.test(call))).toEqual([])
   expect(readSetupProgress(OWNER)).toMatchObject({ completed: true, target: '/clips/new' })
 })
+it('opens a creation reached from its finish without offering again what setup just asked', async () => {
+  const { router } = mountFresh({ creationOffers: true })
+  const user = await start()
+  await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })
+  for (let i = 0; i < 3; i++)
+    await user.click(await screen.findByRole('button', { name: '지금은 건너뛰기' }))
+  await user.click(await screen.findByRole('button', { name: '첫 글 작성하기' }))
+
+  await screen.findByLabelText('제목')
+  expect(router.state.location.pathname).toBe('/posts/new')
+  expect(router.state.location.search).toMatchObject({ from: 'setup' })
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+})
+it('finishes at home with no creation handoff', async () => {
+  const { router } = mountFresh()
+  const user = await start()
+  await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })
+  for (let i = 0; i < 3; i++)
+    await user.click(await screen.findByRole('button', { name: '지금은 건너뛰기' }))
+  await user.click(await screen.findByRole('button', { name: '만들러 가기' }))
+
+  await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  expect(router.state.location.search).not.toHaveProperty('from')
+})
 it('resumes an unfinished voice rather than creating another one', async () => {
   resumeSetup('voice')
   const creates: Array<{ name: string }> = []

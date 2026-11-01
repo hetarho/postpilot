@@ -12,3 +12,11 @@ export function seedCompletedSetup(ownerId: string): void {
     }),
   )
 }
+
+/** The same accounts have answered `다시 묻지 않기` on both creation offers (POST-121, CLIP-223), so
+ *  a suite about something else never writes under an open sheet; a suite about the offer opts
+ *  in with `creationOffers`. */
+export function seedDismissedCreationOffers(ownerId: string): void {
+  for (const kind of ['post', 'clip'])
+    localStorage.setItem(`postpilot.creation-offer.v1.${kind}.${encodeURIComponent(ownerId)}`, '1')
+}

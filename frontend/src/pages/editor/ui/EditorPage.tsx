@@ -1,9 +1,11 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { usePost, postReturnDestination } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
+import { CreateVoiceSheet } from '@/features/create-voice'
+import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
 import { AppFailureMessage, Button, typographyStyles, pageStyles } from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
 import { editorNavigationCopy } from '../config/i18n'
@@ -13,18 +15,59 @@ import { editorNavigationCopy } from '../config/i18n'
  *
  *  The directory is read first: the picker is seeded with the account's 기본, or 말투 없음 when
  *  there is none (POST-101), so the editor waits for that one answer rather than letting a first
- *  keystroke create the post on 말투 없음 because the 기본 had not arrived yet. */
+ *  keystroke create the post on 말투 없음 because the 기본 had not arrived yet.
+ *
+ *  It also waits for the template directory: an account with no made voice or no template opens
+ *  on the offer to make it (POST-121), and that sheet has to stand before anything is typed. */
 export function NewDraftPage() {
   const { t } = useTranslation(['posts', 'common'])
   const { user } = useSession()
-  const { defaultVoice, isPending, isError, refetch } = useVoices(user?.id ?? '')
-  const { template } = useSearch({ strict: false }) as { template?: string }
+  const ownerId = user?.id ?? ''
+  const navigate = useNavigate()
+  const { defaultVoice, isPending, isError, refetch } = useVoices(ownerId)
+  const { template, from } = useSearch({ strict: false }) as {
+    template?: string
+    from?: 'setup'
+  }
+  // A handed template is the offer's own wizard coming back; `from=setup` is setup's finish.
+  // Either way the owner has just answered it.
+  const offer = useCreationOffer({
+    ownerId,
+    kind: 'post',
+    suppressed: !!template || from === 'setup',
+  })
+  const [creatingVoice, setCreatingVoice] = useState(false)
 
   if (isError)
     return <LoadFailure message={t('editor.voiceListFailed', { ns: 'posts' })} onRetry={refetch} />
-  if (isPending)
+  if (isPending || !offer.settled)
     return <EditorPlaceholder>{t('state.loading', { ns: 'common' })}</EditorPlaceholder>
-  return <DraftEditor defaultVoice={defaultVoice} handedTemplate={template} />
+  return (
+    <>
+      <DraftEditor defaultVoice={defaultVoice} handedTemplate={template} />
+      <CreationOfferSheet
+        kind="post"
+        open={offer.open}
+        missing={offer.missing}
+        onCreateVoice={() => {
+          offer.close()
+          setCreatingVoice(true)
+        }}
+        onContinueVoice={(voiceId) => {
+          offer.close()
+          void navigate({ to: '/voices/$voiceId', params: { voiceId } })
+        }}
+        onCreateTemplate={() => {
+          offer.close()
+          // As ①'s picker opens it: 저장 returns to a new draft with the template (TMPL-32).
+          void navigate({ to: '/templates/new', search: { post: 'new' } })
+        }}
+        onClose={offer.close}
+        onDismiss={offer.dismiss}
+      />
+      <CreateVoiceSheet ownerId={ownerId} open={creatingVoice} onOpenChange={setCreatingVoice} />
+    </>
+  )
 }
 
 /** `/posts/$slug` — an existing post. */

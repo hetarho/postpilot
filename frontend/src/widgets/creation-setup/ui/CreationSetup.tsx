@@ -29,7 +29,11 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
     if (visible) heading.current?.querySelector('h1')?.focus({ preventScroll: true })
   }, [state.step, visible])
   useEffect(() => {
-    if (state.phase === 'completed') void navigate({ to: state.target, replace: true })
+    if (state.phase !== 'completed') return
+    // A creation opened from here does not offer again what the owner has just answered
+    // (POST-121, CLIP-223).
+    if (state.target === '/') void navigate({ to: '/', replace: true })
+    else void navigate({ to: state.target, search: { from: 'setup' }, replace: true })
   }, [state.phase, state.target, navigate])
   const loadingError = state.phase === 'checking' && controller.availability.status === 'failed'
   const templateStep = state.step === 'post-template' || state.step === 'clip-template'

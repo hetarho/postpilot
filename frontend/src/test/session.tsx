@@ -1,6 +1,6 @@
 import { WritingVoiceCandidateService } from '@/shared/api'
 import { registerAuthoringService, type FakeAuthoringOptions } from './authoring'
-import { seedCompletedSetup } from './setup-progress'
+import { seedCompletedSetup, seedDismissedCreationOffers } from './setup-progress'
 // Shared harness for tests that need a fake AuthService.
 //
 // Everything is built per test: the app's own transport and QueryClient are module
@@ -46,6 +46,9 @@ export interface FakeAuthOptions {
   authoring?: FakeAuthoringOptions
   /** Existing-account fixtures have acknowledged setup; opt in to a truly first-use browser. */
   firstUseSetup?: boolean
+  /** Existing-account fixtures have also dismissed the new-post and new-clip offers; opt in to
+   *  see them (POST-121, CLIP-223). */
+  creationOffers?: boolean
   /** Only the real-route harness seeds historical browser metadata. */
   existingSetup?: boolean
 
@@ -139,6 +142,7 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
   let session = user
   const seedSetup = (ownerId: string) => {
     if (options.existingSetup && !options.firstUseSetup) seedCompletedSetup(ownerId)
+    if (options.existingSetup && !options.creationOffers) seedDismissedCreationOffers(ownerId)
   }
   if (session) seedSetup(session.id)
 
