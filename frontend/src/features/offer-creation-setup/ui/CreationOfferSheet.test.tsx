@@ -45,7 +45,9 @@ describe('CreationOfferSheet', () => {
     })
 
     const dialog = await screen.findByRole('dialog', { name: '말투가 아직 없어요' })
-    expect(within(dialog).queryByRole('button', { name: '새 템플릿 만들기' })).not.toBeInTheDocument()
+    expect(
+      within(dialog).queryByRole('button', { name: '새 템플릿 만들기' }),
+    ).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '말투 이어서 만들기' }))
 
     expect(handlers.onContinueVoice).toHaveBeenCalledWith('voice-half')

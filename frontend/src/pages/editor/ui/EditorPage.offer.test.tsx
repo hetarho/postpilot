@@ -51,7 +51,9 @@ describe('the new-post offer', () => {
     renderAppAt('/posts/new', { user: USER, creationOffers: true, ...NO_VOICE, ...WITH_TEMPLATE })
 
     const dialog = await offerDialog('말투가 아직 없어요')
-    expect(within(dialog).queryByRole('button', { name: '새 템플릿 만들기' })).not.toBeInTheDocument()
+    expect(
+      within(dialog).queryByRole('button', { name: '새 템플릿 만들기' }),
+    ).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '새 말투 만들기' }))
 
     expect(await offerDialog('새 말투')).toBeInTheDocument()
@@ -78,7 +80,9 @@ describe('the new-post offer', () => {
     renderAppAt('/posts/new', { user: USER, creationOffers: true })
 
     await user.click(
-      within(await offerDialog('템플릿이 아직 없어요')).getByRole('button', { name: '이대로 쓰기' }),
+      within(await offerDialog('템플릿이 아직 없어요')).getByRole('button', {
+        name: '이대로 쓰기',
+      }),
     )
     await expectNoOffer()
     await user.type(screen.getByLabelText('제목'), '그냥 쓰는 글')

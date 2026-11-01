@@ -32,7 +32,8 @@ function voiceOffer(active: readonly Voice[]): VoiceOffer {
   const making = active
     .filter((candidate) => !candidate.made)
     .reduce<Voice | undefined>(
-      (newest, candidate) => (!newest || candidate.createdAt > newest.createdAt ? candidate : newest),
+      (newest, candidate) =>
+        !newest || candidate.createdAt > newest.createdAt ? candidate : newest,
       undefined,
     )
   return making ? { action: 'continue', voiceId: making.id } : { action: 'create' }

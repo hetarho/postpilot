@@ -38,7 +38,9 @@ describe('the new-clip offer', () => {
     renderAppAt('/clips/new', { user: ALICE, creationOffers: true, voice: { voices: [] } })
 
     const dialog = await offerDialog()
-    expect(within(dialog).getByRole('button', { name: '새 영상 템플릿 만들기' })).toBeInTheDocument()
+    expect(
+      within(dialog).getByRole('button', { name: '새 영상 템플릿 만들기' }),
+    ).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: '이대로 만들기' })).toBeInTheDocument()
     expect(within(dialog).getByRole('button', { name: '다시 묻지 않기' })).toBeInTheDocument()
     expect(within(dialog).queryByRole('button', { name: /말투/ })).not.toBeInTheDocument()
@@ -64,7 +66,8 @@ describe('the new-clip offer', () => {
     for (const box of screen.getAllByRole('checkbox')) {
       if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)
     }
-    for (let step = 0; step < 4; step++) await user.click(screen.getByRole('button', { name: '다음' }))
+    for (let step = 0; step < 4; step++)
+      await user.click(screen.getByRole('button', { name: '다음' }))
     await screen.findByRole('heading', { name: '영상의 디자인을 골라요' })
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.type(await screen.findByLabelText('영상 템플릿 이름'), '내 카페 클립')
@@ -156,7 +159,11 @@ describe('the new-clip offer', () => {
     await expectNoOffer()
 
     cleanup()
-    renderAppAt('/clips/new', { user: ALICE, creationOffers: true, clips: { templates: [TEMPLATE] } })
+    renderAppAt('/clips/new', {
+      user: ALICE,
+      creationOffers: true,
+      clips: { templates: [TEMPLATE] },
+    })
     await expectNoOffer()
   })
 
