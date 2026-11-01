@@ -1,5 +1,5 @@
 # VOICE voices
-> r18 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
+> r19 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -58,7 +58,7 @@
 - VOICE-52 [o] /voices, the 말투 section every channel shares (→THEME-38), lists named owned styles with personal/synthetic provenance, default marker, learning/usable state, last analysis and pending-material/EDIT state.
   - use the shared settings-row language rather than inheriting operational post-history behavior
   - personal learning, explicit AI creation and unified actual-writing test entry are named distinct actions; tombstones remain in a closed restore disclosure
-- VOICE-53 [o] `새 말투 만들기` — on the list and in a post's voice picker (→POST-101) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
+- VOICE-53 [o] `새 말투 만들기` — on the list, in a post's voice picker (→POST-101) and in a new post's offer (→POST-121) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
   - the commit action sits in flow after the field rather than in the pinned footer ← the panel is anchored to the layout viewport the software keyboard does not resize
   - success closes the sheet and opens the new voice on `/materials` 말투 학습
   - a refusal (a duplicate name) renders under the field in the user's words
@@ -148,5 +148,6 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
+- r19 261102 VOICE-53✎ 새 말투 만들기 on the list and the post picker→also in a new post's offer (→POST-121)
 - r18 261030 VOICE-52✎ /voices in 내 설정→the 말투 section shared by every channel; its creation comes from the channel creation menu (`?new=1` opens 새 말투 만들기)
 - r17 261015 VOICE-76+ AI 말투 grown toward the owner's voice through the chat; VOICE-65✎ ten-question questionnaire sessions→scripted learning chat (no model call); VOICE-60✎ question wording→casual chat situations framing a scene for others; VOICE-66✎ VOICE-71✎ VOICE-4✎ VOICE-32✎ setup methods ten questions→대화하기; VOICE-52✎ writing settings→내 설정; VOICE-47✎ ending run 기본 지침→원칙

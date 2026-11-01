@@ -8,7 +8,16 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| nud | ihaelam-ui-MacBookPro | autopilot | 2026-11-01T15:55Z | 2026-11-01T15:55Z | - |
+
 ## inbox
+- 261102 decided POST-121 CLIP-223: where does the nudge to make a missing voice or template appear? → when a new post or clip opens on an account missing it, in a sheet, after the directory reads succeed and before anything is typed (alt: on every creation button, which misses home, setup and links | a note under the picker, which the owner rejected for simple controls)
+- 261102 decided POST-121 CLIP-223: how often does it come back? → on every later new post/clip while the kind is still missing, with `이대로 쓰기` for this creation and `다시 묻지 않기` per account on this browser; setup's finish and a return from the offer's own wizard do not ask again (alt: once per account like first-use setup, which never asks again after the last voice is deleted | every time with no opt-out)
+- 261102 decided POST-121: what does a voice still being made count as? → missing, but the action becomes `말투 이어서 만들기` and opens that voice's learning (alt: present, so no offer | 새 말투 만들기, leaving the first one half made)
+- 261102 decided CLIP-223 CLIP-146: what does a new clip offer? → only a video template, whose wizard returns to the new clip with it selected; never 말투, because a clip takes no writing voice (alt: offer 말투 too | link to the wizard with no return)
 - 261030 decided CDS-70 CLIP-111: remove the A/B starting intro/outro designs → drop the candidate letters from the names (심플 제목 · 위아래 가로선 · 가로선 구분 · 점수 강조), keeping the presets and their ids a/b/e (alt: delete presets a/b/e and migrate stored selections | keep the lettered names)
 - 261030 decided CLIP-222: captions, intro and outro unseen in the template preview → frame first, an 인트로 · 자막 · 아웃트로 switch, and design choices move the scrubber to their part (alt: three fixed frames side by side | autoplay the scrubber)
 - 261030 decided THEME-38 VOICE-52: where does 말투 live once it is a channel section? → one /voices section shared by all three channels, the URL carrying a clip channel (none ⇒ 네이버 블로그), and 내 설정 no longer lists it (alt: keep it in 내 설정 too | a per-channel copy) — one home keeps one parent and one back link.
@@ -97,8 +106,8 @@
 | ARCH | 20 | 20 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
-| POST | 44 | 44 | - | 0 |
-| VOICE | 18 | 18 | - | 0 |
+| POST | 45 | 45 | - | 0 |
+| VOICE | 19 | 19 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 36 | 36 | - | 0 |
 | TMPL | 31 | 31 | - | 0 |
@@ -108,7 +117,7 @@
 | THEME | 38 | 38 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 70 | 70 | - | 2 |
+| CLIP | 71 | 71 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -144,16 +153,18 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T728 | Offer a missing voice or template when a new post opens | POST VOICE TMPL AUTH THEME ARCH | - | todo |
+| T729 | Offer a video template when a new clip opens | CLIP POST THEME ARCH | T728 | todo |
 
 ## next
+- implement-task T728, then T729 (nud): the new-post and new-clip offers to make a missing voice or template.
 - T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
-- T721–T725 complete (chl): channels open on their history, section tab row (글/영상 · 템플릿 · 말투 · 지침) under a one-row header without breadcrumb, creation-only menu with the current section's creation nearest the button; 말투 is a channel section. Final gate at 11fd0238: 569 files/4530 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
-- T720 and the compact technical-action fix complete: three persistent channel links, account settings and URL-carried video context. Local final gate: 568 files/4509 tests plus all CI-equivalent FE checks pass; report reports/261030-nux.md.
-- T718 (CLIP r66) pushed: the video-template wizard shows the live template preview beside every step from stages on, stages listed with the on-screen one marked, design offered only on the design step. CI run 40836194942 confirmed success; look at it at lg and on a phone; report reports/261029-vtp1.md.
-- Windows Chrome browser media fixes shipped at a4fe7473 (CI, Deploy backend and Verify media success; live preview/video workers carry profile v2): T716 analysis AAC 96 kbps, opaque D3D11 frame rendering, T717 loudness limiter. Owner: listen to the limited-audio render; browser analysis/final-render readiness, T603 corpus/semantic review, T604 hardware/human review and the T709 provider reservation stay open.
 
 ## log
+- 261102 create-task POST r45 VOICE r19 CLIP r71 → T728 new-post offer (shared slice), T729 new-clip template offer.
+- 261102 update-ssot POST r45 VOICE r19 CLIP r71 (nud): POST-121+ new-post offer to make a missing voice or template; CLIP-223+ new-clip offer to make a video template; VOICE-53✎ CLIP-146✎.
+- 261102 update-ssot POST start (nud): offer to make a missing voice or template when a new post or clip starts.
 - 261030 pushed f1c8e693 (T727, report tpv): CI 41009408074 frontend and backend jobs completed with no failed step; conclusion unreadable over public HTML (gh not logged in); no Deploy backend or Verify media path touched.
 - 261030 tpv final gate at f2694dea: FE suite 568 files/4532 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c reused; report reports/261030-tpv.md.
 - 261030 T727 done: template preview frame first with part switch and choice-driven scrubber, presets renamed; 26 test files/349 tests, tsc, eslint/prettier, steiger, lint:style and a Windows Chrome probe pass.
@@ -171,13 +182,3 @@
 - 261030 T722 done: channels open on their history (no visible heading) with the floating action menu; /posts and /clips redirect with their narrowing; full FE suite 569 files/4521 tests, tsc, eslint/prettier, steiger, lint:style pass.
 - 261030 T721 done: shared FloatingActionMenu (list dock, scrim, × in place, grouped link menu, menu-button keys); 19 unit test files/190 tests, tsc, eslint/prettier, lint:style, steiger pass.
 - 261030 create-task THEME r36 POST r43 CLIP r67 → T721 floating action menu, T722 channel history landing (+/posts, /clips redirects), T723 breadcrumb-free shell with header channel links.
-- 261030 update-ssot THEME r36 POST r43 CLIP r67 (chl): THEME-38✎ THEME-58✎ THEME-67+ POST-43✎ CLIP-3✎ CLIP-41✎ channels open on their history, floating action menu (+말투), no breadcrumb, phone links in the header row, underline current mark.
-- 261030 update-ssot THEME start (chl, autopilot): channels open on their history with a floating action menu, no breadcrumb, phone channel links in the header row.
-- 261030 fix dev stack startup: the Go compile cache is a named volume shared by backend and media-worker, and Dockerfile.dev copies only the health client, so a source edit no longer recreates both containers into a cold compile (API 35 s → 2.8 s, worker 21 s → 1.6–2.0 s across recreated containers; image manifest unchanged by a source edit); deploy/media_dev_test.py 5 tests pass.
-- 261030 pushed 74b71784 (dev compile-cache fix d096f06c, report dgc): batch gate at d096f06c passed (dev/deploy tests, Compose, native deployable images, worker smoke, media-release both layouts); CI 40992574798, Deploy backend 40992574758 and Verify media 40992950875 jobs all completed with no failed step, conclusion unreadable over public HTML (gh not logged in).
-- 261030 nux final gate at b6b894c1: 568 files/4509 tests and all FE CI-equivalent checks pass; unchanged backend/generation/deploy evidence reused from bb21f128.
-- 261030 fix editor inspection: compact secondary technical action on new/saved posts; 3 affected test files/18 tests, file lint/format, type/build and 8 browser compositions pass.
-- 261030 T720 done: persistent Blog/Clip/Instagram navigation, account settings entry and shared video URLs; affected tests, lint/format/type/build and 60 browser combinations plus draft/caret continuity pass.
-- 261030 T720 starts (nux) at a15e7bb0; persistent channel navigation and portable shared-video context.
-- 261030 create-task THEME r35 → T720: persistent channels and URL-carried shared video context; preserve creation, settings and return contracts.
-- 261030 update-ssot THEME start: persistent three-channel navigation and channel-context usability (nux, autopilot).
