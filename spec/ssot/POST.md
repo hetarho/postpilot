@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r44 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r45 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -223,10 +223,19 @@
 - POST-120 [o] ③ carries `이 체험으로 클립 만들기` whenever canonical content exists: the owner picks 네이버 클립 or 인스타 클립 and confirms, and a new clip is created in that channel seeded with the post's title, its memo as the clip's instruction, its 체험단 글 switch and advertiser guide, and its attached videos as sources, and the post is linked to that clip as its story (→CLIP-214 →CLIP-215)
   - photos stay with the post ← a clip takes only video sources (→CLIP-6)
   - it starts no AI work and changes nothing on the post; later edits on either side do not flow to the other
+- POST-121 [o] a new post (`/posts/new`) on an account with no made writing voice or no template first offers, in the shared `Sheet`, to make what is missing; it forces nothing, and the post can always be written without either (→POST-101 →TMPL-32) ← the pickers' create options sit at the end of a closed list, so an owner with neither otherwise writes a first post in no voice and no shape without noticing
+  - it opens only after both directory reads succeed and before the owner has typed or attached anything; a pending or failed read never opens it ← an unknown directory is never an empty one (→~AUTH-50)
+  - its title names what is missing — 말투, 템플릿 or both — and it offers one action per missing kind:
+    - no made voice: `새 말투 만들기` opens VOICE-53's sheet; while a voice is still being made, `말투 이어서 만들기` opens that voice's learning instead (the newest when there are several, →VOICE-54) ← a second voice would leave the first one half made
+    - no template: `새 템플릿 만들기` opens the wizard and returns to a new draft with that template selected, as the picker's option does (→!TMPL-32)
+  - `이대로 쓰기`, Escape or the scrim close it for this creation; `다시 묻지 않기` stops the post offer for this account on this browser
+  - it is offered again on every later new post while a kind is still missing, whatever first-use setup recorded (→AUTH-50) ← an account that deleted its last voice or template is as unready as a new one
+  - a new post reached from first-use setup's finish, or back from the offer's own wizard, does not offer it ← the owner has just answered it
+  - an existing post never offers it
 
 ## flow
 - origin review: current canonical content + matching result evidence → phrase highlights/legend → select meaning → source detail | unconfirmed explanation → optional manual/AI refinement under existing action gates
-- new post: 네이버 블로그 → `/posts/new` (voice picker seeded with the 기본, or 말투 없음; 체험단 글 on) → type or pick photos, paste the advertiser guide → `mint()` → slug → `/posts/<slug>` (replace) → autosave 1 s after each pause
+- new post: 네이버 블로그 → `/posts/new` (voice picker seeded with the 기본, or 말투 없음; 체험단 글 on) → (no made voice or no template → offer: make it | 이대로 쓰기 | 다시 묻지 않기) → type or pick photos, paste the advertiser guide → `mint()` → slug → `/posts/<slug>` (replace) → autosave 1 s after each pause
 - finish: ③ → checklist(counted marks + owner ticks) → copy Naver output (placeholder on top while 체험단 글) → optional 이 체험으로 클립 만들기(channel → confirm → new clip seeded from the post)
 - photo · video: select(gate) → (photo: decode → resize/encode | video: read metadata) → CreateUpload → PUT to storage → ConfirmUpload → cache patch → next GetPost supplies the presigned view URL
 - lifecycle: draft →(storyline job) draft holding a storyline, on ② →(machine result) review →(FinalizePost) finalized →(changed content save | machine result) review | →(paste Naver URL) published →(clear URL) finalized
@@ -244,6 +253,7 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r45 261102 POST-121+ a new post on an account with no made voice or no template offers to make it (sheet; 이대로 쓰기 · 다시 묻지 않기), again on every later new post while it is missing
 - r44 261030 POST-43✎ new writing from the channel's floating action menu→from the 글 section's 새 글 button
 - r43 261030 POST-43✎ the channel launches writing and holds a secondary history at /posts→opens on its history at /naver-blog (/posts replaces itself there with its filters), no history heading, new writing from the floating action menu
 - r41 261015 POST-117+ 체험단 글 switch (new posts on, earlier posts off); POST-118+ advertiser guide (free text + counted items); POST-119+ pre-submission checklist; POST-120+ 이 체험으로 클립 만들기; POST-112✎ three→four origin categories (+ 광고주 요청, own color); POST-114✎ wording; POST-43✎ POST-64✎ home/history→Naver Blog channel; POST-54✎ POST-62✎ ① and ③ order; POST-107✎ Tistory/site/Markdown no-rotation line removed with those exports

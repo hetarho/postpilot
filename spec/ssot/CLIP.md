@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r70 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r71 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -225,6 +225,7 @@
   - this is a workload estimate, not a longest elapsed-time promise across devices; device/render timings follow CLIP-207
   - a later manual style choice may change work beyond that estimate; it invokes no AI and requires no new credit approval (→CLIP-20 →CLIP-142)
 - CLIP-146 [o] having no video template is a normal project state and is never presented as something missing: the list shows 템플릿 없음 as plain metadata, ①'s template selector stays re-selectable and offers 없음 as a choice beside every template, and only a project whose named template is gone says so (→CLIP-5 →CLIP-25 →CLIP-40 →CLIP-41)
+  - the one place an empty video-template directory is named is a new clip's offer (→CLIP-223), which speaks of the account's directory, never of a project
 - CLIP-148 [o] one info control on the preview's frame, at its top-right beside the player's own controls, carries everything ② has to say about the whole clip — what the draft preview cannot promise about the delivered render (browser timing tolerance, approximate frame position, on-source contrast and final loudness) and every notice naming no cut and no caption — and none of it stands as permanent text in the flow ② edits in (→CLIP-56 →CLIP-57 →CLIP-109 →THEME-29 →THEME-39)
 - CLIP-150 [o] ②'s read-only reference — the stored observations, the source strip and the verbatim request record — is reached on demand from the editing surface and never stands open beneath it, while ① keeps them in flow where settings are what the step is for (→CLIP-47 →CLIP-48 →CLIP-53 →CLIP-133) ← one phone screen of editor followed by three open panels is scrolled past rather than read
 - CLIP-149 [o] in ② the identified latest successful render is downloaded from an icon control directly under the video it downloads, naming the revision it delivers; ③ keeps its docked download, which is the whole of what that step does (→CLIP-27 →CLIP-40 →CLIP-49 →CLIP-57)
@@ -426,9 +427,12 @@
   - the frame, its part switch and the scrubber stand first in the preview, above the ratio, the design selection and the sample duration
   - an 인트로 · 자막 · 아웃트로 switch moves the scrubber to that part's first instant and marks the part the scrubber is in; a part the illustration does not draw is not offered, and fewer than two parts show no switch
   - choosing an intro preset moves to the intro, an outro preset to the outro, and adding a caption style to the first caption drawn in that style; removing a style moves to the first caption; a choice whose part is not drawn leaves the scrubber where it is
+- CLIP-223 [o] a new clip (`/clips/new`) on an account with no video template first offers to make one, with POST-121's timing, repetition and exceptions (→!POST-121); it never offers 말투 ← a clip takes no writing voice
+  - `새 영상 템플릿 만들기` opens CLIP-213's wizard in that channel; its 저장 returns to a new clip in that channel with that template selected, and leaving the wizard unsaved selects nothing
+  - `이대로 만들기`, Escape or the scrim close it for this creation; `다시 묻지 않기` stops the clip offer, apart from the post offer, for this account on this browser
 
 ## flow
-- create: 네이버 클립 | 인스타 클립 → choose title and optional template (9:16) → arrange sources and explicitly retain any original sound → optionally link a post (글 연결) → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
+- create: 네이버 클립 | 인스타 클립 → (no video template → offer: 새 영상 템플릿 만들기 → wizard → back with it selected | 이대로 만들기 | 다시 묻지 않기) → choose title and optional template (9:16) → arrange sources and explicitly retain any original sound → optionally link a post (글 연결) → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
 - template: 형식 안내 복사 → outside AI writes the outline, or 원문 복사 hands it the template already saved → paste 원문, or build the same entries in the block builder → choose the design selection in the preview → validate with entry/line errors → save → offer for a project
 - wizard: 네이버 클립 | 인스타 클립 → 템플릿 → 새 영상 템플릿 → target(one question per screen → leaf) → stages(check roles · 직접 추가) → order → headings(fields · 제목 제안 받기) → one step per stage(name · what it shows · information field) → design(presets · caption styles on the preview) → name → 저장(standard create); live preview beside every step from stages on(lg right | below lg 미리보기 → sheet)
 - observe: prepared bounded source intervals → observation model records ordered scenes across every interval → retain source-time evidence and explicit uncertainty → validate bounded coverage without editorial choices
@@ -475,6 +479,7 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r71 261102 CLIP-223+ a new clip on an account with no video template offers to make one (wizard returns to the new clip with it selected); CLIP-146✎ no template never named as missing→except that offer, which names the account's directory
 - r70 261030 CLIP-111✎ preset names A 크기만→심플 제목, B 위아래 가로선→위아래 가로선, B 가로선 구분→가로선 구분, E 점수 강조→점수 강조; CLIP-222+ template preview leads with its frame, an 인트로 · 자막 · 아웃트로 switch and design choices move the scrubber to the part they show
 - r69 261030 CLIP-3✎ CLIP-41✎ creation from the channel creation menu→from the 영상 section's 새 영상 button
 - r68 261030 CLIP-3✎ creation the first floating-menu item→새 영상 in the channel creation menu, the history being the 영상 section
