@@ -17,7 +17,7 @@
     "keyboardAutosaveAndStillFlowPassed": true,
     "initialFailurePreserved": true
   },
-  "currentLockfileSHA256": "94a980b07aef292a1d96bd52a3187a8a516ca8a02305990e496c3e28797214c5",
+  "currentLockfileSHA256": "11dffdcc7c15b8d22606540dbf3f7330625a5fe729c75ca8cebd397ac6c7c8d0",
   "mediaPackageVersionSourceAndNoticeCount": 20,
   "historicalReportsAreHistorical": true,
   "releaseQualification": false,
@@ -321,7 +321,7 @@
     "statusAtReceiptCreation": "not-executed",
     "evidenceLocation": "Git origin/main HEAD and GitHub Actions commit checks are collected after promotion/push separately from this local-CI receipt."
   },
-  "currentAssetVersion": "clip-design-assets-v1-ink-81334bffba7c956826d594440c077e902cdbea6c515778aab41f89ad838d065b",
+  "currentAssetVersion": "clip-design-assets-v1-ink-a03ef33d54312d3009f4249a2c2ac6cb078ed0e606e63c7a8e701a0f9bafe4e4",
   "catalogRegenerationScope": "Only effectImplementation.sources/pnpm-lock.yaml changed; native catalog styles/paint and all font/WASM bytes are unchanged.",
   "distributionApproved": false,
   "sourceOnlyTaskStatus": {
