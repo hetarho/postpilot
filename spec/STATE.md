@@ -160,9 +160,10 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
-- 261102 T729 done: new-clip video-template offer, wizard returns to /clips/new with the template and its design; 80 files/710 tests, tsc, lint, steiger and lint:style pass.
+- 261102 fix offer files format (12a1da9c): CI 41327886298 refused 65d192f4 at format:check; the gate's `vibe check -- bash -c "…"` had lost its quoting and passed a failed pnpm lint. Fail-fast script gate at 12a1da9c: every FE/root check and 574 files/4574 tests pass.
+- 261102 T729 done: new-clip video-template offer, wizard returns to /clips/new with the template and its design; 80 files/710 tests pass (static checks really passed only at 12a1da9c).
 - 261102 T729 starts (nud) at 6f484cba; new-clip video-template offer.
-- 261102 T728 done: new-post offer sheet (missing voice/template, 이대로 쓰기, 다시 묻지 않기) and the shared offer slice; 54 files/459 tests, tsc, lint, steiger and lint:style pass.
+- 261102 T728 done: new-post offer sheet (missing voice/template, 이대로 쓰기, 다시 묻지 않기) and the shared offer slice; 54 files/459 tests pass (static checks really passed only at 12a1da9c).
 - 261102 T728 starts (nud) at 05c8d739; new-post offer and the shared offer slice.
 - 261102 create-task POST r45 VOICE r19 CLIP r71 → T728 new-post offer (shared slice), T729 new-clip template offer.
 - 261102 update-ssot POST r45 VOICE r19 CLIP r71 (nud): POST-121+ new-post offer to make a missing voice or template; CLIP-223+ new-clip offer to make a video template; VOICE-53✎ CLIP-146✎.
@@ -179,4 +180,3 @@
 - 261030 T725 done: creation-only channel menu on every section list page (current creation nearest the button), page creation docks removed, ?new=1 for 말투 and 영상 지침; 42 test files/366 tests, tsc, eslint/prettier, steiger, lint:style and 90 Windows Chrome combinations pass.
 - 261030 T724 done: channel section tab row (글/영상 · 템플릿 · 말투 · 지침) on section list pages, sections top-level, 말투 shared by all channels and out of 내 설정; 36 test files/356 tests, tsc, eslint/prettier, steiger, lint:style pass.
 - 261030 update-ssot THEME r37 VOICE r18 GUIDE r24 CLIP r68 + create-task → T724 section tabs (말투 shared by all channels, out of 내 설정), T725 creation-only menu on every section list page; the owner found the history-only menu of destinations awkward.
-- 261030 fix lint:retirement: the legacy publishing redirect check follows the post list to /naver-blog (POST-43, T722); check and its test pass.
