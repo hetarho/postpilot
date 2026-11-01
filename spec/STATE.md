@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| nud | ihaelam-ui-MacBookPro | autopilot | 2026-11-01T15:55Z | 2026-11-01T16:27Z | T729 |
-
 ## inbox
 - 261102 decided POST-121 CLIP-223: where does the nudge to make a missing voice or template appear? → when a new post or clip opens on an account missing it, in a sheet, after the directory reads succeed and before anything is typed (alt: on every creation button, which misses home, setup and links | a note under the picker, which the owner rejected for simple controls)
 - 261102 decided POST-121 CLIP-223: how often does it come back? → on every later new post/clip while the kind is still missing, with `이대로 쓰기` for this creation and `다시 묻지 않기` per account on this browser; setup's finish and a return from the offer's own wizard do not ask again (alt: once per account like first-use setup, which never asks again after the last voice is deleted | every time with no opt-out)
@@ -155,11 +150,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected.
+- T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected. Pushed dffd0a20, CI 41330923778 success.
 - T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261102 pushed dffd0a20 (T728 T729 + format fix, report nud): CI 41330923778 frontend and backend success; no Deploy backend or Verify media path touched.
 - 261102 fix offer files format (12a1da9c): CI 41327886298 refused 65d192f4 at format:check; the gate's `vibe check -- bash -c "…"` had lost its quoting and passed a failed pnpm lint. Fail-fast script gate at 12a1da9c: every FE/root check and 574 files/4574 tests pass.
 - 261102 T729 done: new-clip video-template offer, wizard returns to /clips/new with the template and its design; 80 files/710 tests pass (static checks really passed only at 12a1da9c).
 - 261102 T729 starts (nud) at 6f484cba; new-clip video-template offer.
@@ -179,4 +175,3 @@
 - 261030 chl final gate at 11fd0238: FE suite 569 files/4530 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c (dgc gate) reused.
 - 261030 T725 done: creation-only channel menu on every section list page (current creation nearest the button), page creation docks removed, ?new=1 for 말투 and 영상 지침; 42 test files/366 tests, tsc, eslint/prettier, steiger, lint:style and 90 Windows Chrome combinations pass.
 - 261030 T724 done: channel section tab row (글/영상 · 템플릿 · 말투 · 지침) on section list pages, sections top-level, 말투 shared by all channels and out of 내 설정; 36 test files/356 tests, tsc, eslint/prettier, steiger, lint:style pass.
-- 261030 update-ssot THEME r37 VOICE r18 GUIDE r24 CLIP r68 + create-task → T724 section tabs (말투 shared by all channels, out of 내 설정), T725 creation-only menu on every section list page; the owner found the history-only menu of destinations awkward.
