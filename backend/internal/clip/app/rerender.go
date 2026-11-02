@@ -204,6 +204,12 @@ func (s *GenerationService) startRenderWithBrowserVersion(ctx context.Context, u
 	if err != nil {
 		return none, err
 	}
+	// A writer caption the checks below would refuse is repaired or omitted,
+	// and the render runs on the revision that saves (CLIP-224).
+	if p, plan, err = s.repairWriterCaptions(ctx, user, p, plan); err != nil {
+		return none, err
+	}
+	revision = p.EditPlanRevision
 	speechAssets, err := s.renderSpeechAssets(ctx, user, id, plan, revision)
 	if err != nil {
 		return none, err

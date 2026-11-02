@@ -349,6 +349,8 @@ type rendererFake struct {
 	calls       int
 	captionErr  error
 	panicRender bool
+	// refuse, when set, refuses a laid-out plan as the real layout would.
+	refuse func(clip.EditPlan) error
 }
 
 func (*rendererFake) CompositionPlanVersion() int { return clip.CompositionPlanVersion }
@@ -370,6 +372,11 @@ func (r *rendererFake) Layout(_ context.Context, p clip.EditPlan, _ []clip.Rende
 // plan a generation writes is one, and these tests are about the stages around
 // the layout rather than the layout engine.
 func (r *rendererFake) LayoutComposition(_ context.Context, p clip.EditPlan, _ []clip.RenderSource) (clip.EditPlan, []clip.CompositionElement, error) {
+	if r.refuse != nil {
+		if err := r.refuse(p); err != nil {
+			return p, nil, err
+		}
+	}
 	return p, nil, r.captionErr
 }
 
