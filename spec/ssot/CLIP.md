@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r71 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r72 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -208,6 +208,8 @@
   - scripted narration and speech calls are included in the initial ceiling under QUOTA-71; generation still stops at a plan under CLIP-151
 - CLIP-136 [o] footage order, rhythm and count follow the storyline the clip is built from, otherwise the instruction; without either, cuts follow the order the owner arranged the sources in ① and source time within a source, with CDS-37's rhythm targets; the cut budget derives from the target duration and the observed footage, and no template structure admits or forbids footage (→CLIP-7 →CLIP-99 →CLIP-127 →CDS-37)
 - CLIP-138 [o] a notice records only what the server changed or could not place — a caption shortened or omitted, an element that could not render; a moment the writer left without a caption, a fact the narration did not state and a source it did not use record nothing (→CLIP-108 →CLIP-109) ← a notice that reports the writer's own choice as a defect teaches the owner to ignore notices
+- CLIP-224 [o] a writer-authored caption never stops a render: when the render start's own checks refuse one the owner has not edited, the start first frees it to automatic placement, then omits it with one notice, saves that plan as the next revision and renders it (→CLIP-108 →CLIP-138 →CLIP-109) ← a model's caption is a draft, and refusing the whole clip over one line leaves the owner nothing to fix
+  - owner-edited or owner-placed content and every non-caption refusal still refuse the start; a narration caption whose segment keeps its speech loses only its visible caption
 - CLIP-139 [o] region enablement/presets, the AI caption style set, caption pace and accent are project settings in ①; template selection seeds the design under CLIP-168, otherwise CLIP-111 applies, and pace/accent start at the shared defaults
   - region or visual changes update the current draft under CLIP-188 and make a matching result stale for credit-free rerender without discarding observations or footage flow
   - changing the AI style set affects future AI choices and never restyles existing captions (→CLIP-142)
@@ -479,6 +481,7 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r72 261103 CLIP-224+ a writer-authored caption the render start refuses is freed to automatic placement, then omitted with a notice and the plan saved as the next revision, instead of refusing the render
 - r71 261102 CLIP-223+ a new clip on an account with no video template offers to make one (wizard returns to the new clip with it selected); CLIP-146✎ no template never named as missing→except that offer, which names the account's directory
 - r70 261030 CLIP-111✎ preset names A 크기만→심플 제목, B 위아래 가로선→위아래 가로선, B 가로선 구분→가로선 구분, E 점수 강조→점수 강조; CLIP-222+ template preview leads with its frame, an 인트로 · 자막 · 아웃트로 switch and design choices move the scrubber to the part they show
 - r69 261030 CLIP-3✎ CLIP-41✎ creation from the channel creation menu→from the 영상 section's 새 영상 button

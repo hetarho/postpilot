@@ -9,6 +9,7 @@
 - push: main
 
 ## inbox
+- 261103 decided CLIP-224: a model-written caption refused at render start (prod narration-2, repeated) → free it to automatic placement, then omit it with a notice, save the next revision and render (alt: keep refusing and ask the owner to fix it | repair only at generation, leaving saved plans broken) — the owner asked that captions never block a render and that hallucinated output be absorbed; owner-edited content still refuses.
 - 261102 decided ARCH-68 CLIP-155: browser final rendering is closed by its readiness record and the API flag, so ② refuses it as 준비 중 — open it? → open it now; the unmet performance, Windows integrated-GPU, lower-resource, human-review and WASM license-graph gates become follow-up evidence, and analysis preparation stays closed (alt: keep it closed until T604 qualifies it | open it behind an operator env) — the owner asked for it to work, the editor preview already ships the same components and WASM, and code-owned activation keeps one switch on both sides.
 - 261102 decided POST-121 CLIP-223: where does the nudge to make a missing voice or template appear? → when a new post or clip opens on an account missing it, in a sheet, after the directory reads succeed and before anything is typed (alt: on every creation button, which misses home, setup and links | a note under the picker, which the owner rejected for simple controls)
 - 261102 decided POST-121 CLIP-223: how often does it come back? → on every later new post/clip while the kind is still missing, with `이대로 쓰기` for this creation and `다시 묻지 않기` per account on this browser; setup's finish and a return from the offer's own wizard do not ask again (alt: once per account like first-use setup, which never asks again after the last voice is deleted | every time with no opt-out)
@@ -113,7 +114,7 @@
 | THEME | 38 | 38 | - | 2 |
 | MKT | 11 | 11 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 71 | 71 | - | 2 |
+| CLIP | 72 | 72 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 9 | 9 | - | 0 |
 | MEM | 7 | 7 | - | 2 |
@@ -149,9 +150,11 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T732 | Repair or omit a refused writer caption at render start instead of refusing | CLIP | - | todo |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 
 ## next
+- implement-task T732 (cap): a writer caption the render start refuses is freed, then omitted with a notice, and the render proceeds.
 - implement-task T731 (brr): Verify media 41469072328 refused 70811b8c at the worker parity preparation subtest, CadenceVerified worker true vs embedded false on the same fixture; not reproduced in 12 local repeats.
 - T730 complete (brr; report reports/261102-brr.md): ② offers 브라우저에서 렌더 on a capable device and the API admits it; analysis preparation stays closed. Pushed 70811b8c: CI and Deploy backend success, Verify media red only at the T731 cadence parity check.
 - T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected. Pushed dffd0a20, CI 41330923778 success.
@@ -159,6 +162,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261103 update-ssot CLIP r72 + create-task (cap): CLIP-224+ render start repairs or omits a refused writer caption → T732.
 - 261103 pushed bc1d5bf4 (render refusal fix): FE gate 575 files/4576 tests and all FE checks pass; CI 41482325787 success; no backend path, so no deploy.
 - 261103 fix clip render start: a server render refused by plan validation (CLIP_COMPOSITION_INVALID/UNAVAILABLE) is a definite refusal, not an uncertain start; ② shows the failure instead of a stuck run view that a reload sends back to ②.
 - 261103 pushed 70811b8c (T730, brr): CI 41468348128 and Deploy backend 41468347969 success; Verify media 41469072328 failed only at Media worker TestWorkerExecutionParity/preparation (CadenceVerified mismatch, unrelated to T730) → T731.
@@ -178,4 +182,3 @@
 - 261102 update-ssot POST r45 VOICE r19 CLIP r71 (nud): POST-121+ new-post offer to make a missing voice or template; CLIP-223+ new-clip offer to make a video template; VOICE-53✎ CLIP-146✎.
 - 261102 update-ssot POST start (nud): offer to make a missing voice or template when a new post or clip starts.
 - 261030 pushed f1c8e693 (T727, report tpv): CI 41009408074 frontend and backend jobs completed with no failed step; conclusion unreadable over public HTML (gh not logged in); no Deploy backend or Verify media path touched.
-- 261030 tpv final gate at f2694dea: FE suite 568 files/4532 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c reused; report reports/261030-tpv.md.
