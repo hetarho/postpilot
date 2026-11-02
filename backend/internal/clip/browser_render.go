@@ -21,6 +21,10 @@ const BrowserFontVersion = "bundled-clip-fonts-v1"
 const BrowserAssetVersion = "clip-design-assets-v1-ink-a03ef33d54312d3009f4249a2c2ac6cb078ed0e606e63c7a8e701a0f9bafe4e4"
 const BrowserBackgroundVersion = "clip-browser-background-v1"
 
+// BrowserCompositionReleased activates browser final rendering (ARCH-68). It is
+// code-owned like the frontend readiness record, never an operator bypass.
+const BrowserCompositionReleased = true
+
 func validBrowserSHA256(value string) bool {
 	b, e := hex.DecodeString(value)
 	return e == nil && len(b) == sha256.Size && hex.EncodeToString(b) == value

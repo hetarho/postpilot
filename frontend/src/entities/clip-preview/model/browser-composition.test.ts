@@ -211,7 +211,7 @@ describe('frozen browser composition', () => {
     expect(snapshot.speechFingerprint).toMatch(/^[a-f0-9]{64}$/u)
     expect(evaluateBrowserFrame(snapshot, 0).footageLayers[0]!.retainOriginalAudio).toBe(false)
     expect(await readBrowserCompositionSnapshot(JSON.parse(before))).toEqual(snapshot)
-    expect(CLIP_BROWSER_COMPOSITION.qualified).toBe(false)
+    expect(CLIP_BROWSER_COMPOSITION.qualified).toBe(true)
   })
   it('hashes changed text, geometry, sound, speech, versions and owner identity independently', async () => {
     const request = input()

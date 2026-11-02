@@ -45,3 +45,15 @@ func TestDefaultGenerationConfigTakesOnlyItsWindowsFromTheEnvironment(t *testing
 		t.Fatalf("product numbers moved with the environment: %+v", g)
 	}
 }
+
+// Browser final rendering is released in code (ARCH-68), so the default
+// config admits it with an empty environment.
+func TestDefaultGenerationConfigAdmitsBrowserComposition(t *testing.T) {
+	g := clip.DefaultGenerationConfig(clip.Environment{})
+	if !g.BrowserCompositionQualified {
+		t.Fatalf("browser composition is not released by default: %+v", g)
+	}
+	if err := clip.CheckBrowserCompositionVersion(clip.BrowserCompositionVersion, g.BrowserCompositionQualified); err != nil {
+		t.Fatal(err)
+	}
+}

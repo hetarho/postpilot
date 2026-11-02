@@ -149,15 +149,16 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T730 | Activate browser final rendering on the frontend and the API | ARCH CLIP | - | todo |
 
 ## next
-- implement-task T730 (brr): activate browser final rendering.
+- T730 complete (brr): ② offers 브라우저에서 렌더 on a capable device and the API admits it; analysis preparation stays closed.
 - T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected. Pushed dffd0a20, CI 41330923778 success.
 - T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261102 T730 done: browser final rendering active (readiness record + code-owned API switch); 81 files/608 FE tests and BE clip/cmd/api tests pass.
+- 261102 T730 starts (brr) at aebf4d47; activate browser final rendering.
 - 261102 create-task ARCH r21 → T730 activate browser final rendering (brr).
 - 261102 update-ssot ARCH r21 (brr): ARCH-68✎ browser final rendering active; its remaining device/review/license gates are follow-up evidence; activation code-owned on both sides.
 - 261102 update-ssot ARCH start (brr): browser final render is refused as 준비 중 although the owner wants it working.
@@ -176,5 +177,3 @@
 - 261030 T727 starts (tpv) at c20a5f37; template preview parts and preset names.
 - 261030 create-task CLIP r70 CDS r38 → T727 template preview parts and preset names.
 - 261030 update-ssot CLIP r70 CDS r38 (tpv): CLIP-111✎ CDS-70/71/72/75/76✎ preset names without candidate letters; CLIP-222+ template preview leads with its frame, part switch and choice-driven scrubber.
-- 261030 T726 done: each section list page's floating button opens its own creation directly; FloatingActionMenu removed; 75 test files/532 tests, tsc, eslint/prettier, steiger, lint:style and 54 Windows Chrome combinations pass.
-- 261030 update-ssot THEME r38 POST r44 CLIP r69 GUIDE r25 + create-task → T726: the floating button opens its section's creation directly; the owner found a menu of creations redundant beside the section tabs.

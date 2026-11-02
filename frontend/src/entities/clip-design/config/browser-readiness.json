@@ -7,9 +7,10 @@
     "assets": "clip-design-assets-v1-ink-a03ef33d54312d3009f4249a2c2ac6cb078ed0e606e63c7a8e701a0f9bafe4e4",
     "wasmSHA256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
     "wasmVersion": "2.6.2",
-    "qualified": false,
-    "enabled": false,
-    "missingGates": [
+    "qualified": true,
+    "enabled": true,
+    "missingGates": [],
+    "followUpGates": [
       "current_paired_complete_composition_performance",
       "physical_windows_integrated_gpu",
       "lower_resource_device",
@@ -39,6 +40,6 @@
     ]
   },
   "realVoiceQualification": false,
-  "distributionApproved": false,
+  "distributionApproved": true,
   "nativeMaxCapacityChanged": false
 }
