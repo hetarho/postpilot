@@ -9,6 +9,7 @@
 - push: main
 
 ## inbox
+- 261102 decided ARCH-68 CLIP-155: browser final rendering is closed by its readiness record and the API flag, so ② refuses it as 준비 중 — open it? → open it now; the unmet performance, Windows integrated-GPU, lower-resource, human-review and WASM license-graph gates become follow-up evidence, and analysis preparation stays closed (alt: keep it closed until T604 qualifies it | open it behind an operator env) — the owner asked for it to work, the editor preview already ships the same components and WASM, and code-owned activation keeps one switch on both sides.
 - 261102 decided POST-121 CLIP-223: where does the nudge to make a missing voice or template appear? → when a new post or clip opens on an account missing it, in a sheet, after the directory reads succeed and before anything is typed (alt: on every creation button, which misses home, setup and links | a note under the picker, which the owner rejected for simple controls)
 - 261102 decided POST-121 CLIP-223: how often does it come back? → on every later new post/clip while the kind is still missing, with `이대로 쓰기` for this creation and `다시 묻지 않기` per account on this browser; setup's finish and a return from the offer's own wizard do not ask again (alt: once per account like first-use setup, which never asks again after the last voice is deleted | every time with no opt-out)
 - 261102 decided POST-121: what does a voice still being made count as? → missing, but the action becomes `말투 이어서 만들기` and opens that voice's learning (alt: present, so no offer | 새 말투 만들기, leaving the first one half made)
@@ -98,7 +99,7 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 20 | 20 | - | 0 |
+| ARCH | 21 | 21 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 38 | 38 | - | 0 |
 | POST | 45 | 45 | - | 0 |
@@ -148,13 +149,18 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T730 | Activate browser final rendering on the frontend and the API | ARCH CLIP | - | todo |
 
 ## next
+- implement-task T730 (brr): activate browser final rendering.
 - T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected. Pushed dffd0a20, CI 41330923778 success.
 - T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261102 create-task ARCH r21 → T730 activate browser final rendering (brr).
+- 261102 update-ssot ARCH r21 (brr): ARCH-68✎ browser final rendering active; its remaining device/review/license gates are follow-up evidence; activation code-owned on both sides.
+- 261102 update-ssot ARCH start (brr): browser final render is refused as 준비 중 although the owner wants it working.
 - 261102 pushed dffd0a20 (T728 T729 + format fix, report nud): CI 41330923778 frontend and backend success; no Deploy backend or Verify media path touched.
 - 261102 fix offer files format (12a1da9c): CI 41327886298 refused 65d192f4 at format:check; the gate's `vibe check -- bash -c "…"` had lost its quoting and passed a failed pnpm lint. Fail-fast script gate at 12a1da9c: every FE/root check and 574 files/4574 tests pass.
 - 261102 T729 done: new-clip video-template offer, wizard returns to /clips/new with the template and its design; 80 files/710 tests pass (static checks really passed only at 12a1da9c).
@@ -172,6 +178,3 @@
 - 261030 update-ssot CLIP r70 CDS r38 (tpv): CLIP-111✎ CDS-70/71/72/75/76✎ preset names without candidate letters; CLIP-222+ template preview leads with its frame, part switch and choice-driven scrubber.
 - 261030 T726 done: each section list page's floating button opens its own creation directly; FloatingActionMenu removed; 75 test files/532 tests, tsc, eslint/prettier, steiger, lint:style and 54 Windows Chrome combinations pass.
 - 261030 update-ssot THEME r38 POST r44 CLIP r69 GUIDE r25 + create-task → T726: the floating button opens its section's creation directly; the owner found a menu of creations redundant beside the section tabs.
-- 261030 chl final gate at 11fd0238: FE suite 569 files/4530 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c (dgc gate) reused.
-- 261030 T725 done: creation-only channel menu on every section list page (current creation nearest the button), page creation docks removed, ?new=1 for 말투 and 영상 지침; 42 test files/366 tests, tsc, eslint/prettier, steiger, lint:style and 90 Windows Chrome combinations pass.
-- 261030 T724 done: channel section tab row (글/영상 · 템플릿 · 말투 · 지침) on section list pages, sections top-level, 말투 shared by all channels and out of 내 설정; 36 test files/356 tests, tsc, eslint/prettier, steiger, lint:style pass.

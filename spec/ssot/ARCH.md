@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r20 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
+> r21 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -166,8 +166,10 @@
   - browser integration tests exercise real Worker, codec, fonts, canvas, audio and storage behavior; unit mocks cannot establish performance or hardware use
   - analysis evaluation isolates high-quality references, native proxies and browser proxies at matched inputs/model/endpoint/prompt versions, with human-grounded labels and a separately approved live-call budget
   - record missing hardware, provider credentials or review as unmet gates; compile success and synthetic structure tests do not certify semantic accuracy or production voice readiness
-- ARCH-68 [o] release qualifies and activates browser final rendering separately from browser analysis preparation.
-  - final-render activation requires complete component/output parity and real-device performance; analysis activation additionally requires server artifact-verification and semantic-quality evidence
+- ARCH-68 [o] release activates browser final rendering separately from browser analysis preparation.
+  - browser final rendering is active; real-device performance, Windows integrated-GPU and lower-resource measurements, human output review and the complete WASM source/license graph are follow-up qualification evidence (→~ARCH-67) and never close it
+  - analysis activation requires complete component/output parity, real-device performance, server artifact-verification and semantic-quality evidence
+  - each activation is code-owned and identical on the static frontend and the API; no operator env or client claim opens either
   - HTTPS, private-storage CORS, module Worker URLs, versioned font/WASM assets, notices/source access and temporary-output cleanup are checked in the static deployment
   - same-host CPU workers retain finite job/queue/resource budgets; an unsupported browser never triggers an implicit native job, GPU rental or desktop installation
 
@@ -192,3 +194,4 @@
 ## chg
 - r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
 - r20 261007 ARCH-70+ ARCH-31✎ separate task submission/integration lifecycle→one dependency-ready task implemented, verified and committed directly on main
+- r21 261102 ARCH-68✎ final-render activation required complete component/output parity and real-device performance→browser final rendering active with those checks as follow-up evidence; activation code-owned and identical on frontend and API
