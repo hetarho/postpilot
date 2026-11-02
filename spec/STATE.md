@@ -159,6 +159,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261103 pushed bc1d5bf4 (render refusal fix): FE gate 575 files/4576 tests and all FE checks pass; CI 41482325787 success; no backend path, so no deploy.
 - 261103 fix clip render start: a server render refused by plan validation (CLIP_COMPOSITION_INVALID/UNAVAILABLE) is a definite refusal, not an uncertain start; ② shows the failure instead of a stuck run view that a reload sends back to ②.
 - 261103 pushed 70811b8c (T730, brr): CI 41468348128 and Deploy backend 41468347969 success; Verify media 41469072328 failed only at Media worker TestWorkerExecutionParity/preparation (CadenceVerified mismatch, unrelated to T730) → T731.
 - 261102 brr pre-push gate at 70811b8c: FE 575 files/4575 tests, all CI checks, compose, deployable builds, worker smoke and media release pass.
@@ -178,4 +179,3 @@
 - 261102 update-ssot POST start (nud): offer to make a missing voice or template when a new post or clip starts.
 - 261030 pushed f1c8e693 (T727, report tpv): CI 41009408074 frontend and backend jobs completed with no failed step; conclusion unreadable over public HTML (gh not logged in); no Deploy backend or Verify media path touched.
 - 261030 tpv final gate at f2694dea: FE suite 568 files/4532 tests, lint/format/FSD/retirement/style, spec check and build pass; backend/deploy inputs identical to d096f06c reused; report reports/261030-tpv.md.
-- 261030 T727 done: template preview frame first with part switch and choice-driven scrubber, presets renamed; 26 test files/349 tests, tsc, eslint/prettier, steiger, lint:style and a Windows Chrome probe pass.
