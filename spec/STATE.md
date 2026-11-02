@@ -161,6 +161,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261103 pushed b69fbc67 (T732, cap): full CI and media gates pass locally; CI 41503060208, Deploy backend 41503060153 and Verify media 41503865441 all success (Media worker green, the T731 mismatch did not recur).
 - 261103 T732 done: render start repairs or omits a refused writer caption (CLIP-224); new store tests pass and fail without the wiring.
 - 261103 T732 starts (cap) at 5081b0d1.
 - 261103 update-ssot CLIP r72 + create-task (cap): CLIP-224+ render start repairs or omits a refused writer caption → T732.
@@ -180,4 +181,3 @@
 - 261102 T728 done: new-post offer sheet (missing voice/template, 이대로 쓰기, 다시 묻지 않기) and the shared offer slice; 54 files/459 tests pass (static checks really passed only at 12a1da9c).
 - 261102 T728 starts (nud) at 05c8d739; new-post offer and the shared offer slice.
 - 261102 create-task POST r45 VOICE r19 CLIP r71 → T728 new-post offer (shared slice), T729 new-clip template offer.
-- 261102 update-ssot POST r45 VOICE r19 CLIP r71 (nud): POST-121+ new-post offer to make a missing voice or template; CLIP-223+ new-clip offer to make a video template; VOICE-53✎ CLIP-146✎.
