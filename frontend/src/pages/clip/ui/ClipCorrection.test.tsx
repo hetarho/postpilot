@@ -823,6 +823,25 @@ it('starts a server render when the retained batch includes an unused original',
   expect(renderStarts.at(-1)).toMatchObject({ batchId: 'retained', expectedRevision: 1 })
 })
 
+// A plan its own validation refuses never became a job, so the start is not left
+// "checking whether it was accepted" with the run view holding the screen.
+it('shows a refused server render at once and keeps ② usable', async () => {
+  const calls: string[] = []
+  await mount({
+    calls,
+    renderRefusal: 'CLIP_COMPOSITION_INVALID',
+    renderRefusalParams: { element_id: 'narration-2', line: '0', reason: 'rapid_readability' },
+  })
+  await select()
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+  await userEvent.click(screen.getByRole('button', { name: RENDER }))
+  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+  await waitFor(() => expect(calls).toContain('StartClipRender'))
+  expect(await screen.findByText('영상의 2번째 자막을 확인해 주세요.')).toBeVisible()
+  expect(screen.queryByText(/요청의 접수 여부를 확인하는 중이에요/)).not.toBeInTheDocument()
+  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+})
+
 const styleRadio = (name: string) =>
   within(screen.getByRole('radiogroup', { name: '자막 스타일' })).getByRole('radio', {
     name: new RegExp('^' + name),

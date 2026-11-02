@@ -212,6 +212,7 @@ export interface FakeClipsOptions {
   renderFails?: boolean
   /** A verifier refusal, as the server's stable reason (CDS-52, LANG-21). */
   renderRefusal?: AppFailureReason
+  renderRefusalParams?: Record<string, string>
   planWrites?: Array<{ revision: number; plan: ClipEditPlan }>
   soundWrites?: Array<{ sourceId: string; expectedRevision: number; retainOriginalAudio: boolean }>
   soundFails?: boolean
@@ -1229,7 +1230,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('StartClipRender')
     options.renderStarts?.push(req)
     if (options.renderFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
-    if (options.renderRefusal) throw connectAppError(options.renderRefusal, Code.InvalidArgument)
+    if (options.renderRefusal)
+      throw connectAppError(
+        options.renderRefusal,
+        Code.InvalidArgument,
+        options.renderRefusalParams,
+      )
     const p = projects.get(req.projectId),
       b = batches.get(req.batchId)
     if (!p || !b || b.state !== 'ready')
