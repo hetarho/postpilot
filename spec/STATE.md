@@ -159,7 +159,7 @@
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 
 ## next
-- self-improve-local complete (sil; report reports/261109-sil.md): T733 per-binary template DB for Go tests (CI go test 1006→262 s), T734 lazy post editor routes (entry 445→365 kB gzip), T735 Editable keyboard focus, T736 /memories keyboard focus — all independently reviewed; pushed 5c2a8c03 (CI, Deploy backend, Verify media success) and fb01e678 (CI success).
+- self-improve-local complete (sil; report reports/261109-sil.md): T733 per-binary template DB for Go tests (CI go test 1006→262 s), T734 lazy post editor routes (entry 445→365 kB gzip), T735 Editable keyboard focus, T736 /memories keyboard focus — all independently reviewed; pushed 5c2a8c03 (CI, Deploy backend, Verify media success) and fb01e678 (CI success); the flaky llm leak-sentinel fix pushed as c96bc898 (CI, Deploy backend, Verify media success).
 - T732 complete (cap): a writer caption the render start refuses is freed, then omitted with a notice, and the render proceeds on the saved next revision; owner content still refuses.
 - implement-task T731 (brr): Verify media 41469072328 refused 70811b8c at the worker parity preparation subtest, CadenceVerified worker true vs embedded false on the same fixture; not reproduced in 12 local repeats.
 - T730 complete (brr; report reports/261102-brr.md): ② offers 브라우저에서 렌더 on a capable device and the API admits it; analysis preparation stays closed. Pushed 70811b8c: CI and Deploy backend success, Verify media red only at the T731 cadence parity check.
@@ -168,6 +168,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 pushed c96bc898 (llm sentinel fix + report, sil): backend gate at 534ad96e passes (90 packages, 119 s); CI 42522650704, Deploy backend 42522650731, Verify media 42523039487 success.
 - 261109 fix llm tests: leak checks searched inspection JSON for short numeric sentinels ("999", "90000", "0.7") that a live RFC3339Nano IssuedAt can contain — CI 42520643603 failed on spec-only 1115efa7; sentinels now cannot match a timestamp (15/3000 and 2357/250000 failures → 0); reviewed approved (sil).
 - 261109 pushed fb01e678 (T736 + report, sil): FE gate at df31babb (577 files/4,592 tests, all FE checks) passes; CI 42519697954 success; no backend path, so no deploy.
 - 261109 pushed 5c2a8c03 (T733 T734 T735, sil): full CI gate at 5c2a8c03 and media/deploy gates at ee9ef3fa pass; CI 42516751893, Deploy backend 42516751884, Verify media 42517082146 success; CI backend job 1154→385 s.
@@ -187,4 +188,3 @@
 - 261103 pushed 70811b8c (T730, brr): CI 41468348128 and Deploy backend 41468347969 success; Verify media 41469072328 failed only at Media worker TestWorkerExecutionParity/preparation (CadenceVerified mismatch, unrelated to T730) → T731.
 - 261102 brr pre-push gate at 70811b8c: FE 575 files/4575 tests, all CI checks, compose, deployable builds, worker smoke and media release pass.
 - 261102 T730 done: browser final rendering active (readiness record + code-owned API switch); 81 files/608 FE tests and BE clip/cmd/api tests pass.
-- 261102 T730 starts (brr) at aebf4d47; activate browser final rendering.
