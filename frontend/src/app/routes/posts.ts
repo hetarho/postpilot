@@ -1,9 +1,14 @@
-import { createRoute, redirect } from '@tanstack/react-router'
+import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
 import { postReviewSearchSchema, testRecordSearchSchema } from '@/pages/model-experiment'
 import { editorSearchSchema } from '@/pages/editor'
 import { postsSearchSchema } from '@/pages/posts'
-import { NewDraftPage, PostEditorPage } from '@/pages/editor'
 import { authenticatedRoute } from './tree'
+
+// Both editor routes name the same specifier, so the bundler emits one chunk for the editor
+// and everything it pulls in, fetched when either route is first entered rather than on every
+// page's first load.
+const lazyEditor = <K extends 'NewDraftPage' | 'PostEditorPage'>(name: K) =>
+  lazyRouteComponent(() => import('@/pages/editor'), name)
 
 /** The post history moved onto the channel itself (POST-43); a bookmark or an old return link
  *  lands there with its narrowing. */
@@ -22,14 +27,14 @@ export const newDraftRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/posts/new',
   validateSearch: editorSearchSchema,
-  component: NewDraftPage,
+  component: lazyEditor('NewDraftPage'),
 })
 
 export const postEditorRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/posts/$slug',
   validateSearch: editorSearchSchema,
-  component: PostEditorPage,
+  component: lazyEditor('PostEditorPage'),
 })
 
 export const postExperimentRoute = createRoute({

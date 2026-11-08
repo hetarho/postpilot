@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { expect, it } from 'vitest'
+import * as editorPage from '@/pages/editor'
+import { newDraftRoute, postEditorRoute } from './posts'
 
 const routes = import.meta.dirname
 const pages = resolve(import.meta.dirname, '../../pages')
@@ -31,4 +33,18 @@ it('re-exports every search schema a route imports from its page’s model segme
       /^export \{[^}]*\} from '\.\/model\/[^']+'$/,
     )
   }
+})
+
+// The editor routes take only their schema statically and reach the page itself through
+// `lazyRouteComponent`, so the editor and everything it pulls in leave the entry chunk. The lazy
+// component carries `preload` until its first load resolves; nothing in this file renders a
+// route, so neither component has loaded when this reads it.
+it.each([
+  ['/posts/new', newDraftRoute, 'NewDraftPage'],
+  ['/posts/$slug', postEditorRoute, 'PostEditorPage'],
+] as const)('loads the %s editor page lazily', async (_path, route, page) => {
+  const component = route.options.component!
+  expect(component).not.toBe(editorPage[page])
+  expect(component.preload).toBeTypeOf('function')
+  await expect(component.preload!()).resolves.toBeUndefined()
 })

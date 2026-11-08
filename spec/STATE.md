@@ -156,7 +156,6 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T733 | Migrate a template database once per test binary and copy it per test | ARCH | - | todo |
-| T734 | Load the post editor routes lazily | ARCH | - | todo |
 
 ## next
 - self-improve-local (sil, until 08:00): T733 per-binary template DB for Go tests and T734 lazy post editor routes from review/perf-quality-261109, implemented by workers in a work group on main, independently reviewed, then the pre-push gate and one push.
@@ -168,6 +167,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 T734 integrated (sil): editor routes lazy, entry 1,433→1,163 kB raw (445→365 kB gzip); reviewed approved (review 640f1c5c, P3 only).
 - 261109 create-task review/perf-quality-261109 (sil) → T733 template DB for Go tests, T734 lazy post editor routes; F3–F9 kept [?].
 - 261103 pushed b69fbc67 (T732, cap): full CI and media gates pass locally; CI 41503060208, Deploy backend 41503060153 and Verify media 41503865441 all success (Media worker green, the T731 mismatch did not recur).
 - 261103 T732 done: render start repairs or omits a refused writer caption (CLIP-224); new store tests pass and fail without the wiring.
@@ -187,4 +187,3 @@
 - 261102 T729 done: new-clip video-template offer, wizard returns to /clips/new with the template and its design; 80 files/710 tests pass (static checks really passed only at 12a1da9c).
 - 261102 T729 starts (nud) at 6f484cba; new-clip video-template offer.
 - 261102 T728 done: new-post offer sheet (missing voice/template, 이대로 쓰기, 다시 묻지 않기) and the shared offer slice; 54 files/459 tests pass (static checks really passed only at 12a1da9c).
-- 261102 T728 starts (nud) at 05c8d739; new-post offer and the shared offer slice.
