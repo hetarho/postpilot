@@ -9,6 +9,7 @@
 - push: main
 
 ## inbox
+- 261109 decided review/perf-quality-261109 T736: third round → adopt F11 /memories keyboard focus for /memories only, reject F4 after re-measuring (2.5 s with T733) (alt: also templates, clip templates and guidelines | stop the run) — measured defect, one page, same rule as T735; the other directories' shape is inferred and their extension stays a scope choice.
 - 261109 decided review/perf-quality-261109 T735: second scout round (interaction UI/UX) → adopt F10 Editable keyboard focus, defer F11 /memories focus, reject F6 useJob error polling (alt: F11 too | fix F6) — F10 is measured on the core ② 다듬기 flow and invisible to pointer users; F11 has smaller reach and an open scope choice; F6 has no user-facing trigger.
 - 261109 decided review/perf-quality-261109 T733 T734: which scout proposals does this local improvement run (owner: until 08:00, focus performance, code quality and UI/UX) implement? → F1 per-binary template DB for Go tests and F2 lazy post editor routes, both behavior-preserving with measured evidence (alt: add F3 lazy motion | add F4 per-iteration queue stop) — F1 is ≈60% of CI's backend job and F2 a one-file cut of every first load; F3 changes the first-moment segmented animation, F4 should be re-measured after F1, and both would push the review, pre-push and media gates past 08:00.
 - 261109 decided review/perf-quality-261109: F5 i18n split, F7 CI entry-size budget, F8 sqlc image pin and F9 test-setup barrel imports → kept [?] for the owner or a later run (alt: implement now) — F5/F7 change an ARCH rule or CI gate, F8 is an ARCH-33 dependency change, F9 showed no wall gain in a 57-file A/B.
@@ -156,6 +157,7 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
+| T736 | Keep keyboard focus in the 기억 list after an edit closes or a memory is deleted | ARCH THEME MEM | - | todo |
 
 ## next
 - self-improve-local (sil, until 08:00): T733 per-binary template DB for Go tests and T734 lazy post editor routes from review/perf-quality-261109, implemented by workers in a work group on main, independently reviewed, then the pre-push gate and one push.
@@ -167,6 +169,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 create-task review/perf-quality-261109 F11 (sil) → T736 /memories keyboard focus; F4 rejected after re-measurement.
 - 261109 T735 integrated (sil): Editable keeps keyboard focus on entry/exit (keyboard-only entry move, exit only while focus is lost); 3 cases fail at base; reviewed approved (review ff709665, P3 only).
 - 261109 create-task review/perf-quality-261109 F10 (sil) → T735 Editable keyboard focus; F6 rejected, F11 kept [?].
 - 261109 T733 integrated (sil): DB tests copy a once-migrated template (74 of 86 sites); post/store 117.6→3.5 s locally; reviewed approved (review 4d401114, P3 only).
@@ -186,4 +189,3 @@
 - 261102 update-ssot ARCH r21 (brr): ARCH-68✎ browser final rendering active; its remaining device/review/license gates are follow-up evidence; activation code-owned on both sides.
 - 261102 update-ssot ARCH start (brr): browser final render is refused as 준비 중 although the owner wants it working.
 - 261102 pushed dffd0a20 (T728 T729 + format fix, report nud): CI 41330923778 frontend and backend success; no Deploy backend or Verify media path touched.
-- 261102 fix offer files format (12a1da9c): CI 41327886298 refused 65d192f4 at format:check; the gate's `vibe check -- bash -c "…"` had lost its quoting and passed a failed pnpm lint. Fail-fast script gate at 12a1da9c: every FE/root check and 574 files/4574 tests pass.
