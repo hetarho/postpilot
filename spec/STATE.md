@@ -159,7 +159,7 @@
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 
 ## next
-- self-improve-local complete (sil; report reports/261109-sil.md): T733 per-binary template DB for Go tests (CI go test 1006→262 s), T734 lazy post editor routes (entry 445→365 kB gzip), T735 Editable keyboard focus, T736 /memories keyboard focus — all independently reviewed; pushed 5c2a8c03 (CI, Deploy backend, Verify media success) and df31babb.
+- self-improve-local complete (sil; report reports/261109-sil.md): T733 per-binary template DB for Go tests (CI go test 1006→262 s), T734 lazy post editor routes (entry 445→365 kB gzip), T735 Editable keyboard focus, T736 /memories keyboard focus — all independently reviewed; pushed 5c2a8c03 (CI, Deploy backend, Verify media success) and fb01e678 (CI success).
 - T732 complete (cap): a writer caption the render start refuses is freed, then omitted with a notice, and the render proceeds on the saved next revision; owner content still refuses.
 - implement-task T731 (brr): Verify media 41469072328 refused 70811b8c at the worker parity preparation subtest, CadenceVerified worker true vs embedded false on the same fixture; not reproduced in 12 local repeats.
 - T730 complete (brr; report reports/261102-brr.md): ② offers 브라우저에서 렌더 on a capable device and the API admits it; analysis preparation stays closed. Pushed 70811b8c: CI and Deploy backend success, Verify media red only at the T731 cadence parity check.
@@ -168,6 +168,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 pushed fb01e678 (T736 + report, sil): FE gate at df31babb (577 files/4,592 tests, all FE checks) passes; CI 42519697954 success; no backend path, so no deploy.
 - 261109 pushed 5c2a8c03 (T733 T734 T735, sil): full CI gate at 5c2a8c03 and media/deploy gates at ee9ef3fa pass; CI 42516751893, Deploy backend 42516751884, Verify media 42517082146 success; CI backend job 1154→385 s.
 - 261109 T736 integrated (sil): /memories keeps keyboard focus after an edit closes or a delete (only while focus is lost, once per removal); 3 cases fail at base; reviewed approved (review 4279acaf, P3 only).
 - 261109 create-task review/perf-quality-261109 F11 (sil) → T736 /memories keyboard focus; F4 rejected after re-measurement.
@@ -187,4 +188,3 @@
 - 261102 T730 done: browser final rendering active (readiness record + code-owned API switch); 81 files/608 FE tests and BE clip/cmd/api tests pass.
 - 261102 T730 starts (brr) at aebf4d47; activate browser final rendering.
 - 261102 create-task ARCH r21 → T730 activate browser final rendering (brr).
-- 261102 update-ssot ARCH r21 (brr): ARCH-68✎ browser final rendering active; its remaining device/review/license gates are follow-up evidence; activation code-owned on both sides.
