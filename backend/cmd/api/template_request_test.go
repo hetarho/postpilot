@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/template"
 	templatestore "github.com/postpilot/backend/internal/template/store"
@@ -61,14 +61,7 @@ func (stubRequestSamples) RequestSample(context.Context, string, string) (templa
 
 func newRequestHarness(t *testing.T) *requestHarness {
 	t.Helper()
-	d, err := db.Open(filepath.Join(t.TempDir(), "request.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { d.Close() })
-	if err := db.Migrate(context.Background(), d.Writer); err != nil {
-		t.Fatal(err)
-	}
+	d := dbtest.Open(t)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := d.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES(?,'hash',?)", id, now); err != nil {

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/voice"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
 )
@@ -21,15 +20,9 @@ import (
 // MODEL-31: a comparison's voice that is unknown or another account's answers
 // NotFound, one of the owner's that is deleted FailedPrecondition, and an active one passes.
 func TestExperimentVoicesTellAnUnknownVoiceFromADeletedOne(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "experiment-voice.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	users := authstore.New(handle.Writer, handle.Reader)
 	for _, id := range []string{"alice", "bob"} {
 		if err := users.CreateUser(ctx, auth.User{ID: id, PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
@@ -76,15 +69,9 @@ func TestExperimentVoicesTellAnUnknownVoiceFromADeletedOne(t *testing.T) {
 // calls pass one admission — so the voice it froze deletes while the comparison runs; and the
 // voice context's refusals reach the experiment context in its own words.
 func TestAReflectionJobNeverHoldsItsVoice(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "reflection-job.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}

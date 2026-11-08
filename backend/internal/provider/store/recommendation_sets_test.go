@@ -3,26 +3,19 @@ package store_test
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
 
 func openRecommendationStore(t *testing.T) (*providerstore.Store, *db.DB) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "provider.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	return providerstore.New(handle.Writer, handle.Reader), handle
 }
 

@@ -2,13 +2,13 @@ package store_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 const (
@@ -29,15 +29,8 @@ func testKinds() jobstore.Kinds {
 // subjectHarness is a migrated temp database with the rows every subject dimension needs.
 func subjectHarness(t *testing.T) (*jobstore.Store, *db.DB) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "subjects.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	// The schema this task adds a generated column to carries thirteen triggers and two
 	// partial unique indexes; a rebuild would be visible here.
 	var integrity string

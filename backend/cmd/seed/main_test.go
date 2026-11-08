@@ -18,6 +18,7 @@ import (
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
@@ -322,14 +323,8 @@ func (c *capturedExports) CurrentExportWindow(context.Context, string, time.Time
 // billing adapter does.
 func TestSeedExportWindowsEndWithTheCoverage(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "seed-exports.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	authSvc := auth.NewService(authstore.New(handle.Writer, handle.Reader), time.Hour, auth.Deps{Mailer: mail.NewLog()})
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Basic, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)

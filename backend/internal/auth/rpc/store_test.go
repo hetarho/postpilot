@@ -1,12 +1,10 @@
 package rpc_test
 
 import (
-	"context"
-	"path/filepath"
 	"testing"
 
 	"github.com/postpilot/backend/internal/auth/store"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 // newStore opens a throwaway SQLite database, applies the embedded migrations, and
@@ -15,14 +13,7 @@ import (
 func newStore(t *testing.T) *store.Store {
 	t.Helper()
 
-	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	return store.New(handle.Writer, handle.Reader)
 }

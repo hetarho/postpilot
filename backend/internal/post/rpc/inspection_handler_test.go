@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -13,7 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 )
@@ -33,14 +32,7 @@ func (r inspectionStoreOriginReader) Get(ctx context.Context, userID, slug strin
 
 func TestInspectionRPCReadsEveryRealCapturedCallWithoutMutation(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "inspection.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	stamp := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
 	if _, err := handle.Writer.ExecContext(ctx, "INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)", stamp.Format(time.RFC3339)); err != nil {
 		t.Fatal(err)

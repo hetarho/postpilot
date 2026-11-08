@@ -4,13 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/modelcatalog/store"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 // txRows writes through the transaction it is bound to, so a test can see whether its write
@@ -53,14 +53,7 @@ func (r txRows) Replace(ctx context.Context, sets []modelcatalog.StoredSet, at t
 
 func newDocumentStore(t *testing.T, fail error) (*store.Store, *db.DB) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
+	handle := dbtest.Open(t)
 	s := store.New(handle.Writer, handle.Reader)
 	s.SetRecommendationsForTx(func(tx *sql.Tx) modelcatalog.RecommendationRows { return txRows{tx: tx, fail: fail} })
 	return s, handle

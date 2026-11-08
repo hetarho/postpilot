@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
@@ -21,6 +20,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/quality"
@@ -34,15 +34,8 @@ import (
 // The adapter stores the payload generation encoded byte for byte, and the worker's mapping hands
 // those same bytes back: nothing in between decodes, retypes or drops a frozen member.
 func TestTheGenerateRowCarriesStartsPayloadVerbatim(t *testing.T) {
-	d, err := db.Open(filepath.Join(t.TempDir(), "freeze.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { d.Close() })
+	d := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, d.Writer); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, statement := range []string{
 		"INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)",
@@ -198,15 +191,8 @@ type drainHarness struct {
 
 func newDrainHarness(t *testing.T, models *recordingModels, configure ...func(*generation.Service, *post.Service, *db.DB) *generation.Service) *drainHarness {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "drain.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -320,15 +306,8 @@ func TestANativeEffortStartDrainsWithReasoningHeadroom(t *testing.T) {
 // The adapter renders the ticks in the run's language — the quality service's own texts, in
 // Korean or English — and refuses a language it cannot name rather than guessing one.
 func TestGenerationQualityRendersTheTicksInTheRunsLanguage(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "rules.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}

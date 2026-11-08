@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"google.golang.org/protobuf/proto"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ import (
 
 	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 )
@@ -103,14 +102,7 @@ func rpcService(t *testing.T) *Handler {
 // generation's replacement candidates, say.
 func rpcServiceWith(t *testing.T) (*Handler, *post.Service) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "post.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	stamp := time.Date(2026, 9, 24, 12, 0, 0, 0, time.UTC).Format(time.RFC3339Nano)
 	for _, statement := range []string{
 		`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','` + stamp + `')`,

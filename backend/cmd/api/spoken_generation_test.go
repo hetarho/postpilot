@@ -17,6 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 	"github.com/postpilot/backend/internal/voice/spoken"
@@ -233,14 +234,12 @@ type spokenGenerationFixture struct {
 func spokenGenerationFresh(t *testing.T) *spokenGenerationFixture {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "spoken-jobs.db")
+	dbtest.WriteMigrated(t, path)
 	h, err := db.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { h.Close() })
-	if err := db.Migrate(t.Context(), h.Writer); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := h.Writer.Exec("INSERT INTO users(id,password_hash,plan,created_at) VALUES (?,?,'master',?)", id, "hash", now); err != nil {

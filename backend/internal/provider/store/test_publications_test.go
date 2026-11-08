@@ -10,6 +10,7 @@ import (
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
@@ -41,14 +42,7 @@ func (s *lostAdoptionResponse) CommitTestModelAdoption(ctx context.Context, in p
 
 func TestModelAdoptionReceiptAndSelectionCommitAtomicallyAndRecoverWithoutReplay(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "adoption.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	for _, user := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES(?, 'hash', '2026-10-07T00:00:00Z')`, user); err != nil {
 			t.Fatal(err)
@@ -124,14 +118,7 @@ func TestModelAdoptionReceiptAndSelectionCommitAtomicallyAndRecoverWithoutReplay
 
 func TestModelAdoptionChecksCurrentEligibilityBeforeAnySelectionWrite(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "eligibility.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-10-07T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
@@ -155,14 +142,12 @@ func TestModelAdoptionChecksCurrentEligibilityBeforeAnySelectionWrite(t *testing
 func TestConcurrentModelAdoptionAcrossSQLiteHandlesReturnsOneReceipt(t *testing.T) {
 	ctx := context.Background()
 	path := filepath.Join(t.TempDir(), "concurrent.db")
+	dbtest.WriteMigrated(t, path)
 	first, err := db.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = first.Close() })
-	if err := db.Migrate(ctx, first.Writer); err != nil {
-		t.Fatal(err)
-	}
 	second, err := db.Open(path)
 	if err != nil {
 		t.Fatal(err)

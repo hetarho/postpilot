@@ -10,6 +10,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
@@ -37,14 +38,12 @@ func (raceCredits) Balance(context.Context, string) (int, bool, error) {
 func TestDefaultInitializationAndManualSelectionRaceAcrossSQLiteHandles(t *testing.T) {
 	ctx := context.Background()
 	file := filepath.Join(t.TempDir(), "defaults.db")
+	dbtest.WriteMigrated(t, file)
 	first, err := db.Open(file)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = first.Close() })
-	if err := db.Migrate(ctx, first.Writer); err != nil {
-		t.Fatal(err)
-	}
 	second, err := db.Open(file)
 	if err != nil {
 		t.Fatal(err)

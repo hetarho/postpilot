@@ -3,7 +3,6 @@ package rpc_test
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -14,20 +13,12 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	jobrpc "github.com/postpilot/backend/internal/job/rpc"
 	jobstore "github.com/postpilot/backend/internal/job/store"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 func newHandler(t *testing.T) (*jobrpc.Handler, *job.Queue) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "rpc.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec(

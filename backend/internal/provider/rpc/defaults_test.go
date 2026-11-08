@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -11,7 +10,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
@@ -41,15 +40,8 @@ func TestInitializeDefaultsUsesOnlyTheAuthenticatedOwner(t *testing.T) {
 	if _, err := NewHandler(nil).InitializeDefaultSelections(context.Background(), request); connect.CodeOf(err) != connect.CodeUnauthenticated {
 		t.Fatalf("initializer without actor: %v", err)
 	}
-	handle, err := db.Open(filepath.Join(t.TempDir(), "owner.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	for _, userID := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES(?, 'hash', '2026-10-07T00:00:00Z')`, userID); err != nil {
 			t.Fatal(err)

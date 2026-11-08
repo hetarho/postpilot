@@ -22,6 +22,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/voice/spoken"
 	spokenrpc "github.com/postpilot/backend/internal/voice/spoken/rpc"
 	"github.com/postpilot/backend/internal/voice/spoken/store"
@@ -83,14 +84,12 @@ type fixture struct {
 func fresh(t *testing.T) *fixture {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "library.db")
+	dbtest.WriteMigrated(t, path)
 	h, err := db.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = h.Close() })
-	if err := db.Migrate(t.Context(), h.Writer); err != nil {
-		t.Fatal(err)
-	}
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := h.Writer.Exec("INSERT INTO users(id,password_hash,plan,created_at) VALUES (?,?,'free',?)", id, "hash", time.Now().Format(time.RFC3339Nano)); err != nil {
 			t.Fatal(err)

@@ -3,28 +3,20 @@ package store_test
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 func newStore(t *testing.T) *store.Store {
 	t.Helper()
 
-	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	return store.New(handle.Writer, handle.Reader)
 }
 

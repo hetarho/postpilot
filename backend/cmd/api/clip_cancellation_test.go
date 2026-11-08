@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -20,6 +19,7 @@ import (
 	"github.com/postpilot/backend/internal/mail"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
@@ -38,14 +38,7 @@ type cancellationHarness struct {
 
 func newCancellationHarness(t *testing.T, wrap func(*jobstore.Store) job.Store) *cancellationHarness {
 	t.Helper()
-	d, err := db.Open(filepath.Join(t.TempDir(), "cancel.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { d.Close() })
-	if err := db.Migrate(t.Context(), d.Writer); err != nil {
-		t.Fatal(err)
-	}
+	d := dbtest.Open(t)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, user := range []string{"alice", "bob"} {
 		if _, err := d.Writer.Exec("INSERT INTO users(id,password_hash,plan,created_at) VALUES (?,'hash','free',?)", user, now); err != nil {

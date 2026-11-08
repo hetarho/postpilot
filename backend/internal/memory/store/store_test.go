@@ -3,7 +3,6 @@ package store_test
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/memory/store"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 var testNow = time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC)
@@ -22,14 +22,7 @@ var testNow = time.Date(2026, 9, 20, 12, 0, 0, 0, time.UTC)
 // boundary is only provable with a second account present.
 func newStore(t *testing.T) (*store.Store, *db.DB) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
+	handle := dbtest.Open(t)
 	users := authstore.New(handle.Writer, handle.Reader)
 	stamp := testNow.UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {

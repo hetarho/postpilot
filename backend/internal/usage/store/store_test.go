@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
@@ -59,15 +59,8 @@ func newService(t *testing.T) *usage.Service {
 // only a purchase would open, and a CHECK constraint no Go path can reach.
 func newServiceWithDB(t *testing.T) (*usage.Service, *db.DB) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "usage.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.ExecContext(ctx,
 			"INSERT INTO users (id, password_hash, plan, created_at) VALUES (?,'hash','free',?)",

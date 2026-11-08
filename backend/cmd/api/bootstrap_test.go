@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/url"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/template"
@@ -94,15 +94,9 @@ func (j *trackingVoiceJobs) HasActiveForVoice(context.Context, string) (bool, er
 	return false, nil
 }
 func TestCreditBootstrapDoesNotGrantCreditsToAFreeAccount(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "credits.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	createdAt := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{
 		ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: createdAt,
@@ -127,15 +121,9 @@ func TestCreditBootstrapDoesNotGrantCreditsToAFreeAccount(t *testing.T) {
 }
 
 func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "signup-repair.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 
 	mailer := &captureMailer{}
 	authStore := authstore.New(handle.Writer, handle.Reader)
@@ -189,15 +177,9 @@ func TestVerificationRepairsFailedSignupBootstrapsExactlyOnce(t *testing.T) {
 // VOICE-4, POST r25: a new account holds no voice, writes a post with 말투 없음 at once, and
 // names a voice only once it created one by name and that voice is made.
 func TestANewAccountHasNoVoiceUntilItMakesOne(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "bootstrap.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -245,15 +227,9 @@ func makeVoice(t *testing.T, handle *db.DB, userID, voiceID string) {
 // the POST's option, so a value the author typed over the seed is what reaches generation —
 // the template is never consulted again, here or anywhere downstream.
 func TestARunFreezesThePostsNumbersNotTheTemplates(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "seed.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -319,15 +295,9 @@ func intPtr(value int) *int { return &value }
 // saved with a 템플릿, read back through generationPosts, resolved through generationTemplates —
 // because both contexts' own tests inject the id into a fake and so cannot see it dropped here.
 func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "template.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -443,15 +413,9 @@ func TestGenerationAdapterCarriesThePostTemplateThroughToTheFrozenBrief(t *testi
 // and both adapters, rendered with the post's own answers, and the prompts carry it inside the
 // template section ahead of the body.
 func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "title-area.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -524,15 +488,9 @@ func TestGenerationAdapterCarriesTheTitleAreaIntoTheFrozenBrief(t *testing.T) {
 // like the template id is; an adapter that dropped them would make every run resolve as if the
 // post had neither.
 func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "field.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -577,15 +535,9 @@ func TestGenerationAdapterCarriesTheFieldAndTheTicks(t *testing.T) {
 // rendered by the real prompt builder. A review once caught this seam silently dropping a
 // field, and only a real-wiring test prevents a repeat.
 func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -720,15 +672,9 @@ func TestGuidelineAdapterCarriesScopeThroughToTheFrozenPromptSection(t *testing.
 // approval is the create. This is the only place the two contexts meet, so it is where the
 // seam is worth proving.
 func TestGuidelineCandidateAdaptersRecordReviewAndApproveAcrossTheSeam(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-candidate.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -914,15 +860,9 @@ func (noPurge) PurgePost(context.Context, string, string) error { return nil }
 // template → 분야 with nothing appended; another 분야's guideline never reaches it; and deleting
 // the 분야 guideline removes it from the next resolution.
 func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-fields.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -1015,15 +955,9 @@ func TestGuidelineAdapterFreezesGlobalThenTemplateThenFieldGroup(t *testing.T) {
 // GUIDE-46: a title is the list's name for a rule and nothing else — naming every guideline
 // changes neither a post's write prompt nor what a clip freezes, byte for byte.
 func TestAGuidelineTitleNeverReachesAPromptOrAClipFreeze(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "guideline-title.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}
@@ -1090,15 +1024,9 @@ func TestAGuidelineTitleNeverReachesAPromptOrAClipFreeze(t *testing.T) {
 // 기본 지침 in the project's language and the owner's global clip guidelines — and never a
 // post's guideline.
 func TestClipGuidelineAdapterResolvesTheClipKind(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "clip-guideline.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}

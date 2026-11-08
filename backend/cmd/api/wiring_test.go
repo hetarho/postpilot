@@ -17,7 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/modelcatalog"
 	modelcatalogstore "github.com/postpilot/backend/internal/modelcatalog/store"
 	"github.com/postpilot/backend/internal/platform/config"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -119,15 +119,8 @@ func wiringPlatform(t *testing.T, cfg *config.Config) *platform {
 		}
 		cfg.ClipFontPaths[key] = path
 	}
-	handle, err := db.Open(filepath.Join(t.TempDir(), "wiring.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	catalog := modelcatalog.NewService(modelcatalogstore.New(handle.Writer, handle.Reader))
 	if err := catalog.Reload(ctx); err != nil {
 		t.Fatal(err)

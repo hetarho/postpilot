@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -19,6 +18,7 @@ import (
 	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/provider"
@@ -144,15 +144,7 @@ type resolverHarness struct {
 
 func actualResolverHarness(t *testing.T) *resolverHarness {
 	t.Helper()
-	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "resolver.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	at := time.Date(2026, 10, 8, 0, 0, 0, 0, time.UTC)
 	stamp := at.Format(time.RFC3339Nano)
 	for _, user := range []string{"alice", "bob"} {

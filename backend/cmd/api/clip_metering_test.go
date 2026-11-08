@@ -15,6 +15,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 )
 
@@ -43,15 +44,14 @@ func (clipMeterAdmission) OpenHolds(context.Context) ([]string, error) { return 
 func TestClipMeteringRequiresTheCompleteAdmittedExecutionPolicy(t *testing.T) {
 	for _, mode := range []string{"missing policy", "fallback", "parameters", "ref", "stage", "budget", "reasoning", "reasoning disabled", "fingerprint", "modality price", "delivery", "extra call", "missing work"} {
 		t.Run(mode, func(t *testing.T) {
-			d, err := db.Open(filepath.Join(t.TempDir(), "meter.db"))
+			path := filepath.Join(t.TempDir(), "meter.db")
+			dbtest.WriteMigrated(t, path)
+			d, err := db.Open(path)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer d.Close()
 			ctx := t.Context()
-			if err = db.Migrate(ctx, d.Writer); err != nil {
-				t.Fatal(err)
-			}
 			now := time.Now().UTC().Format(time.RFC3339Nano)
 			if _, err = d.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES ('alice','hash',?)", now); err != nil {
 				t.Fatal(err)

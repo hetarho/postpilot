@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"reflect"
 	"regexp"
 	"sort"
@@ -17,6 +16,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store"
 )
@@ -37,14 +37,7 @@ func newStore(t *testing.T) *store.Store {
 func newStoreWithHandle(t *testing.T) (*store.Store, *db.DB) {
 	t.Helper()
 
-	handle, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
+	handle := dbtest.Open(t)
 
 	users := authstore.New(handle.Writer, handle.Reader)
 	for _, id := range []string{"alice", "bob"} {
