@@ -399,10 +399,10 @@ describe('the guideline management route', () => {
   })
 })
 
-// Every screen outside the login → posts → editor core is now fetched when its route
-// is first entered. These mount the app DIRECTLY at each address — createMemoryHistory starts
-// there with no prior navigation, which is what a deep link or a refresh does — so a lazy
-// boundary that only resolves via in-app navigation would fail here.
+// Every screen outside the login → posts core, the editor included, is now fetched when its
+// route is first entered. The direct-load cases mount the app DIRECTLY at each address —
+// createMemoryHistory starts there with no prior navigation, which is what a deep link or a
+// refresh does — so a lazy boundary that only resolves via in-app navigation would fail here.
 describe('lazily loaded routes', () => {
   it.each([
     ['/voices', '말투'],
@@ -425,6 +425,28 @@ describe('lazily loaded routes', () => {
     expect(await screen.findByRole('link', { name: '말투 분석' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '학습 데이터' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/voices/voice-default/materials')
+  })
+
+  // The two editor routes share one chunk: a direct load of either, and an in-app move into
+  // it from another page, each still end on the editor.
+  it.each([
+    ['/posts/new', undefined],
+    ['/posts/jeju-trip', { posts: [{ slug: 'jeju-trip', title: '제주 3일' }] }],
+  ])('renders the %s editor on a direct load', async (path, posts) => {
+    const { router } = renderAppAt(path, { user: { id: 'alice' }, posts })
+
+    expect(await screen.findByRole('textbox', { name: '제목' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe(path)
+  })
+
+  it('renders the editor after navigating to it from another page', async () => {
+    const posts = { posts: [{ slug: 'jeju-trip', title: '제주 3일' }] }
+    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' }, posts })
+    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
+
+    await act(() => router.navigate({ to: '/posts/$slug', params: { slug: 'jeju-trip' } }))
+    expect(await screen.findByDisplayValue('제주 3일')).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/posts/jeju-trip')
   })
 })
 
