@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Pencil } from 'lucide-react'
 import { useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
@@ -19,9 +19,34 @@ export function MemoriesPage() {
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { memories, isPending, isError, isFetching, refetch } = useMemories(ownerId)
+  const page = useRef<HTMLElement>(null)
+  const list = useRef<HTMLUListElement>(null)
+  // A confirmed delete hands focus back to the trash button, then the re-read list removes the row
+  // holding it, which drops focus to <body> and sends a keyboard user to the top of the page. The
+  // delete does not await that re-read, so the move waits until the row has left the list.
+  const [removed, setRemoved] = useState<Removal | null>(null)
+  const settled = useRef<Removal | null>(null)
+
+  useEffect(() => {
+    if (!removed || settled.current === removed) return
+    if (memories.some((memory) => memory.id === removed.id)) return
+    settled.current = removed
+    // Only while focus is lost, the rule Editable follows: focus the user moved elsewhere in the
+    // meantime stays where they put it.
+    const active = document.activeElement
+    if (active && active !== document.body) return
+    const target =
+      memories.length > 0
+        ? buttonNamed(
+            list.current?.children[Math.min(removed.index, memories.length - 1)],
+            t('delete.aria', { ns: 'memories' }),
+          )
+        : buttonNamed(page.current, t('create.open', { ns: 'memories' }))
+    target?.focus()
+  }, [removed, memories, t])
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <main ref={page} className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
       <Typography variant="display">{t('title', { ns: 'memories' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'memories' })}
@@ -58,9 +83,14 @@ export function MemoriesPage() {
               <Typography variant="body" as="p" className="text-content-secondary mt-1">
                 {t('page.order', { ns: 'memories' })}
               </Typography>
-              <ul className="divide-divider mt-3 divide-y">
-                {memories.map((memory) => (
-                  <MemoryRow key={memory.id} ownerId={ownerId} memory={memory} />
+              <ul ref={list} className="divide-divider mt-3 divide-y">
+                {memories.map((memory, index) => (
+                  <MemoryRow
+                    key={memory.id}
+                    ownerId={ownerId}
+                    memory={memory}
+                    onDeleted={() => setRemoved({ id: memory.id, index })}
+                  />
                 ))}
               </ul>
             </section>
@@ -78,6 +108,17 @@ export function MemoriesPage() {
         </>
       )}
     </main>
+  )
+}
+
+/** A deleted memory and the position its row held. */
+type Removal = { id: string; index: number }
+
+/** The button named `name` inside `root`. The rows repeat the same names and carry no ids, so a
+ *  name means something only within the one row (or the page) that should hold it. */
+function buttonNamed(root: Element | null | undefined, name: string) {
+  return Array.from(root?.querySelectorAll('button') ?? []).find(
+    (button) => (button.getAttribute('aria-label') ?? button.textContent?.trim()) === name,
   )
 }
 
@@ -103,12 +144,32 @@ function EmptyState() {
 /** One saved memory (MEM-30): its text with 수정 and 삭제 at the end of the text line, over one
  *  line of its kind and tags. The list is read to see what the account knows, so a fact keeps to
  *  one short row; 수정 turns the whole row into one form for the text, the kind and the tags. */
-function MemoryRow({ ownerId, memory }: { ownerId: string; memory: Memory }) {
+function MemoryRow({
+  ownerId,
+  memory,
+  onDeleted,
+}: {
+  ownerId: string
+  memory: Memory
+  onDeleted: () => void
+}) {
   const { t } = useTranslation(['memories', 'common'])
   const update = useUpdateMemoryCall(ownerId, memory.id)
-  const [editing, setEditing] = useState(false)
+  // Closing the form takes the focused 취소 or 저장 out of the document, which drops focus to
+  // <body>, so a close carries the move back to the pencil. State, not a ref: `onDone` is handed
+  // to the form during render.
+  const [form, setForm] = useState({ editing: false, refocus: false })
+  const pencil = useRef<HTMLButtonElement>(null)
 
-  if (editing)
+  useEffect(() => {
+    // Only while focus is lost, as in Editable: focus the user moved elsewhere stays there.
+    const active = document.activeElement
+    if (!form.refocus || (active && active !== document.body)) return
+    // A collapsing form must not scroll the page to the pencil.
+    pencil.current?.focus({ preventScroll: true })
+  }, [form])
+
+  if (form.editing)
     return (
       <li className="py-3">
         <MemoryEditForm
@@ -116,7 +177,10 @@ function MemoryRow({ ownerId, memory }: { ownerId: string; memory: Memory }) {
           save={update.save}
           errorMessage={update.errorMessage}
           pending={update.isPending}
-          onDone={() => setEditing(false)}
+          // Closing when already closed changes nothing, as before.
+          onDone={() =>
+            setForm((current) => (current.editing ? { editing: false, refocus: true } : current))
+          }
         />
       </li>
     )
@@ -131,18 +195,19 @@ function MemoryRow({ ownerId, memory }: { ownerId: string; memory: Memory }) {
           {memory.text}
         </Typography>
         <Button
+          ref={pencil}
           variant="ghost"
           size="icon"
           aria-label={t('action.editNamed', {
             ns: 'common',
             name: t('edit.text', { ns: 'memories' }),
           })}
-          onClick={() => setEditing(true)}
+          onClick={() => setForm({ editing: true, refocus: false })}
           className="shrink-0"
         >
           <Pencil className="size-4" aria-hidden />
         </Button>
-        <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} />
+        <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} onDeleted={onDeleted} />
       </div>
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <Badge tone="accent">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
