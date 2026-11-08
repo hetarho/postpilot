@@ -11,6 +11,12 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
+// witnessReportedUSD is the supplier-reported cost the native projection must
+// never carry. Its four integer digits before the point cannot occur in the
+// captured IssuedAt (RFC3339Nano puts exactly two second digits after a colon
+// before its point) nor in an integer measure, so a match is a real leak.
+const witnessReportedUSD = "4321.0987"
+
 type nativeWitnessProvider struct {
 	calls int
 	err   error
@@ -18,7 +24,7 @@ type nativeWitnessProvider struct {
 
 func (p *nativeWitnessProvider) DesignVoice(context.Context, llm.VoiceDesignRequest) (llm.VoiceDesignResponse, error) {
 	p.calls++
-	return llm.VoiceDesignResponse{Evidence: llm.SpeechEvidence{RequestID: "private-supplier-request", ReportedUSD: "999"}}, p.err
+	return llm.VoiceDesignResponse{Evidence: llm.SpeechEvidence{RequestID: "private-supplier-request", ReportedUSD: witnessReportedUSD}}, p.err
 }
 func (p *nativeWitnessProvider) ConfirmVoice(context.Context, llm.VoiceConfirmationRequest) (llm.VoiceConfirmationResponse, error) {
 	p.calls++
@@ -88,7 +94,7 @@ func TestNativeSpeechInspectionUsesActualFieldsWithoutChatRolesOrPrivateSupplier
 			t.Fatal("native evidence became token/chat evidence", err)
 		}
 		raw, _ := json.Marshal(inspection)
-		for _, private := range []string{"private-candidate-handle", "private-voice-handle", "private-confirmed-handle", "private-audio-body", "private-supplier-request", "private-text-key", "private-speech-key", "api.elevenlabs.io", "999"} {
+		for _, private := range []string{"private-candidate-handle", "private-voice-handle", "private-confirmed-handle", "private-audio-body", "private-supplier-request", "private-text-key", "private-speech-key", "api.elevenlabs.io", witnessReportedUSD} {
 			if strings.Contains(string(raw), private) {
 				t.Fatal("native projection leaked supplier/media data", private)
 			}

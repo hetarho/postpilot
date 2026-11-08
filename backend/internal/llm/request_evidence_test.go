@@ -53,7 +53,7 @@ func TestPreparedAndCapturedInspectionShareEffectiveRegistryResolutionWithoutExt
 		t.Run(string(override), func(t *testing.T) {
 			source := twoModels()
 			source.models[0].Reasoning = map[string]llm.ReasoningEffort{"write": override}
-			p := &evidenceProvider{result: llm.Response{Text: "done", Usage: llm.Usage{PromptTokens: 13, CompletionTokens: 7, ReasoningTokens: 3, CostMicrousd: 90000, CostReported: true}}}
+			p := &evidenceProvider{result: llm.Response{Text: "done", Usage: llm.Usage{PromptTokens: 13, CompletionTokens: 7, ReasoningTokens: 3, CostMicrousd: 9000000001, CostReported: true}}}
 			registry := evidenceRegistry(t, p, source)
 			ref := llm.ModelRef{ProviderID: "openrouter", ModelID: "vision-json"}
 			req := llm.Request{Composition: evidenceComposition(), Stage: "write", MaxTokens: -1, Reasoning: llm.ReasoningLow, System: "Actual system", Messages: []llm.Message{{Role: llm.RoleUser, Parts: []llm.Part{llm.TextPart("actual material"), llm.ImagePart([]byte("PRIVATE_IMAGE_BODY"), "image/jpeg")}}}, JSONSchema: []byte(`{"type":"object"}`)}
@@ -74,7 +74,9 @@ func TestPreparedAndCapturedInspectionShareEffectiveRegistryResolutionWithoutExt
 				t.Fatal("disable/omission decision not captured")
 			}
 			raw, _ := json.Marshal(captured)
-			for _, secret := range []string{"PRIVATE_API_KEY", "PRIVATE_IMAGE_BODY", "example.test", "90000", "CostMicrousd", "Messages", "ExecutionPolicy"} {
+			// The reported cost has ten digits: IssuedAt carries at most nine in a
+			// row and the measures are small, so only a real leak can match it.
+			for _, secret := range []string{"PRIVATE_API_KEY", "PRIVATE_IMAGE_BODY", "example.test", "9000000001", "CostMicrousd", "Messages", "ExecutionPolicy"} {
 				if strings.Contains(string(raw), secret) {
 					t.Fatalf("transport/supplier secret leaked=%s", secret)
 				}
@@ -150,7 +152,9 @@ func TestRegistryPreflightUnsupportedCancelledAndUnadmittedWorkHasNoIssuedEviden
 func TestFreeAdmissionAndFrozenExecutionInspectionPreserveActualDecision(t *testing.T) {
 	source := twoModels()
 	source.models[0].InputUSDPerMillion = "0.1"
-	source.models[0].OutputUSDPerMillion = "0.7"
+	// Three integer digits before the point: IssuedAt has only two (seconds), so
+	// the leak check below cannot match the captured timestamp by chance.
+	source.models[0].OutputUSDPerMillion = "700.7"
 	source.models[0].Reasoning = map[string]llm.ReasoningEffort{"write": llm.ReasoningLow}
 	p := &evidenceProvider{}
 	registry := evidenceRegistry(t, p, source)
@@ -159,7 +163,7 @@ func TestFreeAdmissionAndFrozenExecutionInspectionPreserveActualDecision(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	frozen.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionTextOnly, Endpoint: "PRIVATE_ENDPOINT", RequiredParameters: "max_tokens,reasoning", PromptUSDPerMillion: "0.1", CompletionUSDPerMillion: "0.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0", AggregateUsageSufficient: true}
+	frozen.Pricing = llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionTextOnly, Endpoint: "PRIVATE_ENDPOINT", RequiredParameters: "max_tokens,reasoning", PromptUSDPerMillion: "0.1", CompletionUSDPerMillion: "700.7", RequestUSD: "0", ImageUSD: "0", AudioUSDPerToken: "0", AggregateUsageSufficient: true}
 	source.models[0].Reasoning["write"] = llm.ReasoningMax
 	request := llm.Request{Composition: evidenceComposition(), Stage: "write", MaxTokens: 80, Reasoning: llm.ReasoningLow, JSONSchema: []byte(`{}`), Execution: &llm.ExecutionPolicy{Call: frozen, Delivery: llm.ExecutionTextOnly, NoFallback: true, RequireParameters: true}}
 	prepared, err := registry.Prepare(context.Background(), ref, request)
@@ -171,7 +175,7 @@ func TestFreeAdmissionAndFrozenExecutionInspectionPreserveActualDecision(t *test
 		t.Fatalf("frozen witness drift=%v", err)
 	}
 	raw, _ := json.Marshal(response.Inspection)
-	if strings.Contains(string(raw), "PRIVATE_ENDPOINT") || strings.Contains(string(raw), "0.7") {
+	if strings.Contains(string(raw), "PRIVATE_ENDPOINT") || strings.Contains(string(raw), "700.7") {
 		t.Fatal("frozen supplier routing/pricing leaked")
 	}
 	registry.WithModelGrades()
