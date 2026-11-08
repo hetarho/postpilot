@@ -14,6 +14,7 @@ import (
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/voice"
 	voicerpc "github.com/postpilot/backend/internal/voice/rpc"
 	voicestore "github.com/postpilot/backend/internal/voice/store"
@@ -49,14 +50,7 @@ func (jobs) HasActiveForVoice(context.Context, string) (bool, error) { return fa
 // openVoiceTestDB opens a migrated database with both accounts already provisioned.
 func openVoiceTestDB(t *testing.T) *db.DB {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "voice-rpc.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, userID := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec(
@@ -69,14 +63,13 @@ func openVoiceTestDB(t *testing.T) *db.DB {
 }
 
 func TestVoiceRPCIsScopedOnlyByAuthenticatedContext(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "voice-rpc.db"))
+	path := filepath.Join(t.TempDir(), "voice-rpc.db")
+	dbtest.WriteMigrated(t, path)
+	handle, err := db.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer handle.Close()
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, userID := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec(
@@ -230,14 +223,8 @@ func voiceReason(t *testing.T, err error) string {
 // The directory RPCs map every lifecycle refusal to a code the client can act on, and never
 // let one account see or move another account's voices.
 func TestVoiceDirectoryRPCCodes(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "voice-directory.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
-	if err := db.Migrate(context.Background(), handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, userID := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec("INSERT INTO users (id, password_hash, created_at) VALUES (?, 'hash', ?)", userID, now); err != nil {

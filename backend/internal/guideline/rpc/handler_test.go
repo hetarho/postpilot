@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -18,7 +17,7 @@ import (
 	"github.com/postpilot/backend/internal/guideline"
 	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 // A1/A2: every refusal the user can provoke has a stable code and reason, and the two
@@ -258,15 +257,8 @@ func TestFieldsProjectThroughTheSharedMapper(t *testing.T) {
 // GUIDE-14: ListGuidelines answers the owner's guidelines alone, in injection order — the global
 // group, then the 분야 group — and the response has no member beside them.
 func TestListGuidelinesAnswersTheOwnersGuidelinesAlone(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "guidelines.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	users := authstore.New(handle.Writer, handle.Reader)
 	for _, id := range []string{"alice", "bob"} {
 		if err := users.CreateUser(ctx, auth.User{ID: id, PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {

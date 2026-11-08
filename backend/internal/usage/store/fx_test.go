@@ -3,12 +3,11 @@ package store_test
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 	usagestore "github.com/postpilot/backend/internal/usage/store"
 )
@@ -34,14 +33,7 @@ func (s *datedRates) KRWPerUSD(_ context.Context, day time.Time) (int64, bool, e
 
 func TestOfficialFXCalendarCacheAndTemporaryFallback(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "fx.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	store := usagestore.New(handle.Writer, handle.Reader)
 	seoul := time.FixedZone("Asia/Seoul", 9*60*60)
 	at := func(year int, month time.Month, day int) time.Time {
@@ -85,14 +77,7 @@ func TestOfficialFXCalendarCacheAndTemporaryFallback(t *testing.T) {
 
 func TestConcurrentFXSelectorsShareOnePublicationLookup(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "fx-concurrent.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	source := &datedRates{data: map[string]int64{"2026-09-29": 13_579_001}}
 	selector := usage.NewRateSelector(source, usagestore.New(handle.Writer, handle.Reader))
 	now := time.Date(2026, 9, 30, 12, 0, 0, 0, time.FixedZone("Asia/Seoul", 9*60*60))

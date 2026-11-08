@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/quality"
@@ -54,15 +53,9 @@ func TestQualityAdapterMapsEveryBlockType(t *testing.T) {
 // The aggregate reads published posts only, a measurement row belongs to its post, and a
 // deleted post leaves both its row and the aggregate (POST-85).
 func TestTheAggregateCountsPublishedPostsOnlyAndForgetsADeletedOne(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "quality.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}

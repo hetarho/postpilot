@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -12,7 +11,7 @@ import (
 	guidelinestore "github.com/postpilot/backend/internal/guideline/store"
 	"github.com/postpilot/backend/internal/memory"
 	memorystore "github.com/postpilot/backend/internal/memory/store"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 // GEN-73 through the real wiring: a preference memory reaches the generation context as a
@@ -20,15 +19,8 @@ import (
 // one. The adapters pass generation's flag through unchanged, so an account whose retrieval
 // finds nothing freezes the defaults it froze before this 지침 existed.
 func TestTheMemoriesDefaultFreezesOnlyBesideAMatchingMemory(t *testing.T) {
-	d, err := db.Open(filepath.Join(t.TempDir(), "impressions.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { d.Close() })
+	d := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, d.Writer); err != nil {
-		t.Fatal(err)
-	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := d.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES(?,'hash',?)", id, now); err != nil {

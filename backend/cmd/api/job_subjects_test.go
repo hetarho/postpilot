@@ -2,7 +2,6 @@ package main
 
 import (
 	"maps"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"testing"
@@ -12,6 +11,7 @@ import (
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -128,14 +128,7 @@ func TestStorylineWorkIsPostTargetedAndOwnsNoVoice(t *testing.T) {
 // one account.
 func migratedJobs(t *testing.T) (*jobstore.Store, *db.DB) {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "jobs.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(t.Context(), handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)`, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
@@ -10,7 +9,7 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/voice"
@@ -21,14 +20,7 @@ import (
 // adapter's existing walk of the post's photos, and the videos still follow them.
 func TestGenerationReceivesPhotosInTheOwnersOrder(t *testing.T) {
 	ctx := context.Background()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "order.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { handle.Close() })
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}

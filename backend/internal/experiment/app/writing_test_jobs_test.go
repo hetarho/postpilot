@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -14,6 +13,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/usage"
 )
 
@@ -121,14 +121,7 @@ func (bridgeCancel) Kind(kind string) bool           { return kind == WritingTes
 func (bridgeCancel) Allowed(kind string, v int) bool { return kind == WritingTestJobKind && v == 1 }
 
 func TestWritingTestJobsAdmitExactPlanWaitForBindingAndConfirmActualSettlement(t *testing.T) {
-	h, err := db.Open(filepath.Join(t.TempDir(), "jobs.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = h.Close() })
-	if err := db.Migrate(t.Context(), h.Writer); err != nil {
-		t.Fatal(err)
-	}
+	h := dbtest.Open(t)
 	if _, err := h.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}
@@ -233,14 +226,7 @@ func (s *bridgeRuntime) PendingTestSettlements(context.Context) ([]experiment.Te
 
 func recoveryBridge(t *testing.T) (*WritingTestJobs, *bridgeRuntime, *job.Queue, *db.DB, *bridgeGate) {
 	t.Helper()
-	h, err := db.Open(filepath.Join(t.TempDir(), "recover.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = h.Close() })
-	if err := db.Migrate(t.Context(), h.Writer); err != nil {
-		t.Fatal(err)
-	}
+	h := dbtest.Open(t)
 	if _, err := h.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash',?)", time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
 		t.Fatal(err)
 	}

@@ -2,27 +2,19 @@ package main
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/modelcatalog"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
 
 // The document names models by id alone; the adapter fills the registry's provider on the way
 // in, drops it on the way out, and gives a new set its identity (MODEL-72).
 func TestCatalogRecommendationsRoundTripsTheProviderRows(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "api.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := handle.Writer.BeginTx(ctx, nil)
 	if err != nil {
 		t.Fatal(err)

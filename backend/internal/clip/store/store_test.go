@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -19,6 +18,7 @@ import (
 	"github.com/postpilot/backend/internal/clip/store"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 func setup(t *testing.T) (*clipapp.Service, *store.Store, *db.DB) {
@@ -32,14 +32,7 @@ func setup(t *testing.T) (*clipapp.Service, *store.Store, *db.DB) {
 // observe are chosen before the service exists.
 func setupWith(t *testing.T, objects clip.ObjectStore) (*clipapp.Service, *store.Store, *db.DB, *clipapp.SourceService) {
 	t.Helper()
-	d, err := db.Open(filepath.Join(t.TempDir(), "clip.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { d.Close() })
-	if err := db.Migrate(context.Background(), d.Writer); err != nil {
-		t.Fatal(err)
-	}
+	d := dbtest.Open(t)
 	for _, u := range []string{"alice", "bob"} {
 		if err := authstore.New(d.Writer, d.Reader).CreateUser(context.Background(), auth.User{ID: u, PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 			t.Fatal(err)

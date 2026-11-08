@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -13,7 +12,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/plan"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 	poststore "github.com/postpilot/backend/internal/post/store"
 	"github.com/postpilot/backend/internal/voice"
@@ -92,15 +91,9 @@ func TestALegacyCandidateOutputDecodesAsNone(t *testing.T) {
 // Through the adapter into the real post store: the nouns land beside the content, in a column
 // of their own, and a nil (a revision) keeps them.
 func TestGenerationPostsMapsTheAnnotations(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "annotations.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	handle := dbtest.Open(t)
 	defer handle.Close()
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if err := authstore.New(handle.Writer, handle.Reader).CreateUser(ctx, auth.User{ID: "alice", PasswordHash: "hash", Plan: plan.Free, CreatedAt: time.Now()}); err != nil {
 		t.Fatal(err)
 	}

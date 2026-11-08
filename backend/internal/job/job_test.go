@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +13,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 )
 
 // Every deadline in this file guards a liveness property — work starts, a status lands, an
@@ -45,15 +45,8 @@ type harness struct {
 
 func newHarness(t *testing.T) *harness {
 	t.Helper()
-	handle, err := db.Open(filepath.Join(t.TempDir(), "jobs.db"))
-	if err != nil {
-		t.Fatalf("open db: %v", err)
-	}
-	t.Cleanup(func() { handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatalf("migrate: %v", err)
-	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.ExecContext(ctx,

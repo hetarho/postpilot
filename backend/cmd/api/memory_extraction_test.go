@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -13,6 +12,7 @@ import (
 	"github.com/postpilot/backend/internal/memory"
 	memorystore "github.com/postpilot/backend/internal/memory/store"
 	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -72,15 +72,7 @@ func (a *stubAdmitter) OpenHolds(context.Context) ([]string, error) { return nil
 
 func newExtractionHarness(t *testing.T) *extractionHarness {
 	t.Helper()
-	d, err := db.Open(filepath.Join(t.TempDir(), "extract.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { d.Close() })
-	ctx := context.Background()
-	if err := db.Migrate(ctx, d.Writer); err != nil {
-		t.Fatal(err)
-	}
+	d := dbtest.Open(t)
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 	for _, id := range []string{"alice", "bob"} {
 		if _, err := d.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES(?,'hash',?)", id, now); err != nil {

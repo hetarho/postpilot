@@ -2,26 +2,18 @@ package store_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
-	"github.com/postpilot/backend/internal/platform/db"
+	"github.com/postpilot/backend/internal/platform/db/dbtest"
 	"github.com/postpilot/backend/internal/provider"
 	providerstore "github.com/postpilot/backend/internal/provider/store"
 )
 
 func TestSaveSelectionsIsAtomicAndActiveReadsStayCompatible(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "provider.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES('alice','hash','2026-08-29T00:00:00Z')`); err != nil {
 		t.Fatal(err)
 	}
@@ -64,15 +56,8 @@ func TestSaveSelectionsIsAtomicAndActiveReadsStayCompatible(t *testing.T) {
 }
 
 func TestReplaceLabExtraCandidatesIsAtomicAndOwnerScoped(t *testing.T) {
-	handle, err := db.Open(filepath.Join(t.TempDir(), "lab.db"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = handle.Close() })
+	handle := dbtest.Open(t)
 	ctx := context.Background()
-	if err := db.Migrate(ctx, handle.Writer); err != nil {
-		t.Fatal(err)
-	}
 	for _, user := range []string{"alice", "bob"} {
 		if _, err := handle.Writer.Exec(`INSERT INTO users(id,password_hash,created_at) VALUES(?, 'hash', '2026-10-01T00:00:00Z')`, user); err != nil {
 			t.Fatal(err)
