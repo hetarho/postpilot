@@ -157,7 +157,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
-| T736 | Keep keyboard focus in the 기억 list after an edit closes or a memory is deleted | ARCH THEME MEM | - | todo |
 
 ## next
 - self-improve-local (sil, until 08:00): T733 per-binary template DB for Go tests and T734 lazy post editor routes from review/perf-quality-261109, implemented by workers in a work group on main, independently reviewed, then the pre-push gate and one push.
@@ -169,6 +168,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 T736 integrated (sil): /memories keeps keyboard focus after an edit closes or a delete (only while focus is lost, once per removal); 3 cases fail at base; reviewed approved (review 4279acaf, P3 only).
 - 261109 create-task review/perf-quality-261109 F11 (sil) → T736 /memories keyboard focus; F4 rejected after re-measurement.
 - 261109 T735 integrated (sil): Editable keeps keyboard focus on entry/exit (keyboard-only entry move, exit only while focus is lost); 3 cases fail at base; reviewed approved (review ff709665, P3 only).
 - 261109 create-task review/perf-quality-261109 F10 (sil) → T735 Editable keyboard focus; F6 rejected, F11 kept [?].
@@ -188,4 +188,3 @@
 - 261102 create-task ARCH r21 → T730 activate browser final rendering (brr).
 - 261102 update-ssot ARCH r21 (brr): ARCH-68✎ browser final rendering active; its remaining device/review/license gates are follow-up evidence; activation code-owned on both sides.
 - 261102 update-ssot ARCH start (brr): browser final render is refused as 준비 중 although the owner wants it working.
-- 261102 pushed dffd0a20 (T728 T729 + format fix, report nud): CI 41330923778 frontend and backend success; no Deploy backend or Verify media path touched.

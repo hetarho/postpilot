@@ -226,4 +226,71 @@ describe('the memory directory', () => {
     await waitFor(() => expect(deletions).toEqual(['memory-place']))
     await waitFor(() => expect(screen.queryByText('연남동에 자주 간다')).not.toBeInTheDocument())
   })
+
+  // The form replaces the row's controls, so closing it removes the focused 취소 or 저장 from the
+  // document. A keyboard user is put back on the pencil they opened it from, not on <body>.
+  it("returns focus to 수정 when the row's form closes from the keyboard", async () => {
+    const user = userEvent.setup()
+    renderMemories()
+
+    const place = await row('연남동에 자주 간다')
+    place.getByRole('button', { name: '기억 수정' }).focus()
+    await user.keyboard('{Enter}')
+    place.getByRole('button', { name: '취소' }).focus()
+    await user.keyboard('{Enter}')
+    expect(place.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(place.getByRole('button', { name: '기억 수정' })).toHaveFocus()
+
+    // 저장 with nothing changed closes the form the same way.
+    await user.keyboard('{Enter}')
+    place.getByRole('button', { name: '저장' }).focus()
+    await user.keyboard('{Enter}')
+    expect(place.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(place.getByRole('button', { name: '기억 수정' })).toHaveFocus()
+  })
+
+  /** Deletes the row holding `text` from the keyboard: Enter on its trash, Enter on 삭제. */
+  async function deleteByKeyboard(user: ReturnType<typeof userEvent.setup>, text: string) {
+    ;(await row(text)).getByRole('button', { name: '이 기억 삭제' }).focus()
+    await user.keyboard('{Enter}')
+    const dialog = within(await screen.findByRole('dialog', { name: '기억을 삭제할까요?' }))
+    dialog.getByRole('button', { name: '삭제' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByText(text)).not.toBeInTheDocument())
+  }
+
+  // The confirmation hands focus back to the trash button, and the re-read list then removes the
+  // row that holds it. Focus goes to the row that took the deleted one's place, or to the one
+  // above it when the last row went.
+  it('keeps keyboard focus in the list after a memory is deleted', async () => {
+    const user = userEvent.setup()
+    const deletions: string[] = []
+    renderMemories({
+      deletions,
+      memories: [
+        ...MEMORIES,
+        { id: 'memory-person', text: '동생과 자주 간다', kind: ProtoMemoryKind.PERSON },
+      ],
+    })
+
+    await deleteByKeyboard(user, '매운 음식을 못 먹는다')
+    const next = (await row('동생과 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
+    await waitFor(() => expect(next).toHaveFocus())
+
+    await deleteByKeyboard(user, '동생과 자주 간다')
+    expect(deletions).toEqual(['memory-preference', 'memory-person'])
+    const above = (await row('연남동에 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
+    await waitFor(() => expect(above).toHaveFocus())
+  })
+
+  it('moves focus to 새 기억 when the last memory is deleted', async () => {
+    const user = userEvent.setup()
+    const deletions: string[] = []
+    renderMemories({ deletions, memories: [MEMORIES[0]] })
+
+    await deleteByKeyboard(user, '연남동에 자주 간다')
+    expect(deletions).toEqual(['memory-place'])
+    expect(await screen.findByRole('heading', { name: '아직 기억이 없어요' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: '새 기억' })).toHaveFocus())
+  })
 })

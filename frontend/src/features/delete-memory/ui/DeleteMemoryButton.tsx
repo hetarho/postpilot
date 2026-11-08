@@ -10,7 +10,17 @@ import { Button, Dialog, FieldMessage } from '@/shared/ui'
  *
  *  Nothing references a memory — a generation froze the TEXTS it selected at enqueue (MEM-19) —
  *  so there is no count to name and nothing in flight changes. */
-export function DeleteMemoryButton({ ownerId, memoryId }: { ownerId: string; memoryId: string }) {
+export function DeleteMemoryButton({
+  ownerId,
+  memoryId,
+  onDeleted,
+}: {
+  ownerId: string
+  memoryId: string
+  /** Run once the server confirms the delete. The list's re-read is not awaited, so the row may
+   *  still be on screen when this runs, or already gone with this button in it. */
+  onDeleted?: () => void
+}) {
   const { t } = useTranslation(['memories', 'common'])
   const remove = useDeleteMemoryCall(ownerId)
   const [confirming, setConfirming] = useState(false)
@@ -19,11 +29,13 @@ export function DeleteMemoryButton({ ownerId, memoryId }: { ownerId: string; mem
     try {
       await remove.remove(memoryId)
     } catch {
-      // The mutation's message renders beside the button.
-    } finally {
-      // Closed on failure too, so the message is not left behind the scrim.
+      // The mutation's message renders beside the button. Closed on failure too, so the message
+      // is not left behind the scrim.
       setConfirming(false)
+      return
     }
+    setConfirming(false)
+    onDeleted?.()
   }
 
   return (
