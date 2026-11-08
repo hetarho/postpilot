@@ -168,6 +168,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 fix llm tests: leak checks searched inspection JSON for short numeric sentinels ("999", "90000", "0.7") that a live RFC3339Nano IssuedAt can contain — CI 42520643603 failed on spec-only 1115efa7; sentinels now cannot match a timestamp (15/3000 and 2357/250000 failures → 0); reviewed approved (sil).
 - 261109 pushed fb01e678 (T736 + report, sil): FE gate at df31babb (577 files/4,592 tests, all FE checks) passes; CI 42519697954 success; no backend path, so no deploy.
 - 261109 pushed 5c2a8c03 (T733 T734 T735, sil): full CI gate at 5c2a8c03 and media/deploy gates at ee9ef3fa pass; CI 42516751893, Deploy backend 42516751884, Verify media 42517082146 success; CI backend job 1154→385 s.
 - 261109 T736 integrated (sil): /memories keeps keyboard focus after an edit closes or a delete (only while focus is lost, once per removal); 3 cases fail at base; reviewed approved (review 4279acaf, P3 only).
@@ -187,4 +188,3 @@
 - 261102 brr pre-push gate at 70811b8c: FE 575 files/4575 tests, all CI checks, compose, deployable builds, worker smoke and media release pass.
 - 261102 T730 done: browser final rendering active (readiness record + code-owned API switch); 81 files/608 FE tests and BE clip/cmd/api tests pass.
 - 261102 T730 starts (brr) at aebf4d47; activate browser final rendering.
-- 261102 create-task ARCH r21 → T730 activate browser final rendering (brr).
