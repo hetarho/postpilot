@@ -209,6 +209,29 @@ describe('the block editor and the header', () => {
     expect(screen.getByText(POST_CONTENT_FIXTURE.blocks[1].content)).toBeInTheDocument()
   })
 
+  // Opening and leaving a block swap the focused button out of the document; a keyboard user must
+  // not be sent back to the top of the page each time.
+  it('keeps keyboard focus on the block across opening, saving and moving it', async () => {
+    const user = userEvent.setup()
+    renderEditor(reviewPost)
+    const pencil = () => screen.getByRole('button', { name: '2번째 블록 수정' })
+
+    ;(await screen.findByRole('button', { name: '2번째 블록 수정' })).focus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByLabelText('2번째 블록 종류')).toHaveFocus()
+
+    screen.getByRole('button', { name: '저장' }).focus()
+    await user.keyboard('{Enter}')
+    expect(pencil()).toHaveFocus()
+
+    await user.keyboard('{Enter}')
+    screen.getByRole('button', { name: '2번째 블록 위로' }).focus()
+    await user.keyboard('{Enter}')
+    // The rows are keyed by position, so focus stays on the slot the block left, which now holds
+    // its neighbour — adjacent, not the block itself (T735 limits).
+    expect(pencil()).toHaveFocus()
+  })
+
   // The header editor owns the title, summary and tags — cancelling it must not revert a block.
   it('keeps a block edit made while the header editor was open', async () => {
     const user = userEvent.setup()
