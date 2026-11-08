@@ -9,6 +9,9 @@
 - push: main
 
 ## inbox
+- 261109 decided review/perf-quality-261109 T733 T734: which scout proposals does this local improvement run (owner: until 08:00, focus performance, code quality and UI/UX) implement? → F1 per-binary template DB for Go tests and F2 lazy post editor routes, both behavior-preserving with measured evidence (alt: add F3 lazy motion | add F4 per-iteration queue stop) — F1 is ≈60% of CI's backend job and F2 a one-file cut of every first load; F3 changes the first-moment segmented animation, F4 should be re-measured after F1, and both would push the review, pre-push and media gates past 08:00.
+- 261109 decided review/perf-quality-261109: F5 i18n split, F7 CI entry-size budget, F8 sqlc image pin and F9 test-setup barrel imports → kept [?] for the owner or a later run (alt: implement now) — F5/F7 change an ARCH rule or CI gate, F8 is an ARCH-33 dependency change, F9 showed no wall gain in a 57-file A/B.
+- 261109 decided T734: preload the editor chunk at idle after the signed-in shell mounts? → no; the first editor open shows the existing RoutePending like every other lazy page (alt: idle preload from AuthenticatedLayout) — smallest change, no new side effect.
 - 261103 decided CLIP-224: a model-written caption refused at render start (prod narration-2, repeated) → free it to automatic placement, then omit it with a notice, save the next revision and render (alt: keep refusing and ask the owner to fix it | repair only at generation, leaving saved plans broken) — the owner asked that captions never block a render and that hallucinated output be absorbed; owner-edited content still refuses.
 - 261102 decided ARCH-68 CLIP-155: browser final rendering is closed by its readiness record and the API flag, so ② refuses it as 준비 중 — open it? → open it now; the unmet performance, Windows integrated-GPU, lower-resource, human-review and WASM license-graph gates become follow-up evidence, and analysis preparation stays closed (alt: keep it closed until T604 qualifies it | open it behind an operator env) — the owner asked for it to work, the editor preview already ships the same components and WASM, and code-owned activation keeps one switch on both sides.
 - 261102 decided POST-121 CLIP-223: where does the nudge to make a missing voice or template appear? → when a new post or clip opens on an account missing it, in a sheet, after the directory reads succeed and before anything is typed (alt: on every creation button, which misses home, setup and links | a note under the picker, which the owner rejected for simple controls)
@@ -140,6 +143,7 @@
 | desktop-ux-policy-261007 | converted@261007 |
 | all-261008 | converted@261008 |
 | structure-261008 | converted@261008 |
+| perf-quality-261109 | converted@261109 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -151,8 +155,11 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
+| T733 | Migrate a template database once per test binary and copy it per test | ARCH | - | todo |
+| T734 | Load the post editor routes lazily | ARCH | - | todo |
 
 ## next
+- self-improve-local (sil, until 08:00): T733 per-binary template DB for Go tests and T734 lazy post editor routes from review/perf-quality-261109, implemented by workers in a work group on main, independently reviewed, then the pre-push gate and one push.
 - T732 complete (cap): a writer caption the render start refuses is freed, then omitted with a notice, and the render proceeds on the saved next revision; owner content still refuses.
 - implement-task T731 (brr): Verify media 41469072328 refused 70811b8c at the worker parity preparation subtest, CadenceVerified worker true vs embedded false on the same fixture; not reproduced in 12 local repeats.
 - T730 complete (brr; report reports/261102-brr.md): ② offers 브라우저에서 렌더 on a capable device and the API admits it; analysis preparation stays closed. Pushed 70811b8c: CI and Deploy backend success, Verify media red only at the T731 cadence parity check.
@@ -161,6 +168,7 @@
 - T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
 
 ## log
+- 261109 create-task review/perf-quality-261109 (sil) → T733 template DB for Go tests, T734 lazy post editor routes; F3–F9 kept [?].
 - 261103 pushed b69fbc67 (T732, cap): full CI and media gates pass locally; CI 41503060208, Deploy backend 41503060153 and Verify media 41503865441 all success (Media worker green, the T731 mismatch did not recur).
 - 261103 T732 done: render start repairs or omits a refused writer caption (CLIP-224); new store tests pass and fail without the wiring.
 - 261103 T732 starts (cap) at 5081b0d1.
@@ -180,4 +188,3 @@
 - 261102 T729 starts (nud) at 6f484cba; new-clip video-template offer.
 - 261102 T728 done: new-post offer sheet (missing voice/template, 이대로 쓰기, 다시 묻지 않기) and the shared offer slice; 54 files/459 tests pass (static checks really passed only at 12a1da9c).
 - 261102 T728 starts (nud) at 05c8d739; new-post offer and the shared offer slice.
-- 261102 create-task POST r45 VOICE r19 CLIP r71 → T728 new-post offer (shared slice), T729 new-clip template offer.
