@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "lockfileSHA256": "11dffdcc7c15b8d22606540dbf3f7330625a5fe729c75ca8cebd397ac6c7c8d0",
+  "lockfileSHA256": "226669535a3c731bd7582845b781e815a3448320b22306f575e58f5753b48969",
   "packages": [
     {
       "name": "@pixi/colord",
@@ -340,7 +340,7 @@
     "generator": "fonttools-4.60.2",
     "sourceVersion": "1.0.3",
     "manifestSHA256": "51ad5c795ede98d22e4dfea750946889af3717c04dee3642b87e3419c835970c",
-    "assetVersion": "clip-design-assets-v1-ink-a03ef33d54312d3009f4249a2c2ac6cb078ed0e606e63c7a8e701a0f9bafe4e4",
+    "assetVersion": "clip-design-assets-v1-ink-1e5f395a5cd3c570018044739b9227557678efcf7eb79137a2545599b20f87be",
     "sources": {
       "wantedsans": {
         "file": "WantedSansVariable.ttf",
