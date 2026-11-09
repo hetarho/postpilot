@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T05:46Z | - |
+| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T07:28Z | T740 |
 
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T740: observed VM clock rollback rejects the active attempt checkpoint → repair SQL ownership using the existing active-job index and atomic checkpoint replacement trigger (alt: retry tests | change timestamps/clocks | weaken the gate) — deterministic and real-run proof, no policy/schema/provider/credit change; this repair precedes the pending source publication.
@@ -167,14 +167,14 @@
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
-| T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH | - | todo |
 
 ## next
-- self-improve-local si4: T740 repairs the reproduced checkpoint clock-rollback failure blocking the T737 pre-push gate; T738/T739 independently reviewed and waiting for integration/publication.
-- Frontend580 files/4614 tests/build and native-Compose69 deployment tests pass; full Go failed in clip/store, so no source push yet. Report reports/261109-si4.md.
+- self-improve-local si4: T737/T740 integrated; run full CI and required CPU deployment/media gates, then publish. T738/T739 follow as separately validated units.
+- T740 removes clock-order election using existing ownership/trigger fences; independent review and affected tests pass. No source has been pushed yet. Report reports/261109-si4.md.
 - Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 T740 done (si4): reviewed c3423b1b, source a89b15b7/submission d796f89b merged6a7bd326; three affected packages and17 regression subcases pass; full CI/media gate before pending T737/source publication.
 - 261109 T740 replan (si4): first gate exposed stale trigger assumption; release340e69d1 before clarifying current0162 (upload-text retains, sampling clears), preserve source fdcc92b7; SQL ownership fix and schema unchanged.
 - 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.
 - 261109 T737 done (si4): approved review 76ed0387; source integrated 7e1f30c5; unit evidence reuses identical verified source 99399408 (34 affected tests plus 54 consumer cases, six base failures); per-unit full CI/push next.
