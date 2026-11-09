@@ -14,6 +14,7 @@
 | si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T05:46Z | - |
 
 ## inbox
+- 261109 decided review/perf-quality-si4-261109 F5 T740: observed VM clock rollback rejects the active attempt checkpoint → repair SQL ownership using the existing active-job index and atomic checkpoint replacement trigger (alt: retry tests | change timestamps/clocks | weaken the gate) — deterministic and real-run proof, no policy/schema/provider/credit change; this repair precedes the pending source publication.
 - 261109 decided review/perf-quality-si4-261109 T737 T738 T739: four-hour local improvement delegation → approve measured template/guideline focus recovery and an exact 20-file Node test project (alt: broad DOM/test refactors | dependency/policy changes) — five real-route BODY defects and 31.22→2.73 s paired 83-case subset; preserve existing contracts, independently review every unit, final full CI before cfg main push.
 - 261109 decided review/perf-quality-261109 T736: third round → adopt F11 /memories keyboard focus for /memories only, reject F4 after re-measuring (2.5 s with T733) (alt: also templates, clip templates and guidelines | stop the run) — measured defect, one page, same rule as T735; the other directories' shape is inferred and their extension stays a scope choice.
 - 261109 decided review/perf-quality-261109 T735: second scout round (interaction UI/UX) → adopt F10 Editable keyboard focus, defer F11 /memories focus, reject F6 useJob error polling (alt: F11 too | fix F6) — F10 is measured on the core ② 다듬기 flow and invisible to pointer users; F11 has smaller reach and an open scope choice; F6 has no user-facing trigger.
@@ -166,12 +167,15 @@
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
+| T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH | - | todo |
 
 ## next
-- self-improve-local in progress (si4; reports/261109-si4.md): T737 template focus integrated/reviewed, pre-push full gate pending; T738 guideline focus may use its reviewed helper, T739 audited Node test project in progress.
-- T731 remains unrelated todo; existing blocked qualification tasks and INFRA planning remain outside this run.
+- self-improve-local si4: T740 repairs the reproduced checkpoint clock-rollback failure blocking the T737 pre-push gate; T738/T739 independently reviewed and waiting for integration/publication.
+- Frontend580 files/4614 tests/build and native-Compose69 deployment tests pass; full Go failed in clip/store, so no source push yet. Report reports/261109-si4.md.
+- Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.
 - 261109 T737 done (si4): approved review 76ed0387; source integrated 7e1f30c5; unit evidence reuses identical verified source 99399408 (34 affected tests plus 54 consumer cases, six base failures); per-unit full CI/push next.
 - 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
 - 261109 self-improve-local starts (si4): user delegates a roughly four-hour run on main at 97e07304, prioritizing performance, test cost, code quality and keyboard usability; proposals require orchestrator approval and independent code review.
@@ -191,4 +195,3 @@
 - 261103 T732 starts (cap) at 5081b0d1.
 - 261103 update-ssot CLIP r72 + create-task (cap): CLIP-224+ render start repairs or omits a refused writer caption → T732.
 - 261103 pushed bc1d5bf4 (render refusal fix): FE gate 575 files/4576 tests and all FE checks pass; CI 41482325787 success; no backend path, so no deploy.
-- 261103 fix clip render start: a server render refused by plan validation (CLIP_COMPOSITION_INVALID/UNAVAILABLE) is a definite refusal, not an uncertain start; ② shows the failure instead of a stuck run view that a reload sends back to ②.
