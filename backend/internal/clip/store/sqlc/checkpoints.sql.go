@@ -22,7 +22,7 @@ type GetAttemptCheckpointParams struct {
 	JobID     string
 }
 
-// A new non-sampling job atomically deletes the previous checkpoint on insertion.
+// Read the stored attempt; the insertion trigger owns checkpoint replacement.
 func (q *Queries) GetAttemptCheckpoint(ctx context.Context, arg GetAttemptCheckpointParams) (string, error) {
 	row := q.db.QueryRowContext(ctx, getAttemptCheckpoint, arg.ProjectID, arg.UserID, arg.JobID)
 	var checkpoint_json string

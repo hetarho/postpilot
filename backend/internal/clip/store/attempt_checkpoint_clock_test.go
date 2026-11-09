@@ -124,38 +124,48 @@ func TestAttemptCheckpointIdentityAndLifecycleFences(t *testing.T) {
 	}
 }
 
-func TestAttemptCheckpointReplacementPreservesSamplingException(t *testing.T) {
-	h := generationSetup(t)
-	first := h.start(t)
-	c := clip.AttemptCheckpoint{Version: 1, JobID: first, Stage: "analyze", CompletedChunks: 1}
-	if err := h.store.SaveAttemptCheckpoint(t.Context(), "alice", h.project.ID, c); err != nil {
-		t.Fatal(err)
-	}
-	failCheckpointAttempt(t, h, first)
-	// Sampling is a browser render's own job and does not replace attempt evidence.
-	if err := h.jobs.Insert(t.Context(), job.Job{ID: "checkpoint-sampling", UserID: "alice", Kind: clip.JobKindSampleBrowserRender, Subjects: []job.Subject{{Dimension: clip.JobSubject, ID: h.project.ID}}, CreatedAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)}); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, first); err != nil || got == nil || got.CompletedChunks != 1 {
-		t.Fatal("sampling insertion hid or deleted attempt diagnostic", got, err)
-	}
-	if got, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, "checkpoint-sampling"); err != nil || got != nil {
-		t.Fatal("sampling borrowed the attempt diagnostic", got, err)
-	}
-	if changed, err := h.jobs.FailQueued(t.Context(), "checkpoint-sampling", "alice", job.Failure{Reason: "JOB_INTERRUPTED"}, time.Now()); err != nil || !changed {
-		t.Fatal("sampling did not stop", changed, err)
-	}
-	second := h.start(t)
-	var count int
-	if err := h.db.Reader.QueryRow("SELECT count(*) FROM clip_attempt_checkpoints WHERE project_id=?", h.project.ID).Scan(&count); err != nil || count != 0 {
-		t.Fatal("new attempt did not atomically delete prior diagnostic", count, err)
-	}
-	for _, id := range []string{first, second} {
-		if got, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, id); err != nil || got != nil {
-			t.Fatal("replacement exposed or borrowed a prior diagnostic", got, err)
-		}
-	}
-	if err := h.store.SaveAttemptCheckpoint(t.Context(), "alice", h.project.ID, c); !errors.Is(err, clip.ErrNotFound) {
-		t.Fatal("replaced terminal attempt recreated its diagnostic", err)
+func TestAttemptCheckpointReplacementFollowsExistingTrigger(t *testing.T) {
+	for _, kind := range []string{clip.JobKindSampleBrowserRender, clip.JobKindUploadText} {
+		t.Run(kind, func(t *testing.T) {
+			h := generationSetup(t)
+			first := h.start(t)
+			c := clip.AttemptCheckpoint{Version: 1, JobID: first, Stage: "analyze", CompletedChunks: 1}
+			if err := h.store.SaveAttemptCheckpoint(t.Context(), "alice", h.project.ID, c); err != nil {
+				t.Fatal(err)
+			}
+			failCheckpointAttempt(t, h, first)
+			// The current migration preserves evidence for upload text only; sampling replaces it.
+			const sideJob = "checkpoint-side-job"
+			if err := h.jobs.Insert(t.Context(), job.Job{ID: sideJob, UserID: "alice", Kind: kind, Subjects: []job.Subject{{Dimension: clip.JobSubject, ID: h.project.ID}}, CreatedAt: time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)}); err != nil {
+				t.Fatal(err)
+			}
+			retained := kind == clip.JobKindUploadText
+			var count int
+			if err := h.db.Reader.QueryRow("SELECT count(*) FROM clip_attempt_checkpoints WHERE project_id=?", h.project.ID).Scan(&count); err != nil || (count == 1) != retained {
+				t.Fatal("job insertion changed established checkpoint replacement", count, err)
+			}
+			got, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, first)
+			if err != nil || (got != nil) != retained || got != nil && got.CompletedChunks != 1 {
+				t.Fatal("stored diagnostic did not follow existing trigger", got, err)
+			}
+			if got, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, sideJob); err != nil || got != nil {
+				t.Fatal("new job borrowed the attempt diagnostic", got, err)
+			}
+			if changed, err := h.jobs.FailQueued(t.Context(), sideJob, "alice", job.Failure{Reason: "JOB_INTERRUPTED"}, time.Now()); err != nil || !changed {
+				t.Fatal("job did not stop", changed, err)
+			}
+			second := h.start(t)
+			if err := h.db.Reader.QueryRow("SELECT count(*) FROM clip_attempt_checkpoints WHERE project_id=?", h.project.ID).Scan(&count); err != nil || count != 0 {
+				t.Fatal("new generation did not atomically delete prior diagnostic", count, err)
+			}
+			for _, id := range []string{first, second} {
+				if got, err := h.store.GetAttemptCheckpoint(t.Context(), "alice", h.project.ID, id); err != nil || got != nil {
+					t.Fatal("replacement exposed or borrowed a prior diagnostic", got, err)
+				}
+			}
+			if err := h.store.SaveAttemptCheckpoint(t.Context(), "alice", h.project.ID, c); !errors.Is(err, clip.ErrNotFound) {
+				t.Fatal("replaced terminal attempt recreated its diagnostic", err)
+			}
+		})
 	}
 }
