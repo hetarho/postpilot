@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T08:12Z | T741 |
+| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T08:16Z | - |
 
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
@@ -171,12 +171,14 @@
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 
 ## next
+- Owner deadline: finish before21:00KST on261109 (12:00UTC). Finish current five units and their required checks; no additional improvement scope.
 - T741 repairs the reproduced index-rotation packaging prerequisite; full CI90 Go packages already passed at80d3cd8a, media build remains failed before smoke. T738/T739 reviewed source is preserved for later per-unit integration/publication.
 - self-improve-local si4: T737/T740 integrated; run full CI and required CPU deployment/media gates, then publish. T738/T739 follow as separately validated units.
 - T740 removes clock-order election using existing ownership/trigger fences; independent review and affected tests pass. No source has been pushed yet. Report reports/261109-si4.md.
 - Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 si4 deadline clarified by owner: complete before21:00KST; T741 reviewed source integrated, final media gates then staged T739/T738 publication remain.
 - 261109 create-task review/perf-quality-si4-261109 F6 (si4) → T741 same-version signed/checksummed APK fallback; no library upgrade or gate relaxation. Both original media build failures preserved.
 - 261109 T740 done (si4): reviewed c3423b1b, source a89b15b7/submission d796f89b merged6a7bd326; three affected packages and17 regression subcases pass; full CI/media gate before pending T737/source publication.
 - 261109 T740 replan (si4): first gate exposed stale trigger assumption; release340e69d1 before clarifying current0162 (upload-text retains, sampling clears), preserve source fdcc92b7; SQL ownership fix and schema unchanged.
@@ -196,4 +198,3 @@
 - 261109 T734 integrated (sil): editor routes lazy, entry 1,433→1,163 kB raw (445→365 kB gzip); reviewed approved (review 640f1c5c, P3 only).
 - 261109 create-task review/perf-quality-261109 (sil) → T733 template DB for Go tests, T734 lazy post editor routes; F3–F9 kept [?].
 - 261103 pushed b69fbc67 (T732, cap): full CI and media gates pass locally; CI 41503060208, Deploy backend 41503060153 and Verify media 41503865441 all success (Media worker green, the T731 mismatch did not recur).
-- 261103 T732 done: render start repairs or omits a refused writer caption (CLIP-224); new store tests pass and fail without the wiring.
