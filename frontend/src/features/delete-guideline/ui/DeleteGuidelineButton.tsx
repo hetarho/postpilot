@@ -12,11 +12,14 @@ export function DeleteGuidelineButton({
   ownerId,
   kind = 'post',
   guidelineId,
+  onDeleted,
 }: {
   ownerId: string
   /** The guideline kind the action is for; a post's by default. */
   kind?: GuidelineKind
   guidelineId: string
+  /** Success only; the invalidated directory may remove the row after this returns. */
+  onDeleted?: () => void
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const remove = useDeleteGuidelineCall(ownerId, kind)
@@ -27,10 +30,12 @@ export function DeleteGuidelineButton({
       await remove.remove(guidelineId)
     } catch {
       // The mutation's message renders beside the button.
-    } finally {
       // Closed on failure too, so the message is not left behind the scrim.
       setConfirming(false)
+      return
     }
+    setConfirming(false)
+    onDeleted?.()
   }
 
   return (

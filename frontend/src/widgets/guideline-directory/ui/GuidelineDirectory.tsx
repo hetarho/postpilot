@@ -1,7 +1,7 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode, type Ref } from 'react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadge,
@@ -41,6 +41,7 @@ import {
   Typography,
   pageStyles,
   typographyStyles,
+  useListRemovalFocus,
 } from '@/shared/ui'
 
 /** The account's 지침 of one kind: a post's 작문 지침 on /guidelines (GUIDE-20) and a clip's 영상
@@ -80,6 +81,25 @@ export function GuidelineDirectory({
   // 기본 지침 in use and the owner's own.
   const principles = defaults.filter((guideline) => guideline.principle)
   const inUse = defaults.filter((guideline) => !guideline.principle && guideline.enabled)
+  // The two kinds of row may carry the same raw id. Keep their mixed list identities distinct,
+  // in the exact order already rendered, and focus the existing disclosure rather than an action
+  // hidden inside a closed row.
+  const rowKeys = [
+    ...inUse.map((guideline) => `default:${guideline.key}`),
+    ...guidelines.map((guideline) => `owned:${guideline.id}`),
+  ]
+  const disclosures = useRef(new Map<string, HTMLButtonElement>())
+  const defaultAction = useRef<HTMLButtonElement | null>(null)
+  const requestRemoval = useListRemovalFocus({
+    keys: rowKeys,
+    getTarget: (key) => disclosures.current.get(key),
+    getFallback: () => defaultAction.current,
+  })
+  const rememberDisclosure = (key: string, row: HTMLLIElement | null) => {
+    const button = row?.querySelector<HTMLButtonElement>('button[aria-expanded]')
+    if (button) disclosures.current.set(key, button)
+    else disclosures.current.delete(key)
+  }
   // A refused 적용 안함 is said here, not on its row: the write is optimistic, so the row it was
   // pressed on has already left the list when the refusal arrives (GUIDE-43).
   const [stopRefusal, setStopRefusal] = useState('')
@@ -137,7 +157,14 @@ export function GuidelineDirectory({
         <>
           {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
               writing one directly stay on the page, above the list (GUIDE-44). */}
-          <div className="mt-6 flex flex-wrap items-center gap-3">
+          <div
+            ref={(actions) => {
+              // The existing first action opens the default-guidelines sheet. Read its actual
+              // button without adding a wrapper, translated selector or another control.
+              defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
+            }}
+            className="mt-6 flex flex-wrap items-center gap-3"
+          >
             <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
             <Button
               variant="secondary"
@@ -212,20 +239,26 @@ export function GuidelineDirectory({
                 {t(`${page}.order`, { ns: 'guidelines' })}
               </Typography>
               <ul className="divide-divider mt-3 divide-y">
-                {inUse.map((guideline) => (
+                {inUse.map((guideline, index) => (
                   <DefaultGuidelineItem
                     key={guideline.key}
                     ownerId={ownerId}
                     kind={kind}
                     guideline={guideline}
                     onRefused={setStopRefusal}
+                    rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
+                    onRemoving={() => requestRemoval(rowKeys[index], index)}
                   />
                 ))}
-                {guidelines.map((guideline) => (
+                {guidelines.map((guideline, index) => (
                   <GuidelineRow
                     key={guideline.id}
                     ownerId={ownerId}
                     guideline={guideline}
+                    rowRef={(row) => rememberDisclosure(rowKeys[inUse.length + index], row)}
+                    onDeleted={() =>
+                      requestRemoval(rowKeys[inUse.length + index], inUse.length + index)
+                    }
                     summary={summaries.data?.find(
                       (row) =>
                         row.targetId === guideline.id || row.lastPublication?.id === guideline.id,
@@ -341,15 +374,19 @@ function DefaultGuidelineItem({
   kind,
   guideline,
   onRefused,
+  rowRef,
+  onRemoving,
 }: {
   ownerId: string
   kind: GuidelineKind
   guideline: DefaultGuideline
   onRefused: (message: string) => void
+  rowRef: Ref<HTMLLIElement>
+  onRemoving: () => () => void
 }) {
   const { t } = useTranslation('guidelines')
   return (
-    <li>
+    <li ref={rowRef}>
       <Disclosure
         size="row"
         headingLevel={3}
@@ -369,6 +406,7 @@ function DefaultGuidelineItem({
                 kind={kind}
                 guideline={guideline}
                 onRefused={onRefused}
+                onRemoving={onRemoving}
               />
             }
           />
@@ -386,11 +424,15 @@ function GuidelineRow({
   guideline,
   onPublished,
   summary,
+  rowRef,
+  onDeleted,
 }: {
   ownerId: string
   guideline: Guideline
   onPublished: (ref: AuthoringSavedRef) => void
   summary?: AuthoringSummary
+  rowRef: Ref<HTMLLIElement>
+  onDeleted: () => void
 }) {
   const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
@@ -405,7 +447,7 @@ function GuidelineRow({
     setAuthoringOpen(true)
   }
   return (
-    <li>
+    <li ref={rowRef}>
       <Disclosure
         size="row"
         headingLevel={3}
@@ -441,6 +483,7 @@ function GuidelineRow({
               ownerId={ownerId}
               kind={guideline.kind}
               guidelineId={guideline.id}
+              onDeleted={onDeleted}
             />
           </div>
           <AuthoringSheet
