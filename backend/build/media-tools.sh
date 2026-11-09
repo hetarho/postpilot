@@ -79,9 +79,36 @@ printf '%s  musl.tar.gz\n' '1adad96eddb3a2eb0cacb3e363b0046568925fcdd75cf8b0503f
 tar -xOf musl.tar.gz musl-1.2.6/COPYRIGHT > /opt/media/share/licenses/musl-COPYRIGHT.txt
 cp musl.tar.gz /opt/media/share/sources/
 curl -fL --connect-timeout 10 --max-time 120 --retry 3 -o /opt/media/share/licenses/zlib-LICENSE.txt https://raw.githubusercontent.com/madler/zlib/v1.3.2/LICENSE
-curl -fL --retry 3 -o ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"
-curl -fL --retry 3 -o ffmpeg.tar.xz.asc "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz.asc"
-curl -fL --retry 3 -o ffmpeg-signing-key.asc https://ffmpeg.org/ffmpeg-devel.asc
+# A transport fallback never bypasses the release's hash and signature checks below.
+download_ffmpeg_input() {
+  curl -fL --connect-timeout 10 --max-time 120 --retry 3 -o "$1" "$2"
+}
+if ! download_ffmpeg_input ffmpeg.tar.xz "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz"; then
+  download_ffmpeg_input ffmpeg.tar.xz "https://distfiles.macports.org/ffmpeg/ffmpeg-${FFMPEG_VERSION}.tar.xz"
+fi
+if ! download_ffmpeg_input ffmpeg.tar.xz.asc "https://ffmpeg.org/releases/ffmpeg-${FFMPEG_VERSION}.tar.xz.asc"; then
+  if [ "$FFMPEG_VERSION" != '9.0.1' ]; then
+    printf '%s\n' 'No retained detached signature for this FFmpeg version.' >&2
+    exit 1
+  fi
+  cat > ffmpeg.tar.xz.asc <<'FFMPEG_9_0_1_SIGNATURE'
+-----BEGIN PGP SIGNATURE-----
+
+iQFMBAABCgA2FiEE/PmG6hXm4pOlZE8QtDIvBNZ2WNgFAmp767MYHGZmbXBlZy1k
+ZXZlbEBmZm1wZWcub3JnAAoJELQyLwTWdljYeKYH+wdZITIvEOPDHcgPoGq8l8bo
+u5VvRwdLV/kMcT5FKilLhrkc3w+ZVg6zxMmtA6/+6DcEVuYGD7qSLpybPkmTPQPk
+APqdDTmURv+FJDhApIm0uRV1JX1+mmWbTlqztXjGi+q3JKf+m0jktXgAtLJUT85z
+GuAA7PTAKjRSX7jGs9KlKttzMtzDVUomvgW/NIuOFDyC8CzzOkS3c/E8amrE1nXW
+09LrnMEQniKDHGe7KFc+hzxoS5aVPfT+p/yDNrboLwX3w/+1XU1hj3lE7Y/7cISp
+6DuuuzMMxMTTnF0m7klKv5JTcEJpAF659HBITK2kjzYdJ73KeH0UtFtTtAXoQpg=
+=DfGV
+-----END PGP SIGNATURE-----
+FFMPEG_9_0_1_SIGNATURE
+  printf '%s  ffmpeg.tar.xz.asc\n' 'b613a00005232a1245ace7080088781ac23a916119d3e5b0d6c042368eee0177' | sha256sum -c -
+fi
+if ! download_ffmpeg_input ffmpeg-signing-key.asc https://ffmpeg.org/ffmpeg-devel.asc; then
+  download_ffmpeg_input ffmpeg-signing-key.asc https://raw.githubusercontent.com/FFmpeg/web/0745e67732776c48b69ca9441debb54ac9a891e5/htdocs/ffmpeg-devel.asc
+fi
 printf '%s  ffmpeg.tar.xz\n' "$FFMPEG_SHA256" | sha256sum -c -
 gpg --batch --import ffmpeg-signing-key.asc
 gpg --batch --status-fd 1 --verify ffmpeg.tar.xz.asc ffmpeg.tar.xz > signature-status
