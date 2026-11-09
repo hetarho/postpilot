@@ -8,11 +8,6 @@
 - docs: en
 - push: main
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T09:43Z | - |
-
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
@@ -167,19 +162,19 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
-| T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
-| T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
+| T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
 | T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH CLIP | - | todo |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- Owner deadline: finish before21:00KST on261109 (12:00UTC). Complete reviewed FE unitsT737/T739/T738 and their full CI/publications; no new improvement scope.
-- T740/T741/T742 are deferred after the real92daffbe release fixture failed. Their reviewed source/evidence remain on archive/si4-backend-candidate-261109; rollback9fa63516 restores all backend paths exactly to origin/main0cd149ca. They are not completed or published product changes.
-- Resume backend work with the clock/lease/latest-job diagnosis in reports/261109-si4.md. Do not increase budgets, bypass the failed media gate or count the successful13 earlier stages as a full pass.
-- Existing T731 and blocked qualification/planning work remain outside this run.
+- si4 local main integrates reviewedT737/T738/T739; final actual-main full FE passes580files/4638tests plus lint/format/FSD/type/build. T737/T738 are locally done; T739 is blocked on its explicit full-CI completion acceptance, with config already implemented. Do not reimplement it.
+- Every source push and whole-group completion remain blocked: fresh full CI378fe54a fails unchanged clip/store continuation test with CLIP_PROCESSING_FAILED. Preserve the failed native receipt and original full-CI group gate; do not substitute an older Go pass. Report reports/261109-si4.md.
+- T740/T741/T742 are deferred after real92daffbe release failure; reviewed source/evidence remain on archive/si4-backend-candidate-261109. Rollback9fa63516 restores the backend exactly toorigin0cd149ca. They are not completed product changes.
+- Resume backend diagnosis only with a new bounded scope/time reservation. Existing T731 and blocked qualification/planning work remain outside this run; no automatic continuation or standing schedule is enabled.
 
 ## log
+- 261109 si4 local closure: reviewedT739 merge72ab/T738 mergef127; actualmain580files/4638tests andallFEchecks pass with stabledotenv. ArchiveT738 underARCH24; blockT739/wholegroup/sourcepush on observedGo failure, preservebackendrollback/archive and olddirtyspaces; endbefore21:00KST.
 - 261109 si4 defersT740/T741/T742: actual release failed after13 passed image/worker stages; observed10.223s Docker clock rollback and latest-job query reproduction, final render cause unresolved. Preserve92daffbe/archive branch and restore backend exactly toorigin0cd at9fa63516; finish FE scope before21:00KST.
 - 261109 create-task review/perf-quality-si4-261109 F7 (si4) → T742 same-byte authenticated FFmpeg input fallback; source/signature/key identity proven in pinned base, no gate or runtime change.
 - 261109 si4 deadline clarified by owner: complete before21:00KST; T741 reviewed source integrated, final media gates then staged T739/T738 publication remain.
@@ -199,4 +194,3 @@
 - 261109 T735 integrated (sil): Editable keeps keyboard focus on entry/exit (keyboard-only entry move, exit only while focus is lost); 3 cases fail at base; reviewed approved (review ff709665, P3 only).
 - 261109 create-task review/perf-quality-261109 F10 (sil) → T735 Editable keyboard focus; F6 rejected, F11 kept [?].
 - 261109 T733 integrated (sil): DB tests copy a once-migrated template (74 of 86 sites); post/store 117.6→3.5 s locally; reviewed approved (review 4d401114, P3 only).
-- 261109 T734 integrated (sil): editor routes lazy, entry 1,433→1,163 kB raw (445→365 kB gzip); reviewed approved (review 640f1c5c, P3 only).
