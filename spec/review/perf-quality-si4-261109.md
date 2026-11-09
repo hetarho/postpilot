@@ -1,8 +1,8 @@
 # REVIEW perf-quality-si4-261109
-> st:converted@261109 | scope:frontend test setup and template/guideline keyboard focus | at:97e07304 | base:ARCH@21
+> st:converted@261109 | scope:frontend tests and directory focus plus required backend recovery/build repairs | at:97e07304 | base:ARCH@21
 
 ## summary
-- Three measured behavior-preserving improvements approved for the user's four-hour self-improve-local invocation; existing pending/blocked tasks are excluded.
+- Three measured primary improvements and three required behavior-preserving recovery/build repairs approved for the user's four-hour self-improve-local invocation; existing pending/blocked tasks are excluded.
 
 ## findings
 - F1 [o] P2 `frontend/src/pages/templates/ui/TemplatesPage.tsx`, `frontend/src/pages/video-templates/ui/VideoTemplatesPage.tsx`: bug: confirmed deletion removes the focused dialog opener and leaves focus on BODY on both real routes; recover once after the requested row disappears, only while focus is lost, to the next/preceding row delete or the existing creation action when empty →T737
@@ -12,8 +12,10 @@
 
 - F5 [o] P1 `backend/internal/clip/store/queries/checkpoints.sql`: bug: SaveAttemptCheckpoint and GetAttemptCheckpoint elect the latest attempt by wall time, so a real 10-second host clock rollback lets a terminal predecessor outrank the sole active successor and fails analysis with ErrAttemptCheckpointUnavailable; use existing active ownership for saves and stored checkpoint identity plus the existing atomic replacement trigger for reads →T740
 - F6 [o] P1 `backend/build/media-tools.sh`: bug: Alpine's current index no longer resolves the three fixed zlib1.3.2-r1 packages, blocking both canonical and tar media builds before any smoke; preserve the original indexed path and recover only identical-version official checksum/signature-verified APKs when needed →T741
+- F7 [o] P1 `backend/build/media-tools.sh` FFmpeg downloads: bug: canonical TLS never reaches a certificate/HTTP response on 30 bounded client variants, blocking a current cold build; add only measured same-byte source/original-signature/official-key fallback downloads while preserving source SHA and full GPG verification →T742
 
 ## notes
+- F7 approval: root inspected the exact pinned-base verified-route exit0 and fresh-keyring proof. Source cache has the existing cf38...SHA; original520-byte signature verifies under the unchanged full official fingerprint with the immutable official FFmpeg website key. Two existing files, bounded original-first transfers, no fallback on integrity failure, no TLS/trust/version changes. Budget20min plus separate review; root still executes every current-source image/media gate and exact-SHA remote workflow. The user clarified completion before21:00KST; no unrelated improvement scope opens.
 - F6 approval: root inspected /tmp/postpilot-si4/media-env/apk-repair/proposal.json and actual amd6470-dependency install: all three packages remain1.3.2-r1 with the Alpine CVE backport. Preserve original generic path, add only a fixed-hash fallback for seven complete official architecture sets, keep missing/unknown sets fail-closed and document qualification limits. Two product paths,15min implementation/selected checks plus separate review, full unchanged CI/deploy/media gates before publication; no version/trust/policy changes. Old build/cache failures remain preserved, never counted as passed.
 - Authority: direct user request on 261109 for roughly four hours of self-improve-local, until 09:44 UTC / 18:44 KST; continue performance, test-cost, code-quality and keyboard-usability scope. No standing schedule, paid calls, public contracts, persistence changes or new product policy. Approval is proposal selection, not code-review approval.
 - Fixed source base: 97e07304b6b8a838e9b9e9958e45a51e7e78eab2; main is clean before this run's metadata. No other live session or conflicting attempt; old creation-comparison-ux runtime has no live attempts and another path.
