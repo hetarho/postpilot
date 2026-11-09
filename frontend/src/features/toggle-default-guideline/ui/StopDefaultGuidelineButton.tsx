@@ -16,12 +16,15 @@ export function StopDefaultGuidelineButton({
   kind,
   guideline,
   onRefused,
+  onRemoving,
 }: {
   ownerId: string
   kind: GuidelineKind
   guideline: Pick<DefaultGuideline, 'key' | 'name'>
   /** Called with the catalogue's message on a refusal, and with `''` when a new attempt starts. */
   onRefused: (message: string) => void
+  /** Coordinate the optimistic removal; the returned cancellation belongs to this attempt. */
+  onRemoving?: () => () => void
 }) {
   const { t } = useTranslation('guidelines')
   const toggle = useSetDefaultGuidelineEnabled(ownerId, kind)
@@ -32,9 +35,11 @@ export function StopDefaultGuidelineButton({
       disabled={toggle.isPending}
       onClick={() => {
         onRefused('')
-        toggle
-          .setEnabled(guideline.key, false)
-          .catch((cause: unknown) => onRefused(guidelineErrorMessage(cause)))
+        const cancelRemoval = onRemoving?.()
+        toggle.setEnabled(guideline.key, false).catch((cause: unknown) => {
+          cancelRemoval?.()
+          onRefused(guidelineErrorMessage(cause))
+        })
       }}
     >
       {t('defaults.stop')}

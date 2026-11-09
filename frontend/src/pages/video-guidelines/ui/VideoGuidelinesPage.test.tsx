@@ -1,8 +1,10 @@
+import { Code, ConnectError, type Transport } from '@connectrpc/connect'
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoGuidelineKind, ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { createFakeAuthTransport } from '@/test/session'
 import { publishAuthoringDraft } from '@/test/authoring-ui'
 import type { FakeGuidelineRow, FakeGuidelinesOptions } from '@/test/guidelines'
 
@@ -293,5 +295,220 @@ describe('the 영상 지침 후보 section', () => {
       within(await screen.findByRole('dialog')).getByRole('button', { name: '전부 거절' }),
     )
     await waitFor(() => expect(dismissals).toEqual(['clip-repeated', 'clip-orphan']))
+  })
+})
+
+describe('directory removal keyboard focus', () => {
+  const owned: FakeGuidelineRow[] = ['First', 'Middle', 'Last'].map((name) => ({
+    id: `focus-${name.toLowerCase()}`,
+    text: `Owned ${name}`,
+    kind: 'clip',
+  }))
+  const defaultRows = ['First', 'Last'].map((name) => ({
+    key: `focus-${name.toLowerCase()}`,
+    name: `Default ${name}`,
+    text: `Rule ${name}`,
+  }))
+
+  function mountFocusDirectory({
+    guidelines = owned,
+    defaults = [] as NonNullable<FakeGuidelinesOptions['defaults']>,
+    holdReread = false,
+    refuseDelete = false,
+    holdSwitch = false,
+    refuseSwitch = false,
+  } = {}) {
+    let deleting = false
+    let releaseReread = () => {}
+    let releaseSwitch = () => {}
+    const reread = new Promise<void>((resolve) => {
+      releaseReread = resolve
+    })
+    const switchGate = new Promise<void>((resolve) => {
+      releaseSwitch = resolve
+    })
+    const base = createFakeAuthTransport({
+      user: USER,
+      existingSetup: true,
+      guidelines: { guidelines, clipDefaults: defaults, refuseDefaultSwitch: refuseSwitch },
+    })
+    const transport: Transport = {
+      ...base,
+      unary: async (...args) => {
+        const method = args[0].name
+        if (method === 'DeleteGuideline') {
+          if (refuseDelete) throw new ConnectError('refused', Code.PermissionDenied)
+          deleting = true
+        }
+        if (method === 'SetDefaultGuidelineEnabled' && holdSwitch) await switchGate
+        const response = await base.unary(...args)
+        if (method === 'ListGuidelines' && deleting && holdReread) await reread
+        return response
+      },
+    }
+    return { ...renderAppAt('/video-guidelines', { transport }), releaseReread, releaseSwitch }
+  }
+
+  async function focusRow(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const disclosure = await screen.findByRole('button', {
+      name: new RegExp(`^${name}`),
+      expanded: false,
+    })
+    disclosure.focus()
+    await user.keyboard('{Enter}')
+    return within(disclosure.closest('li')!)
+  }
+
+  async function openFocusDelete(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const target = await focusRow(user, name)
+    target.getByRole('button', { name: '지침 삭제' }).focus()
+    await user.keyboard('{Enter}')
+    return within(await screen.findByRole('dialog'))
+  }
+
+  async function confirmFocusDelete(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const dialog = await openFocusDelete(user, name)
+    dialog.getByRole('button', { name: '삭제' }).focus()
+    await user.keyboard('{Enter}')
+  }
+
+  async function stopByKeyboard(user: ReturnType<typeof userEvent.setup>, name: string) {
+    const target = await focusRow(user, name)
+    target.getByRole('button', { name: `${name} 적용 안함` }).focus()
+    await user.keyboard('{Enter}')
+  }
+
+  const queryDisclosure = (name: string) =>
+    screen.queryByRole('button', { name: new RegExp(`^${name}`), expanded: undefined })
+  const getDisclosure = (name: string) =>
+    screen.getByRole('button', { name: new RegExp(`^${name}`), expanded: false })
+
+  it.each([
+    { name: 'Owned Middle', rows: owned, next: 'Owned Last' },
+    { name: 'Owned Last', rows: owned, next: 'Owned Middle' },
+    { name: 'Owned First', rows: [owned[0]], next: null },
+  ])('recovers the keyboard position after deleting $name', async ({ name, rows, next }) => {
+    const user = userEvent.setup()
+    mountFocusDirectory({ guidelines: rows })
+    await confirmFocusDelete(user, name)
+    await waitFor(() => expect(queryDisclosure(name)).toBeNull())
+    expect(
+      next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+    ).toHaveFocus()
+  })
+
+  it.each([
+    {
+      name: 'Default First',
+      defaults: [defaultRows[0]],
+      guidelines: [owned[0]],
+      next: 'Owned First',
+    },
+    { name: 'Default Last', defaults: defaultRows, guidelines: [], next: 'Default First' },
+    { name: 'Default First', defaults: [defaultRows[0]], guidelines: [], next: null },
+  ])(
+    'recovers the keyboard position after disabling $name with next $next',
+    async ({ name, defaults, guidelines, next }) => {
+      const user = userEvent.setup()
+      mountFocusDirectory({ guidelines, defaults })
+      await stopByKeyboard(user, name)
+      await waitFor(() => expect(queryDisclosure(name)).toBeNull())
+      expect(
+        next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+      ).toHaveFocus()
+    },
+  )
+
+  it('cancels a delete without leaving a stale recovery on a later reread', async () => {
+    const user = userEvent.setup()
+    const { queryClient } = mountFocusDirectory()
+    const dialog = await openFocusDelete(user, 'Owned Middle')
+    dialog.getByRole('button', { name: '취소' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const target = getDisclosure('Owned First')
+    target.focus()
+    await act(() => queryClient.invalidateQueries())
+    expect(target).toHaveFocus()
+  })
+
+  it('keeps a refused delete visible and never reclaims focus on an unrelated reread', async () => {
+    const user = userEvent.setup()
+    const { queryClient } = mountFocusDirectory({ refuseDelete: true })
+    await confirmFocusDelete(user, 'Owned Middle')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(queryDisclosure('Owned Middle')).toBeInTheDocument()
+    const target = screen.getByRole('button', { name: '기본 지침' })
+    target.focus()
+    await act(() => queryClient.invalidateQueries())
+    expect(target).toHaveFocus()
+  })
+
+  it('waits for a delayed delete reread before recovering the next disclosure', async () => {
+    const user = userEvent.setup()
+    const { releaseReread } = mountFocusDirectory({ holdReread: true })
+    await confirmFocusDelete(user, 'Owned Middle')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(queryDisclosure('Owned Middle')).toBeInTheDocument()
+    await act(async () => releaseReread())
+    await waitFor(() => expect(queryDisclosure('Owned Middle')).toBeNull())
+    expect(getDisclosure('Owned Last')).toHaveFocus()
+  })
+
+  it('preserves focus moved during a delayed reread and settles the recovery once', async () => {
+    const user = userEvent.setup()
+    const { queryClient, releaseReread } = mountFocusDirectory({ holdReread: true })
+    await confirmFocusDelete(user, 'Owned Middle')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    const target = getDisclosure('Owned First')
+    target.focus()
+    await act(async () => releaseReread())
+    await waitFor(() => expect(queryDisclosure('Owned Middle')).toBeNull())
+    expect(target).toHaveFocus()
+    target.blur()
+    await act(() => queryClient.invalidateQueries())
+    expect(document.body).toHaveFocus()
+  })
+
+  it('recovers on optimistic removal before the switch settles and preserves moved focus', async () => {
+    const user = userEvent.setup()
+    const { queryClient, releaseSwitch } = mountFocusDirectory({
+      guidelines: [owned[0]],
+      defaults: [defaultRows[0]],
+      holdSwitch: true,
+    })
+    await stopByKeyboard(user, 'Default First')
+    await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
+    expect(getDisclosure('Owned First')).toHaveFocus()
+    const target = screen.getByRole('button', { name: '기본 지침' })
+    target.focus()
+    await act(async () => releaseSwitch())
+    await act(() => queryClient.invalidateQueries())
+    expect(target).toHaveFocus()
+    target.blur()
+    await act(() => queryClient.invalidateQueries())
+    expect(document.body).toHaveFocus()
+  })
+
+  it('keeps optimistic refusal rollback/messages and cancels any later stale move', async () => {
+    const user = userEvent.setup()
+    const { queryClient, releaseSwitch } = mountFocusDirectory({
+      guidelines: [owned[0]],
+      defaults: [defaultRows[0]],
+      holdSwitch: true,
+      refuseSwitch: true,
+    })
+    await stopByKeyboard(user, 'Default First')
+    await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
+    expect(getDisclosure('Owned First')).toHaveFocus()
+    const target = screen.getByRole('button', { name: '기본 지침' })
+    target.focus()
+    await act(async () => releaseSwitch())
+    expect(await screen.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()
+    expect(queryDisclosure('Default First')).toBeInTheDocument()
+    expect(target).toHaveFocus()
+    target.blur()
+    await act(() => queryClient.invalidateQueries())
+    expect(document.body).toHaveFocus()
   })
 })
