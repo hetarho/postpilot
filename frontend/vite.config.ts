@@ -1,11 +1,12 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { loadEnv } from 'vite'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import type { Plugin } from 'vite'
 import { routeSchemasPastPageIndex } from './build/route-schemas'
+import { NODE_UNIT_TEST_FILES } from './build/vitest-projects'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -64,9 +65,26 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       globals: true,
-      environment: 'jsdom',
-      setupFiles: ['./src/test/setup.ts'],
       css: true,
+      projects: [
+        {
+          extends: true,
+          test: {
+            name: 'node',
+            environment: 'node',
+            include: NODE_UNIT_TEST_FILES,
+          },
+        },
+        {
+          extends: true,
+          test: {
+            name: 'dom',
+            environment: 'jsdom',
+            setupFiles: ['./src/test/setup.ts'],
+            exclude: [...configDefaults.exclude, ...NODE_UNIT_TEST_FILES],
+          },
+        },
+      ],
       // Every rendered instant goes through Intl with the machine's own zone (localization/
       // format.ts), which is right in a browser and non-deterministic in a test: an assertion
       // written against a wall clock passes in KST on a contributor's machine and fails in UTC

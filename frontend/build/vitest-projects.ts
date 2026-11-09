@@ -1,0 +1,23 @@
+// Audited logic tests only: every unmatched file keeps the browser environment and setup.
+export const NODE_UNIT_TEST_FILES = [
+  'src/shared/lib/blocks/escape.test.ts',
+  'src/shared/lib/media/phase-metrics.test.ts',
+  'src/shared/lib/media/jpeg-capture-time.test.ts',
+  'src/shared/lib/media/packet-window.test.ts',
+  'src/shared/lib/media/audio/encoder-delay.test.ts',
+  'src/shared/lib/media/video/mp4-capture-time.test.ts',
+  'src/features/edit-storyline/model/view-order.test.ts',
+  'src/features/edit-storyline/model/storyline-edits.test.ts',
+  'src/features/edit-template/model/builder-metadata.test.ts',
+  'src/features/ai-authoring/lib/readable-prose.test.ts',
+  'src/pages/editor/model/search.test.ts',
+  'src/pages/template/model/search.test.ts',
+  'src/entities/clip-preview/model/caption-sheets.test.ts',
+  'src/entities/clip-project/lib/write-lane.test.ts',
+  'src/entities/clip-project/model/render-kind.test.ts',
+  'src/entities/clip-project/model/eligibility.test.ts',
+  'src/entities/clip-project/model/source-order.test.ts',
+  'src/shared/lib/presign.test.ts',
+  'src/shared/lib/image/filename.test.ts',
+  'src/widgets/export-panel/lib/hashtags.test.ts',
+]
