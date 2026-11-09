@@ -8,7 +8,13 @@
 - docs: en
 - push: main
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T05:46Z | - |
+
 ## inbox
+- 261109 decided review/perf-quality-si4-261109 T737 T738 T739: four-hour local improvement delegation → approve measured template/guideline focus recovery and an exact 20-file Node test project (alt: broad DOM/test refactors | dependency/policy changes) — five real-route BODY defects and 31.22→2.73 s paired 83-case subset; preserve existing contracts, independently review every unit, final full CI before cfg main push.
 - 261109 decided review/perf-quality-261109 T736: third round → adopt F11 /memories keyboard focus for /memories only, reject F4 after re-measuring (2.5 s with T733) (alt: also templates, clip templates and guidelines | stop the run) — measured defect, one page, same rule as T735; the other directories' shape is inferred and their extension stays a scope choice.
 - 261109 decided review/perf-quality-261109 T735: second scout round (interaction UI/UX) → adopt F10 Editable keyboard focus, defer F11 /memories focus, reject F6 useJob error polling (alt: F11 too | fix F6) — F10 is measured on the core ② 다듬기 flow and invisible to pointer users; F11 has smaller reach and an open scope choice; F6 has no user-facing trigger.
 - 261109 decided review/perf-quality-261109 T733 T734: which scout proposals does this local improvement run (owner: until 08:00, focus performance, code quality and UI/UX) implement? → F1 per-binary template DB for Go tests and F2 lazy post editor routes, both behavior-preserving with measured evidence (alt: add F3 lazy motion | add F4 per-iteration queue stop) — F1 is ≈60% of CI's backend job and F2 a one-file cut of every first load; F3 changes the first-moment segmented animation, F4 should be re-measured after F1, and both would push the review, pre-push and media gates past 08:00.
@@ -146,6 +152,7 @@
 | all-261008 | converted@261008 |
 | structure-261008 | converted@261008 |
 | perf-quality-261109 | converted@261109 |
+| perf-quality-si4-261109 | converted@261109 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -157,17 +164,17 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
+| T737 | Keep keyboard focus after deleting a template | ARCH | - | todo |
+| T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
+| T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
 
 ## next
-- self-improve-local complete (sil; report reports/261109-sil.md): T733 per-binary template DB for Go tests (CI go test 1006→262 s), T734 lazy post editor routes (entry 445→365 kB gzip), T735 Editable keyboard focus, T736 /memories keyboard focus — all independently reviewed; pushed 5c2a8c03 (CI, Deploy backend, Verify media success) and fb01e678 (CI success); the flaky llm leak-sentinel fix pushed as c96bc898 (CI, Deploy backend, Verify media success).
-- T732 complete (cap): a writer caption the render start refuses is freed, then omitted with a notice, and the render proceeds on the saved next revision; owner content still refuses.
-- implement-task T731 (brr): Verify media 41469072328 refused 70811b8c at the worker parity preparation subtest, CadenceVerified worker true vs embedded false on the same fixture; not reproduced in 12 local repeats.
-- T730 complete (brr; report reports/261102-brr.md): ② offers 브라우저에서 렌더 on a capable device and the API admits it; analysis preparation stays closed. Pushed 70811b8c: CI and Deploy backend success, Verify media red only at the T731 cadence parity check.
-- T728 T729 complete (nud; report reports/261102-nud.md): a new post or clip on an account missing a made voice or a (video) template opens a sheet offering to make it, with 이대로 쓰기/만들기 and 다시 묻지 않기; the video-template wizard returns to the new clip with the template selected. Pushed dffd0a20, CI 41330923778 success.
-- T727 complete (tpv; report reports/261030-tpv.md): the template preview leads with its frame and an 인트로 · 자막 · 아웃트로 switch, design choices move the scrubber to their part, presets named without A/B/E (ids unchanged).
-- T726 complete (chl): each section list page's floating button opens its own creation directly (새 글/영상 · 새 템플릿 · 새 말투 · 새 지침). Gate at 0e8015fd: 568 files/4528 tests and all FE CI-equivalent checks pass; report reports/261030-chl.md.
+- self-improve-local in progress (si4; reports/261109-si4.md): approved T737 template focus, T738 guideline focus (after T737), T739 audited Node test project; all implementation and reviews are explicitly scoped.
+- T731 remains unrelated todo; existing blocked qualification tasks and INFRA planning remain outside this run.
 
 ## log
+- 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
+- 261109 self-improve-local starts (si4): user delegates a roughly four-hour run on main at 97e07304, prioritizing performance, test cost, code quality and keyboard usability; proposals require orchestrator approval and independent code review.
 - 261109 pushed c96bc898 (llm sentinel fix + report, sil): backend gate at 534ad96e passes (90 packages, 119 s); CI 42522650704, Deploy backend 42522650731, Verify media 42523039487 success.
 - 261109 fix llm tests: leak checks searched inspection JSON for short numeric sentinels ("999", "90000", "0.7") that a live RFC3339Nano IssuedAt can contain — CI 42520643603 failed on spec-only 1115efa7; sentinels now cannot match a timestamp (15/3000 and 2357/250000 failures → 0); reviewed approved (sil).
 - 261109 pushed fb01e678 (T736 + report, sil): FE gate at df31babb (577 files/4,592 tests, all FE checks) passes; CI 42519697954 success; no backend path, so no deploy.
@@ -186,5 +193,3 @@
 - 261103 pushed bc1d5bf4 (render refusal fix): FE gate 575 files/4576 tests and all FE checks pass; CI 41482325787 success; no backend path, so no deploy.
 - 261103 fix clip render start: a server render refused by plan validation (CLIP_COMPOSITION_INVALID/UNAVAILABLE) is a definite refusal, not an uncertain start; ② shows the failure instead of a stuck run view that a reload sends back to ②.
 - 261103 pushed 70811b8c (T730, brr): CI 41468348128 and Deploy backend 41468347969 success; Verify media 41469072328 failed only at Media worker TestWorkerExecutionParity/preparation (CadenceVerified mismatch, unrelated to T730) → T731.
-- 261102 brr pre-push gate at 70811b8c: FE 575 files/4575 tests, all CI checks, compose, deployable builds, worker smoke and media release pass.
-- 261102 T730 done: browser final rendering active (readiness record + code-owned API switch); 81 files/608 FE tests and BE clip/cmd/api tests pass.
