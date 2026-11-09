@@ -14,6 +14,7 @@
 | si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T08:16Z | - |
 
 ## inbox
+- 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
 - 261109 decided review/perf-quality-si4-261109 T740: observed VM clock rollback rejects the active attempt checkpoint → repair SQL ownership using the existing active-job index and atomic checkpoint replacement trigger (alt: retry tests | change timestamps/clocks | weaken the gate) — deterministic and real-run proof, no policy/schema/provider/credit change; this repair precedes the pending source publication.
 - 261109 decided review/perf-quality-si4-261109 T737 T738 T739: four-hour local improvement delegation → approve measured template/guideline focus recovery and an exact 20-file Node test project (alt: broad DOM/test refactors | dependency/policy changes) — five real-route BODY defects and 31.22→2.73 s paired 83-case subset; preserve existing contracts, independently review every unit, final full CI before cfg main push.
@@ -169,8 +170,10 @@
 | T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
+| T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
+- T742 is the measured same-byte FFmpeg download prerequisite; T741's real installed versions pass, canonical TLS remains unavailable. Root is verifying T739's complete FE component on its exact approved source in an owned verification checkout while preserving main.
 - Owner deadline: finish before21:00KST on261109 (12:00UTC). Finish current five units and their required checks; no additional improvement scope.
 - T741 repairs the reproduced index-rotation packaging prerequisite; full CI90 Go packages already passed at80d3cd8a, media build remains failed before smoke. T738/T739 reviewed source is preserved for later per-unit integration/publication.
 - self-improve-local si4: T737/T740 integrated; run full CI and required CPU deployment/media gates, then publish. T738/T739 follow as separately validated units.
@@ -178,6 +181,7 @@
 - Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 create-task review/perf-quality-si4-261109 F7 (si4) → T742 same-byte authenticated FFmpeg input fallback; source/signature/key identity proven in pinned base, no gate or runtime change.
 - 261109 si4 deadline clarified by owner: complete before21:00KST; T741 reviewed source integrated, final media gates then staged T739/T738 publication remain.
 - 261109 create-task review/perf-quality-si4-261109 F6 (si4) → T741 same-version signed/checksummed APK fallback; no library upgrade or gate relaxation. Both original media build failures preserved.
 - 261109 T740 done (si4): reviewed c3423b1b, source a89b15b7/submission d796f89b merged6a7bd326; three affected packages and17 regression subcases pass; full CI/media gate before pending T737/source publication.
@@ -197,4 +201,3 @@
 - 261109 T733 integrated (sil): DB tests copy a once-migrated template (74 of 86 sites); post/store 117.6→3.5 s locally; reviewed approved (review 4d401114, P3 only).
 - 261109 T734 integrated (sil): editor routes lazy, entry 1,433→1,163 kB raw (445→365 kB gzip); reviewed approved (review 640f1c5c, P3 only).
 - 261109 create-task review/perf-quality-261109 (sil) → T733 template DB for Go tests, T734 lazy post editor routes; F3–F9 kept [?].
-- 261103 pushed b69fbc67 (T732, cap): full CI and media gates pass locally; CI 41503060208, Deploy backend 41503060153 and Verify media 41503865441 all success (Media worker green, the T731 mismatch did not recur).
