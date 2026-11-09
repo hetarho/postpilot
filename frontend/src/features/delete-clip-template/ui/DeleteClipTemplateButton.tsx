@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useClipTemplateMutations, type ClipTemplate } from '@/entities/clip-template'
 import { appFailureFromConnect } from '@/shared/api'
@@ -14,9 +14,14 @@ import { AppFailureMessage, Button, Dialog, FieldMessage } from '@/shared/ui'
 export function DeleteClipTemplateButton({
   ownerId,
   template,
+  buttonRef,
+  onDeleted,
 }: {
   ownerId: string
   template: Pick<ClipTemplate, 'id' | 'name' | 'projectCount'>
+  buttonRef?: Ref<HTMLButtonElement>
+  /** Success only. The invalidated directory may not have removed this row yet. */
+  onDeleted?: () => void
 }) {
   const { t } = useTranslation(['clips', 'common'])
   const { remove } = useClipTemplateMutations(ownerId)
@@ -27,15 +32,18 @@ export function DeleteClipTemplateButton({
       await remove.mutateAsync(template.id)
     } catch {
       // The refusal renders beside the button.
-    } finally {
       // Closed on failure too, so the message is not left behind the scrim.
       setConfirming(false)
+      return
     }
+    setConfirming(false)
+    onDeleted?.()
   }
 
   return (
     <>
       <Button
+        ref={buttonRef}
         variant="danger"
         disabled={remove.isPending}
         onClick={() => setConfirming(true)}

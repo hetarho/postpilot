@@ -1,12 +1,21 @@
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { useRef, type Ref } from 'react'
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '@/entities/clip-project'
 import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
 import { ChannelActions } from '@/widgets/channel-actions'
-import { Badge, Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  pageStyles,
+  typographyStyles,
+  useListRemovalFocus,
+} from '@/shared/ui'
 
 /** The video-template directory, in the shape the post-template directory already has (CLIP-42):
  *  the same rows, the same usage badge, the same failure and empty treatments, and one docked CTA. */
@@ -21,9 +30,17 @@ export function VideoTemplatesPage() {
   const channel = CLIP_CHANNELS.includes(search.channel as ClipChannel)
     ? (search.channel as ClipChannel)
     : DEFAULT_CLIP_CHANNEL
+  const page = useRef<HTMLElement>(null)
+  const deleteButtons = useRef(new Map<string, HTMLButtonElement>())
+  const requestRemoval = useListRemovalFocus({
+    keys: templates.map((template) => template.id),
+    getTarget: (id) => deleteButtons.current.get(id),
+    getFallback: () =>
+      page.current?.querySelector<HTMLAnchorElement>('a[href^="/video-templates/new?"]'),
+  })
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <main ref={page} className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
       <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('directory.description', { ns: 'clips' })}
@@ -74,11 +91,16 @@ export function VideoTemplatesPage() {
               </Typography>
               {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
               <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
-                {templates.map((template) => (
+                {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
                     ownerId={ownerId}
                     template={template}
+                    deleteButtonRef={(button) => {
+                      if (button) deleteButtons.current.set(template.id, button)
+                      else deleteButtons.current.delete(template.id)
+                    }}
+                    onDeleted={() => requestRemoval(template.id, index)}
                     summary={summaries.data?.find(
                       (row) =>
                         row.targetId === template.id || row.lastPublication?.id === template.id,
@@ -152,10 +174,14 @@ function TemplateRow({
   ownerId,
   template,
   summary,
+  deleteButtonRef,
+  onDeleted,
 }: {
   ownerId: string
   template: ClipTemplate
   summary?: AuthoringSummary
+  deleteButtonRef: Ref<HTMLButtonElement>
+  onDeleted: () => void
 }) {
   const { t } = useTranslation('clips')
   return (
@@ -183,7 +209,12 @@ function TemplateRow({
         <Badge tone="neutral">
           {t('directory.projectCount', { count: template.projectCount })}
         </Badge>
-        <DeleteClipTemplateButton ownerId={ownerId} template={template} />
+        <DeleteClipTemplateButton
+          ownerId={ownerId}
+          template={template}
+          buttonRef={deleteButtonRef}
+          onDeleted={onDeleted}
+        />
       </div>
     </li>
   )

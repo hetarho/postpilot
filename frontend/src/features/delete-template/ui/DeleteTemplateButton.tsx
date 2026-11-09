@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { detachWarning, useDeleteTemplate, type Template } from '@/entities/template'
 import { Button, Dialog, FieldMessage } from '@/shared/ui'
@@ -8,9 +8,14 @@ import { Button, Dialog, FieldMessage } from '@/shared/ui'
 export function DeleteTemplateButton({
   ownerId,
   template,
+  buttonRef,
+  onDeleted,
 }: {
   ownerId: string
   template: Pick<Template, 'id' | 'name' | 'postCount'>
+  buttonRef?: Ref<HTMLButtonElement>
+  /** Success only. The invalidated directory may not have removed this row yet. */
+  onDeleted?: () => void
 }) {
   const { t } = useTranslation(['templates', 'common'])
   const remove = useDeleteTemplate(ownerId)
@@ -21,15 +26,18 @@ export function DeleteTemplateButton({
       await remove.remove(template.id)
     } catch {
       // The mutation's message renders beside the button.
-    } finally {
       // Closed on failure too, so the message is not left behind the scrim.
       setConfirming(false)
+      return
     }
+    setConfirming(false)
+    onDeleted?.()
   }
 
   return (
     <>
       <Button
+        ref={buttonRef}
         variant="danger"
         disabled={remove.isPending}
         onClick={() => setConfirming(true)}
