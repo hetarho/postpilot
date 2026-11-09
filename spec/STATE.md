@@ -164,15 +164,15 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 | blocked@261007 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
-| T737 | Keep keyboard focus after deleting a template | ARCH | - | todo |
 | T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
 
 ## next
-- self-improve-local in progress (si4; reports/261109-si4.md): approved T737 template focus, T738 guideline focus (after T737), T739 audited Node test project; all implementation and reviews are explicitly scoped.
+- self-improve-local in progress (si4; reports/261109-si4.md): T737 template focus integrated/reviewed, pre-push full gate pending; T738 guideline focus may use its reviewed helper, T739 audited Node test project in progress.
 - T731 remains unrelated todo; existing blocked qualification tasks and INFRA planning remain outside this run.
 
 ## log
+- 261109 T737 done (si4): approved review 76ed0387; source integrated 7e1f30c5; unit evidence reuses identical verified source 99399408 (34 affected tests plus 54 consumer cases, six base failures); per-unit full CI/push next.
 - 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
 - 261109 self-improve-local starts (si4): user delegates a roughly four-hour run on main at 97e07304, prioritizing performance, test cost, code quality and keyboard usability; proposals require orchestrator approval and independent code review.
 - 261109 pushed c96bc898 (llm sentinel fix + report, sil): backend gate at 534ad96e passes (90 packages, 119 s); CI 42522650704, Deploy backend 42522650731, Verify media 42523039487 success.
@@ -192,4 +192,3 @@
 - 261103 update-ssot CLIP r72 + create-task (cap): CLIP-224+ render start repairs or omits a refused writer caption → T732.
 - 261103 pushed bc1d5bf4 (render refusal fix): FE gate 575 files/4576 tests and all FE checks pass; CI 41482325787 success; no backend path, so no deploy.
 - 261103 fix clip render start: a server render refused by plan validation (CLIP_COMPOSITION_INVALID/UNAVAILABLE) is a definite refusal, not an uncertain start; ② shows the failure instead of a stuck run view that a reload sends back to ②.
-- 261103 pushed 70811b8c (T730, brr): CI 41468348128 and Deploy backend 41468347969 success; Verify media 41469072328 failed only at Media worker TestWorkerExecutionParity/preparation (CadenceVerified mismatch, unrelated to T730) → T731.
