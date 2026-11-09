@@ -1,11 +1,20 @@
 import { useTranslation } from 'react-i18next'
+import { useRef, type Ref } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { useTemplates, type Template } from '@/entities/template'
 import { DeleteTemplateButton } from '@/features/delete-template'
 import { ChannelActions } from '@/widgets/channel-actions'
-import { Badge, Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  pageStyles,
+  typographyStyles,
+  useListRemovalFocus,
+} from '@/shared/ui'
 
 /** The account's 템플릿 (TMPL-24): a list, and the one action that adds to it. Composition only —
  *  every action is its own feature, and a row is the way into one template.
@@ -19,9 +28,16 @@ export function TemplatesPage() {
   const ownerId = user?.id ?? ''
   const { templates, isPending, isError, isFetching, refetch } = useTemplates(ownerId)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'post-template' })
+  const page = useRef<HTMLElement>(null)
+  const deleteButtons = useRef(new Map<string, HTMLButtonElement>())
+  const requestRemoval = useListRemovalFocus({
+    keys: templates.map((template) => template.id),
+    getTarget: (id) => deleteButtons.current.get(id),
+    getFallback: () => page.current?.querySelector<HTMLAnchorElement>('a[href="/templates/new"]'),
+  })
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <main ref={page} className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
       <Typography variant="display">{t('title', { ns: 'templates' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('page.description', { ns: 'templates' })}
@@ -70,11 +86,16 @@ export function TemplatesPage() {
               </Typography>
               {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
               <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
-                {templates.map((template) => (
+                {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
                     ownerId={ownerId}
                     template={template}
+                    deleteButtonRef={(button) => {
+                      if (button) deleteButtons.current.set(template.id, button)
+                      else deleteButtons.current.delete(template.id)
+                    }}
+                    onDeleted={() => requestRemoval(template.id, index)}
                     summary={summaries.data?.find(
                       (row) =>
                         row.targetId === template.id || row.lastPublication?.id === template.id,
@@ -150,10 +171,14 @@ function TemplateRow({
   ownerId,
   template,
   summary,
+  deleteButtonRef,
+  onDeleted,
 }: {
   ownerId: string
   template: Template
   summary?: AuthoringSummary
+  deleteButtonRef: Ref<HTMLButtonElement>
+  onDeleted: () => void
 }) {
   const { t } = useTranslation('templates')
   return (
@@ -183,7 +208,12 @@ function TemplateRow({
       </div>
       <div className="relative ml-auto flex shrink-0 items-center gap-2">
         <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
-        <DeleteTemplateButton ownerId={ownerId} template={template} />
+        <DeleteTemplateButton
+          ownerId={ownerId}
+          template={template}
+          buttonRef={deleteButtonRef}
+          onDeleted={onDeleted}
+        />
       </div>
     </li>
   )
