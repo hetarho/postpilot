@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T08:16Z | - |
+| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T09:43Z | - |
 
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
@@ -169,18 +169,18 @@
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
+| T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH CLIP | - | todo |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- T742 is the measured same-byte FFmpeg download prerequisite; T741's real installed versions pass, canonical TLS remains unavailable. Root is verifying T739's complete FE component on its exact approved source in an owned verification checkout while preserving main.
-- Owner deadline: finish before21:00KST on261109 (12:00UTC). Finish current five units and their required checks; no additional improvement scope.
-- T741 repairs the reproduced index-rotation packaging prerequisite; full CI90 Go packages already passed at80d3cd8a, media build remains failed before smoke. T738/T739 reviewed source is preserved for later per-unit integration/publication.
-- self-improve-local si4: T737/T740 integrated; run full CI and required CPU deployment/media gates, then publish. T738/T739 follow as separately validated units.
-- T740 removes clock-order election using existing ownership/trigger fences; independent review and affected tests pass. No source has been pushed yet. Report reports/261109-si4.md.
+- Owner deadline: finish before21:00KST on261109 (12:00UTC). Complete reviewed FE unitsT737/T739/T738 and their full CI/publications; no new improvement scope.
+- T740/T741/T742 are deferred after the real92daffbe release fixture failed. Their reviewed source/evidence remain on archive/si4-backend-candidate-261109; rollback9fa63516 restores all backend paths exactly to origin/main0cd149ca. They are not completed or published product changes.
+- Resume backend work with the clock/lease/latest-job diagnosis in reports/261109-si4.md. Do not increase budgets, bypass the failed media gate or count the successful13 earlier stages as a full pass.
 - Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 si4 defersT740/T741/T742: actual release failed after13 passed image/worker stages; observed10.223s Docker clock rollback and latest-job query reproduction, final render cause unresolved. Preserve92daffbe/archive branch and restore backend exactly toorigin0cd at9fa63516; finish FE scope before21:00KST.
 - 261109 create-task review/perf-quality-si4-261109 F7 (si4) → T742 same-byte authenticated FFmpeg input fallback; source/signature/key identity proven in pinned base, no gate or runtime change.
 - 261109 si4 deadline clarified by owner: complete before21:00KST; T741 reviewed source integrated, final media gates then staged T739/T738 publication remain.
 - 261109 create-task review/perf-quality-si4-261109 F6 (si4) → T741 same-version signed/checksummed APK fallback; no library upgrade or gate relaxation. Both original media build failures preserved.
@@ -200,4 +200,3 @@
 - 261109 create-task review/perf-quality-261109 F10 (sil) → T735 Editable keyboard focus; F6 rejected, F11 kept [?].
 - 261109 T733 integrated (sil): DB tests copy a once-migrated template (74 of 86 sites); post/store 117.6→3.5 s locally; reviewed approved (review 4d401114, P3 only).
 - 261109 T734 integrated (sil): editor routes lazy, entry 1,433→1,163 kB raw (445→365 kB gzip); reviewed approved (review 640f1c5c, P3 only).
-- 261109 create-task review/perf-quality-261109 (sil) → T733 template DB for Go tests, T734 lazy post editor routes; F3–F9 kept [?].
