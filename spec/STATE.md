@@ -14,6 +14,7 @@
 | si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T07:28Z | T740 |
 
 ## inbox
+- 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
 - 261109 decided review/perf-quality-si4-261109 T740: observed VM clock rollback rejects the active attempt checkpoint → repair SQL ownership using the existing active-job index and atomic checkpoint replacement trigger (alt: retry tests | change timestamps/clocks | weaken the gate) — deterministic and real-run proof, no policy/schema/provider/credit change; this repair precedes the pending source publication.
 - 261109 decided review/perf-quality-si4-261109 T737 T738 T739: four-hour local improvement delegation → approve measured template/guideline focus recovery and an exact 20-file Node test project (alt: broad DOM/test refactors | dependency/policy changes) — five real-route BODY defects and 31.22→2.73 s paired 83-case subset; preserve existing contracts, independently review every unit, final full CI before cfg main push.
 - 261109 decided review/perf-quality-261109 T736: third round → adopt F11 /memories keyboard focus for /memories only, reject F4 after re-measuring (2.5 s with T733) (alt: also templates, clip templates and guidelines | stop the run) — measured defect, one page, same rule as T735; the other directories' shape is inferred and their extension stays a scope choice.
@@ -167,13 +168,16 @@
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T738 | Keep keyboard focus after a guideline row leaves | ARCH | T737 | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | todo |
+| T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 
 ## next
+- T741 repairs the reproduced index-rotation packaging prerequisite; full CI90 Go packages already passed at80d3cd8a, media build remains failed before smoke. T738/T739 reviewed source is preserved for later per-unit integration/publication.
 - self-improve-local si4: T737/T740 integrated; run full CI and required CPU deployment/media gates, then publish. T738/T739 follow as separately validated units.
 - T740 removes clock-order election using existing ownership/trigger fences; independent review and affected tests pass. No source has been pushed yet. Report reports/261109-si4.md.
 - Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 create-task review/perf-quality-si4-261109 F6 (si4) → T741 same-version signed/checksummed APK fallback; no library upgrade or gate relaxation. Both original media build failures preserved.
 - 261109 T740 done (si4): reviewed c3423b1b, source a89b15b7/submission d796f89b merged6a7bd326; three affected packages and17 regression subcases pass; full CI/media gate before pending T737/source publication.
 - 261109 T740 replan (si4): first gate exposed stale trigger assumption; release340e69d1 before clarifying current0162 (upload-text retains, sampling clears), preserve source fdcc92b7; SQL ownership fix and schema unchanged.
 - 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.
