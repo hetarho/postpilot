@@ -11,7 +11,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T07:28Z | T740 |
+| si4 | DESKTOP-VKPLS8P | autopilot | 2026-11-09T05:46Z | 2026-11-09T08:12Z | T741 |
 
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
@@ -197,5 +197,3 @@
 - 261109 create-task review/perf-quality-261109 (sil) → T733 template DB for Go tests, T734 lazy post editor routes; F3–F9 kept [?].
 - 261103 pushed b69fbc67 (T732, cap): full CI and media gates pass locally; CI 41503060208, Deploy backend 41503060153 and Verify media 41503865441 all success (Media worker green, the T731 mismatch did not recur).
 - 261103 T732 done: render start repairs or omits a refused writer caption (CLIP-224); new store tests pass and fail without the wiring.
-- 261103 T732 starts (cap) at 5081b0d1.
-- 261103 update-ssot CLIP r72 + create-task (cap): CLIP-224+ render start repairs or omits a refused writer caption → T732.
