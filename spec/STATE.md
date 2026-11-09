@@ -175,6 +175,7 @@
 - Existing T731 and blocked qualification/planning work remain outside this run.
 
 ## log
+- 261109 T740 replan (si4): first gate exposed stale trigger assumption; release340e69d1 before clarifying current0162 (upload-text retains, sampling clears), preserve source fdcc92b7; SQL ownership fix and schema unchanged.
 - 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.
 - 261109 T737 done (si4): approved review 76ed0387; source integrated 7e1f30c5; unit evidence reuses identical verified source 99399408 (34 affected tests plus 54 consumer cases, six base failures); per-unit full CI/push next.
 - 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
@@ -194,4 +195,3 @@
 - 261103 T732 done: render start repairs or omits a refused writer caption (CLIP-224); new store tests pass and fail without the wiring.
 - 261103 T732 starts (cap) at 5081b0d1.
 - 261103 update-ssot CLIP r72 + create-task (cap): CLIP-224+ render start repairs or omits a refused writer caption → T732.
-- 261103 pushed bc1d5bf4 (render refusal fix): FE gate 575 files/4576 tests and all FE checks pass; CI 41482325787 success; no backend path, so no deploy.
