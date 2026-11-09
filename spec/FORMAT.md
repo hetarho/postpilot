@@ -26,7 +26,7 @@
        `  - login 5/min, password reset 3/hour`
        `  - over limit ⇒ 429 + retry-after, never a silent drop`
 - [o] decided / [?] open / [x] rejected·deferred — a standing decision not to do something the product does not have; a decision whose feature was removed is deleted, not marked [x]
-- change kind: + added / ✎ modified / - removed (e.g. `AUTH-2✎`)
+- decision change kind (chg, pending): + added / ✎ modified / - removed (e.g. `AUTH-2✎`)
 - reference to a decision: `→!AUTH-3` requires (this rule cannot be applied without it) · `→=AUTH-3` canonical (the target owns the rule this line points to) · `→~AUTH-3` related (background, looked up on demand) · `→AUTH-3` unclassified. One marker covers a `/` list or a `–` range (`→!AUTH-3/5`, `→AUTH-3–6`); `→AUTH` is a whole domain; a bare `AUTH-3` counts as unclassified.
   - write the kind when you write or revise the decision; never reclassify old references in bulk by guessing
   - a brief pulls requires and canonical targets transitively, follows unclassified ones one hop from a cited or required decision and lists the rest, and lists related ones without their text
@@ -36,9 +36,9 @@
 - date: YYMMDD (260905)
 - task st: `todo` → `doing@date.tag` → `done@date`. Stuck: `blocked@date` (one-line reason in the task's ## result). tag = 2-4 chars chosen by the claiming session
 - empty value: `-` (never leave a cell blank)
-- log·chg: `- YYMMDD text`, one line each, newest on top
-- flow: A → B(x|y) → C — order and branches
-- commands (verify etc.): backtick code, runnable as-is, no inline commentary
+- log: `- YYMMDD text`; chg: `- rN YYMMDD summary` (see rev) — one line each, newest on top
+- flow (SSOT ## flow, ideation shape): A → B(x|y) → C — order and branches
+- commands anywhere (decision, task, report — verify etc.): backtick code, runnable as-is, no inline commentary
 
 ## Skeletons (section order fixed; only (opt) may be omitted; no sections beyond the skeleton)
 - ssot: `# <ID> <name>` / `> rN | <one-line purpose>` / `## decisions` / `## flow`(opt) / `## constraints`(opt) / `## chg`
