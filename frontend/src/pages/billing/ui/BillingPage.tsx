@@ -9,7 +9,15 @@ import { BillingSubscriptionActions } from '@/features/manage-subscription'
 import { CreditPurchaseSection } from '@/features/purchase-credits'
 import { RefundRequestSection } from '@/features/request-refund'
 import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
-import { Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import { Zap } from 'lucide-react'
+import {
+  Notice,
+  Typography,
+  buttonStyles,
+  cardStyles,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 
 export function BillingPage() {
   const { t } = useTranslation(['billing', 'common', 'plans'])
@@ -47,9 +55,47 @@ export function BillingPage() {
   return (
     <main className={pageStyles()}>
       <Typography variant="display">{t('title', { ns: 'billing' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('description', { ns: 'billing' })}
-      </Typography>
+
+      {/* Guide: the hero — what is left to spend, as one big figure, and ONE 충전 that takes the
+          owner straight to the packs. Everything else on this page is a card below it. */}
+      {myPlan && (
+        <section
+          aria-labelledby="billing-credits"
+          className={cardStyles({
+            padding: 'lg',
+            className: 'bg-badge-accent-bg animate-step-in mt-6 flex flex-col gap-5',
+          })}
+        >
+          <div className="flex flex-col gap-1">
+            <h2 id="billing-credits" className={typographyStyles({ variant: 'label' })}>
+              {t('hero.credits', { ns: 'billing' })}
+            </h2>
+            <p className={typographyStyles({ variant: 'figure' })}>
+              {myPlan.balance.unlimited
+                ? t('balance.unlimited', { ns: 'plans' })
+                : t('balance.credits', { ns: 'plans', count: myPlan.balance.credits })}
+            </p>
+            <p
+              className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}
+            >
+              {planLabel(myPlan.plan)}
+            </p>
+          </div>
+          <a
+            href="#billing-charge"
+            onClick={(event) => {
+              event.preventDefault()
+              const target = document.getElementById('billing-charge')
+              target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              target?.querySelector<HTMLElement>('h2, h3, button')?.focus({ preventScroll: true })
+            }}
+            className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })}
+          >
+            <Zap aria-hidden="true" className="size-5" />
+            {t('hero.charge', { ns: 'billing' })}
+          </a>
+        </section>
+      )}
 
       {registration && (
         <Notice tone="success" role="status" className="mt-6">
@@ -85,7 +131,7 @@ export function BillingPage() {
               }
             />
           )}
-          <section className="grid gap-2">
+          <section className={cardStyles({ className: 'grid gap-2 shadow-sm' })}>
             <Typography variant="title" as="h2">
               {t('subscription.heading', { ns: 'billing' })}
             </Typography>
@@ -115,7 +161,7 @@ export function BillingPage() {
               </>
             )}
           </section>
-          <section className="grid gap-2">
+          <section className={cardStyles({ className: 'grid gap-2 shadow-sm' })}>
             <Typography variant="title" as="h2">
               {t('paymentMethod.heading', { ns: 'billing' })}
             </Typography>
@@ -150,7 +196,7 @@ export function BillingPage() {
               </>
             )}
           </section>
-          <section className="grid gap-2">
+          <section className={cardStyles({ className: 'grid gap-2 shadow-sm' })}>
             <Typography variant="title" as="h2">
               {t('history.heading', { ns: 'billing' })}
             </Typography>
@@ -163,11 +209,16 @@ export function BillingPage() {
           </section>
           {/* Packs are sold to active paid tiers only, so master meets the section's own disabled
               state rather than a section that is missing (QUOTA-68). */}
-          <CreditPurchaseSection
-            hasPaymentMethod={myBilling.paymentMethod !== undefined}
-            activePaid={myBilling.subscription?.status === 'active'}
-            purchases={myBilling.purchases}
-          />
+          <div
+            id="billing-charge"
+            className={cardStyles({ className: 'scroll-mt-[var(--spacing-chrome)] shadow-sm' })}
+          >
+            <CreditPurchaseSection
+              hasPaymentMethod={myBilling.paymentMethod !== undefined}
+              activePaid={myBilling.subscription?.status === 'active'}
+              purchases={myBilling.purchases}
+            />
+          </div>
           <RefundRequestSection charges={myBilling.history} />
         </div>
       )}

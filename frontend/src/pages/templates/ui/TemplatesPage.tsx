@@ -6,11 +6,13 @@ import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-auth
 import { useTemplates, type Template } from '@/entities/template'
 import { DeleteTemplateButton } from '@/features/delete-template'
 import { ChannelActions } from '@/widgets/channel-actions'
+import { LayoutList } from 'lucide-react'
 import {
   Badge,
   Button,
   Notice,
   Typography,
+  cardStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
@@ -37,10 +39,15 @@ export function TemplatesPage() {
   })
 
   return (
-    <main ref={page} className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
-      <Typography variant="display">{t('title', { ns: 'templates' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.description', { ns: 'templates' })}
+    <main
+      ref={page}
+      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
+    >
+      {/* Guide: the hub's title and the 템플릿 chip say where this is; the page leads with what a
+          template does. */}
+      <h1 className="sr-only">{t('title', { ns: 'templates' })}</h1>
+      <Typography variant="display" as="p" aria-hidden="true">
+        {t('page.lead', { ns: 'templates' })}
       </Typography>
 
       {isError && (
@@ -80,12 +87,12 @@ export function TemplatesPage() {
           {templates.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-labelledby="templates-heading" className="mt-8">
+            <section aria-labelledby="templates-heading" className="mt-6">
               <Typography variant="title" id="templates-heading">
                 {t('page.saved', { ns: 'templates' })}
               </Typography>
-              {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
-              <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
+              {/* Guide: each template is a card; the card opens its own focused screen. */}
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -182,24 +189,38 @@ function TemplateRow({
 }) {
   const { t } = useTranslation('templates')
   return (
-    // `min-h-16` and `py-2`, not the list row's usual `min-h-11`/`py-3`: every row carries the
-    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (THEME-23).
-    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
-      <Link
-        to="/templates/$templateId"
-        params={{ templateId: template.id }}
-        className={typographyStyles({
-          variant: 'label',
-          className: 'min-w-0 truncate after:absolute after:inset-0',
-        })}
+    // Guide: a raised card — a glyph tile, the name in a heading's size and the description under
+    // it. The link stretches over the whole card through its `::after`; the delete paints above.
+    <li
+      className={cardStyles({
+        interactive: true,
+        padding: 'sm',
+        className: 'relative flex min-h-16 flex-wrap items-start gap-x-3 gap-y-2 sm:p-5',
+      })}
+    >
+      <span
+        aria-hidden="true"
+        className="bg-badge-accent-bg text-badge-accent-fg flex size-11 shrink-0 items-center justify-center rounded-lg"
       >
-        {template.name}
-      </Link>
-      {template.description && (
-        <Typography variant="meta" as="span" className="min-w-0 flex-1 truncate">
-          {template.description}
-        </Typography>
-      )}
+        <LayoutList className="size-5" />
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
+        <Link
+          to="/templates/$templateId"
+          params={{ templateId: template.id }}
+          className={typographyStyles({
+            variant: 'fieldTitle',
+            className: 'text-content-primary min-w-0 truncate after:absolute after:inset-0',
+          })}
+        >
+          {template.name}
+        </Link>
+        {template.description && (
+          <Typography variant="body" as="span" className="text-content-secondary line-clamp-2">
+            {template.description}
+          </Typography>
+        )}
+      </span>
       <div className="basis-full">
         <Typography variant="body" className="text-content-secondary">
           {t('screen.savedAvailable')}

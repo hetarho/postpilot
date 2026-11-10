@@ -11,6 +11,7 @@ const DEFAULT_ELEMENT: Record<TypographyVariant, ElementType> = {
   launch: 'h1',
   promoDisplay: 'h1',
   hero: 'p',
+  largeTitle: 'h1',
   display: 'h1',
   stepTitle: 'h2',
   title: 'h2',
@@ -19,6 +20,8 @@ const DEFAULT_ELEMENT: Record<TypographyVariant, ElementType> = {
   label: 'span',
   meta: 'span',
   eyebrow: 'span',
+  figure: 'p',
+  groupLabel: 'h2',
 }
 
 type TypographyProps<E extends ElementType> = {

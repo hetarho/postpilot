@@ -1,6 +1,6 @@
 import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FieldLabel, Textarea, Typography, typographyStyles } from '@/shared/ui'
+import { FieldLabel, Textarea, typographyStyles } from '@/shared/ui'
 
 /** The 가제 belongs to 글 생성 alone (POST-50). From 글 다듬기 on there is exactly one
  *  title on the screen and it is `content.title`, edited through the block editor's header — two
@@ -31,11 +31,6 @@ export function TitleField({
       <FieldLabel htmlFor="post-title" className="sr-only">
         {t('editor.title')}
       </FieldLabel>
-      {/* The visible title remains an editable field, so this mirrors its current value into the
-          document outline without replacing the field or creating a second tab stop. */}
-      <Typography variant="display" className="sr-only">
-        {value.trim() || t('editor.titlePlaceholder')}
-      </Typography>
       <Textarea
         id="post-title"
         ref={fieldRef}
@@ -61,7 +56,7 @@ export function TitleField({
         autoComplete="off"
         // The bare editor's caller owns the field's type (THEME-29): the title wears the display role —
         // the post title is the largest thing on the screen (THEME-8).
-        className={typographyStyles({ variant: 'display', className: 'mt-6' })}
+        className={typographyStyles({ variant: 'display', className: 'mt-4' })}
       />
     </>
   )

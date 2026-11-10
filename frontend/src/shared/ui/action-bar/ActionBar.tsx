@@ -7,6 +7,10 @@ export type ActionBarDock =
   | 'always'
   /** List add actions float at their natural width without a background plane. */
   | 'list'
+  /** Guide: a guided step's bottom bar — 이전 · 다음, or the step's one big action — sitting in
+   *  the thumb zone. On a phone it spans the screen's bottom edge with rounded top corners; from
+   *  `sm:` up it floats as a rounded bar inside the centred column. */
+  | 'step'
 
 /** Action groups fit their controls; a composer has readable space for its fields. */
 type ActionBarWidth = 'actions' | 'content'
@@ -14,6 +18,7 @@ type ActionBarWidth = 'actions' | 'content'
 const DOCK_STYLES: Record<ActionBarDock, string> = {
   always: 'bottom-dock-nav sticky z-20 mx-auto mt-6 min-w-0 self-center rounded-xl p-2 shadow-md',
   list: 'bottom-dock-nav sticky z-20 mt-6 ml-auto w-fit max-w-full *:shadow-lg',
+  step: 'pb-dock-b sticky bottom-0 z-20 -mx-4 mt-8 min-w-0 rounded-t-2xl px-4 pt-3 shadow-lg sm:bottom-dock-nav sm:mx-auto sm:w-full sm:max-w-measure sm:rounded-2xl sm:p-3',
 }
 
 const WIDTH_STYLES: Record<ActionBarWidth, string> = {

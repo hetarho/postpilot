@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 
 const UNMADE_REASON = '아직 만들지 않은 말투예요. 말투를 만들거나 다른 말투로 바꿔 주세요.'
@@ -17,7 +18,9 @@ describe('the editor voice warning', () => {
     })
 
     expect(await screen.findByText(UNMADE_REASON)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '말투 학습하기' })).toHaveAttribute(
+    // Guide: the warning sits on the guided editor's 확인 screen, beside the 말투 it is about.
+    await userEvent.click(await screen.findByRole('button', { name: '확인' }))
+    expect(await screen.findByRole('link', { name: '말투 학습하기' })).toHaveAttribute(
       'href',
       '/voices/voice-cafe',
     )

@@ -30,7 +30,6 @@ describe('Button', () => {
   })
 
   it.each([
-    ['cta', 'bg-button-cta-bg'],
     ['secondary', 'bg-button-secondary-bg'],
     ['ghost', 'bg-button-ghost-bg'],
     ['danger', 'text-button-danger-quiet-fg'],
@@ -39,6 +38,15 @@ describe('Button', () => {
     // The pointer floor (THEME-23): 40px under a mouse, the 44px touch floor under a thumb.
     expect(buttonStyles({ variant })).toContain('min-h-10')
     expect(buttonStyles({ variant })).toContain('pointer-coarse:min-h-11')
+  })
+
+  // Guide: a committing action is at least 48px at every pointer, and the step's one big action
+  // takes the 56px hero size.
+  it('gives the committing cta 48px and the hero action 56px at every pointer', () => {
+    expect(buttonStyles({ variant: 'cta' })).toContain('bg-button-cta-bg')
+    expect(buttonStyles({ variant: 'cta' })).toContain('min-h-12')
+    expect(buttonStyles({ variant: 'cta', size: 'hero' })).toContain('min-h-14')
+    expect(buttonStyles({ variant: 'cta' })).toContain('rounded-full')
   })
 
   it('keeps icon actions square at the pointer floor', () => {

@@ -241,13 +241,13 @@ describe('logout', () => {
   })
 })
 
-// TMPL-24: templates are the Naver Blog channel's 템플릿 section.
+// Guide: templates are a section of 내 스타일, one chip away from 말투.
 describe('the template management route', () => {
-  it('opens templates from the Naver Blog section tabs', async () => {
-    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
-    await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
+  it('opens templates from the 내 스타일 section chips', async () => {
+    const { router } = renderAppAt('/voices', { user: { id: 'alice' } })
+    await screen.findByRole('heading', { level: 1, name: '말투' })
     await userEvent.click(
-      within(screen.getByRole('navigation', { name: '채널 메뉴' })).getByRole('link', {
+      within(screen.getByRole('navigation', { name: '나누어 보기' })).getByRole('link', {
         name: '템플릿',
       }),
     )
@@ -385,14 +385,14 @@ describe('About consumes the shared locale and theme runtimes', () => {
   })
 })
 
-// GUIDE-20: guidelines are the Naver Blog channel's 지침 section, after templates and 말투.
+// Guide: guidelines are 내 스타일's 지침 section, right after templates.
 describe('the guideline management route', () => {
-  it('opens guidelines from the Naver Blog section tabs', async () => {
-    const { router } = renderAppAt('/naver-blog', { user: { id: 'alice' } })
-    await screen.findByRole('heading', { level: 1, name: '네이버 블로그' })
-    const sections = within(screen.getByRole('navigation', { name: '채널 메뉴' }))
+  it('opens guidelines from the 내 스타일 section chips', async () => {
+    const { router } = renderAppAt('/templates', { user: { id: 'alice' } })
+    await screen.findByRole('heading', { level: 1, name: '템플릿' })
+    const sections = within(screen.getByRole('navigation', { name: '나누어 보기' }))
     const hrefs = sections.getAllByRole('link').map((item) => item.getAttribute('href'))
-    expect(hrefs.indexOf('/guidelines')).toBe(hrefs.indexOf('/templates') + 2)
+    expect(hrefs.indexOf('/guidelines')).toBe(hrefs.indexOf('/templates') + 1)
     await userEvent.click(sections.getByRole('link', { name: '지침' }))
     await screen.findByRole('heading', { level: 1, name: '지침' })
     expect(router.state.location.pathname).toBe('/guidelines')
@@ -409,7 +409,10 @@ describe('lazily loaded routes', () => {
     ['/templates', '템플릿'],
     ['/guidelines', '지침'],
     ['/about', '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로'],
-    ['/ai-models', '모델 변경'],
+    ['/ai-models', 'AI 고르기'],
+    ['/create', '무엇을 만들까요?'],
+    ['/my', '내 글'],
+    ['/style', '내 스타일'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
@@ -435,7 +438,9 @@ describe('lazily loaded routes', () => {
   ])('renders the %s editor on a direct load', async (path, posts) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' }, posts })
 
-    expect(await screen.findByRole('textbox', { name: '제목' })).toBeInTheDocument()
+    // Guide: an empty draft opens on its story, the first of 글 생성's screens.
+    expect(await screen.findByRole('textbox', { name: '메모' })).toBeInTheDocument()
+    expect(screen.getByLabelText('제목')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(path)
   })
 
@@ -548,7 +553,7 @@ describe('theme preferences in the real route tree', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await act(() => first.router.navigate({ to: '/posts/new' }))
-    expect(await screen.findByRole('textbox', { name: '제목' })).toBeInTheDocument()
+    expect(await screen.findByRole('textbox', { name: '메모' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await user.click(screen.getByRole('button', { name: '내 계정' }))
@@ -636,7 +641,9 @@ describe('theme preferences in the real route tree', () => {
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  it('keeps the phone main row whole and puts a channel section row under it', async () => {
+  // Guide: a slim top bar (brand · account), the destinations as a bottom tab bar where the thumb
+  // is, and the channel's sections as a chip row under its large title.
+  it('keeps the phone top bar slim, the tab bar at the bottom and the section chips under the title', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
@@ -645,23 +652,29 @@ describe('theme preferences in the real route tree', () => {
 
     expect(await screen.findByRole('heading', { name: '템플릿', level: 1 })).toBeInTheDocument()
     const header = screen.getByRole('banner')
-    const account = screen.getByRole('button', { name: '내 계정' })
-    const navigation = within(header).getByRole('navigation', { name: '주요' })
+    const account = within(header).getByRole('button', { name: '내 계정' })
+    expect(header.querySelector('a[href="/"]')).not.toBeNull()
+    expect(within(header).queryByRole('navigation')).toBeNull()
+    const navigation = screen.getByRole('navigation', { name: '주요' })
     expect(
       within(navigation)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['블로그', '클립', '인스타'])
-    expect(navigation.parentElement).toContainElement(account)
-    expect(navigation.compareDocumentPosition(account) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(
-      0,
-    )
-    const sections = within(header).getByRole('navigation', { name: '채널 메뉴' })
+    ).toEqual(['만들기', '내 글', '내 스타일', 'AI 고르기', '나'])
+    // The tab bar is the last thing in the shell, after the page.
+    expect(
+      screen.getByRole('main').compareDocumentPosition(navigation) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0)
+    expect(navigation.closest('[data-tab-bar="shown"]')).not.toBeNull()
+    const sections = screen.getByRole('navigation', { name: '나누어 보기' })
+    expect(header.compareDocumentPosition(sections) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(sections).toHaveClass('overflow-x-auto', 'overscroll-x-contain')
     expect(
       within(sections)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['글', '템플릿', '말투', '지침'])
+    ).toEqual(['말투', '템플릿', '지침', '기억', '목소리'])
     expect(within(sections).getByRole('link', { name: '템플릿' })).toHaveAttribute(
       'aria-current',
       'page',
@@ -670,9 +683,9 @@ describe('theme preferences in the real route tree', () => {
     expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
     expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
-    await user.click(within(sections).getByRole('link', { name: '글' }))
-    await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
-    expect(within(navigation).getByRole('link', { name: '블로그' })).toHaveAttribute(
+    await user.click(within(sections).getByRole('link', { name: '기억' }))
+    await screen.findByRole('heading', { name: '기억', level: 1 })
+    expect(within(navigation).getByRole('link', { name: '내 스타일' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -724,9 +737,12 @@ describe('localized registered-route smoke', () => {
       about: '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로',
       analysis: '말투 분석',
       materials: '학습 데이터',
-      models: '모델 변경',
+      models: 'AI 고르기',
+      create: '무엇을 만들까요?',
+      mine: '내 글',
+      style: '내 스타일',
       retry: '다시 시도',
-      title: '제목',
+      memo: '메모',
     },
     en: {
       login: 'Log in',
@@ -738,9 +754,12 @@ describe('localized registered-route smoke', () => {
         'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
       analysis: 'Voice analysis',
       materials: 'Training data',
-      models: 'Change models',
+      models: 'Pick AI',
+      create: 'What shall we make?',
+      mine: 'My work',
+      style: 'My style',
       retry: 'Try again',
-      title: 'Title',
+      memo: 'Notes',
     },
   } as const
 
@@ -817,6 +836,10 @@ describe('localized registered-route smoke', () => {
           expectedPath: '/voices/voice-default/materials',
         },
         { path: '/ai-models', role: 'heading', name: text.models, signedIn: true },
+        { path: '/create', role: 'heading', name: text.create, signedIn: true },
+        { path: '/my', role: 'heading', name: text.mine, signedIn: true },
+        { path: '/style', role: 'heading', name: text.style, signedIn: true },
+        { path: '/library', role: 'heading', name: text.mine, signedIn: true, expectedPath: '/my' },
         {
           path: '/ai-models/experiments/smoke',
           role: 'button',
@@ -824,8 +847,9 @@ describe('localized registered-route smoke', () => {
           signedIn: true,
           expectedPath: '/tests/records/smoke',
         },
-        { path: '/posts/new', role: 'textbox', name: text.title, signedIn: true },
-        { path: '/posts/smoke-post', role: 'textbox', name: text.title, signedIn: true },
+        // Guide: the writing flow opens on its first question, the story.
+        { path: '/posts/new', role: 'textbox', name: text.memo, signedIn: true },
+        { path: '/posts/smoke-post', role: 'textbox', name: text.memo, signedIn: true },
       ]
 
       for (const routeCase of cases) {
@@ -865,9 +889,11 @@ describe('localized registered-route smoke', () => {
         )
         for (const control of directControls) {
           // Every control keeps its touch floor under a coarse pointer (THEME-23): the 44px
-          // floor, or `compact`'s documented 36px step below it.
+          // floor, or `compact`'s documented 36px step below it. Guide raises fields and every
+          // committing action above the floor — 48px (`min-h-12`) and the 56px hero action
+          // (`min-h-14`) — which still keeps it.
           expect(control.className, `${routeCase.path}: ${control.tagName}`).toMatch(
-            /(?:^|\s)(?:min-h-11|size-11|pointer-coarse:min-h-11|pointer-coarse:min-h-9|pointer-coarse:size-11)(?:\s|$)/,
+            /(?:^|\s)(?:min-h-11|min-h-12|min-h-14|size-11|pointer-coarse:min-h-11|pointer-coarse:min-h-12|pointer-coarse:min-h-9|pointer-coarse:size-11)(?:\s|$)/,
           )
         }
         for (const choice of main.querySelectorAll('input[type="checkbox"], input[type="radio"]')) {
@@ -891,9 +917,10 @@ describe('localized registered-route smoke', () => {
       const shell = main.parentElement
       expect(shell).toHaveClass('flex', 'flex-1', 'flex-col')
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
+      // Guide: five verb tabs — 만들기 · 내 글 · 내 스타일 · AI 고르기 · 나.
       expect(
         within(screen.getByRole('navigation', { name: '주요' })).getAllByRole('link'),
-      ).toHaveLength(3)
+      ).toHaveLength(5)
       expect(document.querySelector('aside')).toBeNull()
       expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     },
@@ -927,9 +954,10 @@ describe('retired publishing route', () => {
   })
 
   it('keeps voice and model settings for the free tier', async () => {
-    renderAppAt('/settings', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-    await screen.findByRole('heading', { level: 1, name: '내 설정' })
-    for (const destination of ['/memories', '/spoken-voices', '/ai-models']) {
+    // Guide: what the owner taught the AI is 내 스타일, model choice is its own tab.
+    renderAppAt('/style', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    await screen.findByRole('heading', { level: 1, name: '내 스타일' })
+    for (const destination of ['/memories', '/spoken-voices', '/voices', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }
   })

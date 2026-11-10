@@ -36,6 +36,8 @@ interface PostTemplateSelectProps {
   onCreateTemplate: () => void
   /** Off for a reason the caller states elsewhere, so this field adds none of its own. */
   disabled?: boolean
+  /** Guide: the label stands beside the trigger as a summary row's name instead of `sr-only`. */
+  labelVisible?: boolean
   className?: string
 }
 
@@ -55,6 +57,7 @@ export function PostTemplateSelect({
   onSelect,
   onCreateTemplate,
   disabled = false,
+  labelVisible = false,
   className,
 }: PostTemplateSelectProps) {
   const { t } = useTranslation(['templates', 'common'])
@@ -108,8 +111,12 @@ export function PostTemplateSelect({
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-2">
-        <FieldLabel id={labelId} htmlFor={id} className="sr-only">
+      <div className="flex items-center gap-3">
+        <FieldLabel
+          id={labelId}
+          htmlFor={id}
+          className={labelVisible ? 'w-20 shrink-0' : 'sr-only'}
+        >
           {t('title', { ns: 'templates' })}
         </FieldLabel>
         <span className="min-w-0 flex-1">

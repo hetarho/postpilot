@@ -32,7 +32,8 @@ export function MemoField({
         id="post-memo"
         ref={fieldRef}
         appearance="well"
-        rows={6}
+        // Guide: the story is the first screen's ONE task, so its field is the screen.
+        rows={9}
         autoGrow
         viewportAllocation={{ reservedBottom: MEMO_WORKSPACE_RESERVED_BOTTOM_PX }}
         value={value}
@@ -40,7 +41,7 @@ export function MemoField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={t('editor.memoPlaceholder')}
         enterKeyHint="enter"
-        className="mt-5"
+        className="bg-card-bg min-h-64 rounded-xl p-5 shadow-md"
       />
     </>
   )

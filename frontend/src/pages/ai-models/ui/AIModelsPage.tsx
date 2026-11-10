@@ -1,60 +1,106 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
+import { ChevronRight, Columns2, History, ScanEye } from 'lucide-react'
 import { useRecommendationSets } from '@/entities/model-catalog'
 import { ApplyRecommendation } from '@/features/apply-model-recommendation'
-import { ActiveModelForm, OptionalTestPair } from '@/features/configure-model-pair'
+import { OptionalTestPair, StageModelRow } from '@/features/configure-model-pair'
 import { PostCreditEstimate } from '@/features/select-model'
-import { Notice, Typography, buttonStyles, pageStyles } from '@/shared/ui'
-import { ModelPageHeader } from './ModelPageHeader'
+import {
+  ListRowIcon,
+  Notice,
+  Typography,
+  buttonStyles,
+  cardStyles,
+  listRowStyles,
+  pageStyles,
+} from '@/shared/ui'
 
+/** Guide: AI 고르기 — model choice made friendly. It opens on the AI in use for each stage as
+ *  plain rows (글 쓰기 · 사진 보기 · 말투 분석) whose 바꾸기 opens a picker sorted by what matters
+ *  first; then the ONE big invitation to 비교해 보기 — two AIs writing the owner's own post side by
+ *  side, the writing test and the model comparison as one flow — with 지난 비교 beside it; then the
+ *  operator's 추천 조합. */
 export function AIModelsPage() {
   const { t } = useTranslation('models')
   const recommendations = useRecommendationSets()
   return (
-    <main className={pageStyles({ className: 'pt-0 sm:pt-0 lg:pt-8' })}>
-      <ModelPageHeader title="modelSettings" description="settingsDescription" />
-      <div className="mt-6 space-y-6">
-        <ActiveModelForm stage="observe" />
-        <ActiveModelForm stage="analyze" />
-        <ActiveModelForm stage="write" />
-      </div>
-      <PostCreditEstimate className="mt-6" />
-      <section className="mt-6 sm:mt-10" aria-labelledby="writing-test-heading">
-        <Typography variant="title" as="h2" id="writing-test-heading">
-          {t('page.writingTests')}
+    <main className={pageStyles({ width: 'prose', className: 'pt-4 sm:pt-10' })}>
+      <Typography variant="largeTitle">{t('page.guideTitle')}</Typography>
+
+      <section aria-labelledby="ai-in-use" className="mt-8">
+        <Typography
+          variant="label"
+          as="h2"
+          id="ai-in-use"
+          className="text-content-tertiary mb-2 px-4"
+        >
+          {t('page.inUse')}
         </Typography>
-        <Typography variant="body" className="text-content-secondary mt-3">
-          {t('page.writingTestsHelp')}
-        </Typography>
-        <div className="mt-6 flex flex-wrap gap-4">
-          <Link
-            to="/tests"
-            search={{ factor: 'model', stage: 'write', count: 2, entry: '/ai-models' }}
-            className={buttonStyles({ variant: 'secondary' })}
-          >
-            {t('page.testWriteModels')}
-          </Link>
+        <div
+          className={cardStyles({
+            padding: 'none',
+            className: 'divide-divider divide-y overflow-hidden shadow-sm',
+          })}
+        >
+          <StageModelRow stage="write" />
+          <StageModelRow stage="observe" />
+          <StageModelRow stage="analyze" />
+        </div>
+        <PostCreditEstimate className="mt-3 px-4" />
+      </section>
+
+      {/* The comparison: the screen's one big action. */}
+      <section
+        aria-labelledby="writing-test-heading"
+        className={cardStyles({
+          padding: 'lg',
+          className: 'bg-badge-accent-bg animate-step-in mt-10 flex flex-col gap-5',
+        })}
+      >
+        <span className="flex items-center gap-3">
+          <ListRowIcon icon={Columns2} size="lg" />
+          <Typography variant="title" as="h2" id="writing-test-heading" className="text-balance">
+            {t('page.writingTests')}
+          </Typography>
+        </span>
+        <Link
+          to="/tests"
+          search={{ factor: 'model', stage: 'write', count: 2, entry: '/ai-models' }}
+          className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })}
+        >
+          {t('page.testWriteModels')}
+        </Link>
+        <OptionalTestPair />
+      </section>
+
+      <ul
+        className={cardStyles({
+          padding: 'none',
+          className: 'divide-divider mt-6 divide-y overflow-hidden shadow-sm',
+        })}
+      >
+        <li>
           <Link
             to="/tests"
             search={{ factor: 'model', stage: 'observe', count: 2, entry: '/ai-models' }}
-            className={buttonStyles({ variant: 'ghost' })}
+            className={listRowStyles()}
           >
-            {t('page.testObserveModels')}
+            <ListRowIcon icon={ScanEye} />
+            <span className="min-w-0 flex-1">{t('page.testObserveModels')}</span>
+            <ChevronRight aria-hidden="true" className="text-content-tertiary size-5 shrink-0" />
           </Link>
-          <Link
-            to="/tests/history"
-            search={{ entry: '/ai-models' }}
-            className={buttonStyles({ variant: 'ghost' })}
-          >
-            {t('page.testHistory')}
+        </li>
+        <li>
+          <Link to="/tests/history" search={{ entry: '/ai-models' }} className={listRowStyles()}>
+            <ListRowIcon icon={History} />
+            <span className="min-w-0 flex-1">{t('page.testHistory')}</span>
+            <ChevronRight aria-hidden="true" className="text-content-tertiary size-5 shrink-0" />
           </Link>
-        </div>
-        <div className="mt-6">
-          <OptionalTestPair />
-        </div>
-      </section>
-      <section className="mt-6 sm:mt-10" aria-labelledby="recommendation-heading">
-        <Typography variant="title" id="recommendation-heading">
+        </li>
+      </ul>
+
+      <section className="mt-10" aria-labelledby="recommendation-heading">
+        <Typography variant="title" as="h2" id="recommendation-heading">
           {t('page.recommendation')}
         </Typography>
         {/* Every set the operator curated, in their order (MODEL-71). Loading, failure and an
@@ -74,9 +120,9 @@ export function AIModelsPage() {
               {t('page.recommendationEmpty')}
             </Typography>
           ) : (
-            <ul className="grid gap-8">
+            <ul className="grid gap-4">
               {recommendations.sets.map((set) => (
-                <li key={set.id}>
+                <li key={set.id} className={cardStyles({ className: 'shadow-sm' })}>
                   <ApplyRecommendation recommendation={set} />
                 </li>
               ))}

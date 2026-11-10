@@ -89,7 +89,8 @@ describe('RefineDock', () => {
     // The field's name remains below the task heading in the shared type hierarchy;
     // 확정하기 fills what is left of the row.
     expect(heading.tagName).toBe('LABEL')
-    expect(heading).toHaveClass('text-lg', 'font-semibold')
+    // Guide's field title is heavier (bold) than the old semibold, at the same size.
+    expect(heading).toHaveClass('text-lg', 'font-bold')
     expect(open).toHaveClass('flex-1')
     expect(open).toBeEnabled()
 

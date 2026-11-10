@@ -7,6 +7,7 @@ export type TypographyVariant =
   | 'launch'
   | 'promoDisplay'
   | 'hero'
+  | 'largeTitle'
   | 'display'
   | 'stepTitle'
   | 'title'
@@ -15,6 +16,8 @@ export type TypographyVariant =
   | 'label'
   | 'meta'
   | 'eyebrow'
+  | 'figure'
+  | 'groupLabel'
 
 /** The one place the THEME-19 recipes exist. Slices never compose raw size/weight/tracking utilities —
  *  `pnpm lint:style` rejects them outside shared/ui — so hierarchy cannot drift per call site. */
@@ -28,18 +31,28 @@ const VARIANT_STYLES: Record<TypographyVariant, string> = {
   promoDisplay: 'text-4xl font-bold tracking-tight leading-tight sm:text-6xl',
   // Five-digit KRW prices still fit a narrow card with text enlarged to 200%.
   hero: 'text-xl font-bold tracking-tight sm:text-4xl',
-  display: 'text-3xl font-semibold tracking-tight leading-tight sm:text-4xl',
-  stepTitle: 'text-2xl font-semibold tracking-tight leading-tight sm:text-3xl',
-  title: 'text-xl font-semibold tracking-tight leading-snug sm:text-2xl',
+  /* Guide: the large page title a channel or library opens on (the iOS large title), and the one
+     question a guided step asks. The heaviest weight in the app, so the screen's one question is
+     the first thing read. */
+  largeTitle: 'text-[2.125rem] font-extrabold tracking-tight leading-[1.15] sm:text-[2.625rem]',
+  display: 'text-[1.875rem] font-bold tracking-tight leading-tight sm:text-[2.25rem]',
+  stepTitle: 'text-[1.75rem] font-bold tracking-tight leading-tight sm:text-[2rem]',
+  title: 'text-[1.3125rem] font-bold tracking-tight leading-snug sm:text-2xl',
   /* A field's own heading, where it stands beside the step title rather than under it: SMALLER
      than `title` so the step keeps the outline, HEAVIER so the field still reads as named and not
      as a caption. `label` cannot do this — it is `content-secondary` at a normal weight, which is
      a hint about a control, not the name of one. */
-  fieldTitle: 'text-lg font-semibold tracking-tight leading-snug',
-  body: 'text-base leading-relaxed',
-  label: 'text-sm font-medium text-content-secondary',
-  meta: 'text-xs text-content-tertiary',
-  eyebrow: 'text-[10px] font-medium tracking-wide text-content-tertiary uppercase',
+  fieldTitle: 'text-lg font-bold tracking-tight leading-snug',
+  /* Guide: 17px reading text on every width — a busy owner reads this at arm's length. */
+  body: 'text-[1.0625rem] leading-relaxed',
+  label: 'text-[0.9375rem] font-semibold text-content-secondary',
+  meta: 'text-[0.8125rem] text-content-tertiary',
+  eyebrow: 'text-xs font-semibold tracking-wide text-content-tertiary uppercase',
+  /* Guide: the one big number a hero card is about — the credits left. Not a heading: the card's
+     own label names it. */
+  figure: 'text-[2.75rem] font-extrabold tracking-tight leading-none tabular-nums sm:text-6xl',
+  /* Guide: the small caps-like name over an iOS-style group of rows. */
+  groupLabel: 'text-[0.8125rem] font-semibold tracking-wide text-content-tertiary uppercase',
 }
 
 /** Shared type contract for elements that must keep their own component or semantics — a router

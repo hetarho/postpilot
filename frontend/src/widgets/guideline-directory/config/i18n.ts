@@ -26,6 +26,7 @@ export const i18n = {
     },
     page: {
       title: '지침',
+      always: 'AI가 항상 지킬 것',
       description:
         '지침은 글에서 피해야 할 내용과 주의할 점을 정해요. 저장하면 이 계정의 모든 글에 적용되고, 특정 템플릿이나 분야에만 적용되게 좁힐 수도 있어요. 문체와 종결어미는 그대로 말투 프로필을 따릅니다.',
       listAria: '지침 목록',
@@ -38,6 +39,7 @@ export const i18n = {
     },
     clipPage: {
       title: '영상 지침',
+      always: '영상에서 AI가 항상 지킬 것',
       description:
         '영상 지침은 영상의 구성과 자막에서 피해야 할 내용과 주의할 점을 정해요. 저장하면 이 계정의 모든 영상에 적용되고, 특정 영상 템플릿에만 적용되게 좁힐 수도 있어요.',
       listAria: '영상 지침 목록',
@@ -71,6 +73,7 @@ export const i18n = {
     },
     page: {
       title: 'Guidelines',
+      always: 'What the AI always keeps to',
       description:
         'A guideline says what a post must avoid or watch out for. Saved guidelines apply to every post of this account, and can be narrowed to specific templates or categories. Tone and sentence endings still follow your voice profile.',
       listAria: 'Guidelines',
@@ -85,6 +88,7 @@ export const i18n = {
     },
     clipPage: {
       title: 'Video guidelines',
+      always: 'What the AI always keeps to in videos',
       description:
         'A video guideline says what a clip’s cuts and captions must avoid or watch out for. Saved video guidelines apply to every clip of this account, and can be narrowed to specific video templates.',
       listAria: 'Video guidelines',

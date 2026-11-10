@@ -1,6 +1,8 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { clsx } from 'clsx'
+import { CircleCheck, PenLine, Scale, Send, Sparkles, TriangleAlert } from 'lucide-react'
 import {
   displayTitle,
   isPostStatus,
@@ -17,6 +19,7 @@ import { matchedTags, PostListControls, type PostNarrowing } from '@/features/fi
 import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
 import { ChannelActions } from '@/widgets/channel-actions'
+import { ContinueSection, FindSheet, WorkGroup, heroCardClass } from '@/widgets/work-list'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
@@ -25,6 +28,7 @@ import {
   Notice,
   Typography,
   buttonStyles,
+  cardStyles,
   typographyStyles,
   type BadgeTone,
   pageStyles,
@@ -66,6 +70,46 @@ function postStatusTone(status: string): BadgeTone {
   return isPostStatus(status) ? STATUS_TONE[status] : 'neutral'
 }
 
+/** Guide: the card's leading tile — a soft square in the status chip's own tone with a glyph for
+ *  where the post is, so the list is scanned by shape and colour before a word is read. The list
+ *  carries no photo, so the state is the picture. */
+const TILE_TONE: Record<BadgeTone, string> = {
+  neutral: 'bg-badge-neutral-bg text-badge-neutral-fg',
+  accent: 'bg-badge-accent-bg text-badge-accent-fg',
+  success: 'bg-notice-success-bg text-notice-success-fg',
+  done: 'bg-badge-done-bg text-badge-done-fg',
+  warning: 'bg-notice-warning-bg text-notice-warning-fg',
+  info: 'bg-notice-info-bg text-notice-info-fg',
+  danger: 'bg-notice-danger-bg text-notice-danger-fg',
+}
+function StatusTile({ tone, status }: { tone: BadgeTone; status: string }) {
+  const Icon =
+    tone === 'info'
+      ? Sparkles
+      : tone === 'danger'
+        ? TriangleAlert
+        : tone === 'warning'
+          ? Scale
+          : status === 'published'
+            ? Send
+            : status === 'finalized'
+              ? CircleCheck
+              : status === 'review'
+                ? Sparkles
+                : PenLine
+  return (
+    <span
+      aria-hidden="true"
+      className={clsx(
+        'flex size-12 shrink-0 items-center justify-center rounded-lg sm:size-14',
+        TILE_TONE[tone],
+      )}
+    >
+      <Icon className="size-6" />
+    </span>
+  )
+}
+
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's posts,
  *  newest first, a page at a time as the list's end nears the screen (POST-90), and it applies the
  *  search and the status filter over every post the account owns (POST-91). The narrowing reads
@@ -98,6 +142,18 @@ export function PostsPage() {
       replace: true,
     })
   const narrowed = posts.map((post) => ({ post, matchedTags: matchedTags(post, settledQ) }))
+  // Guide: 완성 is a post finished writing (확정 or 발행) with no run going; everything else is
+  // still 작성 중. The newest unfinished post leads the page as 이어서 쓰기 — unless a narrowing is
+  // on, when the page is answering a search instead.
+  const finished = ({ post }: (typeof narrowed)[number]) =>
+    (post.status === 'finalized' || post.status === 'published') &&
+    !(post.activeJob && !isTerminal(post.activeJob))
+  const isNarrowedNow = (narrowing.q ?? '').trim() !== '' || narrowing.status !== undefined
+  const hero = isNarrowedNow ? undefined : narrowed.find((item) => !finished(item))
+  const groups = [
+    { key: 'inProgress', items: narrowed.filter((item) => !finished(item) && item !== hero) },
+    { key: 'done', items: narrowed.filter(finished) },
+  ] as const
   // The page-top notice is for a list with nothing to show; a page further down that fails keeps
   // every row on screen and says so at the list's end instead (POST-92).
   const isError = list.isError && posts.length === 0
@@ -140,18 +196,23 @@ export function PostsPage() {
       className={pageStyles({
         width: 'wide',
         gutters: false,
-        className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
+        className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
       {/* The channel opens straight onto this list: the marked channel link names the place, so
           the heading is for assistive technology only (THEME-38, POST-43). */}
       <h1 className="sr-only">{t('list.mine', { ns: 'posts' })}</h1>
 
-      {/* On the screen at every post count (POST-68): a search that appears at some number of
-          posts is a second layout for the same page, and the count it would appear at is exactly
-          where someone starts needing it. */}
+      {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
+          the list opens on its work. The button is there at every post count, and says how many
+          narrowings are on while they are. */}
       <div className="px-4 sm:px-6 lg:px-8">
-        <PostListControls narrowing={narrowing} onChange={narrow} />
+        <FindSheet
+          active={(narrowing.q?.trim() ? 1 : 0) + (narrowing.status ? 1 : 0)}
+          onClear={() => narrow({})}
+        >
+          <PostListControls narrowing={narrowing} onChange={narrow} />
+        </FindSheet>
       </div>
 
       {isError && (
@@ -198,163 +259,200 @@ export function PostsPage() {
         </div>
       )}
 
-      <ul
+      {/* Guide: the latest unfinished post as the big 이어서 쓰기 card, then the rest in two groups
+          — 작성 중 and 완성 — each a column of large, friendly cards (two on the desk). A
+          narrowing shows its matches in the same two groups, without the hero. */}
+      <section
         aria-label={t('list.history.directory', { ns: 'posts' })}
-        className="divide-divider mt-4 shrink-0 divide-y"
+        className="mt-6 flex shrink-0 flex-col gap-10 px-4 sm:px-6 lg:px-8"
       >
-        {narrowed.map(({ post, matchedTags }) => {
-          const status = rowStatus(
-            post,
-            post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
-            t,
-          )
-          // On a phone: two lines, not three items competing on one. At 360px a single row left
-          // the title ~146px — about ten Hangul — and because the badge label swings from 초안 to
-          // AI 결과 확인 the cut point moved row to row, so the list read as a ragged column of
-          // half-titles. The voice sits between the status and the time as metadata: which voice a post is in
-          // is the one thing this list newly has to say, and a tombstone must say so on the row
-          // itself (POST-25) — the name gives way before the badge or the time do. A post with
-          // 말투 없음 shows none: an absence is not metadata.
-          const content = (
-            <>
-              <Typography
-                variant="label"
-                className="text-content-primary w-full truncate lg:w-auto lg:min-w-0 lg:flex-1"
-              >
-                {displayTitle(post)}
-              </Typography>
-              <span className="flex w-full min-w-0 flex-wrap items-center gap-2 lg:w-auto lg:shrink-0 lg:justify-end">
-                <Badge tone={status.tone}>{status.label}</Badge>
-                {post.exportReady && (
-                  <span className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}>
-                    {t('list.history.exportReady', { ns: 'posts' })}
-                  </span>
-                )}
-                {post.voice && (
-                  <VoiceRefLabel
-                    voice={post.voice}
-                    className={typographyStyles({ variant: 'meta' })}
-                  />
-                )}
-                {/* Only for an assigned post, and after the voice: most rows carry a voice and
+        {(() => {
+          // One post's card: the status tile, the title in a heading's size, its state as a chip,
+          // and the recovery links under it. The hero is the same card, large, its 이어서 작성 the
+          // screen's one big button.
+          const renderPost = (
+            { post, matchedTags }: (typeof narrowed)[number],
+            heroCard = false,
+          ) => {
+            const status = rowStatus(
+              post,
+              post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
+              t,
+            )
+            // The title gets a whole line in a heading's size, and the metadata wraps under it: the
+            // voice sits between the status and the time, because which voice a post is in is the
+            // one thing this list has to say and a tombstone must say so on the card itself
+            // (POST-25). A post with 말투 없음 shows none: an absence is not metadata.
+            const content = (
+              <>
+                <StatusTile tone={status.tone} status={post.status} />
+                <span className="flex min-w-0 flex-1 flex-col gap-2">
+                  <Typography
+                    variant="fieldTitle"
+                    as="span"
+                    className="text-content-primary line-clamp-2"
+                  >
+                    {displayTitle(post)}
+                  </Typography>
+                  <span className="flex w-full min-w-0 flex-wrap items-center gap-2">
+                    <Badge tone={status.tone}>{status.label}</Badge>
+                    {post.exportReady && (
+                      <span
+                        className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
+                      >
+                        {t('list.history.exportReady', { ns: 'posts' })}
+                      </span>
+                    )}
+                    {post.voice && (
+                      <VoiceRefLabel
+                        voice={post.voice}
+                        className={typographyStyles({ variant: 'meta' })}
+                      />
+                    )}
+                    {/* Only for an assigned post, and after the voice: most rows carry a voice and
                     fewer a 템플릿, so it reads as an addition rather than a second column. */}
-                <TemplateRefLabel
-                  template={post.template}
-                  className={typographyStyles({ variant: 'meta' })}
-                />
-                {/* Only the tags the search actually matched, and only while it did (POST-65).
+                    <TemplateRefLabel
+                      template={post.template}
+                      className={typographyStyles({ variant: 'meta' })}
+                    />
+                    {/* Only the tags the search actually matched, and only while it did (POST-65).
                     A row kept by a word its title never shows looks arbitrary otherwise; as
                     metadata rather than the chips ② uses, because a fourth object in a 360px
                     row is what pushed the title down to ten Hangul in the first place. */}
-                {matchedTags.length > 0 && (
-                  <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
-                    {matchedTags.map((tag) => `#${tag}`).join(' ')}
+                    {matchedTags.length > 0 && (
+                      <span
+                        className={typographyStyles({ variant: 'meta', className: 'truncate' })}
+                      >
+                        {matchedTags.map((tag) => `#${tag}`).join(' ')}
+                      </span>
+                    )}
+                    <time
+                      dateTime={post.updatedAt}
+                      className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
+                    >
+                      {formatRelativeTime(post.updatedAt)}
+                    </time>
                   </span>
-                )}
-                <time
-                  dateTime={post.updatedAt}
-                  className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
-                >
-                  {formatRelativeTime(post.updatedAt)}
-                </time>
-              </span>
-            </>
-          )
-          // Two stacked lines on a phone, one line on the desk. At 360px a single row left the
-          // title ~146px, so the metadata gets its own line there; from `lg:` up the column is
-          // ~1,000px wide and the same two lines read as a ragged double-height list with the
-          // right two thirds of every row empty — which is the whole complaint about a phone
-          // layout centred on a desk. The title takes the free space and the metadata settles
-          // against the right edge, so status, voice and time line up down the list.
-          const rowClass =
-            'hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 min-w-0 flex-1 flex-col items-start justify-center gap-1 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:gap-4 lg:px-8'
-          const runningJob =
-            post.activeJob && !isTerminal(post.activeJob) ? post.activeJob : undefined
-          const failedJob =
-            post.latestOrdinaryFailure ??
-            (post.activeJob?.status === 'failed' ? post.activeJob : undefined)
-          const failure = failedJob?.failure
-          return (
-            <li
-              key={post.slug}
-              data-post-slug={post.slug}
-              className={
-                runningJob || failure
-                  ? 'flex flex-col'
-                  : 'flex flex-col lg:flex-row lg:items-center'
-              }
-            >
-              {post.pendingExperimentId && !runningJob && !failedJob ? (
-                <Link
-                  to="/tests/records/$id"
-                  params={{ id: post.pendingExperimentId }}
-                  search={{ entry: historyEntry }}
-                  className={rowClass}
-                  onClick={() => remember(post)}
-                >
-                  {content}
-                </Link>
-              ) : (
-                <Link
-                  to="/posts/$slug"
-                  params={{ slug: post.slug }}
-                  className={rowClass}
-                  onClick={() => remember(post)}
-                >
-                  {content}
-                </Link>
-              )}
-              {/* Each recovery target is a sibling of the work link. Export has no link of its
-                  own: it lives in the opened post's 글 완성 step, one step press from wherever the
-                  post opens (POST-64). */}
-              <div className="flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-2 sm:px-6 lg:px-8 lg:py-2">
-                {(runningJob || failure) && (
-                  <Typography
-                    variant={runningJob ? 'meta' : 'body'}
-                    className="text-content-secondary w-full"
-                  >
-                    {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
-                  </Typography>
-                )}
-                <Link
-                  to="/posts/$slug"
-                  params={{ slug: post.slug }}
-                  onClick={() => remember(post)}
-                  className={buttonStyles({ variant: 'ghost', className: '-ml-3' })}
-                >
-                  {t(
-                    post.status === 'published' || post.status === 'finalized' || runningJob
-                      ? 'list.history.open'
-                      : 'list.history.continue',
-                    { ns: 'posts' },
-                  )}
-                </Link>
-                {post.pendingExperimentId && (runningJob || failedJob) && (
+                </span>
+              </>
+            )
+            const rowClass =
+              'hover:bg-card-bg-hover active:bg-card-bg-active flex min-h-11 min-w-0 items-start gap-4 p-4 transition-colors sm:p-5'
+            const runningJob =
+              post.activeJob && !isTerminal(post.activeJob) ? post.activeJob : undefined
+            const failedJob =
+              post.latestOrdinaryFailure ??
+              (post.activeJob?.status === 'failed' ? post.activeJob : undefined)
+            const failure = failedJob?.failure
+            return (
+              <li
+                key={post.slug}
+                data-post-slug={post.slug}
+                className={cardStyles({
+                  padding: 'none',
+                  className: clsx('flex flex-col overflow-hidden', heroCard && heroCardClass),
+                })}
+              >
+                {post.pendingExperimentId && !runningJob && !failedJob ? (
                   <Link
                     to="/tests/records/$id"
                     params={{ id: post.pendingExperimentId }}
                     search={{ entry: historyEntry }}
+                    className={rowClass}
                     onClick={() => remember(post)}
-                    className={buttonStyles({ variant: 'ghost' })}
                   >
-                    {t('list.history.result', { ns: 'posts' })}
+                    {content}
+                  </Link>
+                ) : (
+                  <Link
+                    to="/posts/$slug"
+                    params={{ slug: post.slug }}
+                    className={rowClass}
+                    onClick={() => remember(post)}
+                  >
+                    {content}
                   </Link>
                 )}
-                {post.publishedUrl && (
-                  <a
-                    href={post.publishedUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={buttonStyles({ variant: 'ghost' })}
+                {/* Each recovery target is a sibling of the work link. Export has no link of its
+                  own: it lives in the opened post's 글 완성 step, one step press from wherever the
+                  post opens (POST-64). */}
+                <div
+                  className={clsx(
+                    'flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 sm:px-5',
+                    heroCard ? 'pb-5 sm:pb-6' : 'pl-[4.75rem] sm:pl-[5.25rem]',
+                  )}
+                >
+                  {(runningJob || failure) && (
+                    <Typography
+                      variant={runningJob ? 'meta' : 'body'}
+                      className="text-content-secondary w-full"
+                    >
+                      {runningJob
+                        ? progressLabel(runningJob)
+                        : failure && formatAppFailure(failure)}
+                    </Typography>
+                  )}
+                  <Link
+                    to="/posts/$slug"
+                    params={{ slug: post.slug }}
+                    onClick={() => remember(post)}
+                    className={
+                      heroCard
+                        ? buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })
+                        : buttonStyles({ variant: 'ghost', className: '-ml-3' })
+                    }
                   >
-                    {t('list.history.published', { ns: 'posts' })}
-                  </a>
-                )}
-              </div>
-            </li>
+                    {t(
+                      post.status === 'published' || post.status === 'finalized' || runningJob
+                        ? 'list.history.open'
+                        : 'list.history.continue',
+                      { ns: 'posts' },
+                    )}
+                  </Link>
+                  {post.pendingExperimentId && (runningJob || failedJob) && (
+                    <Link
+                      to="/tests/records/$id"
+                      params={{ id: post.pendingExperimentId }}
+                      search={{ entry: historyEntry }}
+                      onClick={() => remember(post)}
+                      className={buttonStyles({ variant: 'ghost' })}
+                    >
+                      {t('list.history.result', { ns: 'posts' })}
+                    </Link>
+                  )}
+                  {post.publishedUrl && (
+                    <a
+                      href={post.publishedUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={buttonStyles({ variant: 'ghost' })}
+                    >
+                      {t('list.history.published', { ns: 'posts' })}
+                    </a>
+                  )}
+                </div>
+              </li>
+            )
+          }
+          return (
+            <>
+              {hero && <ContinueSection>{renderPost(hero, true)}</ContinueSection>}
+              {groups.map(
+                (group) =>
+                  group.items.length > 0 && (
+                    <WorkGroup
+                      key={group.key}
+                      heading={t(`work.${group.key}`, { ns: 'channel' })}
+                      count={group.items.length}
+                    >
+                      {group.items.map((item) => renderPost(item))}
+                    </WorkGroup>
+                  ),
+              )}
+            </>
           )
-        })}
-      </ul>
+        })()}
+      </section>
 
       {/* The list's end, while there is more to load: what the observer watches, and ONE live region
           whose text says a page is loading or that it failed, so the change is announced rather than

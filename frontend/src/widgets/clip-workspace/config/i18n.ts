@@ -4,6 +4,13 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    guide: {
+      aria: '클립 만들기 단계',
+      sources: '소스',
+      story: '이야기',
+      style: '스타일',
+      make: '만들기',
+    },
     navigation: {
       returnCreation: '{{channel}}으로 돌아가기',
       untitled: '제목 없는 클립',
@@ -34,6 +41,13 @@ export const i18n = {
     },
   },
   en: {
+    guide: {
+      aria: 'Clip steps',
+      sources: 'Sources',
+      story: 'Story',
+      style: 'Style',
+      make: 'Make',
+    },
     navigation: {
       returnCreation: 'Back to {{channel}}',
       untitled: 'Untitled clip',

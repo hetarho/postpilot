@@ -407,6 +407,22 @@ describe('the guideline candidate section', () => {
     { id: 'candidate-orphan', text: '문단을 짧게' },
   ]
 
+  // Guide: the candidates wait behind a banner, and the review shows ONE at a time.
+  const review = () => within(screen.getByRole('dialog', { name: '새 지침 후보' }))
+  const openReview = async (user: ReturnType<typeof userEvent.setup>) => {
+    if (!screen.queryByRole('dialog', { name: '새 지침 후보' }))
+      await user.click(await screen.findByRole('button', { name: '하나씩 보기' }))
+    await screen.findByRole('dialog', { name: '새 지침 후보' })
+    return review()
+  }
+  /** Opens the review and skips forward until the candidate with this text is on screen. */
+  const reviewTo = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
+    const sheet = await openReview(user)
+    for (let step = 0; step < 10 && !sheet.queryByText(text); step++)
+      await user.click(sheet.getByRole('button', { name: '넘기기' }))
+    return sheet
+  }
+  /** The candidate on screen, as the review's one list item. */
   const candidateRow = async (text: string) => {
     const list = await section('후보 지침')
     const found = list
@@ -415,19 +431,26 @@ describe('the guideline candidate section', () => {
     if (!found) throw new Error(`no candidate row with text ${text}`)
     return within(found)
   }
+  const approve = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
+    const sheet = await reviewTo(user, text)
+    await user.click(sheet.getByRole('button', { name: '저장' }))
+    return within(await screen.findByRole('dialog', { name: '지침으로 승인' }))
+  }
 
-  const disclosure = async () => (await screen.findByText(/지침 후보 \d+개/)).closest('details')!
-
-  // GUIDE-22: the saved rules are what the screen is for, so the queue is folded away below them
-  // and says how much is waiting.
-  it('folds the queue away below the saved list with its pending count', async () => {
+  // Guide: the candidates are the one thing on this screen waiting on the owner, so a banner leads
+  // the page with how many are waiting and one big way into the review.
+  it('leads the page with a banner that counts the candidates and opens the review', async () => {
+    const user = userEvent.setup()
     renderGuidelines({ candidates: CANDIDATES })
 
-    const details = await disclosure()
-    expect(details).not.toHaveAttribute('open')
+    const banner = await screen.findByRole('heading', { name: '새 지침 후보 3개' })
     const saved = await screen.findByRole('region', { name: '지침 목록' })
-    // Below the list, not above it: DOCUMENT_POSITION_FOLLOWING.
-    expect(saved.compareDocumentPosition(details) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Above the list: the list FOLLOWS the banner.
+    expect(banner.compareDocumentPosition(saved) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // Nothing is listed until the owner asks for the review.
+    expect(screen.queryByRole('region', { name: '후보 지침' })).toBeNull()
+    const sheet = await openReview(user)
+    expect(sheet.getByText('1 / 3')).toBeInTheDocument()
   })
 
   // GUIDE-27: everything that passes is saved 전역, in one go.
@@ -436,7 +459,7 @@ describe('the guideline candidate section', () => {
     const creates: FakeGuidelinesOptions['creates'] = []
     renderGuidelines({ candidates: CANDIDATES, creates })
 
-    await user.click(await screen.findByRole('button', { name: '전부 수락' }))
+    await user.click((await openReview(user)).getByRole('button', { name: '전부 수락' }))
 
     await waitFor(() => expect(creates).toHaveLength(3))
     expect(creates.map((call) => call.text)).toEqual([
@@ -476,18 +499,18 @@ describe('the guideline candidate section', () => {
       creates,
     })
 
-    await user.click(await screen.findByRole('button', { name: '전부 수락' }))
+    await user.click((await openReview(user)).getByRole('button', { name: '전부 수락' }))
 
     // The walk did not abort at the refusal: all three were attempted, two saved.
     await waitFor(() => expect(creates).toHaveLength(3))
     expect(
       await screen.findByText('2개를 지침으로 저장했어요. 1개는 그대로 남았어요.'),
     ).toBeInTheDocument()
+    // The two that saved left the queue; the refused one is the only one left to review, with
+    // its reason on it.
+    await waitFor(() => expect(review().getByText('1 / 1')).toBeInTheDocument())
     const refused = await candidateRow('없는 사실을 쓰지 않기')
     expect(refused.getByText('이미 같은 지침이 있어요.')).toBeInTheDocument()
-    // The two that saved left the queue; the refused one is still there to fix by hand.
-    const list = await section('후보 지침')
-    await waitFor(() => expect(list.getAllByRole('listitem')).toHaveLength(1))
   })
 
   // GUIDE-27: fifty rows at once have no undo, so this one asks — unlike a single 무시.
@@ -496,35 +519,41 @@ describe('the guideline candidate section', () => {
     const dismissals: string[] = []
     renderGuidelines({ candidates: CANDIDATES, dismissals })
 
-    await user.click(await screen.findByRole('button', { name: '전부 거절' }))
-    const dialog = within(await screen.findByRole('dialog'))
-    expect(dialog.getByText('후보 3개를 전부 거절할까요?')).toBeInTheDocument()
+    await user.click((await openReview(user)).getByRole('button', { name: '전부 거절' }))
+    const confirm = () => screen.findByRole('dialog', { name: '후보 3개를 전부 거절할까요?' })
+    const dialog = within(await confirm())
     await user.click(dialog.getByRole('button', { name: '취소' }))
     expect(dismissals).toEqual([])
 
-    await user.click(screen.getByRole('button', { name: '전부 거절' }))
-    await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: '전부 거절' }),
-    )
+    await user.click(review().getByRole('button', { name: '전부 거절' }))
+    await user.click(within(await confirm()).getByRole('button', { name: '전부 거절' }))
 
     await waitFor(() => expect(dismissals).toHaveLength(3))
     expect(dismissals).toEqual(['candidate-repeated', 'candidate-once', 'candidate-orphan'])
     expect(await screen.findByText('3개를 거절했어요.')).toBeInTheDocument()
   })
 
-  // A1/A2: the review order and the occurrence count, and nothing asked of a model.
-  it('lists the pending candidates in review order with their occurrence count', async () => {
+  // A1/A2: the review order and the occurrence count, and nothing asked of a model. Guide: one
+  // candidate per screen, a progress count, 넘기기 to the next and round again past the last.
+  it('reviews the pending candidates one at a time in review order with their occurrence count', async () => {
+    const user = userEvent.setup()
     const calls: string[] = []
     renderGuidelines({ candidates: CANDIDATES }, calls)
 
-    const list = await section('후보 지침')
-    const items = list.getAllByRole('listitem')
-    expect(items).toHaveLength(3)
-    expect(within(items[0]).getByText('여기 너무 광고 같아')).toBeInTheDocument()
-    expect(within(items[0]).getByText('5번 요청함')).toBeInTheDocument()
-    expect(within(items[1]).getByText('존댓말로 써줘')).toBeInTheDocument()
+    const sheet = await openReview(user)
+    const shown = async () => (await section('후보 지침')).getAllByRole('listitem')
+    expect(await shown()).toHaveLength(1)
+    expect(sheet.getByText('1 / 3')).toBeInTheDocument()
+    expect(within((await shown())[0]).getByText('여기 너무 광고 같아')).toBeInTheDocument()
+    expect(within((await shown())[0]).getByText('5번 요청함')).toBeInTheDocument()
+    await user.click(sheet.getByRole('button', { name: '넘기기' }))
+    expect(sheet.getByText('2 / 3')).toBeInTheDocument()
+    expect(within((await shown())[0]).getByText('존댓말로 써줘')).toBeInTheDocument()
     // A single sighting shows no count: the count exists to mark a repeat.
-    expect(within(items[1]).queryByText('1번 요청함')).not.toBeInTheDocument()
+    expect(within((await shown())[0]).queryByText('1번 요청함')).not.toBeInTheDocument()
+    await user.click(sheet.getByRole('button', { name: '넘기기' }))
+    await user.click(sheet.getByRole('button', { name: '넘기기' }))
+    expect(sheet.getByText('1 / 3')).toBeInTheDocument()
 
     // A12: reading the section calls no provider and enqueues nothing ([I5]).
     const allowed = [
@@ -541,13 +570,16 @@ describe('the guideline candidate section', () => {
 
   // A11: a deleted post leaves the candidate listed with its text and no link.
   it('names the source post as a link, or says it is gone', async () => {
+    const user = userEvent.setup()
     renderGuidelines({ candidates: CANDIDATES })
 
+    await reviewTo(user, '여기 너무 광고 같아')
     const repeated = await candidateRow('여기 너무 광고 같아')
     expect(repeated.getByRole('link', { name: '요청한 글 보기' })).toHaveAttribute(
       'href',
       '/posts/post-1',
     )
+    await reviewTo(user, '문단을 짧게')
     const orphan = await candidateRow('문단을 짧게')
     expect(orphan.queryByRole('link')).not.toBeInTheDocument()
     expect(orphan.getByText('요청한 글이 삭제됐어요')).toBeInTheDocument()
@@ -560,10 +592,7 @@ describe('the guideline candidate section', () => {
     const creates: FakeGuidelinesOptions['creates'] = []
     renderGuidelines({ candidates: CANDIDATES, creates })
 
-    const repeated = await candidateRow('여기 너무 광고 같아')
-    await user.click(repeated.getByRole('button', { name: '승인' }))
-
-    const dialog = within(await screen.findByRole('dialog'))
+    const dialog = await approve(user, '여기 너무 광고 같아')
     expect(dialog.getByLabelText('지침')).toHaveValue('여기 너무 광고 같아')
     // 전역 is preselected: a rule applies everywhere unless the user narrows it — to templates or
     // to 분야, the shared control's three choices.
@@ -587,11 +616,11 @@ describe('the guideline candidate section', () => {
     })
     // The approval names the row it approves rather than relying on the text match alone.
     expect(creates[0].fromCandidateId).toBe('candidate-repeated')
-    // The approved candidate leaves the 후보 section and the rule appears in the saved list:
-    // one create invalidated both, because an approval moves a row from one to the other.
-    await waitFor(async () =>
-      expect((await section('후보 지침')).getAllByRole('listitem')).toHaveLength(2),
-    )
+    // The approved candidate leaves the review — the same place now shows the next of the two
+    // left — and the rule appears in the saved list: one create invalidated both, because an
+    // approval moves a row from one to the other.
+    await waitFor(() => expect(review().getByText('1 / 2')).toBeInTheDocument())
+    expect(review().queryByText('여기 너무 광고 같아')).toBeNull()
     const saved = await section('지침 목록')
     expect(saved.getAllByRole('listitem')).toHaveLength(4)
     // The approval named it, so its closed row shows the title (GUIDE-46).
@@ -605,10 +634,7 @@ describe('the guideline candidate section', () => {
     const creates: FakeGuidelinesOptions['creates'] = []
     renderGuidelines({ candidates: CANDIDATES, creates })
 
-    const repeated = await candidateRow('여기 너무 광고 같아')
-    await user.click(repeated.getByRole('button', { name: '승인' }))
-
-    const dialog = within(await screen.findByRole('dialog'))
+    const dialog = await approve(user, '여기 너무 광고 같아')
     await user.clear(dialog.getByLabelText('지침'))
     await user.type(dialog.getByLabelText('지침'), '광고처럼 읽히는 문장을 쓰지 않기')
     await user.click(dialog.getByRole('tab', { name: '특정 템플릿' }))
@@ -632,10 +658,7 @@ describe('the guideline candidate section', () => {
     const creates: FakeGuidelinesOptions['creates'] = []
     renderGuidelines({ candidates: [{ id: 'candidate-long', text: long }], creates })
 
-    const overLong = await candidateRow(long)
-    await user.click(overLong.getByRole('button', { name: '승인' }))
-
-    const dialog = within(await screen.findByRole('dialog'))
+    const dialog = await approve(user, long)
     // 340 - 300: the count goes negative rather than clamping, so it says how much to cut.
     expect(dialog.getByText('40자 초과')).toBeInTheDocument()
     // The recorded text was never truncated — it is all still here to shorten.
@@ -644,7 +667,7 @@ describe('the guideline candidate section', () => {
     // Saving it unedited reaches no create at all: the client's own field rule stops it, and the
     // server's bound is the one that would refuse it if this check were bypassed.
     await user.click(dialog.getByRole('button', { name: '지침으로 저장' }))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '지침으로 승인' })).toBeInTheDocument()
     expect(creates).toHaveLength(0)
 
     // Shortened, it saves — the correction was kept rather than lost at recording time.
@@ -661,16 +684,14 @@ describe('the guideline candidate section', () => {
     const user = userEvent.setup()
     renderGuidelines({ candidates: CANDIDATES, createAtCap: true })
 
-    const once = await candidateRow('존댓말로 써줘')
-    await user.click(once.getByRole('button', { name: '승인' }))
-
-    const dialog = within(await screen.findByRole('dialog'))
+    const dialog = await approve(user, '존댓말로 써줘')
     await user.click(dialog.getByRole('button', { name: '지침으로 저장' }))
 
     await waitFor(() => expect(dialog.getByText(/100/)).toBeInTheDocument())
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    const list = await section('후보 지침')
-    expect(list.getAllByRole('listitem')).toHaveLength(3)
+    expect(screen.getByRole('dialog', { name: '지침으로 승인' })).toBeInTheDocument()
+    // Still three waiting, and still on the one that was refused.
+    expect(review().getByText('2 / 3')).toBeInTheDocument()
+    expect(await candidateRow('존댓말로 써줘')).toBeTruthy()
   })
 
   // A6: 무시 marks the row and removes it from the section, with no confirmation — nothing is
@@ -680,11 +701,12 @@ describe('the guideline candidate section', () => {
     const dismissals: string[] = []
     renderGuidelines({ candidates: CANDIDATES, dismissals })
 
+    await reviewTo(user, '존댓말로 써줘')
     const once = await candidateRow('존댓말로 써줘')
     await user.click(once.getByRole('button', { name: '무시' }))
 
     await waitFor(() => expect(dismissals).toEqual(['candidate-once']))
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '지침으로 승인' })).not.toBeInTheDocument()
     await waitFor(() => expect(screen.queryByText('존댓말로 써줘')).not.toBeInTheDocument())
   })
 
@@ -696,15 +718,12 @@ describe('the guideline candidate section', () => {
     const calls: string[] = []
     renderGuidelines({ candidates: CANDIDATES, createDuplicates: true }, calls)
 
-    const once = await candidateRow('존댓말로 써줘')
-    await user.click(once.getByRole('button', { name: '승인' }))
-
-    const dialog = within(await screen.findByRole('dialog'))
+    const dialog = await approve(user, '존댓말로 써줘')
     const before = calls.filter((call) => call === 'ListGuidelineCandidates').length
     await user.click(dialog.getByRole('button', { name: '지침으로 저장' }))
 
     expect(await screen.findByText(/이미 같은 지침이 있어요/)).toBeInTheDocument()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: '지침으로 승인' })).toBeInTheDocument()
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListGuidelineCandidates').length).toBeGreaterThan(
         before,
@@ -718,22 +737,21 @@ describe('the guideline candidate section', () => {
     const user = userEvent.setup()
     renderGuidelines({ candidates: CANDIDATES, createAtCap: true })
 
-    const once = await candidateRow('존댓말로 써줘')
-    await user.click(once.getByRole('button', { name: '승인' }))
-    let dialog = within(await screen.findByRole('dialog'))
+    let dialog = await approve(user, '존댓말로 써줘')
     await user.click(dialog.getByRole('button', { name: '지침으로 저장' }))
     await waitFor(() => expect(dialog.getByText(/100/)).toBeInTheDocument())
     await user.click(dialog.getByRole('button', { name: '취소' }))
 
-    await user.click((await candidateRow('존댓말로 써줘')).getByRole('button', { name: '승인' }))
-    dialog = within(await screen.findByRole('dialog'))
+    dialog = await approve(user, '존댓말로 써줘')
     expect(dialog.queryByText(/100/)).not.toBeInTheDocument()
   })
 
   // A9: the full queue is the one thing an empty result cannot say.
   it('says the queue is full even with no candidates listed', async () => {
+    const user = userEvent.setup()
     renderGuidelines({ candidates: [], candidateQueueFull: true })
 
+    await openReview(user)
     const list = await section('후보 지침')
     expect(list.getByText(/후보가 가득 차서/)).toBeInTheDocument()
     expect(list.queryAllByRole('listitem')).toHaveLength(0)
@@ -742,19 +760,22 @@ describe('the guideline candidate section', () => {
     expect(list.queryByRole('button', { name: '전부 거절' })).not.toBeInTheDocument()
   })
 
-  // GUIDE-22, F3: the closed disclosure's summary says the queue is full, so a full queue is seen
-  // without opening it.
-  it('says the queue is full in the closed summary', async () => {
+  // GUIDE-22, F3: the banner says the queue is full, so a full queue is seen without opening the
+  // review.
+  it('says the queue is full on the banner', async () => {
     renderGuidelines({ candidates: [], candidateQueueFull: true })
 
-    const summary = await screen.findByText('지침 후보 0개 · 가득 참')
-    expect(summary.closest('details')).not.toHaveAttribute('open')
+    expect(
+      await screen.findByRole('heading', { name: '새 지침 후보 0개 · 가득 참' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: '새 지침 후보' })).toBeNull()
   })
 
-  // Nothing waiting and room to record is the ordinary state: no section, no words about it.
+  // Nothing waiting and room to record is the ordinary state: no banner, no words about it.
   it('renders no section when nothing is waiting', async () => {
     renderGuidelines({ candidates: [] })
     await screen.findByRole('heading', { level: 1, name: '지침' })
+    expect(screen.queryByRole('button', { name: '하나씩 보기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '후보 지침' })).not.toBeInTheDocument()
   })
 
@@ -763,6 +784,7 @@ describe('the guideline candidate section', () => {
   it('renders no section when the candidate list cannot be read', async () => {
     renderGuidelines({ candidateListFails: true })
     expect(await screen.findByRole('region', { name: '지침 목록' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '하나씩 보기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '후보 지침' })).not.toBeInTheDocument()
   })
 
@@ -771,7 +793,7 @@ describe('the guideline candidate section', () => {
   it('re-reads the candidate list on mount rather than trusting a fresh cache entry', async () => {
     const calls: string[] = []
     const { queryClient, transport } = renderGuidelines({ candidates: CANDIDATES }, calls)
-    await screen.findByRole('region', { name: '후보 지침' })
+    await screen.findByRole('heading', { name: '새 지침 후보 3개' })
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListGuidelineCandidates')).toHaveLength(1),
     )

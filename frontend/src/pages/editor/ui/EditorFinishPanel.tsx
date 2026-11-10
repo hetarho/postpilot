@@ -1,12 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
+import { PartyPopper } from 'lucide-react'
 import type { PostDraft } from '@/entities/post'
 import { isEmptyGuide, type AdvertiserGuide } from '@/entities/advertiser-guide'
 import type { PostContent } from '@/shared/api'
 import { AdvertiserChecklist } from '@/features/check-advertiser-guide'
 import { ExtractMemoriesButton } from '@/features/extract-memories'
 import { PublishedUrlField } from '@/features/record-published-url'
-import { Notice, buttonStyles } from '@/shared/ui'
+import { Notice, Typography, buttonStyles, cardStyles } from '@/shared/ui'
 import { ExportPanel } from '@/widgets/export-panel'
 import { EmptyStep } from './EmptyStep'
 import { CreateClipFromPostButton } from './CreateClipFromPostButton'
@@ -20,8 +21,11 @@ export interface FinishCampaign {
   onTicksChange: (ticks: string[]) => void
 }
 
-/** ③'s panel: what the finished post is for — 기억으로 저장, the 체험단 checklist, the manual
- *  per-platform export and the address it was published at (POST-54, POST-119). */
+/** ③'s panel — Guide: a 완성 screen about one thing, getting the post out. It opens on a short
+ *  celebration, then the 체험단 checklist when there is one (what to check before the copy goes
+ *  to the campaign, POST-119), then the per-platform copy and export as the screen's main body.
+ *  The things a finished post can ALSO become — 기억, a template, a clip — wait in one card under
+ *  it, and the address it was published at closes the screen (POST-54). */
 export function EditorFinishPanel({
   post,
   ownerId,
@@ -54,40 +58,14 @@ export function EditorFinishPanel({
     )
   return (
     <>
-      {/* Enabled by the same thing that makes this step exist: canonical content (POST-72). It
-          proposes; nothing is stored until the user checks a row. */}
-      {/* The two things a finished post can be turned into for later, side by side (POST-72,
-          POST-103). The template link starts nothing: the owner sends the request themselves. */}
-      <div className="mt-10 flex flex-wrap items-start gap-2">
-        {ownerId && (
-          <ExtractMemoriesButton
-            ownerId={ownerId}
-            postSlug={post.slug}
-            hasContent={Boolean(post.content)}
-          />
-        )}
-        {post.content && (
-          <Link
-            to="/templates/new"
-            search={{ from: post.slug }}
-            className={buttonStyles({ variant: 'secondary' })}
-          >
-            {t('editor.templateFromPost')}
-          </Link>
-        )}
-        {post.content && ownerId && (
-          <CreateClipFromPostButton
-            key={`${ownerId}-${post.slug}`}
-            ownerId={ownerId}
-            post={{
-              ...post,
-              ...clipMaterial,
-              campaign: campaign?.on ?? post.campaign,
-              advertiserGuide: campaign?.guide ?? post.advertiserGuide,
-            }}
-            beforeCreate={beforeCreateClip}
-          />
-        )}
+      <div className="mt-8 flex items-center gap-4">
+        <span
+          aria-hidden="true"
+          className="bg-badge-accent-bg text-badge-accent-fg flex size-14 shrink-0 items-center justify-center rounded-full"
+        >
+          <PartyPopper className="size-7" />
+        </span>
+        <Typography variant="stepTitle">{t('guide.finishTitle')}</Typography>
       </div>
       {/* Above the export: what to check before the copy goes to the campaign (POST-119). */}
       {campaign?.on && !isEmptyGuide(campaign.guide) && (
@@ -114,6 +92,44 @@ export function EditorFinishPanel({
           {t('export.languageMissing')}
         </Notice>
       )}
+      {/* What else the finished post can be turned into (POST-72, POST-103): one card, three
+          quiet actions. The template link starts nothing: the owner sends the request themselves. */}
+      <section aria-labelledby="finish-more" className={cardStyles({ className: 'mt-10' })}>
+        <Typography variant="fieldTitle" as="h2" id="finish-more">
+          {t('guide.more')}
+        </Typography>
+        <div className="mt-4 flex flex-wrap items-start gap-2">
+          {ownerId && (
+            <ExtractMemoriesButton
+              ownerId={ownerId}
+              postSlug={post.slug}
+              hasContent={Boolean(post.content)}
+            />
+          )}
+          {post.content && (
+            <Link
+              to="/templates/new"
+              search={{ from: post.slug }}
+              className={buttonStyles({ variant: 'secondary' })}
+            >
+              {t('editor.templateFromPost')}
+            </Link>
+          )}
+          {post.content && ownerId && (
+            <CreateClipFromPostButton
+              key={`${ownerId}-${post.slug}`}
+              ownerId={ownerId}
+              post={{
+                ...post,
+                ...clipMaterial,
+                campaign: campaign?.on ?? post.campaign,
+                advertiserGuide: campaign?.guide ?? post.advertiserGuide,
+              }}
+              beforeCreate={beforeCreateClip}
+            />
+          )}
+        </div>
+      </section>
       {/* The panel's foot (POST-54): what the finished post ends with is where it was published. */}
       <PublishedUrlField post={post} className="mt-10" />
     </>

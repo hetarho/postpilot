@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import { USER, openStep, resetEditorTest } from '@/test/editor'
+import { GUIDE, USER, guideTo, openStep, resetEditorTest } from '@/test/editor'
 import { publishedPostRow, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
@@ -21,7 +21,11 @@ describe('the 체험단 글 switch', () => {
   ]
   const following = (first: Node, second: Node) =>
     Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
-  const campaignSwitch = () => screen.findByRole('switch', { name: '체험단 글' })
+  // Guide: the switch rides with the 가제 on 글 생성's 내용 screen.
+  const campaignSwitch = async () => {
+    await guideTo(userEvent.setup(), GUIDE.details)
+    return screen.findByRole('switch', { name: '체험단 글' })
+  }
   const guideText = () => screen.queryByRole('textbox', { name: '광고주 가이드' })
 
   it('lays out the switch and guide between the 가제 and the fields', async () => {
@@ -34,15 +38,16 @@ describe('the 체험단 글 switch', () => {
       templates: { templates: TEMPLATES },
     })
 
-    const answer = await screen.findByLabelText('방문일')
-    const title = screen.getByLabelText('제목')
     const toggle = await campaignSwitch()
+    const answer = await screen.findByRole('textbox', { name: '방문일' })
+    const title = screen.getByRole('textbox', { name: '제목' })
     const guide = guideText()!
+    // The story has its own screen before this one.
     const memo = screen.getByLabelText('메모')
+    expect(following(memo, title)).toBe(true)
     expect(following(title, toggle)).toBe(true)
     expect(following(toggle, guide)).toBe(true)
     expect(following(guide, answer)).toBe(true)
-    expect(following(answer, memo)).toBe(true)
     expect(screen.getByText('0 / 3000자')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '셀 수 있는 항목' })).toHaveAttribute(
       'aria-expanded',
@@ -125,10 +130,11 @@ describe('the 체험단 글 switch', () => {
 
     const toggle = await campaignSwitch()
     expect(toggle).toBeChecked()
-    // The unminted order is the same: 가제 → the switch with its guide → memo.
+    // The unminted order is the same: memo on its own screen, then 가제 → the switch with its
+    // guide.
+    expect(following(screen.getByLabelText('메모'), screen.getByLabelText('제목'))).toBe(true)
     expect(following(screen.getByLabelText('제목'), toggle)).toBe(true)
     expect(following(toggle, guideText()!)).toBe(true)
-    expect(following(guideText()!, screen.getByLabelText('메모'))).toBe(true)
     await user.type(screen.getByLabelText('제목'), '성수')
 
     await waitFor(

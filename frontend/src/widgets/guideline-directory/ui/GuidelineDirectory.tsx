@@ -1,7 +1,9 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import { useRef, useState, type ReactNode, type Ref } from 'react'
+import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
+import { clsx } from 'clsx'
+import { Check, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadge,
@@ -38,7 +40,9 @@ import {
   Disclosure,
   FieldMessage,
   Notice,
+  Sheet,
   Typography,
+  cardStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
@@ -128,10 +132,12 @@ export function GuidelineDirectory({
   }
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
-      <Typography variant="display">{t(`${page}.title`, { ns: 'guidelines' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t(`${page}.description`, { ns: 'guidelines' })}
+    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
+      {/* Guide: the hub's large title and the 지침 chip say where this is; the page leads with
+          what the list IS — the plain sentences the AI always keeps to. */}
+      <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>
+      <Typography variant="display" as="p" aria-hidden="true" className="text-balance">
+        {t(`${page}.always`, { ns: 'guidelines' })}
       </Typography>
 
       {isError && (
@@ -155,6 +161,9 @@ export function GuidelineDirectory({
 
       {!isError && !isPending && (
         <>
+          {/* Guide: 후보 lead the page as a banner — the one thing here that waits on the owner —
+              and open a one-at-a-time review rather than unfolding a list under the rules. */}
+          <CandidateSection ownerId={ownerId} kind={kind} />
           {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
               writing one directly stay on the page, above the list (GUIDE-44). */}
           <div
@@ -235,10 +244,12 @@ export function GuidelineDirectory({
             <EmptyState kind={kind} />
           ) : (
             <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className="mt-6">
-              <Typography variant="body" as="p" className="text-content-secondary">
+              <Typography variant="meta" as="p">
                 {t(`${page}.order`, { ns: 'guidelines' })}
               </Typography>
-              <ul className="divide-divider mt-3 divide-y">
+              {/* Guide: each rule is one card holding its plain sentence; tapping it opens the
+                  rule's own reading view with its scope and the way to edit it. */}
+              <ul className="mt-3 grid gap-3">
                 {inUse.map((guideline, index) => (
                   <DefaultGuidelineItem
                     key={guideline.key}
@@ -311,7 +322,6 @@ export function GuidelineDirectory({
               </ul>
             </section>
           )}
-          <CandidateSection ownerId={ownerId} kind={kind} />
 
           {dock}
         </>
@@ -330,6 +340,49 @@ function RowTitle({ label, badge }: { label: string; badge: ReactNode }) {
     </span>
   )
 }
+
+/** Guide: a rule as a plain sentence — a check, the rule's own name above (when it has one), the
+ *  sentence itself wrapping in full, and its badge. The name leads, so the row's accessible name
+ *  starts with what the rule is called. */
+function SentenceTitle({
+  sentence,
+  name,
+  badge,
+}: {
+  sentence: string
+  name?: string
+  badge: ReactNode
+}) {
+  return (
+    <span className="flex min-w-0 items-start gap-3 py-1">
+      <span
+        aria-hidden="true"
+        className="bg-badge-accent-bg text-badge-accent-fg mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full"
+      >
+        <Check className="size-4" />
+      </span>
+      <span className="flex min-w-0 flex-col gap-1">
+        {name && name !== sentence && (
+          <span className={typographyStyles({ variant: 'label', className: 'truncate' })}>
+            {name}
+          </span>
+        )}
+        <span
+          className={typographyStyles({
+            variant: 'fieldTitle',
+            className: 'text-content-primary text-pretty break-words',
+          })}
+        >
+          {sentence}
+        </span>
+        <span className="flex min-w-0 flex-wrap items-center gap-2">{badge}</span>
+      </span>
+    </span>
+  )
+}
+
+/** The card a rule row sits on. */
+const ruleCard = cardStyles({ padding: 'none', className: 'px-4 shadow-sm sm:px-5' })
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
@@ -386,13 +439,13 @@ function DefaultGuidelineItem({
 }) {
   const { t } = useTranslation('guidelines')
   return (
-    <li ref={rowRef}>
+    <li ref={rowRef} className={ruleCard}>
       <Disclosure
         size="row"
         headingLevel={3}
         title={
-          <RowTitle
-            label={guideline.name}
+          <SentenceTitle
+            sentence={guideline.name}
             badge={<Badge tone="accent">{t('defaults.badge')}</Badge>}
           />
         }
@@ -447,12 +500,16 @@ function GuidelineRow({
     setAuthoringOpen(true)
   }
   return (
-    <li ref={rowRef}>
+    <li ref={rowRef} className={ruleCard}>
       <Disclosure
         size="row"
         headingLevel={3}
         title={
-          <RowTitle label={named.name} badge={<GuidelineScopeBadge guideline={guideline} />} />
+          <SentenceTitle
+            name={guideline.title}
+            sentence={guideline.text}
+            badge={<GuidelineScopeBadge guideline={guideline} />}
+          />
         }
       >
         <div className="pb-3 pl-6">
@@ -574,27 +631,68 @@ function CandidateSection({ ownerId, kind }: { ownerId: string; kind: GuidelineK
   const [outcome, setOutcome] = useState<BulkOutcome | null>(null)
   const live = failures.filter((failure) => candidates.some((row) => row.id === failure.id))
   const waiting = candidates.length > 0 || queueFull
+  const [reviewing, setReviewing] = useState(false)
 
   // Nothing waiting, room to record more and nothing just done is the ordinary state, and it
   // needs no words.
-  if (isError || (!waiting && !outcome)) return null
+  if (isError || (!waiting && !outcome && !reviewing)) return null
 
+  const summary =
+    kind === 'clip'
+      ? t(queueFull ? 'candidate.summaryClipFull' : 'candidate.summaryClip', {
+          count: candidates.length,
+        })
+      : t(queueFull ? 'candidate.summaryFull' : 'candidate.summary', {
+          count: candidates.length,
+        })
   return (
-    <div className="mt-10">
-      <Typography variant="meta" as="p" role="status">
+    <div className="mt-6">
+      <Typography variant="meta" as="p" role="status" className="empty:hidden">
         {outcome ? bulkReport(t, outcome) : ''}
       </Typography>
+      {/* Guide: the banner — the count, and ONE big way into the review. A full queue says so
+          here, before anything is opened (GUIDE-22). */}
       {waiting && (
-        <CandidateQueue
-          ownerId={ownerId}
-          kind={kind}
-          candidates={candidates}
-          queueFull={queueFull}
-          failures={live}
-          onFailures={setFailures}
-          onFinished={setOutcome}
-        />
+        <section
+          aria-labelledby="guideline-candidates-banner"
+          className={cardStyles({
+            padding: 'md',
+            className:
+              'bg-badge-accent-bg animate-step-in mt-2 flex flex-col gap-4 sm:flex-row sm:items-center',
+          })}
+        >
+          <span className="flex min-w-0 flex-1 items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="bg-button-cta-bg text-button-cta-fg flex size-12 shrink-0 items-center justify-center rounded-lg"
+            >
+              <Sparkles className="size-6" />
+            </span>
+            <Typography variant="title" as="h2" id="guideline-candidates-banner">
+              {summary}
+            </Typography>
+          </span>
+          <Button
+            variant="cta"
+            size="hero"
+            className="w-full sm:w-auto"
+            onClick={() => setReviewing(true)}
+          >
+            {t('candidate.reviewStart')}
+          </Button>
+        </section>
       )}
+      <CandidateReview
+        open={reviewing}
+        onClose={() => setReviewing(false)}
+        ownerId={ownerId}
+        kind={kind}
+        candidates={candidates}
+        queueFull={queueFull}
+        failures={live}
+        onFailures={setFailures}
+        onFinished={setOutcome}
+      />
     </div>
   )
 }
@@ -616,7 +714,14 @@ function bulkReport(t: TFunction<'guidelines'>, outcome: BulkOutcome) {
     : t('candidate.dismissAllResult', { count: outcome.moved })
 }
 
-function CandidateQueue({
+/** Guide: the review — ONE candidate per screen, large, with a progress count and the two big
+ *  answers in the thumb zone: 저장 (which asks for the scope, as approval always has) and 넘기기
+ *  (look at the next one; this one stays waiting). 무시 and the bulk answers stay one row below,
+ *  quieter. Saving or ignoring takes the candidate out of the queue, so the same position then
+ *  shows the next one; skipping past the last wraps to the first. */
+function CandidateReview({
+  open,
+  onClose,
   ownerId,
   kind,
   candidates,
@@ -625,6 +730,8 @@ function CandidateQueue({
   onFailures,
   onFinished,
 }: {
+  open: boolean
+  onClose: () => void
   ownerId: string
   kind: GuidelineKind
   candidates: readonly GuidelineCandidate[]
@@ -634,37 +741,96 @@ function CandidateQueue({
   onFinished: (outcome: BulkOutcome) => void
 }) {
   const { t } = useTranslation('guidelines')
+  const headingId = useId()
+  const [position, setPosition] = useState(0)
+  const total = candidates.length
+  const index = total === 0 ? 0 : Math.min(position, total - 1)
+  const candidate = candidates[index]
   return (
-    <details>
-      <summary
-        className={typographyStyles({
-          variant: 'label',
-          className:
-            'active:bg-row-bg-active text-content-secondary min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
-        })}
-      >
-        {/* A full queue stops recording corrections, so the closed summary says so from the
-            server's queue_full (GUIDE-22); the notice inside says what to do about it. */}
-        {kind === 'clip'
-          ? t(queueFull ? 'candidate.summaryClipFull' : 'candidate.summaryClip', {
-              count: candidates.length,
-            })
-          : t(queueFull ? 'candidate.summaryFull' : 'candidate.summary', {
-              count: candidates.length,
-            })}
-      </summary>
-      {/* Named by what it is, not by the summary's count, so the region a screen reader lands in
-          keeps the same name as the queue empties. */}
-      <section aria-label={t('candidate.section')} className="mt-2 px-4">
-        <Typography variant="body" as="p" className="text-content-secondary max-w-measure">
-          {t(kind === 'clip' ? 'candidate.sectionHelpClip' : 'candidate.sectionHelp')}
-        </Typography>
-        {/* The one thing an empty result cannot tell the user: recording has stopped, and clearing
-            a row is what starts it again. The bound itself is the server's and is not mirrored. */}
+    <Sheet
+      open={open}
+      labelledBy={headingId}
+      onClose={onClose}
+      size="wide"
+      header={
+        <div className="flex flex-col gap-3 px-5 pt-5 sm:px-6">
+          <span className="flex items-baseline justify-between gap-3">
+            <Typography variant="title" as="h2" id={headingId}>
+              {t(kind === 'clip' ? 'candidate.reviewTitleClip' : 'candidate.reviewTitle')}
+            </Typography>
+            {total > 0 && (
+              <span className={typographyStyles({ variant: 'label' })}>
+                {t('candidate.reviewProgress', { current: index + 1, total })}
+              </span>
+            )}
+          </span>
+          {total > 0 && (
+            <span aria-hidden="true" className="flex gap-1">
+              {candidates.map((row, at) => (
+                <span
+                  key={row.id}
+                  className={clsx(
+                    'h-1.5 flex-1 rounded-full',
+                    at <= index ? 'bg-progress-step-done' : 'bg-progress-step-todo',
+                  )}
+                />
+              ))}
+            </span>
+          )}
+        </div>
+      }
+      bodyClassName="px-5 pb-4 sm:px-6"
+      footer={
+        <div className="flex flex-col gap-2 px-5 pt-2 pb-5 sm:px-6">
+          {candidate ? (
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="hero"
+                className="flex-1"
+                disabled={total < 2}
+                onClick={() => setPosition((index + 1) % total)}
+              >
+                {t('candidate.skip')}
+              </Button>
+              <ApproveGuidelineCandidateButton
+                key={candidate.id}
+                ownerId={ownerId}
+                candidate={candidate}
+                size="hero"
+                className="flex-1"
+              />
+            </div>
+          ) : (
+            <Button variant="cta" size="hero" className="w-full" onClick={onClose}>
+              {t('candidate.close')}
+            </Button>
+          )}
+        </div>
+      }
+    >
+      {/* Named by what it is, not by a count, so the region a screen reader lands in keeps its
+          name as the queue empties. */}
+      <section aria-label={t('candidate.section')} className="flex flex-col gap-4">
+        {/* The one thing an empty result cannot tell the user: recording has stopped, and
+            clearing a row is what starts it again. */}
         {queueFull && (
-          <Notice tone="warning" role="status" className="mt-3">
+          <Notice tone="warning" role="status">
             {t('candidate.queueFull')}
           </Notice>
+        )}
+        {candidate ? (
+          <ul key={candidate.id} className="animate-step-in">
+            <CandidateRow
+              ownerId={ownerId}
+              candidate={candidate}
+              failure={failures.find((failure) => failure.id === candidate.id)?.message}
+            />
+          </ul>
+        ) : (
+          <Typography variant="title" as="p" className="py-8 text-center">
+            {t('candidate.reviewDone')}
+          </Typography>
         )}
         <BulkGuidelineCandidateActions
           ownerId={ownerId}
@@ -673,20 +839,8 @@ function CandidateQueue({
           onFailures={onFailures}
           onFinished={onFinished}
         />
-        {candidates.length > 0 && (
-          <ul className="divide-divider mt-3 divide-y">
-            {candidates.map((candidate) => (
-              <CandidateRow
-                key={candidate.id}
-                ownerId={ownerId}
-                candidate={candidate}
-                failure={failures.find((failure) => failure.id === candidate.id)?.message}
-              />
-            ))}
-          </ul>
-        )}
       </section>
-    </details>
+    </Sheet>
   )
 }
 
@@ -707,11 +861,15 @@ function CandidateRow({
 }) {
   const { t } = useTranslation('guidelines')
   return (
-    <li className="py-4">
-      <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
+    <li className={cardStyles({ padding: 'lg', className: 'shadow-sm' })}>
+      <Typography
+        variant="title"
+        as="p"
+        className="text-content-primary break-words whitespace-pre-wrap"
+      >
         {candidate.text}
       </Typography>
-      <div className="mt-2 flex flex-wrap items-center gap-2">
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         {candidate.occurrences > 1 && (
           <Badge tone="accent">
             {t('candidate.occurrences', { count: candidate.occurrences })}
@@ -746,8 +904,8 @@ function CandidateRow({
         )}
       </div>
       {failure && <FieldMessage className="mt-2">{failure}</FieldMessage>}
+      {/* 저장 is the review's big button; 무시 stays here, quiet, on the candidate it ignores. */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <ApproveGuidelineCandidateButton ownerId={ownerId} candidate={candidate} />
         <DismissGuidelineCandidateButton
           ownerId={ownerId}
           kind={candidate.kind}

@@ -19,6 +19,11 @@ function renderList(posts: FakePostsOptions = {}) {
   return renderAppAt('/naver-blog', { user: USER, posts })
 }
 
+/** Guide: the search and the status filter wait behind one 찾기 button, in a bottom sheet. */
+async function openFind() {
+  await userEvent.click(await screen.findByRole('button', { name: /^찾기( · \d+)?$/ }))
+}
+
 describe('PostsPage', () => {
   // A4.
   it('lists the posts the server returned, in that order', async () => {
@@ -185,7 +190,8 @@ describe('PostsPage', () => {
         },
       ],
     })
-    const history = await screen.findByRole('list', { name: '글 작업 내역' })
+    // Guide: one region holds 이어서 쓰기 (the review post) and the 작성 중 / 완성 groups.
+    const history = await screen.findByRole('region', { name: '글 작업 내역' })
     const [review, empty, published] = await within(history).findAllByRole('listitem')
     const resume = within(review).getByRole('link', { name: '이어서 작성' })
     expect(resume).toHaveAttribute('href', '/posts/review-content')
@@ -223,7 +229,7 @@ describe('PostsPage', () => {
         },
       ],
     })
-    const history = await screen.findByRole('list', { name: '글 작업 내역' })
+    const history = await screen.findByRole('region', { name: '글 작업 내역' })
     const work = await within(history).findByRole('link', { name: /다시 쓸 작업/ })
     expect(work).toHaveTextContent('AI 결과 오류')
     expect(work).toHaveAttribute('href', '/posts/failed')
@@ -287,6 +293,7 @@ describe('PostsPage', () => {
     const { router } = renderList(NARROWABLE)
     await screen.findByRole('link', { name: /제주 3일/ })
 
+    await openFind()
     await user.click(screen.getByRole('combobox', { name: /^상태/ }))
     await user.click(await screen.findByRole('option', { name: '확정' }))
 
@@ -330,6 +337,7 @@ describe('PostsPage', () => {
     const { router, unmount } = renderList(WITH_PUBLISHED)
     await screen.findByRole('link', { name: /성수 카페/ })
 
+    await openFind()
     await user.click(screen.getByRole('combobox', { name: /^상태/ }))
     expect((await screen.findAllByRole('option')).map((option) => option.textContent)).toEqual([
       '전체',
@@ -349,6 +357,7 @@ describe('PostsPage', () => {
     renderAppAt(address, { user: USER, posts: WITH_PUBLISHED })
     expect(await screen.findByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /제주 3일/ })).toBeNull()
+    await openFind()
     expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('발행됨')
   })
 
@@ -358,6 +367,9 @@ describe('PostsPage', () => {
     expect(await screen.findByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /서울 산책/ })).toBeNull()
     expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull()
+    // The 찾기 button counts the narrowing that is on.
+    expect(screen.getByRole('button', { name: '찾기 · 1' })).toBeInTheDocument()
+    await openFind()
     expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('발행됨')
   })
 
@@ -367,6 +379,7 @@ describe('PostsPage', () => {
     renderList(NARROWABLE)
     await screen.findByRole('link', { name: /제주 3일/ })
 
+    await openFind()
     await user.type(screen.getByLabelText('검색'), '카페')
 
     await waitFor(() => expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull())
@@ -381,6 +394,7 @@ describe('PostsPage', () => {
     renderList(NARROWABLE)
     await screen.findByRole('link', { name: /제주 3일/ })
 
+    await openFind()
     await user.type(screen.getByLabelText('검색'), '밥상')
 
     const row = await screen.findByRole('link', { name: /부산 밥상/ })
@@ -393,6 +407,7 @@ describe('PostsPage', () => {
     const { router } = renderList(NARROWABLE)
     await screen.findByRole('link', { name: /제주 3일/ })
 
+    await openFind()
     await user.type(screen.getByLabelText('검색'), '없는말')
 
     expect(await screen.findByText(/"없는말"에 맞는 글이 없어요/)).toBeInTheDocument()
@@ -411,6 +426,8 @@ describe('PostsPage', () => {
 
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull()
+    expect(screen.getByRole('button', { name: '찾기 · 2' })).toBeInTheDocument()
+    await openFind()
     expect(screen.getByLabelText('검색')).toHaveValue('제주')
     expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('검토')
   })
@@ -423,6 +440,7 @@ describe('PostsPage', () => {
     await screen.findByRole('link', { name: /제주 3일/ })
     const before = router.history.length
 
+    await openFind()
     await user.type(screen.getByLabelText('검색'), '제주')
 
     await waitFor(() => expect(router.state.location.search).toEqual({ q: '제주' }))
@@ -434,6 +452,7 @@ describe('PostsPage', () => {
     renderList()
 
     expect(await screen.findByText(/아직 글이 없어요/)).toBeInTheDocument()
+    await openFind()
     expect(screen.getByLabelText('검색')).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('전체')
   })
@@ -620,6 +639,7 @@ describe('PostsPage paging (POST-90..92)', () => {
     await screen.findByRole('link', { name: /글 20번/ })
     expect(screen.queryByRole('link', { name: /제주 마지막/ })).toBeNull()
 
+    await openFind()
     await user.type(screen.getByLabelText('검색'), '제주')
 
     expect(await screen.findByRole('link', { name: /제주 마지막/ })).toBeInTheDocument()
@@ -632,6 +652,7 @@ describe('PostsPage paging (POST-90..92)', () => {
     const { router } = renderList({ posts: manyPosts(3), listRequests })
     await screen.findByRole('link', { name: /글 3번/ })
 
+    await openFind()
     await user.type(screen.getByLabelText('검색'), '글 2번')
 
     // The URL follows every keystroke (POST-67) …

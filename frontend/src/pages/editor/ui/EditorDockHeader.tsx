@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react'
+import { useState, type ReactNode, type Ref } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { isPublished, type GenerationOptionsSet, type PostDraft } from '@/entities/post'
@@ -11,57 +11,57 @@ import type { ContentLanguage } from '@/shared/api'
 import type { PopoverHandle } from '@/shared/ui'
 import { GenerationBrief } from '@/widgets/generation-brief'
 
-/** The dock's first row: 말투, 템플릿 and the writing brief's glyph.
+export interface EditorChoicesProps {
+  post?: PostDraft
+  ownerId: string
+  voiceId: string
+  templateId: string
+  targetLanguage: ContentLanguage
+  targetLength?: number
+  tagCount: number
+  onVoiceSelect: (id: string) => void
+  onGrowVoice: (id: string) => void
+  onTemplateSelect: (id: string) => void
+  onTargetLanguageSelect: (language: ContentLanguage) => void
+  onBriefSaved: (set: GenerationOptionsSet) => void
+  /** The run a press was refused for, which the brief marks the missing fields of; `count`
+   *  grows with every refused press. */
+  refusal?: { mode: GenerationMode; count: number }
+  onBriefClosed?: () => void
+  writingTest?: { href: string; onOpen: () => Promise<void> | void; disabled?: boolean }
+  briefRef: Ref<PopoverHandle>
+}
+
+/** The three choices that decide what a run writes — 말투, 템플릿 and the writing brief — as
+ *  separately placeable pieces.
  *
- *  Both selects ride the dock's own surface beside the brief rather than inside it: each is
- *  chosen per draft and each silently changes what comes out of a run, so they are the parts of
- *  the brief that must be readable — and changeable — without opening anything (POST-51).
- *  Neither shows a caption; each trigger reads its own value.
- *
- *  `items-start` so the glyph stays level with the two listboxes when either field grows a hint
- *  or an error underneath it; `min-w-0` on both so a long voice or template name truncates inside
- *  its own trigger instead of pushing the glyph off a 320px screen (THEME-32). */
-export const EditorDockHeader = forwardRef<
-  PopoverHandle,
-  {
-    post?: PostDraft
-    ownerId: string
-    voiceId: string
-    templateId: string
-    targetLanguage: ContentLanguage
-    targetLength?: number
-    tagCount: number
-    onVoiceSelect: (id: string) => void
-    onGrowVoice: (id: string) => void
-    onTemplateSelect: (id: string) => void
-    onTargetLanguageSelect: (language: ContentLanguage) => void
-    onBriefSaved: (set: GenerationOptionsSet) => void
-    /** The run a press was refused for, which the brief marks the missing fields of; `count`
-     *  grows with every refused press. */
-    refusal?: { mode: GenerationMode; count: number }
-    onBriefClosed?: () => void
-    writingTest?: { href: string; onOpen: () => Promise<void> | void; disabled?: boolean }
-  }
->(function EditorDockHeader(
-  {
-    post,
-    ownerId,
-    voiceId,
-    templateId,
-    targetLanguage,
-    targetLength,
-    tagCount,
-    onVoiceSelect,
-    onGrowVoice,
-    onTemplateSelect,
-    onTargetLanguageSelect,
-    onBriefSaved,
-    refusal,
-    onBriefClosed,
-    writingTest,
-  },
+ *  Guide: they no longer share one dock row. The 템플릿 is chosen on the screen that asks for its
+ *  answers (내용), and the 말투 and the brief are rows of the 확인 summary, each reading its own
+ *  value with its own way to change it (POST-51: both stay readable without opening anything).
+ *  `sheet` is the 새 말투 만들기 sheet the voice picker opens; mount it once, anywhere. */
+export function useEditorChoices({
+  post,
+  ownerId,
+  voiceId,
+  templateId,
+  targetLanguage,
+  targetLength,
+  tagCount,
+  onVoiceSelect,
+  onGrowVoice,
+  onTemplateSelect,
+  onTargetLanguageSelect,
+  onBriefSaved,
+  refusal,
+  onBriefClosed,
+  writingTest,
   briefRef,
-) {
+}: EditorChoicesProps): {
+  voice: ReactNode
+  template: ReactNode
+  brief: ReactNode
+  sheet: ReactNode
+} {
   // Read from the post it holds: a published post (POST-86) takes no post write here, and none of
   // these fields names a reason — ① says it once, above its actions.
   const published = post ? isPublished(post) : false
@@ -70,18 +70,14 @@ export const EditorDockHeader = forwardRef<
   // lives here because the picker, a feature, cannot render another feature (ARCH-13).
   const [creatingVoice, setCreatingVoice] = useState(false)
   const navigate = useNavigate()
-  // Read as soon as the dock renders, so the rows are there when the brief opens; the language is
-  // part of the read, since every rule text is rendered in it.
+  // Read as soon as the editor renders, so the rows are there when the brief opens; the language
+  // is part of the read, since every rule text is rendered in it.
   usePrefetchAccountQuality(ownerId, post?.slug ?? '', targetLanguage)
 
-  // Everything the next AI run is given, in one surface. Every callback goes through the autosave
-  // queue for an existing post, and through local state for a draft the server has not created.
-  //
-  // The ref is how 글 생성 opens it for a press its setup refused, with `refusal` naming the run
-  // whose missing fields it marks.
-  const briefPanel = (
+  const brief = (
     <GenerationBrief
       ref={briefRef}
+      trigger="change"
       targetLanguage={targetLanguage}
       contentLanguage={post?.contentLanguage}
       frozenLanguage={
@@ -95,9 +91,7 @@ export const EditorDockHeader = forwardRef<
       locked={published}
       writingTest={writingTest}
       // The run options, one form saved by the brief's 저장 (POST-89), only for a saved post: a
-      // draft has no slug to save against. The two numbers come from the brief's mirror, which is
-      // also what 생성 sends; the other three from the post. A running job holds the numbers and
-      // the ticks, which it has already frozen; 분야 and 기억 사용 are read at the next enqueue.
+      // draft has no slug to save against.
       options={
         post
           ? {
@@ -118,12 +112,7 @@ export const EditorDockHeader = forwardRef<
     />
   )
 
-  // The 말투 and the 템플릿 ride the dock's own surface beside the brief's glyph, not inside it:
-  // both are chosen per draft and both silently change what comes out of a run, so they are the
-  // parts of the brief that must be readable — and changeable — without opening anything
-  // (POST-51). Neither shows a caption; each trigger reads its own value, and the labels
-  // stay `sr-only` inside the two features.
-  const voiceSelect = (
+  const voice = (
     <PostVoiceSelect
       ownerId={ownerId}
       value={voiceId}
@@ -134,16 +123,17 @@ export const EditorDockHeader = forwardRef<
       onCreateVoice={() => setCreatingVoice(true)}
       onGrowVoice={onGrowVoice}
       disabled={published}
-      className="min-w-0 flex-1"
+      labelVisible
+      className="min-w-0"
     />
   )
 
-  const templateSelect = (
+  const template = (
     <PostTemplateSelect
       ownerId={ownerId}
       value={templateId}
       current={post?.template}
-      jobRunning={!published && Boolean(post?.activeJob && !isTerminal(post.activeJob))}
+      jobRunning={!published && jobRunning}
       onSelect={onTemplateSelect}
       // The wizard returns here on 저장 with the new template assigned (TMPL-32); an unsaved
       // draft has nothing typed to lose, since the first edit mints the post.
@@ -151,22 +141,14 @@ export const EditorDockHeader = forwardRef<
         void navigate({ to: '/templates/new', search: { post: post?.slug ?? 'new' } })
       }
       disabled={published}
-      className="min-w-0 flex-1"
+      labelVisible
+      className="min-w-0"
     />
   )
 
-  // `items-start` so the glyph stays level with the two listboxes when either field grows a hint
-  // or an error underneath it; `min-w-0` on both so a long voice or template name truncates inside
-  // its own trigger instead of pushing the glyph off a 320px screen (THEME-32). The two fields share
-  // the row evenly, which is also what took the voice trigger down from full width.
-  const dockHeader = (
-    <div className="flex items-start gap-2">
-      {voiceSelect}
-      {templateSelect}
-      {briefPanel}
-      <CreateVoiceSheet ownerId={ownerId} open={creatingVoice} onOpenChange={setCreatingVoice} />
-    </div>
+  const sheet = (
+    <CreateVoiceSheet ownerId={ownerId} open={creatingVoice} onOpenChange={setCreatingVoice} />
   )
 
-  return dockHeader
-})
+  return { voice, template, brief, sheet }
+}

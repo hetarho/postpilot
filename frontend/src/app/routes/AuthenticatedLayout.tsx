@@ -1,12 +1,13 @@
 import { useInitializeDefaultSelections } from '@/entities/model-catalog'
 import { useSession } from '@/entities/session'
 import { postReturnDestination } from '@/entities/post'
-import { clipReturnDestination, clipChannelPath, useClipProject } from '@/entities/clip-project'
+import { clipReturnDestination, useClipProject } from '@/entities/clip-project'
 import { useWritingTestSource } from '@/entities/writing-test'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
+import { Bot, CircleUserRound, Files, Palette, SquarePen } from 'lucide-react'
 import { takePendingGift } from '@/features/redeem-voucher'
 import {
   Button,
@@ -14,7 +15,10 @@ import {
   Logo,
   NavigationProvider,
   PromoStage,
+  TabBar,
   Typography,
+  chipStyles,
+  pageStyles,
   typographyStyles,
   useMediaQuery,
   type NavigationLinkProps,
@@ -30,17 +34,29 @@ import {
   rememberNavigationEntry,
 } from '../model/navigation-entry'
 import {
-  channelSections,
   currentDestination,
   currentSection,
-  CHANNEL_DESTINATIONS,
+  isFocusedFlow,
   isStructuralNavigationEntry,
   isTopLevelDestination,
+  MINE_SECTIONS,
   navigationPathname,
   navigationChannelFromHref,
   routeLocation,
+  STYLE_SECTIONS,
+  styleKinds,
+  TAB_DESTINATIONS,
 } from './navigation'
 import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
+
+/** Guide: one glyph per tab, so a destination is found by shape before it is read. */
+const TAB_ICONS = {
+  '/create': SquarePen,
+  '/my': Files,
+  '/style': Palette,
+  '/ai-models': Bot,
+  '/settings': CircleUserRound,
+} as const
 
 function NavigationLink({ href, children, className, onClick, ...rest }: NavigationLinkProps) {
   const navigate = useNavigate()
@@ -230,11 +246,7 @@ export function AuthenticatedLayout() {
               inherited &&
               isStructuralNavigationEntry(to, entryHref(inherited), fromChannel)
             ? entryHref(inherited)
-            : fromChannel &&
-                currentDestination(from, fromChannel) === clipChannelPath(fromChannel) &&
-                /^\/video-(templates|guidelines)(?:\/|$)/.test(navigationPathname(to))
-              ? clipChannelPath(fromChannel)
-              : undefined
+            : undefined
       const parentEntry = entry ? navigationParent(entry) : undefined
       const scopedEntry =
         entry &&
@@ -296,34 +308,72 @@ export function AuthenticatedLayout() {
     Link: NavigationLink,
   }
   const section = currentSection(pathname)
-  const sectionChannel =
-    current === '/insta-clip'
-      ? 'instagram_clip'
-      : current === '/naver-clip'
-        ? 'naver_clip'
-        : undefined
   const backLink =
     !setup &&
     !ownReturn &&
     !isTopLevelDestination(pathname) &&
     (navigationValue.ancestors.length > 0 || !!navigationValue.returnTo)
+  // Guide: the tab bar is the thumb's home row on every screen except a focused flow, where the
+  // flow's own bottom bar owns the thumb zone.
+  const tabBar = !isFocusedFlow(pathname)
+  const tabs = TAB_DESTINATIONS.map(({ to, labelKey }) => ({
+    href: to,
+    label: t(labelKey),
+    icon: TAB_ICONS[to],
+    current: current === to,
+  }))
+  const clipScope = channel ?? navigationChannelFromHref(location.href)
+  const chips =
+    section?.hub === 'mine'
+      ? MINE_SECTIONS.map(({ key, href }) => ({
+          key,
+          href,
+          label: t(`mine.${key}`),
+          current: section.key === key,
+        }))
+      : section?.hub === 'style'
+        ? STYLE_SECTIONS.map(({ key, href }) => ({
+            key,
+            href,
+            label: t(`style.${key}`),
+            current: section.key === key,
+          }))
+        : []
+  const kinds =
+    section?.hub === 'style' && (section.key === 'templates' || section.key === 'guidelines')
+      ? styleKinds(section.key, clipScope).map(({ key, href }) => ({
+          key,
+          href,
+          label: t(`kinds.${key}`),
+          current: section.kind === key,
+        }))
+      : []
   return (
     <NavigationProvider value={navigationValue}>
       <div
         data-plans-shell={immersive || undefined}
-        className="bg-surface-base text-content-primary relative isolate flex min-h-full flex-col"
+        data-tab-bar={tabBar ? 'shown' : undefined}
+        className={clsx(
+          // `overflow-x-clip`: a step's one-time slide-in starts 1.5rem to the right, and on a phone
+          // that first frame must not widen the layout viewport. Clip, not hidden, so no scroll
+          // container is made and the sticky header still sticks.
+          'bg-surface-base text-content-primary relative isolate flex min-h-full flex-col overflow-x-clip',
+          tabBar && 'pb-nav',
+        )}
       >
         {immersive && <PromoStage viewport />}
         <header
           ref={header}
           className={clsx(
             'min-h-header sticky top-0 z-30 has-[[aria-expanded=true]]:z-40',
-            immersive ? 'bg-surface-raised/70 backdrop-blur-xl' : 'bg-surface-base',
+            immersive
+              ? 'bg-surface-raised/70 backdrop-blur-xl'
+              : 'bg-surface-base/90 backdrop-blur-xl',
           )}
         >
-          {/* One row at every width (THEME-38): brand, the three channel links, account. The marked
-              channel link is the location of a channel's own page, so no breadcrumb repeats it. */}
-          <div className="h-header mx-auto flex w-full max-w-7xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
+          {/* Guide: one slim row — the brand, then credits and the account. The destinations live
+              in the bottom tab bar, where the thumb is. */}
+          <div className="h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
             <Link
               to="/"
               aria-label={t('home')}
@@ -331,31 +381,6 @@ export function AuthenticatedLayout() {
             >
               <Logo className="h-5 max-w-full sm:h-6" />
             </Link>
-            <nav
-              aria-label={t('primary')}
-              className="flex min-w-0 flex-1 justify-center lg:ml-6 lg:flex-none lg:justify-start lg:gap-2"
-            >
-              {CHANNEL_DESTINATIONS.map(({ to, labelKey }) => (
-                <Link
-                  key={to}
-                  to={to}
-                  aria-current={current === to ? 'page' : undefined}
-                  // A tab marks the current channel by its underline and colour alone, with no
-                  // plane behind it at rest, on hover or when pressed.
-                  className={typographyStyles({
-                    variant: 'label',
-                    className: clsx(
-                      'inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm px-2 whitespace-nowrap lg:px-3',
-                      current === to
-                        ? 'text-link-fg-current underline decoration-2 underline-offset-8'
-                        : 'text-content-secondary hover:text-content-primary',
-                    ),
-                  })}
-                >
-                  {t(labelKey)}
-                </Link>
-              ))}
-            </nav>
             <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
               {wide && (
@@ -372,39 +397,66 @@ export function AuthenticatedLayout() {
               />
             </div>
           </div>
-          {/* A channel's four sections, on their list pages only: deeper pages keep the main row
-              alone (THEME-38). */}
-          {section && (
+        </header>
+        {/* Guide: a hub's pages (내 글's channels, 내 스타일's sections) open on the hub's large
+            title, with the sibling pages as a chip row under it that scrolls sideways rather than
+            wrapping. The page keeps its own (visually hidden) `h1`, so the title is the sighted
+            reader's copy of the hub's name, not a second heading in the outline. */}
+        {section && (
+          // The directory column's own width, so the title and chips line up with the list.
+          <div className={pageStyles({ width: 'wide', className: 'pt-2 pb-0 sm:pt-6 sm:pb-0' })}>
+            <p
+              aria-hidden="true"
+              className={typographyStyles({ variant: 'largeTitle', className: 'truncate' })}
+            >
+              {t(`hub.${section.hub}`)}
+            </p>
             <nav
               aria-label={t('sections')}
-              className="mx-auto flex w-full max-w-7xl gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8"
+              className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
             >
-              {channelSections(sectionChannel).map(({ key, href }) => (
+              {chips.map((chip) => (
                 <Link
-                  key={key}
-                  to={href}
-                  aria-current={section === key ? 'page' : undefined}
-                  className={typographyStyles({
-                    variant: 'label',
-                    className: clsx(
-                      'inline-flex min-h-11 shrink-0 items-center justify-center rounded-sm px-2 whitespace-nowrap lg:px-3',
-                      section === key
-                        ? 'text-link-fg-current underline decoration-2 underline-offset-8'
-                        : 'text-content-secondary hover:text-content-primary',
-                    ),
-                  })}
+                  key={chip.key}
+                  to={chip.href}
+                  aria-current={chip.current ? 'page' : undefined}
+                  className={chipStyles({ current: chip.current })}
                 >
-                  {t(`section.${key === 'work' && sectionChannel ? 'video' : key}`)}
+                  {chip.label}
                 </Link>
               ))}
             </nav>
-          )}
-        </header>
+            {kinds.length > 0 && (
+              // 템플릿 and 지침 each have a 글 side and a 영상 side: a small two-way switch under
+              // the chips rather than a third row of tabs.
+              <nav aria-label={t('kinds.aria')} className="mt-1 flex gap-1">
+                {kinds.map((kind) => (
+                  <Link
+                    key={kind.key}
+                    to={kind.href}
+                    aria-current={kind.current ? 'page' : undefined}
+                    className={typographyStyles({
+                      variant: 'label',
+                      className: clsx(
+                        'inline-flex min-h-11 items-center rounded-full px-4',
+                        kind.current
+                          ? 'bg-badge-accent-bg text-badge-accent-fg'
+                          : 'text-content-secondary hover:text-content-primary',
+                      ),
+                    })}
+                  >
+                    {kind.label}
+                  </Link>
+                ))}
+              </nav>
+            )}
+          </div>
+        )}
         <div className="flex min-w-0 flex-1 flex-col">
           {backLink && (
             <nav
               aria-label={t('returnLabel')}
-              className="mx-auto w-full max-w-7xl px-4 pt-2 sm:px-6 lg:px-8"
+              className="mx-auto w-full max-w-5xl px-4 pt-2 sm:px-6 lg:px-8"
             >
               <ContextualReturn className="-ml-4" />
             </nav>
@@ -421,6 +473,7 @@ export function AuthenticatedLayout() {
           )}
           <Outlet />
         </div>
+        {tabBar && <TabBar items={tabs} ariaLabel={t('primary')} />}
       </div>
     </NavigationProvider>
   )

@@ -12,6 +12,9 @@ import {
 
 const STABLE_PARENTS = new Set([
   '/',
+  '/create',
+  '/my',
+  '/style',
   '/settings',
   '/naver-blog',
   '/naver-clip',

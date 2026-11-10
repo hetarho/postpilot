@@ -52,6 +52,9 @@ interface GenerationBriefProps {
     onOpen: () => Promise<void> | void
     disabled?: boolean
   }
+  /** Guide: `change` draws the trigger as a summary row's quiet 바꾸기 instead of the dock's gear
+   *  glyph. The button keeps the brief's name either way. */
+  trigger?: 'icon' | 'change'
   /** The run-options form. Absent for a draft with no post yet: the form has no slug to save
    *  against, and appears after the draft's first save (POST-89). */
   options?: {
@@ -92,6 +95,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       onClose,
       locked = false,
       writingTest,
+      trigger = 'icon',
       options,
     },
     ref,
@@ -129,8 +133,17 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         // exists to produce (owner decision, 2026-09-01). The 말투 and 템플릿 it used to name now sit
         // beside this glyph as their own dropdowns, so the two expensive-to-get-wrong fields are
         // visible WITHOUT opening anything, which is what naming them in the trigger was for.
-        triggerSize="icon"
-        triggerLabel={<Settings aria-hidden="true" className="size-5" />}
+        triggerSize={trigger === 'icon' ? 'icon' : 'default'}
+        triggerVariant={trigger === 'icon' ? 'secondary' : 'ghost'}
+        triggerClassName={trigger === 'change' ? 'text-link-fg-current' : undefined}
+        triggerLabel={
+          trigger === 'icon' ? (
+            <Settings aria-hidden="true" className="size-5" />
+          ) : (
+            t('guide.change', { ns: 'posts' })
+          )
+        }
+        placement={trigger === 'change' ? 'below' : 'above'}
         align="end"
         phone="sheet"
         className="shrink-0"

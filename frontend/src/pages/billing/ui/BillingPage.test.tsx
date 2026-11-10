@@ -138,7 +138,9 @@ describe('BillingPage', () => {
     const headings = screen
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent)
+    // Guide: the 남은 크레딧 hero leads, with one 충전 that goes straight to 크레딧 구매.
     expect(headings).toEqual([
+      '남은 크레딧',
       '혜택과 잔액',
       '구독',
       '결제 수단',
@@ -146,6 +148,13 @@ describe('BillingPage', () => {
       '크레딧 구매',
       '환불 요청',
     ])
+    expect(screen.getByRole('link', { name: '충전하기' })).toHaveAttribute(
+      'href',
+      '#billing-charge',
+    )
+    expect(document.getElementById('billing-charge')?.querySelector('h2')?.textContent).toBe(
+      '크레딧 구매',
+    )
     expect(screen.getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
     expect(screen.getByText('등록된 결제 수단이 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('아직 결제 기록이 없습니다.')).toBeInTheDocument()

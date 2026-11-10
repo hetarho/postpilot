@@ -42,9 +42,11 @@ describe('the plan cards', () => {
     renderAppAt('/plans', { user: USER, plans: { plan: ProtoPlan.BASIC } })
     const items = await cards()
     expect(items).toHaveLength(5)
+    // Guide: one plan per screen on a phone — a sideways snapping row — and the five-column
+    // ladder again on the widest desk.
     expect(
       within(await screen.findByRole('region', { name: '플랜' })).getAllByRole('list')[0],
-    ).toHaveClass('md:grid-cols-2', 'xl:grid-cols-5')
+    ).toHaveClass('snap-x', 'snap-mandatory', 'overscroll-x-contain', 'xl:grid-cols-5')
     for (const [index, name, monthly, daily, bonus, exports, level] of [
       [1, 'Light', 1900, 15, 290, 0, '가성비'],
       [2, 'Basic', 4900, 45, 510, 0, '밸런스'],

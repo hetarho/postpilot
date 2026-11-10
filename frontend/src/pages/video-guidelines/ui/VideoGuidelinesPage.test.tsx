@@ -214,6 +214,16 @@ describe('the 영상 지침 후보 section', () => {
     { id: 'post-candidate', text: '존댓말로 써줘', postSlug: 'post-1' },
   ]
 
+  // Guide: a banner opens a one-at-a-time review.
+  const review = () => within(screen.getByRole('dialog', { name: '새 영상 지침 후보' }))
+  const reviewTo = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
+    if (!screen.queryByRole('dialog', { name: '새 영상 지침 후보' }))
+      await user.click(await screen.findByRole('button', { name: '하나씩 보기' }))
+    const sheet = within(await screen.findByRole('dialog', { name: '새 영상 지침 후보' }))
+    for (let step = 0; step < 10 && !sheet.queryByText(text); step++)
+      await user.click(sheet.getByRole('button', { name: '넘기기' }))
+    return sheet
+  }
   const candidateRow = async (text: string) => {
     const list = await section('후보 지침')
     const found = list
@@ -224,18 +234,23 @@ describe('the 영상 지침 후보 section', () => {
   }
 
   it('counts only the clip candidates and links each to its clip, or says it is gone', async () => {
+    const user = userEvent.setup()
     renderVideoGuidelines({ candidates: CANDIDATES })
 
-    expect(await screen.findByText('영상 지침 후보 2개')).toBeInTheDocument()
-    const list = await section('후보 지침')
-    expect(list.getAllByRole('listitem')).toHaveLength(2)
-    expect(list.queryByText('존댓말로 써줘')).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: '새 영상 지침 후보 2개' }),
+    ).toBeInTheDocument()
+    const sheet = await reviewTo(user, '자막 더 짧게')
+    expect(sheet.getByText('1 / 2')).toBeInTheDocument()
+    expect(sheet.queryByText('존댓말로 써줘')).not.toBeInTheDocument()
     const repeated = await candidateRow('자막 더 짧게')
     expect(repeated.getByText('3번 요청함')).toBeInTheDocument()
     expect(repeated.getByRole('link', { name: '요청한 영상 보기' })).toHaveAttribute(
       'href',
       '/clips/clip-1',
     )
+    await reviewTo(user, '음악은 조용하게')
+    expect(sheet.queryByText('존댓말로 써줘')).not.toBeInTheDocument()
     const orphan = await candidateRow('음악은 조용하게')
     expect(orphan.queryByRole('link')).not.toBeInTheDocument()
     expect(orphan.getByText('요청한 영상이 삭제됐어요')).toBeInTheDocument()
@@ -246,8 +261,8 @@ describe('the 영상 지침 후보 section', () => {
     const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
     renderVideoGuidelines({ candidates: CANDIDATES, creates })
 
-    await user.click((await candidateRow('자막 더 짧게')).getByRole('button', { name: '승인' }))
-    const dialog = within(await screen.findByRole('dialog'))
+    await user.click((await reviewTo(user, '자막 더 짧게')).getByRole('button', { name: '저장' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '지침으로 승인' }))
     expect(dialog.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       '전역',
       '특정 영상 템플릿',
@@ -263,9 +278,8 @@ describe('the 영상 지침 후보 section', () => {
     })
     const saved = await section('영상 지침 목록')
     await waitFor(() => expect(saved.getByText('자막 더 짧게')).toBeInTheDocument())
-    await waitFor(async () =>
-      expect((await section('후보 지침')).getAllByRole('listitem')).toHaveLength(1),
-    )
+    await waitFor(() => expect(review().getByText('1 / 1')).toBeInTheDocument())
+    expect(await candidateRow('음악은 조용하게')).toBeTruthy()
   })
 
   it('dismisses one candidate, and accepts or dismisses the whole clip queue', async () => {
@@ -274,10 +288,11 @@ describe('the 영상 지침 후보 section', () => {
     const creates: NonNullable<FakeGuidelinesOptions['creates']> = []
     renderVideoGuidelines({ candidates: CANDIDATES, dismissals, creates })
 
+    await reviewTo(user, '음악은 조용하게')
     await user.click((await candidateRow('음악은 조용하게')).getByRole('button', { name: '무시' }))
     await waitFor(() => expect(dismissals).toEqual(['clip-orphan']))
 
-    await user.click(await screen.findByRole('button', { name: '전부 수락' }))
+    await user.click(review().getByRole('button', { name: '전부 수락' }))
     await waitFor(() => expect(creates).toHaveLength(1))
     expect(creates[0]).toMatchObject({ kind: 'clip', fromCandidateId: 'clip-repeated' })
     expect(
@@ -290,9 +305,13 @@ describe('the 영상 지침 후보 section', () => {
     const dismissals: string[] = []
     renderVideoGuidelines({ candidates: CANDIDATES, dismissals })
 
-    await user.click(await screen.findByRole('button', { name: '전부 거절' }))
     await user.click(
-      within(await screen.findByRole('dialog')).getByRole('button', { name: '전부 거절' }),
+      (await reviewTo(user, '자막 더 짧게')).getByRole('button', { name: '전부 거절' }),
+    )
+    await user.click(
+      within(await screen.findByRole('dialog', { name: /전부 거절할까요/ })).getByRole('button', {
+        name: '전부 거절',
+      }),
     )
     await waitFor(() => expect(dismissals).toEqual(['clip-repeated', 'clip-orphan']))
   })

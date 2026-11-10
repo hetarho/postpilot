@@ -72,8 +72,12 @@ const mount = (path = '/naver-clip', clips: FakeClipsOptions = {}) =>
     user: { id: 'alice' },
     clips: { templates: [{ ...template }], projects, ...clips },
   })
+// Guide: the directory is one region holding 이어서 쓰기 and the 작성 중 / 완성 groups.
 const row = async (name: RegExp) =>
-  within(await screen.findByRole('list', { name: '저장된 클립' })).findByRole('link', { name })
+  within(await screen.findByRole('region', { name: '저장된 클립' })).findByRole('link', { name })
+// Guide: the search and the filter wait behind one 찾기 button, in a bottom sheet.
+const openFind = async (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(await screen.findByRole('button', { name: /^찾기( · \d+)?$/ }))
 
 describe('clip directory', () => {
   it('refreshes a running badge to failure without leaving the list and then stops polling', async () => {
@@ -139,6 +143,7 @@ describe('clip directory', () => {
   it('narrows by title and by state, and carries both in the URL', async () => {
     const user = userEvent.setup()
     const { router } = mount()
+    await openFind(user)
     await user.type(await screen.findByLabelText('클립 검색'), '바다')
     await waitFor(() => expect(router.state.location.search).toMatchObject({ q: '바다' }))
     expect(screen.queryByRole('link', { name: /제주 여행/ })).not.toBeInTheDocument()
@@ -156,6 +161,9 @@ describe('clip directory', () => {
   it('drops an emptied query from the address rather than carrying it', async () => {
     const user = userEvent.setup()
     const { router } = mount('/naver-clip?q=바다')
+    // The 찾기 button counts the narrowing that is on.
+    expect(await screen.findByRole('button', { name: '찾기 · 1' })).toBeInTheDocument()
+    await openFind(user)
     const search = await screen.findByLabelText('클립 검색')
     expect(search).toHaveValue('바다')
     await user.clear(search)
@@ -193,7 +201,7 @@ describe('clip directory', () => {
   it('offers separate continuation and retained download actions without a creation dock or preview', async () => {
     const calls: string[] = []
     mount('/naver-clip', { calls })
-    const directory = await screen.findByRole('list', { name: '저장된 클립' })
+    const directory = await screen.findByRole('region', { name: '저장된 클립' })
     const finished = (await within(directory).findByRole('link', { name: /JEJU 다시/ })).closest(
       'li',
     )!
@@ -219,7 +227,7 @@ describe('clip directory', () => {
         { ...projects[2], result: { ...result, downloadUrl: 'https://private.test/download.mp4' } },
       ],
     })
-    const directory = await screen.findByRole('list', { name: '저장된 클립' })
+    const directory = await screen.findByRole('region', { name: '저장된 클립' })
     const download = await within(directory).findByRole('link', { name: '영상 다운로드' })
     expect(download).toHaveAttribute('href', 'https://private.test/download.mp4')
     expect(download.parentElement?.closest('a')).toBeNull()
@@ -231,9 +239,38 @@ describe('clip directory', () => {
     expect(await row(/제목 없는 클립/)).toHaveAttribute('href', '/clips/untitled')
   })
 
+  // Guide: the newest unfinished clip leads as 이어서 쓰기; the rest split into 작성 중 and 완성,
+  // each clip shown once.
+  it('leads with the newest unfinished clip and groups the rest by status', async () => {
+    mount('/naver-clip', {
+      // Newest first, the order the server lists them in.
+      projects: [
+        {
+          ...base,
+          id: 'done',
+          title: '끝난 클립',
+          editPlanRevision: 1,
+          renderedPlanRevision: 1,
+          result,
+          finalized: { at: '2026-09-13T00:00:00Z', planRevision: 1, resultId: 'result' },
+        },
+        { ...base, id: 'new', title: '새 초안' },
+        { ...base, id: 'old', title: '오래된 초안' },
+      ],
+    })
+    const hero = (await screen.findByRole('heading', { name: '이어서 쓰기' })).closest('section')!
+    expect(await within(hero).findByRole('link', { name: /새 초안/ })).toBeInTheDocument()
+    const inProgress = screen.getByRole('heading', { name: /^작성 중/ }).closest('section')!
+    expect(within(inProgress).getByRole('link', { name: /오래된 초안/ })).toBeInTheDocument()
+    expect(within(inProgress).queryByRole('link', { name: /새 초안/ })).toBeNull()
+    const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
+    expect(within(done).getByRole('link', { name: /끝난 클립/ })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: /새 초안/ })).toHaveLength(1)
+  })
+
   it('keeps the secondary history free of a docked new-clip action', async () => {
     mount()
-    await screen.findByRole('list', { name: '저장된 클립' })
+    await screen.findByRole('region', { name: '저장된 클립' })
     expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
   })
 })
@@ -251,6 +288,7 @@ it("lists one channel's clips", async () => {
   })
   expect(await screen.findByRole('link', { name: /Instagram only/ })).toBeInTheDocument()
   expect(screen.queryByRole('link', { name: /Naver only/ })).not.toBeInTheDocument()
+  await openFind(user)
   await user.type(screen.getByRole('searchbox'), 'missing')
   await screen.findByRole('button', { name: '전체 보기' })
   await user.click(screen.getByRole('button', { name: '전체 보기' }))

@@ -58,42 +58,44 @@ function legacyEntry(target: string, path: string, ownerKey = 'alice') {
   )
 }
 
-it('traverses channel hubs and settings as sibling destinations without paid work', async () => {
+it('traverses the five tabs as sibling destinations without paid work', async () => {
   const user = userEvent.setup()
   const view = renderLegacyModelRoute('/naver-blog', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   expectRoot()
-  for (const [label, pathname, navLabel] of [
-    ['네이버 클립', '/naver-clip', '클립'],
-    ['인스타 클립', '/insta-clip', '인스타'],
-    ['내 설정', '/settings', '내 설정'],
-    ['네이버 블로그', '/naver-blog', '블로그'],
+  // Guide: five verb tabs; the account panel still reaches 나.
+  for (const [label, pathname, navLabel, viaAccount] of [
+    ['무엇을 만들까요?', '/create', '만들기', false],
+    ['내 글', '/my', '내 글', false],
+    ['내 스타일', '/style', '내 스타일', false],
+    ['AI 고르기', '/ai-models', 'AI 고르기', false],
+    ['나', '/settings', '나', true],
+    ['내 글', '/my', '내 글', false],
+    ['나', '/settings', '나', false],
   ] as const) {
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
-    if (pathname === '/settings') {
+    if (viaAccount) {
       await user.click(screen.getByRole('button', { name: '내 계정' }))
       await user.click(
         within(screen.getByRole('dialog', { name: '내 계정' })).getByRole('link', {
-          name: navLabel,
+          name: '내 설정',
         }),
       )
     } else await user.click(primary.getByRole('link', { name: navLabel }))
     await waitFor(() => expect(view.router.state.location.pathname).toBe(pathname))
     await screen.findByRole('heading', { name: label, level: 1 })
     expectRoot()
-    if (pathname === '/settings')
-      expect(
-        primary.queryAllByRole('link').every((link) => !link.hasAttribute('aria-current')),
-      ).toBe(true)
-    else
-      expect(primary.getByRole('link', { name: navLabel })).toHaveAttribute('aria-current', 'page')
+    expect(primary.getByRole('link', { name: navLabel })).toHaveAttribute('aria-current', 'page')
+    expect(
+      primary.queryAllByRole('link').filter((link) => link.hasAttribute('aria-current')),
+    ).toHaveLength(1)
   }
   expect(paidActions(view.procedures)).toEqual([])
 })
 
 it.each([
   ['/naver-clip', '네이버 클립'],
-  ['/settings', '내 설정'],
+  ['/settings', '나'],
   ['/naver-blog', '네이버 블로그'],
 ])(
   'ignores an old cross-destination origin on direct load and reload of %s',
@@ -235,10 +237,9 @@ it.each(['/ai-models/experiments/retained', '/posts/experiments/retained'])(
     await screen.findByRole('heading', { name: '이전 유료 비교 기록', level: 1 })
     expect(view.router.state.location.pathname).toBe('/tests/records/retained')
     expect(backHref()).toBeUndefined()
-    const primary = within(screen.getByRole('navigation', { name: '주요' }))
-    expect(primary.queryAllByRole('link').every((link) => !link.hasAttribute('aria-current'))).toBe(
-      true,
-    )
+    // Guide: a retained record is a focused screen of AI 고르기's comparison flow — the tab bar
+    // steps aside and the record's own top row carries the way back.
+    expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
     expect(
       within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
     ).toHaveAttribute('href', '/tests/history')
@@ -261,7 +262,7 @@ it.each([
 
 it.each([
   ['/naver-blog/', '네이버 블로그'],
-  ['/settings/', '내 설정'],
+  ['/settings/', '나'],
   ['/insta-clip/', '인스타 클립'],
 ])('keeps trailing-slash root %s independent of explicit entry', async (path, label) => {
   const view = renderLegacyModelRoute(`${path}?entry=%2Fposts`, { user: { id: 'alice' } })
@@ -270,16 +271,19 @@ it.each([
   expect(paidActions(view.procedures)).toEqual([])
 })
 
-it('retains the Instagram location through shared templates, child navigation, reload and return', async () => {
+it('retains the Instagram scope through shared templates, child navigation, reload and return', async () => {
   const calls: string[] = []
-  const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, calls })
-  await screen.findByRole('heading', { name: '인스타 클립', level: 1 })
-  await userEvent.click(
-    within(screen.getByRole('navigation', { name: '채널 메뉴' })).getByRole('link', {
-      name: '템플릿',
-    }),
-  )
+  const view = renderAppAt('/video-templates?channel=instagram_clip', {
+    user: { id: 'alice' },
+    calls,
+  })
   await screen.findByRole('heading', { name: '영상 템플릿', level: 1 })
+  // Guide: 템플릿's 글 · 영상 switch keeps the channel the page was opened under.
+  expect(
+    within(screen.getByRole('navigation', { name: '글 · 영상' })).getByRole('link', {
+      name: '영상',
+    }),
+  ).toHaveAttribute('aria-current', 'page')
   expect(backHref()).toBeUndefined()
   await userEvent.click(await screen.findByRole('link', { name: '새 템플릿' }))
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
@@ -328,13 +332,13 @@ it('keeps a directly opened Instagram project channel when visiting shared video
 })
 
 it.each([
-  ['템플릿', '영상 템플릿'],
-  ['지침', '영상 지침'],
-])('keeps Instagram when its %s section opens in a fresh tab', async (section, heading) => {
+  ['템플릿', '/templates', '영상 템플릿'],
+  ['지침', '/guidelines', '영상 지침'],
+])('keeps Instagram when its %s 영상 side opens in a fresh tab', async (section, from, heading) => {
   const calls: string[] = []
-  const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, calls })
-  const sections = await screen.findByRole('navigation', { name: '채널 메뉴' })
-  const href = within(sections).getByRole('link', { name: section }).getAttribute('href')!
+  const view = renderAppAt(`${from}?channel=instagram_clip`, { user: { id: 'alice' }, calls })
+  const kinds = await screen.findByRole('navigation', { name: '글 · 영상' })
+  const href = within(kinds).getByRole('link', { name: '영상' }).getAttribute('href')!
   expect(href).toContain('channel=instagram_clip')
   view.unmount()
   sessionStorage.clear()
@@ -342,7 +346,10 @@ it.each([
   await screen.findByRole('heading', { name: heading, level: 1 })
   expect(backHref()).toBeUndefined()
   const nav = screen.getByRole('navigation', { name: '주요' })
-  expect(within(nav).getByRole('link', { name: '인스타' })).toHaveAttribute('aria-current', 'page')
+  expect(within(nav).getByRole('link', { name: '내 스타일' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
   // The section's creation button keeps the channel (THEME-67).
   expect(
     await screen.findByRole('link', { name: section === '템플릿' ? '새 템플릿' : '새 지침' }),
@@ -350,25 +357,18 @@ it.each([
   expect(paidActions(calls)).toEqual([])
 })
 
+// Guide: 내 스타일's five sections are siblings in one chip row, whatever channel a page names.
+const STYLE_HREFS = ['/voices', '/templates', '/guidelines', '/memories', '/spoken-voices']
 it.each([
-  ['/templates', '블로그', '템플릿', ['/naver-blog', '/templates', '/voices', '/guidelines']],
-  [
-    '/voices?channel=instagram_clip',
-    '인스타',
-    '말투',
-    [
-      '/insta-clip',
-      '/video-templates?channel=instagram_clip',
-      '/voices?channel=instagram_clip',
-      '/video-guidelines?channel=instagram_clip',
-    ],
-  ],
-  ['/voices', '블로그', '말투', ['/naver-blog', '/templates', '/voices', '/guidelines']],
+  ['/templates', '내 스타일', '템플릿', STYLE_HREFS],
+  ['/voices?channel=instagram_clip', '내 스타일', '말투', STYLE_HREFS],
+  ['/memories', '내 스타일', '기억', STYLE_HREFS],
+  ['/naver-blog', '내 글', '블로그', ['/my', '/naver-blog', '/naver-clip', '/insta-clip']],
 ] as const)(
-  'places the %s section under its channel as a sibling with no way back',
+  'places the %s section in its hub as a sibling with no way back',
   async (path, channel, section, hrefs) => {
     const view = renderAppAt(path, { user: { id: 'alice' } })
-    const sections = await screen.findByRole('navigation', { name: '채널 메뉴' })
+    const sections = await screen.findByRole('navigation', { name: '나누어 보기' })
     expect(
       within(sections)
         .getAllByRole('link')
@@ -392,13 +392,15 @@ it.each([
 
 it('returns a voice page opened from an Instagram 말투 list to that list', async () => {
   const view = renderAppAt('/voices?channel=instagram_clip', { user: { id: 'alice' } })
-  await screen.findByRole('navigation', { name: '채널 메뉴' })
+  await screen.findByRole('navigation', { name: '나누어 보기' })
   await act(() =>
     view.router.navigate({ to: '/voices/$voiceId', params: { voiceId: 'voice-default' } }),
   )
   await waitFor(() => expect(backHref()).toBe('/voices?channel=instagram_clip'))
-  expect(screen.queryByRole('navigation', { name: '채널 메뉴' })).toBeNull()
+  expect(screen.queryByRole('navigation', { name: '나누어 보기' })).toBeNull()
   expect(
-    within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', { name: '인스타' }),
+    within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {
+      name: '내 스타일',
+    }),
   ).toHaveAttribute('aria-current', 'page')
 })

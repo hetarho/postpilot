@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useStartGeneration,
@@ -60,9 +60,12 @@ export const GenerationActions = forwardRef<
      *  by `pages/editor`, which owns the brief's open state — a feature may not import the widget
      *  that composes its siblings (ARCH-13). */
     onOpenBrief: (mode: GenerationMode) => void
+    /** Guide: a control that leads the action row — the guided flow's 이전. */
+    leading?: ReactNode
   }
 >(function GenerationActions(
   {
+    leading,
     post,
     targetLength,
     activeJob,
@@ -228,8 +231,11 @@ export const GenerationActions = forwardRef<
           {ordinary.reason}
         </Typography>
       )}
-      {/* Storyline first is the secondary path; writing now remains the committing action. */}
-      <div className="grid grid-cols-[3fr_7fr] gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end">
+      {/* Storyline first is the secondary path; writing now remains the committing action — the
+          step's one big button, taking the rest of the row (Guide). `leading` is the guided
+          flow's way back, on the same row. */}
+      <div className="flex items-center gap-2">
+        {leading}
         {/* A refusal for the SETUP leaves an action live: pressing it is how the user is taken to
             the brief with the missing field marked, and nothing is written under the row. Every
             other refusal — a job running, a deleted or not-yet-made voice,
@@ -244,7 +250,8 @@ export const GenerationActions = forwardRef<
         </Button>
         <Button
           variant="cta"
-          className="min-w-0"
+          size="hero"
+          className="min-w-0 flex-1"
           disabled={sharedDisabled || (!ordinary.ok && !refusedForSetup(ordinary))}
           pending={preparing === 'generation' || generation.isPending}
           onClick={() => void start('generation')}

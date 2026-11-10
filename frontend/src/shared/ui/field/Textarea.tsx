@@ -132,7 +132,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
           // state, so the first paint never flashes a scrollbar.
           grow && 'overflow-hidden',
           appearance === 'well'
-            ? 'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus rounded-md px-4 py-2 text-base sm:text-sm'
+            ? // Guide: 17px and roomy — the owner writes the story here with a thumb.
+              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus rounded-md px-4 py-3 text-[1.0625rem] leading-relaxed sm:text-base'
             : 'bg-transparent',
           className,
         ),

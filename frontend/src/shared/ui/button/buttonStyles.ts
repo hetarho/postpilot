@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export type ButtonVariant = 'cta' | 'secondary' | 'ghost' | 'danger' | 'scrim'
-export type ButtonSize = 'default' | 'compact' | 'icon'
+export type ButtonSize = 'default' | 'compact' | 'icon' | 'hero'
 
 // Every variant carries an `active:` treatment. Tailwind compiles `hover:` to
 // `@media (hover: hover)`, so a variant whose only fill lives behind `hover:` emits CSS a
@@ -47,9 +47,13 @@ function sizeStyles(size: ButtonSize, variant: ButtonVariant): string {
   // 32px against a 20px line box leaves 6px of effective vertical padding, so `px-4` keeps THEME-23's
   // 2 : 1 ratio rather than turning the shorter control into a square one.
   if (size === 'compact') return 'min-h-8 pointer-coarse:min-h-9 px-4'
+  // Guide: the ONE big action a step screen ends on — 생성, 다음, 완성. 56px at every pointer, the
+  // full width of the thumb zone it sits in, in the heaviest label the app has.
+  if (size === 'hero') return 'min-h-14 px-7 text-[1.0625rem] font-bold'
+  // Guide: every committing action is at least 48px, whatever the pointer (THEME-23 raised).
   return variant === 'cta'
-    ? 'min-h-10 pointer-coarse:min-h-11 px-5'
-    : 'min-h-10 pointer-coarse:min-h-11 px-4'
+    ? 'min-h-12 px-6 text-base font-bold'
+    : 'min-h-10 pointer-coarse:min-h-11 px-5'
 }
 
 /** Shared visual contract for native buttons and elements that must retain their own
@@ -69,7 +73,9 @@ export function buttonStyles({
       // padding, its height IS the `min-h` floor, so the one case that decides the box is a label
       // wrapping in a narrow column — and two 20px lines leave 2px of air inside 44px. On the
       // single line every other button has, `items-center` makes the tighter line box invisible.
-      'relative inline-flex items-center justify-center gap-2 rounded-md text-sm leading-snug font-medium active:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
+      // Guide: every button is a full pill — soft, unmistakably a button at any size — and a
+      // press sinks it a touch (scale), the friendly feedback a thumb feels.
+      'duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-[0.9375rem] leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
       // Stable CSS hooks give dock-contained buttons, links and file labels the same larger
       // targets without changing their pointer sizing anywhere else, including portalled panels.
       'ui-button',

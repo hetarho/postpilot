@@ -33,10 +33,15 @@ export function ApproveGuidelineCandidateButton({
   ownerId,
   candidate,
   disabled = false,
+  size = 'default',
+  className,
 }: {
   ownerId: string
   candidate: GuidelineCandidate
   disabled?: boolean
+  /** `hero` when it is the one big action of a review screen. */
+  size?: 'default' | 'hero'
+  className?: string
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const id = useId()
@@ -97,7 +102,13 @@ export function ApproveGuidelineCandidateButton({
 
   return (
     <>
-      <Button disabled={disabled} onClick={openDialog}>
+      <Button
+        variant={size === 'hero' ? 'cta' : undefined}
+        size={size === 'hero' ? 'hero' : undefined}
+        className={className}
+        disabled={disabled}
+        onClick={openDialog}
+      >
         {t('candidate.approve', { ns: 'guidelines' })}
       </Button>
       <Dialog

@@ -109,7 +109,8 @@ describe('clip directory and setup', () => {
   it('lists the persisted metadata and navigates to a ratio-immutable project', async () => {
     const user = userEvent.setup()
     mount('/naver-clip')
-    const list = within(await screen.findByRole('list', { name: '저장된 클립' }))
+    // Guide: the directory is one region holding 이어서 쓰기 and the status groups.
+    const list = within(await screen.findByRole('region', { name: '저장된 클립' }))
     const link = await list.findByRole('link', { name: /제주 여행/ })
     // The row carries the badge, the template and the ratio as metadata, and a relative time
     // (CLIP-41). The target duration lives on the project's own screen.
@@ -166,7 +167,7 @@ describe('clip directory and setup', () => {
   })
   it('keeps directory and workspace free of group chrome and gives direct records a named history return', async () => {
     const directory = mount('/naver-clip')
-    await screen.findByRole('list', { name: '저장된 클립' })
+    await screen.findByRole('region', { name: '저장된 클립' })
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
     expect(document.querySelector('aside')).toBeNull()
     directory.unmount()

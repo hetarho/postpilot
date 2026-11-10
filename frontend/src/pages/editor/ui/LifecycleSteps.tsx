@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import {
   hasContent,
@@ -10,12 +11,13 @@ import {
   type PostStorylineParagraph,
 } from '@/entities/post'
 import type { PostContent } from '@/shared/api'
-import type {
-  GenerationActionsHandle,
-  GenerationMode,
-  StorylineActionsHandle,
+import {
+  GenerationActions,
+  type GenerationActionsHandle,
+  type GenerationMode,
+  type StorylineActionsHandle,
 } from '@/features/generate-post'
-import type { BlockEditorHandle } from '@/features/edit-post-content'
+import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
 import { proseStyles } from '@/shared/ui'
@@ -26,7 +28,6 @@ import type { EditorJobView } from '../model/useEditorJob'
 import { EditorJobNotice } from './EditorJobNotice'
 import { EditorStepDock } from './EditorStepDock'
 import { EditorFinishPanel, type FinishCampaign } from './EditorFinishPanel'
-import { EditorGeneratePanel } from './EditorGeneratePanel'
 import { EditorRefinePanel } from './EditorRefinePanel'
 
 const STEP_PANEL_ID = 'editor-step-panel'
@@ -39,16 +40,12 @@ export function LifecycleSteps({
   ownerId,
   step,
   onStepChange,
-  titleField,
-  memoField,
-  answerFields,
-  dockHeader,
+  renderGuide,
   onOpenBrief,
   targetLength,
   onTitleFinalized,
   beforeStart,
   checkRequiredAnswers,
-  ensureSlug,
   jobView,
   storyline,
   campaign,
@@ -59,12 +56,9 @@ export function LifecycleSteps({
   ownerId: string
   step: EditorStep
   onStepChange: (step: EditorStep) => void
-  titleField: ReactNode
-  memoField: ReactNode
-  /** The selected template's data fields. ①'s material, so it renders with the memo it sits
-   *  under rather than anywhere the run is configured (POST-54). */
-  answerFields: ReactNode
-  dockHeader: ReactNode
+  /** Guide: 글 생성 is the page's guided sequence (EditorGuide). The panel hands it the summary's
+   *  committing row — 생성, led by the guide's 이전 — and the last job's failure notice. */
+  renderGuide: (slots: { actions: (back: ReactNode) => ReactNode; notice: ReactNode }) => ReactNode
   /** Opens the writing brief marking what a `mode` press was refused for. */
   onOpenBrief: (mode: GenerationMode) => void
   targetLength?: number
@@ -72,7 +66,6 @@ export function LifecycleSteps({
   onTitleFinalized: (title: string) => void
   beforeStart: () => Promise<void>
   checkRequiredAnswers: () => boolean
-  ensureSlug: () => Promise<string>
   /** The durable job, resolved by the page so the status region and these panels read one poll. */
   jobView: EditorJobView
   /** The storyline as the draft autosave holds it (POST-96): ② edits it through the same queue as
@@ -112,18 +105,28 @@ export function LifecycleSteps({
     (content: PostContent) => setEdited({ revision: post.contentRevision, content }),
     [post.contentRevision],
   )
-  // 제목 · 메모 · 사진 · the voice caveat · the contact sheet. Everything that DESCRIBES the next
-  // AI run left this panel for the one brief surface in the dock, so what is left is the post's
-  // own material (POST-51).
-  const generatePanel = (
-    <EditorGeneratePanel
+  const navigate = useNavigate()
+  const generateActions = (back: ReactNode) => (
+    <GenerationActions
+      ref={generateRef}
+      leading={back}
       post={post}
-      ownerId={ownerId}
-      titleField={titleField}
-      memoField={memoField}
-      answerFields={answerFields}
-      ensureSlug={ensureSlug}
-      job={job}
+      targetLength={targetLength}
+      activeJob={job}
+      jobPending={jobView.isPending}
+      onStarted={(id) => jobView.onStarted(id, 'generate')}
+      beforeStart={beforeStart}
+      onReviewResult={async () => {
+        await beforeStart()
+        await flushContentQueue(post.slug)
+        await navigate({
+          to: '/tests/records/$id',
+          params: { id: post.pendingExperimentId },
+          search: { source: post.slug },
+        })
+      }}
+      checkRequiredAnswers={checkRequiredAnswers}
+      onOpenBrief={onOpenBrief}
     />
   )
   // Read-only while a job targets the post, on a published post and while the queue reports a
@@ -217,9 +220,18 @@ export function LifecycleSteps({
         id={STEP_PANEL_ID}
         role="tabpanel"
         aria-label={editorStepLabel(step)}
-        className={step === 'generate' ? undefined : proseStyles()}
+        className={
+          step === 'generate' ? 'flex flex-1 flex-col' : proseStyles('animate-step-in pb-10')
+        }
       >
-        {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
+        {step === 'generate'
+          ? renderGuide({
+              actions: generateActions,
+              notice: hasJobNotice ? jobNotice : undefined,
+            })
+          : step === 'refine'
+            ? refinePanel
+            : finishPanel}
       </div>
 
       {/* A finished job announces itself and takes no space. The visible success banner this
@@ -246,14 +258,8 @@ export function LifecycleSteps({
         jobView={jobView}
         jobNotice={jobNotice}
         hasJobNotice={hasJobNotice}
-        dockHeader={dockHeader}
-        targetLength={targetLength}
         editorRef={contentEditorRef}
-        generateRef={generateRef}
         reviseRef={reviseRef}
-        beforeStart={beforeStart}
-        checkRequiredAnswers={checkRequiredAnswers}
-        onOpenBrief={onOpenBrief}
         onTitleFinalized={onTitleFinalized}
         onStepChange={onStepChange}
       />

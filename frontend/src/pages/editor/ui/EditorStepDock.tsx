@@ -1,12 +1,6 @@
 import type { ReactNode, RefObject } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
-import {
-  GenerationActions,
-  type GenerationActionsHandle,
-  type GenerationMode,
-} from '@/features/generate-post'
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { RefineDock } from '@/widgets/refine-dock'
@@ -14,9 +8,9 @@ import type { EditorStep } from '../model/steps'
 import type { EditorJobView } from '../model/useEditorJob'
 import { EditorDock } from './EditorDock'
 
-/** ① and ② both always dock: 생성 ends the first step and 확정 ends the second, and the draft
- *  between them is routinely thousands of pixels tall (THEME-24). ③ docks only when the job has
- *  something to report. There is exactly ONE ActionBar in this scroller either way. */
+/** ②'s bottom composer — 다듬기 with the AI, and 확정하기 — and ③'s failure notice when the job has
+ *  something to report. 글 생성's bar is the guided flow's own (EditorGuide), so this docks only on
+ *  the two later steps. There is exactly ONE bar in this scroller either way. */
 export function EditorStepDock({
   post,
   ownerId,
@@ -25,14 +19,8 @@ export function EditorStepDock({
   jobView,
   jobNotice,
   hasJobNotice,
-  dockHeader,
-  targetLength,
   editorRef,
-  generateRef,
   reviseRef,
-  beforeStart,
-  checkRequiredAnswers,
-  onOpenBrief,
   onTitleFinalized,
   onStepChange,
 }: {
@@ -44,46 +32,17 @@ export function EditorStepDock({
   jobView: EditorJobView
   jobNotice: ReactNode
   hasJobNotice: boolean
-  dockHeader: ReactNode
-  targetLength?: number
   editorRef: RefObject<BlockEditorHandle | null>
-  generateRef: RefObject<GenerationActionsHandle | null>
   reviseRef: RefObject<ReviseFormHandle | null>
-  beforeStart: () => Promise<void>
-  checkRequiredAnswers: () => boolean
-  /** Opens the writing brief marking what a `mode` press was refused for. */
-  onOpenBrief: (mode: GenerationMode) => void
   onTitleFinalized: (title: string) => void
   onStepChange: (step: EditorStep) => void
 }) {
   const job: GenerationJob | undefined = jobView.job
-  const navigate = useNavigate()
-  if (!(step === 'generate' || (step === 'refine' && Boolean(result)) || hasJobNotice)) return null
+  if (step === 'generate') return null
+  if (!((step === 'refine' && Boolean(result)) || hasJobNotice)) return null
   return (
-    <EditorDock header={step === 'generate' ? dockHeader : undefined}>
+    <EditorDock>
       {jobNotice}
-      {step === 'generate' && (
-        <GenerationActions
-          ref={generateRef}
-          post={post}
-          targetLength={targetLength}
-          activeJob={job}
-          jobPending={jobView.isPending}
-          onStarted={(id) => jobView.onStarted(id, 'generate')}
-          beforeStart={beforeStart}
-          onReviewResult={async () => {
-            await beforeStart()
-            await flushContentQueue(post.slug)
-            await navigate({
-              to: '/tests/records/$id',
-              params: { id: post.pendingExperimentId },
-              search: { source: post.slug },
-            })
-          }}
-          checkRequiredAnswers={checkRequiredAnswers}
-          onOpenBrief={onOpenBrief}
-        />
-      )}
       {step === 'refine' && result && (
         <RefineDock
           ref={reviseRef}

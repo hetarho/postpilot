@@ -7,9 +7,11 @@ import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
   BRIEF_TRIGGER,
+  GUIDE,
   M1_OVER_BAND,
   USER,
   briefField,
+  guideTo,
   openBrief,
   resetEditorTest,
 } from '@/test/editor'
@@ -214,8 +216,10 @@ describe('opening a post', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
     // Neither voice refusal — deleted or not yet made — has anything to say.
     expect(screen.queryByText(/말투예요/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('h-6')
-    expect(screen.getByLabelText('글 작업').previousElementSibling).not.toHaveClass('mt-auto')
+    // Guide: 생성 is the summary's one big action, in the step bar along the screen's bottom.
+    const bar = screen.getByLabelText('글 작업')
+    expect(bar).toHaveAttribute('data-action-bar', 'step')
+    expect(within(bar).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
 
     const brief = await openBrief(user)
     expect(within(brief).getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
@@ -247,18 +251,24 @@ describe('opening a post', () => {
       },
     })
 
-    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
-    const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
+    // The draft holds a story, so it opens on 확인, where both writing paths are.
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     const storyline = screen.getByRole('button', { name: '스토리라인 먼저' })
+    expect(screen.queryByRole('textbox', { name: /방문 계기/ })).toBeNull()
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
+    // The refused press brings the 내용 screen up with the missing answer focused.
+    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
     expect(screen.getByText('필수 입력란을 확인해 주세요: 방문 계기')).toBeInTheDocument()
-    expect(answer).toHaveFocus()
+    await waitFor(() => expect(answer).toHaveFocus())
     expect(calls).not.toContain('StartGeneration')
+    await guideTo(user, GUIDE.review)
     await user.click(storyline)
     expect(calls).not.toContain('StartStoryline')
+    expect(screen.getByRole('textbox', { name: /방문 계기/ })).toBe(answer)
 
     await user.type(answer, '퇴근길에 간판을 보고 처음 들어갔다.')
+    await guideTo(user, GUIDE.review)
     await user.click(storyline)
     await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartStoryline'))
@@ -299,15 +309,16 @@ describe('opening a post', () => {
       },
     })
 
-    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
-    expect(answer).toBeEnabled()
-    const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
     expect(calls).not.toContain('StartGeneration')
-    expect(answer).toHaveFocus()
+    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
+    expect(answer).toBeEnabled()
+    await waitFor(() => expect(answer).toHaveFocus())
 
     await user.click(screen.getByRole('button', { name: '기존 답변 사용하기' }))
+    await guideTo(user, GUIDE.review)
     await user.click(generate)
     await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartGeneration'))

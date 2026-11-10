@@ -380,6 +380,8 @@ export function ClipProjectForm({
               </Button>
             </section>
           )}
+          {/* Guide: where the clip's 이야기 starts, for the workspace's step strip. */}
+          <span id="clip-guide-story" aria-hidden="true" className="block scroll-mt-40" />
           {!creating && document && (
             <ClipCompositionInputFields
               document={document}
@@ -447,6 +449,8 @@ export function ClipProjectForm({
               readOnly={readOnly}
             />
           )}
+          {/* Guide: where the clip's 스타일 starts — its shape, length, look and voice. */}
+          <span id="clip-guide-style" aria-hidden="true" className="block scroll-mt-40" />
           <div>
             <Typography variant="fieldTitle" as="p">
               {t('project.ratio')}
