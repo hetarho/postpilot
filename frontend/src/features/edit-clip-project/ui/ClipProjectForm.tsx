@@ -152,6 +152,18 @@ export function ClipProjectForm({
   const dirty = draftIdentity(draft) !== baseline
   const storedJSON = stored ? draftIdentity(stored) : baseline
   const synced = storedJSON === baseline
+  // A save's answer moves `baseline` at once, but the page hands the answered project down a
+  // render later: for that render `stored` is still the project from BEFORE the save, and adopting
+  // it flipped the fields back and forth — the campaign guide unmounted and came back with its
+  // `셀 수 있는 항목` closed and an item being typed gone (CLIP-39). So the project this form was
+  // last given is remembered with whether an answer has superseded it: a superseded project is
+  // never adopted, and the first one given after the answer is, as saved, while the owner has
+  // typed nothing since.
+  const [seen, setSeen] = useState({ stored: storedJSON, superseded: false })
+  const storedChanged = seen.stored !== storedJSON
+  if (storedChanged) setSeen({ stored: storedJSON, superseded: false })
+  const superseded = seen.superseded && !storedChanged
+  const answered = seen.superseded && storedChanged
   const pending = disabled || save.isPending
   // The FIELDS stay open while an autosave is in flight. Disabling a `fieldset` disables every
   // control inside it, and a browser blurs a control it disables — so locking the form on each
@@ -160,7 +172,7 @@ export function ClipProjectForm({
   // flight goes out after it rather than racing it (CLIP-39). `/clips/new` still locks, because
   // there `save.isPending` is the one committing action and it navigates away.
   const locked = disabled || readOnly || (save.isPending && !stored)
-  if (!synced && !dirty && !save.isPending) {
+  if ((!synced || answered) && !dirty && !save.isPending && !superseded) {
     const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
     setDraft(refreshed)
     setSeconds(refreshed.targetDurationMs ? String(refreshed.targetDurationMs / 1000) : '')
@@ -192,6 +204,7 @@ export function ClipProjectForm({
       save.mutateAsync({ id: stored.id, draft: next }),
     )
     setBaseline(draftIdentity(value))
+    setSeen((current) => ({ ...current, superseded: true }))
   }
   const patch = (fields: Partial<ClipProjectDraft>) => {
     const next = { ...draft, ...fields }
