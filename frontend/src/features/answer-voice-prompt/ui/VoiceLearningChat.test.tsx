@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
@@ -354,37 +354,81 @@ describe('scripted voice learning chat', () => {
       }),
     )
   })
-  it('releases the preview of a photo whose conversion ends after the form closed', async () => {
-    let finish: (value: { blob: Blob; width: number; height: number }) => void = () => {}
-    vi.mocked(preparePhoto).mockImplementationOnce(
-      () => new Promise((resolve) => (finish = resolve)),
-    )
-    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:abandoned')
-    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
-    const { unmount } = render(
+
+  describe('photo conversion that outlives its pick', () => {
+    type Converted = { blob: Blob; width: number; height: number }
+    const jpeg = (size: number): Converted => ({
+      blob: new Blob(['x'.repeat(size)]),
+      width: 1024,
+      height: 768,
+    })
+    const slow = () => {
+      let settle: { ok: (value: Converted) => void; fail: () => void } | undefined
+      const promise = new Promise<Converted>((ok, reject) => {
+        settle = { ok, fail: () => reject(new Error('unreadable')) }
+      })
+      return { promise, settle: () => settle! }
+    }
+    const file = (name: string) => new File(['x'], name, { type: 'image/heic' })
+    const form = () => (
       <AnswerForm
         ownerId="alice"
         voiceId="voice"
         prompt={{ ...fake.prompts[0]!, photo: true }}
         onBack={vi.fn()}
         onDone={vi.fn()}
-      />,
+      />
     )
-    const user = userEvent.setup()
-    await user.upload(
-      screen.getByLabelText('사진 고르기'),
-      new File(['x'], 'bread.heic', { type: 'image/heic' }),
+    // Each preview URL names its blob's size, so a test can tell whose copy is on screen.
+    let create: MockInstance<typeof URL.createObjectURL>
+    let revoke: MockInstance<typeof URL.revokeObjectURL>
+    beforeEach(() => {
+      create = vi
+        .spyOn(URL, 'createObjectURL')
+        .mockImplementation((blob) => `blob:${(blob as Blob).size}`)
+      revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    })
+    afterEach(() => {
+      create.mockRestore()
+      revoke.mockRestore()
+    })
+
+    it('releases the preview of a photo whose conversion ends after the form closed', async () => {
+      const first = slow()
+      vi.mocked(preparePhoto).mockReturnValueOnce(first.promise)
+      const { unmount } = render(form())
+      await userEvent.setup().upload(screen.getByLabelText('사진 고르기'), file('bread.heic'))
+      expect(screen.getByRole('status')).toHaveTextContent('사진을 준비하는 중')
+      unmount()
+      first.settle().ok(jpeg(7))
+      await first.promise
+      await new Promise((resolve) => setTimeout(resolve))
+      const alive = create.mock.calls.length - revoke.mock.calls.length
+      expect(alive).toBe(0)
+    })
+
+    it.each(['resolves', 'rejects'] as const)(
+      'keeps the newer photo when an older conversion %s after it',
+      async (ending) => {
+        const first = slow()
+        vi.mocked(preparePhoto).mockReturnValueOnce(first.promise)
+        vi.mocked(preparePhoto).mockResolvedValueOnce(jpeg(5))
+        render(form())
+        const user = userEvent.setup()
+        const input = screen.getByLabelText('사진 고르기')
+        await user.upload(input, file('old.heic'))
+        await user.upload(input, file('new.heic'))
+        expect(await screen.findByRole('img', { name: '고른 사진' })).toHaveAttribute(
+          'src',
+          'blob:5',
+        )
+        if (ending === 'resolves') first.settle().ok(jpeg(9))
+        else first.settle().fail()
+        await first.promise.catch(() => {})
+        await new Promise((resolve) => setTimeout(resolve))
+        expect(screen.getByRole('img', { name: '고른 사진' })).toHaveAttribute('src', 'blob:5')
+        expect(create).toHaveBeenCalledTimes(1)
+      },
     )
-    unmount()
-    const errors = vi.spyOn(console, 'error')
-    finish({ blob: new Blob(['jpeg']), width: 1024, height: 768 })
-    await new Promise((resolve) => setTimeout(resolve))
-    const alive =
-      create.mock.calls.length - revoke.mock.calls.filter(([u]) => u === 'blob:abandoned').length
-    expect(alive).toBe(0)
-    expect(errors).not.toHaveBeenCalled()
-    create.mockRestore()
-    revoke.mockRestore()
-    errors.mockRestore()
   })
 })
