@@ -80,6 +80,8 @@ export default defineConfig(({ mode }) => {
           test: {
             name: 'dom',
             environment: 'jsdom',
+            // Evaluates the i18n catalogs once per run for `setup.ts` (see the file).
+            globalSetup: ['./src/test/i18n-global-setup.ts'],
             setupFiles: ['./src/test/setup.ts'],
             exclude: [...configDefaults.exclude, ...NODE_UNIT_TEST_FILES],
           },

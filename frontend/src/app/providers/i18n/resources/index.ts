@@ -145,38 +145,7 @@ import { modelsI18n as selectModelModelsI18n } from '@/features/select-model/con
 import { plansI18n as selectModelPlansI18n } from '@/features/select-model/config/i18n'
 import { postsI18n as editWithAiPostsI18n } from '@/features/edit-with-ai/config/i18n'
 
-export const defaultNS = 'common' as const
-
-export const RESOURCE_NAMESPACES = [
-  'requestInspection',
-  'authoring',
-  'voicePreparation',
-  'channel',
-  'creation',
-  'spokenVoice',
-  'createSpokenVoice',
-  'manageSpokenVoice',
-  'spokenCreation',
-  'spokenVoices',
-  'common',
-  'auth',
-  'nav',
-  'writingTests',
-  'voiceMaterialEdit',
-  'posts',
-  'voices',
-  'clipWizard',
-  'templateTargets',
-  'templates',
-  'guidelines',
-  'memories',
-  'models',
-  'errors',
-  'marketing',
-  'plans',
-  'billing',
-  'clips',
-] as const
+export { defaultNS, RESOURCE_NAMESPACES } from './namespaces'
 
 /** Every slice fragment, for the checks `resources.test.ts` runs over this assembly: two
  *  fragments of one namespace may not claim the same key, and every fragment must name a real
