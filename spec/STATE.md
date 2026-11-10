@@ -167,7 +167,6 @@
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 | T743 | Make the campaign guide test independent of load | ARCH | - | todo |
-| T744 | Release the preview of an abandoned photo conversion | ARCH | - | todo |
 
 ## next
 - gcf repairs the Go CI failures and archives T740. All90Go test packages are verified:25affected suites freshly run,65unchanged successful suites reused; global format/vet/build pass. Clock fixtures and the browser ink identity chain are committed. Report reports/261110-gcf.md; no source push.
@@ -175,6 +174,7 @@
 - T741/T742 remain deferred after the92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 T744 done (sil5): an abandoned or superseded photo conversion creates no object URL and sets no state; three regressions fail on base and pass; submit task check passed on 8ea48f27, independent reviews 4188cf5e (three P3, fixed) and 248777d6 approve; merged 8b40fc17 after the CLI spec gate stopped on identical pre-existing diagnostics.
 - 261110 T740 done (gcf): deterministic clock-rollback ownership and recovery regressions fail original SQL and pass the repair; actual sqlc regeneration and all90Go test-package coverage pass (25fresh/65unchanged reused), global Go checks pass. Broad FE ClipCampaign failure remains unqualified; no push. Report261110-gcf.
 - 261110 fix browser ink identity (gcf): regenerate catalog lockfile SHA, canonical identity and both browser/API asset-version constants after the0.12.0 upgrade; styles/fonts/WASM unchanged. Native catalog and browser frozen-profile checks plus generated-file formatting pass; broad247-file FE selection has one unchanged ClipCampaign failure, isolated repeat passes.
 - 261110 fix CI clocks (gcf): assert the exact persisted auth session TTL and inject the spoken qualification harness clock; deterministic completed/stale/future review checks preserve all publication guards. Full affected Go package suites pass;65 unchanged successful package results are reused for90-package coverage.
