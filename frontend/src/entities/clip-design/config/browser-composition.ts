@@ -7,7 +7,7 @@ export const CLIP_BROWSER_COMPOSITION = {
   components: 'native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1',
   fonts: 'bundled-clip-fonts-v1',
   assets:
-    'clip-design-assets-v1-ink-3a4dd72f32662b9b28fab4298de31ca1b7eca8323b49ba1f602de93dd48cd594',
+    'clip-design-assets-v1-ink-399d20dfb790158868f86d8d8ec8ea0557eb38f9d45e1f1839516b643508057f',
   qualified:
     readiness.schemaVersion === 1 &&
     readiness.finalRender.renderer === 'clip-browser-composition-v1' &&
