@@ -1,8 +1,16 @@
 import '@testing-library/jest-dom/vitest'
 import { configure } from '@testing-library/react'
-import { initializeI18n } from '@/app/providers/i18n'
+import { inject } from 'vitest'
+import { configureI18n } from '@/app/providers/i18n/configure'
 
-initializeI18n('ko')
+// The catalogs arrive as data, evaluated once for the run by `i18n-global-setup.ts`: importing
+// them here made every DOM file evaluate ~120 catalog modules and their imports of its own, about
+// 0.9 s of setup per file. Watch mode provides none, so a file there imports them itself.
+// Either way i18next is configured by the product's own `configureI18n`, with the same options
+// and formatters.
+const catalogs = inject('i18nResources')
+if (catalogs) configureI18n(catalogs, 'ko')
+else (await import('@/app/providers/i18n')).initializeI18n('ko')
 
 // The suite runs 290 files in parallel, so a page-level `findBy*` can exceed testing-library's
 // 1s default from scheduling pressure alone rather than from anything being wrong — PostsPage's
