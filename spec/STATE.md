@@ -6,7 +6,6 @@
 - level: mid
 - lang: ko
 - docs: en
-- push: main
 
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
@@ -168,11 +167,12 @@
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- rb1 rebased main onto origin4c3aee81 without conflicts or source loss; backup/main-before-rebase-20261110 retains the original history. Full CI at2b649a96 passes18/19 checks, FE580files/4638tests and89Go packages; clip/store fails quote expiry and recovery/target. No push. Report reports/261110-rb1.md.
+- h12 updates haeram-spec-creator0.11.0→0.12.0 and20skills; migrated branch settings to SETTINGS.md, merged FORMAT while retaining project overrides. No push: the rb1 full-CI clip/store failures still block publication. Reports reports/261110-h12.md and reports/261110-rb1.md; backup/main-before-rebase-20261110 retains original history.
 - Local wall time jumps about11.65s forward/back even with CPU affinity. Diagnose/stabilize the execution environment before a fresh successful full-CI gate and main push; preserve the failed receipts. T737/T738 remain locally done; T739 is implemented but blocked on its full-CI acceptance. Do not reimplement its config.
 - T740/T741/T742 remain deferred after the actual92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 h12 updates haeram-spec-creator0.11.0→0.12.0,20skills; migrates cfg push to SETTINGS landmain/pushtrue, merges FORMAT with project overrides preserved. Integrity/settings/idempotence pass; existing54lint errors unchanged; no sourcepush while rb1 fullCI fails. Report261110-h12.
 - 261110 rb1 rebases36 local commits onto origin4c3aee81 with exact expected tree and backup; fullCI2b649a96 passes18/19 checks, FE580/4638 and89Go packages, fails two clip/store tests. Measured11.65s wall-clock jumps persist with CPU pinning; preserve source and block push underARCH31. Report261110-rb1.
 - 261109 si4 local closure: reviewedT739 merge72ab/T738 mergef127; actualmain580files/4638tests andallFEchecks pass with stabledotenv. ArchiveT738 underARCH24; blockT739/wholegroup/sourcepush on observedGo failure, preservebackendrollback/archive and olddirtyspaces; endbefore21:00KST.
 - 261109 si4 defersT740/T741/T742: actual release failed after13 passed image/worker stages; observed10.223s Docker clock rollback and latest-job query reproduction, final render cause unresolved. Preserve92daffbe/archive branch and restore backend exactly toorigin0cd at9fa63516; finish FE scope before21:00KST.
@@ -192,4 +192,3 @@
 - 261109 T736 integrated (sil): /memories keeps keyboard focus after an edit closes or a delete (only while focus is lost, once per removal); 3 cases fail at base; reviewed approved (review 4279acaf, P3 only).
 - 261109 create-task review/perf-quality-261109 F11 (sil) → T736 /memories keyboard focus; F4 rejected after re-measurement.
 - 261109 T735 integrated (sil): Editable keeps keyboard focus on entry/exit (keyboard-only entry move, exit only while focus is lost); 3 cases fail at base; reviewed approved (review ff709665, P3 only).
-- 261109 create-task review/perf-quality-261109 F10 (sil) → T735 Editable keyboard focus; F6 rejected, F11 kept [?].
