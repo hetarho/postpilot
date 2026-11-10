@@ -7,11 +7,6 @@
 - lang: ko
 - docs: en
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| gcf | DESKTOP-VKPLS8P | pair | 2026-11-10T05:01Z | 2026-11-10T05:03Z | T740 |
-
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
@@ -167,16 +162,16 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
-| T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH CLIP | - | doing@261110.gcf |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- h12 updates haeram-spec-creator0.11.0→0.12.0 and20skills; migrated branch settings to SETTINGS.md, merged FORMAT while retaining project overrides. No push: the rb1 full-CI clip/store failures still block publication. Reports reports/261110-h12.md and reports/261110-rb1.md; backup/main-before-rebase-20261110 retains original history.
-- Local wall time jumps about11.65s forward/back even with CPU affinity. Diagnose/stabilize the execution environment before a fresh successful full-CI gate and main push; preserve the failed receipts. T737/T738 remain locally done; T739 is implemented but blocked on its full-CI acceptance. Do not reimplement its config.
-- T740/T741/T742 remain deferred after the actual92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
+- gcf repairs the Go CI failures and archives T740. All90Go test packages are verified:25affected suites freshly run,65unchanged successful suites reused; global format/vet/build pass. Clock fixtures and the browser ink identity chain are committed. Report reports/261110-gcf.md; no source push.
+- Main publication remains gated by the broad FE ClipCampaign.test.tsx missing-hashtag-label failure (247files:246pass; isolated repeat passes without source changes). Diagnose it, retain failed receipts, and complete full CI plus deployment/media parity before push under ARCH-31. T739 remains blocked on its full-CI acceptance. The host clock itself was not changed.
+- T741/T742 remain deferred after the92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 T740 done (gcf): deterministic clock-rollback ownership and recovery regressions fail original SQL and pass the repair; actual sqlc regeneration and all90Go test-package coverage pass (25fresh/65unchanged reused), global Go checks pass. Broad FE ClipCampaign failure remains unqualified; no push. Report261110-gcf.
 - 261110 fix browser ink identity (gcf): regenerate catalog lockfile SHA, canonical identity and both browser/API asset-version constants after the0.12.0 upgrade; styles/fonts/WASM unchanged. Native catalog and browser frozen-profile checks plus generated-file formatting pass; broad247-file FE selection has one unchanged ClipCampaign failure, isolated repeat passes.
 - 261110 fix CI clocks (gcf): assert the exact persisted auth session TTL and inject the spoken qualification harness clock; deterministic completed/stale/future review checks preserve all publication guards. Full affected Go package suites pass;65 unchanged successful package results are reused for90-package coverage.
 - 261110 T740 resumes (gcf): deterministic reversed job timestamps reproduce the recovery/target CLIP_PROCESSING_FAILED via refused current-attempt checkpoints. Apply only the approved T740 ownership repair and fresh regression/consumer checks; T741/T742 remain deferred.
@@ -196,4 +191,3 @@
 - 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
 - 261109 self-improve-local starts (si4): user delegates a roughly four-hour run on main at 97e07304, prioritizing performance, test cost, code quality and keyboard usability; proposals require orchestrator approval and independent code review.
 - 261109 pushed c96bc898 (llm sentinel fix + report, sil): backend gate at 534ad96e passes (90 packages, 119 s); CI 42522650704, Deploy backend 42522650731, Verify media 42523039487 success.
-- 261109 fix llm tests: leak checks searched inspection JSON for short numeric sentinels ("999", "90000", "0.7") that a live RFC3339Nano IssuedAt can contain — CI 42520643603 failed on spec-only 1115efa7; sentinels now cannot match a timestamp (15/3000 and 2357/250000 failures → 0); reviewed approved (sil).
