@@ -8,6 +8,7 @@
 - docs: en
 
 ## inbox
+- 261110 decided review/perf-quality-sil5-261110 T743 T744: self-improve-local until 21:00 KST with a push of the finished part → approve the load-dependent ClipCampaign gate failure (reproduction first) and the abandoned photo preview leak, frontend only (alt: backend/test-cost changes needing media parity | an unmeasured setup/config change) — backend paths would require media gates that do not fit before 21:00; the setup cost gets a measurement only; one scout claim refuted by the ClipSpeechPlayer key.
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
 - 261109 decided review/perf-quality-si4-261109 T740: observed VM clock rollback rejects the active attempt checkpoint → repair SQL ownership using the existing active-job index and atomic checkpoint replacement trigger (alt: retry tests | change timestamps/clocks | weaken the gate) — deterministic and real-run proof, no policy/schema/provider/credit change; this repair precedes the pending source publication.
@@ -150,6 +151,7 @@
 | structure-261008 | converted@261008 |
 | perf-quality-261109 | converted@261109 |
 | perf-quality-si4-261109 | converted@261109 |
+| perf-quality-sil5-261110 | converted@261110 |
 
 ## tasks
 | id | title | ssot | dep | st |
@@ -164,6 +166,8 @@
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
+| T743 | Make the campaign guide test independent of load | ARCH | - | todo |
+| T744 | Release the preview of an abandoned photo conversion | ARCH | - | todo |
 
 ## next
 - gcf repairs the Go CI failures and archives T740. All90Go test packages are verified:25affected suites freshly run,65unchanged successful suites reused; global format/vet/build pass. Clock fixtures and the browser ink identity chain are committed. Report reports/261110-gcf.md; no source push.
