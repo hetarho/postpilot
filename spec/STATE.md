@@ -10,7 +10,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| gcf | DESKTOP-VKPLS8P | pair | 2026-11-10T05:01Z | 2026-11-10T05:01Z | - |
+| gcf | DESKTOP-VKPLS8P | pair | 2026-11-10T05:01Z | 2026-11-10T05:03Z | T740 |
 
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
@@ -167,7 +167,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
-| T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH CLIP | - | todo |
+| T740 | Keep attempt checkpoint ownership independent of wall-clock order | ARCH CLIP | - | doing@261110.gcf |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
@@ -177,6 +177,8 @@
 - T740/T741/T742 remain deferred after the actual92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 fix CI clocks (gcf): assert the exact persisted auth session TTL and inject the spoken qualification harness clock; deterministic completed/stale/future review checks preserve all publication guards. Full affected Go package suites pass;65 unchanged successful package results are reused for90-package coverage.
+- 261110 T740 resumes (gcf): deterministic reversed job timestamps reproduce the recovery/target CLIP_PROCESSING_FAILED via refused current-attempt checkpoints. Apply only the approved T740 ownership repair and fresh regression/consumer checks; T741/T742 remain deferred.
 - 261110 fix clip quote test (gcf): expire the fixture at a fixed past instant, preserving refusal and durable-idempotency assertions across host wall-clock corrections; targeted quote test, store go vet and gofmt pass. Continue the deterministic checkpoint-ownership repair under T740 before publication.
 - 261110 gcf starts the requested diagnosis and repair of the failed Go CI tests; preserve deferred candidates and reproduce the quote-expiry and recovery failures before selecting the fix.
 - 261110 h12 updates haeram-spec-creator0.11.0→0.12.0,20skills; migrates cfg push to SETTINGS landmain/pushtrue, merges FORMAT with project overrides preserved. Integrity/settings/idempotence pass; existing54lint errors unchanged; no sourcepush while rb1 fullCI fails. Report261110-h12.
@@ -195,5 +197,3 @@
 - 261109 pushed c96bc898 (llm sentinel fix + report, sil): backend gate at 534ad96e passes (90 packages, 119 s); CI 42522650704, Deploy backend 42522650731, Verify media 42523039487 success.
 - 261109 fix llm tests: leak checks searched inspection JSON for short numeric sentinels ("999", "90000", "0.7") that a live RFC3339Nano IssuedAt can contain — CI 42520643603 failed on spec-only 1115efa7; sentinels now cannot match a timestamp (15/3000 and 2357/250000 failures → 0); reviewed approved (sil).
 - 261109 pushed fb01e678 (T736 + report, sil): FE gate at df31babb (577 files/4,592 tests, all FE checks) passes; CI 42519697954 success; no backend path, so no deploy.
-- 261109 pushed 5c2a8c03 (T733 T734 T735, sil): full CI gate at 5c2a8c03 and media/deploy gates at ee9ef3fa pass; CI 42516751893, Deploy backend 42516751884, Verify media 42517082146 success; CI backend job 1154→385 s.
-- 261109 T736 integrated (sil): /memories keeps keyboard focus after an edit closes or a delete (only while focus is lost, once per removal); 3 cases fail at base; reviewed approved (review 4279acaf, P3 only).

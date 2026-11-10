@@ -751,7 +751,7 @@ func TestLoginPersistenceUsesConfiguredTTLAndBothModesAreRevocable(t *testing.T)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if delta := time.Until(session.ExpiresAt); delta < ttl-time.Minute || delta > ttl {
+			if delta := session.ExpiresAt.Sub(session.CreatedAt); delta != ttl {
 				t.Fatalf("session TTL = %v", delta)
 			}
 			probe := connect.NewRequest(&postpilotv1.GetMeRequest{})

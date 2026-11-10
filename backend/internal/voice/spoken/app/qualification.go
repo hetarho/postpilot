@@ -79,13 +79,22 @@ type QualificationHarness struct {
 	Sessions   QualificationSessions
 	Accounting QualificationAccounting
 	Poll       time.Duration
+	// Now supplies the clock boundary; nil uses the system clock.
+	Now func() time.Time
 }
 
 func NewQualificationHarness(g *GenerationService, sessions QualificationSessions, accounting QualificationAccounting) *QualificationHarness {
 	if g == nil || sessions == nil || accounting == nil {
 		panic("spoken qualification dependencies required")
 	}
-	return &QualificationHarness{g, sessions, accounting, 200 * time.Millisecond}
+	return &QualificationHarness{Generation: g, Sessions: sessions, Accounting: accounting, Poll: 200 * time.Millisecond}
+}
+
+func (h *QualificationHarness) now() time.Time {
+	if h.Now != nil {
+		return h.Now()
+	}
+	return time.Now()
 }
 func qualificationUSD(s string) (*big.Rat, error) {
 	n, ok := new(big.Rat).SetString(s)
@@ -110,7 +119,7 @@ func (h *QualificationHarness) Preflight(ctx context.Context, owner, session str
 	if err != nil {
 		return q, err
 	}
-	if q.OwnerID != owner || !q.ExpiresAt.After(time.Now()) {
+	if q.OwnerID != owner || !q.ExpiresAt.After(h.now()) {
 		return q, ErrQualificationEvidence
 	}
 	maximum, err := qualificationUSD(q.MaximumUSD)
@@ -154,7 +163,7 @@ func (h *QualificationHarness) source(ctx context.Context, in QualificationInput
 	if e != nil {
 		return q, spoken.Operation{}, spoken.Operation{}, spoken.Voice{}, e
 	}
-	if q.OwnerID != in.OwnerID || !q.ExpiresAt.After(time.Now()) {
+	if q.OwnerID != in.OwnerID || !q.ExpiresAt.After(h.now()) {
 		return q, spoken.Operation{}, spoken.Operation{}, spoken.Voice{}, ErrQualificationEvidence
 	}
 	d, e := h.Generation.Get(ctx, in.OwnerID, in.DesignOperationID)
@@ -554,7 +563,7 @@ func (h *QualificationHarness) Audit(ctx context.Context, r QualificationReport)
 	return r, nil
 }
 func (h *QualificationHarness) Publish(ctx context.Context, r QualificationReport, reportID string) error {
-	if reportID == "" || r.Review.Reviewer == "" || r.Review.ReviewedAt.IsZero() || r.Review.ReviewedAt.After(time.Now()) || !r.Review.AuditionAccepted || !r.Review.KoreanAccepted || !r.Review.ContinuityAccepted {
+	if reportID == "" || r.Review.Reviewer == "" || r.Review.ReviewedAt.IsZero() || r.Review.ReviewedAt.After(h.now()) || !r.Review.AuditionAccepted || !r.Review.KoreanAccepted || !r.Review.ContinuityAccepted {
 		return ErrQualificationEvidence
 	}
 	for _, note := range []string{r.Review.Names, r.Review.PricesNumbers, r.Review.Units, r.Review.Punctuation, r.Review.MixedLanguage, r.Review.OmissionsRepeats, r.Review.Clipping, r.Review.Continuity, r.Review.ConfirmationCapacity} {

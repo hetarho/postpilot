@@ -111,9 +111,20 @@ func TestSpokenQualificationProductionJobsBoundCostReuseAndEvidence(t *testing.T
 	if e = h.Publish(ctx, report, "fixture-report"); !errors.Is(e, app.ErrQualificationEvidence) || sessions.published != 0 {
 		t.Fatal("fixture flag qualified", e)
 	}
-	report.Review = app.QualificationReview{Reviewer: "fixture listener; no live qualification", ReviewedAt: time.Now(), AuditionAccepted: true, KoreanAccepted: true, ContinuityAccepted: true, Names: "fixture", PricesNumbers: "fixture", Units: "fixture", Punctuation: "fixture", MixedLanguage: "fixture", OmissionsRepeats: "fixture", Clipping: "fixture", Continuity: "fixture", ConfirmationCapacity: "fixture"}
+	// Review follows durable completion even when the host clock moves backward.
+	reviewedAt := report.Probes[0].UpdatedAt
+	if report.Probes[1].UpdatedAt.After(reviewedAt) {
+		reviewedAt = report.Probes[1].UpdatedAt
+	}
+	h.Now = func() time.Time { return reviewedAt }
+	report.Review = app.QualificationReview{Reviewer: "fixture listener; no live qualification", ReviewedAt: reviewedAt, AuditionAccepted: true, KoreanAccepted: true, ContinuityAccepted: true, Names: "fixture", PricesNumbers: "fixture", Units: "fixture", Punctuation: "fixture", MixedLanguage: "fixture", OmissionsRepeats: "fixture", Clipping: "fixture", Continuity: "fixture", ConfirmationCapacity: "fixture"}
+	future := report
+	future.Review.ReviewedAt = reviewedAt.Add(time.Nanosecond)
+	if e = h.Publish(ctx, future, "future-fixture-report"); !errors.Is(e, app.ErrQualificationEvidence) || sessions.published != 0 {
+		t.Fatal("future review was accepted", e)
+	}
 	stale := report
-	stale.Review.ReviewedAt = time.Now().Add(-time.Hour)
+	stale.Review.ReviewedAt = reviewedAt.Add(-time.Hour)
 	stale.Probes[0].UpdatedAt = stale.Review.ReviewedAt
 	stale.Probes[1].UpdatedAt = stale.Review.ReviewedAt
 	if e = h.Publish(ctx, stale, "stale-fixture-report"); !errors.Is(e, app.ErrQualificationEvidence) || sessions.published != 0 {
