@@ -173,7 +173,7 @@
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes d95f0f5f after a full local gate on 729ec6d0 (Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback; remote CI passed). T745 (shared DOM test i18n catalogs, setup 1.65 -> 0.73 s per file) follows in a second push after an FE gate on the identical tree. Report reports/261110-sil5.md; inspect CI for the second push.
+- sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes d95f0f5f after a full local gate on 729ec6d0 (Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback; remote CI passed). T745 (shared DOM test i18n catalogs, setup 1.65 -> 0.73 s per file) follows in a second push after an FE gate on the identical tree. Remote CI passed for both pushes (42802447091, 42808343741). Report reports/261110-sil5.md.
 - Fix the clip/store request history ordering under clock rollback (backend; needs a full gate plus media parity), then close T739. Add the T745 provided-data assertion suggested in the inbox.
 - T741/T742 remain deferred after the 92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
