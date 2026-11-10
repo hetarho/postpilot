@@ -70,10 +70,17 @@ export function VoiceAnswerComposer({
   const answer = useAnswerVoicePrompt(ownerId, voiceId)
   const uploads = useVoicePhotoUpload(voiceId)
   const submitLock = useRef(false)
+  const latestPick = useRef(0)
 
   // The preview is an object URL of the converted copy; it is released with the form.
   const preview = photo.phase === 'ready' ? photo.preview : ''
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
+  // A conversion that ends after the form is gone or a newer pick began is dropped; bumping the
+  // token on unmount makes that the same check.
+  useEffect(() => {
+    const picks = latestPick
+    return () => void (picks.current += 1)
+  }, [])
 
   // The list row or the form that opened this one is gone, so focus would fall to the page. A
   // rewrite puts the cursor after the answer, where more sentences go.
@@ -87,12 +94,14 @@ export function VoiceAnswerComposer({
   const pick = async (file: File | undefined) => {
     if (!file) return
     onEdit?.()
+    const token = ++latestPick.current
     setPhoto({ phase: 'converting' })
     try {
       const converted = await preparePhoto(file)
+      if (token !== latestPick.current) return
       setPhoto({ phase: 'ready', photo: converted, preview: URL.createObjectURL(converted.blob) })
     } catch {
-      setPhoto({ phase: 'failed' })
+      if (token === latestPick.current) setPhoto({ phase: 'failed' })
     }
   }
 

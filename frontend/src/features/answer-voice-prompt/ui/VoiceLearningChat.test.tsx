@@ -6,6 +6,7 @@ import { emptyVoice, type VoiceProfile, type VoicePrompt, type VoiceSample } fro
 import { Button } from '@/shared/ui'
 import { VoiceLearningChat } from './VoiceLearningChat'
 import { AnswerForm } from './AnswerForm'
+import { preparePhoto } from '../api/photo'
 
 const fake = vi.hoisted(() => ({
   prompts: [] as VoicePrompt[],
@@ -352,5 +353,38 @@ describe('scripted voice learning chat', () => {
         photo: { uploadId: 'private-upload', width: 1024, height: 768 },
       }),
     )
+  })
+  it('releases the preview of a photo whose conversion ends after the form closed', async () => {
+    let finish: (value: { blob: Blob; width: number; height: number }) => void = () => {}
+    vi.mocked(preparePhoto).mockImplementationOnce(
+      () => new Promise((resolve) => (finish = resolve)),
+    )
+    const create = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:abandoned')
+    const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+    const { unmount } = render(
+      <AnswerForm
+        ownerId="alice"
+        voiceId="voice"
+        prompt={{ ...fake.prompts[0]!, photo: true }}
+        onBack={vi.fn()}
+        onDone={vi.fn()}
+      />,
+    )
+    const user = userEvent.setup()
+    await user.upload(
+      screen.getByLabelText('사진 고르기'),
+      new File(['x'], 'bread.heic', { type: 'image/heic' }),
+    )
+    unmount()
+    const errors = vi.spyOn(console, 'error')
+    finish({ blob: new Blob(['jpeg']), width: 1024, height: 768 })
+    await new Promise((resolve) => setTimeout(resolve))
+    const alive =
+      create.mock.calls.length - revoke.mock.calls.filter(([u]) => u === 'blob:abandoned').length
+    expect(alive).toBe(0)
+    expect(errors).not.toHaveBeenCalled()
+    create.mockRestore()
+    revoke.mockRestore()
+    errors.mockRestore()
   })
 })
