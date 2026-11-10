@@ -167,7 +167,6 @@
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
-| T743 | Make the campaign guide test independent of load | ARCH | - | todo |
 | T745 | Stop re-evaluating the i18n catalogs in every DOM test file | ARCH | - | todo |
 
 ## next
@@ -176,6 +175,7 @@
 - T741/T742 remain deferred after the92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 T743 done (sil5): the ClipCampaign gate failure was a product remount; the form no longer adopts the pre-save project in the render after an autosave answer, so the open guide disclosure and a half-typed item survive. Base fails 3/4 loaded runs at ClipCampaign.test.tsx:35, fix passes 5/5; new regression fails on base; task check passed on a612c3e9; review 50f9d212 approves with two P3 notes; merged 28b58944.
 - 261110 T744 done (sil5): an abandoned or superseded photo conversion creates no object URL and sets no state; three regressions fail on base and pass; submit task check passed on 8ea48f27, independent reviews 4188cf5e (three P3, fixed) and 248777d6 approve; merged 8b40fc17 after the CLI spec gate stopped on identical pre-existing diagnostics.
 - 261110 T740 done (gcf): deterministic clock-rollback ownership and recovery regressions fail original SQL and pass the repair; actual sqlc regeneration and all90Go test-package coverage pass (25fresh/65unchanged reused), global Go checks pass. Broad FE ClipCampaign failure remains unqualified; no push. Report261110-gcf.
 - 261110 fix browser ink identity (gcf): regenerate catalog lockfile SHA, canonical identity and both browser/API asset-version constants after the0.12.0 upgrade; styles/fonts/WASM unchanged. Native catalog and browser frozen-profile checks plus generated-file formatting pass; broad247-file FE selection has one unchanged ClipCampaign failure, isolated repeat passes.
@@ -195,5 +195,3 @@
 - 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.
 - 261109 T737 done (si4): approved review 76ed0387; source integrated 7e1f30c5; unit evidence reuses identical verified source 99399408 (34 affected tests plus 54 consumer cases, six base failures); per-unit full CI/push next.
 - 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
-- 261109 self-improve-local starts (si4): user delegates a roughly four-hour run on main at 97e07304, prioritizing performance, test cost, code quality and keyboard usability; proposals require orchestrator approval and independent code review.
-- 261109 pushed c96bc898 (llm sentinel fix + report, sil): backend gate at 534ad96e passes (90 packages, 119 s); CI 42522650704, Deploy backend 42522650731, Verify media 42523039487 success.
