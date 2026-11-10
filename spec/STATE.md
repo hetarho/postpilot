@@ -8,6 +8,7 @@
 - docs: en
 
 ## inbox
+- 261110 decided review/perf-quality-sil5-261110 T745: measured i18n share of DOM test setup (1.43 s of about 1.65 s per file, ABBA spread 0.03 s) → approve a test-infrastructure change that evaluates the catalogs once per run with deep-equal resources (alt: leave it for a later run | tune workers or isolation) — production i18n, discovery and outcomes unchanged; joins a second push only after review and a full gate before 21:00.
 - 261110 decided review/perf-quality-sil5-261110 T743 T744: self-improve-local until 21:00 KST with a push of the finished part → approve the load-dependent ClipCampaign gate failure (reproduction first) and the abandoned photo preview leak, frontend only (alt: backend/test-cost changes needing media parity | an unmeasured setup/config change) — backend paths would require media gates that do not fit before 21:00; the setup cost gets a measurement only; one scout claim refuted by the ClipSpeechPlayer key.
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
@@ -167,6 +168,7 @@
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 | T743 | Make the campaign guide test independent of load | ARCH | - | todo |
+| T745 | Stop re-evaluating the i18n catalogs in every DOM test file | ARCH | - | todo |
 
 ## next
 - gcf repairs the Go CI failures and archives T740. All90Go test packages are verified:25affected suites freshly run,65unchanged successful suites reused; global format/vet/build pass. Clock fixtures and the browser ink identity chain are committed. Report reports/261110-gcf.md; no source push.
