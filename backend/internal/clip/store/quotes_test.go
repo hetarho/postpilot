@@ -108,7 +108,10 @@ func TestChangedQuoteInputsAndPricesRequireNewApproval(t *testing.T) {
 func TestExpiredQuoteRefusesBeforeEnqueueButAcceptedSnapshotSurvivesCleanup(t *testing.T) {
 	h := generationSetup(t)
 	q := quote(t, h)
-	if _, err := h.db.Writer.Exec("UPDATE clip_generation_quotes SET expires_at=? WHERE id=?", time.Now().Add(-time.Second).UTC().Format(time.RFC3339Nano), q.ID); err != nil {
+	// A fixed past instant stays expired across wall-clock corrections between
+	// fixture setup and acceptance.
+	expiredAt := time.Unix(0, 0).UTC().Format(time.RFC3339Nano)
+	if _, err := h.db.Writer.Exec("UPDATE clip_generation_quotes SET expires_at=? WHERE id=?", expiredAt, q.ID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := accept(h, q); !errors.Is(err, clip.ErrQuoteExpired) {
@@ -120,7 +123,7 @@ func TestExpiredQuoteRefusesBeforeEnqueueButAcceptedSnapshotSurvivesCleanup(t *t
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err = h.db.Writer.Exec("UPDATE clip_generation_quotes SET expires_at=? WHERE id=?", time.Now().Add(-time.Second).UTC().Format(time.RFC3339Nano), q.ID); err != nil {
+	if _, err = h.db.Writer.Exec("UPDATE clip_generation_quotes SET expires_at=? WHERE id=?", expiredAt, q.ID); err != nil {
 		t.Fatal(err)
 	}
 	if retry, err := accept(h, q); err != nil || retry != id {

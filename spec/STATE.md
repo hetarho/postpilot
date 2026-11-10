@@ -7,6 +7,11 @@
 - lang: ko
 - docs: en
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| gcf | DESKTOP-VKPLS8P | pair | 2026-11-10T05:01Z | 2026-11-10T05:01Z | - |
+
 ## inbox
 - 261109 decided review/perf-quality-si4-261109 T742: canonical FFmpeg TLS blocks the cold build after T741 recovers dependencies → use measured identical-source/original-signature/official-key fallbacks (alt: change source/version | weaken TLS or GPG | count old images as passed) — same archive SHA and full signer verified inside pinned base; only download availability changes.
 - 261109 decided review/perf-quality-si4-261109 T741: old zlib pin disappeared from the current index → retain the generic install and recover identical signed official APKs with fixed checksums (alt: upgrade runtime | pretend old image tags pass | weaken media gates) — actual same-version install proven; only two packaging paths, original architecture capability/trust/contracts preserved.
@@ -172,6 +177,8 @@
 - T740/T741/T742 remain deferred after the actual92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 fix clip quote test (gcf): expire the fixture at a fixed past instant, preserving refusal and durable-idempotency assertions across host wall-clock corrections; targeted quote test, store go vet and gofmt pass. Continue the deterministic checkpoint-ownership repair under T740 before publication.
+- 261110 gcf starts the requested diagnosis and repair of the failed Go CI tests; preserve deferred candidates and reproduce the quote-expiry and recovery failures before selecting the fix.
 - 261110 h12 updates haeram-spec-creator0.11.0→0.12.0,20skills; migrates cfg push to SETTINGS landmain/pushtrue, merges FORMAT with project overrides preserved. Integrity/settings/idempotence pass; existing54lint errors unchanged; no sourcepush while rb1 fullCI fails. Report261110-h12.
 - 261110 rb1 rebases36 local commits onto origin4c3aee81 with exact expected tree and backup; fullCI2b649a96 passes18/19 checks, FE580/4638 and89Go packages, fails two clip/store tests. Measured11.65s wall-clock jumps persist with CPU pinning; preserve source and block push underARCH31. Report261110-rb1.
 - 261109 si4 local closure: reviewedT739 merge72ab/T738 mergef127; actualmain580files/4638tests andallFEchecks pass with stabledotenv. ArchiveT738 underARCH24; blockT739/wholegroup/sourcepush on observedGo failure, preservebackendrollback/archive and olddirtyspaces; endbefore21:00KST.
@@ -190,5 +197,3 @@
 - 261109 pushed fb01e678 (T736 + report, sil): FE gate at df31babb (577 files/4,592 tests, all FE checks) passes; CI 42519697954 success; no backend path, so no deploy.
 - 261109 pushed 5c2a8c03 (T733 T734 T735, sil): full CI gate at 5c2a8c03 and media/deploy gates at ee9ef3fa pass; CI 42516751893, Deploy backend 42516751884, Verify media 42517082146 success; CI backend job 1154→385 s.
 - 261109 T736 integrated (sil): /memories keeps keyboard focus after an edit closes or a delete (only while focus is lost, once per removal); 3 cases fail at base; reviewed approved (review 4279acaf, P3 only).
-- 261109 create-task review/perf-quality-261109 F11 (sil) → T736 /memories keyboard focus; F4 rejected after re-measurement.
-- 261109 T735 integrated (sil): Editable keeps keyboard focus on entry/exit (keyboard-only entry move, exit only while focus is lost); 3 cases fail at base; reviewed approved (review ff709665, P3 only).
