@@ -8,6 +8,7 @@
 - docs: en
 
 ## inbox
+- 261110 suggest T745: the i18n equality test cannot tell whether the provided catalogs were used; assert in non-watch runs that the injected data backs the store so a lost globalSetup cannot silently bring back about 0.9 s per DOM file (review 274ecdd7 P3).
 - 261110 decided -: push gate Go step failed only in clip/store on a 12 s wall-clock rollback inside one test, on a backend tree byte-identical to origin → push 729ec6d0 reusing the successful Go evidence for that exact tree (alt: hold every frontend fix until a backend fix passes media parity | rerun the suite until green) — ARCH-31 keeps unchanged successful checks; the failing code is already published and untouched; T739 stays blocked on the fresh failure.
 - 261110 parked T739: TestEveryAcceptedRequestIsKeptAndNoSaveWritesOne orders request history by wall-clock creation time and reverses newest-first under a clock rollback; fix with a backend task that passes a full gate and media parity.
 - 261110 decided T743 T744: CLI integration refuses on unchanged pre-existing spec diagnostics → merge approved submissions with Git and prove identical diagnostics (alt: edit unrelated legacy documents | wait).
@@ -170,14 +171,14 @@
 | T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
-| T745 | Stop re-evaluating the i18n catalogs in every DOM test file | ARCH | - | todo |
 
 ## next
-- sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes 729ec6d0 after a full local gate: every FE and generation check passes; Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback. Report reports/261110-sil5.md. Inspect CI for the pushed revision.
-- Fix the clip/store request history ordering under clock rollback (backend; needs a full gate plus media parity), then close T739. T745 (shared test i18n catalogs) may follow in a second push only after review and a full gate.
+- sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes d95f0f5f after a full local gate on 729ec6d0 (Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback; remote CI passed). T745 (shared DOM test i18n catalogs, setup 1.65 -> 0.73 s per file) follows in a second push after an FE gate on the identical tree. Report reports/261110-sil5.md; inspect CI for the second push.
+- Fix the clip/store request history ordering under clock rollback (backend; needs a full gate plus media parity), then close T739. Add the T745 provided-data assertion suggested in the inbox.
 - T741/T742 remain deferred after the 92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261110 T745 done (sil5): the dom project evaluates the i18n catalogs once per run (globalSetup provide, setup inject into the unchanged product init); resources strictly equal the catalogs, discovery identical except the new equality case; ABBA setup per DOM file 1.65 -> 0.73 s; submit check ran the full FE suite (581 files / 4642 tests); review 274ecdd7 approves with two P3 notes; merged 08edc691.
 - 261110 T743 done (sil5): the ClipCampaign gate failure was a product remount; the form no longer adopts the pre-save project in the render after an autosave answer, so the open guide disclosure and a half-typed item survive. Base fails 3/4 loaded runs at ClipCampaign.test.tsx:35, fix passes 5/5; new regression fails on base; task check passed on a612c3e9; review 50f9d212 approves with two P3 notes; merged 28b58944.
 - 261110 T744 done (sil5): an abandoned or superseded photo conversion creates no object URL and sets no state; three regressions fail on base and pass; submit task check passed on 8ea48f27, independent reviews 4188cf5e (three P3, fixed) and 248777d6 approve; merged 8b40fc17 after the CLI spec gate stopped on identical pre-existing diagnostics.
 - 261110 T740 done (gcf): deterministic clock-rollback ownership and recovery regressions fail original SQL and pass the repair; actual sqlc regeneration and all90Go test-package coverage pass (25fresh/65unchanged reused), global Go checks pass. Broad FE ClipCampaign failure remains unqualified; no push. Report261110-gcf.
@@ -197,4 +198,3 @@
 - 261109 T740 replan (si4): first gate exposed stale trigger assumption; release340e69d1 before clarifying current0162 (upload-text retains, sampling clears), preserve source fdcc92b7; SQL ownership fix and schema unchanged.
 - 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.
 - 261109 T737 done (si4): approved review 76ed0387; source integrated 7e1f30c5; unit evidence reuses identical verified source 99399408 (34 affected tests plus 54 consumer cases, six base failures); per-unit full CI/push next.
-- 261109 create-task review/perf-quality-si4-261109 (si4) → T737 template-directory focus helper/consumers, T738 guideline-directory focus, T739 exact 20-file Node project; preserve existing contracts.
