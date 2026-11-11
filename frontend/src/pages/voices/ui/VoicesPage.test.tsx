@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
+import { ProtoVoiceOrigin } from '@/shared/api'
 import { createFakeAuthTransport } from '@/test/session'
 import type { FakeVoiceOptions, FakeVoiceRow } from '@/test/voice'
 
@@ -90,6 +91,48 @@ describe('the voice directory', () => {
           ].includes(call),
       ),
     ).toEqual([])
+  })
+
+  // VOICE-69: a style an AI made was read from a fictional sample, and the card quoting that
+  // sample says so; a voice learned from the owner's own writing carries no such label.
+  it('labels the sample an AI-made style shows as fictional', async () => {
+    renderAppAt('/voices', {
+      user: USER,
+      voice: {
+        voices: [{ id: 'voice-ai', name: 'AI 말투', isDefault: true, origin: 'synthetic' }],
+        analysis: {
+          origin: ProtoVoiceOrigin.SYNTHETIC,
+          syntheticSample: '바다가 보이는 창가에서 커피를 마셨어요.',
+          counted: {},
+          ai: {},
+        },
+      },
+    })
+    await screen.findByRole('heading', { level: 1, name: '말투' })
+    const card = within(await activeRows()).getByRole('link', { name: /AI 말투/ })
+    await waitFor(() => expect(card).toHaveTextContent('바다가 보이는 창가에서 커피를 마셨어요.'))
+    expect(card).toHaveTextContent('AI가 만든 가상의 예문')
+  })
+
+  it("leaves a sample from the owner's own writing unlabelled", async () => {
+    renderAppAt('/voices', {
+      user: USER,
+      voice: {
+        voices: [{ id: 'voice-mine', name: '내 말투', isDefault: true }],
+        samples: [{ id: 'sample-1', label: '가게 일기' }],
+        analysis: {
+          origin: ProtoVoiceOrigin.PERSONAL,
+          counted: {},
+          ai: {
+            examples: [{ field: 1, sentence: '오늘도 손님이 많았다.', materialId: 'sample-1' }],
+          },
+        },
+      },
+    })
+    await screen.findByRole('heading', { level: 1, name: '말투' })
+    const card = within(await activeRows()).getByRole('link', { name: /내 말투/ })
+    await waitFor(() => expect(card).toHaveTextContent('오늘도 손님이 많았다.'))
+    expect(card).not.toHaveTextContent('가상의 예문')
   })
 
   it('renders no tombstone group at all when nothing is deleted', async () => {

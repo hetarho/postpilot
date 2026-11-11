@@ -180,12 +180,15 @@ export function VoicesPage() {
 /** Guide: a voice card leads with how the voice SOUNDS — the analysis's one-line impression and
  *  one of its own example sentences in quotes, then its signature phrases — and only then its
  *  name, the 기본 badge and the meta line (`만드는 중` until it is made, then how many 학습 글 it
- *  holds and the day its analysis was published). */
+ *  holds and the day its analysis was published). A sentence an AI-made style was read from is a
+ *  fictional sample, and the card says so over it (VOICE-69). */
 function VoiceRowContent({ voice, ownerId }: { voice: Voice; ownerId: string }) {
-  const { t } = useTranslation(['voices', 'common'])
+  const { t } = useTranslation(['voices', 'common', 'authoring'])
   const { profile } = useVoiceProfile(ownerId, voice.made ? voice.id : '')
-  const ai = profile?.analysis?.ai
-  const sample = profile?.analysis?.syntheticSample || ai?.examples[0]?.sentence
+  const analysis = profile?.analysis
+  const ai = analysis?.ai
+  const sample = analysis?.syntheticSample || ai?.examples[0]?.sentence
+  const fictional = Boolean(analysis?.syntheticSample) || analysis?.origin === 'synthetic'
   return (
     <>
       <span className="flex min-w-0 items-start gap-3">
@@ -207,13 +210,17 @@ function VoiceRowContent({ voice, ownerId }: { voice: Voice; ownerId: string }) 
         </span>
       </span>
       {sample && (
-        <span
-          className={typographyStyles({
-            variant: 'body',
-            className: 'bg-card-well text-content-primary block rounded-lg px-4 py-3',
-          })}
-        >
-          “{sample}”
+        <span className="bg-card-well flex flex-col gap-1 rounded-lg px-4 py-3">
+          {fictional && (
+            <span className={typographyStyles({ variant: 'label' })}>
+              {t('fictional', { ns: 'authoring' })}
+            </span>
+          )}
+          <span
+            className={typographyStyles({ variant: 'body', className: 'text-content-primary' })}
+          >
+            “{sample}”
+          </span>
         </span>
       )}
       {ai?.impression && (
