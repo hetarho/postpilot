@@ -6,6 +6,7 @@ import {
   LEVELS,
   levelOf,
   modelChoiceIssue,
+  orderModelsForStage,
   postCreditLabel,
   refKey,
   stagePostFigure,
@@ -25,7 +26,11 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 
-type Lens = 'quality' | 'balanced' | 'price'
+/** `grade` is the order the picker opens on and no switch names it: 무료 first, then 가성비 up to
+ *  최고, unclassified last (MODEL-96 →MODEL-57). The three named lenses apply only once the owner
+ *  picks one. */
+type Lens = 'grade' | 'quality' | 'balanced' | 'price'
+const NAMED_LENSES = ['quality', 'balanced', 'price'] as const
 
 function levelRank(model: CatalogModel, stage: StageName): number {
   const level = levelOf(model, stage)
@@ -36,14 +41,16 @@ function credits(model: CatalogModel, stage: StageName): number {
   return stagePostFigure(model, stage)?.credits ?? Number.POSITIVE_INFINITY
 }
 
-/** The stage's models in the order the lens asks for. 품질 먼저: highest grade first. 가격 먼저:
- *  fewest credits per post first (free first). 균형: the grade nearest 밸런스 first. Inside one
- *  rank the catalog's own order survives (a stable sort). */
+/** The stage's models in the order the lens asks for. The opening order is the selectors' shared
+ *  grade order. 품질 먼저: highest grade first. 가격 먼저: fewest credits per post first (free
+ *  first). 균형: the grade nearest 밸런스 first. Inside one rank the catalog's own order survives
+ *  (a stable sort). */
 function orderByLens(
   models: readonly CatalogModel[],
   stage: StageName,
   lens: Lens,
 ): CatalogModel[] {
+  if (lens === 'grade') return orderModelsForStage(models, stage)
   const middle = LEVELS.indexOf('balanced')
   const key = (model: CatalogModel) =>
     lens === 'quality'
@@ -58,8 +65,8 @@ function orderByLens(
 
 /** Guide: one stage's AI as a row — the plain name of the stage, the model in use with its grade
  *  and what one post costs — whose 바꾸기 opens the picker as a bottom sheet. The picker is a
- *  list of big radio cards, sorted by what the owner says matters first (품질 · 균형 · 가격), and a
- *  tap saves the choice at once: the same save the old dropdown made. */
+ *  list of big radio cards, opening free first and resorted by what the owner says matters first
+ *  (품질 · 균형 · 가격), and a tap saves the choice at once: the same save the old dropdown made. */
 export function StageModelRow({ stage }: { stage: StageName }) {
   const { t } = useTranslation('models')
   const active = useStageSelection(stage)
@@ -123,12 +130,13 @@ export function StageModelRow({ stage }: { stage: StageName }) {
   )
 }
 
-/** The picker itself: a lens switch and the stage's models as radio cards. */
+/** The picker itself: a lens switch, none of whose lenses is on until the owner picks one, and
+ *  the stage's models as radio cards. */
 export function ModelPicker({ stage }: { stage: StageName }) {
   const { t } = useTranslation('models')
   const active = useStageSelection(stage)
   const save = useSaveSelection()
-  const [lens, setLens] = useState<Lens>('quality')
+  const [lens, setLens] = useState<Lens>('grade')
   const selectedKey = active.selected ? refKey(active.selected) : ''
   const pendingKey =
     save.isPending && save.variables?.ref
@@ -143,7 +151,7 @@ export function ModelPicker({ stage }: { stage: StageName }) {
       <SegmentedControl
         value={lens}
         onChange={(value) => setLens(value as Lens)}
-        options={(['quality', 'balanced', 'price'] as const).map((value) => ({
+        options={NAMED_LENSES.map((value) => ({
           value,
           label: t(`picker.lens.${value}`),
         }))}

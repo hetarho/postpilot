@@ -154,6 +154,50 @@ it('offers named common test entries and optional A/B settings without changing 
   expect(calls.filter((name) => /^(Save|Start|Estimate|Adopt|Apply)/.test(name))).toEqual([])
 })
 
+// MODEL-96 →MODEL-57: the picker opens on the grade order — 무료, then 가성비 up to 최고, the
+// unclassified last, the catalog's order inside a grade — with none of the named lenses on; 품질
+// 먼저 reorders only once the owner picks it.
+it('opens the stage picker free first and applies 품질 먼저 only when picked', async () => {
+  const user = userEvent.setup()
+  const graded = (modelId: string, level?: 'free' | 'value' | 'balanced' | 'premium' | 'top') => ({
+    providerId: 'openrouter',
+    modelId,
+    label: modelId,
+    levels: level ? { [Stage.WRITE]: level } : {},
+  })
+  renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    providers: {
+      models: [
+        graded('Top', 'top'),
+        graded('Plain'),
+        graded('Balanced', 'balanced'),
+        graded('Value One', 'value'),
+        graded('Free', 'free'),
+        graded('Value Two', 'value'),
+      ],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  await waitFor(() => expect(main.getByRole('button', { name: '바꾸기 · 글 쓰기' })).toBeEnabled())
+  await user.click(main.getByRole('button', { name: '바꾸기 · 글 쓰기' }))
+  const sheet = within(await screen.findByRole('dialog', { name: '글 쓰기 AI 고르기' }))
+  const order = () =>
+    sheet
+      .getAllByRole('radio')
+      .map(
+        (radio) => radio.textContent?.match(/(Free|Value One|Value Two|Balanced|Top|Plain)/)?.[0],
+      )
+  await waitFor(() =>
+    expect(order()).toEqual(['Free', 'Value One', 'Value Two', 'Balanced', 'Top', 'Plain']),
+  )
+  for (const lens of ['품질 먼저', '균형', '가격 먼저'])
+    expect(sheet.getByRole('tab', { name: lens })).toHaveAttribute('aria-selected', 'false')
+  await user.click(sheet.getByRole('tab', { name: '품질 먼저' }))
+  expect(sheet.getByRole('tab', { name: '품질 먼저' })).toHaveAttribute('aria-selected', 'true')
+  expect(order()).toEqual(['Top', 'Balanced', 'Value One', 'Value Two', 'Free', 'Plain'])
+})
+
 // QUOTA-66, MODEL-27: the chosen model's row and its picker card never show a supplier price.
 it('describes a chosen model without any price', async () => {
   const user = userEvent.setup()
