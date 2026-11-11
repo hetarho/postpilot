@@ -161,3 +161,11 @@ roots/exclusions; absent original input keeps graph completeness false. Small
 fixtures cover that subset, binary-string extraction, version mismatch and
 missing notices. A fresh generated manifest does not claim the publisher's
 unretained build provenance or distribution approval.
+
+Validation at source commit `9fabeddd3711fa90d00b991bc756f82dc01d60f9`:
+all 10 browser-media inventory/report tests, required builds, lint/format and
+syntax checks pass. The existing static-delivery consumer passes 13 checks in
+Chromium 157.0.8103.40, including actual served notice/source body hashes; the
+four generated files regenerate byte-identically. This is local loopback
+technical evidence with qualification false, not missing original-build proof
+or live deployment success. Task T748 retains the exact verification log.
