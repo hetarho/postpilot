@@ -1,4 +1,4 @@
-import { useId, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { twMerge } from '@/shared/lib'
 import { typographyStyles } from '../typography/typographyStyles'
 
@@ -7,7 +7,9 @@ import { typographyStyles } from '../typography/typographyStyles'
  *  the step at the call site so each step gets its own entrance. Reduced motion holds it still.
  *
  *  The question is the section's heading (`h2` by default), so the outline reads the flow as a
- *  list of questions. */
+ *  list of questions. A screen shown again after being hidden is a move to it, so focus goes to
+ *  its question and a screen reader hears where the owner now is — never on the first paint
+ *  (THEME-55), the way `WizardFrame` does it. */
 export function StepScreen({
   eyebrow,
   title,
@@ -30,6 +32,13 @@ export function StepScreen({
 }) {
   const id = useId()
   const Heading = headingLevel === 1 ? 'h1' : 'h2'
+  const heading = useRef<HTMLHeadingElement>(null)
+  const wasHidden = useRef(hidden)
+  useEffect(() => {
+    const arrived = wasHidden.current && !hidden
+    wasHidden.current = hidden
+    if (arrived) heading.current?.focus()
+  }, [hidden])
   return (
     <section
       aria-labelledby={id}
@@ -45,9 +54,15 @@ export function StepScreen({
           {eyebrow}
         </p>
       )}
+      {/* A question takes focus for announcement on navigation; it is not a control. */}
       <Heading
+        ref={heading}
         id={id}
-        className={typographyStyles({ variant: 'stepTitle', className: 'mt-1 text-balance' })}
+        tabIndex={-1}
+        className={typographyStyles({
+          variant: 'stepTitle',
+          className: 'mt-1 text-balance focus:outline-none!',
+        })}
       >
         {title}
       </Heading>

@@ -29,6 +29,10 @@ describe('campaign-led writing', () => {
       'true',
     )
     await user.click(screen.getByRole('button', { name: '다음' }))
+    // THEME-55: the new question takes focus, so a screen reader hears the screen changed.
+    expect(
+      screen.getByRole('heading', { name: '광고주가 부탁한 내용을 알려 주세요' }),
+    ).toHaveFocus()
     expect(screen.queryByText('셀 수 있는 항목')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '글에 꼭 담을 내용' })).toBeVisible()
     for (const name of ['필수 키워드', '최소 글자 수', '최소 사진 수', '필수 해시태그'])
