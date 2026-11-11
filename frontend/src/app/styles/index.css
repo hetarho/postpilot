@@ -845,6 +845,24 @@
   z-index: 60;
 }
 
+/* The three motion steps as duration utilities. Tailwind has no `--duration-*` theme namespace,
+   so `duration-base` in a class list compiled to nothing: a card's hover, a fold, the guide's
+   progress segments all ran at the 150ms default whatever step they named. Each sets the
+   variable `transition-*` reads as well as the property, the way the stock `duration-<n>` does,
+   so it holds in either order. */
+@utility duration-fast {
+  --tw-duration: var(--duration-fast);
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  --tw-duration: var(--duration-base);
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  --tw-duration: var(--duration-slow);
+  transition-duration: var(--duration-slow);
+}
+
 @theme inline {
   --color-clip-coral: var(--palette-clip-coral);
   --color-clip-amber: var(--palette-clip-amber);
