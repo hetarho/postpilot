@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGuidelines } from '@/entities/guideline'
 import { isTerminal, progressRatio, type GenerationJob } from '@/entities/generation-job'
@@ -22,6 +22,7 @@ export function EditorReview({
   voiceWarning,
   brief,
   job,
+  onWritingCardShown,
   onGo,
   onOpenGuidelines,
 }: {
@@ -37,6 +38,8 @@ export function EditorReview({
   /** The writing brief's trigger, drawn as this row's 바꾸기. */
   brief: ReactNode
   job?: GenerationJob
+  /** Whether the writing card is in view, so the page-top bar can step aside while it is. */
+  onWritingCardShown?: (shown: boolean) => void
   onGo: (step: GuideStep) => void
   onOpenGuidelines: () => void
 }) {
@@ -52,7 +55,7 @@ export function EditorReview({
     .join(' · ')
   return (
     <div className="mt-6 flex flex-col gap-4">
-      {running && <WritingCard job={running} />}
+      {running && <WritingCard job={running} onShown={onWritingCardShown} />}
       <ul className={cardStyles({ padding: 'none', className: 'divide-divider divide-y' })}>
         <SummaryRow
           label={t('guide.summary.kind')}
@@ -205,13 +208,30 @@ function GuidelinesRow({ ownerId, onOpen }: { ownerId: string; onOpen: () => voi
 }
 
 /** The run in progress, said warmly on the summary it was started from. The page-top hairline
- *  and the status line carry the same job; this is the one place it is big enough to wait on. */
-function WritingCard({ job }: { job: GenerationJob }) {
+ *  and the status line carry the same job; this is the one place it is big enough to wait on.
+ *  While it is in view it is the ONE bar the owner sees: it reports itself so the hairline fades
+ *  out, and back in once the card has scrolled away (or the run ends and the card goes). */
+function WritingCard({ job, onShown }: { job: GenerationJob; onShown?: (shown: boolean) => void }) {
   const { t } = useTranslation('posts')
   const ratio = progressRatio(job)
   const share = ratio ? Math.round((ratio.done / Math.max(ratio.total, 1)) * 100) : undefined
+  const card = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const node = card.current
+    if (!node || !onShown || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      (entries) => onShown(entries.some((entry) => entry.isIntersecting)),
+      { threshold: 0.5 },
+    )
+    observer.observe(node)
+    return () => {
+      observer.disconnect()
+      onShown(false)
+    }
+  }, [onShown])
   return (
     <div
+      ref={card}
       className={cardStyles({
         className: 'bg-badge-accent-bg flex items-center gap-4 shadow-none',
       })}

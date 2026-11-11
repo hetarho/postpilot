@@ -186,6 +186,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   // The durable job is watched HERE, not inside the step panels: the page-top status region
   // reports it and the panels act on it, and one poll has to serve both ([I5]).
   const jobView = useEditorJob(post)
+  // 확인's writing card has a bar of its own; while it is in view the page-top one fades out.
+  const [writingCardShown, setWritingCardShown] = useState(false)
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
@@ -445,6 +447,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         }
         brief={choices.brief}
         job={jobView.job}
+        onWritingCardShown={setWritingCardShown}
         onGo={setGuide}
         onOpenGuidelines={() => leaveTo('/guidelines')}
       />
@@ -487,7 +490,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       {/* First child of the flow on template: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while a draft thousands of pixels tall
           scrolls past it. It adds no layout height. */}
-      <EditorProgressBar job={jobView.job} />
+      <EditorProgressBar job={jobView.job} muted={writingCardShown} />
       {/* The 가제 is an editable field on the 내용 screen; this mirrors its value into the document
           outline on every screen, without a second field or tab stop. */}
       <Typography variant="display" className="sr-only">

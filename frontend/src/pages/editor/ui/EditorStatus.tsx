@@ -30,12 +30,26 @@ import { observingVideo } from '../model/steps'
  *  has to clear it. It adds no layout height in either: `ProgressBar` paints out of flow, so this
  *  sticky box is zero pixels tall whether the bar is there or not. Full-bleed past the page's own
  *  gutters, because it belongs to the page rather than to its content column. */
-export function EditorProgressBar({ job }: { job: GenerationJob | undefined }) {
+export function EditorProgressBar({
+  job,
+  muted = false,
+}: {
+  job: GenerationJob | undefined
+  /** Another bar for the same job is on screen — 확인's writing card — so this one fades out
+   *  rather than showing the owner two bars for one run. It stays mounted and announced: the
+   *  card's bar is decoration, this is the progressbar. */
+  muted?: boolean
+}) {
   const { t } = useTranslation('posts')
   if (!job || isTerminal(job)) return null
   const ratio = progressRatio(job)
   return (
-    <div className="top-chrome sticky z-10 -mx-4 sm:-mx-6 lg:-mx-8">
+    <div
+      className={clsx(
+        'top-chrome duration-base ease-standard sticky z-10 -mx-4 transition-opacity sm:-mx-6 lg:-mx-8',
+        muted && 'opacity-0',
+      )}
+    >
       <ProgressBar label={t('generation.progressAria')} done={ratio?.done} total={ratio?.total} />
     </div>
   )

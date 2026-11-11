@@ -1,6 +1,6 @@
 // ① 글 생성: starting a run, the re-observation picker, the photos and the writing brief's run
 // options and quality rows.
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
@@ -32,6 +32,7 @@ async function confirmNoPhotos(user: ReturnType<typeof userEvent.setup>) {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   resetEditorTest()
   // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
@@ -78,6 +79,37 @@ describe('opening a post', () => {
     expect(bar).toHaveAttribute('aria-valuemax', '4')
     expect(screen.queryByText(/사진 2\/4/)).not.toBeInTheDocument()
     expect(calls).toContain('GetGeneration')
+  })
+
+  // The owner saw two bars for one run: the page-top hairline over 확인's writing card and its own.
+  it('fades the page-top bar while the writing card is on screen', async () => {
+    const observed: Element[] = []
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(private readonly report: IntersectionObserverCallback) {}
+        observe(node: Element) {
+          observed.push(node)
+          this.report(
+            [{ isIntersecting: true, target: node } as unknown as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          )
+        }
+        disconnect() {}
+      },
+    )
+    const active = { id: 'job-1', status: 'running', stage: 'observe', progressDone: 1 }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-jeju', activeJob: { ...active, progressTotal: 4 } }] },
+      jobs: { jobs: [{ ...active, progressTotal: 4 }] },
+    })
+
+    expect(await screen.findByText('글을 쓰고 있어요')).toBeInTheDocument()
+    // Still the page's one announced progressbar; only its paint steps aside for the card's.
+    const bar = screen.getByRole('progressbar', { name: '작업 진행률' })
+    await waitFor(() => expect(bar.closest('.sticky')).toHaveClass('opacity-0'))
+    expect(observed).toHaveLength(1)
   })
 
   it('refreshes observations while running and renders the review draft after completion', async () => {
