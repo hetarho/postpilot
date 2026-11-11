@@ -1046,6 +1046,21 @@
     height: calc(var(--spacing) * 12);
     padding: 0;
   }
+
+  /* A phone's step bar holds ←, a second action and the big one in a single row. At 24px a side
+     the big action's label broke over two lines on a 360–375px phone (바로 글 / 쓰기), so the
+     bar's labels take a narrower side there; the targets keep their 48px height. */
+  @media (width < 40rem) {
+    [data-action-bar='step'] button,
+    [data-action-bar='step'] summary,
+    [data-action-bar='step'] .ui-button {
+      padding-inline: calc(var(--spacing) * 4);
+    }
+
+    [data-action-bar='step'] .ui-button.ui-button-cta {
+      padding-inline: calc(var(--spacing) * 5);
+    }
+  }
 }
 
 /* Guide: a shell that shows the bottom tab bar (phone) or the floating pill (desk) hands its height
