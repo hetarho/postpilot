@@ -1,0 +1,353 @@
+{
+  "tag": "sv8",
+  "runId": "07f660d2-f96a-4136-8b5b-ba200c594a5f",
+  "status": "cancelled",
+  "reason": "stop-file",
+  "stopReason": "stop-file",
+  "error": null,
+  "units": 6,
+  "scope": [
+    "T739",
+    "T697",
+    "T709",
+    "T741",
+    "T742",
+    "T731",
+    "T604",
+    "T748",
+    "T750",
+    "T749",
+    "T752"
+  ],
+  "publication": {
+    "pushed": "784b5dafd4f0b37d027f717f8df74a17eb313643",
+    "target": "main"
+  },
+  "dispatches": [
+    {
+      "unit": 1,
+      "task": "T709",
+      "result": {
+        "kind": "task",
+        "id": "T709",
+        "outcome": "completed",
+        "pushed": false,
+        "next": "implementation"
+      },
+      "head": "47a1104281f10279f1fae038f3f092606cbbc287",
+      "at": "2026-11-11T08:55:17.604Z",
+      "stopped": null,
+      "error": null
+    },
+    {
+      "unit": 2,
+      "task": "T604",
+      "result": {
+        "kind": "planning",
+        "id": "T604",
+        "outcome": "completed",
+        "pushed": false,
+        "next": "implement-task T747"
+      },
+      "head": "7bbdf84a07c4725ed56c53467172f0a16ff50e12",
+      "at": "2026-11-11T09:02:28.690Z",
+      "stopped": null,
+      "error": null
+    },
+    {
+      "unit": 3,
+      "task": "T739",
+      "result": {
+        "kind": "planning",
+        "id": "T739",
+        "outcome": "completed",
+        "pushed": false,
+        "next": "implementation: T751 (clip/store request history ordered by acceptance across a clock rollback; backend change, so the pre-push gate needs ARCH-26/28 plus Deploy backend/Verify media checks)"
+      },
+      "head": "36a7684874f92d5446d58e31dbdb7f7de4833fbf",
+      "at": "2026-11-11T09:05:21.508Z",
+      "stopped": null,
+      "error": null
+    },
+    {
+      "unit": 4,
+      "task": "T731",
+      "result": {
+        "kind": "task",
+        "id": "T731",
+        "outcome": "completed",
+        "pushed": false,
+        "next": "implementation"
+      },
+      "head": "fc7825dd07ab266b6814b32d9e0dfd2202b72f84",
+      "at": "2026-11-11T09:35:05.338Z",
+      "stopped": null,
+      "error": null
+    },
+    {
+      "unit": 5,
+      "task": "T741",
+      "result": {
+        "kind": "task",
+        "id": "T741",
+        "outcome": "completed",
+        "pushed": false,
+        "next": "implementation"
+      },
+      "head": "169a8ca28946b07b1414c16f5f08020abf7395c2",
+      "at": "2026-11-11T10:25:34.884Z",
+      "stopped": null,
+      "error": null
+    },
+    {
+      "unit": 6,
+      "task": "T742",
+      "result": {
+        "kind": "task",
+        "id": "T742",
+        "outcome": "completed",
+        "pushed": false,
+        "next": "implement-task T752 (dep T742 done; close it on the host's gate re-run of c30dbbfa)"
+      },
+      "head": "c30dbbfada3011e66cb73343419543e93144746e",
+      "at": "2026-11-11T10:47:35.541Z",
+      "stopped": null,
+      "error": null
+    }
+  ],
+  "checks": [
+    {
+      "command": "python3 /home/hrlee/project/postpilot/.git/haeram/v1/launchers/sv8/verify-arch31.py",
+      "ok": true,
+      "cached": false,
+      "exitCode": 0,
+      "failedTests": [],
+      "ci": null
+    },
+    {
+      "command": null,
+      "ok": null,
+      "cached": null,
+      "exitCode": null,
+      "failedTests": null,
+      "ci": {
+        "schemaVersion": 1,
+        "ok": true,
+        "outcome": "success",
+        "reason": "completed",
+        "commit": "c50b5348c6c47a6e88972c2df3b471ced13ae253",
+        "repo": "hetarho/postpilot",
+        "transport": "public-html",
+        "polls": 8,
+        "ms": 664875,
+        "runUrl": "https://github.com/hetarho/postpilot/actions/runs/43001837329",
+        "runs": [
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001837329",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183237",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183221",
+            "status": "completed",
+            "conclusion": "success"
+          }
+        ],
+        "jobs": [
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001837329/job/130459611376#step:21:2",
+            "name": "Media release",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001837329/job/130459611376",
+            "name": "Media release",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183237/job/130457415897",
+            "name": "build",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183237/job/130459135001",
+            "name": "rollout",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183237/job/130457415897#step:15:2",
+            "name": "build",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183237/job/130459135001#step:19:2",
+            "name": "rollout",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183221/job/130457415915",
+            "name": "frontend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183221/job/130457416345",
+            "name": "backend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183221/job/130457416345#step:17:2",
+            "name": "backend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43001183221/job/130457415915#step:35:2",
+            "name": "frontend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          }
+        ]
+      }
+    },
+    {
+      "command": "python3 /home/hrlee/project/postpilot/.git/haeram/v1/launchers/sv8/verify-arch31.py",
+      "ok": false,
+      "cached": false,
+      "exitCode": 1,
+      "failedTests": [],
+      "ci": null
+    },
+    {
+      "command": "python3 /home/hrlee/project/postpilot/.git/haeram/v1/launchers/sv8/verify-arch31.py",
+      "ok": true,
+      "cached": false,
+      "exitCode": 0,
+      "failedTests": [],
+      "ci": null
+    },
+    {
+      "command": null,
+      "ok": null,
+      "cached": null,
+      "exitCode": null,
+      "failedTests": null,
+      "ci": {
+        "schemaVersion": 1,
+        "ok": false,
+        "outcome": "cancelled",
+        "reason": "stopped",
+        "commit": "784b5dafd4f0b37d027f717f8df74a17eb313643",
+        "repo": "hetarho/postpilot",
+        "transport": "public-html",
+        "polls": 14,
+        "ms": 1415813,
+        "runUrl": "https://github.com/hetarho/postpilot/actions/runs/43012059783",
+        "runs": [
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43012059783",
+            "status": "unknown",
+            "conclusion": null
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959498",
+            "status": "completed",
+            "conclusion": "success"
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959371",
+            "status": "in_progress",
+            "conclusion": null
+          }
+        ],
+        "jobs": [
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959498/job/130493523153",
+            "name": "frontend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959498/job/130493523105",
+            "name": "backend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959498/job/130493523105#step:17:2",
+            "name": "backend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959498/job/130493523153#step:35:2",
+            "name": "frontend",
+            "status": "completed",
+            "conclusion": "success",
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959371/job/130493523349",
+            "name": "build",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              "Build image (push to GHCR only when deploy is enabled)"
+            ]
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959371/job/130493840225",
+            "name": "tabindex=\"0\" draggable=\"false\" data-action=\"dragstart:action-graph#cancelEvent\" data-hydro-click=\"{\"event_type\":\"actions.execution_graph_click\",\"payload\":{\"repository_id\":1346905428,\"session_id\":\"\",\"click_area\":&q",
+            "status": "unknown",
+            "conclusion": null,
+            "failedSteps": []
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959371/job/130493523349#step:6:374",
+            "name": "build",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              "Build image (push to GHCR only when deploy is enabled)"
+            ]
+          },
+          {
+            "url": "https://github.com/hetarho/postpilot/actions/runs/43011959371/job/130493523349#step:15:2",
+            "name": "build",
+            "status": "completed",
+            "conclusion": "failure",
+            "failedSteps": [
+              "Build image (push to GHCR only when deploy is enabled)"
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "retainedSnapshots": []
+}
