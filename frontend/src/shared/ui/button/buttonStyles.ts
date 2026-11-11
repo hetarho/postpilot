@@ -81,6 +81,7 @@ export function buttonStyles({
       'ui-button',
       size === 'icon' && 'ui-button-icon',
       variant === 'cta' && 'ui-button-cta',
+      variant === 'secondary' && 'ui-button-secondary',
       VARIANT_STYLES[variant],
       sizeStyles(size, variant),
       className,

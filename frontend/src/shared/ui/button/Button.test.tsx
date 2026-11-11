@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Button } from './Button'
 import { buttonStyles } from './buttonStyles'
+import { cardStyles } from '../card/cardStyles'
 
 describe('Button', () => {
   it('is a non-submitting button by default and forwards its ref', () => {
@@ -62,6 +63,22 @@ describe('Button', () => {
     const styles = buttonStyles({ size: 'compact' })
     expect(styles).toContain('min-h-8')
     expect(styles).toContain('pointer-coarse:min-h-9')
+  })
+
+  // A secondary pill is the card's own plane; on a card the stylesheet gives it the card's well
+  // through these two hooks, so 기억으로 저장 on 더 해 보기 reads as a button, not loose text.
+  it('marks a secondary button and a card for the on-card plane', () => {
+    render(
+      <section className={cardStyles()}>
+        <Button>기억으로 저장</Button>
+        <Button variant="ghost">닫기</Button>
+      </section>,
+    )
+    expect(screen.getByRole('button', { name: '기억으로 저장' })).toHaveClass('ui-button-secondary')
+    expect(screen.getByRole('button', { name: '닫기' })).not.toHaveClass('ui-button-secondary')
+    expect(screen.getByRole('button', { name: '기억으로 저장' }).parentElement).toHaveClass(
+      'ui-card',
+    )
   })
 
   it('marks styled links and file labels for the same contextual dock sizing as buttons', () => {

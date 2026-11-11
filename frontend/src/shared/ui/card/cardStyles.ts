@@ -18,7 +18,8 @@ export function cardStyles({
 } = {}) {
   return twMerge(
     clsx(
-      'bg-card-bg rounded-xl shadow-md',
+      // `ui-card`: the hook a secondary button standing on the card reads its plane from.
+      'ui-card bg-card-bg rounded-xl shadow-md',
       padding === 'sm' && 'p-4',
       padding === 'md' && 'p-5 sm:p-6',
       padding === 'lg' && 'p-6 sm:p-8',

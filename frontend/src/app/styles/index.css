@@ -1047,6 +1047,15 @@
     }
   }
 
+  /* A secondary button is a `surface-raised` pill, which is exactly what a Guide card is made of:
+     on a card it had no plane at all, and 기억으로 저장 · 이 글 형식으로 템플릿 만들기 read as
+     loose bold text indented by padding. On a card it takes the card's inner well instead; its
+     hover and press planes are unchanged. A card that IS a secondary button (a choice card) keeps
+     its own plane. */
+  .ui-card .ui-button-secondary:not(.ui-card) {
+    --button-secondary-bg: var(--card-well);
+  }
+
   [data-action-bar] button,
   [data-action-bar] summary,
   [data-action-bar] .ui-button {
