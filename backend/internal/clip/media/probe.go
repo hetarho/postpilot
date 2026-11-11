@@ -181,7 +181,7 @@ func (a *Adapter) Probe(ctx context.Context, ws clip.MediaWorkspace, path string
 	if err != nil {
 		return clip.MediaInfo{}, err
 	}
-	data, err := a.runLog(ctx, ws, a.cfg.FFmpegPath, "-hide_banner", "-nostdin", "-v", "info", "-xerror", "-nostats", "-stats_period", "3600", "-progress", "pipe:2", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:V:0", "-map", "0:a?", "-vf", "vfrdet", "-t", seconds(a.cfg.Sources.MaxDurationMS+a.cfg.DurationToleranceMS), "-fps_mode", "passthrough", "-f", "null", "-")
+	data, err := a.runLog(ctx, ws, a.cfg.FFmpegPath, "-hide_banner", "-nostdin", "-v", "info", "-xerror", "-nostats", "-stats_period", "3600", "-progress", "pipe:1", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-i", path, "-map", "0:V:0", "-map", "0:a?", "-vf", "vfrdet", "-t", seconds(a.cfg.Sources.MaxDurationMS+a.cfg.DurationToleranceMS), "-fps_mode", "passthrough", "-f", "null", "-")
 	if err != nil {
 		return clip.MediaInfo{}, errors.Join(clip.ErrInvalidMedia, err)
 	}
@@ -261,7 +261,14 @@ func seconds(ms int) string { return strconv.FormatFloat(float64(ms)/1000, 'f', 
 // vfrdet observes every decoded video timestamp in the same admission pass.
 // Require its final integer counts, not its rounded VFR fraction; a missing,
 // truncated or malformed report remains unknown rather than implying CFR.
-var cadenceReport = regexp.MustCompile(`\[Parsed_vfrdet_[^\]]+\] VFR:[^ ]+ \(([0-9]+)/([0-9]+)\)`)
+//
+// The report is read by its message alone. FFmpeg writes a line's
+// "[Parsed_vfrdet_0 @ 0x…] " prefix and its message as separate writes, so
+// another thread's output can land between them, and a line another thread
+// left without its newline makes FFmpeg drop the prefix altogether. Only
+// vfrdet writes "VFR:", and a stray copy can only add a report, which refuses
+// the verdict below and never grants it.
+var cadenceReport = regexp.MustCompile(`VFR:[^ \n]+ \(([0-9]+)/([0-9]+)\)`)
 
 func constantCadenceReport(log []byte) bool {
 	measured := 0
@@ -273,6 +280,8 @@ func constantCadenceReport(log []byte) bool {
 		}
 		// FFmpeg also closes an unused graph during initial format negotiation.
 		// Its (0/0) report is not evidence; require one actual decoded graph.
+		// A second one means the stream reconfigured the graph mid-decode, and
+		// the step across that boundary was never measured.
 		if constant > 0 {
 			measured++
 		}

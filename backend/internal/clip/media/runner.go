@@ -14,7 +14,8 @@ type Command struct {
 	Args        []string
 	// FFmpeg prints a filter's own report — loudnorm's measurement JSON among
 	// them — on stderr and nowhere else, so a caller that needs one asks for
-	// stderr instead of stdout. The bound and the failure text are unchanged.
+	// stderr. Whatever the command wrote to stdout, its -progress blocks among
+	// them, comes back ahead of it. The bound and the failure text are unchanged.
 	CaptureStderr bool
 	// A structured decoder run uses -v error: any stderr is failed input,
 	// even when a tool otherwise exits successfully after concealing damage.
@@ -77,7 +78,10 @@ func (r ExecRunner) Run(ctx context.Context, command Command) ([]byte, error) {
 		if stderr.exceeded {
 			return nil, errors.New("media command log exceeded its bound")
 		}
-		return stderr.data, nil
+		// FFmpeg writes -progress outside its log lock, so on stderr a block
+		// could land between a report's prefix and its message. On stdout it
+		// has a descriptor of its own and arrives whole, before the log.
+		return append(out.data, stderr.data...), nil
 	}
 	return out.data, nil
 }
