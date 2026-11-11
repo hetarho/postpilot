@@ -131,3 +131,10 @@ export {
 
 export { useClipUploadTexts, useClipUploadTextCalls } from './api/upload-text'
 export type { ClipUploadText, ClipUploadTextLimits } from './api/upload-text'
+export {
+  CLIP_HISTORY_STATES,
+  clipHistoryState,
+  clipHistoryStateLabel,
+  clipHistoryStatus,
+} from './model/history-state'
+export type { ClipHistoryState } from './model/history-state'

@@ -77,3 +77,21 @@ describe('narrowClips', () => {
     expect(ids(narrowClips(all, { q: '부산' }))).toEqual([])
   })
 })
+
+it('finds prepared stories while preserving the existing refining URL meaning', () => {
+  const ready = project({
+    id: 'story',
+    title: '이야기',
+    storyline: {
+      paragraphs: [{ text: '경험', observationIds: [] }],
+      editedByHand: false,
+      addedSourceIds: [],
+      takenOutObservationIds: [],
+    },
+  })
+  const values = [...all, ready]
+  expect(ids(narrowClips(values, { status: 'storyline_ready' }))).toEqual(['story'])
+  expect(ids(narrowClips(values, { status: 'refining' }))).toEqual(['b', 'story'])
+  expect(ids(narrowClips(values, { status: 'draft' }))).toEqual(['a'])
+  expect(ids(narrowClips(values, { status: 'finished' }))).toEqual(['c'])
+})

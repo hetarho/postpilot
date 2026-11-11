@@ -13,6 +13,7 @@ export const i18n = {
     },
     state: {
       draft: '초안',
+      storyline_ready: '스토리라인 작성 완료',
       refining: '다듬는 중',
       finished: '완성',
       generating: '생성 중',
@@ -146,6 +147,7 @@ export const i18n = {
     },
     state: {
       draft: 'Draft',
+      storyline_ready: 'Storyline ready',
       refining: 'Refining',
       finished: 'Finished',
       generating: 'Generating',

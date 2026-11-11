@@ -146,3 +146,48 @@ it('waits for both histories without exposing a partial latest item or replaying
   expect(main.querySelector('[data-work-skeleton]')).toBeNull()
   expect(view.router.state.location.pathname).toBe('/my')
 })
+
+it('keeps both channels’ prepared stories unfinished and gives cancelled attempts precedence', async () => {
+  const storyline = {
+    paragraphs: [{ text: '직접 겪은 이야기', observationIds: [] }],
+    editedByHand: false,
+    addedSourceIds: [],
+    takenOutObservationIds: [],
+  }
+  renderAppAt('/my', {
+    user: { id: 'alice' },
+    clips: {
+      projects: [
+        { ...clip, id: 'naver-story', title: '네이버 이야기', channel: 'naver_clip', storyline },
+        {
+          ...clip,
+          id: 'insta-story',
+          title: '인스타 이야기',
+          channel: 'instagram_clip',
+          storyline,
+          dubbing: { enabled: true, voiceId: 'confirmed' },
+        },
+        {
+          ...clip,
+          id: 'cancelled-story',
+          title: '취소된 이야기',
+          storyline,
+          latestJob: {
+            id: 'cancelled',
+            kind: 'storyline_clip',
+            status: 'cancelled',
+            stage: 'storyline',
+          },
+        },
+      ],
+    },
+  })
+  expect(await screen.findByRole('link', { name: /네이버 이야기/ })).toHaveTextContent(
+    '스토리라인 작성 완료',
+  )
+  expect(await screen.findByRole('link', { name: /인스타 이야기/ })).toHaveTextContent(
+    '스토리라인 작성 완료',
+  )
+  expect(await screen.findByRole('link', { name: /취소된 이야기/ })).toHaveTextContent('취소됨')
+  expect(screen.queryByRole('heading', { name: /^완성/ })).toBeNull()
+})

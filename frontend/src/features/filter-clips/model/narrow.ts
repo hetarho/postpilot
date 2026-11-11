@@ -1,16 +1,17 @@
 import {
   clipState,
+  clipHistoryState,
   clipChannel,
   type ClipChannel,
   type ClipProject,
-  type ClipState,
+  type ClipHistoryState,
 } from '@/entities/clip-project'
 
 /** The narrowing the clip directory holds, straight out of the URL (CLIP-41). */
 export interface ClipNarrowing {
   channel?: ClipChannel
   q?: string
-  status?: ClipState
+  status?: ClipHistoryState
 }
 
 /** Trimmed, case-folded and whitespace-collapsed. No `#` rule here: a clip project has no tags,
@@ -29,7 +30,12 @@ export function narrowClips(projects: ClipProject[], narrowing: ClipNarrowing): 
   const query = normalize(narrowing.q ?? '')
   return projects.filter((project) => {
     if (clipChannel(project.channel) !== clipChannel(narrowing.channel)) return false
-    if (narrowing.status && clipState(project) !== narrowing.status) return false
+    if (narrowing.status) {
+      // Existing refining URLs include every editable ② project, including a prepared story.
+      const state =
+        narrowing.status === 'storyline_ready' ? clipHistoryState(project) : clipState(project)
+      if (state !== narrowing.status) return false
+    }
     return query === '' || normalize(project.title).includes(query)
   })
 }

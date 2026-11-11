@@ -13,7 +13,7 @@ import {
 import {
   clipChannel,
   clipState,
-  clipStateLabel,
+  clipHistoryStatus,
   rememberClipEntry,
   useClipProjects,
   type ClipProject,
@@ -145,14 +145,7 @@ export function MyWorkPage() {
       kind: channel === 'instagram_clip' ? 'instaClip' : 'naverClip',
       title: project.title.trim() || t('untitled', { ns: 'posts' }),
       updatedAt: project.updatedAt,
-      status: running
-        ? { label: t('state.generating', { ns: 'clips' }), tone: 'info' }
-        : project.latestJob?.status === 'failed'
-          ? { label: t('state.failed', { ns: 'clips' }), tone: 'danger' }
-          : {
-              label: clipStateLabel(state),
-              tone: state === 'finished' ? 'success' : state === 'refining' ? 'accent' : 'neutral',
-            },
+      status: clipHistoryStatus(project),
       finished: state === 'finished' && !running,
       icon: channel === 'instagram_clip' ? Film : Clapperboard,
       id: project.id,

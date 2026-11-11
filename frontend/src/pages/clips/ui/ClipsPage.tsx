@@ -1,4 +1,3 @@
-import type { TFunction } from 'i18next'
 import { useEffect } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -6,7 +5,8 @@ import {
   clipState,
   clipChannel,
   clipChannelPath,
-  clipStateLabel,
+  clipHistoryStateLabel,
+  clipHistoryStatus,
   type ClipProject,
   useClipProjects,
   rememberClipEntry,
@@ -43,42 +43,9 @@ import {
   Typography,
   buttonStyles,
   typographyStyles,
-  type BadgeTone,
 } from '@/shared/ui'
 import { pageStyles } from '@/shared/ui'
 import { i18n } from '../config/i18n'
-
-/** The one status chip a row carries. Colour never travels alone (THEME-18): the tone only reinforces
- *  the label, so the label is chosen first and the tone follows it.
- *
- *  A running attempt and a failed one are things the JOB says, and they outrank the project's own
- *  state — a generation in flight is the most useful thing a row can tell you. Everything else is
- *  `clipState`, the same function the workspace's step bar and status line read (CLIP-41). */
-function rowStatus(
-  project: ClipProject,
-  t: TFunction<'clips'>,
-): { label: string; tone: BadgeTone } {
-  if (project.latestJob && !isTerminal(project.latestJob))
-    return {
-      label: t(
-        project.latestJob.cancelRequestedAt ? 'cancellation.cancelling' : 'state.generating',
-      ),
-      tone: 'info',
-    }
-  if (project.latestJob?.status === 'failed') return { label: t('state.failed'), tone: 'danger' }
-  if (project.latestJob?.status === 'cancelled')
-    return { label: t('cancellation.cancelled'), tone: 'neutral' }
-  const state = clipState(project)
-  return { label: clipStateLabel(state), tone: stateTone(state) }
-}
-
-/** 초안 stays neutral (nothing has happened yet), 다듬는 중 takes the accent (the owner is
- *  mid-way), 완성 takes success. The label still carries the meaning on its own. */
-function stateTone(state: ReturnType<typeof clipState>): BadgeTone {
-  if (state === 'refining') return 'accent'
-  if (state === 'finished') return 'success'
-  return 'neutral'
-}
 
 /** A clip channel's own page: the way back to its unfinished clips (CLIP-3, CLIP-41). The server
  *  returns only the acting user's projects (CLIP-2); the channel comes from the address, and the
@@ -149,7 +116,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
     { key: 'done', items: narrowed.filter(finished) },
   ] as const
   const noMatch = !projects.isPending && !projects.isError && listed.length > 0 && !narrowed.length
-  const statusLabel = narrowing.status ? clipStateLabel(narrowing.status) : ''
+  const statusLabel = narrowing.status ? clipHistoryStateLabel(narrowing.status) : ''
   const noMatchText = narrowing.q?.trim()
     ? narrowing.status
       ? t('project.noMatchBoth', { ns: 'clips', q: narrowing.q.trim(), status: statusLabel })
@@ -251,7 +218,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
           // the recovery links under it. The hero is the same card, large, its 이어서 만들기 the
           // screen's one big button.
           const renderClip = (project: ClipProject, heroCard = false) => {
-            const status = rowStatus(project, t)
+            const status = clipHistoryStatus(project)
             const template = templates.templates.find((v) => v.id === project.videoTemplateId)
             const runningJob =
               project.latestJob && !isTerminal(project.latestJob) ? project.latestJob : undefined

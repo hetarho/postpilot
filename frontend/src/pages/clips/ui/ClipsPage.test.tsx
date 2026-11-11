@@ -324,3 +324,53 @@ it.each([
   await waitFor(() => expect(view.router.state.location.pathname).toBe(path))
   expect(view.router.state.location.search).toEqual(search)
 })
+
+it.each([
+  ['/naver-clip', 'naver_clip', false],
+  ['/insta-clip', 'instagram_clip', true],
+] as const)(
+  'shows a prepared story and filters it on %s without calling it a finished video',
+  async (path, channel, narrated) => {
+    const user = userEvent.setup()
+    const storyline = {
+      paragraphs: [{ text: '직접 겪은 이야기', observationIds: [] }],
+      editedByHand: false,
+      addedSourceIds: [],
+      takenOutObservationIds: [],
+    }
+    const { router } = mount(path, {
+      projects: [
+        {
+          ...base,
+          id: 'ready',
+          title: '이야기만 준비한 영상',
+          channel,
+          storyline,
+          ...(narrated ? { dubbing: { enabled: true, voiceId: 'confirmed' } } : {}),
+        },
+        {
+          ...base,
+          id: 'built',
+          title: '편집안이 준비된 영상',
+          channel,
+          storyline,
+          editPlanRevision: 1,
+        },
+        { ...base, id: 'draft', title: '시작한 초안', channel },
+      ],
+    })
+    expect(await row(/이야기만 준비한 영상/)).toHaveTextContent('스토리라인 작성 완료')
+    expect(await row(/편집안이 준비된 영상/)).toHaveTextContent('다듬는 중')
+    expect(await row(/시작한 초안/)).toHaveTextContent('초안')
+    expect(screen.queryByRole('heading', { name: /^완성/ })).toBeNull()
+    await openFind(user)
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    await user.click(await screen.findByRole('option', { name: '스토리라인 작성 완료' }))
+    await waitFor(() =>
+      expect(router.state.location.search).toMatchObject({ status: 'storyline_ready' }),
+    )
+    expect(await row(/이야기만 준비한 영상/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /편집안이 준비된 영상/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /시작한 초안/ })).toBeNull()
+  },
+)
