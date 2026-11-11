@@ -438,6 +438,11 @@
   - `새 영상 템플릿 만들기` opens CLIP-213's wizard in that channel; its 저장 returns to a new clip in that channel with that template selected, and leaving the wizard unsaved selects nothing
   - `이대로 만들기`, Escape or the scrim close it for this creation; `다시 묻지 않기` stops the clip offer, apart from the post offer, for this account on this browser
 
+- CLIP-226 [o] clip histories and aggregate 내 글 distinguish 스토리라인 작성 완료 from 초안, 다듬는 중 and 완성 using stored project facts, without changing the creation lifecycle or persisting a new state.
+  - a stored storyline with no edit plan or rendered result is storyline-ready; an edit plan or result remains refining until explicit finalization
+  - running/cancelling, failed and cancelled attempts take precedence over the project display state; storyline-ready remains 작성 중 and never claims a finished/rendered video
+  - channel status filters support storyline-ready; valid existing draft/refining/finished URLs and lifecycle-step routing retain their meaning
+
 ## flow
 - create: 만들기 | 네이버 클립 · 인스타 클립's 새 영상 → (no video template → offer: 새 영상 템플릿 만들기 → wizard → back with it selected | 이대로 만들기 | 다시 묻지 않기) → choose title and optional template (9:16) → arrange sources and explicitly retain any original sound → optionally link a post (글 연결) → choose regions, caption styles/pace, facts, target duration and instruction → optionally enable dubbing and choose a confirmed voice → choose 스토리라인 먼저 or 바로 만들기 → approve its remaining work
 - template: 형식 안내 복사 → outside AI writes the outline, or 원문 복사 hands it the template already saved → paste 원문, or build the same entries in the block builder → choose the design selection in the preview → validate with entry/line errors → save → offer for a project
@@ -484,11 +489,6 @@
 - template semantics stay bounded by the existing output durations, supported ratios, bundled fonts and the CDS region presets; source grammar and preview implementation are implementation-task decisions
 - draft preview supports source selection, split cuts, fixed rates, source-audio presence, ready narration and stale-speech feedback, region slot text and per-caption style/position/size verification; frame-identical real-time rendering of all transitions, contrast adaptation, pitch treatment and final loudness on every device is not an established capability
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
-
-- CLIP-226 [o] clip histories and aggregate 내 글 distinguish 스토리라인 작성 완료 from 초안, 다듬는 중 and 완성 using stored project facts, without changing the creation lifecycle or persisting a new state.
-  - a stored storyline with no edit plan or rendered result is storyline-ready; an edit plan or result remains refining until explicit finalization
-  - running/cancelling, failed and cancelled attempts take precedence over the project display state; storyline-ready remains 작성 중 and never claims a finished/rendered video
-  - channel status filters support storyline-ready; valid existing draft/refining/finished URLs and lifecycle-step routing retain their meaning
 
 ## chg
 -
