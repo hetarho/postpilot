@@ -202,22 +202,27 @@ describe('WritingOriginReview', () => {
 
   // Turning 출처 보기 off dropped the legend and its notes in one frame and pulled the draft up
   // under the owner's thumb; they fold away and back, and are out of reach while folded.
-  it('folds the legend and its notes away and back instead of dropping them', async () => {
+  // The toggle only shows or hides the colours: the legend stays, grey while the draft is not
+  // wearing them, and 문구 출처 찾기 stays in the row, disabled — nothing appears or leaves.
+  it('keeps the bar steady and greys the legend while the colours are off', async () => {
     const user = userEvent.setup()
     render(<Review />)
     const legend = screen.getByRole('list', { name: '의미의 출처' })
-    const notes = legend.closest('.grid')
-    expect(notes).toHaveClass('grid-rows-[1fr]', 'transition-[grid-template-rows,opacity]')
-
-    await user.click(screen.getByRole('checkbox', { name: '출처 보기' }))
-    expect(screen.queryByRole('list', { name: '의미의 출처' })).not.toBeInTheDocument()
-    expect(legend.isConnected).toBe(true)
-    expect(notes).toHaveClass('grid-rows-[0fr]', 'opacity-0')
-    expect(notes).toHaveAttribute('inert')
+    const find = screen.getByRole('button', { name: '문구 출처 찾기' })
+    expect(within(legend).getByText('광고주 요청')).toHaveClass('text-origin-advertiser-foreground')
 
     await user.click(screen.getByRole('checkbox', { name: '출처 보기' }))
     expect(screen.getByRole('list', { name: '의미의 출처' })).toBe(legend)
-    expect(notes).not.toHaveAttribute('inert')
+    const muted = within(legend).getByText('광고주 요청')
+    expect(muted).toHaveClass('text-content-tertiary', 'decoration-double')
+    expect(muted).not.toHaveClass('text-origin-advertiser-foreground')
+    expect(screen.getByRole('button', { name: '문구 출처 찾기' })).toBe(find)
+    expect(find).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /주인 말/ })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('checkbox', { name: '출처 보기' }))
+    expect(within(legend).getByText('광고주 요청')).toHaveClass('text-origin-advertiser-foreground')
+    expect(find).toBeEnabled()
   })
 
   it('shows the named toggle by default and exactly four categories', () => {
@@ -234,7 +239,8 @@ describe('WritingOriginReview', () => {
       'text-origin-advertiser-foreground',
       'bg-origin-advertiser-highlight',
     )
-    expect(screen.getByText(/^출처 미확인:/)).not.toHaveAttribute('role', 'listitem')
+    // The longer notes are read where a phrase is looked up, not printed above the draft.
+    expect(screen.queryByText(/^출처 미확인:/)).not.toBeInTheDocument()
     expect(phrase('주인 말', '직접 입력 기반')).toHaveClass('text-origin-owner-foreground')
     expect(phrase('사진 관찰', '사진에서 추론')).toHaveClass('text-origin-visual-foreground')
     expect(phrase('AI 제안', 'AI가 보탠 내용')).toHaveClass('text-origin-ai-foreground')
@@ -252,7 +258,7 @@ describe('WritingOriginReview', () => {
     ]) {
       await user.click(phrase(text!, category!))
       const dialog = screen.getByRole('dialog', { name: '문구의 출처' })
-      expect(within(dialog).getByText(source!)).toHaveClass('text-base', 'leading-relaxed')
+      expect(within(dialog).getByText(source!)).toHaveClass('text-[1.0625rem]', 'leading-relaxed')
       expect(within(dialog).queryByText('현재 메모는 변경되었다.')).not.toBeInTheDocument()
       expect(dialog.textContent).not.toContain('signature=')
       if (text === '사진 관찰') expect(within(dialog).getByText('IMG_1.jpg')).toBeInTheDocument()
