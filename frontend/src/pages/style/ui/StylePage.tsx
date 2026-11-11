@@ -10,14 +10,16 @@ import { useMemories } from '@/entities/memory'
 import { ListRowIcon, Typography, cardStyles, pageStyles, typographyStyles } from '@/shared/ui'
 
 type Section = 'voices' | 'templates' | 'guidelines' | 'memories' | 'spoken'
+/** In the hub's chip-row order — 말투, 템플릿, 지침, 기억, 목소리 — so the overview and the chips
+ *  under the title read the sections the same way (THEME-70 →THEME-38). */
 const SECTIONS: readonly {
   key: Section
   to: string
   icon: ComponentType<{ className?: string }>
 }[] = [
   { key: 'voices', to: '/voices', icon: ScrollText },
-  { key: 'guidelines', to: '/guidelines', icon: Shield },
   { key: 'templates', to: '/templates', icon: LayoutList },
+  { key: 'guidelines', to: '/guidelines', icon: Shield },
   { key: 'memories', to: '/memories', icon: Brain },
   { key: 'spoken', to: '/spoken-voices', icon: Mic },
 ]
