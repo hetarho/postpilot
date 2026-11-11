@@ -181,20 +181,21 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T731 | Make the source cadence measurement deterministic | CLIP ARCH | - | todo |
-| T739 | Avoid browser setup for audited logic tests | ARCH | - | blocked@261109 |
 | T741 | Recover pinned zlib build artifacts after index rotation | ARCH | - | todo |
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 | T747 | Prove browser export independence from saturated server-export capacity | ARCH CLIP INFRA | - | todo |
 | T748 | Reconstruct the shipped resvg WASM's Rust source and license graph | ARCH | - | todo |
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
+| T751 | Keep the request history newest first across a clock rollback | CLIP ARCH | - | todo |
 
 ## next
-- Approved unattended scope: T739 T697 T709 T741 T742 T731 T604 and follow-ups created for them. T709 is closed under its exit rule; close T739/T697 on the retained evidence; create the clock-rollback request-history task; reintegrate T741/T742; run T731 within its 2h exit contract; run T747–T750, split from T604 (T750 after T749), and keep T604 parked on its owner-held gates. Use the decisions above without reopening the settled investigation.
+- Approved unattended scope: T739 T697 T709 T741 T742 T731 T604 and follow-ups created for them. T709 is closed under its exit rule and T739 on its retained evidence; close T697 on the retained evidence; run T751, the clock-rollback request-history fix; reintegrate T741/T742; run T731 within its 2h exit contract; run T747–T750, split from T604 (T750 after T749), and keep T604 parked on its owner-held gates. Use the decisions above without reopening the settled investigation.
 - Run scoped Claude loop sv8 with bypass permission in main, an explicit repository for public-HTML CI observation and the complete ARCH-31 gate. Complete per-task checks and commits, deployment/media gates before each applicable push, and record every remote workflow as observed or unconfirmed. Preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md; prior FE/CI evidence is in reports/261110-sil5.md. T745's provided-data assertion remains an optional inbox suggestion outside this scope.
 - Park T539/T550/T603, INFRA and all active ideation. Preserve the separate ideation/post-faithful-clip resumption: the first caption's place-name hook still needs SSOT coverage (GUIDE-42 or CLIP), while its default caption look (CDS) and unmeasured prompt growth remain open. Owner-only follow-ups include human/hardware evidence, supplier budgets/tariffs, T709's unsettled usage and unavailable remote workflow results.
 
 ## log
+- 261111 T739 done (sv8): closed on its retained evidence (20-file Node split on origin/main, gates 729ec6d0 FE 580/4642 and 08edc691 FE 581/4643, remote CI 42802447091 and 42808343741 green); create-task T751 moves the clip/store request-history ordering under a clock rollback into a backend task that orders by acceptance with no migration.
 - 261111 create-task T747 T748 T749 T750 (sv8): T604's agent-runnable evidence becomes server-capacity independence, the resvg WASM license graph, a whole-frame PixiJS compositor comparison and Windows Chrome/Edge measurement; T604 keeps human review, integrated-GPU/lower-resource hardware, the live static check and distribution approval, rebased to ARCH@22 CLIP@73 CDS@38 and parked.
 - 261111 T709 done (sv8): closed under its exit rule with the retained cost/outcome matrix (docs/qa/clip-real-pipeline-proof-261028.json); confirmed USD0.010868 plus unresolved USD0.025001 stays within the USD0.20 approval, no further live call; two fresh complete pipelines remain unmet, readiness gates stay closed and the owner's usage reconciliation stays parked.
 - 261111 sv7 stops before any task: worker-probe passes with bypass, ci-access alone fails because the origin uses an SSH alias. Explicit-repo public HTML reads CI run 42989787293 (in progress, unconfirmed); prepare sv8 with a runtime-only repository resolver and explicit complete ARCH-31 commands, preserving Git settings and installed skills.
@@ -214,4 +215,3 @@
 - 261110 fix clip quote test (gcf): expire the fixture at a fixed past instant, preserving refusal and durable-idempotency assertions across host wall-clock corrections; targeted quote test, store go vet and gofmt pass. Continue the deterministic checkpoint-ownership repair under T740 before publication.
 - 261110 gcf starts the requested diagnosis and repair of the failed Go CI tests; preserve deferred candidates and reproduce the quote-expiry and recovery failures before selecting the fix.
 - 261110 h12 updates haeram-spec-creator0.11.0→0.12.0,20skills; migrates cfg push to SETTINGS landmain/pushtrue, merges FORMAT with project overrides preserved. Integrity/settings/idempotence pass; existing54lint errors unchanged; no sourcepush while rb1 fullCI fails. Report261110-h12.
-- 261110 rb1 rebases36 local commits onto origin4c3aee81 with exact expected tree and backup; fullCI2b649a96 passes18/19 checks, FE580/4638 and89Go packages, fails two clip/store tests. Measured11.65s wall-clock jumps persist with CPU pinning; preserve source and block push underARCH31. Report261110-rb1.
