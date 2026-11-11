@@ -1,0 +1,11 @@
+{
+  "result": "pass",
+  "filesRecoveredExactly": 16,
+  "patchSha256": "4823cbb1cf25f3667673de4f6f79025505aafdbf9f50576d063bdab1c1b27a45",
+  "baseCommit": "ada6afc201602a5332264d06925ea9cf8737fc0b",
+  "methods": [
+    "git apply --check --index on unchanged main source",
+    "apply to isolated index at original task base and compare SHA-256 for every file"
+  ],
+  "implementationAcceptance": "not claimed"
+}

@@ -1,0 +1,1145 @@
+diff --git a/frontend/src/features/edit-clip-project/config/i18n.ts b/frontend/src/features/edit-clip-project/config/i18n.ts
+index 946f921d..5633123b 100644
+--- a/frontend/src/features/edit-clip-project/config/i18n.ts
++++ b/frontend/src/features/edit-clip-project/config/i18n.ts
+@@ -4,6 +4,23 @@ import type { I18nFragment } from '@/shared/lib'
+ export const i18n = {
+   namespace: 'clips',
+   ko: {
++    preparation: {
++      optionalEmpty: '입력한 내용 없음 (선택 사항)',
++      titleEmpty: '제목을 입력해 주세요.',
++      durationEmpty: '목표 길이를 정해 주세요.',
++      campaignOn: '체험단 글 · 광고주 가이드 사용',
++      campaignOff: '체험단 글 아님 · 보관한 가이드는 사용하지 않아요.',
++      keywords: '필수 키워드: {{value}}',
++      hashtags: '필수 해시태그: {{value}}',
++      answers: '템플릿 답변',
++      narrationOn: '더빙 사용',
++      narrationOff: '더빙 사용 안 함 · 원본 소리는 소스별 선택을 따라요.',
++      voice: '확정 목소리: {{name}}',
++      voiceLoading: '확정 목소리를 확인하는 중이에요.',
++      voiceFailed: '확정 목소리를 불러오지 못했어요. 스타일에서 다시 확인해 주세요.',
++      voiceMissing: '사용할 수 있는 확정 목소리를 스타일에서 선택해 주세요.',
++      disclosureOff: '영상에 광고·협찬 표시 안 함',
++    },
+     linkedPost: {
+       title: '글 연결',
+       none: '없음',
+@@ -124,6 +141,23 @@ export const i18n = {
+     },
+   },
+   en: {
++    preparation: {
++      optionalEmpty: 'Not entered (optional)',
++      titleEmpty: 'Enter a title.',
++      durationEmpty: 'Choose a target duration.',
++      campaignOn: 'Campaign content · use advertiser guide',
++      campaignOff: 'Not campaign content · retained guide is not used.',
++      keywords: 'Required keywords: {{value}}',
++      hashtags: 'Required hashtags: {{value}}',
++      answers: 'Template answers',
++      narrationOn: 'Use dubbing',
++      narrationOff: 'No dubbing · original sound follows each source’s selection.',
++      voice: 'Confirmed voice: {{name}}',
++      voiceLoading: 'Checking the confirmed voice.',
++      voiceFailed: 'Could not load the confirmed voice. Check again in Style.',
++      voiceMissing: 'Choose an available confirmed voice in Style.',
++      disclosureOff: 'Do not show campaign disclosure in the video',
++    },
+     linkedPost: {
+       title: 'Linked post',
+       none: 'None',
+diff --git a/frontend/src/features/edit-clip-project/index.ts b/frontend/src/features/edit-clip-project/index.ts
+index 85891022..8ab569aa 100644
+--- a/frontend/src/features/edit-clip-project/index.ts
++++ b/frontend/src/features/edit-clip-project/index.ts
+@@ -3,3 +3,5 @@ export type { ClipRegionSwitches } from './ui/ClipDesignSelection'
+ export { useClipDraftSave } from './model/useClipDraftSave'
+ export { discardClipDraftQueue, discardClipDraftQueues } from './model/clip-draft-queue'
+ export { MoveClipChannel } from './ui/MoveClipChannel'
++
++export type { ClipPreparationContent, ClipPreparationRow, ClipPreparationScreen } from './model/preparation'
+diff --git a/frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx b/frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx
+index 3f5dc7e2..e5c92117 100644
+--- a/frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx
++++ b/frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx
+@@ -25,6 +25,9 @@ import {
+   validClipProject,
+   validNewClipProject,
+ } from '@/entities/clip-project'
++import { useSpokenLibrary } from '@/entities/spoken-voice'
++import type { ClipPreparationContent } from '../model/preparation'
++import { clipPreparationRows } from './ClipPreparationSummary'
+ import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
+ import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
+ import { appFailureFromConnect } from '@/shared/api'
+@@ -80,8 +83,10 @@ export function ClipProjectForm({
+   regions,
+   dubbing,
+   initialTemplateId,
++  layout,
+ }: {
+   ownerId: string
++  layout?: (content: ClipPreparationContent) => ReactNode
+   /** `/clips/new` only: the video template the new-clip offer's wizard just saved (CLIP-223). */
+   initialTemplateId?: string
+   dubbing?: (
+@@ -282,17 +287,15 @@ export function ClipProjectForm({
+       submitting.current = false
+     }
+   }
+-  return (
+-    <>
+-      <form
+-        id="clip-project-form"
+-        className="mt-6"
+-        onSubmit={(event) => {
+-          event.preventDefault()
+-          void submit()
+-        }}
+-      >
+-        <fieldset disabled={locked} className="min-w-0 space-y-6">
++  const guided = !!layout && !!stored && !readOnly
++  const voiceLibrary = useSpokenLibrary(
++    draft.dubbing?.enabled || draft.dubbing?.voiceId ? ownerId : '',
++    false,
++    false,
++  )
++  const storyFields = (
++    <fieldset disabled={locked} className="min-w-0 space-y-6">
++
+           <div>
+             <FieldLabel htmlFor="clip-title">{t('project.name')}</FieldLabel>
+             <TextField
+@@ -380,8 +383,6 @@ export function ClipProjectForm({
+               </Button>
+             </section>
+           )}
+-          {/* Guide: where the clip's 이야기 starts, for the workspace's step strip. */}
+-          <span id="clip-guide-story" aria-hidden="true" className="block scroll-mt-40" />
+           {!creating && document && (
+             <ClipCompositionInputFields
+               document={document}
+@@ -423,6 +424,10 @@ export function ClipProjectForm({
+               />
+             </div>
+           )}
++    </fieldset>
++  )
++  const sourceFields = (
++    <fieldset disabled={locked} className="min-w-0 space-y-6">
+           {!creating && (
+             <ClipCampaignMaterial
+               campaign={draft.campaign ?? false}
+@@ -449,8 +454,11 @@ export function ClipProjectForm({
+               readOnly={readOnly}
+             />
+           )}
+-          {/* Guide: where the clip's 스타일 starts — its shape, length, look and voice. */}
+-          <span id="clip-guide-style" aria-hidden="true" className="block scroll-mt-40" />
++    </fieldset>
++  )
++  const styleFields = (
++    <>
++      <fieldset disabled={locked} className="min-w-0 space-y-6">
+           <div>
+             <Typography variant="fieldTitle" as="p">
+               {t('project.ratio')}
+@@ -489,7 +497,8 @@ export function ClipProjectForm({
+               </Typography>
+             </div>
+           )}
+-        </fieldset>
++      </fieldset>
++
+         {/* Appearance choices stay after duration; phones open them explicitly.
+               The project draft and other inputs remain mounted above this view. */}
+         {!creating && (
+@@ -584,24 +593,54 @@ export function ClipProjectForm({
+             </fieldset>
+           </Disclosure>
+         )}
+-      </form>
++
+       {!creating &&
+         dubbing?.(draft.dubbing ?? { enabled: false, voiceId: '' }, (value) =>
+           change('dubbing', value),
+         )}
++    </>
++  )
++  const notices = (
++    <>
++      {refusal}
++      {failure && (
++        <div role="alert" className="mb-3">
++          <AppFailureMessage failure={appFailureFromConnect(failure)} />
++        </div>
++      )}
++    </>
++  )
++  const generationActions = actions?.(valid && !disabled && !templateChanged, dirty)
++  const summary = clipPreparationRows({
++    t, draft, document, inputs, selected, templates, stored, regions, voiceLibrary,
++  })
++  return (
++    <>
++      <form
++        id="clip-project-form"
++        className={guided ? "mt-2 flex flex-1 flex-col" : "mt-6"}
++        onSubmit={(event) => {
++          event.preventDefault()
++          void submit()
++        }}
++      >
++        {guided && layout ? layout({
++          screens: { sources: sourceFields, story: storyFields, style: styleFields },
++          rows: summary,
++          actions: generationActions,
++          refusal: notices,
++          inputRefusal: !valid || templateChanged
++            ? (!Number.isFinite(draft.targetDurationMs) ||
++                draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
++                draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000 ? 'style' : 'story')
++            : draft.dubbing?.enabled && !draft.dubbing.voiceId ? 'style' : undefined,
++        }) : <>{storyFields}{sourceFields}{styleFields}</>}
++      </form>
+       {children}
+-      {/* A reading commits nothing, so it docks nothing (CLIP-160, CLIP-40). */}
+-      {!readOnly && (
++      {!readOnly && !guided && (
+         <ActionBar className="mt-auto">
+-          {refusal}
+-          {failure && (
+-            <div role="alert" className="mb-3">
+-              <AppFailureMessage failure={appFailureFromConnect(failure)} />
+-            </div>
+-          )}
++          {notices}
+           <div className="flex flex-wrap justify-end gap-3">
+-            {/* Only `/clips/new` commits by hand (CLIP-39). An existing project has no 저장: the
+-              queue saves it a beat after each pause and the page's one status line says so. */}
+             {!stored && (
+               <Button
+                 form="clip-project-form"
+@@ -614,7 +653,7 @@ export function ClipProjectForm({
+                 {t('project.create')}
+               </Button>
+             )}
+-            {actions?.(valid && !disabled && !templateChanged, dirty)}
++            {generationActions}
+           </div>
+         </ActionBar>
+       )}
+diff --git a/frontend/src/features/generate-clip/api/useGenerateClip.ts b/frontend/src/features/generate-clip/api/useGenerateClip.ts
+index 18373590..5224aa0b 100644
+--- a/frontend/src/features/generate-clip/api/useGenerateClip.ts
++++ b/frontend/src/features/generate-clip/api/useGenerateClip.ts
+@@ -438,6 +438,7 @@ export function useGenerateClip(
+         ['failed', 'cancelled'].includes(project.latestJob?.status ?? '')),
+     availability,
+     eligibility,
++    retryEligibility: () => { void eligibilityQuery.refetch() },
+     observeStatus,
+     accounting,
+     observeRef: observe.selected,
+diff --git a/frontend/src/features/generate-clip/index.ts b/frontend/src/features/generate-clip/index.ts
+index fbe2060b..42ba8dc7 100644
+--- a/frontend/src/features/generate-clip/index.ts
++++ b/frontend/src/features/generate-clip/index.ts
+@@ -6,3 +6,5 @@ export {
+   type ClipGenerationContext,
+ } from './ui/ClipGenerationActions'
+ export { ClipCreditSettlement } from './ui/ClipCreditSettlement'
++
++export { readyClipBatch } from './model/preconditions'
+diff --git a/frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx b/frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx
+index 16dac879..aefb5de1 100644
+--- a/frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx
++++ b/frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx
+@@ -28,6 +28,7 @@ export interface ClipGenerationContext {
+   ready: boolean
+   pending: boolean
+   preparationRoute?: ClipAnalysisPreparationRoute
++  describedBy?: string
+   onApprove(mode: ClipQuoteMode, quote: ClipQuote): void
+ }
+ 
+@@ -35,26 +36,28 @@ export interface ClipGenerationContext {
+  *  path left and the committing one right; enlarged text can give each a full row. Each opens its own
+  *  quote and approval from itself (a popover, a sheet on a phone), so the ceiling the owner
+  *  approves is the one for the work that button starts. The quote is read only while it is open. */
+-export function ClipGenerationActions(context: ClipGenerationContext) {
++export function ClipGenerationActions({ stepBar = false, ...context }: ClipGenerationContext & { stepBar?: boolean }) {
+   const { t } = useTranslation('clips')
+-  return (
+-    <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:items-center sm:justify-end">
++  const actions = (
++    <>
+       <ClipQuotedPopover
+         {...context}
+         mode="storyline"
+-        className="min-w-0 grow-[3] basis-28 sm:grow-0 sm:basis-auto"
++        className={stepBar ? "min-w-0" : "min-w-0 grow-[3] basis-28 sm:grow-0 sm:basis-auto"}
+         label={t('generation.storylineFirst')}
+         variant="secondary"
+       />
+       <ClipQuotedPopover
+         {...context}
+         mode="generate"
+-        className="min-w-0 grow-[7] basis-28 sm:grow-0 sm:basis-auto"
++        hero={stepBar}
++        className={stepBar ? "min-w-0 flex-1" : "min-w-0 grow-[7] basis-28 sm:grow-0 sm:basis-auto"}
+         label={t('generation.makeNow')}
+         variant="cta"
+       />
+-    </div>
++    </>
+   )
++  return stepBar ? actions : <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:items-center sm:justify-end">{actions}</div>
+ }
+ 
+ /** ②'s storyline space's heading actions (CLIP-180, CLIP-181): 다시 만들기 writes the storyline
+@@ -118,6 +121,7 @@ export function ClipStorylineBuildActions(
+ /** One generation action: its trigger, and the quote and approval it opens from itself. */
+ function ClipQuotedPopover({
+   className,
++  hero = false,
+   mode,
+   label,
+   variant,
+@@ -127,6 +131,7 @@ function ClipQuotedPopover({
+   label: string
+   variant: 'secondary' | 'cta'
+   className?: string
++  hero?: boolean
+ }) {
+   const {
+     ownerId,
+@@ -139,6 +144,7 @@ function ClipQuotedPopover({
+     pending,
+     onApprove,
+     preparationRoute,
++    describedBy,
+   } = context
+   const live = ready && !!batch && !!observe && !!write
+   return (
+@@ -148,7 +154,9 @@ function ClipQuotedPopover({
+       triggerLabel={label}
+       triggerVariant={variant}
+       triggerPending={pending}
+-      triggerClassName="w-full sm:w-auto"
++      triggerClassName={hero ? "w-full" : "w-full sm:w-auto"}
++      triggerSize={hero ? "hero" : undefined}
++      triggerAttributes={{ "aria-describedby": describedBy }}
+       disabled={!live || pending}
+       placement="above"
+       align="end"
+diff --git a/frontend/src/pages/clip/ui/ClipPage.tsx b/frontend/src/pages/clip/ui/ClipPage.tsx
+index 42bf674d..e54221b2 100644
+--- a/frontend/src/pages/clip/ui/ClipPage.tsx
++++ b/frontend/src/pages/clip/ui/ClipPage.tsx
+@@ -114,7 +114,7 @@ export function ClipPage() {
+     // `flex-1 flex-col` here plus `mt-auto` on a dock is what puts the bar at the BOTTOM of a
+     // short panel: `sticky` can only pull an element up toward the scrollport edge, never push
+     // one down.
+-    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-8' })}>
++    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-0' })}>
+       {!clipId ? (
+         <NewClip
+           key={`${ownerId}-${channel}-${search.template ?? ''}`}
+@@ -126,15 +126,15 @@ export function ClipPage() {
+         />
+       ) : query.data ? (
+         <>
+-          <ClipImportFeedback
+-            key={`import-${ownerId}-${clipId}`}
+-            ownerId={ownerId}
+-            clipId={clipId}
+-          />
+           <ClipWorkspace
+             key={`${user?.id}-${clipId}`}
+             ownerId={user?.id ?? ''}
+             project={query.data}
++            sourceFeedback={<ClipImportFeedback
++            key={`import-${ownerId}-${clipId}`}
++            ownerId={ownerId}
++            clipId={clipId}
++          />}
+           />
+         </>
+       ) : query.isPending ? (
+diff --git a/frontend/src/widgets/clip-workspace/config/i18n.ts b/frontend/src/widgets/clip-workspace/config/i18n.ts
+index f5812970..847fd9ad 100644
+--- a/frontend/src/widgets/clip-workspace/config/i18n.ts
++++ b/frontend/src/widgets/clip-workspace/config/i18n.ts
+@@ -9,7 +9,32 @@ export const i18n = {
+       sources: '소스',
+       story: '이야기',
+       style: '스타일',
+-      make: '만들기',
++      review: '확인',
++      position: '{{current}} / {{total}}',
++      backTo: '{{screen}}로 이전',
++      next: '다음',
++      change: '{{row}} 바꾸기',
++      changeShort: '바꾸기',
++      fix: '바로잡기',
++      actions: '영상 준비 이동과 생성',
++      questions: { sources: '어떤 영상으로 만들까요?', story: '어떤 이야기를 담을까요?', style: '어떤 모습과 소리로 만들까요?', review: '이 내용으로 만들까요?' },
++      sourceSummary: '원본 영상과 소리',
++      sourceCount: '{{count}}개 · 준비 완료 {{ready}}개',
++      sourceReady: '준비 완료',
++      sourcePending: '업로드·준비 대기',
++      sourceUnavailable: '원본을 다시 선택해 주세요.',
++      soundOn: '원본 소리 유지',
++      soundOff: '원본 소리 제외',
++      sourceItem: '{{position}}. {{filename}} · {{seconds}}초 · {{status}} · {{sound}}',
++      binding: '항목 연결: {{item}}',
++      noBinding: '항목 연결 없음 (선택 사항)',
++      noSources: '소스에서 원본 영상을 선택해 주세요.',
++      inputRefusal: '바로 만들기와 스토리라인 먼저를 시작하려면 {{screen}}의 입력을 확인해 주세요.',
++      sourceRefusal: '바로 만들기와 스토리라인 먼저를 시작하려면 소스에서 원본 영상의 준비 상태를 확인해 주세요.',
++      modelRefusal: '바로 만들기와 스토리라인 먼저를 시작하려면 위의 모델 선택과 사용 가능 여부를 확인해 주세요.',
++      saveRefusal: '저장하지 못했어요. 입력을 확인하고 저장을 다시 시도해 주세요.',
++      retrySave: '저장 다시 시도',
++
+     },
+     navigation: {
+       returnCreation: '{{channel}}으로 돌아가기',
+@@ -47,7 +72,32 @@ export const i18n = {
+       sources: 'Sources',
+       story: 'Story',
+       style: 'Style',
+-      make: 'Make',
++      review: 'Review',
++      position: '{{current}} / {{total}}',
++      backTo: 'Back to {{screen}}',
++      next: 'Next',
++      change: 'Change {{row}}',
++      changeShort: 'Change',
++      fix: 'Fix this',
++      actions: 'Video preparation and generation',
++      questions: { sources: 'Which footage will you use?', story: 'What story will it tell?', style: 'How will it look and sound?', review: 'Make it with these details?' },
++      sourceSummary: 'Original footage and sound',
++      sourceCount: '{{count}} sources · {{ready}} ready',
++      sourceReady: 'Ready',
++      sourcePending: 'Waiting for upload or preparation',
++      sourceUnavailable: 'Select the original again.',
++      soundOn: 'Keep original sound',
++      soundOff: 'Exclude original sound',
++      sourceItem: '{{position}}. {{filename}} · {{seconds}} s · {{status}} · {{sound}}',
++      binding: 'Item binding: {{item}}',
++      noBinding: 'No item binding (optional)',
++      noSources: 'Select original footage in Sources.',
++      inputRefusal: 'To use Make now or Storyline first, check the inputs in {{screen}}.',
++      sourceRefusal: 'To use Make now or Storyline first, check footage readiness in Sources.',
++      modelRefusal: 'To use Make now or Storyline first, check the model choices and availability above.',
++      saveRefusal: 'Could not save. Check the inputs and retry saving.',
++      retrySave: 'Retry saving',
++
+     },
+     navigation: {
+       returnCreation: 'Back to {{channel}}',
+diff --git a/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx b/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx
+index bf52c4f9..34a4f2a0 100644
+--- a/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx
++++ b/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx
+@@ -1,5 +1,5 @@
+ import { ClipBrowserPreparationStatus } from '@/features/prepare-clip-browser'
+-import { useState } from 'react'
++import { useId, useState, type ReactNode } from 'react'
+ import { useNavigate } from '@tanstack/react-router'
+ import { isTerminal } from '@/entities/generation-job'
+ import { useTranslation } from 'react-i18next'
+@@ -16,7 +16,7 @@ import { ClipStorylineRequest } from '@/features/request-clip-storyline'
+ import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
+ import { FinalizeClipAction } from '@/features/finalize-clip'
+ import { CancelClipAction } from '@/features/cancel-clip'
+-import { ClipProjectForm, MoveClipChannel } from '@/features/edit-clip-project'
++import { ClipProjectForm, MoveClipChannel, type ClipPreparationScreen } from '@/features/edit-clip-project'
+ import {
+   ClipVoiceChoice,
+   ClipDubbingEditor,
+@@ -32,6 +32,7 @@ import {
+   ClipCreditSettlement,
+   ClipDownloadAction,
+   ClipResult,
++  readyClipBatch,
+ } from '@/features/generate-clip'
+ import { ClipBrowserRenderStatus } from '@/features/render-clip-browser'
+ import { ClipRevisionRequest } from '@/features/revise-clip'
+@@ -42,25 +43,23 @@ import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect
+ import {
+   ActionBar,
+   Button,
+-  GuideProgress,
+   Sheet,
+   SegmentedControl,
+   ProgressBar,
+   Typography,
+ } from '@/shared/ui'
+ 
+-/** Guide: the four parts of a clip's settings, in the order a guided sequence asks for them. */
+-const CLIP_GUIDE = ['sources', 'story', 'style', 'make'] as const
+-type ClipGuideStep = (typeof CLIP_GUIDE)[number]
+ import { useRunFocus } from '../model/lifecycle'
+ import { useClipWorkspace } from '../model/useClipWorkspace'
+ import { clipStepLabel, clipSteps } from '../model/steps'
++import { ClipPreparationGuide } from './ClipPreparationGuide'
++import { ClipPreparationSources } from './ClipPreparationSources'
+ import { ClipStepWaiting, ClipTopRow, STEP_PANEL_ID } from './ClipTopRow'
+ import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipStatus'
+ 
+ /** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
+  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
+-export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: ClipProject }) {
++export function ClipWorkspace({ ownerId, project, sourceFeedback }: { ownerId: string; project: ClipProject; sourceFeedback?: ReactNode }) {
+   const { t } = useTranslation('clips')
+   const navigate = useNavigate()
+   const destination = clipReturnDestination(ownerId, project.id, undefined, project.channel)
+@@ -88,7 +87,9 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+   // A finalized project is READ in ① and ②: the same steps, the same places, values instead of
+   // controls, and no original behind them (CLIP-160, CLIP-76).
+   const reading = !!project.finalized
+-  const [guide, setGuide] = useState<ClipGuideStep>('sources')
++  const [guide, setGuide] = useState<ClipPreparationScreen>('sources')
++  const reasonId = useId()
++  const sourceReady = readyClipBatch(upload.readyBatch, project.id, Date.now())
+   const job = run.job
+   const browserStatus = (
+     <ClipBrowserRenderStatus
+@@ -142,63 +143,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+       (entry) =>
+         !entry.file && ['expired', 'missing', 'cleanup_pending'].includes(entry.availability ?? ''),
+     )
+-  const generatePanel = (
+-    <ClipProjectForm
+-      ownerId={ownerId}
+-      stored={project}
+-      disabled={pending || reading}
+-      readOnly={reading}
+-      onUploadAllowed={sources.allow}
+-      dubbing={(value, change) => (
+-        <ClipVoiceChoice
+-          ownerId={ownerId}
+-          enabled={value.enabled}
+-          voiceId={value.voiceId}
+-          disabled={pending || reading}
+-          onChange={change}
+-        />
+-      )}
+-      regions={
+-        regions.regions && {
+-          enabled: { intro: regions.regions.intro.enabled, outro: regions.regions.outro.enabled },
+-          setEnabled: regions.setEnabled,
+-        }
+-      }
+-      refusal={reading ? undefined : <ClipFailureNotice failure={generation.failure} />}
+-      actions={
+-        reading
+-          ? undefined
+-          : (ready) => (
+-              <ClipGenerationActions
+-                preparationRoute={generation.preparationRoute}
+-                ownerId={ownerId}
+-                project={project}
+-                batch={upload.readyBatch}
+-                observe={generation.observeRef}
+-                write={generation.writeRef}
+-                observeStatus={generation.observeStatus}
+-                ready={
+-                  ready &&
+-                  generation.canQuote &&
+-                  !generation.busy &&
+-                  !render.browser.busy &&
+-                  !regions.invalid
+-                }
+-                pending={generation.starting}
+-                // The queue is flushed BEFORE the run starts, so an approval can never be committed
+-                // against settings the server has not taken (CLIP-39). A refusal stops the start; the
+-                // status line is already saying the save failed.
+-                onApprove={(mode, quote) => {
+-                  void flushAll()
+-                    .then(() =>
+-                      generation.start(upload.readyBatch, ready, quote, generation.ownership, mode),
+-                    )
+-                    .catch(() => undefined)
+-                }}
+-              />
+-            )
+-      }
+-    >
++  const sourcePanel = (<>
+       {!reading &&
+         originalsGone &&
+         (project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
+@@ -208,7 +153,6 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+         )}
+       {/* Bind a whole source to an item before generating, where footage of one
+           cut of meat carries nothing that tells it from another (CLIP-123). */}
+-      <span id="clip-guide-sources" aria-hidden="true" className="block scroll-mt-40" />
+       {!reading && (
+         <ClipSourcePicker
+           upload={upload}
+@@ -221,7 +165,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+       )}
+       {observationPanel}
+       {requestRecord}
+-      <span id="clip-guide-make" aria-hidden="true" className="block scroll-mt-40" />
++  </>)
++  const modelsPanel = (<>
+       {!reading && (
+         <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
+           <Typography id="clip-models-heading" variant="title">
+@@ -258,6 +203,88 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+           </Typography>
+         </section>
+       )}
++  </>)
++  const generatePanel = (
++    <ClipProjectForm
++      ownerId={ownerId}
++      stored={project}
++      disabled={pending || reading}
++      readOnly={reading}
++      onUploadAllowed={sources.allow}
++      dubbing={(value, change) => (
++        <ClipVoiceChoice
++          ownerId={ownerId}
++          enabled={value.enabled}
++          voiceId={value.voiceId}
++          disabled={pending || reading}
++          onChange={change}
++        />
++      )}
++      regions={
++        regions.regions && {
++          enabled: { intro: regions.regions.intro.enabled, outro: regions.regions.outro.enabled },
++          setEnabled: regions.setEnabled,
++        }
++      }
++      refusal={reading ? undefined : <ClipFailureNotice failure={generation.failure} />}
++      layout={reading ? undefined : (content) => (
++        <ClipPreparationGuide
++          screen={guide}
++          onSelect={setGuide}
++          reasonId={reasonId}
++          screens={{ ...content.screens, sources: <>{content.screens.sources}{sourceFeedback}{sourcePanel}</> }}
++          rows={[{ id: 'sources', label: t('guide.sourceSummary'), screen: 'sources', value: <ClipPreparationSources sources={sources} ready={sourceReady} /> }, ...content.rows]}
++          models={modelsPanel}
++          actions={content.actions}
++          refusal={content.refusal}
++          correction={content.inputRefusal
++            ? { screen: content.inputRefusal, label: t('guide.inputRefusal', { screen: t(`guide.${content.inputRefusal}`) }) }
++            : save.failing
++              ? { retry: () => { void flushAll(true).catch(() => undefined) }, label: t('guide.saveRefusal') }
++              : !sourceReady
++                ? { screen: 'sources', label: t('guide.sourceRefusal') }
++                : !generation.canQuote
++                  ? { retry: generation.retryEligibility, label: t('guide.modelRefusal') }
++                  : undefined}
++        />
++      )}
++      actions={
++        reading
++          ? undefined
++          : (ready) => (
++              <ClipGenerationActions
++                stepBar
++                describedBy={reasonId}
++                preparationRoute={generation.preparationRoute}
++                ownerId={ownerId}
++                project={project}
++                batch={upload.readyBatch}
++                observe={generation.observeRef}
++                write={generation.writeRef}
++                observeStatus={generation.observeStatus}
++                ready={
++                  ready &&
++                  generation.canQuote &&
++                  !generation.busy &&
++                  !render.browser.busy &&
++                  !regions.invalid
++                }
++                pending={generation.starting}
++                // The queue is flushed BEFORE the run starts, so an approval can never be committed
++                // against settings the server has not taken (CLIP-39). A refusal stops the start; the
++                // status line is already saying the save failed.
++                onApprove={(mode, quote) => {
++                  void flushAll()
++                    .then(() =>
++                      generation.start(upload.readyBatch, ready, quote, generation.ownership, mode),
++                    )
++                    .catch(() => undefined)
++                }}
++              />
++            )
++      }
++    >
++      {reading && sourcePanel}
+     </ClipProjectForm>
+   )
+ 
+@@ -832,29 +859,11 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+         />
+       )}
+       {!run.focused && step !== 'refine' && browserStatus}
+-      {!run.focused && step === 'generate' && !reading && (
+-        // Guide: the clip's settings as a guided sequence — 소스 → 이야기 → 스타일 → 만들기 — a
+-        // slim strip that stays under the header and takes the owner to each part in turn; the
+-        // one big 만들기 action stays in the bottom dock.
+-        <div className="bg-surface-base/90 sticky top-[var(--spacing-chrome)] z-20 -mx-4 mt-2 px-4 py-1 backdrop-blur-xl sm:mx-0 sm:px-0">
+-          <GuideProgress
+-            steps={CLIP_GUIDE.map((value) => ({ value, label: t(`guide.${value}`) }))}
+-            current={guide}
+-            onSelect={(value) => {
+-              setGuide(value)
+-              document
+-                .getElementById(`clip-guide-${value}`)
+-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+-            }}
+-            ariaLabel={t('guide.aria')}
+-          />
+-        </div>
+-      )}
+-      {!run.focused && (
+-        <div id={STEP_PANEL_ID} role="tabpanel" aria-label={clipStepLabel(step)}>
+-          {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
+-        </div>
+-      )}
++      <div id={STEP_PANEL_ID} role="tabpanel" aria-label={clipStepLabel(step)} className="flex flex-1 flex-col">
++        <div hidden={run.focused || step !== 'generate'} className="flex flex-1 flex-col">{generatePanel}</div>
++        {!run.focused && step === 'refine' && refinePanel}
++        {!run.focused && step === 'finish' && finishPanel}
++      </div>
+       {/* ONE dock per step: ① and ② carry their own (the settings form's and the correction
+           workspace's), so the page docks only ③'s 다운로드 (CLIP-40). */}
+       {project.finalized && step === 'finish' && project.result?.downloadUrl && (
+diff --git a/spec/tasks/T758.guide-video-preparation-and-review.md b/spec/tasks/T758.guide-video-preparation-and-review.md
+index 89744832..b1542842 100644
+--- a/spec/tasks/T758.guide-video-preparation-and-review.md
++++ b/spec/tasks/T758.guide-video-preparation-and-review.md
+@@ -26,3 +26,7 @@ Replace the scroll-only video preparation form with 소스→이야기→스타
+ - Worker budget90min; report a concrete scope/decision issue early rather than silently dropping acceptance. Independent review and full local/remote gates are reserved. Hard deadline2026-11-13T00:00Z, new-work closing cutoff2026-11-12T21:00Z (expand if measured gates require).
+ 
+ ## result
++- outcome: In progress. Implementing the retained preparation guide and latest-local review only.
++- at: ada6afc201602a5332264d06925ea9cf8737fc0b (task-start baseline; complete delta is measured from this revision).
++- verified: Initial scope inspection: clean checkout at the assigned baseline; no checks run yet.
++- limits: Host owns commits, submission, integration, full CI/build gates and browser proof. Route tests compose router/query/transport/features and are integration tests despite running in Vitest; update but defer their execution. Task checks will isolate guide/form/summary behavior and pure affected model/queue logic on Node24.18.0. The bundled video3-fast.py includes route integration suites and a production bundle build, so defer that command to the host and run only its allowed task-tier checks individually.
+diff --git a/frontend/src/features/edit-clip-project/model/preparation.ts b/frontend/src/features/edit-clip-project/model/preparation.ts
+new file mode 100644
+index 00000000..32be9927
+--- /dev/null
++++ b/frontend/src/features/edit-clip-project/model/preparation.ts
+@@ -0,0 +1,19 @@
++import type { ReactNode } from 'react'
++
++export type ClipPreparationScreen = 'sources' | 'story' | 'style' | 'review'
++
++export interface ClipPreparationRow {
++  id: string
++  label: string
++  value: ReactNode
++  screen: Exclude<ClipPreparationScreen, 'review'>
++}
++
++/** The form owns its inputs and latest local draft; the widget composes sibling features. */
++export interface ClipPreparationContent {
++  screens: Record<Exclude<ClipPreparationScreen, 'review'>, ReactNode>
++  rows: ClipPreparationRow[]
++  actions: ReactNode
++  refusal: ReactNode
++  inputRefusal?: 'story' | 'style'
++}
+diff --git a/frontend/src/features/edit-clip-project/ui/ClipPreparationSummary.tsx b/frontend/src/features/edit-clip-project/ui/ClipPreparationSummary.tsx
+new file mode 100644
+index 00000000..1ce7681e
+--- /dev/null
++++ b/frontend/src/features/edit-clip-project/ui/ClipPreparationSummary.tsx
+@@ -0,0 +1,50 @@
++import type { TFunction } from 'i18next'
++import type { ClipProject, ClipProjectDraft } from '@/entities/clip-project'
++import type { ClipComposition, useClipTemplates } from '@/entities/clip-template'
++import type { useSpokenLibrary } from '@/entities/spoken-voice'
++import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DEFAULT_CAPTION_STYLE } from '@/entities/clip-design'
++import type { ClipPreparationRow } from '../model/preparation'
++import type { ClipRegionSwitches } from './ClipDesignSelection'
++
++/** Read values from the form's draft, never the project's last autosave response. */
++export function clipPreparationRows({ t, draft, document, inputs, selected, templates, stored, regions, voiceLibrary }: {
++  t: TFunction<'clips'>
++  draft: ClipProjectDraft
++  document: ClipComposition | null | undefined
++  inputs: NonNullable<ClipProjectDraft['compositionInputs']>
++  selected: ReturnType<typeof useClipTemplates>['templates'][number] | undefined
++  templates: ReturnType<typeof useClipTemplates>
++  stored?: ClipProject
++  regions?: ClipRegionSwitches
++  voiceLibrary: ReturnType<typeof useSpokenLibrary>
++}): ClipPreparationRow[] {
++  const none = t('preparation.optionalEmpty')
++  const voice = voiceLibrary.voices.find(v => v.id === draft.dubbing?.voiceId && !v.removedAt)
++  const appearance = t('project.designSummary', {
++    intro: regions && !regions.enabled.intro ? t('project.regionOff') : t(`composition.design.intro_${draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro}`),
++    outro: regions && !regions.enabled.outro ? t('project.regionOff') : t(`composition.design.outro_${draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro}`),
++    pace: t(`pace.${draft.captionPace || 'steady'}`),
++    accent: t(`accent.${draft.accent || 'none'}`),
++    count: draft.allowedCaptionStyles?.length || 1,
++  })
++  const answers = document?.fields.flatMap(field => field.group
++    ? (inputs.items[field.group] ?? []).map((item, index) => ({ key: `${field.group}-${item.id}-${field.id}`, label: `${document.groups.find(g => g.id === field.group)?.label || field.group} ${index + 1} · ${field.label}`, text: item.values[field.id] }))
++    : [{ key: field.id, label: field.label, text: inputs.values[field.id] }]) ?? []
++  return [
++    { id: 'campaign', label: t('project.campaign'), screen: 'sources', value: <>
++      <p>{t(draft.campaign ? 'preparation.campaignOn' : 'preparation.campaignOff')}</p>
++      {draft.campaign && <><p className="whitespace-pre-wrap">{draft.advertiserGuide?.text || none}</p>
++        <p>{t('preparation.keywords', { value: draft.advertiserGuide?.keywords.join(', ') || none })}</p>
++        <p>{t('preparation.hashtags', { value: draft.advertiserGuide?.hashtags.join(', ') || none })}</p></>}
++    </> },
++    { id: 'post', label: t('linkedPost.title'), screen: 'sources', value: stored?.linkedPost?.title || t('linkedPost.none') },
++    { id: 'title', label: t('project.name'), screen: 'story', value: draft.title || t('preparation.titleEmpty') },
++    { id: 'template', label: t('project.template'), screen: 'story', value: !draft.videoTemplateId ? t('project.noTemplate') : selected?.name || t(templates.isPending ? 'project.templateLoading' : templates.isError ? 'project.templateUnavailable' : 'project.detachedTemplate') },
++    { id: 'answers', label: t('preparation.answers'), screen: 'story', value: answers.length ? <dl className="space-y-2">{answers.map(answer => <div key={answer.key}><dt>{answer.label}</dt><dd className="whitespace-pre-wrap">{answer.text || none}</dd></div>)}</dl> : none },
++    { id: 'instruction', label: t('project.instruction'), screen: 'story', value: draft.instruction || none },
++    { id: 'duration', label: t('project.duration'), screen: 'style', value: Number.isFinite(draft.targetDurationMs) && draft.targetDurationMs > 0 ? t('project.summaryDuration', { seconds: draft.targetDurationMs / 1000 }) : t('preparation.durationEmpty') },
++    { id: 'ratio', label: t('project.ratio'), screen: 'style', value: t(`ratio.${draft.ratio}`) },
++    { id: 'appearance', label: t('project.designChoices'), screen: 'style', value: <><p>{appearance}</p><p>{(draft.allowedCaptionStyles?.length ? draft.allowedCaptionStyles : [CLIP_DEFAULT_CAPTION_STYLE]).map(style => t(`captionStyles.${style as 'bold'}`)).join(', ')}</p><p>{draft.hideDisclosure ? t('preparation.disclosureOff') : stored?.disclosure ? t('composition.retainedDisclosure', { text: t(`disclosure.${stored.disclosure}`) }) : none}</p></> },
++    { id: 'narration', label: t('dubbing.enabled'), screen: 'style', value: <><p>{t(draft.dubbing?.enabled ? 'preparation.narrationOn' : 'preparation.narrationOff')}</p>{(draft.dubbing?.enabled || draft.dubbing?.voiceId) && <p>{voice ? t('preparation.voice', { name: voice.name }) : t(voiceLibrary.voicesQuery.isPending ? 'preparation.voiceLoading' : voiceLibrary.voicesQuery.isError ? 'preparation.voiceFailed' : 'preparation.voiceMissing')}</p>}</> },
++  ]
++}
+diff --git a/frontend/src/features/edit-clip-project/ui/ClipProjectForm.test.tsx b/frontend/src/features/edit-clip-project/ui/ClipProjectForm.test.tsx
+new file mode 100644
+index 00000000..ce0362c6
+--- /dev/null
++++ b/frontend/src/features/edit-clip-project/ui/ClipProjectForm.test.tsx
+@@ -0,0 +1,101 @@
++import { useState } from 'react'
++import { act, fireEvent, render, screen, within } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++import { createInstance } from 'i18next'
++import { I18nextProvider } from 'react-i18next'
++import { emptyClipProject, type ClipProject, type ClipProjectDraft } from '@/entities/clip-project'
++import { ClipProjectForm } from './ClipProjectForm'
++import { discardClipDraftQueues, flushClipDraft, queueClipDraft } from '../model/clip-draft-queue'
++
++const ports = vi.hoisted(() => ({ save: vi.fn(), voices: [] as Array<{ id: string; name: string; removedAt: string }>, voicePending: false, voiceFailed: false, templatePending: false, templateFailed: false }))
++vi.mock('@tanstack/react-router', () => ({
++  useNavigate: () => vi.fn(), useBlocker: () => ({ status: 'idle' }),
++  Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
++}))
++vi.mock('@/entities/clip-project', async original => ({ ...(await original<object>()), useClipProjectMutations: () => ({ save: { mutateAsync: ports.save, isPending: false, error: null } }) }))
++vi.mock('@/entities/clip-template', async original => ({ ...(await original<object>()), useClipTemplates: () => ({ templates: [{ id: 'template', name: '선택한 구성', compositionBody: '<clip version="1"><field id="place" label="장소" required="true" /></clip>' }], isPending: ports.templatePending, isError: ports.templateFailed }) }))
++vi.mock('@/entities/spoken-voice', () => ({ useSpokenLibrary: () => ({ voices: ports.voices, voicesQuery: { isPending: ports.voicePending, isError: ports.voiceFailed } }) }))
++vi.mock('./ClipLinkedPost', () => ({ ClipLinkedPost: () => <p>연결 입력</p> }))
++vi.mock('./MoveClipChannel', () => ({ MoveClipChannel: () => null }))
++vi.mock('./ClipDesignSelection', () => ({ ClipDesignSelection: () => <p>디자인 입력</p> }))
++
++const project: ClipProject = { ...emptyClipProject(), id: 'one', title: '서버 제목', targetDurationMs: 30000, createdAt: '', updatedAt: '', editPlanRevision: 0, renderedPlanRevision: 0 }
++let ready: boolean
++function Form({ stored = project }: { stored?: ClipProject }) {
++  const [part, select] = useState<'sources' | 'story' | 'style' | 'review'>('story')
++  return <ClipProjectForm ownerId="alice" stored={stored}
++    dubbing={(value, change) => <label><input type="checkbox" checked={value.enabled} onChange={e => change({ ...value, enabled: e.target.checked })} />더빙 선택</label>}
++    actions={value => { ready = value; return null }}
++    layout={content => <>
++      {(['sources', 'story', 'style'] as const).map(screen => <div key={screen} hidden={part !== screen}>{content.screens[screen]}</div>)}
++      <div hidden={part !== 'review'}>{content.rows.map(row => <section aria-label={row.label} key={row.id}>{row.value}</section>)}</div>
++      <button type="button" onClick={() => select('review')}>검토</button>
++      <button type="button" onClick={() => select('story')}>이야기</button>
++      <button type="button" onClick={() => select('style')}>스타일</button>
++    </>} />
++}
++// The component's transport, router and library reads are explicit injected mocks; no app route tree.
++beforeEach(() => { ports.save.mockImplementation(async ({ draft }: { draft: ClipProjectDraft }) => ({ ...project, ...draft })); ports.voices = []; ports.voicePending = false; ports.voiceFailed = false; ports.templatePending = false; ports.templateFailed = false })
++afterEach(() => { discardClipDraftQueues(); vi.clearAllMocks() })
++
++it('summarizes queued local values before a delayed save and retains them after rejection', async () => {
++  let reject!: (error: Error) => void
++  ports.save.mockImplementation(() => new Promise((_, no) => { reject = no }))
++  render(<Form />)
++  const title = screen.getByLabelText('클립 제목')
++  fireEvent.compositionStart(title)
++  fireEvent.input(title, { target: { value: '저장 대기 한글' }, isComposing: true })
++  fireEvent.change(screen.getByLabelText(/클립에 담고 싶은 내용/), { target: { value: '정확한 원문 🥗\n두 번째 줄' } })
++  let flushing!: Promise<void>
++  act(() => { flushing = flushClipDraft('one').catch(() => undefined) })
++  await act(async () => { await Promise.resolve() })
++  await userEvent.click(screen.getByRole('button', { name: '검토' }))
++  expect(within(screen.getByRole('region', { name: '클립 제목' })).getByText('저장 대기 한글')).toBeVisible()
++  expect(screen.getByRole('region', { name: '클립에 담고 싶은 내용' })).toHaveTextContent('정확한 원문 🥗 두 번째 줄')
++  await act(async () => { reject(new Error('save failed')); await flushing })
++  await userEvent.click(screen.getByRole('button', { name: '이야기' }))
++  expect(screen.getByLabelText('클립 제목')).toBe(title)
++  expect(title).toHaveValue('저장 대기 한글')
++})
++
++it('starts from a queued draft and refuses invalid local input without clearing it', async () => {
++  queueClipDraft('one', { ...project, title: '큐의 제목' }, async () => {})
++  render(<Form />)
++  expect(screen.getByLabelText('클립 제목')).toHaveValue('큐의 제목')
++  fireEvent.change(screen.getByLabelText('클립 제목'), { target: { value: '' } })
++  expect(ready).toBe(false)
++  await userEvent.click(screen.getByRole('button', { name: '검토' }))
++  expect(screen.getByText('제목을 입력해 주세요.')).toBeVisible()
++  await userEvent.click(screen.getByRole('button', { name: '이야기' }))
++  expect(screen.getByLabelText('클립 제목')).toHaveValue('')
++})
++
++it('reads the current local template answers, duration, appearance, campaign and linked post without a second editor', async () => {
++  render(<Form stored={{ ...project, videoTemplateId: 'template', campaign: true, advertiserGuide: { text: '광고주 원문', keywords: ['키워드'], hashtags: ['해시'] }, linkedPost: { title: '내 글', slug: 'post', updatedAt: '' } }} />)
++  fireEvent.change(screen.getByLabelText('장소'), { target: { value: '내가 입력한 장소' } })
++  await userEvent.click(screen.getByRole('button', { name: '스타일' }))
++  fireEvent.change(screen.getByLabelText('목표 길이 (초)'), { target: { value: '42' } })
++  await userEvent.click(screen.getByRole('button', { name: '검토' }))
++  expect(screen.queryByRole('textbox', { name: '장소' })).toBeNull()
++  expect(screen.getByText('내가 입력한 장소')).toBeVisible()
++  expect(screen.getByText('목표 42초')).toBeVisible()
++  expect(screen.getByText('선택한 구성')).toBeVisible()
++  expect(screen.getByText('내 글')).toBeVisible()
++  expect(screen.getByRole('region', { name: '체험단 글' })).toHaveTextContent('광고주 원문')
++  expect(screen.getByRole('region', { name: '체험단 글' })).toHaveTextContent('필수 키워드: 키워드')
++  expect(screen.getByRole('region', { name: '화면 비율' })).toHaveTextContent('세로 9:16')
++})
++
++it.each(['missing', 'loading', 'failed', 'confirmed'] as const)('states %s voice truthfully and keeps original sound independent', async state => {
++  ports.voicePending = state === 'loading'; ports.voiceFailed = state === 'failed'
++  ports.voices = state === 'confirmed' ? [{ id: 'voice', name: '차분한 목소리', removedAt: '' }] : []
++  render(<Form stored={{ ...project, dubbing: { enabled: true, voiceId: 'voice' } }} />)
++  await userEvent.click(screen.getByRole('button', { name: '검토' }))
++  const narration = screen.getByRole('region', { name: '더빙 사용' })
++  expect(narration).toHaveTextContent(state === 'confirmed' ? '확정 목소리: 차분한 목소리' : state === 'loading' ? '확정 목소리를 확인하는 중' : state === 'failed' ? '불러오지 못했어요' : '사용할 수 있는 확정 목소리')
++  await userEvent.click(screen.getByRole('button', { name: '스타일' }))
++  await userEvent.click(screen.getByRole('checkbox', { name: '더빙 선택' }))
++  await userEvent.click(screen.getByRole('button', { name: '검토' }))
++  expect(narration).toHaveTextContent('더빙 사용 안 함 · 원본 소리는 소스별 선택을 따라요.')
++})
+diff --git a/frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.test.tsx b/frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.test.tsx
+new file mode 100644
+index 00000000..e4382e13
+--- /dev/null
++++ b/frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.test.tsx
+@@ -0,0 +1,111 @@
++import { useEffect, useState } from 'react'
++import { fireEvent, render, screen, within } from '@testing-library/react'
++import userEvent from '@testing-library/user-event'
++import { describe, expect, it, vi } from 'vitest'
++import type { ClipPreparationScreen } from '@/features/edit-clip-project'
++import { Button, TextField } from '@/shared/ui'
++import { ClipPreparationGuide } from './ClipPreparationGuide'
++
++function Mounted({ mounted }: { mounted: () => void }) {
++  useEffect(mounted, [mounted])
++  return null
++}
++function Fixture({ active = true, refusal, onSubmit = () => {}, mounted = () => {} }: {
++  active?: boolean
++  refusal?: 'sources' | 'style' | 'save'
++  onSubmit?: () => void
++  mounted?: () => void
++}) {
++  const [step, select] = useState<ClipPreparationScreen>('sources')
++  const [value, change] = useState('')
++  const [approved, approve] = useState(false)
++  return <form hidden={!active} onSubmit={event => { event.preventDefault(); onSubmit() }}>
++    <ClipPreparationGuide screen={step} onSelect={select}
++      screens={{ sources: <><Mounted mounted={mounted} /><TextField aria-label="원본 파일" type="file" /></>, story: <TextField aria-label="제목" value={value} onChange={event => change(event.target.value)} />, style: <TextField aria-label="길이" type="number" defaultValue="30" /> }}
++      rows={[{ id: 'title', label: '제목', value: value || '비었어요', screen: 'story' }]}
++      models={<TextField aria-label="선택 모델" defaultValue="저장된 모델" />}
++      refusal={refusal === 'save' ? <p role="alert">저장 실패</p> : undefined}
++      correction={refusal ? { screen: refusal === 'save' ? 'story' : refusal, label: '입력을 확인해 주세요.' } : undefined}
++      actions={<><Button variant="secondary" onClick={() => approve(true)}>스토리라인 먼저</Button><Button variant="cta" onClick={() => approve(true)}>{approved ? '승인 확인 중' : '바로 만들기'}</Button></>}
++    />
++  </form>
++}
++async function go(name: string) {
++  await userEvent.click(within(screen.getByRole('navigation', { name: '클립 만들기 단계' })).getByRole('button', { name }))
++}
++
++describe('retained clip preparation questions', () => {
++  it('uses one visible question, truthful positions, native pointer/keyboard navigation and one dock without submitting', async () => {
++    const submit = vi.fn(), mounted = vi.fn()
++    render(<Fixture onSubmit={submit} mounted={mounted} />)
++    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('어떤 영상으로 만들까요?')
++    expect(screen.getByText('1 / 4')).toBeVisible()
++    expect(screen.queryByRole('button', { name: '바로 만들기' })).toBeNull()
++    const user = userEvent.setup()
++    await user.click(screen.getByRole('button', { name: '다음' }))
++    expect(screen.getByRole('heading', { level: 2 })).toHaveFocus()
++    expect(screen.getByText('2 / 4')).toBeVisible()
++    await user.type(screen.getByRole('textbox', { name: '제목' }), '주인이 쓴 제목')
++    expect(screen.getByRole('textbox', { name: '제목' })).toHaveFocus()
++    await go('스타일')
++    await user.click(screen.getByRole('button', { name: '이야기로 이전' }))
++    expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue('주인이 쓴 제목')
++    const review = within(screen.getByRole('navigation')).getByRole('button', { name: '확인' })
++    review.focus()
++    await user.keyboard('{Enter}')
++    expect(screen.getByText('4 / 4')).toBeVisible()
++    expect(review).toHaveAttribute('aria-current', 'step')
++    expect(screen.getByText('주인이 쓴 제목')).toBeVisible()
++    expect(screen.getAllByRole('region', { name: '영상 준비 이동과 생성' })).toHaveLength(1)
++    expect(submit).not.toHaveBeenCalled()
++    expect(mounted).toHaveBeenCalledTimes(1)
++  })
++
++  it('reads pending IME input, has no duplicate editable summary, and returns to the original control', async () => {
++    render(<Fixture />)
++    await go('이야기')
++    const input = screen.getByRole('textbox', { name: '제목' })
++    fireEvent.compositionStart(input)
++    fireEvent.input(input, { target: { value: '아직 저장 안 된 한글' }, isComposing: true })
++    await go('확인')
++    expect(screen.getByText('아직 저장 안 된 한글')).toBeVisible()
++    expect(screen.queryByRole('textbox', { name: '제목' })).toBeNull()
++    await userEvent.click(screen.getByRole('button', { name: '제목 바꾸기' }))
++    expect(screen.getByRole('textbox', { name: '제목' })).toBe(input)
++    expect(input).toHaveValue('아직 저장 안 된 한글')
++  })
++
++  it.each(['sources', 'style', 'save'] as const)('keeps a %s refusal actionable and navigation available', async refusal => {
++    const submit = vi.fn()
++    render(<Fixture refusal={refusal} onSubmit={submit} />)
++    await go('확인')
++    expect(screen.getByText('입력을 확인해 주세요.')).toBeVisible()
++    if (refusal === 'save') expect(screen.getByRole('alert')).toHaveTextContent('저장 실패')
++    await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
++    expect(screen.getByRole('button', { name: '다음' })).toBeEnabled()
++    expect(submit).not.toHaveBeenCalled()
++  })
++
++  it('retains cursor, approval state, fields and actor mounts across lifecycle visits, resetting at the keyed boundary', async () => {
++    const mounted = vi.fn()
++    const view = render(<Fixture key="alice/one" mounted={mounted} />)
++    await go('확인')
++    await userEvent.click(screen.getByRole('button', { name: '바로 만들기' }))
++    view.rerender(<Fixture key="alice/one" active={false} mounted={mounted} />)
++    expect(screen.queryByRole('heading')).toBeNull()
++    view.rerender(<Fixture key="alice/one" active mounted={mounted} />)
++    expect(screen.getByText('4 / 4')).toBeVisible()
++    expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
++    await go('소스')
++    await go('확인')
++    expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
++    expect(mounted).toHaveBeenCalledTimes(1)
++    view.rerender(<Fixture key="alice/two" mounted={mounted} />)
++    expect(screen.getByText('1 / 4')).toBeVisible()
++    await go('이야기')
++    await userEvent.type(screen.getByRole('textbox', { name: '제목' }), 'alice only')
++    view.rerender(<Fixture key="bob/two" mounted={mounted} />)
++    await go('이야기')
++    expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue('')
++  })
++})
+diff --git a/frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.tsx b/frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.tsx
+new file mode 100644
+index 00000000..cbc6717a
+--- /dev/null
++++ b/frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.tsx
+@@ -0,0 +1,70 @@
++import { useId, useState, type ReactNode } from 'react'
++import { useTranslation } from 'react-i18next'
++import type { ClipPreparationRow, ClipPreparationScreen } from '@/features/edit-clip-project'
++import {
++  Button, GuideProgress, StepBar, StepBarActions, StepBarBack, StepBarCta,
++  StepBarReason, StepScreen, Typography, cardStyles,
++} from '@/shared/ui'
++
++const SCREENS = ['sources', 'story', 'style', 'review'] as const
++
++/** Retained questions and a single shared dock. The keyed workspace owns the cursor. */
++export function ClipPreparationGuide({ screen, onSelect, screens, rows, models, actions, refusal, correction, reasonId }: {
++  screen: ClipPreparationScreen
++  onSelect: (screen: ClipPreparationScreen) => void
++  screens: Record<Exclude<ClipPreparationScreen, 'review'>, ReactNode>
++  rows: readonly ClipPreparationRow[]
++  models: ReactNode
++  actions: ReactNode
++  refusal?: ReactNode
++  correction?: { screen: ClipPreparationScreen; label: string } | { retry: () => void; label: string }
++  reasonId?: string
++}) {
++  const { t } = useTranslation('clips')
++  const ownReasonId = useId()
++  const id = reasonId ?? ownReasonId
++  const [shown, setShown] = useState(screen)
++  const [direction, setDirection] = useState<'forward' | 'back'>('forward')
++  if (shown !== screen) {
++    setDirection(SCREENS.indexOf(screen) < SCREENS.indexOf(shown) ? 'back' : 'forward')
++    setShown(screen)
++  }
++  const index = SCREENS.indexOf(screen)
++  const go = (next: ClipPreparationScreen) => {
++    if (next === screen) return
++    onSelect(next)
++    window.scrollTo(0, 0)
++  }
++  const back = (target: ClipPreparationScreen) => <StepBarBack label={t('guide.backTo', { screen: t(`guide.${target}`) })} onClick={() => go(target)} />
++  return <>
++    <GuideProgress steps={SCREENS.map(value => ({ value, label: t(`guide.${value}`) }))} current={screen} onSelect={go} ariaLabel={t('guide.aria')} className="mt-2" />
++    {SCREENS.map((value, position) => <StepScreen key={value} hidden={screen !== value} direction={direction} eyebrow={t('guide.position', { current: position + 1, total: SCREENS.length })} title={t(`guide.questions.${value}`)} className="mt-6 mb-8">
++      {value !== 'review' ? <div className="mt-6 min-w-0 space-y-6">{screens[value]}</div> : <>
++        <dl className={cardStyles({ className: 'mt-6 min-w-0 space-y-6' })}>
++          {rows.map(row => <div key={row.id} className="min-w-0">
++            <div className="flex min-w-0 items-center justify-between gap-3">
++              <Typography variant="fieldTitle" as="dt">{row.label}</Typography>
++              <Button type="button" variant="ghost" aria-label={t('guide.change', { row: row.label })} onClick={() => go(row.screen)}>{t('guide.changeShort')}</Button>
++            </div>
++            <Typography variant="body" as="dd" className="mt-2 whitespace-pre-wrap break-words">{row.value}</Typography>
++          </div>)}
++        </dl>
++        {models}
++      </>}
++    </StepScreen>)}
++    <StepBar ariaLabel={t('guide.actions')}>
++      {screen !== 'review' && <StepBarActions back={index > 0 ? back(SCREENS[index - 1]!) : undefined}>
++        <StepBarCta type="button" forward onClick={() => go(SCREENS[index + 1]!)}>{t('guide.next')}</StepBarCta>
++      </StepBarActions>}
++      {/* Approval/quote components keep their identity while another question is visible. */}
++      <div hidden={screen !== 'review'}>
++        {refusal}
++        {correction && <div className="mb-3 flex flex-wrap items-center gap-2">
++          <StepBarReason id={id}>{correction.label}</StepBarReason>
++          <Button type="button" variant="ghost" onClick={() => 'screen' in correction ? go(correction.screen) : correction.retry()}>{t('guide.fix')}</Button>
++        </div>}
++        <StepBarActions back={back('style')}>{actions}</StepBarActions>
++      </div>
++    </StepBar>
++  </>
++}
+diff --git a/frontend/src/widgets/clip-workspace/ui/ClipPreparationSources.tsx b/frontend/src/widgets/clip-workspace/ui/ClipPreparationSources.tsx
+new file mode 100644
+index 00000000..37313144
+--- /dev/null
++++ b/frontend/src/widgets/clip-workspace/ui/ClipPreparationSources.tsx
+@@ -0,0 +1,28 @@
++import { useTranslation } from 'react-i18next'
++import type { useClipWorkspace } from '../model/useClipWorkspace'
++
++/** Source order, readiness, owner audio choices and optional bindings from their current owner. */
++export function ClipPreparationSources({ sources, ready }: { sources: ReturnType<typeof useClipWorkspace>['sources']; ready: boolean }) {
++  const { t } = useTranslation('clips')
++  const entries = sources.upload.entries
++  const now = Date.now()
++  const unavailable = (entry: (typeof entries)[number]) =>
++    ['expired', 'missing', 'cleanup_pending'].includes(entry.availability ?? '') ||
++    (!!entry.retentionExpiresAt && Date.parse(entry.retentionExpiresAt) <= now)
++  const readyCount = entries.filter(entry => entry.confirmed && !unavailable(entry)).length
++  return <>
++    <p>{t('guide.sourceCount', { count: entries.length, ready: readyCount })}</p>
++    {!ready && <p>{t(entries.length ? 'guide.sourceRefusal' : 'guide.noSources')}</p>}
++    <ol className="space-y-3">
++      {entries.map((entry, index) => {
++        const source = { batchId: entry.batchId ?? '', sourceId: entry.sourceId ?? '', fingerprint: entry.metadata.fingerprint, retainOriginalAudio: entry.retainOriginalAudio ?? false }
++        const item = sources.binding.items.find(item => item.value === sources.binding.value(source))
++        const missing = unavailable(entry)
++        return <li key={entry.metadata.fingerprint}>
++          <p>{t('guide.sourceItem', { position: index + 1, filename: entry.metadata.filename, seconds: entry.metadata.durationMs / 1000, status: t(missing ? 'guide.sourceUnavailable' : entry.confirmed ? 'guide.sourceReady' : 'guide.sourcePending'), sound: t(sources.sound.value(source) ? 'guide.soundOn' : 'guide.soundOff') })}</p>
++          <p>{item ? t('guide.binding', { item: item.label }) : t('guide.noBinding')}</p>
++        </li>
++      })}
++    </ol>
++  </>
++}

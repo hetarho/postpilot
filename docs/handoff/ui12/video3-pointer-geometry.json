@@ -1,0 +1,246 @@
+[
+  {
+    "rects": {
+      "scrollY": 0,
+      "root": 0,
+      "tabs": [
+        {
+          "text": "생성",
+          "x": 201.953125,
+          "y": 135,
+          "width": 41.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">생성</span>"
+        },
+        {
+          "text": "수정",
+          "x": 247.890625,
+          "y": 135,
+          "width": 41.9375,
+          "height": 40,
+          "hit": "<button type=\"button\" class=\"duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-button bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-danger-quiet-bg-hover min-h-10 pointer-coarse:min-h-11 px-5\" aria-label=\"삭제\"><span class=\"inline-flex max-w-fu"
+        },
+        {
+          "text": "완성",
+          "x": 293.828125,
+          "y": 135,
+          "width": 41.9375,
+          "height": 40,
+          "hit": "<button type=\"button\" class=\"duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-button bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-danger-quiet-bg-hover min-h-10 pointer-coarse:min-h-11 px-5\" aria-label=\"삭제\"><span class=\"inline-flex max-w-fu"
+        }
+      ]
+    },
+    "pointerRefine": false,
+    "pointerError": "m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8\">…</div> from <header class=\"min-h-header sticky top-0 z-30 has-[[aria-expanded=true]]:z-40 bg-surface-base/90 backdrop-blur-xl\">…</header> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <button type=\"button\" aria-label=\"삭제\" class=\"duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-button bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-…>…</button> from <div class=\"ml-auto flex shrink-0 items-center gap-2\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n",
+    "width": 360,
+    "channel": "naver_clip",
+    "text": "공원과 카페를 방문한 산책 하루의 아주 긴 한국어 영상 제목\n\n네이버 클립으로 돌아가기\n생성\n수정\n완성\n소스\n이야기\n스타일\n만들기\n클립 제목\n영상 템플릿\n영상 구성\n\n템플릿 없이도 만들 수 있어요. 고르면 그 구성과 시작 디자인을 따르고, 디자인은 뒤에서 하나씩 바꿀 수 있어요.\n\n기존 공개 문구: 광고\n\n영상에 광고·협찬 표시\n클립에 담고 싶은 내용 (선택)\n\n이 클립에서 무엇을 어떤 순서로 보여줄지, 자막이 무엇을 말할지 자유롭게 적어 주세요. 여기에 적은 내용이 영상 순서와 리듬, 자막 내용에서 템플릿의 안내보다 우선합니다. 첫 화면과 마지막 화면의 구성은 템플릿이 정한 대로 유지돼요.\n\n1000자 남음\n\n체험단 글\n\n광고주 가이드를 영상 글쓰기에 반영해요. 끄면 가이드는 보관하고 사용하지 않아요.\n\n글 연결\n\n없음\n\n클립 채널\n\n네이버 클립\n\n인스타 클립으로 옮기기\n\n화면 비율\n\n세로 9:16\n\n화면 비율은 바꿀 수 없어요. 저장된 비율로 계속 편집하고 내려받을 수 있어요.\n\n목표 길이 (초)\n\n15초부터 60초까지 선택할 수 있어요.\n\n디자인과 자막 스타일\n\n문장형 · 강조색 기본 · 인트로 심플 제목 · 아웃트로 가로선 구분 · 자막 스타일 1종\n\n더빙 사용\n내 목소리 보기목소리 만들기\n원본 영상\n\n원본은 비공개 저장소에 보관하고, 승인한 방식으로 분석용 압축 사본을 준비해요. 선택한 영상과 들리는 말이 담긴 압축 사본을 OpenRouter를 통해 외부 영상 분석 제공자에게 보내요. 원본은 확인·수정·작업 시작 또는 종료 후 24시간 보관되며, 확정하면 삭제돼요. 분석 사본은 작업 후 삭제해요. 이 안내는 외부 제공자의 보관 정책을 보장하지 않아요. 보관 기한 안에는 다시 접속해도 원본을 재생하고 재사용할 수 있어요.\n\n원본 영상 선택\nAI가 관찰한 내용\n\n최근 생성에 사용한 관찰 기록이에요. 영상을 선택해 장면과 사용 구간을 확인하세요. 확인에는 크레딧이 들지 않아요.\n\n아직 저장된 관찰 결과가 없어요. 클립 생성이 완료되면 여기에서 확인할 수 있어요.\n\n생성 모델\n관찰 모델\nModel 1 👁 구조화 응답 (선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.)\n\n선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.\n\n작성 모델\nModel 1 👁 구조화 응답\n\n선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.\n\n표시된 최대 크레딧을 승인해야 생성해요. 모든 원본과 분석용 영상을 검증한 뒤 필요한 크레딧을 한 번 예약하며, 승인액과 예약액을 넘겨 청구하지 않아요. 실패한 작업에 확인된 유료 사용이 없으면 기본 비용도 차감하지 않아요.\n\n스토리라인 먼저\n바로 만들기",
+    "headings": [
+      "디자인과 자막 스타일",
+      "원본 영상",
+      "AI가 관찰한 내용",
+      "생성 모델"
+    ],
+    "overflow": false,
+    "calls": [
+      "GetMe",
+      "GetClipProject",
+      "InitializeDefaultSelections",
+      "GetClipSources",
+      "GetMyPlan",
+      "GetClipUploadTexts",
+      "ListModels",
+      "GetSelections",
+      "ListClipAnalysisEligibility",
+      "GetSelections",
+      "GetClipProject",
+      "GetSelections",
+      "ListVideoTemplates",
+      "GetClipSources"
+    ]
+  },
+  {
+    "rects": {
+      "scrollY": 0,
+      "root": 0,
+      "tabs": [
+        {
+          "text": "생성",
+          "x": 201.953125,
+          "y": 112.5,
+          "width": 41.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">생성</span>"
+        },
+        {
+          "text": "수정",
+          "x": 247.890625,
+          "y": 112.5,
+          "width": 41.9375,
+          "height": 40,
+          "hit": "<button type=\"button\" class=\"duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-button bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-danger-quiet-bg-hover min-h-10 pointer-coarse:min-h-11 px-5\" aria-label=\"삭제\"><span class=\"inline-flex max-w-fu"
+        },
+        {
+          "text": "완성",
+          "x": 293.828125,
+          "y": 112.5,
+          "width": 41.9375,
+          "height": 40,
+          "hit": "<button type=\"button\" class=\"duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-button bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-danger-quiet-bg-hover min-h-10 pointer-coarse:min-h-11 px-5\" aria-label=\"삭제\"><span class=\"inline-flex max-w-fu"
+        }
+      ]
+    },
+    "pointerRefine": false,
+    "pointerError": "m      - waiting 100ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8\">…</div> from <header class=\"min-h-header sticky top-0 z-30 has-[[aria-expanded=true]]:z-40 bg-surface-base/90 backdrop-blur-xl\">…</header> subtree intercepts pointer events\u001b[22m\n\u001b[2m  2 × retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m      - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <button type=\"button\" aria-label=\"삭제\" class=\"duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ui-button bg-button-ghost-bg text-button-danger-quiet-fg pointer-coarse:bg-button-danger-quiet-bg-hover hover:bg-button-danger-quiet-bg-hover active:bg-button-…>…</button> from <div class=\"ml-auto flex shrink-0 items-center gap-2\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m  - retrying click action\u001b[22m\n\u001b[2m    - waiting 500ms\u001b[22m\n",
+    "width": 360,
+    "channel": "instagram_clip",
+    "text": "인스타에서 이어 만들 영상\n\n인스타 클립으로 돌아가기\n생성\n수정\n완성\n소스\n이야기\n스타일\n만들기\n클립 제목\n영상 템플릿\n영상 구성\n\n템플릿 없이도 만들 수 있어요. 고르면 그 구성과 시작 디자인을 따르고, 디자인은 뒤에서 하나씩 바꿀 수 있어요.\n\n기존 공개 문구: 광고\n\n영상에 광고·협찬 표시\n클립에 담고 싶은 내용 (선택)\n\n이 클립에서 무엇을 어떤 순서로 보여줄지, 자막이 무엇을 말할지 자유롭게 적어 주세요. 여기에 적은 내용이 영상 순서와 리듬, 자막 내용에서 템플릿의 안내보다 우선합니다. 첫 화면과 마지막 화면의 구성은 템플릿이 정한 대로 유지돼요.\n\n1000자 남음\n\n체험단 글\n\n광고주 가이드를 영상 글쓰기에 반영해요. 끄면 가이드는 보관하고 사용하지 않아요.\n\n글 연결\n\n없음\n\n클립 채널\n\n인스타 클립\n\n네이버 클립으로 옮기기\n\n화면 비율\n\n세로 9:16\n\n화면 비율은 바꿀 수 없어요. 저장된 비율로 계속 편집하고 내려받을 수 있어요.\n\n목표 길이 (초)\n\n15초부터 60초까지 선택할 수 있어요.\n\n디자인과 자막 스타일\n\n문장형 · 강조색 기본 · 인트로 심플 제목 · 아웃트로 가로선 구분 · 자막 스타일 1종\n\n더빙 사용\n내 목소리 보기목소리 만들기\n원본 영상\n\n원본은 비공개 저장소에 보관하고, 승인한 방식으로 분석용 압축 사본을 준비해요. 선택한 영상과 들리는 말이 담긴 압축 사본을 OpenRouter를 통해 외부 영상 분석 제공자에게 보내요. 원본은 확인·수정·작업 시작 또는 종료 후 24시간 보관되며, 확정하면 삭제돼요. 분석 사본은 작업 후 삭제해요. 이 안내는 외부 제공자의 보관 정책을 보장하지 않아요. 보관 기한 안에는 다시 접속해도 원본을 재생하고 재사용할 수 있어요.\n\n원본 영상 선택\nAI가 관찰한 내용\n\n최근 생성에 사용한 관찰 기록이에요. 영상을 선택해 장면과 사용 구간을 확인하세요. 확인에는 크레딧이 들지 않아요.\n\n아직 저장된 관찰 결과가 없어요. 클립 생성이 완료되면 여기에서 확인할 수 있어요.\n\n생성 모델\n관찰 모델\nModel 1 👁 구조화 응답 (선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.)\n\n선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.\n\n작성 모델\nModel 1 👁 구조화 응답\n\n선택한 관찰 모델은 클립 분석에 아직 쓸 수 없어요. 다른 모델을 선택해 주세요.\n\n표시된 최대 크레딧을 승인해야 생성해요. 모든 원본과 분석용 영상을 검증한 뒤 필요한 크레딧을 한 번 예약하며, 승인액과 예약액을 넘겨 청구하지 않아요. 실패한 작업에 확인된 유료 사용이 없으면 기본 비용도 차감하지 않아요.\n\n스토리라인 먼저\n바로 만들기",
+    "headings": [
+      "디자인과 자막 스타일",
+      "원본 영상",
+      "AI가 관찰한 내용",
+      "생성 모델"
+    ],
+    "overflow": false,
+    "calls": [
+      "GetMe",
+      "GetClipProject",
+      "InitializeDefaultSelections",
+      "GetClipSources",
+      "GetMyPlan",
+      "GetClipUploadTexts",
+      "ListModels",
+      "GetSelections",
+      "ListClipAnalysisEligibility",
+      "GetSelections",
+      "GetClipProject",
+      "GetSelections",
+      "ListVideoTemplates",
+      "GetClipSources"
+    ]
+  },
+  {
+    "rects": {
+      "scrollY": 0,
+      "root": 0,
+      "tabs": [
+        {
+          "text": "생성",
+          "x": 653.59375,
+          "y": 120.5,
+          "width": 49.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">생성</span>"
+        },
+        {
+          "text": "수정",
+          "x": 727.53125,
+          "y": 120.5,
+          "width": 49.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">수정</span>"
+        },
+        {
+          "text": "완성",
+          "x": 801.46875,
+          "y": 120.5,
+          "width": 49.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">완성</span>"
+        }
+      ]
+    },
+    "pointerRefine": true,
+    "pointerError": "",
+    "width": 1440,
+    "channel": "naver_clip",
+    "text": "공원과 카페를 방문한 산책 하루의 아주 긴 한국어 영상 제목\n\n네이버 클립으로 돌아가기\n생성\n수정\n완성\n삭제\n\n원본과 편집 내용의 미리보기를 준비하고 있어요.\n\n원본 소스\n더빙 대본\n0 s\n9.8 s\n\n영상\n\n컷 1\n1×\n컷 2\n1×\n\n자막\n\n이 지점에 자막 추가\n정확한 고정 문구\ncaption a\ncaption b\n\n더빙\n\n더빙 설정\n더빙 없음\n0 / 19.8 s\n이전에 만든 영상 비교 · 수정본 1\n선택 항목 속성\n\n영상·자막·더빙 구간을 선택해 편집하세요.\n\nAI로 수정\n다시 렌더\n확정하기\n\n렌더하기로 영상을 만든 뒤 확정해 주세요.\n\n업로드 문구\n\n영상은 그대로 두고, 선택한 채널에 올릴 문구만 만들어요.\n\n네이버 클립\n인스타 클립\n\n아직 이 채널의 업로드 문구가 없어요.\n\n작성 모델\nModel 1 👁 구조화 응답\n업로드 문구 만들기",
+    "headings": [
+      "선택 항목 속성",
+      "업로드 문구"
+    ],
+    "overflow": false,
+    "calls": [
+      "GetMe",
+      "GetMyPlan",
+      "GetClipProject",
+      "InitializeDefaultSelections",
+      "GetClipSources",
+      "GetClipUploadTexts",
+      "ListModels",
+      "GetSelections",
+      "ListClipAnalysisEligibility",
+      "GetSelections",
+      "GetClipProject",
+      "GetSelections",
+      "ListVideoTemplates",
+      "GetClipSources",
+      "GetSelections",
+      "GetClipUploadTexts",
+      "GetClipSources",
+      "GetClipProject"
+    ]
+  },
+  {
+    "rects": {
+      "scrollY": 0,
+      "root": 0,
+      "tabs": [
+        {
+          "text": "생성",
+          "x": 653.59375,
+          "y": 120.5,
+          "width": 49.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">생성</span>"
+        },
+        {
+          "text": "수정",
+          "x": 727.53125,
+          "y": 120.5,
+          "width": 49.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">수정</span>"
+        },
+        {
+          "text": "완성",
+          "x": 801.46875,
+          "y": 120.5,
+          "width": 49.9375,
+          "height": 40,
+          "hit": "<span class=\"relative inline-flex items-center justify-center gap-1\">완성</span>"
+        }
+      ]
+    },
+    "pointerRefine": true,
+    "pointerError": "",
+    "width": 1440,
+    "channel": "instagram_clip",
+    "text": "인스타에서 이어 만들 영상\n\n인스타 클립으로 돌아가기\n생성\n수정\n완성\n삭제\n\n원본과 편집 내용의 미리보기를 준비하고 있어요.\n\n원본 소스\n더빙 대본\n0 s\n9.8 s\n\n영상\n\n컷 1\n1×\n컷 2\n1×\n\n자막\n\n이 지점에 자막 추가\n정확한 고정 문구\ncaption a\ncaption b\n\n더빙\n\n더빙 설정\n더빙 없음\n0 / 19.8 s\n이전에 만든 영상 비교 · 수정본 1\n선택 항목 속성\n\n영상·자막·더빙 구간을 선택해 편집하세요.\n\nAI로 수정\n다시 렌더\n확정하기\n\n렌더하기로 영상을 만든 뒤 확정해 주세요.\n\n업로드 문구\n\n영상은 그대로 두고, 선택한 채널에 올릴 문구만 만들어요.\n\n네이버 클립\n인스타 클립\n\n아직 이 채널의 업로드 문구가 없어요.\n\n작성 모델\nModel 1 👁 구조화 응답\n업로드 문구 만들기",
+    "headings": [
+      "선택 항목 속성",
+      "업로드 문구"
+    ],
+    "overflow": false,
+    "calls": [
+      "GetMe",
+      "GetMyPlan",
+      "GetClipProject",
+      "InitializeDefaultSelections",
+      "GetClipSources",
+      "GetClipUploadTexts",
+      "ListModels",
+      "GetSelections",
+      "ListClipAnalysisEligibility",
+      "GetSelections",
+      "GetClipProject",
+      "GetSelections",
+      "ListVideoTemplates",
+      "GetClipSources",
+      "GetSelections",
+      "GetClipUploadTexts",
+      "GetClipSources",
+      "GetClipProject"
+    ]
+  }
+]

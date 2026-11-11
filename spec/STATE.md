@@ -11,9 +11,9 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T22:42Z | 2026-11-11T22:45Z | - |
 
 ## inbox
+- 261112 decided T758: move all current work to another device? → stop ui12 coordinator/runner, release the partial attempt, publish completed main plus the full16-file T758 recovery patch, hashes, scout/browser evidence and restore instructions in docs/handoff/ui12 (alt: omit unfinished work | integrate unreviewed partial source). T758 remains todo and requires completion, checks and independent review; automatic work on this machine is stopped at the user's request.
 - 261112 decided CLIP-225 CLIP-227 T758 review/video-preparation-guide-261112: which video redesign slice follows the completed foreground/T757? → adopt independent scout F1, retained preparation with latest-local review and shared step bar, via CLIP r75 and T758 (alt: another isolated bug | rewrite the whole editor at once). T746/POST-122/123/124 plus real browser baseline support the sequence; preserve backend/credit/owner/export contracts and plan later storyline/edit/delivery slices separately. Original deadline unchanged; closing reserve expanded to3h.
 - 261112 decided ARCH-31 T757: resume after the remote-only blocker? → GitHub CI43094556625 for0af0cf99 is now completed/success with both jobs successful, so resume the remaining explicitly delegated video workflow redesign on main under the original deadline and existing review/verification requirements (alt: leave the temporary run stopped | call one retention bug fix a complete video redesign). The user requested status; no cancellation or scope reduction was given.
 - 261112 parked ARCH-31 T757: T757 sourceeed85f60/completion5114f7d5 is reviewed, integrated, published and source CI43091754368 passes. Final record0af0cf99 CI43094556625 has every step successful but run/jobs/checks remain in_progress with null conclusions; REST/GraphQL agree. Force and normal cancel both reject as completed, full rerun rejects as already running. No source fix or repeated retry is justified; keep exact runtime evidence and await GitHub state reconciliation. The blocker report is local-only to avoid another unverifiable main push.
@@ -200,11 +200,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- ui12 resumed: CI43094556625 for0af0cf99 is completed/success; finish the delegated video creation workflow redesign against recent blog decisions, including coherent guided stages, shared components and design-system consistency. Retain the original deadline2026-11-13T00:00Z and real independent proposal/implementation/review gates; current execution receipt is .git/haeram/v1/launchers/ui12/current-execution.json.
-- Preserve the owner-held T539/T550 live voice/human review, T603 semantic truth and T604 Windows/hardware/human/live/distribution gates; no Mac-only or synthetic evidence qualifies them.
-- T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
+- Device handoff: fetch origin/main, read docs/handoff/ui12/README.md and recover the16-file partial T758 patch in its newly assigned checkout before continuing spec/tasks/T758.guide-video-preparation-and-review.md. Patch baseada6afc2, SHA-256 and per-file verification are recorded alongside it. T758 is not completed/reviewed/integrated; completed T753–T757 remain on main.
+- This machine's ui12 coordinator/runner stopped by user request and attemptb1df8608 is released; fresh devices must establish new ownership rather than copy .git runtime. The broader video-process redesign continues after T758 under its own evidence/planning/review gates. Resume with /start-vibe; details and full journey are in the report and review/video-preparation-guide-261112.
+- Preserve owner-held T539/T550 live voice/human review, T603 semantic truth, T604 hardware/human/live/distribution, T697 production source-read and T709 unresolved budget; unrelated INFRA/ideation stay outside this handoff.
 
 ## log
+- 261112 ui12 device handoff: all own processes stopped, T758 attempt released, original dirty worker kept. Preserve all16 partial files in docs/handoff/ui12/T758.patch with exact recovery hashes and portable scout/browser evidence; main implementation stays through reviewed T757. Latest planning ada6afc2 was already pushed. Owner requested all current work remotely, no continued local automation.
 - 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
 - 261112 update-ssot CLIP start (ui12 video cycle3): adopt independent scout preparation-flow proposal under explicit reversible UX delegation; preserve whole-journey plan and excluded contracts.
 - 261112 ui12 resumes after status audit: foreground T753–T756 and T757 are published; GitHub43094556625 now completed/success (updated21:01:03Z, verified22:41Z). The prior host parked20:49Z and did not auto-resume. Continue the still-authorized full video UX scope under the same hard deadline, without calling the retention fix the requested redesign.
@@ -224,4 +225,3 @@
 - 261112 T754 starts (ui12), baseline 8cf585bb: actual browser hub/title/chips stay mounted; missing aggregate toolbar and clip padding shift first groups by 48px then 8px (desktop 48px/16px). T753 full gate/push passed; immutable remote CI remains under observation before the next push.
 - 261112 T753 done (ui12): canonical /create with / alias, logo/login/setup preserved; 24 files/288 consumer tests, lint/FSD/style/build and Chromium fixture proof pass. Full pre-push gate follows.
 - 261112 T753 starts (ui12), baseline 1baf181e: canonical /create, preserve setup/deep links/public auth.
-- 261112 create-task T753–T756 (ui12): consume THEME r40, POST r47 and CLIP r74; four sequential foreground units, no unrelated pending domain consumed.

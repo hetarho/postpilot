@@ -1,0 +1,93 @@
+{
+  "task": "T758",
+  "status": "interrupted-unverified",
+  "baseCommit": "ada6afc201602a5332264d06925ea9cf8737fc0b",
+  "patch": "docs/handoff/ui12/T758.patch",
+  "patchSha256": "4823cbb1cf25f3667673de4f6f79025505aafdbf9f50576d063bdab1c1b27a45",
+  "files": [
+    {
+      "path": "frontend/src/features/edit-clip-project/config/i18n.ts",
+      "sha256": "f3ee650f5dfed0ee2d96ad3e91764628a24f852bd4aa32b41b37b1d4ff62e445",
+      "new": false
+    },
+    {
+      "path": "frontend/src/features/edit-clip-project/index.ts",
+      "sha256": "45adb5229ff44ec0986e2ea7047b17b499275071f662829986c7a7a413361bf7",
+      "new": false
+    },
+    {
+      "path": "frontend/src/features/edit-clip-project/model/preparation.ts",
+      "sha256": "7bf8a47fe7b6e0871ca88e9351260b273912f37185af24d3ab84bec10404a365",
+      "new": true
+    },
+    {
+      "path": "frontend/src/features/edit-clip-project/ui/ClipPreparationSummary.tsx",
+      "sha256": "7cdb49f215ae69a81ee6addcfa43400bc0e17077945cc31bb2c37ce48b8e4636",
+      "new": true
+    },
+    {
+      "path": "frontend/src/features/edit-clip-project/ui/ClipProjectForm.test.tsx",
+      "sha256": "8ed3b58bc1362fbd4842a75dd86d1e4028685f972c4affaba6c77b8dc4f54727",
+      "new": true
+    },
+    {
+      "path": "frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx",
+      "sha256": "c4dddcf1c82f81c6c7b5d35f59927c608b3a098a262fadc877f4737bd7df9f92",
+      "new": false
+    },
+    {
+      "path": "frontend/src/features/generate-clip/api/useGenerateClip.ts",
+      "sha256": "ca345528b018373caba48575f198a4eed1a730a09009fc87e61ec13a83d7d25f",
+      "new": false
+    },
+    {
+      "path": "frontend/src/features/generate-clip/index.ts",
+      "sha256": "f724f39922fc0bb7a22d9516e98059f15f727aa5e1746cb88ef55806d871c994",
+      "new": false
+    },
+    {
+      "path": "frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx",
+      "sha256": "bc0bf73c5fc1d85137182ffd5b55cc9b0b78871b74b25524a9950033546f08b9",
+      "new": false
+    },
+    {
+      "path": "frontend/src/pages/clip/ui/ClipPage.tsx",
+      "sha256": "450b39866ab5aa7f3eee7b8e9a08100311ea5e3773dbb492c377978becbd00cd",
+      "new": false
+    },
+    {
+      "path": "frontend/src/widgets/clip-workspace/config/i18n.ts",
+      "sha256": "f56336415f690ea0f0dcb24abf362f0dc05224115c79750e56795265a86107cc",
+      "new": false
+    },
+    {
+      "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.test.tsx",
+      "sha256": "871cfc5300d5299d27645a67f0b4a4bc77deefa794c8b6dcbdf19db346ce1bd1",
+      "new": true
+    },
+    {
+      "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.tsx",
+      "sha256": "4f03339f76815f5d116cca8e09c16f2b85b56db5f8a3ec180edaefbbb53abbe3",
+      "new": true
+    },
+    {
+      "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationSources.tsx",
+      "sha256": "d28bf10d074ee649ef6cbdde230ef07da274980bd90c1e1d0b2b0e7aef94a448",
+      "new": true
+    },
+    {
+      "path": "frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx",
+      "sha256": "d5a88a5cb667d961d537f01405ef0b3a095cf588cace49febda8f651cdbf53a9",
+      "new": false
+    },
+    {
+      "path": "spec/tasks/T758.guide-video-preparation-and-review.md",
+      "sha256": "0dfbd25913dc34131a62e6d68e99f04452d6767852eb845ad02e96d333865c9b",
+      "new": false
+    }
+  ],
+  "mainProductThrough": "T757",
+  "localRunnerStopped": true,
+  "independentReview": "not performed for this partial T758 implementation",
+  "checks": "No T758 completion, full-suite, browser acceptance or integration pass is claimed. Existing main product evidence remains valid for its unchanged implementation."
+}
