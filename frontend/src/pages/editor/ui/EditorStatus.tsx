@@ -55,9 +55,11 @@ export function EditorProgressBar({
   )
 }
 
-/** One line of `meta` text carrying AT MOST ONE thing, in this precedence: the running job's
+/** One line of `label` text carrying AT MOST ONE thing, in this precedence: the running job's
  *  stage, then the save state, then the post's own status. A row with two state indicators on it
- *  is what this replaced.
+ *  is what this replaced. It is the editor's only word on where the post is — 초안, 작성 중,
+ *  저장됨 — so it reads at the label step, not in the 13px `meta` grey it started in, which made
+ *  the one thing it says the smallest text on the screen.
  *
  *  The live region is MOUNTED at all times and only its text changes: a region inserted already
  *  holding its message announces nothing, and this line changes about once a second while someone
@@ -96,7 +98,7 @@ export function EditorStatusLine({
   const running = !failing && job && !isTerminal(job) ? stageLabel : ''
   return (
     <Typography
-      variant="meta"
+      variant="label"
       as="p"
       role="status"
       aria-live="polite"

@@ -579,6 +579,9 @@ describe('the editor status region', () => {
     // A7: the status IS the report. The 이 revision을 확정했어요 notice that used to stand on
     // 글 완성 said the same thing as an event that nothing ever took down.
     await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
+    // The editor's one word on where the post is reads at the label step, not as a 13px caption.
+    expect(statusLine()).toHaveClass('font-semibold')
+    expect(statusLine()).not.toHaveClass('text-[0.8125rem]')
     expect(screen.queryByText('이 revision을 확정했어요.')).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })
