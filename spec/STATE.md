@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T13:39Z | T747 |
+| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T13:50Z | - |
 
 ## inbox
 - 261111 decided T747 T748 T749 T750 T751 T752: unattended continuation scope? → finish the existing dependency-ready tasks on main, starting with T752, then T751 and T747 before the explore tasks; preserve owner-only hardware, listening, live-call/hosting budgets and active ideation (alt: expand into new product planning | leave executable tasks stopped). The user selected unattended mode during T752's verification.
@@ -186,15 +186,15 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T747 | Prove browser export independence from saturated server-export capacity | ARCH CLIP INFRA | - | doing@261111.cr11 |
 | T748 | Reconstruct the shipped resvg WASM's Rust source and license graph | ARCH | - | todo |
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
 
 ## next
-- implement-task T747
+- implement-task T748
 
 ## log
+- 261111 T747 done: saturated native admission/browser independence pinned; QA matrix leaves worker CPU assertion and sustained load open.
 - 261111 T747 starts (cr11): pin browser admission independently of fully occupied native active/waiting slots and map load/queue/cancellation/restart/resource clauses to current named tests, without live hosting or rental benchmarks. T751 is committed/pushed; its immutable remote workflows remain under observation.
 - 261111 T751 done (cr11): query/sqlc order solely by reverse rowid acceptance, preserving stored timestamps, bodies/kinds, owner/project filters and schema/index. Deterministic reversed/equal-time regression fails original query and passes the repair; full clip/store/app/rpc and 21 FE consumer tests pass. Complete ARCH-31 on 4f357b66 passes (FE 593/4721, deploy Python 69, Go all, static/build/generation/Compose, both deployment images and all three media gates, both layouts); remote results follow after push.
 - 261111 T752 remote verified (cr11): code push 53dc028d CI 43025005875 and Deploy backend 43025005647 pass, including actual rollout/ranged GET/CORS/R2 gates; completion metadata 740b8437 CI 43025066174 passes. Verify media 43026911492 passes all three jobs; its API head_sha is 740b8437 but every checkout/log binds the tested source to deployed 53dc028d.
@@ -214,5 +214,3 @@
 - 261111 T746 done (hu3): the compared Guide redesign and requirements-led post guide land as merge 4899eb2b with the rule fixes; full local gate (FE 4721 tests, Go 90 packages, deploy tests, media gates) and remote CI, Deploy backend and Verify media pass; A/B worktrees and branches removed
 - 261111 create-task T746: one adoption task consumes the THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH deltas; its implementation is the compared and polished branch
 - 261111 update-ssot THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH: the adopted Guide redesign (ab ui-redesign/b) and the requirements-led post guide (ab post-writing-ux/d, polish a/b/c/d merged on ab/post-writing-polish/final) become the rules; 13 revs, 11 new decisions; code gaps the rules keep (MODEL-24/96, QUOTA-75, THEME-11/18/28/55/58/67/70, ARCH-16, POST-123, VOICE-69, TMPL-32, MKT-11) are fixed on that branch before it lands
-- 261111 hu2 updates haeram-spec-creator 0.12.0→0.12.2 (8 skill files, no conflicts; no structural migration, FORMAT overrides unchanged, 54 existing lint errors identical) and refreshes the browser ink identity for the new lockfile SHA (catalog, canonical identity, both asset-version constants; styles/fonts/WASM unchanged). clip/design, clip, store codec, go vet/build and 46 FE files/294 tests, tsc, prettier, eslint pass; no push.
-- 261110 T745 done (sil5): the dom project evaluates the i18n catalogs once per run (globalSetup provide, setup inject into the unchanged product init); resources strictly equal the catalogs, discovery identical except the new equality case; ABBA setup per DOM file 1.65 -> 0.73 s; submit check ran the full FE suite (581 files / 4642 tests); review 274ecdd7 approves with two P3 notes; merged 08edc691.
