@@ -55,11 +55,15 @@ export function EditorProgressBar({
   )
 }
 
-/** One line of `label` text carrying AT MOST ONE thing, in this precedence: the running job's
- *  stage, then the save state, then the post's own status. A row with two state indicators on it
- *  is what this replaced. It is the editor's only word on where the post is — 초안, 작성 중,
- *  저장됨 — so it reads at the label step, not in the 13px `meta` grey it started in, which made
- *  the one thing it says the smallest text on the screen.
+/** One line of `label` text carrying AT MOST ONE thing, in this precedence: a failing save, the
+ *  running job's stage, then the save state, then the post's own status.
+ *
+ *  Only the first two are SHOWN. The routine words — 초안, 작성 중, 저장됨 — sat on their own line
+ *  above 요청 기술 보기 and read like a log printed on the page: the step names already say where
+ *  the post is, and an autosave that works needs no applause. They stay in the live region for a
+ *  screen reader and take no height on screen. A failing save is the only thing this screen has
+ *  instead of a save button (PRD F-2), and a running job's stage is what the owner waits on, so
+ *  those two appear.
  *
  *  The live region is MOUNTED at all times and only its text changes: a region inserted already
  *  holding its message announces nothing, and this line changes about once a second while someone
@@ -96,6 +100,7 @@ export function EditorStatusLine({
         ? progressLabel(job)
         : ''
   const running = !failing && job && !isTerminal(job) ? stageLabel : ''
+  const shown = failing || Boolean(running)
   return (
     <Typography
       variant="label"
@@ -103,9 +108,11 @@ export function EditorStatusLine({
       role="status"
       aria-live="polite"
       aria-label={t('editor.statusAria')}
-      // One line tall while it has nothing to say — an unsaved `/posts/new` — so the first save's
-      // word does not push ① down.
-      className={clsx('min-h-lh min-w-0 truncate', failing && 'text-notice-danger-fg', className)}
+      // Hidden, the caller's placement is dropped with it: a full-width row class on a
+      // visually-hidden box would undo the hiding.
+      className={
+        shown ? clsx('min-w-0 truncate', failing && 'text-notice-danger-fg', className) : 'sr-only'
+      }
     >
       {failing ? save.label : running || save.label || postStatusLabel(status)}
     </Typography>
