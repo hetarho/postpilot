@@ -188,7 +188,7 @@
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
 | T751 | Keep the request history newest first across a clock rollback | CLIP ARCH | - | todo |
-| T752 | Fix final gate failure | ARCH | T742 | todo |
+| T752 | Fix final gate failure | ARCH | T742 | doing@261111.cr11 |
 
 ## next
 - implement-task T752
