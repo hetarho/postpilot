@@ -11,9 +11,10 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T19:14Z | - |
+| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T19:31Z | - |
 
 ## inbox
+- 261112 decided THEME-51 THEME-55 CLIP-180 CLIP-197: video cycle2 scout finds tool-local unsent request lost on preview navigation → adopt review/video-request-retention-261112 F1 as T757 restoring existing retention contracts (alt: discard text | persist globally | broaden generation/process policy). User delegation covers this reversible fix; keep quote hooks local and owner/project boundaries keyed, independently implement/review before main publication.
 - 261112 decided THEME-47 THEME-72 THEME-73 CLIP-226: UI choices delegated for this run? → use /create for logo and signed-in landing with / as an alias, keep setup eligibility there, reserve shared hub/list geometry and show the latest unfinished item once in 작성 중; derive storyline-ready only before a plan/result and preserve lifecycle semantics (alt: two launch canvases | separate large continuation hero | treat storyline as finished video). T746 supplies the adopted Guide primitives and one-goal hierarchy; no paid generation or backend contract change is required.
 - 261112 decided THEME-47 THEME-68 THEME-69 POST-43 CLIP-41: unattended UI/video scope? → first unify the logo and creation destination, stabilize My work section transitions, distinguish a prepared storyline and replace oversized duplicate continuation emphasis with compact in-progress work; then apply recent blog-workflow decisions and shared design primitives to video creation through self-improve-local (alt: retain duplicate launch/resume surfaces | redesign unrelated features). Questions are waived; the bounded run ends by 2026-11-13T00:00Z (09:00 Asia/Seoul), reserving time for independent review, complete pre-push gates and every triggered workflow. Existing paid/live and hardware gates remain outside this UI scope.
 - 261112 decided -: the inherited sil-261109 group binding prevents vibe loop on main → use a checkout-local detached headless coordinator with durable request, deadline and execution receipts, preserving the existing runtime and all unrelated work (alt: alter package-managed skills/runtime ownership | stop the authorized overnight work). A real Codex bypass-mode push dry-run probe passed; permission is expressly delegated for this run. Retain per-unit commits/pushes under AGENTS.md and diagnose actual remote workflows.
@@ -166,6 +167,7 @@
 ## review
 | id | st |
 |---|---|
+| video-request-retention-261112 | converted@261112 |
 | diff-260908 | converted@260908 |
 | clip-project-update-260914 | converted@260914 |
 | clip-failure-visibility-260914 | converted@260914 |
@@ -186,6 +188,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T757 | Retain storyline requests during preview navigation | ARCH | - | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -193,11 +196,13 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- ui12: foreground T753–T756 and clip return-filter repair are published and all exact-source workflows pass; next invoke self-improve-local with independent headless scout/implementation/review for video creation. Deadline 2026-11-13T00:00Z, stop new work at least2h earlier (expand with measured gates); report spec/reports/261112-ui12.md.
+- ui12: video cycle2 approved T757 only; configure inherited sil-261109 with preserved T733–T736 plus T757, independent headless implementation/review all, then full gates and exact-revision CI. Deadline2026-11-13T00:00Z, new work ends at least2h before; report spec/reports/261112-ui12.md.
 - Preserve the owner-held T539/T550 live voice/human review, T603 semantic truth and T604 Windows/hardware/human/live/distribution gates; no Mac-only or synthetic evidence qualifies them.
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 create-task T757 (ui12): adopt independent scout F1; restore existing THEME-51/55 within CLIP-180/197, no new policy/SSOT revision or unrelated pending consumption. Plan-push precedes worker assignment.
+- 261112 self-improve-local video cycle2 starts (ui12): clean main c61f9949; independent read-only work scout dispatched; preserve inherited scope/history and all contracts. Exploration+implementation <=60m; review/full gates/remote CI reserve follows.
 - 261112 foreground accepted (ui12): T753–T756 plus repair05dc604c are on origin/main; all5 code revisions pass full ARCH-31 and every triggered workflow. Repair48/380, full FE595/4748/Python69/Go and CI43083205954 pass. Browser canonical24/warm96/delayed32/alias24 pass. Video has not started; keep active for the next coordinator stage.
 - 261112 fix clip-navigation done (ui12): canonical history states retain storyline_ready on both channel returns; red4→green33 and expanded48 files/380 tests/static/type/build pass. Separate repair unit; complete ARCH-31 and exact-revision workflows follow.
 - 261112 fix clip-navigation starts (ui12), baseline aef8ed75: final return-path audit finds the new storyline_ready filter dropped by the clip history return allowlist. Repair the existing CLIP-226/THEME-58 contract in the lightweight path; no new product policy or persisted format.
@@ -216,5 +221,3 @@
 - 261112 remaining work audited (cr11): no existing runnable task remains. T539/T550 need live voice/human evidence, T603 matched authorized semantic truth, T604 hardware/human/live/distribution evidence, T697 explicit production generation/source-read proof. Retained preview evidence is not substituted for the latter; no new paid/live call is made.
 - 261112 T750 done (cr11): bounded driver exploration at e2f40117; actual Mac matrix24/comparisons16/production8 passes, matching frozen snapshots and clean recovery. Windows48/comparisons32/production16 remain unmeasured, runtime criteria unchecked; first full CI follows. T749 publication7aab07a5 CI43041827273 passes both jobs.
 - 261111 T750 starts (cr11): 90m exploration from 2026-11-11T14:49Z (upper bound 16:19Z), baseline 7aab07a5. Implement the Windows/WSL comparison and production-path driver with exact source/fixture binding, default temporary browser profiles and no serials; current host is Darwin ARM64 without Windows Node/Chrome/Edge. Validate executable transport here while retaining every unavailable Windows combination as unmeasured, never qualified.
-- 261111 T749 gate passes (cr11): complete pre-push CI at c509d1a7 (26 dev, FE593/4721, Python69, full Go, all generated/static/type/build checks); no backend/media workflow input in its diff. T748 a74464d6 remote CI 43037986093 passes both jobs.
-- 261111 T749 done (cr11): whole-frame Pixi WebGL diagnostic at 1a603269; single6/matrix24 runs, 16 contract/PCM comparisons and all output/cleanup checks pass. Identified M1 Max Metal/Chromium153 shows 13.2–24.5% shorter instrumented assembly, decoded mean residual0.660449–0.932307; no pixel acceptance/default/qualification change. Historical data preserved; full pre-push CI follows.
