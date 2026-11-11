@@ -1,5 +1,7 @@
 # UI and video work: device handoff
 
+This is the preserved device-handoff snapshot. The owner subsequently authorized a bounded T758 continuation; consult current `spec/STATE.md`, the task (including `tasks/done/`) and `spec/reports/261112-ui12.md` before applying this historical patch. Never apply it on top of an already integrated T758 implementation.
+
 The completed implementation through T757 and the approved T758 plan are on `main`. T758 was interrupted at the owner's request to move work to another device. Its partial implementation is preserved in `T758.patch`, including all six new files and the worker's task edits. It is not integrated product code and has not passed task acceptance or independent review.
 
 The original preparation task starts at `ada6afc201602a5332264d06925ea9cf8737fc0b`. `T758-snapshot.json` records all 16 file hashes and the patch SHA-256. The source on main has not changed since that base; subsequent handoff commits contain records and recovery artifacts only.
