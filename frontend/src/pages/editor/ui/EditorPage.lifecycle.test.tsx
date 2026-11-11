@@ -478,39 +478,38 @@ describe('the editor lifecycle steps', () => {
     expect(tab.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  // Guide: ① starts with the story — "무슨 일이 있었나요?" — then the photos, then the 가제 with
-  // the template's answers, each on its own screen; on a saved draft and on a /posts/new alike.
-  it('puts the story first, the photos after it, and the title after them', async () => {
+  // Campaign context leads; photos precede writing inputs, and optional notes come last.
+  it('puts campaign context before photos, then template inputs and closing notes', async () => {
     const following = (first: Node, second: Node) =>
       Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
-    const expectStoryFirst = async () => {
+    const expectPhotoBeforeWriting = async () => {
       const picker = await screen.findByLabelText('사진·영상 추가')
       const memo = screen.getByLabelText('메모')
       const title = screen.getByLabelText('제목')
-      expect(following(memo, picker)).toBe(true)
+      expect(following(title, memo)).toBe(true)
       expect(following(picker, title)).toBe(true)
       const progress = screen.getByRole('navigation', { name: '글쓰기 단계' })
       expect(
         within(progress)
           .getAllByRole('button')
           .map((step) => step.textContent),
-      ).toEqual(['이야기', '사진', '내용', '확인'])
+      ).toEqual(['글 종류', '요청', '사진', '템플릿', '내용', '덧붙임', '확인'])
     }
 
     const saved = renderAppAt('/posts/20260820-jeju', {
       user: USER,
-      posts: { posts: [{ ...reviewPost, status: 'draft' }] },
+      posts: { posts: [{ ...reviewPost, status: 'draft', campaign: true }] },
     })
-    await expectStoryFirst()
+    await expectPhotoBeforeWriting()
     saved.unmount()
 
     renderAppAt('/posts/new', { user: USER })
-    await expectStoryFirst()
-    // A new draft opens on its story: the one field on screen, under its question.
-    expect(screen.getByRole('heading', { name: '무슨 일이 있었나요?' })).toBeInTheDocument()
-    expect(screen.getByRole('textbox', { name: '메모' })).toBeInTheDocument()
+    await expectPhotoBeforeWriting()
+    // A new draft opens on its two plain post-type choices.
+    expect(screen.getByRole('heading', { name: '어떤 글을 쓰시나요?' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '메모' })).toBeNull()
     expect(screen.queryByRole('textbox', { name: '제목' })).toBeNull()
-    expect(screen.getByRole('button', { name: '이야기' })).toHaveAttribute('aria-current', 'step')
+    expect(screen.getByRole('button', { name: '글 종류' })).toHaveAttribute('aria-current', 'step')
   })
 
   // POST-100: ①'s strip opens a saved attachment large and walks it in the strip's order.

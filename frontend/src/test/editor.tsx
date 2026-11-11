@@ -41,10 +41,12 @@ const GENERATE_STEP = /^(글 생성|Generate)$/
 export const generateTab = () =>
   screen.queryAllByRole('tab').find((tab) => GENERATE_STEP.test(tab.textContent ?? ''))
 
-/** Guide: 글 생성 is four screens — 이야기 · 사진 · 내용 · 확인 — behind a progress whose segments
- *  are buttons. Brings the named screen up, on the 글 생성 step. */
+/** Writing screens are reached through the progress buttons, on the 글 생성 step. */
 export const GUIDE = {
-  story: /^(이야기|Story)$/,
+  kind: /^(글 종류|Post type)$/,
+  requirements: /^(요청|Guide)$/,
+  template: /^(템플릿|Template)$/,
+  story: /^(덧붙임|Extra)$/,
   photos: /^(사진|Photos)$/,
   details: /^(내용|Details)$/,
   review: /^(확인|Review)$/,
@@ -80,7 +82,7 @@ export async function briefField(user: ReturnType<typeof userEvent.setup>, label
 }
 
 /** 말투 and 템플릿 are the two parts of the brief that are NOT behind the trigger: 말투 is its own row
- *  of the 확인 summary and 템플릿 leads the 내용 screen, so a wrong voice or template is visible
+ *  of the 확인 summary and 템플릿 has a dedicated card screen, so a wrong voice or template is visible
  *  without opening anything. */
 export async function dockField(
   user: ReturnType<typeof userEvent.setup>,
@@ -92,7 +94,10 @@ export async function dockField(
 }
 export const voiceField = (user: ReturnType<typeof userEvent.setup>) => dockField(user, /말투/)
 export const templateField = (user: ReturnType<typeof userEvent.setup>) =>
-  dockField(user, /템플릿/, GUIDE.details)
+  (async () => {
+    await guideTo(user, GUIDE.template)
+    return screen.findByRole('group', { name: '템플릿' })
+  })()
 
 /** jsdom has no image decoder, canvas encoder or object URLs; these stand in for the
  *  browser so the test can follow a file through the whole upload handshake. */

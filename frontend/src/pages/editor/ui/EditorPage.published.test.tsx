@@ -172,7 +172,7 @@ describe('a published post', () => {
     await screen.findByRole('button', { name: '기억으로 저장' })
 
     await openStep(user, '글 생성')
-    // Guide: each of ①'s four screens, in turn.
+    // Visit the material screens to check their published locks.
     await guideTo(user, GUIDE.details)
     const title = await screen.findByRole('textbox', { name: '제목' })
     expect(title).toHaveAttribute('readonly')
@@ -197,7 +197,8 @@ describe('a published post', () => {
     expect(screen.getByLabelText('촬영')).toBeDisabled()
     expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /삭제$/ })).toBeNull()
-    expect(await templateField(user)).toBeDisabled()
+    for (const card of within(await templateField(user)).getAllByRole('button'))
+      expect(card).toBeDisabled()
     expect(await voiceField(user)).toBeDisabled()
 
     const dock = screen.getByLabelText('글 작업')

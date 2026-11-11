@@ -2,45 +2,55 @@ import i18next from 'i18next'
 import { isTerminal } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 
-/** Guide: 글 생성 as four screens, one question each — the story first, then the photos, then the
- *  template's answers and the title, then a short summary that ends on 생성. */
-export type GuideStep = 'story' | 'photos' | 'details' | 'review'
+/** Campaign requirements set the context; photos still precede all writing inputs. */
+export type GuideStep =
+  'kind' | 'requirements' | 'photos' | 'template' | 'details' | 'story' | 'review'
 
-export const GUIDE_STEPS: readonly GuideStep[] = ['story', 'photos', 'details', 'review']
+export const GUIDE_STEPS: readonly GuideStep[] = [
+  'kind',
+  'requirements',
+  'photos',
+  'template',
+  'details',
+  'story',
+  'review',
+]
 
-export function guideSteps(): ReadonlyArray<{ value: GuideStep; label: string }> {
-  return GUIDE_STEPS.map((value) => ({
+export function activeGuideSteps(sponsored = true): readonly GuideStep[] {
+  return sponsored ? GUIDE_STEPS : GUIDE_STEPS.filter((step) => step !== 'requirements')
+}
+
+export function guideSteps(sponsored = true): ReadonlyArray<{ value: GuideStep; label: string }> {
+  return activeGuideSteps(sponsored).map((value) => ({
     value,
     label: i18next.t(`guide.steps.${value}`, { ns: 'posts' }),
   }))
 }
 
-export function guideIndex(step: GuideStep): number {
-  return GUIDE_STEPS.indexOf(step)
+export function guideIndex(step: GuideStep, sponsored = true): number {
+  return activeGuideSteps(sponsored).indexOf(step)
 }
 
-export function nextGuideStep(step: GuideStep): GuideStep | undefined {
-  return GUIDE_STEPS[guideIndex(step) + 1]
+export function nextGuideStep(step: GuideStep, sponsored = true): GuideStep | undefined {
+  return activeGuideSteps(sponsored)[guideIndex(step, sponsored) + 1]
 }
 
-export function previousGuideStep(step: GuideStep): GuideStep | undefined {
-  const index = guideIndex(step)
-  return index > 0 ? GUIDE_STEPS[index - 1] : undefined
+export function previousGuideStep(step: GuideStep, sponsored = true): GuideStep | undefined {
+  const index = guideIndex(step, sponsored)
+  return index > 0 ? activeGuideSteps(sponsored)[index - 1] : undefined
 }
 
-/** Where a draft opens. A new draft starts on its story. A draft that already holds material —
- *  a story or a photo — has a run going, or has a paid comparison's result waiting opens on the
- *  summary, where 생성 and that result are: the owner coming back to it has already answered the
- *  questions. */
+/** Returning drafts with material or a retained job open at the summary. A newly minted draft
+ *  instead consumes its stashed step, so entering a guide never skips the photo/template flow. */
 export function initialGuideStep(
   post:
     Pick<PostDraft, 'memo' | 'images' | 'videos' | 'activeJob' | 'pendingExperimentId'> | undefined,
 ): GuideStep {
-  if (!post) return 'story'
+  if (!post) return 'kind'
   if (post.activeJob && !isTerminal(post.activeJob)) return 'review'
   if (post.pendingExperimentId) return 'review'
   if (post.memo.trim() || post.images.length > 0 || post.videos.length > 0) return 'review'
-  return 'story'
+  return 'kind'
 }
 
 /** The step a draft was on when its first save minted it. `/posts/new` and `/posts/$slug` are two

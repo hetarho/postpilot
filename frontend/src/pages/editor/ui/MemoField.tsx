@@ -1,11 +1,8 @@
 import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import { FieldLabel, Textarea } from '@/shared/ui'
-import { MEMO_WORKSPACE_RESERVED_BOTTOM_PX } from '../config/workspace'
 
-/** The memo is the post's own words, and it is what 글 생성 works from — so it is rendered by
- *  that step while its value and its autosave stay in `DraftEditor`. Unmounting the field on
- *  another step cannot strand a queued save: the queue is keyed by slug and lives above it. */
+/** Optional closing material after the template answers; its autosave stays in DraftEditor. */
 export function MemoField({
   value,
   onChange,
@@ -32,16 +29,15 @@ export function MemoField({
         id="post-memo"
         ref={fieldRef}
         appearance="well"
-        // Guide: the story is the first screen's ONE task, so its field is the screen.
-        rows={9}
+        // Optional closing notes follow the photos and template answers.
+        rows={3}
         autoGrow
-        viewportAllocation={{ reservedBottom: MEMO_WORKSPACE_RESERVED_BOTTOM_PX }}
         value={value}
         readOnly={readOnly}
         onChange={(event) => onChange(event.target.value)}
-        placeholder={t('editor.memoPlaceholder')}
+        placeholder={t('guide.memoPlaceholder')}
         enterKeyHint="enter"
-        className="bg-card-bg min-h-64 rounded-xl p-5 shadow-md"
+        className="bg-card-bg rounded-xl p-5 shadow-md"
       />
     </>
   )

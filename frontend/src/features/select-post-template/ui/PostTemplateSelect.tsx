@@ -8,6 +8,8 @@ import {
 } from '@/entities/template'
 import {
   Button,
+  ChoiceButton,
+  cardStyles,
   FieldLabel,
   FieldMessage,
   Listbox,
@@ -21,6 +23,7 @@ import { runningJobNote, assignmentFailureMessage } from '../model/assignment'
 const CREATE_TEMPLATE_VALUE = '__create_template__'
 
 interface PostTemplateSelectProps {
+  presentation?: 'listbox' | 'cards'
   ownerId: string
   /** The assignment as the editor shows it; '' is 없음. */
   value: string
@@ -51,6 +54,7 @@ interface PostTemplateSelectProps {
  *  draft (owner decision 2026-09-02). */
 export function PostTemplateSelect({
   ownerId,
+  presentation = 'listbox',
   value,
   current,
   jobRunning = false,
@@ -111,27 +115,61 @@ export function PostTemplateSelect({
 
   return (
     <div className={className}>
-      <div className="flex items-center gap-3">
-        <FieldLabel
-          id={labelId}
-          htmlFor={id}
-          className={labelVisible ? 'w-20 shrink-0' : 'sr-only'}
-        >
-          {t('title', { ns: 'templates' })}
-        </FieldLabel>
-        <span className="min-w-0 flex-1">
-          <Listbox
-            id={id}
-            aria-labelledby={labelId}
-            value={value}
-            options={options}
-            onChange={onChange}
-            disabled={disabled || applying || isError || (isPending && !unlisted)}
-            aria-invalid={error || isError ? true : undefined}
-            aria-describedby={describedBy || undefined}
-          />
-        </span>
-      </div>
+      {presentation === 'cards' ? (
+        <div role="group" aria-label={t('title', { ns: 'templates' })} className="space-y-3">
+          {options
+            .filter((option) => option.value !== CREATE_TEMPLATE_VALUE)
+            .map((option) => (
+              <ChoiceButton
+                key={option.value}
+                title={option.label}
+                description={
+                  option.value === NO_TEMPLATE_VALUE
+                    ? t('picker.without', { ns: 'templates' })
+                    : templates.find((template) => template.id === option.value)?.description
+                }
+                selected={option.value === value}
+                disabled={disabled || applying || isError || (isPending && !unlisted)}
+                onClick={() => onChange(option.value)}
+                className={cardStyles({
+                  interactive: true,
+                  padding: 'none',
+                  className: option.value === value ? 'ring-stroke-accent ring-2' : '',
+                })}
+              />
+            ))}
+          <Button
+            variant="secondary"
+            className="min-h-11 w-full"
+            onClick={onCreateTemplate}
+            disabled={disabled || applying}
+          >
+            {t('picker.create', { ns: 'templates' })}
+          </Button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <FieldLabel
+            id={labelId}
+            htmlFor={id}
+            className={labelVisible ? 'w-20 shrink-0' : 'sr-only'}
+          >
+            {t('title', { ns: 'templates' })}
+          </FieldLabel>
+          <span className="min-w-0 flex-1">
+            <Listbox
+              id={id}
+              aria-labelledby={labelId}
+              value={value}
+              options={options}
+              onChange={onChange}
+              disabled={disabled || applying || isError || (isPending && !unlisted)}
+              aria-invalid={error || isError ? true : undefined}
+              aria-describedby={describedBy || undefined}
+            />
+          </span>
+        </div>
+      )}
       {jobRunning && (
         <Typography variant="label" as="p" id={hintId} role="status" className="mt-2">
           {runningJobNote()}

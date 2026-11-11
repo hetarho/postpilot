@@ -43,7 +43,7 @@ import {
 import {
   SegmentedControl,
   buttonStyles,
-  cardStyles,
+  ChoiceButton,
   type PopoverHandle,
   pageStyles,
   Typography,
@@ -65,6 +65,7 @@ import { LifecycleSteps } from './LifecycleSteps'
 import { MemoField } from './MemoField'
 import { TitleField } from './TitleField'
 import { CampaignMaterial } from './CampaignMaterial'
+import { CampaignTracker } from './CampaignTracker'
 
 const STEP_PANEL_ID = 'editor-step-panel'
 
@@ -118,8 +119,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const assignments = useDraftAssignments(post, defaultVoice, post ? '' : handedTemplate)
   const { voiceId, templateId, targetLanguage } = assignments
 
-  // Guide: which of 글 생성's four screens is up. It crosses the mint's remount through a stash,
-  // the way the caret does, so typing the first word of a story never throws the owner elsewhere.
+  // Which writing screen is up. It crosses the mint's remount through a stash,
+  // the way the caret does, so the first saved input never throws the owner elsewhere.
   const [guide, setGuide] = useState<GuideStep>(
     () => takeGuideStep(post?.slug) ?? initialGuideStep(post),
   )
@@ -148,8 +149,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       stashGuideStep(slug, guideRef.current)
       retainMintedPostEntry(ownerId, slug)
       // Replace the unminted address without changing its creation/history context. The scroll
-      // stays: the mint is the first edit's side effect — a toggle of the 체험단 switch halfway
-      // down ① is one — and the router's reset would yank the page to its top under the owner.
+      // stays: the mint is an edit’s side effect, and a router reset would move the input
+      // away from the owner.
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
@@ -256,28 +257,14 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     briefRef.current.open()
   }, [briefPending, guide, step])
 
-  // Guide: 내용 is 가제 → the 체험단 글 switch with its guide → the 템플릿 and its fields (POST-54's
-  // order, so the switch rides with the 가제). The memo has its own screen, first: the story is
-  // what the post is written from.
   const titleField = (
-    <>
-      <TitleField
-        value={autosave.title}
-        onChange={autosave.setTitle}
-        fieldRef={titleRef}
-        // The next text field on this screen: the template's first field that takes typing. With
-        // none, Enter stays in the 가제 (still never a newline).
-        nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : titleRef}
-        readOnly={published}
-      />
-      <CampaignMaterial
-        on={autosave.campaign.on}
-        guide={autosave.campaign.guide}
-        refusal={autosave.campaignRefusal}
-        readOnly={published}
-        onChange={({ on, guide }) => autosave.setCampaign({ ...autosave.campaign, on, guide })}
-      />
-    </>
+    <TitleField
+      value={autosave.title}
+      onChange={autosave.setTitle}
+      fieldRef={titleRef}
+      nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : titleRef}
+      readOnly={published}
+    />
   )
   const memoField = (
     <MemoField
@@ -324,6 +311,17 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         })
     },
     onTemplateSelect: post ? autosave.assignTemplate : assignments.setTemplateId,
+    onTemplateCreate: () => {
+      void autosave
+        .flush()
+        .then(async () => {
+          const slug = await autosave.ensureSlug()
+          await navigate({ to: '/templates/new', search: { post: slug } })
+        })
+        .catch(() => {
+          /* The autosave status explains a save refusal. */
+        })
+    },
     onTargetLanguageSelect: post ? autosave.assignTargetLanguage : assignments.setTargetLanguage,
     onBriefSaved: (set) => {
       brief.setTargetLength(set.targetLength)
@@ -356,9 +354,50 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       })
   }
 
-  // Guide: 글 생성's four screens. Each holds one task; the summary reads back the other three.
+  // Each writing screen holds one task; the summary links back to every input.
   const guideScreens: Record<GuideStep, ReactNode> = {
-    story: <div className="mt-6">{memoField}</div>,
+    kind: (
+      <div role="group" aria-label={t('guide.questions.kind')} className="mt-6 space-y-3">
+        <ChoiceButton
+          title={t('guide.sponsored')}
+          description={t('guide.sponsoredHelp')}
+          selected={autosave.campaign.on}
+          disabled={published}
+          onClick={() => autosave.setCampaign({ ...autosave.campaign, on: true })}
+        />
+        <ChoiceButton
+          title={t('guide.selfPaid')}
+          description={t('guide.selfPaidHelp')}
+          selected={!autosave.campaign.on}
+          disabled={published}
+          onClick={() => autosave.setCampaign({ ...autosave.campaign, on: false })}
+        />
+      </div>
+    ),
+    requirements: (
+      <CampaignMaterial
+        guide={autosave.campaign.guide}
+        refusal={autosave.campaignRefusal}
+        readOnly={published}
+        onChange={(guide) => autosave.setCampaign({ ...autosave.campaign, guide })}
+      />
+    ),
+    story: (
+      <div className="mt-6">
+        <Typography variant="body" as="p" className="mb-4">
+          {t('guide.memoHelp')}
+        </Typography>
+        {memoField}
+      </div>
+    ),
+    template: (
+      <div className="mt-6">
+        <Typography variant="body" as="p" className="mb-4">
+          {t('guide.templateHelp')}
+        </Typography>
+        {choices.template}
+      </div>
+    ),
     photos: (
       <div className="mt-4">
         <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
@@ -375,14 +414,28 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     details: (
       <div className="mt-2 flex flex-col">
         {titleField}
-        <div className={cardStyles({ padding: 'sm', className: 'mt-6' })}>{choices.template}</div>
-        {answerFieldsPanel}
+        <Typography variant="meta" as="p" className="mt-2">
+          {t('guide.titleHelp')}
+        </Typography>
+        {fields.length > 0 ? (
+          <>
+            <Typography variant="label" as="p" className="mt-5">
+              {selectedTemplate?.name}
+            </Typography>
+            {answerFieldsPanel}
+          </>
+        ) : (
+          <Typography variant="body" as="p" className="mt-6">
+            {t(templateId ? 'guide.noFields' : 'guide.withoutTemplateFields')}
+          </Typography>
+        )}
       </div>
     ),
     review: (
       <EditorReview
         post={post}
         ownerId={ownerId}
+        sponsored={autosave.campaign.on}
         memo={autosave.memo}
         title={autosave.title}
         templateName={selectedTemplate?.name || post?.template.name || noTemplateLabel()}
@@ -400,6 +453,21 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const renderGuide = (slots?: { actions: (back: ReactNode) => ReactNode; notice: ReactNode }) => (
     <EditorGuide
       step={guide}
+      sponsored={autosave.campaign.on}
+      closingHasText={Boolean(autosave.memo.trim())}
+      tracker={
+        autosave.campaign.on && guide !== 'kind' && guide !== 'requirements' ? (
+          <CampaignTracker
+            guide={autosave.campaign.guide}
+            photoCount={post?.images.length ?? 0}
+            title={autosave.title}
+            memo={autosave.memo}
+            answers={fields}
+            step={guide}
+            onEdit={() => setGuide('requirements')}
+          />
+        ) : undefined
+      }
       onStepChange={setGuide}
       screens={guideScreens}
       actions={slots?.actions}

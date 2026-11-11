@@ -14,6 +14,7 @@ import type { GuideStep } from '../model/guide'
 export function EditorReview({
   post,
   ownerId,
+  sponsored,
   memo,
   title,
   templateName,
@@ -26,6 +27,7 @@ export function EditorReview({
 }: {
   post?: PostDraft
   ownerId: string
+  sponsored: boolean
   memo: string
   title: string
   templateName: string
@@ -53,13 +55,11 @@ export function EditorReview({
       {running && <WritingCard job={running} />}
       <ul className={cardStyles({ padding: 'none', className: 'divide-divider divide-y' })}>
         <SummaryRow
-          label={t('guide.summary.story')}
+          label={t('guide.summary.kind')}
           change={t('guide.change')}
-          onChange={() => onGo('story')}
+          onChange={() => onGo('kind')}
         >
-          <span className="line-clamp-2 whitespace-pre-line">
-            {memo.trim() || t('guide.storyEmpty')}
-          </span>
+          {t(sponsored ? 'guide.sponsored' : 'guide.selfPaid')}
         </SummaryRow>
         <SummaryRow
           label={t('guide.summary.photos')}
@@ -95,8 +95,21 @@ export function EditorReview({
           onChange={() => onGo('details')}
         >
           <span className="line-clamp-2">{title.trim() || t('guide.titleEmpty')}</span>
-          <span className={typographyStyles({ variant: 'meta', className: 'block' })}>
-            {t('guide.summary.template')} · {templateName}
+        </SummaryRow>
+        <SummaryRow
+          label={t('guide.summary.template')}
+          change={t('guide.change')}
+          onChange={() => onGo('template')}
+        >
+          {templateName}
+        </SummaryRow>
+        <SummaryRow
+          label={t('guide.summary.story')}
+          change={t('guide.change')}
+          onChange={() => onGo('story')}
+        >
+          <span className="line-clamp-2 whitespace-pre-line">
+            {memo.trim() || t('guide.storyEmpty')}
           </span>
         </SummaryRow>
       </ul>

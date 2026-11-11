@@ -7,7 +7,7 @@ export const i18n = {
     checklist: {
       title: '제출 전 체크리스트',
       help: '광고주 가이드를 지금 글과 비교했어요. 참고용이라 복사, 완성, 발행은 그대로 할 수 있어요.',
-      counted: '셀 수 있는 항목',
+      counted: '글에 꼭 담을 내용',
       keyword: '필수 키워드 “{{keyword}}”',
       keywordMet: '들어 있어요',
       keywordMissing: '아직 없어요',
@@ -21,14 +21,14 @@ export const i18n = {
       hashtagMet: '태그에 있어요',
       hashtagMissing: '태그에 없어요',
       lines: '광고주 요청 확인',
-      linesHelp: '셀 수 없는 요청은 글을 읽고 직접 체크하세요.',
+      linesHelp: '나머지 요청은 글을 읽고 직접 확인해 주세요.',
     },
   },
   en: {
     checklist: {
       title: 'Pre-submission checklist',
       help: 'The advertiser guide compared with the post as it is now. It is advisory: copying, finishing and publishing stay available.',
-      counted: 'Countable items',
+      counted: 'What your post needs',
       keyword: 'Required keyword “{{keyword}}”',
       keywordMet: 'Included',
       keywordMissing: 'Not yet included',
@@ -43,7 +43,7 @@ export const i18n = {
       hashtagMet: 'In the tags',
       hashtagMissing: 'Not in the tags',
       lines: 'Advertiser requests to confirm',
-      linesHelp: 'Read the post and tick the requests that cannot be counted.',
+      linesHelp: 'Read the post and check the remaining requests yourself.',
     },
   },
 } as const satisfies I18nFragment

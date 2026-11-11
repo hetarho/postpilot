@@ -1,5 +1,4 @@
 import { useState, type ReactNode, type Ref } from 'react'
-import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { isPublished, type GenerationOptionsSet, type PostDraft } from '@/entities/post'
 import { usePrefetchAccountQuality } from '@/entities/quality'
@@ -22,6 +21,7 @@ export interface EditorChoicesProps {
   onVoiceSelect: (id: string) => void
   onGrowVoice: (id: string) => void
   onTemplateSelect: (id: string) => void
+  onTemplateCreate: () => void
   onTargetLanguageSelect: (language: ContentLanguage) => void
   onBriefSaved: (set: GenerationOptionsSet) => void
   /** The run a press was refused for, which the brief marks the missing fields of; `count`
@@ -35,8 +35,8 @@ export interface EditorChoicesProps {
 /** The three choices that decide what a run writes — 말투, 템플릿 and the writing brief — as
  *  separately placeable pieces.
  *
- *  Guide: they no longer share one dock row. The 템플릿 is chosen on the screen that asks for its
- *  answers (내용), and the 말투 and the brief are rows of the 확인 summary, each reading its own
+ *  The template is a dedicated card-choice screen before its answers. Voice and the writing
+ *  brief are rows of the review summary, each reading its own
  *  value with its own way to change it (POST-51: both stay readable without opening anything).
  *  `sheet` is the 새 말투 만들기 sheet the voice picker opens; mount it once, anywhere. */
 export function useEditorChoices({
@@ -50,6 +50,7 @@ export function useEditorChoices({
   onVoiceSelect,
   onGrowVoice,
   onTemplateSelect,
+  onTemplateCreate,
   onTargetLanguageSelect,
   onBriefSaved,
   refusal,
@@ -69,7 +70,6 @@ export function useEditorChoices({
   // The picker's `새 말투 만들기` opens the directory's own create sheet (VOICE-53). Its open state
   // lives here because the picker, a feature, cannot render another feature (ARCH-13).
   const [creatingVoice, setCreatingVoice] = useState(false)
-  const navigate = useNavigate()
   // Read as soon as the editor renders, so the rows are there when the brief opens; the language
   // is part of the read, since every rule text is rendered in it.
   usePrefetchAccountQuality(ownerId, post?.slug ?? '', targetLanguage)
@@ -130,16 +130,14 @@ export function useEditorChoices({
 
   const template = (
     <PostTemplateSelect
+      presentation="cards"
       ownerId={ownerId}
       value={templateId}
       current={post?.template}
       jobRunning={!published && jobRunning}
       onSelect={onTemplateSelect}
-      // The wizard returns here on 저장 with the new template assigned (TMPL-32); an unsaved
-      // draft has nothing typed to lose, since the first edit mints the post.
-      onCreateTemplate={() =>
-        void navigate({ to: '/templates/new', search: { post: post?.slug ?? 'new' } })
-      }
+      // The page flushes the guide and photos before leaving for the wizard.
+      onCreateTemplate={onTemplateCreate}
       disabled={published}
       labelVisible
       className="min-w-0"

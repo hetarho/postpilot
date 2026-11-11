@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { ActionBar, Button, GuideProgress, StepScreen } from '@/shared/ui'
 import {
   GUIDE_STEPS,
+  activeGuideSteps,
   guideIndex,
   guideSteps,
   nextGuideStep,
@@ -11,9 +12,8 @@ import {
   type GuideStep,
 } from '../model/guide'
 
-/** Guide: 글 생성 as a guided sequence — a slim progress at the top, ONE question per screen, and
- *  the bottom bar in the thumb zone holding 이전 and the step's one big action: 다음 on the first
- *  three screens, 생성 on the summary.
+/** A slim progress, one question per screen, and the next action in the thumb zone.
+ *  Sponsored posts include a requirements screen; closing notes are optional.
  *
  *  The screens are PANELS, not routes, for the same reason the lifecycle steps are: the page owns
  *  the post's fields and their autosave, so a screen change can never strand a queued save. */
@@ -23,7 +23,13 @@ export function EditorGuide({
   screens,
   actions,
   notice,
+  sponsored,
+  closingHasText,
+  tracker,
 }: {
+  sponsored: boolean
+  closingHasText: boolean
+  tracker?: ReactNode
   step: GuideStep
   onStepChange: (step: GuideStep) => void
   /** Each screen's content, under the question the screen asks. */
@@ -43,8 +49,9 @@ export function EditorGuide({
     setDirection(guideIndex(step) < guideIndex(shown) ? 'back' : 'forward')
     setShown(step)
   }
-  const previous = previousGuideStep(step)
-  const next = nextGuideStep(step)
+  const steps = activeGuideSteps(sponsored)
+  const previous = previousGuideStep(step, sponsored)
+  const next = nextGuideStep(step, sponsored)
   const go = (target: GuideStep) => {
     onStepChange(target)
     window.scrollTo(0, 0)
@@ -65,23 +72,24 @@ export function EditorGuide({
   return (
     <>
       <GuideProgress
-        steps={guideSteps()}
+        steps={guideSteps(sponsored)}
         current={step}
         onSelect={go}
         ariaLabel={t('guide.aria')}
         className="mt-2"
       />
+      {tracker}
       {/* Every screen stays mounted and only the current one is shown: an upload started on 사진
           keeps reporting, and an answer half-typed on 내용 keeps its caret, while the owner looks
           at another screen. Showing a screen again replays its entrance. */}
       {GUIDE_STEPS.map((value) => (
         <StepScreen
           key={value}
-          hidden={value !== step}
+          hidden={value !== step || !steps.includes(value)}
           direction={direction}
           eyebrow={t('guide.position', {
-            current: guideIndex(value) + 1,
-            total: GUIDE_STEPS.length,
+            current: guideIndex(value, sponsored) + 1,
+            total: steps.length,
           })}
           title={t(`guide.questions.${value}`)}
           className="mt-6"
@@ -96,7 +104,13 @@ export function EditorGuide({
             <div className="flex items-center gap-2">
               {back}
               <Button variant="cta" size="hero" className="min-w-0 flex-1" onClick={() => go(next)}>
-                {t('guide.next')}
+                {t(
+                  step === 'story'
+                    ? closingHasText
+                      ? 'guide.toReview'
+                      : 'guide.skipMemo'
+                    : 'guide.next',
+                )}
                 <ArrowRight aria-hidden="true" className="size-5" />
               </Button>
             </div>
@@ -105,7 +119,9 @@ export function EditorGuide({
               the draft or asking about re-observation keeps its state while the owner steps back
               to fix an answer. */}
           {actions ? (
-            <div hidden={step !== summary}>{actions(backTo(previousGuideStep(summary)))}</div>
+            <div hidden={step !== summary}>
+              {actions(backTo(previousGuideStep(summary, sponsored)))}
+            </div>
           ) : (
             !next && back && <div className="flex items-center gap-2">{back}</div>
           )}

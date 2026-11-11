@@ -513,9 +513,9 @@ describe('the post template', () => {
 
   async function pickTemplate(user: ReturnType<typeof userEvent.setup>, name: string) {
     const picker = await templateField(user)
-    await waitFor(() => expect(picker).toBeEnabled())
-    await user.click(picker)
-    await user.click(await screen.findByRole('option', { name }))
+    const card = await within(picker).findByRole('button', { name })
+    await waitFor(() => expect(card).toBeEnabled())
+    await user.click(card)
     return picker
   }
 
@@ -697,9 +697,8 @@ describe('the template data fields in ①', () => {
   const before = (a: Element, b: Element) =>
     Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 
-  // Guide: the memo is the first screen's one task (이야기); 가제 and the template's fields share
-  // the 내용 screen after it, in body order.
-  it('puts the memo on its own first screen, then 가제 and the fields in body order', async () => {
+  // The title and selected-template fields precede the optional closing memo.
+  it('puts the closing memo after the title and fields in body order', async () => {
     const user = userEvent.setup()
     renderJeju()
     await guideTo(user, GUIDE.details)
@@ -709,7 +708,7 @@ describe('the template data fields in ①', () => {
     // The story is not on this screen.
     expect(screen.queryByRole('textbox', { name: '메모' })).toBeNull()
     const memo = screen.getByLabelText('메모')
-    expect(before(memo, title)).toBe(true)
+    expect(before(rated, memo)).toBe(true)
     expect(before(title, visited)).toBe(true)
     expect(before(visited, rated)).toBe(true)
     await guideTo(user, GUIDE.story)
