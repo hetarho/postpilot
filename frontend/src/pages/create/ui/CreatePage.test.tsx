@@ -13,14 +13,14 @@ afterEach(() => {
   sessionStorage.clear()
   initializeI18n('ko')
 })
-describe('channel launch', () => {
+describe('canonical creation launch', () => {
   it.each(['light', 'dark'] as const)(
     'offers one entry per channel in the %s theme without creating work',
     async (storedPreference) => {
       const calls: string[] = []
       const theme = createThemeTestEnvironment({ storedPreference })
       renderAppAt('/', { user: { id: 'home-alice' }, calls, theme: theme.ports })
-      const choices = await screen.findByRole('navigation', { name: '채널 선택' })
+      const choices = await screen.findByRole('navigation', { name: '만들 것' })
       const links = within(choices).getAllByRole('link')
       expect(links).toHaveLength(3)
       expect(links.map((link) => link.getAttribute('href'))).toEqual([
@@ -28,14 +28,15 @@ describe('channel launch', () => {
         '/clips/new?channel=naver_clip',
         '/clips/new?channel=instagram_clip',
       ])
-      expect(links.map((link) => link.getAttribute('aria-labelledby'))).toEqual([
-        'home-naverBlog-label',
-        'home-naverClip-label',
-        'home-instaClip-label',
-      ])
-      expect(links[0]).toHaveAccessibleName('네이버 블로그')
-      expect(links[1]).toHaveAccessibleName('네이버 클립')
-      expect(links[2]).toHaveAccessibleName('인스타 클립')
+      expect(links[0]).toHaveAccessibleName(/블로그 글/)
+      expect(links[1]).toHaveAccessibleName(/네이버 클립/)
+      expect(links[2]).toHaveAccessibleName(/인스타 클립/)
+      expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/create')
+      expect(
+        within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {
+          name: '만들기',
+        }),
+      ).toHaveAttribute('aria-current', 'page')
       expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
       expect(screen.queryByRole('combobox')).toBeNull()
       expect(calls.filter((call) => /^(Create|Start|Analyze|SavePostDraft)/.test(call))).toEqual([])
@@ -45,7 +46,7 @@ describe('channel launch', () => {
     const calls: string[] = []
     const user = userEvent.setup()
     const { router } = renderAppAt('/', { user: { id: 'home-alice' }, calls })
-    const choices = await screen.findByRole('navigation', { name: '채널 선택' })
+    const choices = await screen.findByRole('navigation', { name: '만들 것' })
     const [post, naver, insta] = within(choices).getAllByRole('link')
     post!.focus()
     await user.tab()

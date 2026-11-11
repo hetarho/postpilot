@@ -8,7 +8,6 @@ import { i18n as candidateFlowI18n } from '@/features/generate-writing-voices/co
 import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
 import { i18n as creationOfferI18n } from '@/features/offer-creation-setup/config/i18n'
 import { i18n as channelI18n } from '@/widgets/channel-actions/config/i18n'
-import { i18n as homeI18n } from '@/pages/home/config/i18n'
 import { i18n as workListI18n } from '@/widgets/work-list/config/i18n'
 import { i18n as createI18n } from '@/pages/create/config/i18n'
 import { i18n as guideHubsI18n } from '@/pages/style/config/i18n'
@@ -172,7 +171,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   candidateFlowI18n,
   setupI18n,
   creationOfferI18n,
-  homeI18n,
   channelI18n,
   workListI18n,
   createI18n,
@@ -302,7 +300,6 @@ export const resources = {
     voicePreparation: { ...voicePreparationI18n.ko },
     channel: { ...channelI18n.ko, ...workListI18n.ko },
     creation: {
-      ...homeI18n.ko,
       ...createI18n.ko,
       ...guideHubsI18n.ko,
       ...libraryI18n.ko,
@@ -457,7 +454,6 @@ export const resources = {
     voicePreparation: { ...voicePreparationI18n.en },
     channel: { ...channelI18n.en, ...workListI18n.en },
     creation: {
-      ...homeI18n.en,
       ...createI18n.en,
       ...guideHubsI18n.en,
       ...libraryI18n.en,

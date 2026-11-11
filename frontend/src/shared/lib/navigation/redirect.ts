@@ -21,4 +21,4 @@ export function isInAppPath(value: string | undefined): value is string {
 }
 
 /** The shared default for ordinary login and reverse guards. Deep links retain their target. */
-export const SIGNED_IN_HOME = '/'
+export const SIGNED_IN_HOME = '/create'

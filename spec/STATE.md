@@ -192,7 +192,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
-| T753 | Unify signed-in home and creation | THEME POST CLIP ARCH | - | todo |
 | T754 | Stabilize My work section and loading geometry | THEME POST CLIP ARCH | T753 | todo |
 | T755 | Distinguish prepared storylines in clip histories | THEME POST CLIP ARCH | T754 | todo |
 | T756 | Unify compact emphasized in-progress work | THEME POST CLIP ARCH | T755 | todo |
@@ -203,6 +202,8 @@
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 T753 done (ui12): canonical /create with / alias, logo/login/setup preserved; 24 files/288 consumer tests, lint/FSD/style/build and Chromium fixture proof pass. Full pre-push gate follows.
+- 261112 T753 starts (ui12), baseline 1baf181e: canonical /create, preserve setup/deep links/public auth.
 - 261112 create-task T753–T756 (ui12): consume THEME r40, POST r47 and CLIP r74; four sequential foreground units, no unrelated pending domain consumed.
 - 261112 update-ssot THEME POST CLIP starts (ui12): canonical creation, stable My work geometry, truthful storyline-ready list state and compact unified continuation; current adopted group has no active attempt and foreground follows ARCH-70.
 - 261112 start-vibe ui12 starts: clean main b1c33087, remote equal, no design; questions waived, UI fixes precede video self-improve-local, deadline 2026-11-13T00:00Z. Preflight, push dry-run and real headless Codex probe pass. Preserve the stale adopted work binding and unrelated workspaces.
@@ -221,5 +222,3 @@
 - 261111 T747 starts (cr11): pin browser admission independently of fully occupied native active/waiting slots and map load/queue/cancellation/restart/resource clauses to current named tests, without live hosting or rental benchmarks. T751 is committed/pushed; its immutable remote workflows remain under observation.
 - 261111 T751 done (cr11): query/sqlc order solely by reverse rowid acceptance, preserving stored timestamps, bodies/kinds, owner/project filters and schema/index. Deterministic reversed/equal-time regression fails original query and passes the repair; full clip/store/app/rpc and 21 FE consumer tests pass. Complete ARCH-31 on 4f357b66 passes (FE 593/4721, deploy Python 69, Go all, static/build/generation/Compose, both deployment images and all three media gates, both layouts); remote results follow after push.
 - 261111 T752 remote verified (cr11): code push 53dc028d CI 43025005875 and Deploy backend 43025005647 pass, including actual rollout/ranged GET/CORS/R2 gates; completion metadata 740b8437 CI 43025066174 passes. Verify media 43026911492 passes all three jobs; its API head_sha is 740b8437 but every checkout/log binds the tested source to deployed 53dc028d.
-- 261111 T751 starts (cr11): T752 committed and pushed after the complete local gate; immutable remote workflow observation continues. Follow ARCH-70 on main while the stale adopted work binding prevents the detached loop; pin history to acceptance order with deterministic reversed/equal timestamps and unchanged write/schema/RPC contracts.
-- 261111 T752 done (cr11): retain the three original signed x86_64 zlib APKs in both build contexts after 784b5daf's actual remote 404; index-first, hashes/signatures and all pins/budgets unchanged. New tests fail 7/11 on the original prefix and pass 11/11; related dev suite 22/22 and pinned-base no-wget install pass. Full ARCH-31 on 0af16636 passes: FE 593/4721, Go all, deploy Python 69, generated/static/build checks, Compose, both deployable images and all three media gates, both release layouts within the original envelope. Remote results follow after push.

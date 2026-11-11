@@ -111,7 +111,7 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
   const banner = screen.getByRole('banner')
   expect(banner.children).toHaveLength(1)
   expect(banner).toContainElement(screen.getByRole('button', { name: '내 계정' }))
-  expect(banner.querySelector('a[href="/"]')).not.toBeNull()
+  expect(banner.querySelector('a[href="/create"]')).not.toBeNull()
   expect(banner).not.toContainElement(nav)
   expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
 
@@ -234,8 +234,8 @@ it('retains a 나 origin through reload and restores its document position on ex
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
 it.each([
-  ['ko', '네이버 블로그', '네이버 클립', '인스타 클립'],
-  ['en', 'Naver Blog', 'Naver Clip', 'Instagram Clip'],
+  ['ko', '블로그 글', '네이버 클립', '인스타 클립'],
+  ['en', 'Blog post', 'Naver Clip', 'Instagram Clip'],
 ] as const)(
   'keeps exactly three home channel entries in %s without object writes',
   async (locale, post, naver, insta) => {

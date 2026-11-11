@@ -68,7 +68,7 @@ it('offers setup after missing settings were read without creating content or pa
 it('shows the two-choice launch for configured users and acknowledges that browser', async () => {
   renderAppAt('/', READY)
   expect(
-    await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' }),
+    await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ }),
   ).toHaveAttribute('href', '/posts/new')
   expect(screen.queryByRole('heading', { name: /처음 한 번/ })).toBeNull()
   expect(readSetupProgress(OWNER).completed).toBe(true)
@@ -90,7 +90,7 @@ it('distinguishes failed directory reads from missing settings and offers explic
   expect(screen.queryByRole('button', { name: '내 작업 공간 준비하기' })).toBeNull()
   await user.click(screen.getByRole('button', { name: '먼저 시작하기' }))
   expect(
-    await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' }),
+    await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ }),
   ).toBeInTheDocument()
   expect(readSetupProgress(OWNER).completed).toBe(true)
 })
@@ -178,11 +178,11 @@ it('defers once, survives reload and does not share the acknowledgement with ano
   const user = userEvent.setup()
   const first = mountFresh()
   await user.click(await screen.findByRole('button', { name: '나중에 설정할게요' }))
-  await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' })
+  await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ })
   first.unmount()
   const second = mountFresh()
-  await within(await screen.findByRole('main')).findByRole('link', { name: '네이버 블로그' })
-  expect(second.router.state.location.pathname).toBe('/')
+  await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ })
+  expect(second.router.state.location.pathname).toBe('/create')
   second.unmount()
   renderAppAt('/', { user: { id: 'setup-bob' }, firstUseSetup: true, voice: { voices: [] } })
   expect(
@@ -222,7 +222,7 @@ it('finishes at home with no creation handoff', async () => {
     await user.click(await screen.findByRole('button', { name: '지금은 건너뛰기' }))
   await user.click(await screen.findByRole('button', { name: '만들러 가기' }))
 
-  await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/create'))
   expect(router.state.location.search).not.toHaveProperty('from')
 })
 it('resumes an unfinished voice rather than creating another one', async () => {
@@ -446,7 +446,7 @@ it('saves a clip template once before offering completion', async () => {
   expect(
     await within(screen.getByRole('main')).findByRole('link', { name: '네이버 클립' }),
   ).toBeInTheDocument()
-  expect(router.state.location.pathname).toBe('/')
+  expect(router.state.location.pathname).toBe('/create')
 })
 it('retains a clip template after a failed save', async () => {
   resumeSetup('clip-template')

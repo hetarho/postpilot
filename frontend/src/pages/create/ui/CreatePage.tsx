@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ChevronRight, Clapperboard, Film, PenLine } from 'lucide-react'
+import { FirstUseSetupGate } from '@/widgets/creation-setup'
 import { useSession } from '@/entities/session'
 import { rememberPostEntry } from '@/entities/post'
 import { clipChannelPath, rememberClipEntry } from '@/entities/clip-project'
@@ -32,49 +33,56 @@ export function CreatePage() {
           scrollY: 0,
         })
   return (
-    <main
-      className={pageStyles({ width: 'prose', className: 'flex flex-1 flex-col pt-4 sm:pt-10' })}
-    >
-      <Typography variant="largeTitle" className="text-balance">
-        {t('guideCreate.title')}
-      </Typography>
-      <nav aria-label={t('guideCreate.choices')} className="mt-8">
-        <ul className="grid gap-4">
-          {CHOICES.map(({ key, channel, icon }, index) => (
-            <li key={key} className="animate-step-in" style={{ animationDelay: `${index * 60}ms` }}>
-              <Link
-                to={channel ? '/clips/new' : '/posts/new'}
-                search={channel ? { channel } : {}}
-                onClick={() => remember(channel)}
-                aria-describedby={`create-${key}-outcome`}
-                className={cardStyles({
-                  interactive: true,
-                  className: 'flex min-h-24 items-center gap-4',
-                })}
+    <FirstUseSetupGate>
+      <main
+        className={pageStyles({ width: 'prose', className: 'flex flex-1 flex-col pt-4 sm:pt-10' })}
+      >
+        <Typography variant="largeTitle" className="text-balance">
+          {t('guideCreate.title')}
+        </Typography>
+        <nav aria-label={t('guideCreate.choices')} className="mt-8">
+          <ul className="grid gap-4">
+            {CHOICES.map(({ key, channel, icon }, index) => (
+              <li
+                key={key}
+                className="animate-step-in"
+                style={{ animationDelay: `${index * 60}ms` }}
               >
-                <ListRowIcon icon={icon} size="lg" />
-                <span className="flex min-w-0 flex-1 flex-col gap-1">
-                  <Typography variant="title" as="span">
-                    {t(`guideCreate.${key}`)}
-                  </Typography>
-                  <Typography
-                    variant="body"
-                    as="span"
-                    id={`create-${key}-outcome`}
-                    className="text-content-secondary"
-                  >
-                    {t(`guideCreate.${key}Outcome`)}
-                  </Typography>
-                </span>
-                <ChevronRight
-                  aria-hidden="true"
-                  className="text-content-tertiary size-6 shrink-0"
-                />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
-    </main>
+                <Link
+                  to={channel ? '/clips/new' : '/posts/new'}
+                  search={channel ? { channel } : {}}
+                  onClick={() => remember(channel)}
+                  aria-labelledby={`create-${key}-label`}
+                  aria-describedby={`create-${key}-outcome`}
+                  className={cardStyles({
+                    interactive: true,
+                    className: 'flex min-h-24 items-center gap-4',
+                  })}
+                >
+                  <ListRowIcon icon={icon} size="lg" />
+                  <span className="flex min-w-0 flex-1 flex-col gap-1">
+                    <Typography variant="title" as="span" id={`create-${key}-label`}>
+                      {t(`guideCreate.${key}`)}
+                    </Typography>
+                    <Typography
+                      variant="body"
+                      as="span"
+                      id={`create-${key}-outcome`}
+                      className="text-content-secondary"
+                    >
+                      {t(`guideCreate.${key}Outcome`)}
+                    </Typography>
+                  </span>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="text-content-tertiary size-6 shrink-0"
+                  />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </main>
+    </FirstUseSetupGate>
   )
 }

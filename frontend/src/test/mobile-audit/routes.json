@@ -92,7 +92,7 @@
     "expectedPath": "/",
     "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/home/ui/HomePage.tsx",
+      "source": "frontend/src/pages/create/ui/CreatePage.tsx",
       "status": "changed",
       "finding": "Three peer channel entries open creation without record or AI work.",
       "inspectedStates": ["populated", "loading", "failure"]

@@ -64,7 +64,7 @@ describe('session guard', () => {
 describe('the app home', () => {
   it('renders creation choices at the root', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
-    expect(await screen.findByRole('link', { name: '네이버 블로그' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: /블로그 글/ })).toHaveAttribute(
       'href',
       '/posts/new',
     )
@@ -72,7 +72,7 @@ describe('the app home', () => {
       'href',
       '/clips/new?channel=naver_clip',
     )
-    expect(router.state.location.pathname).toBe('/')
+    expect(router.state.location.pathname).toBe('/create')
   })
 })
 
@@ -657,7 +657,7 @@ describe('theme preferences in the real route tree', () => {
     expect(await screen.findByRole('heading', { name: '템플릿', level: 1 })).toBeInTheDocument()
     const header = screen.getByRole('banner')
     const account = within(header).getByRole('button', { name: '내 계정' })
-    expect(header.querySelector('a[href="/"]')).not.toBeNull()
+    expect(header.querySelector('a[href="/create"]')).not.toBeNull()
     expect(within(header).queryByRole('navigation')).toBeNull()
     const navigation = screen.getByRole('navigation', { name: '주요' })
     expect(
@@ -792,8 +792,9 @@ describe('localized registered-route smoke', () => {
         {
           path: '/',
           role: 'heading',
-          name: locale === 'ko' ? /내가 겪은 것만으로/ : /Your own experience/,
+          name: locale === 'ko' ? /무엇을 만들까요/ : /What shall we make/,
           signedIn: true,
+          expectedPath: '/create',
         },
         { path: '/naver-blog', role: 'heading', name: text.posts, signedIn: true },
         {

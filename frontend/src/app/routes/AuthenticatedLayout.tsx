@@ -192,7 +192,7 @@ export function AuthenticatedLayout() {
           ? t(`location.${routeLocation(returnHref, channel).current}`)
           : undefined
   const immersive = pathname === '/plans'
-  const quiet = pathname === '/' || pathname === '/setup'
+  const quiet = pathname === '/create' || pathname === '/setup'
   const setup = pathname === '/setup'
   // The editor, the clip workspace and the writing tests carry their own way back in their top
   // row; every other child route gets exactly one here (THEME-58).
@@ -407,7 +407,7 @@ export function AuthenticatedLayout() {
               in the bottom tab bar, where the thumb is. */}
           <div className="h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
             <Link
-              to="/"
+              to="/create"
               aria-label={t('home')}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
             >
