@@ -10,6 +10,7 @@ import { toWizardBody } from '../lib/to-body'
 import {
   checkedSections,
   finishProblem,
+  pickedTarget,
   wizardHasAnswers,
   wizardProgress,
   wizardMachine,
@@ -25,6 +26,7 @@ import { TargetStep } from './TargetStep'
 import { WizardPreview } from './WizardPreview'
 import { useWizardHeadingSuggestions as useHeadingSuggestions } from '@/entities/template'
 import { saveTemplateMachine } from '../model/save-template-machine'
+import { useTargetSeeds } from '../model/target-seeds'
 
 interface Props {
   ownerId: string
@@ -54,6 +56,7 @@ function OwnedTemplateWizard({
   host,
 }: Props) {
   const { t } = useTranslation('templates')
+  const seedsFor = useTargetSeeds()
   const actor = useActorRef(wizardMachine, { input: { seedHeadings } })
   const state = useSelector(actor, wizardStateOf)
   const send = actor.send
@@ -188,6 +191,7 @@ function OwnedTemplateWizard({
     switch (current.step) {
       case 'target': {
         const node = templateTargetAt(current.path.slice(0, current.depth))
+        const picked = pickedTarget(current)
         return {
           title: t(`questions.${(node?.key ?? 'root') as 'root'}`, { ns: 'templateTargets' }),
           help: t('wizard.targetHelp'),
@@ -200,6 +204,16 @@ function OwnedTemplateWizard({
                   onClick: host.back,
                   disabled: host.backDisabled,
                 },
+          // A tap only chooses; 다음 moves on with the chosen answer, held until there is one.
+          next: {
+            label: t('wizard.next'),
+            forward: true,
+            disabled: !picked,
+            reason: picked ? undefined : t('wizard.pickFirst'),
+            onClick: () => {
+              if (picked) send({ type: 'choose', key: picked.key, seeds: seedsFor(picked) })
+            },
+          },
           children: <TargetStep state={current} send={send} />,
         }
       }

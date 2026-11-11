@@ -12,6 +12,7 @@ describe('configuration authoring entrypoints', () => {
       await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
     ).toBeVisible()
     await user.click(screen.getByRole('button', { name: /^맛집/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
     expect(await screen.findByRole('heading', { level: 2, name: '어떤 식당인가요?' })).toBeVisible()
     await user.click(screen.getByRole('button', { name: '이전' }))
     expect(

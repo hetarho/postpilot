@@ -10,7 +10,7 @@ import {
   type ClipComposition,
   type ClipRecipe,
 } from '@/entities/clip-template'
-import { templateTargetAt, useWizardHeadingSuggestions } from '@/entities/template'
+import { templateTargetAt, useWizardHeadingSuggestions, type TargetNode } from '@/entities/template'
 import { formatAppFailure } from '@/shared/lib'
 import {
   Button,
@@ -230,10 +230,43 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure, 
       />
     )
   }
+  /** A leaf answer's stages, in the owner's language, which 다음 hands over with the answer. */
+  function seedsFor(child: TargetNode) {
+    if (!child.roles) return undefined
+    const path = [...state.path.slice(0, state.depth), child.key]
+    const target = path
+      .map((key) => t(`targets.${key as 'restaurant'}.name`, { ns: 'templateTargets' }))
+      .join(' · ')
+    const subject = t(`subjects.${subjectOf(path) as 'meal'}`, {
+      ns: 'clipWizard',
+    })
+    const where = t(path[0] === 'product' ? 'whereProduct' : 'wherePlace', {
+      ns: 'clipWizard',
+    })
+    const labels = Object.fromEntries(
+      STAGE_ROLES.map((role) => [
+        role,
+        {
+          name: t(`roles.${role}.name`, { ns: 'clipWizard', subject }),
+          intent: t(`roles.${role}.intent`, {
+            ns: 'clipWizard',
+            target,
+            subject,
+            where,
+          }),
+        },
+      ]),
+    ) as Parameters<typeof clipStageSeeds>[0]
+    return clipStageSeeds(
+      labels,
+      t(path[0] === 'product' ? 'fieldProduct' : 'fieldPlace', { ns: 'clipWizard' }),
+    )
+  }
   function frame() {
     switch (state.step) {
       case 'target': {
         const node = templateTargetAt(state.path.slice(0, state.depth))
+        const picked = node?.children?.find((child) => child.key === state.path[state.depth])
         return {
           title:
             node?.key === 'root'
@@ -249,6 +282,16 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure, 
                   onClick: host.back,
                   disabled: host.backDisabled,
                 },
+          // A tap only chooses; 다음 moves on with the chosen answer, held until there is one.
+          next: {
+            label: t('next', { ns: 'clipWizard' }),
+            forward: true,
+            disabled: !picked,
+            reason: picked ? undefined : t('pickFirst', { ns: 'clipWizard' }),
+            onClick: () => {
+              if (picked) send({ type: 'choose', key: picked.key, seeds: seedsFor(picked) })
+            },
+          },
           children: (
             <ul className="grid gap-2 sm:grid-cols-2">
               {node?.children?.map((child) => (
@@ -262,46 +305,7 @@ function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure, 
                       ns: 'templateTargets',
                     })}
                     selected={state.path[state.depth] === child.key}
-                    onClick={() => {
-                      const path = [...state.path.slice(0, state.depth), child.key]
-                      const target = path
-                        .map((key) =>
-                          t(`targets.${key as 'restaurant'}.name`, { ns: 'templateTargets' }),
-                        )
-                        .join(' · ')
-                      const subject = t(`subjects.${subjectOf(path) as 'meal'}`, {
-                        ns: 'clipWizard',
-                      })
-                      const where = t(path[0] === 'product' ? 'whereProduct' : 'wherePlace', {
-                        ns: 'clipWizard',
-                      })
-                      const labels = Object.fromEntries(
-                        STAGE_ROLES.map((role) => [
-                          role,
-                          {
-                            name: t(`roles.${role}.name`, { ns: 'clipWizard', subject }),
-                            intent: t(`roles.${role}.intent`, {
-                              ns: 'clipWizard',
-                              target,
-                              subject,
-                              where,
-                            }),
-                          },
-                        ]),
-                      ) as Parameters<typeof clipStageSeeds>[0]
-                      send({
-                        type: 'choose',
-                        key: child.key,
-                        seeds: child.roles
-                          ? clipStageSeeds(
-                              labels,
-                              t(path[0] === 'product' ? 'fieldProduct' : 'fieldPlace', {
-                                ns: 'clipWizard',
-                              }),
-                            )
-                          : undefined,
-                      })
-                    }}
+                    onClick={() => send({ type: 'pick', key: child.key })}
                   />
                 </li>
               ))}

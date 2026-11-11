@@ -5,6 +5,7 @@ export const i18n = {
   ko: {
     target: '어떤 체험을 영상으로 남기나요?',
     targetHelp: '고른 대상에 맞춰 영상의 흐름을 함께 정해요.',
+    pickFirst: '하나를 골라 주세요.',
     progress: '{{current}} / {{total}}단계',
     progressLabel: '영상 템플릿 만들기 진행',
     targetProgress: '어떤 영상인지 고르는 중',
@@ -100,6 +101,7 @@ export const i18n = {
   en: {
     target: 'Which experience is this video about?',
     targetHelp: 'Shape a video arc for the target you choose.',
+    pickFirst: 'Choose one to continue.',
     progress: 'Step {{current}} / {{total}}',
     progressLabel: 'Video template progress',
     targetProgress: 'Choosing the kind of video',

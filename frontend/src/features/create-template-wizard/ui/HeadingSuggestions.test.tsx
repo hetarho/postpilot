@@ -24,8 +24,11 @@ async function headings(options: FakeTemplatesOptions = {}, withModel = true) {
       ],
     },
   })
+  // A tap only chooses a target; 다음 moves on.
   await user.click(await screen.findByRole('button', { name: /^맛집/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^식사/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '부분마다 소제목을 정해요' })
@@ -127,7 +130,9 @@ describe('explicit heading suggestions', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     for (let i = 0; i < 4; i++) await user.click(screen.getByRole('button', { name: '이전' }))
     await user.click(screen.getByRole('button', { name: /^카페/ }))
-    await user.click(screen.getByRole('button', { name: /^브런치/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    await user.click(await screen.findByRole('button', { name: /^브런치/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(screen.getByRole('button', { name: '다음' }))
     await act(async () => finish())

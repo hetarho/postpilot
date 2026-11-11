@@ -40,6 +40,9 @@ export interface ClipWizardState {
 }
 type Context = Omit<ClipWizardState, 'step'>
 export type ClipWizardEvent =
+  /** A tap on a target answer: it is chosen and marked, and the screen stays. */
+  | { type: 'pick'; key: string }
+  /** 다음 on a target question, with the chosen answer and, for a leaf, its stages. */
   | { type: 'choose'; key: string; seeds?: readonly StageDraft[] }
   | { type: 'next' | 'back' }
   | { type: 'toggle'; id: string; checked: boolean }
@@ -115,9 +118,21 @@ export const clipWizardMachine = setup({
     name: ({ context }) => !nameProblem(context.name),
   },
   actions: {
+    // The same answer again keeps the answers given after it; another one starts them over.
+    pick: assign(({ context, event }) =>
+      event.type === 'pick' && context.path[context.depth] !== event.key
+        ? { path: choice(context, event.key).path }
+        : {},
+    ),
     narrow: assign(({ context, event }) =>
       event.type === 'choose'
-        ? { path: choice(context, event.key).path, depth: context.depth + 1 }
+        ? {
+            path:
+              context.path[context.depth] === event.key
+                ? context.path
+                : choice(context, event.key).path,
+            depth: context.depth + 1,
+          }
         : {},
     ),
     reachLeaf: assign(({ context, event }) => {
@@ -231,6 +246,7 @@ export const clipWizardMachine = setup({
   states: {
     target: {
       on: {
+        pick: { actions: 'pick' },
         choose: [
           { guard: 'leaf', target: 'stages', actions: 'reachLeaf' },
           { guard: 'branch', actions: 'narrow' },

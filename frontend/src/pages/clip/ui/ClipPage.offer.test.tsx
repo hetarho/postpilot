@@ -61,7 +61,9 @@ describe('the new-clip offer', () => {
     expect(router.state.location.search).toMatchObject({ channel: 'instagram_clip', clip: 'new' })
 
     await user.click(await screen.findByRole('button', { name: /^카페/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
     await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
     await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
     for (const box of screen.getAllByRole('checkbox')) {
       if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)

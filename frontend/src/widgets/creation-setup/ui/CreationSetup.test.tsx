@@ -169,6 +169,7 @@ it('keeps one step bar on a template question, carrying setup’s way back and s
   const bars = document.querySelectorAll<HTMLElement>('[data-action-bar="step"]')
   expect(bars).toHaveLength(1)
   const bar = within(bars[0]!)
+  expect(bar.getByRole('button', { name: '다음' })).toBeDisabled()
   expect(bar.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
   await user.click(bar.getByRole('button', { name: '이전' }))
   expect(await screen.findByRole('button', { name: '내 작업 공간 준비하기' })).toBeInTheDocument()
@@ -278,7 +279,9 @@ it('retains the failed step and returns to all three methods on explicit Back wi
 })
 async function finishPostWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole('button', { name: /^맛집/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^식사/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '이런 글은 보통 이렇게 구성돼요' })
   for (const box of screen.getAllByRole('checkbox')) {
     if (!box.closest('label')?.textContent?.startsWith('방문 계기')) await user.click(box)
@@ -413,7 +416,9 @@ it('creates a valid post template exactly once and advances from its confirmed s
 })
 async function finishClipWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
   for (const box of screen.getAllByRole('checkbox')) {
     if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)

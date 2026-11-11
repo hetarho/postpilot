@@ -5,6 +5,7 @@ import { TEMPLATE_ROLE_DEFAULTS, templateTargetAt, type RoleKey } from '@/entiti
 import {
   checkedSections,
   initialWizardState,
+  pickedTarget,
   sectionProblem,
   wizardHasAnswers,
   wizardProgress,
@@ -98,6 +99,32 @@ describe('narrowing the target', () => {
     expect(state.sections[0]!.id).toBe('components')
     expect(state.sections.map((section) => section.id)).toContain('textureSpread')
     expect(state.sections.map((section) => section.id)).not.toContain('usageReview')
+  })
+
+  // A tap only chooses (owner decision 2026-11-11); 다음 sends the chosen answer on.
+  it('marks a picked answer without moving, and keeps later answers for the same one', () => {
+    const picked = run({ type: 'pick', key: 'restaurant' })
+    expect(picked).toMatchObject({ step: 'target', path: ['restaurant'], depth: 0 })
+    expect(pickedTarget(picked)?.key).toBe('restaurant')
+    expect(wizardHasAnswers(picked)).toBe(true)
+    const back = run(
+      { type: 'pick', key: 'restaurant' },
+      { type: 'choose', key: 'restaurant' },
+      { type: 'pick', key: 'meal' },
+      { type: 'back' },
+    )
+    expect(back).toMatchObject({ step: 'target', path: ['restaurant', 'meal'], depth: 0 })
+    // The same answer again, and 다음, keep the next question's answer chosen.
+    const again = wizardTransition(wizardTransition(back, { type: 'pick', key: 'restaurant' }), {
+      type: 'choose',
+      key: 'restaurant',
+    })
+    expect(again).toMatchObject({ path: ['restaurant', 'meal'], depth: 1 })
+    expect(pickedTarget(again)?.key).toBe('meal')
+    // Another answer starts the questions after it over.
+    const other = wizardTransition(back, { type: 'pick', key: 'cafe' })
+    expect(other).toMatchObject({ step: 'target', path: ['cafe'], depth: 0 })
+    expect(pickedTarget(initialWizardState())).toBeUndefined()
   })
 
   it('refuses a choice the tree does not hold and a leaf without seeds', () => {
