@@ -269,7 +269,7 @@ func (q *Queries) InsertVideoTemplate(ctx context.Context, arg InsertVideoTempla
 }
 
 const listClipProjectRequests = `-- name: ListClipProjectRequests :many
-SELECT kind, body, created_at FROM clip_project_requests WHERE project_id = ? AND user_id = ? ORDER BY created_at DESC, rowid DESC
+SELECT kind, body, created_at FROM clip_project_requests WHERE project_id = ? AND user_id = ? ORDER BY rowid DESC
 `
 
 type ListClipProjectRequestsParams struct {
@@ -645,8 +645,7 @@ type RecordClipProjectRequestParams struct {
 }
 
 // What the owner asked the AI for, kept verbatim with the project (CLIP-133).
-// Ordered newest first, and by rowid within one instant so two requests made in
-// the same millisecond still read in the order they were accepted.
+// Reverse acceptance order; recorded wall-clock times may move backwards.
 func (q *Queries) RecordClipProjectRequest(ctx context.Context, arg RecordClipProjectRequestParams) error {
 	_, err := q.db.ExecContext(ctx, recordClipProjectRequest,
 		arg.ID,

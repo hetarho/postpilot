@@ -100,12 +100,11 @@ UPDATE clip_projects SET hide_disclosure = sqlc.arg(hide_disclosure),
     edit_plan_revision = edit_plan_revision + CASE WHEN edit_plan_json IS NOT NULL AND hide_disclosure != sqlc.arg(hide_disclosure) THEN 1 ELSE 0 END,
     updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id);
 -- What the owner asked the AI for, kept verbatim with the project (CLIP-133).
--- Ordered newest first, and by rowid within one instant so two requests made in
--- the same millisecond still read in the order they were accepted.
+-- Reverse acceptance order; recorded wall-clock times may move backwards.
 -- name: RecordClipProjectRequest :exec
 INSERT INTO clip_project_requests(id, project_id, user_id, kind, body, created_at) VALUES (?, ?, ?, ?, ?, ?);
 -- name: ListClipProjectRequests :many
-SELECT kind, body, created_at FROM clip_project_requests WHERE project_id = ? AND user_id = ? ORDER BY created_at DESC, rowid DESC;
+SELECT kind, body, created_at FROM clip_project_requests WHERE project_id = ? AND user_id = ? ORDER BY rowid DESC;
 
 -- name: SaveClipRegions :execrows
 UPDATE clip_projects SET regions_json = sqlc.arg(regions_json), updated_at = sqlc.arg(updated_at) WHERE id = sqlc.arg(id) AND user_id = sqlc.arg(user_id);

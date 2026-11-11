@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T12:57Z | - |
+| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T13:00Z | T751 |
 
 ## inbox
 - 261111 decided T747 T748 T749 T750 T751 T752: unattended continuation scope? → finish the existing dependency-ready tasks on main, starting with T752, then T751 and T747 before the explore tasks; preserve owner-only hardware, listening, live-call/hosting budgets and active ideation (alt: expand into new product planning | leave executable tasks stopped). The user selected unattended mode during T752's verification.
@@ -190,12 +190,13 @@
 | T748 | Reconstruct the shipped resvg WASM's Rust source and license graph | ARCH | - | todo |
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
-| T751 | Keep the request history newest first across a clock rollback | CLIP ARCH | - | todo |
+| T751 | Keep the request history newest first across a clock rollback | CLIP ARCH | - | doing@261111.cr11 |
 
 ## next
 - implement-task T751
 
 ## log
+- 261111 T751 starts (cr11): T752 committed and pushed after the complete local gate; immutable remote workflow observation continues. Follow ARCH-70 on main while the stale adopted work binding prevents the detached loop; pin history to acceptance order with deterministic reversed/equal timestamps and unchanged write/schema/RPC contracts.
 - 261111 T752 done (cr11): retain the three original signed x86_64 zlib APKs in both build contexts after 784b5daf's actual remote 404; index-first, hashes/signatures and all pins/budgets unchanged. New tests fail 7/11 on the original prefix and pass 11/11; related dev suite 22/22 and pinned-base no-wget install pass. Full ARCH-31 on 0af16636 passes: FE 593/4721, Go all, deploy Python 69, generated/static/build checks, Compose, both deployable images and all three media gates, both release layouts within the original envelope. Remote results follow after push.
 - 261111 T752 diagnosis (cr11): 784b5daf Deploy backend run 43011959371/build/Build image failed on the pinned zlib-static APK's 404; Verify media was skipped. Recover all three original signed x86_64 APKs at their existing hashes into the build context, preserving index-first installation and mandatory hash/signature checks. Full CI and Compose passed on 9782b5fb; image build cancelled before the repair, never counted as passed.
 - 261111 T752 starts (cr11): claim confirmed on main; rerun the complete docs/verification.md gate after T742 with pinned Node 24.18.0, Go 1.26.4 and linux/amd64 Docker targets. Keep sv8 and unrelated planning records intact.
@@ -215,4 +216,3 @@
 - 261110 T745 done (sil5): the dom project evaluates the i18n catalogs once per run (globalSetup provide, setup inject into the unchanged product init); resources strictly equal the catalogs, discovery identical except the new equality case; ABBA setup per DOM file 1.65 -> 0.73 s; submit check ran the full FE suite (581 files / 4642 tests); review 274ecdd7 approves with two P3 notes; merged 08edc691.
 - 261110 T743 done (sil5): the ClipCampaign gate failure was a product remount; the form no longer adopts the pre-save project in the render after an autosave answer, so the open guide disclosure and a half-typed item survive. Base fails 3/4 loaded runs at ClipCampaign.test.tsx:35, fix passes 5/5; new regression fails on base; task check passed on a612c3e9; review 50f9d212 approves with two P3 notes; merged 28b58944.
 - 261110 T744 done (sil5): an abandoned or superseded photo conversion creates no object URL and sets no state; three regressions fail on base and pass; submit task check passed on 8ea48f27, independent reviews 4188cf5e (three P3, fixed) and 248777d6 approve; merged 8b40fc17 after the CLI spec gate stopped on identical pre-existing diagnostics.
-- 261110 T740 done (gcf): deterministic clock-rollback ownership and recovery regressions fail original SQL and pass the repair; actual sqlc regeneration and all90Go test-package coverage pass (25fresh/65unchanged reused), global Go checks pass. Broad FE ClipCampaign failure remains unqualified; no push. Report261110-gcf.
