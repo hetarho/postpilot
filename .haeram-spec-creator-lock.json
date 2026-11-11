@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "packageName": "haeram-spec-creator",
-  "packageVersion": "0.12.0",
-  "installedAt": "2026-11-10T04:56:58.075Z",
+  "packageVersion": "0.12.2",
+  "installedAt": "2026-11-11T02:13:34.204Z",
   "agents": [
     "claude",
     "codex"
@@ -63,7 +63,7 @@
       "sha256": "7caffd57b97f623b3947b8521821a326fca94331ecff0d844d934da5d984b4e8"
     },
     ".claude/skills/manage-work/references/runner.md": {
-      "sha256": "a1b5f3f711a6de21355df4b2fe439a39de134a24f3f0ef15dbe0804fd36beb3e"
+      "sha256": "33999b3e380b7a80315a29eba8b8d52a57cb6dbf96ede90a5d9ef21dcbc19a3c"
     },
     ".claude/skills/manage-work/references/workflow.md": {
       "sha256": "0357f58aab445209cd7888eecd1ca8b78e135f71876c00a6dad0a9421e172889"
@@ -132,10 +132,10 @@
       "sha256": "f1f933dc44cfc7a9e4b225412a9e201637b29a4b9a812fdbaa06d72d0389097a"
     },
     ".claude/skills/start-vibe/references/coordinator.md": {
-      "sha256": "ecab7822a620ad81b400fcece3de8b7843c22a5e6e038d482b21d8a1ae45b4a7"
+      "sha256": "5a790a9b18b7ee557abf48dbf5b43413b450c705b5cd5dfe98668d60dd67f4ce"
     },
     ".claude/skills/start-vibe/references/loop-control.md": {
-      "sha256": "ea3fdbe5f5e3738a4a5958c031e67e853bbc819b1c717d1efc24904742255b1e"
+      "sha256": "3eb1a9d11301c2a8121c7c025565155d8385806916e5d1976c46c12bb4b6150d"
     },
     ".claude/skills/start-vibe/references/session.md": {
       "sha256": "a5fea9df33d97ed1c28c222e9f088abff50b1b079b28571f4a3b3f108431c2dc"
@@ -144,7 +144,7 @@
       "sha256": "8ef00d59e4d98d46f1fb0b0b0589b84565501338b0387f385cc4683670707f15"
     },
     ".claude/skills/start-vibe/SKILL.md": {
-      "sha256": "3e31b0f2109c85e185e8875dd426db002842fa719a25c2855f735870adc9fe99"
+      "sha256": "712c2fe1674bd12076c391e59631f733c83e0a142d3d8eddc2f3a2f20c67b635"
     },
     ".claude/skills/update-haeram-spec-creator/SKILL.md": {
       "sha256": "c714f77a707cafeaef9f43799a8079f20443ab658ed10b486aadc4216d33d2f0"
@@ -240,7 +240,7 @@
       "sha256": "931a5f88d53978761b087dce965ada8acde1c3042fa5e46bdc925244dc046890"
     },
     ".codex/skills/manage-work/references/runner.md": {
-      "sha256": "a1b5f3f711a6de21355df4b2fe439a39de134a24f3f0ef15dbe0804fd36beb3e"
+      "sha256": "33999b3e380b7a80315a29eba8b8d52a57cb6dbf96ede90a5d9ef21dcbc19a3c"
     },
     ".codex/skills/manage-work/references/workflow.md": {
       "sha256": "0357f58aab445209cd7888eecd1ca8b78e135f71876c00a6dad0a9421e172889"
@@ -330,10 +330,10 @@
       "sha256": "f1f933dc44cfc7a9e4b225412a9e201637b29a4b9a812fdbaa06d72d0389097a"
     },
     ".codex/skills/start-vibe/references/coordinator.md": {
-      "sha256": "ecab7822a620ad81b400fcece3de8b7843c22a5e6e038d482b21d8a1ae45b4a7"
+      "sha256": "5a790a9b18b7ee557abf48dbf5b43413b450c705b5cd5dfe98668d60dd67f4ce"
     },
     ".codex/skills/start-vibe/references/loop-control.md": {
-      "sha256": "ea3fdbe5f5e3738a4a5958c031e67e853bbc819b1c717d1efc24904742255b1e"
+      "sha256": "3eb1a9d11301c2a8121c7c025565155d8385806916e5d1976c46c12bb4b6150d"
     },
     ".codex/skills/start-vibe/references/session.md": {
       "sha256": "a5fea9df33d97ed1c28c222e9f088abff50b1b079b28571f4a3b3f108431c2dc"
@@ -342,7 +342,7 @@
       "sha256": "8ef00d59e4d98d46f1fb0b0b0589b84565501338b0387f385cc4683670707f15"
     },
     ".codex/skills/start-vibe/SKILL.md": {
-      "sha256": "3e31b0f2109c85e185e8875dd426db002842fa719a25c2855f735870adc9fe99"
+      "sha256": "712c2fe1674bd12076c391e59631f733c83e0a142d3d8eddc2f3a2f20c67b635"
     },
     ".codex/skills/update-haeram-spec-creator/agents/openai.yaml": {
       "sha256": "63ae34b82e4aff1d9e72d143a92f276d987fcdd90e12db5d5bdbdf9cb02d35a1"
