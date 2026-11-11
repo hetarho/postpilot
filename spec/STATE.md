@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T13:50Z | - |
+| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T14:09Z | T748 |
 
 ## inbox
 - 261111 decided T747 T748 T749 T750 T751 T752: unattended continuation scope? → finish the existing dependency-ready tasks on main, starting with T752, then T751 and T747 before the explore tasks; preserve owner-only hardware, listening, live-call/hosting budgets and active ideation (alt: expand into new product planning | leave executable tasks stopped). The user selected unattended mode during T752's verification.
@@ -186,7 +186,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T748 | Reconstruct the shipped resvg WASM's Rust source and license graph | ARCH | - | todo |
+| T748 | Reconstruct the shipped resvg WASM's Rust source and license graph | ARCH | - | doing@261111.cr11 |
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
 
@@ -194,6 +194,7 @@
 - implement-task T748
 
 ## log
+- 261111 T748 starts (cr11): bounded 2h investigation from 14:09Z, after T747 publication 9812b711; inspect the original npm gitHead and shipped WASM, retain exact-source gaps and keep distribution approval closed. Prefetched source lacks Cargo.lock; preserve that evidence rather than generating a replacement lockfile.
 - 261111 T747 gate passes (cr11): complete ARCH-31 at 8a452082; full CI, Compose/deployment images and all three CPU media gates/both release layouts pass. T751 b6f65d5f remote CI 43030996760, Deploy backend 43030996744 and all3 Verify media 43031747206 pass at its actual checkout SHA.
 - 261111 T747 done: saturated native admission/browser independence pinned; QA matrix leaves worker CPU assertion and sustained load open.
 - 261111 T747 starts (cr11): pin browser admission independently of fully occupied native active/waiting slots and map load/queue/cancellation/restart/resource clauses to current named tests, without live hosting or rental benchmarks. T751 is committed/pushed; its immutable remote workflows remain under observation.
@@ -213,4 +214,3 @@
 - 261111 sv7 prepares the owner-approved scoped unattended continuation: retain the settled T739/T697/T709 closures, resume T741/T742/T731, split T604 and park owner-only gates; preflight spec lint passes, CI access remains unavailable.
 - 261111 ideation: archive 10 converted docs to ideation/done/ after checking SSOT coverage (clip-source-observation-visibility, clip-template-as-preset, post-quality-and-related-links, prompt-engineering, storyline-first, voice-tidy, daily-credit-plans, template-from-request, familiar-video-editing-and-dubbing, campaign-reviewer-focus); settled questions cite their SSOT IDs, undecided ones move to the new open docs instagram-photo-post, related-post-links, unmeasured-search-exposure and job-content-retention; post-faithful-clip returns to ready (its 상호 hook is in no SSOT); domain lines follow the installed FORMAT, spec lint 0 errors
 - 261111 T746 done (hu3): the compared Guide redesign and requirements-led post guide land as merge 4899eb2b with the rule fixes; full local gate (FE 4721 tests, Go 90 packages, deploy tests, media gates) and remote CI, Deploy backend and Verify media pass; A/B worktrees and branches removed
-- 261111 create-task T746: one adoption task consumes the THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH deltas; its implementation is the compared and polished branch

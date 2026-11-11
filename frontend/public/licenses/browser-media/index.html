@@ -127,5 +127,184 @@
       <li><a href="/fonts/clip/LICENSE-NanumMyeongjo">LICENSE-NanumMyeongjo</a></li>
       <li><a href="/fonts/clip/INK-NOTICE.txt">INK-NOTICE.txt</a></li>
     </ul>
+
+    <section id="rust-provenance">
+      <h2>Original resvg WASM Rust provenance</h2>
+      <p>
+        39 embedded crate/version strings are a lower bound. The original build lockfile and
+        complete Rust graph are unavailable; exact source/license/notice gaps remain open in
+        <a href="source-access.json">the manifest</a>.
+      </p>
+      <ul>
+        <li>
+          @resvg/resvg-wasm@2.6.2: The npm gitHead tree contains no Cargo.lock; .gitignore
+          explicitly excludes Cargo.lock. Runtime/feature-resolved dependency closure, exact
+          versions, declared licenses and build provenance cannot be derived from Cargo.toml ranges
+          or panic strings.
+        </li>
+        <li>
+          @resvg/resvg-wasm@2.6.2: The WASM committed at the npm gitHead differs from the shipped
+          npm binary; upstream CI replaces wasm/*.wasm with a fresh wasm-pack artifact before npm
+          publication. No release lockfile is retained in that tree.
+        </li>
+        <li>Rust dependency graph: Complete original wasm runtime/feature graph is not verified</li>
+        <li>
+          adler32@1.2.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          alloc-no-stdlib@2.0.4: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          arrayvec@0.7.4: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          base64@0.21.7: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          bitvec@1.0.1: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          brotli-decompressor@2.5.1: Embedded crate absent from verified graph; exact-version
+          source, declared license and notice remain unresolved
+        </li>
+        <li>
+          bytemuck@1.15.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          bytes@1.6.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          data-url@0.2.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          deflate@1.0.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          flate2@1.0.28: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          fontdb@0.14.1: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          gif@0.12.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          hashbrown@0.14.3: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          imagesize@0.12.0: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          jpeg-decoder@0.3.1: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          kurbo@0.9.5: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          miniz_oxide@0.5.4: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          miniz_oxide@0.7.2: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          pathfinder_content@0.5.0: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          png@0.17.5: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          rctree@0.5.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          roxmltree@0.18.1: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          rustybuzz@0.7.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          serde_json@1.0.115: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          simplecss@0.2.1: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          slotmap@1.0.7: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          smallvec@1.13.2: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          svgtypes@0.11.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          svgtypes@0.14.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          tiny-skia-path@0.10.0: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          tiny-skia@0.10.0: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          tinyvec@1.6.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          ttf-parser@0.18.1: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          unicode-bidi@0.3.15: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          unicode-general-category@0.6.0: Embedded crate absent from verified graph; exact-version
+          source, declared license and notice remain unresolved
+        </li>
+        <li>
+          weezl@0.1.8: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+        <li>
+          xmlparser@0.13.6: Embedded crate absent from verified graph; exact-version source,
+          declared license and notice remain unresolved
+        </li>
+        <li>
+          xmlwriter@0.1.0: Embedded crate absent from verified graph; exact-version source, declared
+          license and notice remain unresolved
+        </li>
+      </ul>
+    </section>
   </main>
 </html>

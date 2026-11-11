@@ -1181,3 +1181,49 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+
+
+Rust WASM provenance inventory (generated)
+This inventory does not replace missing original notices. See source-access.json for exact binary/source binding.
+@resvg/resvg-wasm@2.6.2: The npm gitHead tree contains no Cargo.lock; .gitignore explicitly excludes Cargo.lock. Runtime/feature-resolved dependency closure, exact versions, declared licenses and build provenance cannot be derived from Cargo.toml ranges or panic strings.
+@resvg/resvg-wasm@2.6.2: The WASM committed at the npm gitHead differs from the shipped npm binary; upstream CI replaces wasm/*.wasm with a fresh wasm-pack artifact before npm publication. No release lockfile is retained in that tree.
+Rust dependency graph: Complete original wasm runtime/feature graph is not verified
+adler32@1.2.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+alloc-no-stdlib@2.0.4: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+arrayvec@0.7.4: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+base64@0.21.7: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+bitvec@1.0.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+brotli-decompressor@2.5.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+bytemuck@1.15.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+bytes@1.6.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+data-url@0.2.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+deflate@1.0.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+flate2@1.0.28: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+fontdb@0.14.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+gif@0.12.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+hashbrown@0.14.3: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+imagesize@0.12.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+jpeg-decoder@0.3.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+kurbo@0.9.5: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+miniz_oxide@0.5.4: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+miniz_oxide@0.7.2: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+pathfinder_content@0.5.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+png@0.17.5: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+rctree@0.5.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+roxmltree@0.18.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+rustybuzz@0.7.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+serde_json@1.0.115: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+simplecss@0.2.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+slotmap@1.0.7: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+smallvec@1.13.2: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+svgtypes@0.11.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+svgtypes@0.14.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+tiny-skia-path@0.10.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+tiny-skia@0.10.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+tinyvec@1.6.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+ttf-parser@0.18.1: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+unicode-bidi@0.3.15: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+unicode-general-category@0.6.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+weezl@0.1.8: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+xmlparser@0.13.6: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved
+xmlwriter@0.1.0: Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved

@@ -113,6 +113,277 @@ export function inkFontInventory() {
   };
 }
 
+// Cargo.lock is a package list, not proof of target/feature selection. Callers
+// must supply runtime roots/host exclusions from the actual build manifests.
+export function parseCargoLock(text) {
+  const packages = [];
+  for (const block of text.split(/^\[\[package\]\]\s*$/m).slice(1)) {
+    const scalar = (key) => {
+      const value = block.match(
+        new RegExp(`^${key}\\s*=\\s*("(?:[^"\\\\]|\\\\.)*")`, "m"),
+      );
+      return value ? JSON.parse(value[1]) : null;
+    };
+    const name = scalar("name"),
+      version = scalar("version");
+    if (!name || !version) throw Error("Invalid Cargo.lock package identity");
+    const dependency = block.match(/^dependencies\s*=\s*\[([\s\S]*?)\]/m);
+    const dependencies = dependency
+      ? [...dependency[1].matchAll(/"(?:[^"\\]|\\.)*"/g)].map((value) =>
+          JSON.parse(value[0]),
+        )
+      : [];
+    packages.push({
+      name,
+      version,
+      source: scalar("source"),
+      checksum: scalar("checksum"),
+      dependencies,
+    });
+  }
+  return packages;
+}
+
+export function deriveRustWasmGraph(
+  lock,
+  { roots, excluded = [], metadata = {} },
+) {
+  if (!roots?.length) throw Error("Explicit wasm runtime roots required");
+  const packages = parseCargoLock(lock),
+    graph = new Map(),
+    unresolved = [];
+  const excludedNames = new Set(excluded.map((entry) => entry.name));
+  const visit = (dependency) => {
+    const [name, version, ...origin] = dependency.split(" ");
+    if (excludedNames.has(name)) return;
+    const source = origin.join(" ").replace(/^\(|\)$/g, "");
+    const matches = packages.filter(
+      (entry) =>
+        entry.name === name &&
+        (!version || entry.version === version) &&
+        (!source || entry.source === source),
+    );
+    if (matches.length !== 1) {
+      unresolved.push({
+        component: dependency,
+        reason: "Lock dependency missing or ambiguous",
+      });
+      return;
+    }
+    const entry = matches[0],
+      key = `${entry.name}@${entry.version}`;
+    if (graph.has(key)) return;
+    graph.set(key, {
+      ...entry,
+      declaredLicense: metadata[key]?.declaredLicense ?? null,
+      sourceAccess: metadata[key]?.sourceAccess ?? null,
+      notices: metadata[key]?.notices ?? [],
+    });
+    entry.dependencies.forEach(visit);
+  };
+  roots.forEach(visit);
+  return {
+    rustGraph: [...graph.values()].sort((a, b) =>
+      `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`),
+    ),
+    unresolved,
+    exclusions: excluded,
+  };
+}
+
+// Rust panic locations expose only a lower bound. Do not turn these strings
+// into an asserted complete dependency graph, or deduplicate distinct versions.
+export function embeddedRustCrates(bytes) {
+  const text = Buffer.from(bytes).toString("latin1"),
+    crates = new Map();
+  for (const [, name, version] of text.matchAll(
+    /([A-Za-z0-9_-]+)-(\d+\.\d+\.\d+(?:[-+][A-Za-z0-9._-]+)?)\/src\//g,
+  ))
+    crates.set(`${name}@${version}`, { name, version });
+  return [...crates.values()].sort((a, b) =>
+    `${a.name}@${a.version}`.localeCompare(`${b.name}@${b.version}`),
+  );
+}
+
+export function auditRustEvidence({
+  rustGraph,
+  embeddedCrates,
+  graphComplete,
+  unresolved = [],
+}) {
+  const issues = [...unresolved];
+  if (!graphComplete)
+    issues.push({
+      component: "Rust dependency graph",
+      reason: "Complete original wasm runtime/feature graph is not verified",
+    });
+  for (const embedded of embeddedCrates) {
+    const match = rustGraph.find(
+      (entry) =>
+        entry.name === embedded.name && entry.version === embedded.version,
+    );
+    if (!match)
+      issues.push({
+        component: `${embedded.name}@${embedded.version}`,
+        reason: rustGraph.some((entry) => entry.name === embedded.name)
+          ? "Embedded version does not match the derived graph"
+          : "Embedded crate absent from verified graph; exact-version source, declared license and notice remain unresolved",
+      });
+  }
+  for (const entry of rustGraph) {
+    if (
+      !entry.declaredLicense ||
+      !entry.sourceAccess?.versionPinned ||
+      !entry.sourceAccess?.url ||
+      !entry.notices?.length ||
+      entry.notices.some(
+        (notice) =>
+          !notice.file ||
+          !/^[a-f0-9]{64}$/.test(notice.sha256 ?? "") ||
+          !notice.provenance,
+      )
+    )
+      issues.push({
+        component: `${entry.name}@${entry.version}`,
+        reason:
+          "Exact-version source, declared license or original notice is missing",
+      });
+  }
+  return {
+    unresolved: issues,
+    sourceAccessVerified:
+      graphComplete === true && rustGraph.length > 0 && issues.length === 0,
+  };
+}
+
+function resvgRustInventory(directory, version) {
+  const publicRoot = resolve(root, "frontend/public/licenses/browser-media");
+  const evidence = JSON.parse(
+    readFileSync(resolve(publicRoot, "resvg-rust-evidence.json"), "utf8"),
+  );
+  const wasm = readFileSync(resolve(directory, "index_bg.wasm"));
+  if (
+    evidence.npmVersion !== version ||
+    evidence.binary.sha256 !== sha(wasm) ||
+    evidence.binary.bytes !== wasm.length
+  )
+    throw Error("Retained Rust evidence does not match installed resvg WASM");
+  if (sha(evidence.cargoManifest.content) !== evidence.cargoManifest.sha256)
+    throw Error("Retained original Cargo.toml content/hash changed");
+  let derived = { rustGraph: [], unresolved: [] };
+  if (evidence.cargoLock.present) {
+    if (
+      typeof evidence.cargoLock.content !== "string" ||
+      sha(evidence.cargoLock.content) !== evidence.cargoLock.sha256
+    )
+      throw Error("Original Cargo.lock content/hash is missing or changed");
+    derived = deriveRustWasmGraph(evidence.cargoLock.content, {
+      roots: evidence.runtimeRoots,
+      excluded: evidence.exclusions,
+      metadata: evidence.crateMetadata,
+    });
+  }
+  const rustGraph = derived.rustGraph.map((entry) => ({
+    ...entry,
+    notices: (entry.notices ?? []).filter((notice) => {
+      if (!/^[A-Za-z0-9_.+-]+-LICENSE$/.test(notice.file ?? "")) return false;
+      const file = resolve(publicRoot, notice.file);
+      return existsSync(file) && sha(readFileSync(file)) === notice.sha256;
+    }),
+  }));
+  const embeddedCrates = embeddedRustCrates(wasm);
+  const audit = auditRustEvidence({
+    rustGraph,
+    embeddedCrates,
+    graphComplete:
+      evidence.graphComplete === true &&
+      evidence.cargoLock.present === true &&
+      evidence.targetSelectionVerified === true,
+    unresolved: [...evidence.unresolved, ...derived.unresolved],
+  });
+  return {
+    rustGraph,
+    embeddedCrates,
+    rustBuildEvidence: evidence,
+    unresolved: audit.unresolved,
+    sourceAccessVerified: audit.sourceAccessVerified,
+  };
+}
+
+async function writeRustDistribution(inventory) {
+  const directory = resolve(root, "frontend/public/licenses/browser-media");
+  const file = resolve(directory, "source-access.json");
+  const manifest = JSON.parse(readFileSync(file, "utf8"));
+  const source = inventory.packages.find(
+    (entry) => entry.name === "@resvg/resvg-wasm",
+  );
+  const target = manifest.packages.find(
+    (entry) => entry.name === source.name && entry.version === source.version,
+  );
+  if (!target) throw Error("Missing matching resvg distribution entry");
+  for (const key of [
+    "rustGraph",
+    "embeddedCrates",
+    "rustBuildEvidence",
+    "unresolved",
+    "sourceAccessVerified",
+  ])
+    target[key] = source[key];
+  manifest.unresolved = inventory.unresolved;
+  manifest.sourceAccessVerified = false;
+  manifest.binaryDependencyGraphVerified = source.sourceAccessVerified;
+  manifest.distributionApproved = false;
+  const preferred = manifest.coveredSources.find(
+    (entry) => entry.name === source.name,
+  );
+  if (preferred) {
+    preferred.completeOriginalBinaryGraphVerified =
+      manifest.binaryDependencyGraphVerified;
+    preferred.limit =
+      "The original build Cargo.lock is absent; embedded crate paths are a lower bound, not a resolved target graph.";
+  }
+  writeFileSync(file, JSON.stringify(manifest, null, 2) + "\n");
+  const textMarker = "\n\nRust WASM provenance inventory (generated)\n";
+  const textFile = resolve(directory, "THIRD-PARTY.txt");
+  const text = readFileSync(textFile, "utf8").split(textMarker)[0];
+  const issues = source.unresolved.map(
+    (entry) => `${entry.component}: ${entry.reason}`,
+  );
+  writeFileSync(
+    textFile,
+    text +
+      textMarker +
+      "This inventory does not replace missing original notices. See source-access.json for exact binary/source binding.\n" +
+      issues.join("\n") +
+      "\n",
+  );
+  const htmlFile = resolve(directory, "index.html");
+  const html = readFileSync(htmlFile, "utf8").replace(
+    /\s*<section id="rust-provenance">[\s\S]*?<\/section>/,
+    "",
+  );
+  const escape = (value) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  const section = `\n<section id="rust-provenance"><h2>Original resvg WASM Rust provenance</h2><p>${source.embeddedCrates.length} embedded crate/version strings are a lower bound. The original build lockfile and complete Rust graph are unavailable; exact source/license/notice gaps remain open in <a href="source-access.json">the manifest</a>.</p><ul>${issues.map((issue) => `<li>${escape(issue)}</li>`).join("\n")}</ul></section>\n`;
+  const frontendRequire = createRequire(resolve(root, "frontend/package.json"));
+  const prettier = frontendRequire("prettier");
+  const options = await prettier.resolveConfig(htmlFile);
+  const plugins = (options?.plugins ?? []).map((plugin) =>
+    typeof plugin === "string" ? frontendRequire.resolve(plugin) : plugin,
+  );
+  writeFileSync(
+    htmlFile,
+    await prettier.format(html.replace("</main>", section + "</main>"), {
+      ...options,
+      plugins,
+      filepath: htmlFile,
+    }),
+  );
+}
+
 export function installedMediaInventory() {
   const queue = topLevel.map((name) => ({
     name,
@@ -146,6 +417,16 @@ export function installedMediaInventory() {
         file,
         sha256: sha(readFileSync(resolve(directory, file))),
       }));
+    const rust =
+      metadata.name === "@resvg/resvg-wasm"
+        ? resvgRustInventory(directory, metadata.version)
+        : null;
+    if (rust)
+      unresolved.push(
+        ...rust.unresolved.map(
+          (issue) => `${metadata.name}: ${issue.component}: ${issue.reason}`,
+        ),
+      );
     packages.set(identity, {
       name: metadata.name,
       version: metadata.version,
@@ -156,6 +437,7 @@ export function installedMediaInventory() {
       obligation: licenseObligation(metadata.license),
       topLevel: topLevel.includes(metadata.name),
       coveredSourceEvidence: null,
+      ...(rust ?? {}),
     });
     for (const dependency of Object.keys(metadata.dependencies ?? {}))
       queue.push({ name: dependency, from: directory });
@@ -182,6 +464,9 @@ export function installedMediaInventory() {
     fonts,
     inkFonts: inkFontInventory(),
     sourceAccessVerified: false,
+    binaryDependencyGraphVerified:
+      [...packages.values()].find((value) => value.name === "@resvg/resvg-wasm")
+        ?.sourceAccessVerified === true,
     distributionApproved: false,
     limits: [
       "Dependency metadata is an inventory, not a substitute for actual bundled-license review.",
@@ -303,6 +588,8 @@ if (
   const inventory = installedMediaInventory();
   if (process.argv.includes("--verify-upstream"))
     await verifyCoveredSources(inventory);
+  if (process.argv.includes("--write-distribution"))
+    await writeRustDistribution(inventory);
   const index = process.argv.indexOf("--output");
   const output = JSON.stringify(inventory, null, 2) + "\n";
   if (index !== -1) writeFileSync(resolve(process.argv[index + 1]), output);

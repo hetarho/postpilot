@@ -1,0 +1,230 @@
+{
+  "repository": "https://github.com/thx/resvg-js",
+  "revision": "9ca058462ac529120c8cc84ddcd6fef644cc5406",
+  "cargoManifest": {
+    "path": "Cargo.toml",
+    "sha256": "72880b4d3e64bd62caf033579a21057c97ed069002bdef67a0029b7fc6e340a9",
+    "content": "[package]\nauthors = [\"yisibl <percyley@qq.com>\"]\nedition = \"2021\"\nlicense = \"MPL-2.0\"\nname = \"resvg-js\"\nversion = \"1.0.0\"\n\n[lib]\ncrate-type = [\"cdylib\"]\n\n[dependencies]\nenv_logger = \"0.11.0\"\nlog = \"0.4\"\n\nserde = { version = \"1\", features = [\"derive\"] }\nserde_json = \"1\"\nsvgtypes = \"0.14.0\"\nthiserror = \"1.0.37\"\npng = \"=0.17.5\"\npathfinder_geometry = \"0.5.1\"\npathfinder_content = { version = \"0.5.0\", default-features = false }\npathfinder_simd = { version = \"0.5.2\", features = [\"pf-no-simd\"] }\nfutures = \"0.3.21\"\nwoff2 = \"0.3.0\"\n\n[target.'cfg(not(any(target_os = \"linux\", target_family = \"wasm\")))'.dependencies]\nmimalloc = \"0.1\"\n\n[target.'cfg(target_os = \"linux\")'.dependencies]\nmimalloc = { version = \"0.1\", features = [\"local_dynamic_tls\"] }\n\n[target.'cfg(target_arch = \"wasm32\")'.dependencies]\nwasm-bindgen = \"0.2.87\"\njs-sys = \"0.3.64\"\nresvg = { version = \"0.34.0\", default-features = false, features = [\n    \"raster-images\",\n    \"text\",\n] }\n\n[target.'cfg(not(target_arch = \"wasm32\"))'.dependencies]\nnapi = { version = \"2.16.0\", features = [\"serde-json\", \"async\"] }\nnapi-derive = \"2.16.0\"\nresvg = { version = \"0.34.0\", default-features = false, features = [\n    \"raster-images\",\n    \"text\",\n    \"system-fonts\",\n] }\n\n[build-dependencies]\nnapi-build = \"2\"\n\n[profile.release]\nlto = true    # Enable Link Time Optimization\nopt-level = 3\n# Setting this to 1 may improve the performance of generated code, but may be slower to compile.\n# https://doc.rust-lang.org/rustc/codegen-options/index.html#codegen-units\ncodegen-units = 1\n\n[patch.crates-io]\nresvg = { git = \"https://github.com/zimond/resvg\", rev = \"3495d870\" }\nwoff2 = { git=\"https://github.com/yisibl/woff2-rs\", branch=\"fix-total-compressed-size\" }\n"
+  },
+  "cargoLock": {
+    "path": "Cargo.lock",
+    "present": false,
+    "treeContainsLock": false
+  },
+  "wasmTarget": "wasm32-unknown-unknown",
+  "wasmBuildCommand": "wasm-pack build --target web --out-name index --out-dir wasm/dist --release",
+  "binary": {
+    "sha256": "22bf6e9f9a100d972da0411a69c5ba504367fc1fa87b3b64e3f35e53926d2d70",
+    "bytes": 2478606,
+    "sourceTreeBinarySHA256": "f757ffe05209651fef04cb456bbe42c3defc71738b2aa6754a76ede9e4d6840d",
+    "sourceTreeBinaryMatches": false
+  },
+  "rustGraph": [],
+  "graphComplete": false,
+  "embeddedCrates": [
+    {
+      "name": "adler32",
+      "version": "1.2.0"
+    },
+    {
+      "name": "alloc-no-stdlib",
+      "version": "2.0.4"
+    },
+    {
+      "name": "arrayvec",
+      "version": "0.7.4"
+    },
+    {
+      "name": "base64",
+      "version": "0.21.7"
+    },
+    {
+      "name": "bitvec",
+      "version": "1.0.1"
+    },
+    {
+      "name": "brotli-decompressor",
+      "version": "2.5.1"
+    },
+    {
+      "name": "bytemuck",
+      "version": "1.15.0"
+    },
+    {
+      "name": "bytes",
+      "version": "1.6.0"
+    },
+    {
+      "name": "data-url",
+      "version": "0.2.0"
+    },
+    {
+      "name": "deflate",
+      "version": "1.0.0"
+    },
+    {
+      "name": "flate2",
+      "version": "1.0.28"
+    },
+    {
+      "name": "fontdb",
+      "version": "0.14.1"
+    },
+    {
+      "name": "gif",
+      "version": "0.12.0"
+    },
+    {
+      "name": "hashbrown",
+      "version": "0.14.3"
+    },
+    {
+      "name": "imagesize",
+      "version": "0.12.0"
+    },
+    {
+      "name": "jpeg-decoder",
+      "version": "0.3.1"
+    },
+    {
+      "name": "kurbo",
+      "version": "0.9.5"
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.5.4"
+    },
+    {
+      "name": "miniz_oxide",
+      "version": "0.7.2"
+    },
+    {
+      "name": "pathfinder_content",
+      "version": "0.5.0"
+    },
+    {
+      "name": "png",
+      "version": "0.17.5"
+    },
+    {
+      "name": "rctree",
+      "version": "0.5.0"
+    },
+    {
+      "name": "roxmltree",
+      "version": "0.18.1"
+    },
+    {
+      "name": "rustybuzz",
+      "version": "0.7.0"
+    },
+    {
+      "name": "serde_json",
+      "version": "1.0.115"
+    },
+    {
+      "name": "simplecss",
+      "version": "0.2.1"
+    },
+    {
+      "name": "slotmap",
+      "version": "1.0.7"
+    },
+    {
+      "name": "smallvec",
+      "version": "1.13.2"
+    },
+    {
+      "name": "svgtypes",
+      "version": "0.11.0"
+    },
+    {
+      "name": "svgtypes",
+      "version": "0.14.0"
+    },
+    {
+      "name": "tiny-skia",
+      "version": "0.10.0"
+    },
+    {
+      "name": "tiny-skia-path",
+      "version": "0.10.0"
+    },
+    {
+      "name": "tinyvec",
+      "version": "1.6.0"
+    },
+    {
+      "name": "ttf-parser",
+      "version": "0.18.1"
+    },
+    {
+      "name": "unicode-bidi",
+      "version": "0.3.15"
+    },
+    {
+      "name": "unicode-general-category",
+      "version": "0.6.0"
+    },
+    {
+      "name": "weezl",
+      "version": "0.1.8"
+    },
+    {
+      "name": "xmlparser",
+      "version": "0.13.6"
+    },
+    {
+      "name": "xmlwriter",
+      "version": "0.1.0"
+    }
+  ],
+  "exclusions": [
+    {
+      "name": "napi",
+      "reason": "non-wasm target dependency"
+    },
+    {
+      "name": "napi-derive",
+      "reason": "non-wasm target dependency"
+    },
+    {
+      "name": "mimalloc",
+      "reason": "linux and non-wasm/non-linux target dependencies exclude wasm"
+    },
+    {
+      "name": "napi-build",
+      "reason": "host build dependency; build.rs setup is compiled only for non-wasm"
+    }
+  ],
+  "unresolved": [
+    {
+      "component": "@resvg/resvg-wasm@2.6.2",
+      "reason": "The npm gitHead tree contains no Cargo.lock; .gitignore explicitly excludes Cargo.lock. Runtime/feature-resolved dependency closure, exact versions, declared licenses and build provenance cannot be derived from Cargo.toml ranges or panic strings."
+    },
+    {
+      "component": "@resvg/resvg-wasm@2.6.2",
+      "reason": "The WASM committed at the npm gitHead differs from the shipped npm binary; upstream CI replaces wasm/*.wasm with a fresh wasm-pack artifact before npm publication. No release lockfile is retained in that tree."
+    }
+  ],
+  "npmVersion": "2.6.2",
+  "targetSelectionVerified": false,
+  "runtimeRoots": [
+    "env_logger",
+    "log",
+    "serde",
+    "serde_json",
+    "svgtypes",
+    "thiserror",
+    "png 0.17.5",
+    "pathfinder_geometry",
+    "pathfinder_content",
+    "pathfinder_simd",
+    "futures",
+    "woff2",
+    "wasm-bindgen",
+    "js-sys",
+    "resvg"
+  ],
+  "runtimeRootLimit": "Names come from common + wasm32 dependency tables of Cargo.toml; absent Cargo.lock and feature-resolved package metadata prevent exact closure."
+}
