@@ -349,7 +349,8 @@ describe('graded access (T481)', () => {
 
       const trigger = await screen.findByRole('combobox', { name: /paid/i })
       await waitFor(() => expect(trigger).toHaveAccessibleDescription(lock))
-      expect(trigger).toHaveClass('pointer-coarse:min-h-11')
+      // A listbox trigger is 48px under a coarse pointer (THEME-23).
+      expect(trigger).toHaveClass('pointer-coarse:min-h-12')
       expect(screen.getByText(note)).toHaveClass('break-words')
       expect(calls).not.toContain('SaveSelection')
       await user.click(trigger)

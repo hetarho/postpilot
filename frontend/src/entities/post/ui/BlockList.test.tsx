@@ -24,7 +24,11 @@ it('renders the title metadata and all five canonical block types', () => {
     />,
   )
 
-  expect(screen.getByRole('heading', { name: '비 온 뒤의 제주', level: 3 })).toHaveClass('text-xl')
+  // The block title takes the section-heading role: 21px on a phone, 24px from `sm:` (THEME-19).
+  expect(screen.getByRole('heading', { name: '비 온 뒤의 제주', level: 3 })).toHaveClass(
+    'text-[1.3125rem]',
+    'sm:text-2xl',
+  )
   expect(screen.getByText('비가 그치기를 기다렸다.')).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: '바닷가로', level: 4 })).toBeInTheDocument()
   expect(screen.getByRole('img', { name: '잔잔한 제주 바다' })).toHaveAttribute(
