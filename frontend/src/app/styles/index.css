@@ -545,7 +545,7 @@
      at a call site (THEME-11). Tailwind's stock scale already holds 12 (`xs`), 18 (`lg`), 24
      (`2xl`), 30/36 (`3xl`/`4xl`) and 60 (`6xl`). A step carries no line height of its own, as an
      arbitrary size did not, so a recipe's `leading-*` still decides it — except the large title,
-     whose 1.15 belongs to the step. shared/lib/tw-merge.ts lists the names. */
+     whose 1.15 belongs to the step. shared/lib/style/tw-merge.ts lists the names. */
   --text-meta: 0.8125rem; /* 13 */
   --text-label: 0.9375rem; /* 15 */
   --text-body: 1.0625rem; /* 17 */

@@ -42,7 +42,7 @@ export {
 } from './blocks'
 export { copyImage, copyText } from './clipboard'
 export { loadScript } from './script'
-export { prefersReducedMotion } from './motion'
+export { prefersReducedMotion } from './style'
 export { resolveSaveStatus, SAVE_STATUS_LABEL_KEYS } from './autosave'
 export type { SaveState, SaveStatusState } from './autosave'
 export type { BlockVisitor } from './blocks'
@@ -122,4 +122,4 @@ export type {
 } from './media'
 
 export { measureOriginalMedia, transcodeMediaInterval } from './media'
-export { TYPE_STEPS, twMerge } from './tw-merge'
+export { TYPE_STEPS, twMerge } from './style'

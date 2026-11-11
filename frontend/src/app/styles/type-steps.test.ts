@@ -62,7 +62,7 @@ describe('the Guide type steps', () => {
   it('reaches tailwind-merge only through the configured instance', () => {
     const direct = sources(src).filter(
       (file) =>
-        !file.endsWith(path.join('shared', 'lib', 'tw-merge.ts')) &&
+        !file.endsWith(path.join('shared', 'lib', 'style', 'tw-merge.ts')) &&
         /from 'tailwind-merge'/.test(readFileSync(file, 'utf8')),
     )
     expect(direct.map((file) => path.relative(src, file))).toEqual([])
