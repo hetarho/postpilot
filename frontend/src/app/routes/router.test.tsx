@@ -438,8 +438,10 @@ describe('lazily loaded routes', () => {
   ])('renders the %s editor on a direct load', async (path, posts) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' }, posts })
 
-    // Guide: an empty draft opens on its story, the first of 글 생성's screens.
-    expect(await screen.findByRole('textbox', { name: '메모' })).toBeInTheDocument()
+    // Guide: a draft with no memo or photos yet opens on the first question, 글 종류.
+    expect(
+      await screen.findByRole('heading', { name: '어떤 글을 쓰시나요?', level: 2 }),
+    ).toBeInTheDocument()
     expect(screen.getByLabelText('제목')).toBeInTheDocument()
     expect(router.state.location.pathname).toBe(path)
   })
@@ -553,7 +555,9 @@ describe('theme preferences in the real route tree', () => {
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await act(() => first.router.navigate({ to: '/posts/new' }))
-    expect(await screen.findByRole('textbox', { name: '메모' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: '어떤 글을 쓰시나요?', level: 2 }),
+    ).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
 
     await user.click(screen.getByRole('button', { name: '내 계정' }))
@@ -742,7 +746,7 @@ describe('localized registered-route smoke', () => {
       mine: '내 글',
       style: '내 스타일',
       retry: '다시 시도',
-      memo: '메모',
+      kind: '어떤 글을 쓰시나요?',
     },
     en: {
       login: 'Log in',
@@ -759,7 +763,7 @@ describe('localized registered-route smoke', () => {
       mine: 'My work',
       style: 'My style',
       retry: 'Try again',
-      memo: 'Notes',
+      kind: 'What kind of post is this?',
     },
   } as const
 
@@ -847,9 +851,10 @@ describe('localized registered-route smoke', () => {
           signedIn: true,
           expectedPath: '/tests/records/smoke',
         },
-        // Guide: the writing flow opens on its first question, the story.
-        { path: '/posts/new', role: 'textbox', name: text.memo, signedIn: true },
-        { path: '/posts/smoke-post', role: 'textbox', name: text.memo, signedIn: true },
+        // Guide: the writing flow opens a draft with no memo or photos on its first question,
+        // 글 종류.
+        { path: '/posts/new', role: 'heading', name: text.kind, signedIn: true },
+        { path: '/posts/smoke-post', role: 'heading', name: text.kind, signedIn: true },
       ]
 
       for (const routeCase of cases) {

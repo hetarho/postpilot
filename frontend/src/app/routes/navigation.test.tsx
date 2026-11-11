@@ -134,9 +134,10 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
     '/clips/new?channel=naver_clip',
     '/clips/new?channel=instagram_clip',
   ])
-  // The writing screen hides the bar; the account menu still reaches 나.
+  // The writing screen hides the bar; the account menu still reaches 나. A new draft opens on
+  // the guided flow's first question, 글 종류.
   await act(() => view.router.navigate({ to: '/posts/new' }))
-  await screen.findByRole('textbox', { name: '메모' })
+  await screen.findByRole('heading', { name: '어떤 글을 쓰시나요?', level: 2 })
   expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
   await user.click(screen.getByRole('button', { name: '내 계정' }))
   await user.click(
