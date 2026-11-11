@@ -11,7 +11,8 @@ export type ActionBarDock =
    *  the thumb zone. On a phone it spans the screen's bottom edge with rounded top corners; from
    *  `sm:` up it floats as a rounded bar inside the centred column. `mt-auto` takes it to that
    *  edge on a screen too short to fill the viewport, where it would otherwise stop under the
-   *  content with the page showing below its flat bottom; the screen above it owns the gap. */
+   *  content with the page showing below its flat bottom; the screen above it owns the gap.
+   *  Stepped screens reach it through `StepBar`, which also fixes what it holds. */
   | 'step'
 
 /** Action groups fit their controls; a composer has readable space for its fields. */

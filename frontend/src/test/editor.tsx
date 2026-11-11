@@ -27,8 +27,8 @@ export async function openStep(user: ReturnType<typeof userEvent.setup>, label: 
   await user.click(await screen.findByRole('tab', { name: label }))
 }
 
-/** 글 다듬기's one way out, 확정하기, stands at the top-right of the revision row and finalizes at
- *  once (POST-56): no popover or modal stands between the press and the run. */
+/** 글 다듬기's one way out, 확정하기, is the big action of its step bar and finalizes at once
+ *  (POST-56): no popover or modal stands between the press and the run. */
 export async function finalize(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: '확정하기' }))
 }

@@ -1,7 +1,15 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { ActionBar, Button, GuideProgress, StepScreen, Typography } from '@/shared/ui'
+import {
+  Button,
+  GuideProgress,
+  StepBar,
+  StepBarActions,
+  StepBarBack,
+  StepBarCta,
+  StepBarReason,
+  StepScreen,
+} from '@/shared/ui'
 import {
   GUIDE_STEPS,
   activeGuideSteps,
@@ -58,16 +66,7 @@ export function EditorGuide({
     window.scrollTo(0, 0)
   }
   const backTo = (target: GuideStep | undefined) =>
-    target ? (
-      <Button
-        variant="secondary"
-        size="icon"
-        aria-label={t('guide.back')}
-        onClick={() => go(target)}
-      >
-        <ArrowLeft aria-hidden="true" className="size-5" />
-      </Button>
-    ) : undefined
+    target ? <StepBarBack label={t('guide.back')} onClick={() => go(target)} /> : undefined
   const back = backTo(previous)
   const summary = GUIDE_STEPS[GUIDE_STEPS.length - 1]
   return (
@@ -100,63 +99,50 @@ export function EditorGuide({
       ))}
       {/* The step dock meets the screen's bottom edge even under a short screen (글 종류); the
           screen's `mb-8` is the gap a long one ends on above it. */}
-      <ActionBar dock="step" ariaLabel={t('editor.actionAria')}>
-        <div className="flex min-w-0 flex-col gap-3">
-          {notice}
-          {next && (
-            <div className="flex items-center gap-2">
-              {back}
-              <Button variant="cta" size="hero" className="min-w-0 flex-1" onClick={() => go(next)}>
-                {t(
-                  step === 'story'
-                    ? closingHasText
-                      ? 'guide.toReview'
-                      : 'guide.skipMemo'
-                    : 'guide.next',
-                )}
-                <ArrowRight aria-hidden="true" className="size-5" />
-              </Button>
-            </div>
-          )}
-          {/* The summary's row stays MOUNTED on the other screens, hidden: a 생성 that is flushing
-              the draft or asking about re-observation keeps its state while the owner steps back
-              to fix an answer. */}
-          {actions ? (
-            <div hidden={step !== summary}>
-              {actions(backTo(previousGuideStep(summary, sponsored)))}
-            </div>
-          ) : (
-            // A draft nothing has been entered into has not been saved, so there is no post for
-            // 생성 to run on. The button still stands where the owner expects it, disabled, with
-            // the reason above it and the shortest way to fix it — a bar holding only ← left them
-            // wondering where the button went.
-            !next && (
-              <div className="flex min-w-0 flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-x-2">
-                  <Typography variant="label" as="p" id={emptyReasonId} className="min-w-0">
-                    {t('guide.emptyDraft.reason')}
-                  </Typography>
-                  <Button variant="ghost" size="compact" onClick={() => go('photos')}>
-                    {t('guide.emptyDraft.addPhotos')}
-                  </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  {back}
-                  <Button
-                    variant="cta"
-                    size="hero"
-                    className="min-w-0 flex-1"
-                    disabled
-                    aria-describedby={emptyReasonId}
-                  >
-                    {t('generation.writeNow')}
-                  </Button>
-                </div>
+      <StepBar ariaLabel={t('editor.actionAria')}>
+        {notice}
+        {next && (
+          <StepBarActions back={back}>
+            <StepBarCta forward onClick={() => go(next)}>
+              {t(
+                step === 'story'
+                  ? closingHasText
+                    ? 'guide.toReview'
+                    : 'guide.skipMemo'
+                  : 'guide.next',
+              )}
+            </StepBarCta>
+          </StepBarActions>
+        )}
+        {/* The summary's row stays MOUNTED on the other screens, hidden: a 생성 that is flushing
+            the draft or asking about re-observation keeps its state while the owner steps back
+            to fix an answer. */}
+        {actions ? (
+          <div hidden={step !== summary}>
+            {actions(backTo(previousGuideStep(summary, sponsored)))}
+          </div>
+        ) : (
+          // A draft nothing has been entered into has not been saved, so there is no post for
+          // 생성 to run on. The button still stands where the owner expects it, disabled, with
+          // the reason above it and the shortest way to fix it — a bar holding only ← left them
+          // wondering where the button went.
+          !next && (
+            <>
+              <div className="flex flex-wrap items-center gap-x-2">
+                <StepBarReason id={emptyReasonId}>{t('guide.emptyDraft.reason')}</StepBarReason>
+                <Button variant="ghost" size="compact" onClick={() => go('photos')}>
+                  {t('guide.emptyDraft.addPhotos')}
+                </Button>
               </div>
-            )
-          )}
-        </div>
-      </ActionBar>
+              <StepBarActions back={back}>
+                <StepBarCta disabled aria-describedby={emptyReasonId}>
+                  {t('generation.writeNow')}
+                </StepBarCta>
+              </StepBarActions>
+            </>
+          )
+        )}
+      </StepBar>
     </>
   )
 }

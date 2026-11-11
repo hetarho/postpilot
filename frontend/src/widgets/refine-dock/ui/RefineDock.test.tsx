@@ -1,5 +1,6 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { PostDraft } from '@/entities/post'
 import { Stage } from '@/shared/api'
@@ -29,7 +30,8 @@ const POST = {
 function renderDock({
   post = POST,
   beforeFinalize = vi.fn().mockResolvedValue(1n),
-}: { post?: PostDraft; beforeFinalize?: () => Promise<bigint> } = {}) {
+  back,
+}: { post?: PostDraft; beforeFinalize?: () => Promise<bigint>; back?: ReactNode } = {}) {
   const calls: string[] = []
   const transport = createFakeAuthTransport({
     user: { id: 'alice' },
@@ -68,6 +70,7 @@ function renderDock({
       beforeStart={vi.fn().mockResolvedValue(undefined)}
       beforeFinalize={beforeFinalize}
       onFinalized={onFinalized}
+      back={back}
     />,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
@@ -75,28 +78,35 @@ function renderDock({
 }
 
 describe('RefineDock', () => {
-  // The dock is ONE surface: the revision row, whose heading names the field and carries the
-  // step's one way out at its right. The confirming pair used to stand as a second row of
-  // full-width buttons under the field, which read as a second, competing interface.
-  it('puts the way out in the revision row heading and nothing else beside the field', () => {
-    renderDock()
+  // The dock is the step bar every stepped screen shares (owner decision 2026-11-11): the
+  // revision field with its send button as the bar's composer, then the row every step ends on —
+  // the way back and the step's one big action, 확정하기. 확정하기 used to sit in the field's
+  // heading row of a floating composer that looked nothing like the guide's bar a step earlier.
+  it('puts the field above the row of the way back and 확정하기, the step’s big action', () => {
+    renderDock({ back: <button type="button">이전</button> })
 
     const heading = screen.getByText('수정 요청을 입력하세요')
-    const open = screen.getByRole('button', { name: '확정하기' })
     const field = screen.getByLabelText('수정 요청을 입력하세요')
     const send = screen.getByRole('button', { name: '수정' })
+    const back = screen.getByRole('button', { name: '이전' })
+    const open = screen.getByRole('button', { name: '확정하기' })
 
-    // The field's name remains below the task heading in the shared type hierarchy;
-    // 확정하기 fills what is left of the row.
+    // The field's name remains below the task heading in the shared type hierarchy.
     expect(heading.tagName).toBe('LABEL')
     // Guide's field title is heavier (bold) than the old semibold, at the same size.
     expect(heading).toHaveClass('text-lg', 'font-bold')
-    expect(open).toHaveClass('flex-1')
+    // 확정하기 is the bar's big action, filling the row beside the way back.
+    expect(open).toHaveClass('ui-button-cta', 'flex-1')
     expect(open).toBeEnabled()
+    expect(back.parentElement).toBe(open.parentElement)
 
-    expect(heading.compareDocumentPosition(open) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(open.compareDocumentPosition(field) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(field.compareDocumentPosition(send) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    for (const [before, after] of [
+      [heading, field],
+      [field, send],
+      [send, back],
+      [back, open],
+    ] as const)
+      expect(before.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     for (const gone of ['확정', '확정하고 말투 학습']) {
       expect(screen.queryByRole('button', { name: gone })).not.toBeInTheDocument()
     }
@@ -118,8 +128,8 @@ describe('RefineDock', () => {
     expect(screen.queryByRole('button', { name: '확정하고 말투 학습' })).not.toBeInTheDocument()
   })
 
-  // THEME-31: the control sits in a heading row too narrow for a sentence, so a refused finalize
-  // is said across the dock, ABOVE the row holding the control it explains, and the step holds.
+  // THEME-31: the control sits in the bar's action row, too narrow for a sentence, so a refused
+  // finalize is said across the bar, ABOVE everything it holds, and the step holds.
   it('says a refused finalize above the row and does not move the step', async () => {
     const user = userEvent.setup()
     // The flush names a revision the server has already moved past.

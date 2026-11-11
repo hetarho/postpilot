@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
@@ -109,7 +110,11 @@ function TemplateAuthoringPage({
   }
   return (
     <main
-      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
+      className={pageStyles({
+        width: 'board',
+        // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
+        className: clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0'),
+      })}
     >
       <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
         {named.name}
@@ -124,7 +129,7 @@ function TemplateAuthoringPage({
         </Typography>
       )}
       {guided ? (
-        <div className="mt-4 sm:mt-8">
+        <div className="mt-4 flex flex-1 flex-col sm:mt-8">
           {samplePost.isPending ? (
             <Typography variant="body" role="status">
               {t('state.loading', { ns: 'common' })}

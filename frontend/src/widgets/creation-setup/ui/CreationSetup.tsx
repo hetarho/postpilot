@@ -4,13 +4,16 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useSetup } from '@/features/complete-setup'
-import { ArrowLeft, ChevronRight, Clapperboard, House, PenLine } from 'lucide-react'
+import { ChevronRight, Clapperboard, House, PenLine } from 'lucide-react'
 import {
-  ActionBar,
   Button,
   ListRowIcon,
   Notice,
   ProgressBar,
+  StepBar,
+  StepBarActions,
+  StepBarBack,
+  StepBarCta,
   Typography,
   cardStyles,
   pageStyles,
@@ -157,14 +160,17 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
               ))}
             </div>
           )}
-          {introStep && (
+          {/* A template step's foot is the wizard's step bar, so its note stands up here. */}
+          {(introStep || templateStep) && (
             <Typography variant="meta" className="mt-6 block">
               {t('setup.optional')}
             </Typography>
           )}
         </section>
-        <div className="min-w-0">
-          <div>
+        {/* A template wizard ends on its own step bar, which meets the screen's bottom edge only
+            down a chain of flex columns. */}
+        <div className={clsx('min-w-0', templateStep && 'flex flex-1 flex-col')}>
+          <div className={clsx(templateStep && 'flex flex-1 flex-col')}>
             {state.step === 'welcome' && state.plan.length > 0 && (
               // What the conversation will ask, as numbered cards.
               <ol aria-label={t('setup.overview.label')} className="grid gap-3">
@@ -213,49 +219,63 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                 ownerId={ownerId}
                 kind={state.step}
                 controller={controller}
+                host={{
+                  back: controller.back,
+                  backDisabled: busy,
+                  footer: (
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      disabled={busy}
+                      onClick={controller.skip}
+                    >
+                      {t('setup.skip')}
+                    </Button>
+                  ),
+                }}
               />
             )}
           </div>
-          {!introStep && (
+          {!introStep && !templateStep && (
             <Typography variant="meta" className="mt-4 block md:mt-8">
               {t('setup.optional')}
             </Typography>
           )}
         </div>
       </div>
-      {/* The thumb zone: the screen's one big answer on the welcome, and the way back and the
-          skip on every question after it. */}
+      {/* The thumb zone, on the step bar every stepped screen shares: the screen's one big
+          answer on the welcome, and the way back and the skip on the voice question. A template
+          question's bar is its wizard's, which carries setup's way back and skip. */}
       {state.step === 'welcome' && (
-        <ActionBar dock="step" className="mt-auto">
-          <div className="flex flex-col gap-1">
-            <Button variant="cta" size="hero" className="w-full" onClick={() => controller.next()}>
-              {t('setup.welcome.action')}
-            </Button>
-            <Button variant="ghost" className="w-full" onClick={() => controller.defer('/')}>
-              {t('setup.later')}
-            </Button>
-          </div>
-        </ActionBar>
+        <StepBar>
+          <StepBarActions>
+            <StepBarCta onClick={() => controller.next()}>{t('setup.welcome.action')}</StepBarCta>
+          </StepBarActions>
+          <Button variant="ghost" className="w-full" onClick={() => controller.defer('/')}>
+            {t('setup.later')}
+          </Button>
+        </StepBar>
       )}
-      {state.step !== 'welcome' && state.step !== 'ready' && (
-        <ActionBar dock="step" className="mt-auto">
-          <div className="flex items-center justify-between gap-3">
-            <Button
-              variant="secondary"
-              disabled={busy}
-              onClick={() => {
-                if (state.step === 'voice' && voiceNavigation.current?.back()) return
-                controller.back()
-              }}
-            >
-              <ArrowLeft aria-hidden="true" className="size-5" />
-              {t('setup.back')}
-            </Button>
+      {state.step !== 'welcome' && state.step !== 'ready' && !templateStep && (
+        <StepBar>
+          <StepBarActions
+            back={
+              <StepBarBack
+                label={t('setup.back')}
+                disabled={busy}
+                onClick={() => {
+                  if (state.step === 'voice' && voiceNavigation.current?.back()) return
+                  controller.back()
+                }}
+              />
+            }
+            className="justify-between"
+          >
             <Button variant="ghost" disabled={busy} onClick={controller.skip}>
               {t('setup.skip')}
             </Button>
-          </div>
-        </ActionBar>
+          </StepBarActions>
+        </StepBar>
       )}
     </main>
   )

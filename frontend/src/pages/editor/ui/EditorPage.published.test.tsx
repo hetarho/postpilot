@@ -155,9 +155,13 @@ describe('a published post', () => {
     expect(screen.queryByRole('button', { name: '문단 추가' })).toBeNull()
     expect(screen.queryByRole('button', { name: /번째 블록/ })).toBeNull()
 
+    // The step bar every step shares: the way back and the road onward, and nothing to revise.
     const dock = screen.getByLabelText('글 작업')
     const onward = within(dock).getByRole('button', { name: '글 완성으로 가기' })
-    expect(within(dock).getAllByRole('button')).toEqual([onward])
+    expect(within(dock).getAllByRole('button')).toEqual([
+      within(dock).getByRole('button', { name: '이전' }),
+      onward,
+    ])
     expect(screen.queryByLabelText('수정 요청을 입력하세요')).toBeNull()
 
     await user.click(onward)

@@ -191,7 +191,7 @@ it('shows the live preview from the stages step on, none on the target questions
   await user.clear(hook)
   await user.type(hook, '처음 만난 카페')
   expect(stages().getByText('처음 만난 카페').closest('li')).toHaveAttribute('aria-current', 'step')
-  // Below lg the same preview opens from the floating button.
+  // Below lg the same preview opens from 미리보기 in the step bar.
   await user.click(screen.getByRole('button', { name: '미리보기' }))
   const sheet = within(screen.getByRole('dialog', { name: '미리보기' }))
   expect(sheet.getByText('처음 만난 카페')).toBeInTheDocument()

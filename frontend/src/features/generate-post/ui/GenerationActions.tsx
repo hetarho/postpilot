@@ -14,6 +14,8 @@ import {
   Dialog,
   FieldMessage,
   Notice,
+  StepBarActions,
+  StepBarCta,
   Typography,
   buttonStyles,
 } from '@/shared/ui'
@@ -234,8 +236,7 @@ export const GenerationActions = forwardRef<
       {/* Storyline first is the secondary path; writing now remains the committing action — the
           step's one big button, taking the rest of the row (Guide). `leading` is the guided
           flow's way back, on the same row. */}
-      <div className="flex items-center gap-2">
-        {leading}
+      <StepBarActions back={leading}>
         {/* A refusal for the SETUP leaves an action live: pressing it is how the user is taken to
             the brief with the missing field marked, and nothing is written under the row. Every
             other refusal — a job running, a deleted or not-yet-made voice,
@@ -248,17 +249,14 @@ export const GenerationActions = forwardRef<
         >
           {t('generation.storylineFirst')}
         </Button>
-        <Button
-          variant="cta"
-          size="hero"
-          className="min-w-0 flex-1"
+        <StepBarCta
           disabled={sharedDisabled || (!ordinary.ok && !refusedForSetup(ordinary))}
           pending={preparing === 'generation' || generation.isPending}
           onClick={() => void start('generation')}
         >
           {t('generation.writeNow')}
-        </Button>
-      </div>
+        </StepBarCta>
+      </StepBarActions>
       {post.pendingExperimentId && (
         <a
           href={`/tests/records/${encodeURIComponent(post.pendingExperimentId)}?source=${encodeURIComponent(post.slug)}`}

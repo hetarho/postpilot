@@ -1,13 +1,25 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { Button } from '../button/Button'
 import { ProgressBar } from '../progress-bar/ProgressBar'
+import {
+  StepBar,
+  StepBarActions,
+  StepBarBack,
+  StepBarCta,
+  StepBarReason,
+} from '../step-bar/StepBar'
 import { Typography } from '../typography/Typography'
 import { typographyStyles } from '../typography/typographyStyles'
 
 /** One screen of a guided flow (THEME-52, THEME-55, THEME-56): where the owner is, the one
- *  question the screen asks, its body, Back with lower emphasis and the one emphasized next
- *  action the caller supplies. Focus moves to the heading only when the screen actually changes,
- *  never on the first paint. */
+ *  question the screen asks, its body, and the step bar every stepped screen shares (`StepBar`):
+ *  ← with lower emphasis and the one emphasized next action. Focus moves to the heading only when
+ *  the screen actually changes, never on the first paint.
+ *
+ *  Back and next used to sit at the foot of the page, under the body, so the wizard opened from
+ *  the writing guide moved its owner from a docked bar to buttons that scrolled away (owner
+ *  decision 2026-11-11). The frame is a flex column that takes the rest of its parent's height, so
+ *  its parents down from the page's `main` must be flex columns too, ending on no bottom padding:
+ *  then the bar meets the screen's bottom edge even under a short question. */
 export function WizardFrame({
   screen,
   title,
@@ -15,7 +27,8 @@ export function WizardFrame({
   progress,
   back,
   next,
-  beforeActions,
+  barAction,
+  barFooter,
   children,
 }: {
   /** Identity of the screen on show; a change is a navigation and moves focus to the heading. */
@@ -24,14 +37,25 @@ export function WizardFrame({
   help?: ReactNode
   /** Numbers only when the total is known; otherwise the words alone say what is under way. */
   progress: { text: string; label: string; current?: number; total?: number }
-  back?: { label: string; onClick: () => void }
-  next?: ReactNode
-  /** Rendered between the body and the actions, so a `sticky bottom-*` child floats at the
-   *  viewport's foot while the body scrolls and settles just above Back and next. */
-  beforeActions?: ReactNode
+  back?: { label: string; onClick: () => void; disabled?: boolean }
+  /** The screen's one big action, `forward` (→) when it only moves to the next screen. While it
+   *  is held, `reason` says why in one line above it and names the button for a screen reader. */
+  next?: {
+    label: ReactNode
+    forward?: boolean
+    onClick: () => void
+    disabled?: boolean
+    pending?: boolean
+    reason?: ReactNode
+  }
+  /** A secondary action in the bar's row, between ← and next — the phone's 미리보기. */
+  barAction?: ReactNode
+  /** What a flow the wizard sits in adds under the bar's row (setup's 지금은 건너뛰기). */
+  barFooter?: ReactNode
   children?: ReactNode
 }) {
   const titleId = useId()
+  const reasonId = useId()
   const heading = useRef<HTMLHeadingElement>(null)
   const shown = useRef(screen)
   useEffect(() => {
@@ -40,7 +64,7 @@ export function WizardFrame({
     heading.current?.focus()
   }, [screen])
   return (
-    <section aria-labelledby={titleId} className="min-w-0">
+    <section aria-labelledby={titleId} className="flex min-w-0 flex-1 flex-col">
       <Typography variant="label" as="p" className="text-content-secondary">
         {progress.text}
       </Typography>
@@ -76,19 +100,35 @@ export function WizardFrame({
           {help}
         </Typography>
       )}
-      <div className="mt-6">{children}</div>
-      {beforeActions}
-      {(back || next) && (
-        <div className="mt-8 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-          {back ? (
-            <Button variant="ghost" onClick={back.onClick}>
-              {back.label}
-            </Button>
-          ) : (
-            <span />
+      {/* `mb-8` is the gap a long screen ends on above the bar. */}
+      <div className="mt-6 mb-8">{children}</div>
+      {(back || next || barFooter) && (
+        <StepBar>
+          {next?.reason && <StepBarReason id={reasonId}>{next.reason}</StepBarReason>}
+          {(back || next || barAction) && (
+            <StepBarActions
+              back={
+                back && (
+                  <StepBarBack label={back.label} onClick={back.onClick} disabled={back.disabled} />
+                )
+              }
+            >
+              {barAction}
+              {next && (
+                <StepBarCta
+                  disabled={next.disabled}
+                  pending={next.pending}
+                  forward={next.forward}
+                  aria-describedby={next.reason ? reasonId : undefined}
+                  onClick={next.onClick}
+                >
+                  {next.label}
+                </StepBarCta>
+              )}
+            </StepBarActions>
           )}
-          {next}
-        </div>
+          {barFooter}
+        </StepBar>
       )}
     </section>
   )

@@ -59,6 +59,7 @@ export { TabBar, type TabBarItem } from './tab-bar/TabBar'
 export { ListGroup, ListRowIcon } from './list-group/ListGroup'
 export { listRowStyles } from './list-group/listRowStyles'
 export { StepScreen } from './step-screen/StepScreen'
+export { StepBar, StepBarActions, StepBarBack, StepBarCta, StepBarReason } from './step-bar/StepBar'
 
 export { useMediaQuery, MD_MEDIA_QUERY } from './media-query/useMediaQuery'
 

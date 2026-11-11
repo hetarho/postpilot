@@ -1,16 +1,22 @@
 import type { ReactNode, RefObject } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
+import { StepBar, StepBarBack } from '@/shared/ui'
 import { RefineDock } from '@/widgets/refine-dock'
 import type { EditorStep } from '../model/steps'
 import type { EditorJobView } from '../model/useEditorJob'
-import { EditorDock } from './EditorDock'
 
-/** ②'s bottom composer — 다듬기 with the AI, and 확정하기 — and ③'s failure notice when the job has
- *  something to report. 글 생성's bar is the guided flow's own (EditorGuide), so this docks only on
- *  the two later steps. There is exactly ONE bar in this scroller either way. */
+/** ②'s step bar — 다듬기 with the AI, then ← and 확정하기 — and ③'s failure notice when the job has
+ *  something to report, both on the same `StepBar` as 글 생성's guided flow (EditorGuide), so this
+ *  docks only on the two later steps. There is exactly ONE bar in this scroller either way.
+ *
+ *  It is mounted as the LAST child of `main`: a `sticky bottom-*` box is only pinned while its
+ *  containing block still extends below it, so anywhere earlier in the flow it would scroll away
+ *  with the section it sat in. A bar holding neither a control nor a refusal is not chrome
+ *  (THEME-8), so ③ has one only while a failure has something to say. */
 export function EditorStepDock({
   post,
   ownerId,
@@ -37,15 +43,25 @@ export function EditorStepDock({
   onTitleFinalized: (title: string) => void
   onStepChange: (step: EditorStep) => void
 }) {
+  const { t } = useTranslation('posts')
   const job: GenerationJob | undefined = jobView.job
   if (step === 'generate') return null
   if (!((step === 'refine' && Boolean(result)) || hasJobNotice)) return null
   return (
-    <EditorDock>
+    <StepBar ariaLabel={t('editor.actionAria')}>
       {jobNotice}
       {step === 'refine' && result && (
         <RefineDock
           ref={reviseRef}
+          back={
+            <StepBarBack
+              label={t('guide.back')}
+              onClick={() => {
+                onStepChange('generate')
+                window.scrollTo(0, 0)
+              }}
+            />
+          }
           ownerId={ownerId}
           post={post}
           activeJob={job}
@@ -71,6 +87,6 @@ export function EditorStepDock({
           }}
         />
       )}
-    </EditorDock>
+    </StepBar>
   )
 }

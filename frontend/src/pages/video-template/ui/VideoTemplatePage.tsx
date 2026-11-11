@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -106,9 +107,14 @@ function VideoTemplateHost({
     kind: t('kinds.video-template', { ns: 'authoring' }),
     name: stored?.name ?? t('directory.create', { ns: 'clips' }),
   }
+  const guided = !stored && !sessionId
   return (
     <main
-      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
+      className={pageStyles({
+        width: 'board',
+        // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
+        className: clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0'),
+      })}
     >
       <BackLink />
       <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
@@ -123,8 +129,8 @@ function VideoTemplateHost({
           })}
         </Typography>
       )}
-      {!stored && !sessionId ? (
-        <div className="mt-4 sm:mt-8">
+      {guided ? (
+        <div className="mt-4 flex flex-1 flex-col sm:mt-8">
           <ClipTemplateWizard
             ownerId={ownerId}
             onSaved={(templateId) => {

@@ -61,6 +61,34 @@ describe('opening a post', () => {
     expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeDisabled()
   })
 
+  // Owner decision 2026-11-11: 글 다듬기 ends on the same step bar as 글 생성's guide — its request
+  // field above, then ← and the step's big action — not on a floating composer of its own.
+  it('docks 글 다듬기 on the guide’s step bar, whose ← returns to 글 생성', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [{ slug: '20260820-jeju', status: 'review', content: POST_CONTENT_FIXTURE }],
+      },
+    })
+
+    const field = await screen.findByLabelText('수정 요청을 입력하세요')
+    const bar = field.closest<HTMLElement>('[data-action-bar="step"]')!
+    expect(bar).not.toBeNull()
+    expect(document.querySelectorAll('[data-action-bar]')).toHaveLength(1)
+    const open = within(bar).getByRole('button', { name: '확정하기' })
+    expect(open).toHaveClass('ui-button-cta', 'min-h-14', 'flex-1')
+    const back = within(bar).getByRole('button', { name: '이전' })
+    expect(back).toHaveClass('ui-button-icon')
+    expect(back.parentElement).toBe(open.parentElement)
+
+    await user.click(back)
+    expect(await screen.findByRole('tab', { name: '글 생성', selected: true })).toBeInTheDocument()
+    const guideBar = screen.getByRole('button', { name: '다음' }).closest('[data-action-bar]')
+    expect(guideBar).toHaveAttribute('data-action-bar', 'step')
+    expect(document.querySelectorAll('[data-action-bar]')).toHaveLength(1)
+  })
+
   it('does not offer a no-op retry when a resumed revision fails', async () => {
     const resumed = {
       id: 'revision-1',
