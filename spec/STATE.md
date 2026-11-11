@@ -7,6 +7,11 @@
 - lang: ko
 - docs: en
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
+
 ## inbox
 - 261111 decided -: sv7's real Claude bypass probe passed, but preflight could not derive a repository from the unchanged SSH-alias origin → launch sv8 through the installed loop API with an explicit hetarho/postpilot public-HTML access probe and CI repository argument (alt: leave all tasks stopped | change Git settings or installed skills) — the public Actions page returns 200 with the matching repository metadata and explicit-repo CI observation reads run 42989787293; this proves access only, not workflow success. Keep the original preflight evidence in runtime, and fail on every other failed check.
 - 261111 decided -: the legacy ARCH parser selects only the FE suite for the final gate → explicitly connect docs/verification.md's full CI and conditional deployment/media commands to sv8, using the pinned Node from a checkout-local runtime install (alt: accept the incomplete default | change ARCH or package-managed files). Keep runtime files outside commits; run the existing loop host with its normal lifecycle, ownership, control and failure handling. Enable per-unit push per AGENTS.md, retaining the requested command's default 8h limit and scope-exhaustion stop.
