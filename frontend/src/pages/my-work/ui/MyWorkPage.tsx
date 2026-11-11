@@ -12,7 +12,6 @@ import {
 } from '@/entities/post'
 import {
   clipChannel,
-  clipChannelPath,
   clipState,
   clipStateLabel,
   rememberClipEntry,
@@ -35,6 +34,7 @@ import {
   type BadgeTone,
 } from '@/shared/ui'
 import { ContinueHero, StatusTile, WorkGroup } from '@/widgets/work-list'
+import { useMyWorkScrollReturn } from '../model/useMyWorkScrollReturn'
 
 type Kind = 'post' | 'naverClip' | 'instaClip'
 interface WorkItem {
@@ -118,10 +118,11 @@ export function MyWorkPage() {
       finished: finished && !running,
       icon: PenLine,
       id: post.slug,
+      // Opened from here, a post returns here with this scroll (THEME-58 →THEME-69).
       remember: () =>
         rememberPostEntry(ownerId, {
-          path: '/naver-blog',
-          section: 'posts',
+          path: '/my',
+          section: 'mine',
           filters: {},
           scrollY: window.scrollY,
           targetId: post.slug,
@@ -150,8 +151,8 @@ export function MyWorkPage() {
       id: project.id,
       remember: () =>
         rememberClipEntry(ownerId, {
-          path: clipChannelPath(channel),
-          section: 'clips',
+          path: '/my',
+          section: 'mine',
           scrollY: window.scrollY,
           targetId: project.id,
           filters: { channel },
@@ -166,6 +167,7 @@ export function MyWorkPage() {
   const done = items.filter((item) => item.finished)
   const pending = posts.isPending || clips.isPending
   const failed = posts.isError || clips.isError
+  useMyWorkScrollReturn(ownerId, !pending && !failed)
   const card = (item: WorkItem) => (
     <li key={item.key}>
       <WorkLink

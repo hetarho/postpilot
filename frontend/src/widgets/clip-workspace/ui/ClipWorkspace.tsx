@@ -66,7 +66,10 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   const destination = clipReturnDestination(ownerId, project.id, undefined, project.channel)
   const returnTo = {
     href: destination.href,
-    label: t('navigation.returnCreation', { channel: t(`channel.${destination.channel}`) }),
+    label:
+      destination.path === '/my'
+        ? t('navigation.returnMine')
+        : t('navigation.returnCreation', { channel: t(`channel.${destination.channel}`) }),
     onReturn: async (replace = false) => {
       markClipHistoryReturn(ownerId, project.id)
       await navigate({ href: destination.href, replace })

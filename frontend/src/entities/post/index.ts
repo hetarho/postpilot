@@ -7,6 +7,8 @@ export {
   markPostHistoryReturn,
   readPostHistoryReturn,
   completePostHistoryReturn,
+  readMyWorkPostReturn,
+  completeMyWorkPostReturn,
   type PostEntry,
 } from './lib/navigation-context'
 export type {

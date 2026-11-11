@@ -96,6 +96,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const ownerId = user?.id ?? ''
   const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   const returnTo = useMemo(() => postReturnDestination(ownerId, post?.slug), [ownerId, post?.slug])
+  const returnLabel = returnTo.path === '/my' ? copy.mine : copy.home
   useLayoutEffect(() => {
     if (!post && !readPostReturnContext(ownerId))
       rememberPostEntry(ownerId, {
@@ -511,7 +512,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         {/* Guide: a round 44px back button — the glyph is the control, the destination its name. */}
         <a
           href={returnTo.href}
-          aria-label={copy.home}
+          aria-label={returnLabel}
           onClick={(event) => {
             if (
               event.button !== 0 ||
@@ -536,7 +537,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
           className={buttonStyles({ variant: 'secondary', size: 'icon', className: 'shadow-sm' })}
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
-          <span className="sr-only">{copy.home}</span>
+          <span className="sr-only">{returnLabel}</span>
         </a>
 
         {/* A post with a lifecycle navigates it first: three stations, the one the post is in an

@@ -5,7 +5,8 @@ import {
 } from '@/shared/lib/navigation'
 
 export interface PostEntry {
-  path: '/naver-blog'
+  /** The list the post was opened from: the channel's own, or 내 글 전체 (THEME-69). */
+  path: '/naver-blog' | '/my'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
@@ -25,14 +26,19 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
       }
     : storage
   return createReturnContextStore(ownerId, scoped, {
-    isAccessible: (path) => ['/naver-blog', '/posts', '/', '/library'].includes(path),
+    isAccessible: (path) => ['/naver-blog', '/posts', '/', '/library', '/my'].includes(path),
   })
 }
 
 /** The channel opens on its own history (POST-43), so history and creation share one address and
  *  the section tells them apart. A `/posts` entry stored before that still names the history. */
 function isPostHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'>): boolean {
-  return entry.section === 'posts' || entry.path === '/posts'
+  return entry.path !== '/my' && (entry.section === 'posts' || entry.path === '/posts')
+}
+
+/** Work opened from 내 글 전체 returns there, with its scroll (THEME-58 →THEME-69). */
+function isMyWorkEntry(entry: Pick<ReturnContext, 'path'>): boolean {
+  return entry.path === '/my'
 }
 
 function browserStorage(): NavigationStorage | undefined {
@@ -76,7 +82,9 @@ export function readPostReturnContext(
 
 export function postReturnDestination(ownerId: string, slug?: string, storage = browserStorage()) {
   const entry = readPostReturnContext(ownerId, slug, storage)
-  const path: PostEntry['path'] = '/naver-blog'
+  if (entry && isMyWorkEntry(entry))
+    return { path: '/my' as const, href: '/my', section: entry.section, scrollY: entry.scrollY }
+  const path = '/naver-blog' as const
   const search = Object.fromEntries(
     Object.entries(entry?.filters ?? {}).filter(([key]) => key === 'q' || key === 'status'),
   )
@@ -92,7 +100,7 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
 export function retainMintedPostEntry(ownerId: string, slug: string) {
   const entry = readPostReturnContext(ownerId)
   return rememberPostEntry(ownerId, {
-    path: '/naver-blog',
+    path: entry && isMyWorkEntry(entry) ? '/my' : '/naver-blog',
     section: entry?.section ?? 'naverBlog',
     filters: entry?.filters ?? {},
     scrollY: entry?.scrollY ?? 0,
@@ -103,7 +111,7 @@ export function retainMintedPostEntry(ownerId: string, slug: string) {
 export function markPostHistoryReturn(ownerId: string, slug: string) {
   const storage = browserStorage()
   const entry = readPostReturnContext(ownerId, slug, storage)
-  if (!storage || !entry || !isPostHistoryEntry(entry)) return false
+  if (!storage || !entry || !(isPostHistoryEntry(entry) || isMyWorkEntry(entry))) return false
   return store(ownerId, storage).write({
     ...entry,
     filters: { ...entry.filters, restoreScroll: 'true' },
@@ -122,6 +130,24 @@ export function readPostHistoryReturn(ownerId: string) {
 export function completePostHistoryReturn(ownerId: string) {
   const storage = browserStorage()
   const entry = readPostHistoryReturn(ownerId)
+  if (!storage || !entry) return
+  const filters = Object.fromEntries(
+    Object.entries(entry.filters).filter(([key]) => key !== 'restoreScroll'),
+  )
+  store(ownerId, storage).write({ ...entry, filters })
+}
+
+/** A return to 내 글 전체 that has yet to restore its scroll, marked by `markPostHistoryReturn`. */
+export function readMyWorkPostReturn(ownerId: string) {
+  const storage = browserStorage()
+  if (!storage) return undefined
+  const entry = store(ownerId, storage).read()
+  return entry && isMyWorkEntry(entry) && entry.filters.restoreScroll === 'true' ? entry : undefined
+}
+
+export function completeMyWorkPostReturn(ownerId: string) {
+  const storage = browserStorage()
+  const entry = readMyWorkPostReturn(ownerId)
   if (!storage || !entry) return
   const filters = Object.fromEntries(
     Object.entries(entry.filters).filter(([key]) => key !== 'restoreScroll'),

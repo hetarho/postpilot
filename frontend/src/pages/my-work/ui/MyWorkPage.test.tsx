@@ -1,5 +1,6 @@
-import { expect, it } from 'vitest'
-import { screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 
 const clip = {
@@ -59,4 +60,50 @@ it('leads with the newest unfinished work and groups posts and clips by status',
     '만들기',
   ])
   expect(calls.filter((call) => /^(Start|Create|Generate|Save)/.test(call))).toEqual([])
+})
+
+// THEME-58 →THEME-69: work opened from 내 글 전체 returns to it — its way back names 내 글 and
+// lands where the owner left the list — not to the channel's own list.
+describe('returning to 내 글', () => {
+  let scrollY: PropertyDescriptor | undefined
+  beforeEach(() => {
+    scrollY = Object.getOwnPropertyDescriptor(window, 'scrollY')
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 640 })
+  })
+  afterEach(() => {
+    if (scrollY) Object.defineProperty(window, 'scrollY', scrollY)
+    sessionStorage.clear()
+    vi.restoreAllMocks()
+  })
+  const fixtures = {
+    user: { id: 'alice' },
+    posts: {
+      posts: [
+        {
+          slug: 'draft-post',
+          title: '제주 초안',
+          status: 'draft',
+          updatedAt: '2026-11-09T00:00:00Z',
+        },
+      ],
+    },
+    clips: { projects: [{ ...clip, id: 'clip-draft', title: '부산 클립' }] },
+  }
+
+  it.each([
+    ['a post', /제주 초안/, '/posts/draft-post'],
+    ['a clip', /부산 클립/, '/clips/clip-draft'],
+  ])('brings %s back to 내 글 at the scroll it left', async (_, name, href) => {
+    const user = userEvent.setup()
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const { router } = renderAppAt('/my', fixtures)
+    await user.click(await screen.findByRole('link', { name }))
+    await waitFor(() => expect(router.state.location.pathname).toBe(href))
+    const back = await screen.findByRole('link', { name: '내 글로 돌아가기' })
+    expect(back).toHaveAttribute('href', '/my')
+    scroll.mockClear()
+    await user.click(back)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/my'))
+    await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 640))
+  })
 })
