@@ -92,11 +92,13 @@ export function EditorGuide({
             total: steps.length,
           })}
           title={t(`guide.questions.${value}`)}
-          className="mt-6"
+          className="mt-6 mb-8"
         >
           {screens[value]}
         </StepScreen>
       ))}
+      {/* The step dock meets the screen's bottom edge even under a short screen (글 종류); the
+          screen's `mb-8` is the gap a long one ends on above it. */}
       <ActionBar dock="step" ariaLabel={t('editor.actionAria')}>
         <div className="flex min-w-0 flex-col gap-3">
           {notice}

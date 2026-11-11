@@ -25,6 +25,20 @@ describe('ActionBar', () => {
     }
   })
 
+  // A guided screen too short to fill the viewport (글 종류) left the step bar under its content,
+  // floating with the page showing below a bottom edge drawn to meet the screen's own.
+  it('pushes the step dock to the bottom of its column', () => {
+    render(
+      <ActionBar dock="step" ariaLabel="다음 단계">
+        <button>다음</button>
+      </ActionBar>,
+    )
+
+    const bar = screen.getByLabelText('다음 단계')
+    expect(bar).toHaveClass('sticky', 'bottom-0', 'mt-auto')
+    expect(bar).not.toHaveClass('mt-8')
+  })
+
   it('fits and centers an action group without stretching across its column', () => {
     render(
       <ActionBar dock="always" ariaLabel="초안">
