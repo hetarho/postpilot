@@ -26,24 +26,32 @@ export const marketing = {
   flow: {
     title: 'How it works',
     step1: {
-      title: 'Choose a channel, a template and a voice',
-      body: 'Choose Naver Blog, Naver Clip or Instagram Clip, then use a template and voice to shape your account of the visit.',
+      title: 'Choose a channel and post type',
+      body: 'Choose Naver Blog, Naver Clip or Instagram Clip, then select whether your post is sponsored.',
     },
     step2: {
-      title: 'Add photos, videos, notes and the advertiser guide',
-      body: 'Add the photos or videos you took and notes on what happened and how it felt. Include the advertiser guide for a sponsored review.',
+      title: 'Check the advertiser guide',
+      body: 'If your post is sponsored, paste the advertiser guide as text. Confirm the requirements Postpilot pulls out.',
     },
     step3: {
-      title: 'Observe the material first, then write under principles',
-      body: 'Photos and videos are observed before writing. Principles that always apply guide the writer against inventing experiences absent from your material.',
+      title: 'Add photos or videos',
+      body: 'Add your photos or videos, then choose a template, your saved post structure. You can also continue without a template.',
     },
     step4: {
-      title: 'Review origins, revise and check the guide',
-      body: 'Review whether meaning is based on your input, inferred from photos, requested by the advertiser or added by AI. Edit the sentences yourself or request an AI revision, then review the advertiser guide checklist.',
+      title: 'Share your experience',
+      body: 'Give the post a working title and fill in each template field with what you experienced. Add a closing note if you want.',
     },
     step5: {
-      title: 'Copy or export, then publish yourself',
-      body: 'Copy the finalized post in Naver Blog format. For a clip, prepare the video and upload text, then publish manually on each service.',
+      title: 'Choose a voice and guidelines',
+      body: 'Once you choose a voice and guidelines, Postpilot observes your photos and videos before writing. Principles that always apply help keep it from inventing experiences that aren’t in your material.',
+    },
+    step6: {
+      title: 'Review origins and revise',
+      body: 'See whether each sentence is based on your input, inferred from photos, requested by the advertiser, or added by AI. Edit sentences yourself or request an AI revision, then check the advertiser guide checklist.',
+    },
+    step7: {
+      title: 'Copy and publish manually',
+      body: 'Copy the finished post in Naver Blog format. For a clip, prepare the video and upload text, then publish manually on each service.',
     },
   },
   different: {

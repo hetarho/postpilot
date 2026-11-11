@@ -110,12 +110,21 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
         name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works',
       }),
     ).getAllByRole('listitem')
-    expect(steps).toHaveLength(5)
-    expect(steps[0]).toHaveTextContent(
-      locale === 'ko' ? '채널·템플릿·말투' : 'channel, a template and a voice',
-    )
+    // MKT-11: channel and sponsorship → the sponsor's requirements → photos and a template →
+    // what happened, with a closing note → voice and guidelines, then observe and write → review
+    // origins and revise → copy and post yourself.
+    expect(steps).toHaveLength(7)
+    expect(steps[0]).toHaveTextContent(locale === 'ko' ? '체험단·광고 글인지' : 'sponsored')
     expect(steps[1]).toHaveTextContent(locale === 'ko' ? '광고주 지침' : 'advertiser guide')
-    expect(steps[2]).toHaveTextContent(
+    expect(steps[1]).toHaveTextContent(
+      locale === 'ko' ? '체험단·광고 글일 때만' : 'If your post is sponsored',
+    )
+    expect(steps[1]).toHaveTextContent(locale === 'ko' ? '요구사항' : 'requirements')
+    expect(steps[2]).toHaveTextContent(locale === 'ko' ? '사진이나 영상' : 'photos or videos')
+    expect(steps[2]).toHaveTextContent(locale === 'ko' ? '템플릿' : 'template')
+    expect(steps[3]).toHaveTextContent(locale === 'ko' ? '메모' : 'closing note')
+    expect(steps[4]).toHaveTextContent(locale === 'ko' ? '말투와 지침' : 'voice and guidelines')
+    expect(steps[4]).toHaveTextContent(
       locale === 'ko' ? '항상 적용되는 원칙' : 'Principles that always apply',
     )
     for (const origin of locale === 'ko'
@@ -126,13 +135,13 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
           'requested by the advertiser',
           'added by AI',
         ]) {
-      expect(steps[3]).toHaveTextContent(origin)
+      expect(steps[5]).toHaveTextContent(origin)
     }
-    expect(steps[3]).toHaveTextContent(
+    expect(steps[5]).toHaveTextContent(
       locale === 'ko' ? 'AI 수정을 요청' : 'request an AI revision',
     )
-    expect(steps[3]).toHaveTextContent(locale === 'ko' ? '체크리스트' : 'checklist')
-    expect(steps[4]).toHaveTextContent(locale === 'ko' ? '직접 게시' : 'publish manually')
+    expect(steps[5]).toHaveTextContent(locale === 'ko' ? '체크리스트' : 'checklist')
+    expect(steps[6]).toHaveTextContent(locale === 'ko' ? '직접 게시' : 'publish manually')
     const difference = screen.getByRole('region', {
       name: locale === 'ko' ? '다른 점' : 'What is different',
     })
@@ -208,7 +217,7 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
     const flow = within(
       screen.getByRole('region', { name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works' }),
     )
-    expect(flow.getAllByRole('listitem')).toHaveLength(5)
+    expect(flow.getAllByRole('listitem')).toHaveLength(7)
     expect(flow.getAllByRole('listitem')[0].closest('ol')).not.toBeNull()
     expect(
       screen.getByRole('link', { name: locale === 'ko' ? '시작하기' : 'Get started' }),
