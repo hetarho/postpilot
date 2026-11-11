@@ -1708,7 +1708,7 @@ index 4e3486ba..3bc60e5b 100644
      expect(screen.getByLabelText('추가 정보')).toHaveValue('')
      expect(writes).toHaveLength(0)
 diff --git a/frontend/src/pages/clip/ui/ClipCorrection.test.tsx b/frontend/src/pages/clip/ui/ClipCorrection.test.tsx
-index 16123d9d..ff353ad0 100644
+index 16123d9d..269bd5ec 100644
 --- a/frontend/src/pages/clip/ui/ClipCorrection.test.tsx
 +++ b/frontend/src/pages/clip/ui/ClipCorrection.test.tsx
 @@ -218,7 +218,9 @@ async function select(ids = ['a', 'b']) {
@@ -1722,6 +1722,18 @@ index 16123d9d..ff353ad0 100644
    await waitFor(() => expect(input).toBeEnabled())
    await userEvent.upload(input, files)
    await userEvent.keyboard('{Escape}')
+@@ -837,7 +839,10 @@ it('shows a refused server render at once and keeps ② usable', async () => {
+   await userEvent.click(screen.getByRole('button', { name: RENDER }))
+   await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+   await waitFor(() => expect(calls).toContain('StartClipRender'))
+-  expect(await screen.findByText('영상의 2번째 자막을 확인해 주세요.')).toBeVisible()
++  const editor = within(screen.getByRole('region', { name: '컷·자막 수정' }))
++  expect(
++    within(await editor.findByRole('alert')).getByText('영상의 2번째 자막을 확인해 주세요.'),
++  ).toBeVisible()
+   expect(screen.queryByText(/요청의 접수 여부를 확인하는 중이에요/)).not.toBeInTheDocument()
+   await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+ })
 diff --git a/frontend/src/pages/clip/ui/ClipDesignSelection.test.tsx b/frontend/src/pages/clip/ui/ClipDesignSelection.test.tsx
 index 385465e2..28a72134 100644
 --- a/frontend/src/pages/clip/ui/ClipDesignSelection.test.tsx
@@ -3637,7 +3649,7 @@ index 108920c5..9918d130 100644
        {status}
      </div>
 diff --git a/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx b/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx
-index bf52c4f9..b3140dea 100644
+index bf52c4f9..60ac9758 100644
 --- a/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx
 +++ b/frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx
 @@ -1,5 +1,5 @@
@@ -3812,7 +3824,7 @@ index bf52c4f9..b3140dea 100644
        {!reading && (
          <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
            <Typography id="clip-models-heading" variant="title">
-@@ -258,6 +217,137 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+@@ -258,6 +217,141 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
            </Typography>
          </section>
        )}
@@ -3826,13 +3838,17 @@ index bf52c4f9..b3140dea 100644
 +      readOnly={reading}
 +      onUploadAllowed={sources.allow}
 +      dubbing={(value, change) => (
-+        <ClipVoiceChoice
-+          ownerId={ownerId}
-+          enabled={value.enabled}
-+          voiceId={value.voiceId}
-+          disabled={pending || reading}
-+          onChange={change}
-+        />
++        <RetainedPreparationMedia
++          active={!run.focused && step === 'generate' && (reading || guide === 'style')}
++        >
++          <ClipVoiceChoice
++            ownerId={ownerId}
++            enabled={value.enabled}
++            voiceId={value.voiceId}
++            disabled={pending || reading}
++            onChange={change}
++          />
++        </RetainedPreparationMedia>
 +      )}
 +      regions={
 +        regions.regions && {
@@ -3950,7 +3966,7 @@ index bf52c4f9..b3140dea 100644
      </ClipProjectForm>
    )
  
-@@ -832,29 +922,18 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
+@@ -832,29 +926,18 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project:
          />
        )}
        {!run.focused && step !== 'refine' && browserStatus}
@@ -4033,13 +4049,13 @@ index 00000000..71975754
 +)
 diff --git a/frontend/src/widgets/clip-workspace/ui/RetainedPreparationMedia.tsx b/frontend/src/widgets/clip-workspace/ui/RetainedPreparationMedia.tsx
 new file mode 100644
-index 00000000..c24bd313
+index 00000000..018d7076
 --- /dev/null
 +++ b/frontend/src/widgets/clip-workspace/ui/RetainedPreparationMedia.tsx
-@@ -0,0 +1,19 @@
-+import { useEffect, useRef, type ReactNode } from 'react'
+@@ -0,0 +1,30 @@
++import { useEffect, useRef, type ReactNode, type SyntheticEvent } from 'react'
 +
-+/** Retain upload and picker state, but never play footage from a hidden preparation screen. */
++/** Retain controls, but stop current and late-starting media while their screen is hidden. */
 +export function RetainedPreparationMedia({
 +  active,
 +  children,
@@ -4054,8 +4070,200 @@ index 00000000..c24bd313
 +      if (!media.paused) media.pause()
 +    })
 +  }, [active])
-+  return <div ref={root}>{children}</div>
++  function guardPlayback(event: SyntheticEvent<HTMLDivElement>) {
++    if (active || !(event.target instanceof HTMLMediaElement)) return
++    // Downloads and play promises can finish after navigation. Capture before a sample's
++    // playing handler can acknowledge hidden playback or expose an unreachable Stop control.
++    event.stopPropagation()
++    event.target.pause()
++  }
++  return (
++    <div ref={root} onPlayCapture={guardPlayback} onPlayingCapture={guardPlayback}>
++      {children}
++    </div>
++  )
 +}
+diff --git a/frontend/src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx b/frontend/src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx
+new file mode 100644
+index 00000000..a76a2067
+--- /dev/null
++++ b/frontend/src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx
+@@ -0,0 +1,175 @@
++import { TransportProvider } from '@connectrpc/connect-query'
++import { QueryClientProvider } from '@tanstack/react-query'
++import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
++import { afterEach, beforeEach, expect, it, vi } from 'vitest'
++import { SpokenSamplePlayer } from '@/entities/spoken-voice'
++import type { ClipPreparationScreen } from '@/features/edit-clip-project'
++import { spokenVoiceFixture } from '@/test/spoken-voices'
++import { createTestQueryClient } from '@/test/session'
++import { ClipPreparationGuide } from './ClipPreparationGuide'
++import { RetainedPreparationMedia } from './RetainedPreparationMedia'
++
++function deferred<T>() {
++  let resolve!: (value: T) => void
++  const promise = new Promise<T>((done) => {
++    resolve = done
++  })
++  return { promise, resolve }
++}
++function sampleResponse() {
++  return new Response(new Blob(['mp3']), { headers: { 'content-type': 'audio/mpeg' } })
++}
++function startPlayback(media: HTMLMediaElement) {
++  Object.defineProperty(media, 'paused', { configurable: true, value: false })
++  fireEvent.play(media)
++  if (!media.paused) fireEvent.playing(media)
++}
++
++beforeEach(() => {
++  vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (
++    this: HTMLMediaElement,
++  ) {
++    startPlayback(this)
++    return Promise.resolve()
++  })
++  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(function (
++    this: HTMLMediaElement,
++  ) {
++    Object.defineProperty(this, 'paused', { configurable: true, value: true })
++    fireEvent.pause(this)
++  })
++  vi.stubGlobal(
++    'fetch',
++    vi.fn().mockImplementation(async () => sampleResponse()),
++  )
++  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:sample')
++  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
++})
++afterEach(() => {
++  cleanup()
++  vi.restoreAllMocks()
++  vi.unstubAllGlobals()
++})
++
++function fixture() {
++  const transport = spokenVoiceFixture().transport
++  const client = createTestQueryClient()
++  const acknowledged = vi.fn().mockResolvedValue(undefined)
++  const failed = vi.fn()
++  function View({
++    selected = 'style',
++    lifecycle = false,
++  }: {
++    selected?: ClipPreparationScreen
++    lifecycle?: boolean
++  }) {
++    return (
++      <TransportProvider transport={transport}>
++        <QueryClientProvider client={client}>
++          <div hidden={lifecycle}>
++            <ClipPreparationGuide
++              screen={selected}
++              onSelect={() => {}}
++              screens={{
++                sources: <input aria-label="Upload" type="file" />,
++                story: <input aria-label="Title" defaultValue="Retained title" />,
++                style: (
++                  <RetainedPreparationMedia active={!lifecycle && selected === 'style'}>
++                    <input aria-label="Duration" defaultValue="42" />
++                    <select aria-label="Voice" defaultValue="confirmed">
++                      <option value="confirmed">Confirmed voice</option>
++                    </select>
++                    <SpokenSamplePlayer
++                      ownerId="alice"
++                      assetId={'4'.repeat(32)}
++                      name="Sample"
++                      durationMs={1500}
++                      onPlayed={acknowledged}
++                      onFailure={failed}
++                    />
++                  </RetainedPreparationMedia>
++                ),
++              }}
++              rows={[]}
++              models={null}
++              actions={null}
++            />
++          </div>
++        </QueryClientProvider>
++      </TransportProvider>
++    )
++  }
++  return { View, acknowledged, failed }
++}
++
++it.each(['sources', 'review', 'edit', 'running'] as const)(
++  'stops style samples on %s, retains controls/uploads and permits explicit visible replay',
++  async (destination) => {
++    const { View, acknowledged } = fixture()
++    const view = render(<View />)
++    const duration = screen.getByLabelText('Duration')
++    const voice = screen.getByLabelText('Voice')
++    const upload = screen.getByLabelText('Upload') as HTMLInputElement
++    const file = new File(['source'], 'source.mp4', { type: 'video/mp4' })
++    fireEvent.change(upload, { target: { files: [file] } })
++    fireEvent.change(duration, { target: { value: '51' } })
++    fireEvent.click(screen.getByRole('button', { name: /Sample/ }))
++    await waitFor(() => expect(acknowledged).toHaveBeenCalledOnce())
++    const audio = view.container.querySelector('audio')!
++    expect(audio.paused).toBe(false)
++    const props =
++      destination === 'sources' || destination === 'review'
++        ? { selected: destination }
++        : { lifecycle: true }
++    view.rerender(<View {...props} />)
++    expect(audio.paused).toBe(true)
++    expect(audio).not.toBeVisible()
++    view.rerender(<View />)
++    expect(view.container.querySelector('audio')).toBe(audio)
++    expect(screen.getByLabelText('Duration')).toBe(duration)
++    expect(duration).toHaveValue('51')
++    expect(screen.getByLabelText('Voice')).toBe(voice)
++    expect(voice).toHaveValue('confirmed')
++    expect(upload.files?.[0]).toBe(file)
++    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce()
++    fireEvent.click(screen.getByRole('button', { name: /Sample/ }))
++    await waitFor(() => expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2))
++    expect(audio.paused).toBe(false)
++  },
++)
++
++it.each(['download', 'play'] as const)(
++  'blocks a sample %s completing after style is hidden, including a late playing event',
++  async (stage) => {
++    const download = deferred<Response>()
++    const playback = deferred<void>()
++    if (stage === 'download') vi.mocked(fetch).mockReturnValue(download.promise)
++    if (stage === 'play')
++      vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(function (
++        this: HTMLMediaElement,
++      ) {
++        return playback.promise.then(() => startPlayback(this))
++      })
++    const { View, acknowledged, failed } = fixture()
++    const view = render(<View />)
++    fireEvent.click(screen.getByRole('button', { name: /Sample/ }))
++    await waitFor(() => expect(fetch).toHaveBeenCalledOnce())
++    if (stage === 'play')
++      await waitFor(() => expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce())
++    view.rerender(<View selected="review" />)
++    await act(async () => {
++      download.resolve(sampleResponse())
++      playback.resolve()
++    })
++    await waitFor(() => expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce())
++    const audio = view.container.querySelector('audio')!
++    expect(audio.paused).toBe(true)
++    // A queued native playing event must also be stopped before the player's acknowledgment.
++    fireEvent.playing(audio)
++    expect(audio.paused).toBe(true)
++    expect(acknowledged).not.toHaveBeenCalled()
++    expect(failed).not.toHaveBeenCalled()
++    view.rerender(<View />)
++    expect(screen.getByRole('button', { name: /Sample/ })).toBeEnabled()
++  },
++)
 diff --git a/spec/tasks/T758.guide-video-preparation-and-review.md b/spec/tasks/T758.guide-video-preparation-and-review.md
 index 89744832..ef715175 100644
 --- a/spec/tasks/T758.guide-video-preparation-and-review.md

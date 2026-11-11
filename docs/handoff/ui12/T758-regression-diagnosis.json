@@ -1,0 +1,15 @@
+{
+  "outcome": "blocked",
+  "summary": "Committed only the server-refusal assertion correction, scoped to the visible editor alert. Four original failures remain unchanged. No production/spec changes, push, or task-completion claim.",
+  "commit": "75f4eb8c23df7d4aa8a96aa36c7c333323816097",
+  "checks": [
+    "Node v24.18.0; pnpm install --offline --frozen-lockfile passed without dependency/lockfile changes.",
+    "Five supplied regressions reproduced: 5 failed. Evidence: /tmp/ui12-regressions-five-before.log.",
+    "pnpm --filter ./frontend test src/pages/clip/ui/ClipCorrection.test.tsx: 31 passed. Evidence: /tmp/ui12-regressions-correction-file.log.",
+    "Scoped prettier --check, eslint and git diff --check passed; working tree clean.",
+    "Storyline: expected storyline correction description, received generic Story refusal. ClipWorkspace.tsx:282 prioritizes inputRefusal before regions.invalid; rendered() fixture also lacks a composition snapshot. Assertion preserved.",
+    "Available originals: fixture omits actualBytes despite metadata.bytes=5; readyClipBatch at preconditions.ts:85 requires equality. Enabled assertion preserved.",
+    "Both cross-tab cases fail in clip-preparation.ts:16 because the focused-job view exposes no guide navigation. Ownership/completion assertions preserved; production behavior not masked.",
+    "Remaining two full files, type/build, full CI and browser gates were not run."
+  ]
+}

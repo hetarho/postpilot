@@ -1,218 +1,194 @@
 {
   "task": "T758",
-  "status": "review-changes-requested-not-integrated",
-  "baseCommit": "b7fe8778df41fa6da0636ea5a6768c172fee9e2e",
-  "sourceCommit": "a0c7b3a35733876273c461de201c7b17d60f1b68",
+  "status": "incomplete-unintegrated",
+  "baseCommit": "ada6afc201602a5332264d06925ea9cf8737fc0b",
+  "snapshotCommit": "99b79a9592b1d6a77ffe0358f07da4f4e7711da8",
   "patch": "docs/handoff/ui12/T758.patch",
-  "patchSha256": "fb6d12ee4a7e7c9804d0fc391fbc24b52c66b3a37e69e78f655c57e025febc6f",
-  "patchBytes": 190552,
-  "previousPatchSha256": "4823cbb1cf25f3667673de4f6f79025505aafdbf9f50576d063bdab1c1b27a45",
+  "patchSha256": "a859b5b861b915eb403a407f7c305c819befd93e316f558e9350a27da4422243",
+  "bundle": "docs/handoff/ui12/T758.bundle",
+  "bundleRef": "refs/heads/handoff/ui12-T758-snapshot",
   "files": [
     {
       "path": "frontend/src/features/edit-clip-project/config/i18n.ts",
-      "sha256": "f3ee650f5dfed0ee2d96ad3e91764628a24f852bd4aa32b41b37b1d4ff62e445",
-      "new": false
+      "sha256": "f3ee650f5dfed0ee2d96ad3e91764628a24f852bd4aa32b41b37b1d4ff62e445"
     },
     {
       "path": "frontend/src/features/edit-clip-project/index.ts",
-      "sha256": "ef78cd77fe7960c0d3bd8f487f7ee92ba8e8d02ae17fc9def479e8fb9f042624",
-      "new": false
+      "sha256": "ef78cd77fe7960c0d3bd8f487f7ee92ba8e8d02ae17fc9def479e8fb9f042624"
     },
     {
       "path": "frontend/src/features/edit-clip-project/model/preparation.ts",
-      "sha256": "7bf8a47fe7b6e0871ca88e9351260b273912f37185af24d3ab84bec10404a365",
-      "new": true
+      "sha256": "7bf8a47fe7b6e0871ca88e9351260b273912f37185af24d3ab84bec10404a365"
     },
     {
       "path": "frontend/src/features/edit-clip-project/ui/ClipLinkedPost.test.tsx",
-      "sha256": "f59b01704dde0e4ccf1e2d09286e4943afdf891636b17fb57deee92fddc8949d",
-      "new": false
+      "sha256": "f59b01704dde0e4ccf1e2d09286e4943afdf891636b17fb57deee92fddc8949d"
     },
     {
       "path": "frontend/src/features/edit-clip-project/ui/ClipPreparationSummary.tsx",
-      "sha256": "98c7cffea4d87f102371efba35ca70ce907109ab1a344852e4ebc58251ad7b5f",
-      "new": true
+      "sha256": "98c7cffea4d87f102371efba35ca70ce907109ab1a344852e4ebc58251ad7b5f"
     },
     {
       "path": "frontend/src/features/edit-clip-project/ui/ClipProjectForm.test.tsx",
-      "sha256": "7933cbe0410533e520be72a8f38e166308f30111982d8dd633157f8b666a9359",
-      "new": true
+      "sha256": "7933cbe0410533e520be72a8f38e166308f30111982d8dd633157f8b666a9359"
     },
     {
       "path": "frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx",
-      "sha256": "a1274a02d3e50673b7f07c91b0b98ad3626bfd672c04e04adef7401780551f79",
-      "new": false
+      "sha256": "a1274a02d3e50673b7f07c91b0b98ad3626bfd672c04e04adef7401780551f79"
     },
     {
       "path": "frontend/src/features/generate-clip/api/useGenerateClip.ts",
-      "sha256": "1b26f4fc771a695fbf77885fecf181a8432f1cd4a86930134bf77acc3373f018",
-      "new": false
+      "sha256": "1b26f4fc771a695fbf77885fecf181a8432f1cd4a86930134bf77acc3373f018"
     },
     {
       "path": "frontend/src/features/generate-clip/index.ts",
-      "sha256": "f724f39922fc0bb7a22d9516e98059f15f727aa5e1746cb88ef55806d871c994",
-      "new": false
+      "sha256": "f724f39922fc0bb7a22d9516e98059f15f727aa5e1746cb88ef55806d871c994"
     },
     {
       "path": "frontend/src/features/generate-clip/ui/ClipGenerationActions.test.tsx",
-      "sha256": "9f887d1b1b8f8bddf7ece99dd669e05b20f0929e5fd90786589fbf52a4eb1727",
-      "new": true
+      "sha256": "9f887d1b1b8f8bddf7ece99dd669e05b20f0929e5fd90786589fbf52a4eb1727"
     },
     {
       "path": "frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx",
-      "sha256": "ea425324dbcdd28829e9f56d5dd72b3efe2f00ea1d0fcbd09af0f95a20ca78ad",
-      "new": false
+      "sha256": "ea425324dbcdd28829e9f56d5dd72b3efe2f00ea1d0fcbd09af0f95a20ca78ad"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipBrowserRender.test.tsx",
-      "sha256": "741e7e9420b7116c069b2f17ad0df984292224d01bc10beeb07dd048ea1c7809",
-      "new": false
+      "sha256": "741e7e9420b7116c069b2f17ad0df984292224d01bc10beeb07dd048ea1c7809"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipCaptionSettings.test.tsx",
-      "sha256": "e3d498c47504145776f42d9b6a0aa8ac3a0bb935997365fb5175bdf691d91e4b",
-      "new": false
+      "sha256": "e3d498c47504145776f42d9b6a0aa8ac3a0bb935997365fb5175bdf691d91e4b"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipCompositionInputs.test.tsx",
-      "sha256": "4e67d244530908492b9964da7d816c1f77cffd4c05048a9565ab54483cad23a7",
-      "new": false
+      "sha256": "4e67d244530908492b9964da7d816c1f77cffd4c05048a9565ab54483cad23a7"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipCorrection.test.tsx",
-      "sha256": "7bef4797b8753aad7a53baac25acab9718ec8c401e92996f947e8709c567ede0",
-      "new": false
+      "sha256": "b46045ce1bc8c90f1c6f6ed7e86655a49d2192376c2887fdde4c11626c291137"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipDesignSelection.test.tsx",
-      "sha256": "056b67392b6a1af16463143d00bd4b3c4e9c9e28b1e9b238ea9fda4748054603",
-      "new": false
+      "sha256": "056b67392b6a1af16463143d00bd4b3c4e9c9e28b1e9b238ea9fda4748054603"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipGeneration.test.tsx",
-      "sha256": "9941c517476a3185b6528d1092b85f944df5816d58dd02be0a8a8c534644c395",
-      "new": false
+      "sha256": "9941c517476a3185b6528d1092b85f944df5816d58dd02be0a8a8c534644c395"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipInstruction.test.tsx",
-      "sha256": "cf015bd78af3b00c965cad1b51e9601cd919ddf42e0aeb673b4d8c6bb8840d90",
-      "new": false
+      "sha256": "cf015bd78af3b00c965cad1b51e9601cd919ddf42e0aeb673b4d8c6bb8840d90"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipLifecycle.test.tsx",
-      "sha256": "d39499219d7d79c731147421e6c28407f502d58d8668b14a06d41597e711c896",
-      "new": false
+      "sha256": "d39499219d7d79c731147421e6c28407f502d58d8668b14a06d41597e711c896"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipObservations.test.tsx",
-      "sha256": "0b70c9ee81aa0b50f79de07486c9fe3f79f80c91fc6a14e4e740f180c6725634",
-      "new": false
+      "sha256": "0b70c9ee81aa0b50f79de07486c9fe3f79f80c91fc6a14e4e740f180c6725634"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipPage.navigation.test.tsx",
-      "sha256": "9202797f2def9ec50d47326875678639198f1c3acac6fb417516045e2822d59b",
-      "new": false
+      "sha256": "9202797f2def9ec50d47326875678639198f1c3acac6fb417516045e2822d59b"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipPage.offer.test.tsx",
-      "sha256": "3d1f4a8aff2ac88a2071d9cd84d9f44461a260bf6d6241c213c2159268e8afc8",
-      "new": false
+      "sha256": "3d1f4a8aff2ac88a2071d9cd84d9f44461a260bf6d6241c213c2159268e8afc8"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipPage.test.tsx",
-      "sha256": "2ab6dbc4fa60992b3b51372571811b02c02c0c32e2ffcfe23cca371203015a17",
-      "new": false
+      "sha256": "2ab6dbc4fa60992b3b51372571811b02c02c0c32e2ffcfe23cca371203015a17"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipPage.tsx",
-      "sha256": "a613325afde2bef61beba0735046ad6beeb44b99774294567775d683d049b87c",
-      "new": false
+      "sha256": "a613325afde2bef61beba0735046ad6beeb44b99774294567775d683d049b87c"
     },
     {
       "path": "frontend/src/pages/clip/ui/ClipStoryline.test.tsx",
-      "sha256": "1978b79d783671e2888f0191fe514ae97e2d288e2a024a7311693bdac2db623c",
-      "new": false
+      "sha256": "1978b79d783671e2888f0191fe514ae97e2d288e2a024a7311693bdac2db623c"
     },
     {
       "path": "frontend/src/pages/editor/ui/EditorPage.clip-from-post.test.tsx",
-      "sha256": "023c6f2b6ab3e3d453c32deae39e1505bb7b03648f1aa12dd8360dbb9af28309",
-      "new": false
+      "sha256": "023c6f2b6ab3e3d453c32deae39e1505bb7b03648f1aa12dd8360dbb9af28309"
     },
     {
       "path": "frontend/src/test/clip-preparation.ts",
-      "sha256": "e6a757cdc1d7daf6a009e44717abb7777a6d57dea35b1f7d9e262d7996c2bc07",
-      "new": true
+      "sha256": "e6a757cdc1d7daf6a009e44717abb7777a6d57dea35b1f7d9e262d7996c2bc07"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/config/i18n.ts",
-      "sha256": "ac42b4fc37ebff3bb7564929ec72fa72704d6dc162b4dc28edd83e59df2afdf2",
-      "new": false
+      "sha256": "ac42b4fc37ebff3bb7564929ec72fa72704d6dc162b4dc28edd83e59df2afdf2"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/model/usePreparationClock.test.ts",
-      "sha256": "435651be9669aac9e4a1ebab4bf7ba6584df5bdad81d99fd09f16ad967b3da1c",
-      "new": true
+      "sha256": "435651be9669aac9e4a1ebab4bf7ba6584df5bdad81d99fd09f16ad967b3da1c"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/model/usePreparationClock.ts",
-      "sha256": "3ce0031710374535584107fc006fb919b3ac5cdbca35c4308de9d51fd9568bbd",
-      "new": true
+      "sha256": "3ce0031710374535584107fc006fb919b3ac5cdbca35c4308de9d51fd9568bbd"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.test.tsx",
-      "sha256": "edb55ed14367cb27334918d1e530b624cffb85059e5027f37dd49d341aa34776",
-      "new": true
+      "sha256": "edb55ed14367cb27334918d1e530b624cffb85059e5027f37dd49d341aa34776"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationGuide.tsx",
-      "sha256": "3405c77de56bb20eb0fab34911fb10db4560c2462432f27a35bf351d832362c0",
-      "new": true
+      "sha256": "3405c77de56bb20eb0fab34911fb10db4560c2462432f27a35bf351d832362c0"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationNavigation.test.tsx",
-      "sha256": "d14cee27cd8b7348de9b21c23d637448b367e6609bfa936b9fc97e012a3a45fc",
-      "new": true
+      "sha256": "d14cee27cd8b7348de9b21c23d637448b367e6609bfa936b9fc97e012a3a45fc"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationSources.test.tsx",
-      "sha256": "e49cd91d4a8a6fcf4f4df44d6ce284befc3e843b9907ca12d2172eba5bb2bff1",
-      "new": true
+      "sha256": "e49cd91d4a8a6fcf4f4df44d6ce284befc3e843b9907ca12d2172eba5bb2bff1"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipPreparationSources.tsx",
-      "sha256": "9897ff58b47f9fec4790e9ff5b773d41baaba929b1bd9710430a9870e4630b41",
-      "new": true
+      "sha256": "9897ff58b47f9fec4790e9ff5b773d41baaba929b1bd9710430a9870e4630b41"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipTopRow.tsx",
-      "sha256": "f72037286043f879a128f12fa29c4db7a0a2cd3285be4d059672f4ae08bdf684",
-      "new": false
+      "sha256": "f72037286043f879a128f12fa29c4db7a0a2cd3285be4d059672f4ae08bdf684"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx",
-      "sha256": "9018a5d6401032144321be4c5f1a7d72f8cd19165417cb34ac42766ed45bcb13",
-      "new": false
+      "sha256": "df38763e219c38291589d72d0587f8caeaa374168a52cb272107fcd7cdce8a10"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/RetainedPreparationMedia.test.tsx",
-      "sha256": "0a17c2d2c4f7efafb947a0f035e683d2417738e07f3e9fa0ebcf747b39c5be2b",
-      "new": true
+      "sha256": "0a17c2d2c4f7efafb947a0f035e683d2417738e07f3e9fa0ebcf747b39c5be2b"
     },
     {
       "path": "frontend/src/widgets/clip-workspace/ui/RetainedPreparationMedia.tsx",
-      "sha256": "7ca209de815cddc1c926a8cf73a11619fefc69e6aecbb571be445cfa6df9ba73",
-      "new": true
+      "sha256": "4db6cfdd949baeec70784b80f1337a83728d68d369884aa4b884187f6c1a0727"
+    },
+    {
+      "path": "frontend/src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx",
+      "sha256": "c56b33a12ffa6411128e44631a4a9ebcbe0bb6c5e865d5b1005744ad4bbbd425"
     },
     {
       "path": "spec/tasks/T758.guide-video-preparation-and-review.md",
-      "sha256": "7cc4936f6960378d59446a02d0138841330ee441cebf977391cc31891d0f8191",
-      "new": false
+      "sha256": "7cc4936f6960378d59446a02d0138841330ee441cebf977391cc31891d0f8191"
     }
   ],
-  "remaining": [
-    "P2: style voice sample must stop on preparation/lifecycle/focused-view hiding, including late asynchronous sample load; add regression and obtain new independent source review.",
-    "Full frontend validation still fails5 regressions in ClipCorrection/ClipGeneration/ClipStoryline; see T758-validation.json for exact tests/errors. Preserve assertions and diagnose actual root causes before another review/integration.",
-    "P3:320px primary action label wraps narrowly; improve width distribution within shared step bar.",
-    "Final source CI and browser evidence are separate from independent review acceptance; no source integration/done claim."
+  "sourceOfSnapshot": "Corrected T758 a0c7b3a plus independently approved retained-style-media delta74e456ca and narrow test correction75f4eb8c cherry-picked as99b79a95; all are source checkpoints, not task completion.",
+  "remaining": "Whole-task approval and full final-candidate checks remain open. Earlier candidate full FE4784 passed/5failed; one refusal test subsequently corrected and its full31-test file passes; four named cases remain unresolved in T758-regression-diagnosis.json.",
+  "applicationOnMain": "unchanged through completed T757; this archive does not enable T758",
+  "bundleSha256": "1c5227da619b2676bd4866a80620541fa942c686501567377fbf08b2fe7ecbaa",
+  "narrowReviews": [
+    {
+      "commit": "74e456ca09671421d318765ba2a5bd4420a95143",
+      "scope": "hidden style/voice sample playback only",
+      "verdict": "approved",
+      "artifact": "T758-voice-review.json"
+    },
+    {
+      "commit": "75f4eb8c23df7d4aa8a96aa36c7c333323816097",
+      "scope": "visible editor refusal test assertion only",
+      "verdict": "approved",
+      "artifact": "T758-regression-review.json"
+    }
   ]
 }

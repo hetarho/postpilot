@@ -1,0 +1,15 @@
+{
+  "outcome": "completed",
+  "summary": "Committed the narrow T758 correction: hidden style samples stop, including playback starting after delayed download/play completion. Fields, uploads and selections remain retained. Only three clip-workspace files changed; worktree is clean. No push or task completion performed.",
+  "commit": "74e456ca09671421d318765ba2a5bd4420a95143",
+  "checks": [
+    "All commands used PATH=/Users/ihaelam/.npm/_npx/4aa47c519def57bc/node_modules/node/bin:$PATH; Node v24.18.0 confirmed.",
+    "pnpm install --offline --frozen-lockfile — passed; no dependency or lockfile changes.",
+    "pnpm exec haeram-spec-creator vibe check --tier task --diff-base a0c7b3a35733876273c461de201c7b17d60f1b68 --task T758 -- pnpm --filter ./frontend test src/widgets/clip-workspace src/features/edit-clip-project src/entities/spoken-voice/ui/SpokenSamplePlayer.test.tsx src/features/regenerate-clip-speech — 16 files, 86 tests passed.",
+    "pnpm exec haeram-spec-creator vibe check --tier task --diff-base a0c7b3a35733876273c461de201c7b17d60f1b68 --task T758 -- pnpm --filter ./frontend test src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx --reporter=verbose — all 6 new regressions passed.",
+    "pnpm exec haeram-spec-creator vibe check --tier task --diff-base a0c7b3a35733876273c461de201c7b17d60f1b68 --task T758 -- pnpm --filter ./frontend exec tsc -b — passed after correcting test mock this annotations.",
+    "pnpm --filter ./frontend exec eslint src/widgets/clip-workspace/ui/ClipWorkspace.tsx src/widgets/clip-workspace/ui/RetainedPreparationMedia.tsx src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx — passed.",
+    "pnpm --filter ./frontend exec prettier --check src/widgets/clip-workspace/ui/ClipWorkspace.tsx src/widgets/clip-workspace/ui/RetainedPreparationMedia.tsx src/widgets/clip-workspace/ui/RetainedPreparationSamples.test.tsx — passed.",
+    "git diff --cached --check — passed. Full CI, browser suites, integration, independent review and publication remain with parent."
+  ]
+}
