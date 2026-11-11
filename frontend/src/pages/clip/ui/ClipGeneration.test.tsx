@@ -1230,10 +1230,12 @@ it('confirms before rebuilding over a plan edited by hand, and cancels cleanly',
 it('sends a storyline request through its own approval', async () => {
   const storylineRequestStarts: Array<{ request?: string }> = []
   const user = await storylineSpace({}, { storylineRequestStarts })
-  await user.type(screen.getByLabelText('스토리라인 수정 요청'), '가게 소개를 먼저')
+  const request = '가게 소개를 먼저 🥗\n그다음은  그대로'
+  fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), { target: { value: request } })
+  expect(storylineRequestStarts).toHaveLength(0)
   await approveFrom(user, '스토리라인 수정 요청 보내기', /승인하고 스토리라인 고치기/)
   await waitFor(() => expect(storylineRequestStarts).toHaveLength(1))
-  expect(storylineRequestStarts[0]!.request).toBe('가게 소개를 먼저')
+  expect(storylineRequestStarts[0]!.request).toBe(request)
 })
 
 // CLIP-133: the request record lists storyline requests with the others.

@@ -104,6 +104,9 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       : 'clean'
   // Shared reference content: ① keeps it in flow; ② mounts only the chosen tab.
   const [editorPanel, setEditorPanel] = useState<'storyline' | 'script'>()
+  // Tools and lifecycle panels can unmount the composer; the keyed owner/project workspace
+  // retains its unsent words while quote and approval state stay inside the feature.
+  const [storylineRequest, setStorylineRequest] = useState('')
   const [aiOpen, setAiOpen] = useState(false)
   const aiRunning = job?.kind === 'revise_clip' && !isTerminal(job)
   const showAI = aiOpen || aiRunning
@@ -389,6 +392,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
             <ClipStorylineRequest
               ownerId={ownerId}
               project={project}
+              request={storylineRequest}
+              onRequestChange={setStorylineRequest}
               observe={generation.observeRef}
               write={generation.writeRef}
               job={job}

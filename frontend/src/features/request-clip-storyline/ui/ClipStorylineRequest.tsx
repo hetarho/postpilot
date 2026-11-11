@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Send } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -21,6 +20,8 @@ import { useClipStorylineRequest } from '../api/useClipStorylineRequest'
 export function ClipStorylineRequest({
   ownerId,
   project,
+  request,
+  onRequestChange,
   observe,
   write,
   job,
@@ -29,6 +30,8 @@ export function ClipStorylineRequest({
 }: {
   ownerId: string
   project: ClipProject
+  request: string
+  onRequestChange: (request: string) => void
   observe: ModelRef | null
   write: ModelRef | null
   /** The page's poll of the one clip job, never a second one. */
@@ -40,7 +43,6 @@ export function ClipStorylineRequest({
   flush?: () => Promise<unknown>
 }) {
   const { t } = useTranslation('clips')
-  const [request, setRequest] = useState('')
   const { myPlan } = useMyPlan()
   const storyline = useClipStorylineRequest({ ownerId, project, request, observe, write, job })
   const running = storyline.running
@@ -68,7 +70,9 @@ export function ClipStorylineRequest({
               className="max-h-24 min-w-0 flex-1"
               value={request}
               onChange={(event) =>
-                setRequest(boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
+                onRequestChange(
+                  boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
+                )
               }
             />
             <Popover

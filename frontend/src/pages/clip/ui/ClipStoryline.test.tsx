@@ -5,10 +5,12 @@ import userEvent from '@testing-library/user-event'
 import { hashKey } from '@tanstack/react-query'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Code } from '@connectrpc/connect'
-import { Stage, ClipSourceBatchSchema } from '@/shared/api'
+import { Stage, ClipSourceBatchSchema, GetMeResponseSchema } from '@/shared/api'
 import { create } from '@bufbuild/protobuf'
 import { clipRegionRows } from '@/entities/clip-plan'
+import { clipProjectsKey, type ClipProject } from '@/entities/clip-project'
 import { myPlanQueryKey } from '@/entities/plan'
+import { seedSessionCache } from '@/entities/session'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 import { discardClipRegionQueues } from '@/features/edit-clip-regions'
 import { discardClipStorylineQueues } from '@/features/edit-clip-storyline'
@@ -189,6 +191,148 @@ it('closes the space when ② shows a plan', async () => {
   expect(screen.queryByRole('listitem', { name: '1번째 문단' })).not.toBeInTheDocument()
   await userEvent.click(heading())
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
+})
+
+it.each([
+  ['naver_clip', false],
+  ['naver_clip', true],
+  ['instagram_clip', false],
+  ['instagram_clip', true],
+] as const)(
+  'retains the exact storyline request across tool and lifecycle navigation (%s, narrated=%s)',
+  async (channel, narrated) => {
+    const editing = clipTimelineFixture()
+    if (narrated)
+      editing.plan.narration = {
+        enabled: true,
+        confirmedVoiceId: 'voice',
+        bindingDigest: 'binding',
+        volumePermille: 1000,
+        segments: [
+          {
+            id: 'spoken',
+            text: '처음 장면',
+            textRevision: 1,
+            inputHash: 'text',
+            startMs: 0,
+            endMs: 3000,
+          },
+        ],
+      }
+    const calls: string[] = []
+    const view = await mount(
+      storylined({ channel, editPlanRevision: 1, renderedPlanRevision: 0, editing }),
+      { calls },
+    )
+    const user = userEvent.setup()
+    const request = '  첫 장면을 먼저 🥗\n다음은 그대로!  '
+    await user.click(heading())
+    fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), { target: { value: request } })
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: '스토리라인' })).not.toBeInTheDocument()
+    await user.click(heading())
+    expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
+
+    await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('button', { name: '더빙 대본' }))
+    expect(await screen.findByRole('dialog', { name: '더빙 대본' })).toBeVisible()
+    await user.keyboard('{Escape}')
+    await user.click(heading())
+    expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
+    await user.keyboard('{Escape}')
+    for (const step of ['생성', '완성', '수정']) {
+      await user.click(screen.getByRole('tab', { name: step }))
+    }
+    await user.click(heading())
+    expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
+    await user.keyboard('{Escape}')
+
+    // A server-owned job temporarily takes over the mounted workspace. Cache updates avoid
+    // timers, real media and starting any work merely to exercise that presentation.
+    const key = [...clipProjectsKey(view.transport, 'alice'), 'detail', 'clip']
+    const project = view.queryClient.getQueryData<ClipProject>(key)!
+    await act(async () => {
+      view.queryClient.setQueryData(key, {
+        ...project,
+        latestJob: {
+          id: 'focused',
+          kind: 'generate_clip',
+          status: 'running',
+          stage: 'observe',
+          clipProjectId: 'clip',
+        },
+      })
+    })
+    expect(await screen.findByRole('region', { name: '클립 작업 진행' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: '스토리라인' })).not.toBeInTheDocument()
+    await act(async () => {
+      view.queryClient.setQueryData(key, project)
+    })
+    await user.click(await screen.findByRole('tab', { name: '수정' }))
+    await user.click(heading())
+    expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
+    expect(calls.filter((call) => /Start|Cancel|Update|Finalize/.test(call))).toEqual([])
+  },
+)
+
+it('starts with no prior request when the owner changes in the same clip route', async () => {
+  const calls: string[] = []
+  const view = await mount(storylined({ editPlanRevision: 1, editing: clipTimelineFixture() }), {
+    calls,
+  })
+  await userEvent.click(heading())
+  fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
+    target: { value: 'Alice의 요청' },
+  })
+  const project = view.queryClient.getQueryData<ClipProject>([
+    ...clipProjectsKey(view.transport, 'alice'),
+    'detail',
+    'clip',
+  ])!
+  await act(async () => {
+    view.queryClient.setQueryData(
+      [...clipProjectsKey(view.transport, 'bob'), 'detail', 'clip'],
+      project,
+    )
+    seedSessionCache(
+      view.queryClient,
+      view.transport,
+      create(GetMeResponseSchema, { user: { id: 'bob' } }),
+    )
+  })
+  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
+  expect(calls.filter((call) => /Start|Cancel|Update|Finalize/.test(call))).toEqual([])
+})
+
+it('does not carry request text to another project, back from route departure, or through reload', async () => {
+  const calls: string[] = []
+  const project = storylined({ editPlanRevision: 1, editing: clipTimelineFixture() })
+  const view = await mount(project, {
+    projects: [project, { ...project, id: 'other', title: '다른 영상' }],
+    calls,
+  })
+  await userEvent.click(heading())
+  fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
+    target: { value: '이 영상에만 보낼 요청' },
+  })
+  await act(() => view.router.navigate({ href: '/clips/other' }))
+  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
+  fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
+    target: { value: '다른 영상 요청' },
+  })
+  await act(() => view.router.navigate({ href: '/clips/clip' }))
+  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
+  fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
+    target: { value: '새로 고침 전에 쓴 요청' },
+  })
+  view.unmount()
+  renderAppAt('/clips/clip', { transport: view.transport })
+  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
+  expect(calls.filter((call) => /Start|Cancel|Update|Finalize/.test(call))).toEqual([])
 })
 
 // CLIP-178, CLIP-39: an edit saves itself — the text, a scene moved, a scene taken out and put
