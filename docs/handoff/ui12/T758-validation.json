@@ -1,0 +1,72 @@
+{
+  "sourceCommit": "a0c7b3a35733876273c461de201c7b17d60f1b68",
+  "status": "failed-not-integrated",
+  "node": "24.18.0",
+  "fullARCH31Passed": false,
+  "frontend": {
+    "files": 603,
+    "passedFiles": 600,
+    "failedFiles": 3,
+    "tests": 4789,
+    "passedTests": 4784,
+    "failedTests": 5,
+    "failures": [
+      {
+        "file": "frontend/src/pages/clip/ui/ClipCorrection.test.tsx",
+        "test": "shows a refused server render at once and keeps ② usable",
+        "error": "TestingLibraryElementError: Found multiple elements with text 영상의 2번째 자막을 확인해 주세요."
+      },
+      {
+        "file": "frontend/src/pages/clip/ui/ClipGeneration.test.tsx",
+        "test": "asks to reselect the originals only when they are gone (available)",
+        "error": "expect(element).toBeEnabled(): 바로 만들기 remained disabled."
+      },
+      {
+        "file": "frontend/src/pages/clip/ui/ClipGeneration.test.tsx",
+        "test": "does not attach an ambiguous selection to a different tab’s terminal job",
+        "error": "Error: Clip workspace is still loading (preparation navigation helper)."
+      },
+      {
+        "file": "frontend/src/pages/clip/ui/ClipGeneration.test.tsx",
+        "test": "finishes the locally owned job even when another tab becomes the latest project job",
+        "error": "Error: Clip workspace is still loading (preparation navigation helper)."
+      },
+      {
+        "file": "frontend/src/pages/clip/ui/ClipStoryline.test.tsx:1021",
+        "test": "holds the render while a slot holds words it cannot draw",
+        "error": "Accessible description expected storyline slot correction; received Story input correction."
+      }
+    ]
+  },
+  "completedBeforeFailure": [
+    "dev tests",
+    "generated proto and SQL clean-diff checks",
+    "lint and frontend formatting",
+    "FSD",
+    "retirement",
+    "style probe and style lint",
+    "spec/package check"
+  ],
+  "notRunAfterFailure": [
+    "production web build",
+    "deployment Python tests",
+    "full Go vet/build/tests"
+  ],
+  "browser": {
+    "cases": 25,
+    "status": "passed fixture navigation/geometry/retention checks",
+    "artifact": "T758-browser-final.json",
+    "limits": "No playable fixture originals or live provider/render/export qualification."
+  },
+  "independentReview": {
+    "verdict": "changes_requested",
+    "artifact": "T758-review-latest.json",
+    "blocking": "P2 hidden/late voice sample playback",
+    "polish": "P3 320px action label wrapping"
+  },
+  "rawLogSha256": "665644f2750748e3e52b1ace79f22a19f4f7031ccee683daede4252f58ac913d",
+  "command": "python3 .git/haeram/v1/launchers/ui12x1/verify-candidate.py --ci-only",
+  "runnableContract": "docs/verification.md",
+  "scopeBaseline": "b7fe8778",
+  "recordedAt": "2026-11-11T23:49:58.016658+00:00"
+}

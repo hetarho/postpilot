@@ -1,0 +1,17 @@
+{
+  "verdict": "changes_requested",
+  "summary": "이전 P2 세 건의 수정은 확인했습니다. 숨겨진 목소리 샘플 재생이 남아 있어 수정이 필요합니다. 전체·브라우저 최종 검증은 호스트 관문으로 남깁니다.",
+  "findings": [
+    {
+      "priority": "P2",
+      "where": "frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx:259",
+      "message": "T758: 재생 중지 처리가 sourcePanel만 감쌉니다. 스타일에서 확정 목소리 샘플을 재생한 뒤 확인·소스·수정으로 이동하면, 보존된 ClipVoiceChoice의 SpokenSamplePlayer는 언마운트되지 않아 숨겨진 오디오가 계속 재생됩니다. 중지 버튼도 숨겨지고 다른 미리보기 소리와 겹칠 수 있습니다. 스타일의 샘플 재생도 준비 화면·라이프사이클·실행 화면의 가시성에 연동하고, 비활성화 뒤 늦게 완료되는 샘플 로딩까지 회귀 검증해 주세요."
+    },
+    {
+      "priority": "P3",
+      "where": "frontend/src/features/generate-clip/ui/ClipGenerationActions.tsx:58",
+      "message": "T758: 제공된 320px dark 오류 화면을 확인하면 기본 행동이 ‘바로 / 만들 / 기’ 세 줄로 쪼개집니다. 조작 차단은 아니지만 행동을 읽기 어렵습니다. 360px의 한 줄 배치를 유지하면서 320px에서도 기본 행동에 충분한 너비를 배분하는 개선을 권합니다."
+    }
+  ],
+  "session": "01a1ccf9-94d1-7fa2-b20d-7446a1587b8a"
+}

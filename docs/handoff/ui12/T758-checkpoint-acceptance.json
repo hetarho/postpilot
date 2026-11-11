@@ -1,0 +1,29 @@
+{
+  "commit": "aa2aab52",
+  "browserCases": 25,
+  "browserPassed": true,
+  "fixtureLimits": "No playable original fixture/live provider/render/export qualification; hidden-media pause remains an independent review finding.",
+  "review": {
+    "verdict": "changes_requested",
+    "summary": "aa2aab52에서 숨겨진 미디어 재생, 영역 입력 거절 안내, 기존 테스트 적응 누락을 확인했습니다. 통합·브라우저 최종 검증은 호스트에 남겼습니다.",
+    "findings": [
+      {
+        "priority": "P2",
+        "where": "frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx:918",
+        "message": "T758: 소스 미리보기를 재생한 뒤 이야기·확인·수정 또는 실행 화면으로 이동하면 플레이어가 hidden 상태로 계속 재생됩니다. ClipSourcePicker에는 화면 숨김 시 pause 처리가 없어 보이지 않는 원본 소리가 다른 미리보기와 겹칠 수 있습니다. 필드·업로드는 유지하면서 비활성 화면의 재생을 중지하고 회귀 검증을 추가해 주세요."
+      },
+      {
+        "priority": "P2",
+        "where": "frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx:276",
+        "message": "T758: 소스와 모델이 준비돼 있어도 regions.invalid이면 두 생성 버튼이 비활성화되지만, correction 분기는 이를 처리하지 않습니다. 예를 들어 ②에서 소유자 고정 슬롯의 길이가 초과된 뒤 확인으로 돌아오면 도크에 거절 이유나 해당 슬롯으로 가는 수정 경로가 없고 aria-describedby 대상도 생성되지 않습니다. 영역 검증·저장 실패를 안내에 포함하고 원래 편집 위치로 연결해 주세요."
+      },
+      {
+        "priority": "P2",
+        "where": "frontend/src/pages/clip/ui/ClipObservations.test.tsx:17",
+        "message": "T758: generatePanel이 이제 수정 화면에서도 마운트되므로 숨겨진 '원본 영상 선택' 입력이 DOM에 남습니다. queryByLabelText는 hidden을 제외하지 않아 이 부재 단언과 33행의 같은 단언은 실패합니다. 가시 화면 및 열린 Sheet 범위로 검증을 조정하고, 선택하지 않은 참조 탭이 노출되지 않는 기존 보장은 유지해 주세요. 실행 확인은 호스트의 영향 범위 테스트에서 필요합니다."
+      }
+    ],
+    "session": "01a1ccef-242f-7702-b953-f8fd598be549"
+  },
+  "status": "changes-requested-not-integrated"
+}

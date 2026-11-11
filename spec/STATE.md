@@ -11,9 +11,9 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T23:10Z | 2026-11-11T23:10Z | T758 |
 
 ## inbox
+- 261112 parked T758: the extra-hour source cutoff passed with final independent review changes_requested (P2 hidden/late voice sample playback, P3 narrow320px action label) and full frontend5 failed/4784 passed. Preserve all40 files as docs/handoff/ui12/T758.patch (190552 bytes, SHA-256fb6d12ee4a7e7c9804d0fc391fbc24b52c66b3a37e69e78f655c57e025febc6f), verified exact reconstruction. Sourcea0c7b3a3 remains unintegrated; resume the same task with its review/validation artifacts, never mark done or start T759.
 - 261112 decided T758: continue after the device handoff? → follow the owner's latest one-hour continuation, restore approved partial T758 in a fresh headless worker, independently review, integrate and push at the end (alt: remain stopped | start another scope). Source cutoff2026-11-11T23:37:11Z; target remote inspection2026-11-12T00:02:11Z, validation-only hard tail00:17:11Z. Historical stop/handoff records remain.
 - 261112 decided T758: move all current work to another device? → stop ui12 coordinator/runner, release the partial attempt, publish completed main plus the full16-file T758 recovery patch, hashes, scout/browser evidence and restore instructions in docs/handoff/ui12 (alt: omit unfinished work | integrate unreviewed partial source). T758 remains todo and requires completion, checks and independent review; automatic work on this machine is stopped at the user's request.
 - 261112 decided CLIP-225 CLIP-227 T758 review/video-preparation-guide-261112: which video redesign slice follows the completed foreground/T757? → adopt independent scout F1, retained preparation with latest-local review and shared step bar, via CLIP r75 and T758 (alt: another isolated bug | rewrite the whole editor at once). T746/POST-122/123/124 plus real browser baseline support the sequence; preserve backend/credit/owner/export contracts and plan later storyline/edit/delivery slices separately. Original deadline unchanged; closing reserve expanded to3h.
@@ -202,10 +202,11 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Finish only approved T758 from the portable recovery under the owner's bounded continuation: fresh worker/reviewer, affected/browser/full checks, main integration and end-of-run publication. No T759 or overnight recurrence.
-- If acceptance cannot finish within the bound, preserve all newer files/evidence in the recoverable handoff and publish safe main records; keep T758 todo with exact gaps. Preserve excluded tasks and unrelated groups.
+- T758 remains todo. In a fresh assigned workspace restore the latest40-file patch from docs/handoff/ui12, fix hidden/late voice sample playback and the5 recorded frontend regressions, obtain new independent source review, finish full/browser gates, then integrate/publish. Preserve assertions, mounted ownership, quote/flush and rendering/export contracts.
+- This bounded continuation ends with a remote safe handoff and no automatic overnight recurrence. Later whole-video redesign slices are not approved by this cycle; preserve excluded owner-held tasks and unrelated groups.
 
 ## log
+- 261112 ui12: preserve latest40-file T758 recovery after independent P2 and5 remaining frontend failures; task todo, source not integrated.
 - 261112 ui12: resume T758 only for the owner-authorized extra hour; fresh worker/review and final publication.
 - 261112 ui12 device handoff: all own processes stopped, T758 attempt released, original dirty worker kept. Preserve all16 partial files in docs/handoff/ui12/T758.patch with exact recovery hashes and portable scout/browser evidence; main implementation stays through reviewed T757. Latest planning ada6afc2 was already pushed. Owner requested all current work remotely, no continued local automation.
 - 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
@@ -225,4 +226,3 @@
 - 261112 T755 starts (ui12), baseline 42cdc156: browser reproduces storyline-only and built clips both labelled 다듬는 중 on both channels and aggregate. T754 full gate/push passes; exact-revision CI remains tracked before the next push. Keep lifecycle state and render/finalization unchanged.
 - 261112 T754 done (ui12): shared toolbar/padding/body/skeleton, aggregate waits for both reads, stable scrollbar space; 139 tests plus lint/format/FSD/style/build pass. Loaded warm96 and delayed32 browser traces keep chrome and one group Y per width; T753 remote CI43069662263 passes both jobs. Full pre-push follows.
 - 261112 T754 starts (ui12), baseline 8cf585bb: actual browser hub/title/chips stay mounted; missing aggregate toolbar and clip padding shift first groups by 48px then 8px (desktop 48px/16px). T753 full gate/push passed; immutable remote CI remains under observation before the next push.
-- 261112 T753 done (ui12): canonical /create with / alias, logo/login/setup preserved; 24 files/288 consumer tests, lint/FSD/style/build and Chromium fixture proof pass. Full pre-push gate follows.

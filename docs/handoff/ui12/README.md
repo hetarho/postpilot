@@ -1,46 +1,45 @@
-# UI and video work: device handoff
+# UI and video work: portable T758 handoff
 
-This is the preserved device-handoff snapshot. The owner subsequently authorized a bounded T758 continuation; consult current `spec/STATE.md`, the task (including `tasks/done/`) and `spec/reports/261112-ui12.md` before applying this historical patch. Never apply it on top of an already integrated T758 implementation.
+T753–T757 and T758's approved plan are on main. **T758 remains todo and its application source is not integrated.** The additional-hour continuation recovered and expanded the implementation, then received a second independent request for changes. The explicit implementation cutoff passed, so the coordinator preserves the full result rather than starting another implementation round.
 
-The completed implementation through T757 and the approved T758 plan are on `main`. T758 was interrupted at the owner's request to move work to another device. Its partial implementation is preserved in `T758.patch`, including all six new files and the worker's task edits. It is not integrated product code and has not passed task acceptance or independent review.
+## Restore the latest source
 
-The original preparation task starts at `ada6afc201602a5332264d06925ea9cf8737fc0b`. `T758-snapshot.json` records all 16 file hashes and the patch SHA-256. The source on main has not changed since that base; subsequent handoff commits contain records and recovery artifacts only.
+Read current `spec/STATE.md`, `spec/reports/261112-ui12.md`, `spec/tasks/T758.guide-video-preparation-and-review.md`, `spec/review/video-preparation-guide-261112.md` and `T758-review-latest.json`. Establish a fresh worker assignment before restoring. Never apply this patch on top of an integrated T758 implementation.
 
-## Continue on the other device
+The patch's source base is `b7fe8778df41fa6da0636ea5a6768c172fee9e2e`; its source checkpoint is `a0c7b3a35733876273c461de201c7b17d60f1b68`. Main's subsequent handoff changes are documents only. `T758.patch` contains **40 changed/new files**, including the worker task result, with 190552 bytes and SHA-256 `fb6d12ee4a7e7c9804d0fc391fbc24b52c66b3a37e69e78f655c57e025febc6f`. `T758-snapshot.json` records every file hash. `T758-recovery-proof.json` proves clean application and exact isolated-index reconstruction, not functional acceptance.
 
-Update the existing main checkout from `origin/main`, preserving any unrelated local changes. Read `spec/STATE.md`, `spec/reports/261112-ui12.md`, `spec/tasks/T758.guide-video-preparation-and-review.md`, `spec/review/video-preparation-guide-261112.md` and this directory before starting implementation.
-
-In the checkout assigned to T758, from its repository root, restore the partial work once:
+From the newly assigned checkout's repository root:
 
 ```sh
 git apply --check docs/handoff/ui12/T758.patch
 git apply docs/handoff/ui12/T758.patch
 ```
 
-If the check fails, inspect the relevant differences rather than using a forced or rejected-hunk application. The task file remains the current acceptance contract; unchecked or partially implemented behavior still needs completion and verification. Do not count this recovery snapshot as a completed implementation.
+If the check fails, inspect the actual differences. Do not force rejected hunks or import old `.git` runtime/ownership. Do not start over: finish the preserved implementation and the remaining review correction.
 
-Run `/start-vibe` in automatic mode and explicitly continue T758 from the recovered patch. A fresh clone does not inherit local work ownership, `.git` runtime, runner processes, installed dependencies or absolute tool paths. Establish ownership using the installed skills on the new device; do not import the old runtime as live assignments. On this device, the coordinator and runner were stopped, attempt `b1df8608-7122-4dba-8647-1299ab2ddd5a` was released, and its original dirty worktree was preserved.
+## Exact remaining work
 
-## What is already done
+- P2: the confirmed voice sample in **Style** must stop when its preparation screen, lifecycle or focused-work view becomes inactive. Cover a sample fetch that completes and tries to play after the screen was hidden. Keep fields, uploads, approval and voice ownership lifetimes; add the regression and obtain a new independent immutable-source review. `T758-review-latest.json` has the exact source pointer and actual reviewer session.
+- P3: at320px the emphasized generation label wraps as several narrow lines. Preserve360px behavior and distribute the shared step bar's width more clearly. This does not block pointer operation, but is an observed design issue.
+- Full frontend validation still fails5 tests in3 files (4784 pass,603 files total): see `T758-validation.json` for exact names/errors. Diagnose and correct them without weakened assertions or hidden-control shortcuts.
+- Complete affected/full/browser checks against the corrected complete delta, then independent approval, actual main integration, ARCH-31 publication gates and exact-revision remote workflow inspection. Existing failed or pending candidate checks are never counted as acceptance. The patch is not a completed whole-video redesign.
 
-- T753: authenticated logo/home and Make share `/create`; public entry and valid deep links remain available.
-- T754: stable My work hub, toolbar, list/loading geometry and scrollbar space, with purposeful motion retained.
-- T755: a prepared storyline has its own truthful history status and filters, including aggregate and both clip channels.
-- T756 and the return-filter repair: compact, counted in-progress items replace duplicate oversized continuation cards; storyline filters survive workspace returns.
-- T757: unsent storyline requests survive same-workspace preview/tool/lifecycle visits. Independent review, complete local CI, fixture-browser acceptance and source-revision CI passed.
+## Evidence
 
-The later metadata CI delay for `0af0cf99` resolved successfully: https://github.com/hetarho/postpilot/actions/runs/43094556625. The resumed planning revision is `ada6afc2`. Actual remote workflow conclusions for the final handoff revision must be inspected separately.
+The genuine scout/approval and CLIP r75/T758 contract remain authoritative. The first fresh checkpoint passed250 isolated unit tests plus type/lint/format, but the coordinator's expanded91-file/661-test run failed49 tests in10 files. Independent review requested hidden source playback, invalid-region correction and visible-screen test fixes. A distinct correction session implemented those and passed24 isolated tests/type/lint/format. The second reviewer confirmed the earlier P2 fixes and identified the remaining hidden voice sample issue. Full candidate validation completed with5 failing/4784 passing tests in603 files; later build/Python/Go stages did not run. `T758-validation.json` records the exact failures.
 
-## Remaining work
+`T758-browser-final.json` records25 actual Chromium fixture cases on the frozen corrected source: both channels × new/from-post/resume × ordinary/narrated at360/1440px, plus320px dark/reduced-motion/save+eligibility failure. Native lifecycle hit tests, latest-local summaries/change routes, retained input/file/cursor identity, one dock, no horizontal overflow and no generation on navigation pass. The source360, review360 and dark320 screenshots were viewed. Fixture media are unavailable; no live provider, playback/render/export, hardware, human-listening or distribution qualification is claimed. The independent review remains blocking despite the browser passes.
 
-T758 introduces retained preparation screens **Sources → Story → Style → Review**, latest-local summaries with routes back to the original inputs, shared step navigation and explicit generation approval. Preserve both channels, ordinary/narrated modes, source-post and resume paths, owner isolation, autosave/flush, source audio, exact material, quote/credit checks and preview/render/export/finalization behavior. The task and CLIP-227 carry the full contract.
+## Completed and excluded scope
 
-The baseline 360px fixture also shows the Delete control intercepting the centers of the Edit/Finish lifecycle tabs in both channels. `video3-pointer-geometry.json` preserves the actual hit-test evidence. Fix and verify the native pointer route within the existing task; keyboard-only or forced clicks do not establish this acceptance. `video3-scout.json` and `video3-baseline.json` preserve the independent proposal and browser baseline without depending on `.git` artifacts.
+- T753: authenticated home/logo and Make share `/create`, with public entry/deep links preserved.
+- T754: stable My work hub/title/filter/list/loading geometry with purposeful animation retained.
+- T755: truthful storyline-prepared status across both channels and aggregate history.
+- T756 and return-filter repair: one compact accented in-progress section; storyline filters survive workspace returns.
+- T757: unsent storyline requests survive same-workspace preview/tool/lifecycle visits; independently reviewed, published and verified.
 
-T758 is only the first preparation slice of the broader requested video-process redesign. Later storyline review/build, editor action placement and delivery/resume improvements require their own evidence, scoped planning, implementation and independent review. The journey table in `spec/review/video-preparation-guide-261112.md` records that direction. Do not treat T757 or this interrupted slice as the finished redesign.
+T758 is the retained **Sources → Story → Style → Review** preparation slice. Later storyline/build, editing and delivery/resume redesign require separate evidence and approval; none is introduced in this bounded run. The journey table remains in `spec/review/video-preparation-guide-261112.md`. Preserve backend generation, quotes/ceilings, owner material, queues/flush, rendering/export/finalization contracts and excluded T539/T550/T603/T604/T697/INFRA work. No paid generation or new dependencies are authorized here.
 
-The owner's unattended decisions and original deadline were recorded in the report; the device handoff stops automatic work on this machine. No paid/live model calls or owner-held hardware/listening/distribution qualification are included. Preserve unrelated T539/T550/T603/T604/T697 and INFRA/ideation work.
+## Execution history
 
-## Verification
-
-The partial patch was checked for clean application and exact recovery of all recorded file bytes. Those checks establish recoverability only. Finish T758's changed/affected tests and fast checks, independent review and browser acceptance, then the full pre-push gates in `docs/verification.md` and exact-revision remote workflow inspection before publishing its implementation. The handoff artifacts themselves do not change the implemented application on main.
+The owner first requested a device handoff; the original16-file snapshot and stop/release records are preserved in Git commitb7fe8778 and prior report entries. The owner then explicitly authorized about one additional hour. This run used a fresh assigned worker, a separate read-only reviewer, a fresh correction worker and another independent review. The original released dirty worktree was never reused or modified. Source implementation stopped at the latest bounded cutoff; the remaining interval is validation/publication and this recoverable handoff, without an overnight recurrence.
