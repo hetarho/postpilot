@@ -200,6 +200,26 @@ describe('WritingOriginReview', () => {
     expect(selection.toString()).toBe('주인 말 · 사진 관찰 · AI 제안')
   })
 
+  // Turning 출처 보기 off dropped the legend and its notes in one frame and pulled the draft up
+  // under the owner's thumb; they fold away and back, and are out of reach while folded.
+  it('folds the legend and its notes away and back instead of dropping them', async () => {
+    const user = userEvent.setup()
+    render(<Review />)
+    const legend = screen.getByRole('list', { name: '의미의 출처' })
+    const notes = legend.closest('.grid')
+    expect(notes).toHaveClass('grid-rows-[1fr]', 'transition-[grid-template-rows,opacity]')
+
+    await user.click(screen.getByRole('checkbox', { name: '출처 보기' }))
+    expect(screen.queryByRole('list', { name: '의미의 출처' })).not.toBeInTheDocument()
+    expect(legend.isConnected).toBe(true)
+    expect(notes).toHaveClass('grid-rows-[0fr]', 'opacity-0')
+    expect(notes).toHaveAttribute('inert')
+
+    await user.click(screen.getByRole('checkbox', { name: '출처 보기' }))
+    expect(screen.getByRole('list', { name: '의미의 출처' })).toBe(legend)
+    expect(notes).not.toHaveAttribute('inert')
+  })
+
   it('shows the named toggle by default and exactly four categories', () => {
     render(<Review />)
     expect(screen.getByRole('checkbox', { name: '출처 보기' })).toBeChecked()

@@ -636,6 +636,9 @@
      settles. Only `opacity` and `transform` are animated, and both exits are `forwards` so the
      panel holds its final frame for the beat before React unmounts it. */
   --animate-scrim-in: scrim-in var(--duration-base) var(--ease-standard);
+  /* A control that appears beside the one just pressed fades in where it stands, rather than
+     popping into the row (the scrim's own fade, which is a plain opacity rise). */
+  --animate-fade-in: scrim-in var(--duration-base) var(--ease-standard);
   --animate-scrim-out: scrim-out var(--duration-base) var(--ease-standard) forwards;
   --animate-sheet-in: sheet-in var(--duration-slow) var(--ease-emphasized);
   --animate-sheet-out: sheet-out var(--duration-slow) var(--ease-standard) forwards;

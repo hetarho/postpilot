@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import { useTranslation } from 'react-i18next'
 import {
   originContentMatches,
@@ -149,8 +150,10 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
 
   return (
     <>
-      <div className="my-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-4">
+      <div className="my-4">
+        {/* `min-h-11`: the row keeps the height 문구 출처 찾기 gives it, so the toggle does not
+            drop when that button leaves the row. */}
+        <div className="flex min-h-11 flex-wrap items-center gap-4">
           <label className="inline-flex cursor-pointer items-center gap-3">
             <Checkbox checked={visible} onChange={(event) => setVisible(event.target.checked)} />
             <Typography variant="body" as="span">
@@ -166,35 +169,49 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
                 setSelection(null)
                 setPickerFence(fence)
               }}
+              className="animate-fade-in"
             >
               {t('originReview.find', { ns: 'posts' })}
             </Button>
           )}
         </div>
-        {visible && (
-          <>
-            <ul
-              aria-label={t('originReview.legend', { ns: 'posts' })}
-              className="flex flex-wrap gap-3"
-            >
-              {SEMANTIC_ORIGIN_CATEGORIES.map((category) => (
-                <Typography variant="body" as="li" key={category}>
-                  <span
-                    className={`rounded-sm underline underline-offset-4 ${CATEGORY_STYLES[category]}`}
-                  >
-                    {t(`originReview.category.${category}`, { ns: 'posts' })}
-                  </span>
-                </Typography>
-              ))}
-            </ul>
-            <Typography variant="body" className="text-content-secondary">
-              {t('originReview.help', { ns: 'posts' })}
-            </Typography>
-            <Typography variant="body" className="text-content-secondary">
-              {t('originReview.unconfirmedHelp', { ns: 'posts' })}
-            </Typography>
-          </>
-        )}
+        {/* The legend and its two notes fold away and back rather than vanishing: dropped in one
+            frame, they pulled the whole draft up by their height under the owner's thumb, and the
+            toggle read as broken. The rows collapse to nothing, so the hidden notes leave no gap,
+            and `inert` keeps them out of reach while folded. */}
+        <div
+          aria-hidden={!visible || undefined}
+          inert={!visible}
+          className={clsx(
+            'duration-slow ease-standard grid transition-[grid-template-rows,opacity]',
+            visible ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+          )}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="space-y-3 pt-3">
+              <ul
+                aria-label={t('originReview.legend', { ns: 'posts' })}
+                className="flex flex-wrap gap-3"
+              >
+                {SEMANTIC_ORIGIN_CATEGORIES.map((category) => (
+                  <Typography variant="body" as="li" key={category}>
+                    <span
+                      className={`rounded-sm underline underline-offset-4 ${CATEGORY_STYLES[category]}`}
+                    >
+                      {t(`originReview.category.${category}`, { ns: 'posts' })}
+                    </span>
+                  </Typography>
+                ))}
+              </ul>
+              <Typography variant="body" className="text-content-secondary">
+                {t('originReview.help', { ns: 'posts' })}
+              </Typography>
+              <Typography variant="body" className="text-content-secondary">
+                {t('originReview.unconfirmedHelp', { ns: 'posts' })}
+              </Typography>
+            </div>
+          </div>
+        </div>
       </div>
       <div className="contents" onCopy={copyOriginSelection}>
         {children({
