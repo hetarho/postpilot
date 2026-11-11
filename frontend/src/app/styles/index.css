@@ -65,10 +65,10 @@
  * spec/ssot/THEME.md; this header only says how the layers fit together.
  *
  * TIER 1 — the palette (`--palette-*`). OKLCH ramps, one per hue family, on ONE shared lightness
- * scale (50 ≈ near white … 950 ≈ deep ground); sand adds intermediate stops where five close
+ * scale (50 ≈ near white … 950 ≈ deep ground); mauve adds intermediate stops where five close
  * surfaces need them. These are the only raw colour literals in the frontend. They are plain
  * custom properties, NOT Tailwind theme variables, so no utility class can reach them:
- * `bg-palette-coral-400` does not exist on purpose.
+ * `bg-palette-violet-400` does not exist on purpose.
  *
  * TIER 2 — the semantic foundations (`--surface-*`, `--content-*`, `--intent-*`). A theme maps
  * each foundation to a palette STEP — never to a literal. The five surfaces describe physical
@@ -77,7 +77,7 @@
  * TIER 3 — functional roles (`--button-cta-*`, `--field-*`, `--notice-*`, …). These map the
  * foundations onto the things a screen actually renders. `@theme inline` exposes foundations
  * needed for layout and these functional roles to Tailwind as `--color-<role>`. A primitive uses
- * its own functional role instead of reaching straight for coral, accent, or a palette step.
+ * its own functional role instead of reaching straight for violet, accent, or a palette step.
  *
  * THEMES. The pre-paint app bootstrap selects `night` or `day` on `<html data-theme>`; each block
  * re-maps the same foundations, so components never branch on a palette or effective theme.
@@ -106,39 +106,37 @@
   --palette-clip-ink: #1a1a1a;
   --palette-clip-paper: #fffcf5;
   --palette-clip-white: #ffffff;
-  /* sand — the neutral (Guide). Hue ~55–80: warm paper rather than cool grey, at a whisper-level
-     chroma so a plane reads as "warm" without ever reading as beige. Chroma tapers at the near-white
-     end to stay in gamut. */
-  --palette-sand-25: oklch(0.993 0.004 80);
-  --palette-sand-50: oklch(0.978 0.008 78);
-  --palette-sand-100: oklch(0.948 0.012 74);
-  --palette-sand-200: oklch(0.895 0.014 70);
-  --palette-sand-300: oklch(0.81 0.014 68);
-  --palette-sand-400: oklch(0.725 0.013 65);
-  --palette-sand-500: oklch(0.635 0.012 62);
-  --palette-sand-600: oklch(0.535 0.011 60);
-  --palette-sand-650: oklch(0.485 0.011 60);
-  --palette-sand-700: oklch(0.44 0.011 58);
-  --palette-sand-800: oklch(0.315 0.011 55);
-  --palette-sand-850: oklch(0.28 0.01 55);
-  --palette-sand-900: oklch(0.235 0.009 55);
-  --palette-sand-925: oklch(0.2 0.008 55);
-  --palette-sand-950: oklch(0.165 0.007 55);
+  /* mauve — the neutral. Hue 298 (the primary's hue) at a whisper-level chroma: ~5% of the
+     violet ramp's peak, so greys read as "cool, faintly violet" without ever reading as purple.
+     Chroma tapers only at the near-white end to stay in gamut. */
+  --palette-mauve-25: oklch(0.99 0.004 298);
+  --palette-mauve-50: oklch(0.975 0.006 298);
+  --palette-mauve-100: oklch(0.94 0.008 298);
+  --palette-mauve-200: oklch(0.885 0.01 298);
+  --palette-mauve-300: oklch(0.8 0.01 298);
+  --palette-mauve-400: oklch(0.72 0.01 298);
+  --palette-mauve-500: oklch(0.63 0.01 298);
+  --palette-mauve-600: oklch(0.53 0.01 298);
+  --palette-mauve-650: oklch(0.48 0.01 298);
+  --palette-mauve-700: oklch(0.435 0.01 298);
+  --palette-mauve-800: oklch(0.31 0.01 298);
+  --palette-mauve-850: oklch(0.275 0.01 298);
+  --palette-mauve-900: oklch(0.235 0.01 298);
+  --palette-mauve-925: oklch(0.2 0.01 298);
+  --palette-mauve-950: oklch(0.165 0.01 298);
 
-  /* coral — the primary (Guide): a warm tangerine-terracotta. 600 is the day accent: dark enough
-     for white text on it (≈4.9:1) and for accent text on the cream ground (≈4.6:1). 400 is the
-     night accent, light enough for its own dark ink. */
-  --palette-coral-50: oklch(0.975 0.018 50);
-  --palette-coral-100: oklch(0.94 0.04 48);
-  --palette-coral-200: oklch(0.885 0.075 45);
-  --palette-coral-300: oklch(0.81 0.12 42);
-  --palette-coral-400: oklch(0.74 0.15 40);
-  --palette-coral-500: oklch(0.66 0.18 38);
-  --palette-coral-600: oklch(0.545 0.17 36);
-  --palette-coral-700: oklch(0.47 0.145 35);
-  --palette-coral-800: oklch(0.36 0.09 35);
-  --palette-coral-900: oklch(0.27 0.05 38);
-  --palette-coral-950: oklch(0.19 0.022 40);
+  /* violet — the primary (shared with cosimosi: hue 298, chroma peaking at L 0.63). */
+  --palette-violet-50: oklch(0.975 0.034 298);
+  --palette-violet-100: oklch(0.94 0.048 298);
+  --palette-violet-200: oklch(0.885 0.076 298);
+  --palette-violet-300: oklch(0.8 0.13 298);
+  --palette-violet-400: oklch(0.72 0.177 298);
+  --palette-violet-500: oklch(0.63 0.2 298);
+  --palette-violet-600: oklch(0.53 0.172 298);
+  --palette-violet-700: oklch(0.435 0.114 298);
+  --palette-violet-800: oklch(0.31 0.044 298);
+  --palette-violet-900: oklch(0.235 0.02 298);
+  --palette-violet-950: oklch(0.165 0.008 298);
 
   /* red — danger */
   --palette-red-50: oklch(0.975 0.018 22);
@@ -199,17 +197,17 @@
 
 /* ── Tier 2: semantic foundations ───────────────────────────────────────────────────────────── */
 
-/* Static/no-JS fallback and explicit `night`: dark, warm sand ground, coral accent. */
+/* Static/no-JS fallback and explicit `night`: dark, mauve ground, violet accent. */
 :root,
 [data-theme='night'] {
   color-scheme: dark;
 
   /* planes — physical depth from behind the page to the frontmost floating surface */
-  --surface-lowest: var(--palette-sand-950);
-  --surface-recessed: var(--palette-sand-925);
-  --surface-base: var(--palette-sand-900);
-  --surface-raised: var(--palette-sand-850);
-  --surface-highest: var(--palette-sand-800);
+  --surface-lowest: var(--palette-mauve-950);
+  --surface-recessed: var(--palette-mauve-925);
+  --surface-base: var(--palette-mauve-900);
+  --surface-raised: var(--palette-mauve-850);
+  --surface-highest: var(--palette-mauve-800);
   /* For a panel that opens OVER another surface: a listbox opened from inside a sheet wore the
      sheet's own `highest`, and the two planes met with only a shadow between them. It is the only
      surface that exists to be distinguished from ANOTHER surface, which is why it is a sixth step
@@ -221,24 +219,24 @@
      where the step is largest against the plane a listbox actually opens over most of the time:
      `highest` is worn by `ActionBar`, `Sheet` and `Popover` alike. It reuses a palette step that
      another surface also maps to, which is fine — the roles are what must not collide. */
-  --surface-overlay: var(--palette-sand-925);
+  --surface-overlay: var(--palette-mauve-925);
 
   /* content — the first three meet AA on every surface; disabled content is exempt */
-  --content-primary: var(--palette-sand-50);
-  --content-secondary: var(--palette-sand-300);
-  --content-tertiary: var(--palette-sand-400);
-  --content-disabled: var(--palette-sand-600);
+  --content-primary: var(--palette-mauve-50);
+  --content-secondary: var(--palette-mauve-300);
+  --content-tertiary: var(--palette-mauve-400);
+  --content-disabled: var(--palette-mauve-600);
 
   /* structure — only for cases a plane change cannot express */
-  --stroke-subtle: var(--palette-sand-800);
-  --stroke-strong: var(--palette-sand-600);
+  --stroke-subtle: var(--palette-mauve-800);
+  --stroke-strong: var(--palette-mauve-600);
 
   /* intent — Tier 3 decides which component is allowed to carry each meaning */
-  --intent-accent: var(--palette-coral-400);
-  --intent-accent-hover: var(--palette-coral-300);
-  --intent-accent-active: var(--palette-coral-500);
-  --intent-on-accent: var(--palette-coral-950);
-  --intent-accent-subtle: var(--palette-coral-900);
+  --intent-accent: var(--palette-violet-400);
+  --intent-accent-hover: var(--palette-violet-300);
+  --intent-accent-active: var(--palette-violet-500);
+  --intent-on-accent: var(--palette-violet-950);
+  --intent-accent-subtle: var(--palette-violet-900);
 
   --intent-danger: var(--palette-red-400);
   --intent-danger-hover: var(--palette-red-300);
@@ -266,26 +264,26 @@
      and the neutral; its label and double underline keep it from reading as an error. */
   --evidence-advertiser-foreground: var(--palette-red-300);
   --evidence-advertiser-highlight: var(--palette-red-950);
-  --evidence-unconfirmed-foreground: var(--palette-sand-300);
-  --evidence-unconfirmed-highlight: var(--palette-sand-800);
+  --evidence-unconfirmed-foreground: var(--palette-mauve-300);
+  --evidence-unconfirmed-highlight: var(--palette-mauve-800);
 
   /* interaction + physical light */
-  --interaction-focus: var(--palette-coral-300);
-  --physical-scrim: var(--palette-sand-950);
+  --interaction-focus: var(--palette-violet-300);
+  --physical-scrim: var(--palette-mauve-950);
   --physical-on-scrim: var(--palette-white);
   --physical-video: var(--palette-black);
   --physical-shadow: var(--palette-black);
 
   /* promotional hues — the ONE place a foundation reaches past the accent family (THEME-37).
      Three saturated steps for the aurora blobs behind a promotional surface: the accent's own
-     coral, the gold and a rose from the other ramps — a sunset rather than a neon sky — at the
-     lightness where a blurred blob glows on the night ground instead of vanishing into it. */
-  --promo-hue-a: var(--palette-coral-500);
-  --promo-hue-b: var(--palette-gold-300);
-  --promo-hue-c: var(--palette-red-400);
+     violet, the blue and the gold from the other ramps, at the lightness where a blurred blob
+     glows on the night ground instead of vanishing into it. */
+  --promo-hue-a: var(--palette-violet-500);
+  --promo-hue-b: var(--palette-blue-500);
+  --promo-hue-c: var(--palette-gold-300);
 
   /* How dark a lifted plane's shadow is. A raised step card on the night ground needs a deep,
-     wide shadow to read as lifted; on the cream day ground the same mix is a smudge. */
+     wide shadow to read as lifted; on the light day ground the same mix is a smudge. */
   --shadow-strength: 55%;
 }
 
@@ -293,28 +291,28 @@
 [data-theme='day'] {
   color-scheme: light;
 
-  --surface-lowest: var(--palette-sand-200);
-  --surface-recessed: var(--palette-sand-100);
-  --surface-base: var(--palette-sand-50);
-  --surface-raised: var(--palette-sand-25);
+  --surface-lowest: var(--palette-mauve-200);
+  --surface-recessed: var(--palette-mauve-100);
+  --surface-base: var(--palette-mauve-50);
+  --surface-raised: var(--palette-mauve-25);
   --surface-highest: var(--palette-white);
-  /* Same step down, and here it is the only direction there is. `sand-50` would have been
+  /* Same step down, and here it is the only direction there is. `mauve-50` would have been
      `surface-base` exactly, which is the plane a listbox on an ordinary page opens over. */
-  --surface-overlay: var(--palette-sand-100);
+  --surface-overlay: var(--palette-mauve-100);
 
-  --content-primary: var(--palette-sand-950);
-  --content-secondary: var(--palette-sand-700);
-  --content-tertiary: var(--palette-sand-650);
-  --content-disabled: var(--palette-sand-500);
+  --content-primary: var(--palette-mauve-950);
+  --content-secondary: var(--palette-mauve-700);
+  --content-tertiary: var(--palette-mauve-650);
+  --content-disabled: var(--palette-mauve-500);
 
-  --stroke-subtle: var(--palette-sand-200);
-  --stroke-strong: var(--palette-sand-400);
+  --stroke-subtle: var(--palette-mauve-200);
+  --stroke-strong: var(--palette-mauve-400);
 
-  --intent-accent: var(--palette-coral-600);
-  --intent-accent-hover: var(--palette-coral-700);
-  --intent-accent-active: var(--palette-coral-800);
+  --intent-accent: var(--palette-violet-600);
+  --intent-accent-hover: var(--palette-violet-700);
+  --intent-accent-active: var(--palette-violet-800);
   --intent-on-accent: var(--palette-white);
-  --intent-accent-subtle: var(--palette-coral-50);
+  --intent-accent-subtle: var(--palette-violet-50);
 
   --intent-danger: var(--palette-red-600);
   --intent-danger-hover: var(--palette-red-700);
@@ -340,19 +338,19 @@
   --evidence-ai-highlight: var(--palette-gold-50);
   --evidence-advertiser-foreground: var(--palette-red-700);
   --evidence-advertiser-highlight: var(--palette-red-50);
-  --evidence-unconfirmed-foreground: var(--palette-sand-700);
-  --evidence-unconfirmed-highlight: var(--palette-sand-100);
+  --evidence-unconfirmed-foreground: var(--palette-mauve-700);
+  --evidence-unconfirmed-highlight: var(--palette-mauve-100);
 
-  --interaction-focus: var(--palette-coral-500);
-  --physical-scrim: var(--palette-sand-950);
+  --interaction-focus: var(--palette-violet-500);
+  --physical-scrim: var(--palette-mauve-950);
   --physical-on-scrim: var(--palette-white);
-  --physical-shadow: var(--palette-sand-950);
+  --physical-shadow: var(--palette-mauve-950);
 
   /* One step lighter than night's on the day ground — a soft aurora rather than neon on white,
      but a step deeper than pastel, which the shader's blend washed out to nothing. */
-  --promo-hue-a: var(--palette-coral-400);
-  --promo-hue-b: var(--palette-gold-200);
-  --promo-hue-c: var(--palette-red-300);
+  --promo-hue-a: var(--palette-violet-400);
+  --promo-hue-b: var(--palette-blue-400);
+  --promo-hue-c: var(--palette-gold-300);
 
   --shadow-strength: 14%;
 }
@@ -971,7 +969,7 @@
   --color-progress-step-todo: var(--progress-step-todo);
 
   /* Shadows are mixed from the physical role so they re-skin with the theme, at the theme's own
-     strength: soft and wide, the way a card lifts off warm paper. */
+     strength: soft and wide, the way a card lifts off the page. */
   --shadow-sm: 0 1px 3px
     color-mix(in oklab, var(--shadow-color) var(--shadow-strength), transparent);
   --shadow-md: 0 8px 24px -6px
