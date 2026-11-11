@@ -6,6 +6,7 @@ const { createHash, randomUUID } = require('node:crypto')
 const { execFileSync } = require('node:child_process')
 const { createRequire } = require('node:module')
 const { pathToFileURL } = require('node:url')
+const os = require('node:os')
 const assert = require('node:assert/strict')
 
 const args = process.argv.slice(2)
@@ -229,6 +230,7 @@ async function runClient(root, baseURL, expectedHead, diagnosticExecutable) {
   const artifactRoot = path.join(root, safeRelative(initial.artifactRelative))
   const report = { version: 1, actualExecutionAttempted: true, actualWindowsExecution: process.platform === 'win32' && !diagnosticExecutable,
     hostPlatform: process.platform, hostArchitecture: process.arch, node: process.version, head: expectedHead, sourceBinding: initial,
+    validationHost: diagnosticExecutable ? { platform: process.platform, architecture: process.arch, cpu: os.cpus()[0]?.model, memoryBytes: os.totalmem(), kernel: os.release() } : null,
     device: windowsDevice(), browserProfile: 'Playwright-managed temporary profile; default arguments, no owner profile',
     reports: [], comparisons: [], sessions: [], productionFinal: [], ...flags }
   const browsers = diagnosticExecutable ? [{ name: 'diagnostic-chromium', executable: diagnosticExecutable }] : [
@@ -357,7 +359,8 @@ async function main() {
   try {
     if (args.includes('--serve') || diagnostic) {
       hosted = await serve(root, expectedHead)
-      console.log(JSON.stringify({ serving: hosted.baseURL, binding: hosted.binding, windowsExecution: false }))
+      console.log(JSON.stringify({ serving: hosted.baseURL, head: hosted.binding.head, artifactRelative: hosted.binding.artifactRelative,
+        fixtureManifestSHA256: hosted.binding.fixtureManifestSHA256, arms: hosted.binding.arms, windowsExecution: false }))
       if (!diagnostic) { process.once('SIGINT', () => { void hosted.server.close().then(() => process.exit(0)) }); return }
     }
     const baseURL = hosted?.baseURL ?? option('--base-url', '').replace(/\/$/, '')
