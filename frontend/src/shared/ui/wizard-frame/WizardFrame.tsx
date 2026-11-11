@@ -44,12 +44,21 @@ export function WizardFrame({
       <Typography variant="label" as="p" className="text-content-secondary">
         {progress.text}
       </Typography>
-      <ProgressBar
-        label={progress.label}
-        done={progress.current}
-        total={progress.total}
-        className="mt-2"
-      />
+      {/* A count it does not know yet is said in words over a still, empty track. The job bar's
+          indeterminate sweep means "something is running", and on a question that is only
+          waiting for the owner's answer it read as a load that never ended. */}
+      {progress.total ? (
+        <ProgressBar
+          label={progress.label}
+          done={progress.current}
+          total={progress.total}
+          className="mt-2"
+        />
+      ) : (
+        <div aria-hidden="true" className="relative mt-2 h-0">
+          <div className="bg-meter-track h-progress-bar absolute inset-x-0 top-0" />
+        </div>
+      )}
       {/* A stage heading takes focus for announcement on navigation; it is not a control. */}
       <h2
         ref={heading}
