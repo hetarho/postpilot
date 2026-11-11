@@ -33,7 +33,14 @@ import {
   typographyStyles,
   type BadgeTone,
 } from '@/shared/ui'
-import { ContinueHero, StatusTile, WorkGroup } from '@/widgets/work-list'
+import {
+  ContinueHero,
+  StatusTile,
+  WorkGroup,
+  WorkListToolbar,
+  WorkListBody,
+  WorkListLoading,
+} from '@/widgets/work-list'
 import { useMyWorkScrollReturn } from '../model/useMyWorkScrollReturn'
 
 type Kind = 'post' | 'naverClip' | 'instaClip'
@@ -199,6 +206,7 @@ export function MyWorkPage() {
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
       <h1 className="sr-only">{t('location.mine', { ns: 'nav' })}</h1>
+      <WorkListToolbar />
       {failed && (
         <Notice tone="danger" role="alert" className="mt-4">
           <span>{t('list.loadFailed', { ns: 'posts' })}</span>
@@ -214,13 +222,14 @@ export function MyWorkPage() {
           </Button>
         </Notice>
       )}
-      {!failed && (pending || items.length === 0) && (
+      {!failed && !pending && items.length === 0 && (
         <Typography variant="body" role="status" className="text-content-tertiary mt-6">
-          {pending ? t('state.loading', { ns: 'common' }) : t('list.empty', { ns: 'posts' })}
+          {t('list.empty', { ns: 'posts' })}
         </Typography>
       )}
-      <div className="mt-4 flex flex-col gap-10">
-        {hero && (
+      <WorkListBody>
+        <WorkListLoading pending={pending} />
+        {!pending && hero && (
           <ContinueHero
             kind={t(`work.kind.${hero.kind}`)}
             title={hero.title}
@@ -234,17 +243,17 @@ export function MyWorkPage() {
             )}
           />
         )}
-        {inProgress.length > 0 && (
+        {!pending && inProgress.length > 0 && (
           <WorkGroup heading={t('work.inProgress')} count={inProgress.length}>
             {inProgress.map(card)}
           </WorkGroup>
         )}
-        {done.length > 0 && (
+        {!pending && done.length > 0 && (
           <WorkGroup heading={t('work.done')} count={done.length}>
             {done.map(card)}
           </WorkGroup>
         )}
-        {posts.hasNextPage && (
+        {!pending && posts.hasNextPage && (
           <Link
             to="/naver-blog"
             className={buttonStyles({ variant: 'secondary', className: 'self-start' })}
@@ -252,7 +261,7 @@ export function MyWorkPage() {
             {t('work.more', { name: t('work.kind.post') })}
           </Link>
         )}
-      </div>
+      </WorkListBody>
       <ActionBar dock="list" className="action-list-inset mt-auto w-full sm:w-fit">
         <Link
           to="/create"

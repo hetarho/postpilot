@@ -1127,6 +1127,8 @@ body,
 }
 
 html {
+  /* Keep centred hub chrome steady when a short/loading list gains a document scrollbar. */
+  scrollbar-gutter: stable;
   /* The document is the app's one scroller (THEME-25). Without `contain`, Chrome for
      Android fires pull-to-refresh on any downward swipe at scrollTop 0 — which reloads the SPA and
      discards whatever autosave has not flushed. The editor opens at scrollTop 0. THEME-31. */

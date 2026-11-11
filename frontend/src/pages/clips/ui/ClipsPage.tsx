@@ -23,6 +23,9 @@ import { ChannelActions } from '@/widgets/channel-actions'
 import { clsx } from 'clsx'
 import {
   ContinueSection,
+  WorkListBody,
+  WorkListToolbar,
+  WorkListLoading,
   FindSheet,
   StatusTile,
   WorkGroup,
@@ -160,7 +163,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
       className={pageStyles({
         width: 'wide',
         gutters: false,
-        className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
+        className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
       {/* The channel opens straight onto this list: the marked channel link names the place, so
@@ -171,14 +174,14 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
           the list opens on its work. */}
-      <div className="px-4 sm:px-6 lg:px-8">
+      <WorkListToolbar className="px-4 sm:px-6 lg:px-8">
         <FindSheet
           active={(narrowing.q?.trim() ? 1 : 0) + (narrowing.status ? 1 : 0)}
           onClear={() => narrow({ channel })}
         >
           <ClipListControls narrowing={narrowing} onChange={narrow} />
         </FindSheet>
-      </div>
+      </WorkListToolbar>
 
       {templates.isError && !projects.isError && (
         <Notice tone="danger" role="alert" className="mx-4 mt-8 sm:mx-6">
@@ -211,15 +214,14 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
         </Notice>
       )}
 
-      {/* One live region for both states, so finishing the load is a text change inside it rather
-          than two nodes swapping — a swap announces nothing to a screen reader. */}
-      {!projects.isError && (projects.isPending || listed.length === 0) && (
+      {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
+      {!projects.isError && !projects.isPending && listed.length === 0 && (
         <Typography
           variant="body"
           role="status"
           className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
         >
-          {projects.isPending ? t('state.loading', { ns: 'common' }) : historyText('empty')}
+          {historyText('empty')}
         </Typography>
       )}
 
@@ -239,10 +241,11 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
 
       {/* Guide: the newest unfinished clip as the big 이어서 쓰기 card, then 작성 중 and 완성 as
           columns of cards. A narrowing shows its matches in the same groups, without the hero. */}
-      <section
-        aria-label={t('project.directory', { ns: 'clips' })}
-        className="mt-6 flex shrink-0 flex-col gap-10 px-4 sm:px-6 lg:px-8"
+      <WorkListBody
+        label={t('project.directory', { ns: 'clips' })}
+        className="px-4 sm:px-6 lg:px-8"
       >
+        <WorkListLoading pending={projects.isPending} />
         {(() => {
           // One clip's card: a status tile, the title, its state, template, ratio and time, and
           // the recovery links under it. The hero is the same card, large, its 이어서 만들기 the
@@ -384,7 +387,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
             </>
           )
         })()}
-      </section>
+      </WorkListBody>
       <ChannelActions channel={channel} section="work" className="action-list-inset mt-auto" />
     </main>
   )

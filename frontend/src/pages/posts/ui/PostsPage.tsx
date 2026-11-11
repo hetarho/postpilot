@@ -21,6 +21,9 @@ import { VoiceRefLabel } from '@/entities/voice'
 import { ChannelActions } from '@/widgets/channel-actions'
 import {
   ContinueSection,
+  WorkListBody,
+  WorkListToolbar,
+  WorkListLoading,
   FindSheet,
   WorkGroup,
   workCardActionClass,
@@ -212,14 +215,14 @@ export function PostsPage() {
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
           the list opens on its work. The button is there at every post count, and says how many
           narrowings are on while they are. */}
-      <div className="px-4 sm:px-6 lg:px-8">
+      <WorkListToolbar className="px-4 sm:px-6 lg:px-8">
         <FindSheet
           active={(narrowing.q?.trim() ? 1 : 0) + (narrowing.status ? 1 : 0)}
           onClear={() => narrow({})}
         >
           <PostListControls narrowing={narrowing} onChange={narrow} />
         </FindSheet>
-      </div>
+      </WorkListToolbar>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mx-4 mt-8 sm:mx-6">
@@ -238,15 +241,14 @@ export function PostsPage() {
         </Notice>
       )}
 
-      {/* One live region for both states, so finishing the load is a text change inside it rather
-          than two nodes swapping — a swap announces nothing to VoiceOver or TalkBack (THEME-33). */}
-      {!isError && (isPending || (isEmpty && !isNarrowed)) && (
+      {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
+      {!isError && isEmpty && !isNarrowed && (
         <Typography
           variant="body"
           role="status"
           className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
         >
-          {isPending ? t('state.loading', { ns: 'common' }) : t('list.empty', { ns: 'posts' })}
+          {t('list.empty', { ns: 'posts' })}
         </Typography>
       )}
 
@@ -268,10 +270,11 @@ export function PostsPage() {
       {/* Guide: the latest unfinished post as the big 이어서 쓰기 card, then the rest in two groups
           — 작성 중 and 완성 — each a column of large, friendly cards (two on the desk). A
           narrowing shows its matches in the same two groups, without the hero. */}
-      <section
-        aria-label={t('list.history.directory', { ns: 'posts' })}
-        className="mt-6 flex shrink-0 flex-col gap-10 px-4 sm:px-6 lg:px-8"
+      <WorkListBody
+        label={t('list.history.directory', { ns: 'posts' })}
+        className="px-4 sm:px-6 lg:px-8"
       >
+        <WorkListLoading pending={isPending} />
         {(() => {
           // One post's card: the status tile, the title in a heading's size, its state as a chip,
           // and the recovery links under it. The hero is the same card, large, its 이어서 작성 the
@@ -461,7 +464,7 @@ export function PostsPage() {
             </>
           )
         })()}
-      </section>
+      </WorkListBody>
 
       {/* The list's end, while there is more to load: what the observer watches, and ONE live region
           whose text says a page is loading or that it failed, so the change is announced rather than

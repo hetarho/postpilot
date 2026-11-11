@@ -192,7 +192,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
-| T754 | Stabilize My work section and loading geometry | THEME POST CLIP ARCH | T753 | todo |
 | T755 | Distinguish prepared storylines in clip histories | THEME POST CLIP ARCH | T754 | todo |
 | T756 | Unify compact emphasized in-progress work | THEME POST CLIP ARCH | T755 | todo |
 
@@ -202,6 +201,8 @@
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 T754 done (ui12): shared toolbar/padding/body/skeleton, aggregate waits for both reads, stable scrollbar space; 139 tests plus lint/format/FSD/style/build pass. Loaded warm96 and delayed32 browser traces keep chrome and one group Y per width; T753 remote CI43069662263 passes both jobs. Full pre-push follows.
+- 261112 T754 starts (ui12), baseline 8cf585bb: actual browser hub/title/chips stay mounted; missing aggregate toolbar and clip padding shift first groups by 48px then 8px (desktop 48px/16px). T753 full gate/push passed; immutable remote CI remains under observation before the next push.
 - 261112 T753 done (ui12): canonical /create with / alias, logo/login/setup preserved; 24 files/288 consumer tests, lint/FSD/style/build and Chromium fixture proof pass. Full pre-push gate follows.
 - 261112 T753 starts (ui12), baseline 1baf181e: canonical /create, preserve setup/deep links/public auth.
 - 261112 create-task T753–T756 (ui12): consume THEME r40, POST r47 and CLIP r74; four sequential foreground units, no unrelated pending domain consumed.
@@ -220,5 +221,3 @@
 - 261111 T747 gate passes (cr11): complete ARCH-31 at 8a452082; full CI, Compose/deployment images and all three CPU media gates/both release layouts pass. T751 b6f65d5f remote CI 43030996760, Deploy backend 43030996744 and all3 Verify media 43031747206 pass at its actual checkout SHA.
 - 261111 T747 done: saturated native admission/browser independence pinned; QA matrix leaves worker CPU assertion and sustained load open.
 - 261111 T747 starts (cr11): pin browser admission independently of fully occupied native active/waiting slots and map load/queue/cancellation/restart/resource clauses to current named tests, without live hosting or rental benchmarks. T751 is committed/pushed; its immutable remote workflows remain under observation.
-- 261111 T751 done (cr11): query/sqlc order solely by reverse rowid acceptance, preserving stored timestamps, bodies/kinds, owner/project filters and schema/index. Deterministic reversed/equal-time regression fails original query and passes the repair; full clip/store/app/rpc and 21 FE consumer tests pass. Complete ARCH-31 on 4f357b66 passes (FE 593/4721, deploy Python 69, Go all, static/build/generation/Compose, both deployment images and all three media gates, both layouts); remote results follow after push.
-- 261111 T752 remote verified (cr11): code push 53dc028d CI 43025005875 and Deploy backend 43025005647 pass, including actual rollout/ranged GET/CORS/R2 gates; completion metadata 740b8437 CI 43025066174 passes. Verify media 43026911492 passes all three jobs; its API head_sha is 740b8437 but every checkout/log binds the tested source to deployed 53dc028d.

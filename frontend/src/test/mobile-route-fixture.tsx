@@ -149,6 +149,15 @@ const options: FakeAuthOptions = {
     ],
   },
 }
+if (scenario === 'work-hub') {
+  const project = options.clips!.projects![0]!
+  options.clips!.projects!.push({
+    ...project,
+    id: 'insta-review',
+    channel: 'instagram_clip',
+    title: '인스타에서 이어 만들 영상',
+  })
+}
 if (scenario === 'empty') {
   options.posts = { posts: [] }
   options.templates = { templates: [] }
@@ -229,6 +238,19 @@ const transport: Transport = new Proxy(base, {
     return async (...args: unknown[]) => {
       const method = args[0] as { name: string; parent: { typeName: string } }
       procedures.push(method.name)
+      const delay = Number(
+        params.get(
+          method.name === 'ListClipProjects'
+            ? 'clipDelay'
+            : method.name === 'ListPosts'
+              ? 'postDelay'
+              : method.name === 'ListVideoTemplates'
+                ? 'templateDelay'
+                : 'unusedDelay',
+        ),
+      )
+      if (delay > 0 && Number.isFinite(delay))
+        await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 5000)))
       if (scenario === 'error' && method.name !== 'GetMe' && /^(List|Get)/.test(method.name))
         throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
       if (method.parent.typeName === WritingTestService.typeName)

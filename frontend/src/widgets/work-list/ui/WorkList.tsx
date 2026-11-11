@@ -71,7 +71,7 @@ export function ContinueHero({
   const { t } = useTranslation('channel')
   const id = useId()
   return (
-    <section aria-labelledby={id} className="animate-step-in">
+    <section aria-labelledby={id} className="min-w-0">
       <Typography variant="title" as="h2" id={id} className="mb-3">
         {t('work.continue')}
       </Typography>
@@ -122,7 +122,7 @@ export function ContinueSection({ children }: { children: ReactNode }) {
   const { t } = useTranslation('channel')
   const id = useId()
   return (
-    <section aria-labelledby={id} className="animate-step-in">
+    <section aria-labelledby={id} className="min-w-0">
       <Typography variant="title" as="h2" id={id} className="mb-3">
         {t('work.continue')}
       </Typography>

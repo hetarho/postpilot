@@ -273,3 +273,29 @@ it('derives named child locations and unknown-route behavior from the same hiera
     destination: undefined,
   })
 })
+
+it('keeps the My work hub nodes, chip scroll and selected section through every sibling list', async () => {
+  const view = renderAppAt('/my', { user: { id: 'alice' } })
+  const sections = await screen.findByRole('navigation', { name: '나누어 보기' })
+  const title = sections.previousElementSibling
+  sections.scrollLeft = 24
+  for (const [label, path, heading] of [
+    ['블로그', '/naver-blog', '네이버 블로그'],
+    ['네이버 클립', '/naver-clip', '네이버 클립'],
+    ['인스타 클립', '/insta-clip', '인스타 클립'],
+    ['전체', '/my', '내 글'],
+  ]) {
+    await userEvent.click(within(sections).getByRole('link', { name: label }))
+    await screen.findByRole('heading', { level: 1, name: heading })
+    expect(view.router.state.location.pathname).toBe(path)
+    expect(screen.getByRole('navigation', { name: '나누어 보기' })).toBe(sections)
+    expect(sections.previousElementSibling).toBe(title)
+    expect(sections.scrollLeft).toBe(24)
+    expect(within(sections).getByRole('link', { name: label })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    expect(sections.querySelectorAll('[aria-current]')).toHaveLength(1)
+    expect(readNavigationEntry('alice', path)).toBeUndefined()
+  }
+})

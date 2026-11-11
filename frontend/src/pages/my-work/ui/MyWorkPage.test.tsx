@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
+import { createFakeAuthTransport } from '@/test/session'
+import type { Transport } from '@connectrpc/connect'
 
 const clip = {
   videoTemplateId: '',
@@ -106,4 +108,41 @@ describe('returning to 내 글', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/my'))
     await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 640))
   })
+})
+
+it('waits for both histories without exposing a partial latest item or replaying the body', async () => {
+  let release!: () => void
+  const waiting = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const base = createFakeAuthTransport({
+    existingSetup: true,
+    user: { id: 'alice' },
+    posts: { posts: [{ slug: 'waiting-post', title: '먼저 도착한 글', status: 'draft' }] },
+    clips: { projects: [{ ...clip, id: 'waiting-clip', title: '나중에 도착한 영상' }] },
+  })
+  const transport: Transport = new Proxy(base, {
+    get(target, property) {
+      if (property !== 'unary') return Reflect.get(target, property)
+      return async (...args: unknown[]) => {
+        if ((args[0] as { name: string }).name === 'ListClipProjects') await waiting
+        return Reflect.apply(target.unary, target, args)
+      }
+    },
+  })
+  const view = renderAppAt('/my', { transport })
+  const main = await screen.findByRole('main')
+  await waitFor(() => expect(main.querySelector('[data-work-skeleton]')).not.toBeNull())
+  const body = main.querySelector('[data-work-body]')
+  expect(within(main).queryByRole('link', { name: /먼저 도착한 글/ })).toBeNull()
+  expect(within(main).queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
+  await act(async () => {
+    release()
+    await waiting
+  })
+  await screen.findByRole('link', { name: /나중에 도착한 영상/ })
+  expect(within(main).getByRole('link', { name: /먼저 도착한 글/ })).toBeInTheDocument()
+  expect(main.querySelector('[data-work-body]')).toBe(body)
+  expect(main.querySelector('[data-work-skeleton]')).toBeNull()
+  expect(view.router.state.location.pathname).toBe('/my')
 })
