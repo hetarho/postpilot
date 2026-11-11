@@ -11,6 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
+| cr11 | ihaelam-ui-MacBookPro | pair | 2026-11-11T11:56Z | 2026-11-11T11:56Z | T752 |
 
 ## inbox
 - 261111 decided T752 T742: the sv8 final gate stopped the `deployable` media build with curl exit 35 on ffmpeg.org's FFmpeg 9.0.1 archive, the outage approved T742 already repairs → bring T742 forward, reintegrate its reviewed 799ac39a delta and make T752 depend on it, so T752 closes on the host's gate re-run of the changed code (alt: port the delta under T752 and leave T742 as a duplicate todo | close both tasks in one unit) — the same archive still fails with 35 on 261111 while ffmpeg.org serves the signature and key.
