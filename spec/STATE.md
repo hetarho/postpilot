@@ -114,24 +114,24 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 21 | 21 | - | 0 |
+| ARCH | 22 | 21 | ARCH-20✎ | 0 |
 | AUTH | 15 | 15 | - | 0 |
-| QUOTA | 38 | 38 | - | 0 |
-| POST | 45 | 45 | - | 0 |
-| VOICE | 19 | 19 | - | 0 |
+| QUOTA | 39 | 38 | QUOTA-28✎ QUOTA-75+ | 0 |
+| POST | 46 | 45 | POST-43✎ POST-45✎ POST-47✎ POST-50✎ POST-51✎ POST-53✎ POST-54✎ POST-56✎ POST-62✎ POST-66✎ POST-68✎ POST-109✎ POST-117✎ POST-118✎ POST-122+ POST-123+ POST-124+ | 0 |
+| VOICE | 20 | 19 | VOICE-52✎ VOICE-66✎ | 0 |
 | GEN | 31 | 31 | - | 0 |
-| MODEL | 36 | 36 | - | 0 |
-| TMPL | 31 | 31 | - | 0 |
-| GUIDE | 25 | 25 | - | 0 |
+| MODEL | 37 | 36 | MODEL-44✎ MODEL-96+ | 0 |
+| TMPL | 32 | 31 | TMPL-24✎ TMPL-32✎ TMPL-71✎ TMPL-75✎ | 0 |
+| GUIDE | 26 | 25 | GUIDE-20✎ GUIDE-22✎ GUIDE-23✎ GUIDE-26✎ GUIDE-44✎ GUIDE-46✎ GUIDE-48✎ | 0 |
 | EXPORT | 12 | 12 | - | 0 |
-| LANG | 10 | 10 | - | 0 |
-| THEME | 38 | 38 | - | 2 |
-| MKT | 11 | 11 | - | 0 |
+| LANG | 11 | 10 | LANG-6✎ | 0 |
+| THEME | 39 | 38 | THEME-6✎ THEME-8✎ THEME-11✎ THEME-12✎ THEME-13✎ THEME-14✎ THEME-15✎ THEME-18✎ THEME-19✎ THEME-20✎ THEME-23✎ THEME-24✎ THEME-26✎ THEME-27✎ THEME-28✎ THEME-29✎ THEME-38✎ THEME-39✎ THEME-41✎ THEME-48✎ THEME-52✎ THEME-57✎ THEME-58✎ THEME-59✎ THEME-62✎ THEME-66✎ THEME-67✎ THEME-68+ THEME-69+ THEME-70+ THEME-71+ | 2 |
+| MKT | 12 | 11 | MKT-11✎ | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 72 | 72 | - | 2 |
+| CLIP | 73 | 72 | CLIP-3✎ CLIP-36✎ CLIP-41✎ CLIP-210✎ CLIP-221✎ CLIP-225+ | 2 |
 | CDS | 38 | 38 | - | 1 |
-| BILL | 9 | 9 | - | 0 |
-| MEM | 7 | 7 | - | 2 |
+| BILL | 10 | 9 | BILL-14✎ | 0 |
+| MEM | 8 | 7 | MEM-24✎ | 2 |
 | QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 3 | 3 | - | 0 |
@@ -173,11 +173,13 @@
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
+- create-task for the pending THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH deltas: one adoption task that lands ab/post-writing-polish/final on main after its code-gap fixes and the full gate
 - sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes d95f0f5f after a full local gate on 729ec6d0 (Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback; remote CI passed). T745 (shared DOM test i18n catalogs, setup 1.65 -> 0.73 s per file) follows in a second push after an FE gate on the identical tree. Remote CI passed for both pushes (42802447091, 42808343741). Report reports/261110-sil5.md.
 - Fix the clip/store request history ordering under clock rollback (backend; needs a full gate plus media parity), then close T739. Add the T745 provided-data assertion suggested in the inbox.
 - T741/T742 remain deferred after the 92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261111 update-ssot THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH: the adopted Guide redesign (ab ui-redesign/b) and the requirements-led post guide (ab post-writing-ux/d, polish a/b/c/d merged on ab/post-writing-polish/final) become the rules; 13 revs, 11 new decisions; code gaps the rules keep (MODEL-24/96, QUOTA-75, THEME-11/18/28/55/58/67/70, ARCH-16, POST-123, VOICE-69, TMPL-32, MKT-11) are fixed on that branch before it lands
 - 261111 hu2 updates haeram-spec-creator 0.12.0→0.12.2 (8 skill files, no conflicts; no structural migration, FORMAT overrides unchanged, 54 existing lint errors identical) and refreshes the browser ink identity for the new lockfile SHA (catalog, canonical identity, both asset-version constants; styles/fonts/WASM unchanged). clip/design, clip, store codec, go vet/build and 46 FE files/294 tests, tsc, prettier, eslint pass; no push.
 - 261110 T745 done (sil5): the dom project evaluates the i18n catalogs once per run (globalSetup provide, setup inject into the unchanged product init); resources strictly equal the catalogs, discovery identical except the new equality case; ABBA setup per DOM file 1.65 -> 0.73 s; submit check ran the full FE suite (581 files / 4642 tests); review 274ecdd7 approves with two P3 notes; merged 08edc691.
 - 261110 T743 done (sil5): the ClipCampaign gate failure was a product remount; the form no longer adopts the pre-save project in the render after an autosave answer, so the open guide disclosure and a half-typed item survive. Base fails 3/4 loaded runs at ClipCampaign.test.tsx:35, fix passes 5/5; new regression fails on base; task check passed on a612c3e9; review 50f9d212 approves with two P3 notes; merged 28b58944.

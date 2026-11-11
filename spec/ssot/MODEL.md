@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r36 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
+> r37 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -117,7 +117,8 @@
   - source-post deletion purges associated private test payload before detaching history metadata; account deletion cascades tests and their private data
   - deletion/expiry marks a durable payload-purge fence; queued/in-flight/late callbacks cannot restore purged private data or publish a result from it
   - payload expiry is not a new generation or a reason to recreate an adopted setting
-- MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId; model selections remain named settings at /ai-models.
+- MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId, placed under the AI 고르기 tab at /ai-models (→=THEME-38), which also holds the stage model choices (→=MODEL-96)
+  - AI 고르기's one primary action opens the two-contestant writer comparison; the observer comparison and test history sit beside it
   - voice/template/guideline/model entry points all seed the same factor/format/material flow; changing routes or choosing candidates starts no work
   - model/setting selectors show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
   - desktop review shows two complete readable posts beside each other; phone review preserves candidate reading positions and shows the same pair with explicit winner controls
@@ -146,6 +147,11 @@
   - admin offers a separate free-group view/filter and explicit classification controls; user selectors order free before the four paid grades
 - MODEL-58 [o] classification gates ordinary selections, preset application, comparisons and execution through QUOTA-19, as well as paid estimator-combo assignment. Unclassified registrations remain visible only for operator curation and cannot bypass entitlement. Locked higher grades stay visible to users with the required plan; being price-zero alone does not classify a registration as free.
 - MODEL-59 [o] a models-v1 paste line is an id optionally followed by `free`, `value`, `balanced`, `premium` or `top`. An omitted classification explicitly unsets it; export/preview/apply round-trip the complete membership and classification. Unknown tokens reject the whole document; ordinary access follows MODEL-58.
+- MODEL-96 [o] `/ai-models` shows the model in use for each of the write, observe and analyze stages as a row with its grade and per-post credit figure (→=QUOTA-64); its 바꾸기 opens a picker of that stage's selectable models as radio cards, and a tap saves that choice at once (→!MODEL-25)
+  - the picker opens free first, then 가성비 up to 최고, unclassified last, with catalog order inside a grade (→!MODEL-57)
+  - 품질 먼저 (highest grade first) and 균형 (밸런스 first, nearest grades next) apply only when the owner picks them; 가격 먼저 puts free first, then the fewest credits per post
+  - locked or unaffordable models stay visible as disabled cards stating their reason, including the required plan (→!MODEL-14)
+  - cards and orderings read credits per post only, never a supplier price or pricing date (→!QUOTA-66)
 - MODEL-60 [o] tests retain the originating creation/settings/history location under THEME-58, including filters and safe return through reload or new-tab deep links. A direct test link defaults to test history; a missing source does not imply an unconditional post-list return.
 - MODEL-66 [o] test admission, generation and match decisions never mutate source content, observations, voice, template, guideline or active model. Only MODEL-36/90 explicit result actions publish; the test origin controls contextual return, not hidden source mutation.
 - MODEL-65 [o] saved eligible model A/B pairs may prefill the two-contestant model test; choosing a complete distinct pair saves it atomically, while count4/8/16 candidates belong to the test draft. Existing seven-slot operator recommendation documents remain compatible and do not silently populate/replace larger test entrants.
@@ -297,4 +303,4 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
--
+- r37 261111 MODEL-44✎ place of tests "a destination beside model settings at /ai-models"→"under the AI 고르기 tab (/ai-models), whose one primary action is the two-writer comparison"; MODEL-96+ /ai-models stage rows and picker: radio cards, a tap saves, free-first order, owner-chosen 품질 먼저/균형/가격 먼저, locked cards disabled with reason, credits only

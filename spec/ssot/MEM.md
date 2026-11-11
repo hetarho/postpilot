@@ -1,5 +1,5 @@
 # MEM memories
-> r7 | Explicitly approved owner memories, opted-in frozen evidence and separately identified AI-derived meaning.
+> r8 | Explicitly approved owner memories, opted-in frozen evidence and separately identified AI-derived meaning.
 
 ## decisions
 - MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it would produce without this domain
@@ -32,7 +32,7 @@
 - MEM-21 [o] the section closes with its own line naming the memories as legitimate material for this post, appended only when the section exists (→GEN-16 →GUIDE-16), so a post with the option off carries no memory bytes and no mention of a source it has none of (→TMPL-46's conditional legend)
 - MEM-22 [o] opted-in frozen memories reach post writing and storyline creation/rewrite; the prose revision pass receives no memory texts (→GEN-68/69/73) ← revision must not widen its supplied evidence or rewrite unrelated meaning.
 - MEM-23 [o] nothing is learned without the user: no model creates, approves, edits, ranks, retires or deletes a memory, no threshold promotes a candidate, and no memory reaches any prompt except through `use_memory` ← recording what the user checked is not learning about them
-- MEM-24 [o] `기억` is a writing settings destination (→THEME-38, following 지침 →GUIDE-26), listing the account's memories (→MEM-30); the page carries no standing form — one docked `새 기억` opens the shared `Sheet` (→THEME-24)
+- MEM-24 [o] `기억` is a section of 내 스타일 after 지침 (→=THEME-38), listing the account's memories (→!MEM-30); the page carries no standing form — one docked `새 기억` opens the shared `Sheet` (→=THEME-67 →~THEME-24)
 - MEM-25 [o] a memory may be written by hand on that screen with the same field rules ← a fact the author knows on day one should not require generating a post first
 - MEM-30 [o] a memory's row is its text over one line of its kind and tag badges, with `수정` and `삭제` as its only controls, two icon controls at the end of the text line ← the list is read to see what the account knows, so one fact keeps to one short row and its editing waits behind one control
   - `수정` turns the row into one form holding the text with its live remaining count, the kind and the tags, saved together by one 저장 or left by 취소
@@ -56,8 +56,8 @@
 ## constraints
 - retrieval, tokenization and tag matching use the Go standard library alone; no vector, embedding, similarity or model dependency (→VOICE-51)
 - every bound is backend env with a typed default in `internal/platform/config` (`MEMORY_TEXT_MAX_CHARS` 120 · `MEMORY_TAGS_MAX` 5 · `MEMORY_MAX_PER_ACCOUNT` 300 · `MEMORY_INJECT_MAX` 8; a non-positive value is refused at boot); FE `entities/memory/config` mirrors the two the client counts against (`MEMORY_TEXT_MAX_CHARS` `MEMORY_TAGS_MAX`) through `VITE_MEMORY_*` with the same defaults, and the server stays authoritative (→ARCH-21)
-- the memory queries file stays ASCII-only ← sqlc mis-slices a query file containing any multi-byte character (→GUIDE-26)
+- the memory queries file stays ASCII-only ← sqlc mis-slices a query file containing any multi-byte character
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
--
+- r8 261111 MEM-24✎ writing settings destination following 지침→a section of 내 스타일 after 지침, its 새 기억 the section's creation button

@@ -1,5 +1,5 @@
 # MKT the public /about page
-> r11 | Shipped-feature marketing for 체험단 creators — fast monetization and 상생 through posts written only from the owner's own experience — without accuracy, income or exposure guarantees.
+> r12 | Shipped-feature marketing for 체험단 creators — fast monetization and 상생 through posts written only from the owner's own experience — without accuracy, income or exposure guarantees.
 
 ## decisions
 - MKT-1 [o] `/about` is a direct child of the root route beside `/login` and deliberately not a child of the authenticated pathless layout ← being public is structural, not a check someone has to remember; it has no `beforeLoad`, loader, session branch or query, and mounting it issues no Connect call at all — not even GetMe — because the page exists for a visitor with no account; it is refreshable and deep-linkable through the Cloudflare `single-page-application` fallback with no SSR, prerender, marketing deployment or metadata worker
@@ -26,7 +26,7 @@
 - MKT-11 [o] the information architecture:
   - a header in ONE row at every width — the wordmark at the page gutter, then viewport-side the one filled `시작하기 / Get started` CTA and the preferences pair, vertically centred in the bar with the top safe-area inset added, never stacked under or centred beneath the wordmark
   - a hero with one H1 saying a 체험단 visit's photos and notes become a ready-to-post Naver Blog post or clip in the owner's own voice, written only from what the owner experienced, the access sentence MKT-16 governs, and the quiet `로그인 / Log in` link under it (→MKT-6)
-  - how it works as a real ordered list — choose the channel, a template and a voice → add photos or videos, notes and the advertiser guide → Postpilot observes the material first, then writes under its always-applied principles → review where each sentence came from, revise and check the guide → copy and post it yourself
+  - how it works as a real ordered list — choose the channel and whether the post is sponsored → for a sponsored post, paste the advertiser guide and confirm its requirements → add photos or videos and choose a template → fill in what you experienced, with an optional note → choose the voice and guidelines, then Postpilot observes the material first and writes under its always-applied principles → review where each sentence came from, revise and check the guide → copy and post it yourself
   - why it is different (written only from the owner's own material under principles that cannot be switched off, every sentence's origin visible — 직접 입력 기반, 사진에서 추론, 광고주 요청, AI가 보탠 내용 —, drawbacks kept politely so readers and the store both gain, the owner's own voice and headings so posts do not read alike)
   - where the result goes (Naver Blog posts, Naver Clip and Instagram Clip videos with their upload text; manual posting by the owner on each service)
   - the plans section (MKT-5)
@@ -57,4 +57,5 @@
 - no environment value, tuning value, Connect contract, server package, migration or job; the canonical origin is derived from the current document origin
 
 ## chg
+- r12 261111 MKT-11✎ how-it-works order "channel+template+voice, then material+guide, then observe and write"→"channel+post kind, sponsored guide+requirements, photos/videos+template, experience+optional note, voice+guidelines, then observe and write"
 - r11 261015 MKT-17✎ AI는 속도를, 글의 주도권은 나에게→체험단 자동화, 내가 겪은 그대로, 체험단 글을 빠르게 (빠른 수익화와 상생, no income or selection claims); MKT-11✎ hero, flow, difference and destinations (Naver/Tistory/site/Markdown→Naver Blog, Naver Clip, Instagram Clip)

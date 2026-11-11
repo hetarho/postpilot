@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r31 | Owner-scoped post forms made through a guided, visually previewed target wizard with owner-named sections, explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
+> r32 | Owner-scoped post forms made through a guided, visually previewed target wizard with owner-named sections, explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -61,7 +61,7 @@
   - photo placement follows section meaning and GEN-82; upload/capture order establishes no visit or event chronology
 
 - TMPL-22 [o] a run's output is taken as the model wrote it: its single photos and photo groups pass the attachment filter like any other block (→GEN-2 →GEN-78), and literal fidelity, section order and whether every photo token came back are neither verified nor repaired — no deviation fails, retries or discards a usable generation
-- TMPL-24 [o] /templates is a named directory of the Naver Blog channel (→THEME-38) with shared one-target rows showing name, description, saved usability and EDIT-22 unpublished/job state; post count is operational metadata rather than draft status. 새 템플릿 opens the wizard (→TMPL-71), and unified tests can prepare/adopt template candidates.
+- TMPL-24 [o] /templates is the 글 side of 내 스타일's 템플릿 section (→=THEME-38) with one-target cards showing name, description, saved usability and unpublished/job state (→=EDIT-22); post count is operational metadata rather than draft status. 새 템플릿 opens the wizard (→!TMPL-71), and unified tests can prepare/adopt template candidates.
 - TMPL-25 [o] saved template detail first shows the named saved structure and state, then offers AI editing or direct editing against one captured baseline under EDIT-14/21. New creation and explicit Save retain the domain name/description/composition and number/link rules; unsaved changes are retained or explicitly discarded, and confirmed publication supplies the new clean baseline.
 - TMPL-26 [o] the composition is authored through one control in two modes over the same `body` string: the block builder (default) and `원문`, a plain text view of the stored body with the title area as its own field above it, the 형식 안내 staying body-only (→TMPL-41)
   - both edit the one draft behind the one 저장, switching is lossless because neither holds a second representation (→TMPL-2); ordinary composition shows grammar only inside `원문`, with the explicit technical-inspection exception below ← the builder supports ordinary authoring while stored grammar also accepts outside-AI output (→TMPL-41)
@@ -81,10 +81,13 @@
 - TMPL-29 [o] the controlled composition editor retains its complete and incomplete rows in the EDIT working draft; changes remain unpublished and preview uses the last valid parse with a clear current error. AI/direct/raw mode changes retain the same user work, and publication requires a fully valid current composition.
 - TMPL-30 [o] a body the parser cannot read (pasted or edited outside the app) shows the composition as unreadable and offers exactly two actions: `원문에서 고치기`, which opens `원문` with the parse error at its line in whichever area failed (→TMPL-20), and `구성 비우고 다시 만들기` on the body or `제목 비우고 다시 만들기` on the title area, which empties that composition in the draft; name and description stay editable and nothing is written until 저장 ← inventing a structure the author did not write would be worse than saying so; a body that does not parse still cannot be saved from either mode (→TMPL-7)
 - TMPL-31 [o] the directory query is re-read on every mount (`staleTime: 0`, `refetchOnMount: 'always'`) ← `post_count` is a projection over posts that no template mutation can invalidate, and it is the number the user confirms a destructive detach against; a rename also invalidates the post caches because the name is projected onto every assigned post
-- TMPL-32 [o] the editor and `/posts/new` show a 템플릿 picker defaulting to 없음 on ①'s dock row beside the 말투 picker (→POST-51) with an `sr-only` label and no description line; selecting writes a presence-aware patch through the draft queue; on a create 없음 sends no field at all
-  - it lists 없음, the account's templates, then `새 템플릿 만들기`, which opens the wizard (→!TMPL-71) ← an owner with no template otherwise meets a picker whose only choice is 없음; the 말투 picker offers its creation the same way (→~POST-101)
-  - the wizard opened from a saved post returns to that post on 저장 with the new template assigned through the ordinary assignment (→!TMPL-10 →TMPL-48); opened from an unsaved draft it returns to a new draft with that template selected; leaving the wizard unsaved assigns nothing
-  - the select stays enabled while a job runs and says the running job keeps the template it started with
+- TMPL-32 [o] the post guide's 템플릿 screen (→=POST-122) offers 없음 (`템플릿 없이 사진과 메모로 쓸게요`) and the account's templates as peer choice cards, each with its description, defaulting to 없음; a tap only selects and assigns the template through a presence-aware patch on the draft queue, and the step bar's 다음 moves on (→!THEME-52); on a create 없음 sends no field at all
+  - `새 템플릿 만들기` stands below the cards and opens the wizard (→!TMPL-71) ← an owner with no template otherwise meets a choice whose only option is 없음; the 말투 picker offers its creation the same way (→~POST-101)
+  - the 확인 summary reads the template as a row whose 바꾸기 returns to the 템플릿 screen (→~POST-123)
+  - opened from a post's 템플릿 screen (a new draft is saved first), the wizard's one way back is its `글 작성` back link to that post; that link, the browser's back and 저장 all return to the post's 템플릿 screen, 저장 assigning the new template through the ordinary assignment (→!TMPL-10 →!TMPL-48) ← the owner was writing the post, and the template list was never where they came from
+  - opened from a new post's offer before anything is written (→~POST-121), its way back is the `글 작성` back link to a new draft and 저장 returns to a new draft with that template selected, open on the 템플릿 screen
+  - leaving the wizard unsaved assigns nothing
+  - the choice stays enabled while a job runs and says the running job keeps the template it started with
   - a failed directory read shows a failure with a retry, never an empty directory ← that would leave clearing as the only available action
   - the post list shows the template name beside the voice for an assigned post
 - TMPL-33 [o] the composition editor lives in `entities/template/ui` ← it performs no mutation, it is a controlled input over one of the entity's own fields, and the shape of a block is the entity's business
@@ -177,14 +180,17 @@
   - generated examples and empty fields supply no owner experience; explicit field values are facts only within their own scope (→TMPL-46 →GEN-80)
   - inspection preserves known source/role without changing saved grammar, field bounds or required-answer gates; no paid literal-fidelity repair is introduced
 
-- TMPL-71 [o] 새 템플릿 is a guided wizard with one question or decision per screen, progress, Back that keeps every answer and one emphasized next action per screen (→THEME-52 →THEME-55) ← a first-time owner learns what a post of their kind usually holds instead of assembling blocks
+- TMPL-71 [o] 새 템플릿 is a guided wizard with one question or decision per screen, progress, and Back that keeps every answer beside one emphasized next action in the shared step bar (→!THEME-71 →!THEME-52 →~THEME-55) ← a first-time owner learns what a post of their kind usually holds instead of assembling blocks
+  - Back, 다음 and the last screen's 저장 stand in the shared step bar, never in the page
+  - each target question's choices are peer cards: a tap only selects (round check, accent ring) and the bar's 다음 moves on
+  - while the target is narrowed the step count is unknown: progress names the stage in words over a still, empty track, never a moving sweep, and counts steps once a leaf is chosen ← a moving bar reads as loading while the screen only waits on the owner
   - steps in order: target, narrowing one question at a time to a leaf of the catalog (→TMPL-72) → sections → order → headings → one step per section (→TMPL-74) → name and description, then 저장, with the live preview beside every step from sections on (→!TMPL-75)
   - sections: the leaf's recommended roles as a checklist, each with its one-line explanation, every role starting checked, plus 직접 추가 for a custom section named with one line saying what it covers
   - order: drag and move buttons over the checked sections (→TMPL-28)
   - headings: one field per section starting at its role's name, an explicit 제목 제안 받기 above them (→TMPL-73), and the screen's ordinary 다음 in the next-action place as its one emphasized action ← own words are the fields themselves, so a second continue action beside the suggestion button only competes with it
   - the result is an ordinary template saved through the standard create under every field rule (→TMPL-6 →TMPL-7): each section becomes, in order, its owner-named heading, its content position and its photo place in the existing grammar (→TMPL-18); the title area stays empty (→TMPL-52)
   - nothing is written before 저장, leaving with answers asks before discarding them, and the wizard starts no AI work beyond TMPL-73's explicit action
-  - first-use setup hosts the same wizard (→EDIT-15)
+  - first-use setup hosts the same wizard in the same shared step bar, setup's own way back and skip riding in that bar; there is no second bar (→~EDIT-15)
 - TMPL-72 [o] the wizard's targets are a code-owned tree; each leaf has an ordered list of section roles, each with a name, a one-line explanation, a default content kind and a default photo count (→TMPL-74); v1:
   - 맛집 → 식사 · 코스·오마카세 · 술집·바 · 포장·배달: 방문 계기 · 위치·주차 · 외관·입구 · 내부 분위기 · 메뉴판 · 주문한 메뉴 (메뉴마다 반복) · 서비스·응대 · 가격·가성비 · 아쉬운 점 · 총평 · 매장 정보 (직접 입력); 코스·오마카세 walks 코스 흐름 dish by dish and adds 예약 방법, 술집·바 adds 주류·안주 구성, 포장·배달 replaces the space and service roles with 주문 방법 · 포장 상태 · 배달 시간
   - 카페 → 디저트·베이커리 · 브런치 · 공간·뷰: 방문 계기 · 위치·주차 · 외관 · 공간·좌석 · 메뉴판 · 주문한 음료·디저트 (메뉴마다 반복) · 머물기 좋은 점 · 가격 · 아쉬운 점 · 총평 · 매장 정보 (직접 입력); 디저트·베이커리 adds 포장·선물, 브런치 adds 웨이팅·예약, 공간·뷰 adds 포토 스폿
@@ -210,12 +216,12 @@
   - photos: 없음 or 1 … `TEMPLATE_PHOTO_ROW_MAX` together (→TMPL-38), and for a role marked 반복 whether it repeats per photo group (→TMPL-18)
 - TMPL-75 [o] from the sections step to 저장 the wizard shows the live preview of the template its answers make (→!TMPL-65 →!TMPL-66), redrawn on every answer; the target questions show none ← nothing is built before a leaf is chosen
   - at `lg` and wider it stands to the right of the step and stays in view while the step scrolls, and the step keeps a readable measure instead of the full width
-  - below `lg` a floating `미리보기` button stays above the step's actions and opens the preview in a bottom `Sheet` ← a 360 px screen has no room beside the step, and a preview reached only after the last step is never seen with the choice that shaped it
+  - below `lg` a `미리보기` button sits in the step bar's row between 이전 and 다음 as its one secondary action (→!THEME-71) and opens the preview in a bottom `Sheet` ← a 360 px screen has no room beside the step, and a preview reached only after the last step is never seen with the choice that shaped it
   - the button glows once when an answer changes the preview, with no motion under reduced motion
 
 ## flow
 - render evidence: authored literal/write/ask roles → explicit answers → role-preserving frozen brief → stage composition → current-result source review without treating template shape as visit facts
-- wizard: 네이버 블로그 → 템플릿 → 새 템플릿 | ① 템플릿 picker → 새 템플릿 만들기 → target(one question per screen → leaf) → sections(check roles · 직접 추가) → order → headings(fields · 제목 제안 받기 → sheet(style request | example) → 제안 받기, optional, explicit) → one step per section(heading · content kind cards(글 쓸 때 | 완성된 글) · photos) → name → 저장(standard create) → from ①: back to the post with the template assigned; preview beside every step from sections on(lg right | below lg 미리보기 → sheet)
+- wizard: 내 스타일 → 템플릿(글) → 새 템플릿 | post guide 템플릿 screen → 새 템플릿 만들기 → target(one question per screen: tap selects → 다음 → leaf) → sections(check roles · 직접 추가) → order → headings(fields · 제목 제안 받기 → sheet(style request | example) → 제안 받기, optional, explicit) → one step per section(heading · content kind cards(글 쓸 때 | 완성된 글) · photos) → name → 저장(standard create) → from a post: back to its 템플릿 screen with the template assigned; Back · 다음 · 저장 in the shared step bar; preview beside every step from sections on(lg right | below lg the bar's 미리보기 → sheet)
 - edit: saved template → blocks(toolbar names: AI가 쓰는 글 · 고정 문구 · 사진(n장) · 사진마다 반복 → rows(데이터 받기 → 제목)) | 고급 → `원문` → 저장(parse ok → row | TEMPLATE_PARSE_FAILED line + reason)
 - import: saved template → 고급 → `원문` → `형식 안내 복사` → outside AI writes a body → paste(parse ok → outline in builder | error line + reason, 저장 disabled) → 저장 → same run/delete paths as any body
 - assign: post picks template → each set number copied onto the post's option in the assigning save(unset → post's own value kept) → 없음 or a later template edit copies nothing
@@ -233,6 +239,7 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
+- r32 261111 TMPL-24✎ Naver Blog rows→내 스타일 템플릿(글) cards; TMPL-32✎ ①'s dock-row picker→post guide 템플릿 screen of choice cards + 확인 row, back to the post→the `글 작성` back link to the 템플릿 screen; TMPL-71✎ in-page Back/next, tap moves on, setup's own bar→shared step bar, tap then 다음, unknown count over a still track; TMPL-75✎ floating 미리보기→in the step bar row
 - r31 261029 TMPL-74✎ kind names AI가 쓰는 글/직접 입력/고정 문구→AI가 전부 자동으로 작성/질문을 바탕으로 작성/항상 적을 고정 문구; three cards with inputs below them→one card whose horizontal radios switch its drawings and inputs
 - r30 261029 TMPL-74✎ 직접 입력 typed answer placed verbatim→a field the AI writes the section from as its facts
 - r29 261028 TMPL-73✎ direct call in the 기본 voice→sheet with optional style request (≤200) + examples, outranking the voice; TMPL-71✎ own-words button→fields + ordinary 다음, finish-step preview→preview beside every step; TMPL-74✎ help lines→글 쓸 때/완성된 글 cards; TMPL-75+ wizard preview (lg right, else 미리보기 sheet); TMPL-66✎ grey box/photo cells→compact card, line bars, small photo strip; TMPL-32✎ no 템플릿 관리 link→새 템플릿 만들기 returning assigned

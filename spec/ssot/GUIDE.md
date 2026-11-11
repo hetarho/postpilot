@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r25 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r26 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -62,23 +62,26 @@
 - GUIDE-18 [o] completed-revision candidates remain verbatim owner requests and are never inferred, ranked or auto-approved; ordinary generation uses only saved guidelines, 원칙 and enabled 기본 지침; isolated MODEL tests may use an explicitly validated owned unpublished contender under EDIT-23. Explicit AI authoring under EDIT creates separate private drafts and may generate or refine a guideline, published only after Save. Nothing validates generated post output against a guideline.
 - GUIDE-28 [o] a guideline outranks a memory exactly as it outranks a template instruction: a fact the memory bank carries is not written when a guideline forbids it, and the precedence sentence beside the `[기억]` section says so (→MEM-21) ← a prohibition the user added is the reason the fact must stay out of this post, and the memory bank has no per-post opt-out of its own
 - GUIDE-19 [o] ordinary post/clip generation has no per-item guideline opt-out, owner-rule toggles or implicit selection; 기본 지침 retain their explicit account on/off controls and 원칙 have none. Unified tests may vary one designated guideline slot in an isolated snapshot and disclose the compared rule without rescoping ordinary settings. Stock text editing, cross-voice scoping and automatic candidate approval remain outside guidelines.
-- GUIDE-20 [o] post guidelines are a named directory of the Naver Blog channel (→THEME-38) in injection order: the 원칙 card (→GUIDE-53), enabled 기본 지침, then owned rules. Rows show name/title or readable text fallback, application scope and owned EDIT saved/unpublished/job state; 기본 지침 retain recommendation and on/off behavior.
+- GUIDE-20 [o] post guidelines are the 글 side of 내 스타일's 지침 section (→=THEME-38), listed in injection order — the 원칙 card (→!GUIDE-53), enabled 기본 지침, then owned rules — one card each.
+  - a 기본 지침 card shows its name and (추천) and retains recommendation and on/off behavior
+  - an owned rule's card shows its text with its optional title (→!GUIDE-46), application scope and owned EDIT saved/unpublished/job state
 - GUIDE-21 [o] after a completed revision (`done`, not merely terminal ← a failed revision produced nothing worth saving), `지침으로 저장` — the one save a revision offers — opens a dialog seeded with the revision instruction, editable, offering 전역 (default) and the post's current template when it has one (read from the loaded post, no new query)
   - it calls the standard create
   - `AlreadyExists` renders as already-saved information
-- GUIDE-22 [o] the 후보 queue sits below the saved list as a closed disclosure whose summary carries its pending count (`지침 후보 (3)`) ← the saved rules are what the screen is for and an unreviewed suggestion is not a form
-  - rows follow the server's review order (occurrences descending, then last-seen descending), each showing its text, its occurrence count when above one, and its source post as a link (plain text when the post is gone)
-  - the disclosure renders nothing when nothing waits and the queue has room, and nothing on a failed candidate read ← the saved list owns the page's error state
-  - when the pending queue is full the summary says so from the server's `queue_full` — the client owns no copy of the bound
-- GUIDE-23 [o] 승인 opens the entity's scope control (전역 preselected) over an editable text with the live 300-character count and calls the create with `from_candidate_id`
+- GUIDE-22 [o] the 후보 queue leads the page, above the 기본 지침 controls and the list, as one banner naming its pending count (`새 지침 후보 3개`) with one `하나씩 보기` ← it is the one thing on the screen that waits on the owner
+  - `하나씩 보기` opens the shared `Sheet` showing one candidate at a time in the server's review order (occurrences descending, then last-seen descending) with its position (`2 / 5`); a candidate shows its text, its occurrence count when above one, and its source post as a link (plain text when the post is gone)
+  - `넘기기` shows the next candidate and leaves this one pending, wrapping past the last, and is off with fewer than two; 저장 (→!GUIDE-23) and 무시 (→!GUIDE-12) take the candidate out of the queue and the next one takes its place; an emptied queue reads `다 봤어요` with `닫기`
+  - the banner renders nothing when nothing waits and the queue has room, and nothing on a failed candidate read ← the saved list owns the page's error state
+  - when the pending queue is full the banner says so from the server's `queue_full` before the review opens — the client owns no copy of the bound
+- GUIDE-23 [o] `저장`, the review's emphasized action, opens the entity's scope control (전역 preselected) over an editable text with the live 300-character count and calls the create with `from_candidate_id`
   - a duplicate-text refusal keeps the dialog open, says the rule already exists, and re-reads the candidate list ← another tab usually saved it and thereby approved this row
-  - 무시 has no dialog
-  - 전부 수락 and 전부 거절 sit once at the head of the open disclosure (→GUIDE-27)
+  - 무시 has no dialog and stays on the candidate, quieter than 넘기기 and 저장
+  - 전부 수락 and 전부 거절 sit once in the review sheet below the candidate on screen and act on every listed candidate (→!GUIDE-27)
   - the candidate list is keyed `(accountId, 'guideline-candidates')` with `staleTime: 0` and `refetchOnMount: 'always'` ← a candidate arrives from a revision run in another tab
   - a create invalidates both lists, a dismissal only the candidate list
 - GUIDE-24 [o] server refusal messages are rendered through the shared failure catalogue; the client predicts none of them and mirrors neither the per-account cap nor the pending-candidate bound
 - GUIDE-25 [o] the scope control lives in `entities/guideline/ui` ← the create form and the whole-scope edit need the identical control and a feature may not import a sibling feature; it reads the template directory through `entities/template/@x/guideline.ts`; the write callers live in `entities/guideline/api` because the revision capture needs the create one
-- GUIDE-26 [o] 지침 is a destination of the Naver Blog channel and 영상 지침 one destination shared by the two clip channels (→THEME-38), each retaining the 44 px pointer floor at 320 px.
+- GUIDE-26 [o] 지침 is a section of 내 스타일 whose 글 / 영상 switch opens 지침 or 영상 지침, one list for both clip channels (→=THEME-38), each control retaining the 44 px pointer floor at 320 px.
 - GUIDE-27 [o] 전부 수락 runs the standard create once per listed pending candidate with 전역 scope and `from_candidate_id`, keeping every one that passes and leaving each refusal (over 300 characters, a duplicate, the account cap) in the queue with its catalogue reason for a single 승인 to fix ← one over-long candidate must not hold back the rest, and a rule that needs a scope other than 전역 is exactly the one worth opening
   - 전부 거절 dismisses every listed candidate behind one `Dialog` naming the count ← there is no undo and a single 무시 stays dialog-free (→GUIDE-12)
   - neither action is offered while the list is empty and both re-read the candidate list, a create additionally invalidating the saved list
@@ -111,20 +114,21 @@
   - out of use it leaves the list and stays offered in the sheet, and it leaves every run started afterwards, while work already enqueued keeps the texts it froze (→GUIDE-17)
   - a new account starts with every 기본 지침 in use, and no other surface changes one
   - a 원칙 has no in-use state and appears in no sheet
-- GUIDE-44 [o] `/video-guidelines` (nav 영상 지침, the destination both clip channels share under THEME-38, lazily split) is `/guidelines` for the 영상 지침 kind:
+- GUIDE-44 [o] `/video-guidelines` (the 영상 side of 내 스타일's 지침 section, location 영상 지침, lazily split; its link keeps the clip channel it was opened under, 네이버 클립 without one →=THEME-38) is `/guidelines` for the 영상 지침 kind:
   - the same one list of closed rows (→GUIDE-20), open rows (→GUIDE-47) and 기본 지침 sheet (→GUIDE-48), an owner row's scope badge reading `전역`, `영상 템플릿` or `적용 대상 없음` and its open row carrying the video-template-name chips
   - the section's 새 지침 button opens its new-guideline Sheet (`?new=1`), whose scope control offers 전역 / 특정 영상 템플릿; `기본 지침` and the direct-writing choice sit in the page above the list, not in a dock (→THEME-67)
-  - below the list the `영상 지침 후보` disclosure behaving as GUIDE-22, GUIDE-23 and GUIDE-27 describe, each candidate linking the clip it came from (plain text once that clip is gone)
+  - above the list the `새 영상 지침 후보` banner and its one-at-a-time review (→!GUIDE-22/23/27), each candidate linking the clip it came from (plain text once that clip is gone)
   - its queries are keyed `(accountId, 'video-guidelines')` and `(accountId, 'video-guideline-candidates')` with `staleTime: 0` and `refetchOnMount: 'always'`, and a video template rename or delete marks the list stale
 - GUIDE-45 [o] after a completed clip revision request (→CLIP-131), ②'s composer offers `영상 지침으로 저장`, which opens the standard create seeded with that request, offering 전역 (default) and the project's video template when it has one, as `지침으로 저장` does for a post (→GUIDE-21)
-- GUIDE-46 [o] a guideline's `title` is optional: trimmed, ≤ `GUIDELINE_TITLE_MAX_CHARS` (40) Unicode scalar values, empty meaning none, and never unique; a row without one shows its text cut to one line in its place ← 전부 수락 and the revision capture stay one step, which a required title would break
-  - every surface that creates a guideline offers the title field empty — `새 지침` and `새 영상 지침`, 승인 (→GUIDE-23), `지침으로 저장` (→GUIDE-21) and `영상 지침으로 저장` (→GUIDE-45) — and 전부 수락 creates without one (→GUIDE-27)
+- GUIDE-46 [o] a guideline's `title` is optional: trimmed, ≤ `GUIDELINE_TITLE_MAX_CHARS` (40) Unicode scalar values, empty meaning none, and never unique ← 전부 수락 and the revision capture stay one step, which a required title would break
+  - a closed owner row shows its whole text, wrapping, with the title, when set, as a label above it
+  - every surface that creates a guideline offers the title field empty — `새 지침` and `새 영상 지침`, a candidate's 저장 (→!GUIDE-23), `지침으로 저장` (→!GUIDE-21) and `영상 지침으로 저장` (→!GUIDE-45) — and 전부 수락 creates without one (→!GUIDE-27)
   - the title never enters the generation prompt; tests may snapshot it as reveal/history metadata while only rule text is injected (→GUIDE-17)
 - GUIDE-47 [o] closed guideline rows open independently to readable text and explicit scope.
   - 기본 지침 expose their target note and on/off action, not editing
   - owned rules offer named AI editing/direct editing of one shared draft and explicit deletion; Save changes title/text/scope atomically under domain bounds and preserves failed input
   - confirm deletion explains that already-admitted work keeps its frozen text
-- GUIDE-48 [o] the dock's `기본 지침` opens the shared `Sheet` listing every 기본 지침 of the page's kind in the product's order (→GUIDE-41 →GUIDE-42), each with its name, text and target note, and no 원칙 ← choosing one needs its text, which the closed list no longer shows
+- GUIDE-48 [o] the page's `기본 지침`, above the list (→~GUIDE-44), opens the shared `Sheet` listing every 기본 지침 of the page's kind in the product's order (→=GUIDE-41/42), each with its name, text and target note, and no 원칙 ← choosing one needs its text, which the closed list no longer shows
   - one out of use carries `추가`, which puts it in use at once (→GUIDE-43) and in the list at its product position, and the sheet stays open ← adding several is one visit
   - one in use reads `적용 중` and carries no control; taking one out of use happens on its row, never in the sheet
 
@@ -157,12 +161,12 @@
 - GUIDE-54 [o] a 원칙 outranks every owner guideline, template instruction, advertiser guide item and 기본 지침; the voice still outranks 자연스러운 한국어 문체 where they conflict (→GEN-17), and an authored template title form still outranks 제목 규칙 (→GEN-49 →TMPL-52) ← a rule nobody can switch off would mean nothing if a guideline could countermand it
 
 ## flow
-- author: `/guidelines` | `/video-guidelines` → 새 지침 | 새 영상 지침 → title(optional) + text + scope(전역 | templates | 분야, posts only) → CreateGuideline(bound, cap, dedupe within the kind → row; approves a matching candidate)
+- author: 내 스타일 → 지침(글 `/guidelines` | 영상 `/video-guidelines`) → 새 지침 | 새 영상 지침 → title(optional) + text + scope(전역 | templates | 분야, posts only) → CreateGuideline(bound, cap, dedupe within the kind → row; approves a matching candidate)
 - 원칙: guideline screen → Postpilot 원칙 card(closed) → open(name + text, no control)
-- 기본 지침: dock 기본 지침 → sheet(every 기본 지침; in use | 추가) → 추가 → in use, in the list at its product position → open row → 적용 안함 → out of use, offered in the sheet only → the next run's frozen set
-- browse: list(closed rows: name | title | text cut to one line) → press a row → open(text, scope or target note, 수정 · 삭제 | 적용 안함) → AI editing | direct editing → shared draft(title + text + scope) → explicit named Save | Cancel
+- 기본 지침: page 기본 지침 above the list → sheet(every 기본 지침; in use | 추가) → 추가 → in use, in the list at its product position → open row → 적용 안함 → out of use, offered in the sheet only → the next run's frozen set
+- browse: list(closed cards: 기본 지침 name | owned title over whole text, scope) → press a card → open(text, scope or target note, 수정 · 삭제 | 적용 안함) → AI editing | direct editing → shared draft(title + text + scope) → explicit named Save | Cancel
 - inject: StartGeneration / StartRevision / storyline job(resolve template id and 분야 once → ForPrompt(원칙 + enabled 기본 지침 + global + template-linked + field-linked) → freeze texts) → `[작문 지침]` after the template section → model; clip attempt(영상 지침 원칙 + enabled 기본 지침 + global + video-template-linked → freeze) → storyline, flow, narration and revision calls
-- accrue: post revise done | clip revision request done → record instruction(kind; dedupe → pending +1 | nothing | queue full) → 지침 후보 | 영상 지침 후보 disclosure(closed, counted) → 승인(create with from_candidate_id) | 무시 | 전부 수락(전역, refusals kept) | 전부 거절
+- accrue: post revise done | clip revision request done → record instruction(kind; dedupe → pending +1 | nothing | queue full) → 새 지침 후보 | 새 영상 지침 후보 banner(count, above the list) → 하나씩 보기 → review sheet(one candidate at a time: 저장(create with from_candidate_id) | 넘기기 | 무시; 전부 수락(전역, refusals kept) | 전부 거절)
 
 ## constraints
 - config: `GUIDELINE_TEXT_MAX_CHARS` 300 and `GUIDELINE_TITLE_MAX_CHARS` 40 (BE `platform/config` env · FE `shared/config` `VITE_GUIDELINE_TEXT_MAX_CHARS` and `VITE_GUIDELINE_TITLE_MAX_CHARS`, falling back to the defaults) · `GUIDELINE_MAX_PER_ACCOUNT` 100 · `GUIDELINE_CANDIDATE_MAX_PENDING` 50, each per kind (BE only; malformed values are boot-fatal); the heading, precedence sentence, every 원칙's and 기본 지침's name, text and order, injection ordering, candidate statuses and review order, the candidate storage bound (the revision instruction bound) and the proto/SQL schema are code
@@ -172,6 +176,7 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r26 261111 GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ Naver Blog channel / clip-channel destinations, rows→내 스타일's 지침 section with a 글/영상 switch, cards; GUIDE-22✎ closed counted disclosure below the list→banner above it opening a one-at-a-time review sheet with 넘기기; GUIDE-23✎ 승인→저장, bulk actions at the disclosure head→in the review sheet below the candidate; GUIDE-46✎ untitled row text cut to one line→whole text with the title as a label above; GUIDE-48✎ dock's 기본 지침→the page's, above the list
 - r25 261030 GUIDE-44✎ 새 지침 from the channel creation menu→from the 지침 section's own 새 지침 button
 - r24 261030 GUIDE-44✎ dock with 기본 지침 + 새 영상 지침→새 지침 from the channel creation menu (`?new=1`), 기본 지침 and direct writing in the page
 - r22 261015 GUIDE-51+ GUIDE-52+ GUIDE-53+ GUIDE-54+ 원칙 tier always applied and read-only; GUIDE-16✎ one switchable 기본 지침 tier→원칙 + 기본 지침; GUIDE-41✎ 14 기본 지침→7 (재료에 있는 사실만, 메모의 이름으로, 관찰을 나열하지 않기, 제목·태그 규칙, 종결어미, 자연스러운 한국어 문체 and the impression and chronology halves moved to GUIDE-51; 내 감상은 지키고 맛은 재료로 살리기→맛은 재료로 살리기); GUIDE-42✎ 입력한 사실만 and 감상은 내가 쓴 것만 moved to GUIDE-52; GUIDE-1✎ GUIDE-14✎ GUIDE-15✎ GUIDE-17✎ GUIDE-19✎ GUIDE-37✎ GUIDE-43✎ GUIDE-48✎ 원칙 first and above owner rules; GUIDE-18✎ enabled stock rules→원칙 + enabled 기본 지침; GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ writing/video settings→Naver Blog channel / shared clip channels

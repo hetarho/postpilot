@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r21 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
+> r22 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -56,7 +56,7 @@
 - ARCH-17 [o] `shared/api` owns the Connect transport, failure normalization, language mapping and the generated client; nothing outside it imports `shared/api/gen/**`, and proto service descriptors, message schemas and `@connectrpc/connect-query` are named only in `shared/api` and `entities/*/api` — pages, widgets and features consume hooks and domain types an entity exports (ESLint boundaries) ← a proto rename stops at one directory and a message rename at one entity
 - ARCH-18 [o] pure FE layers (`shared/api` `shared/config` `shared/lib` `entities/*/model`) import no react / react-dom (ESLint boundaries)
 - ARCH-19 [o] image work runs in the browser before upload: libheif WASM decode → 1024px downscale → JPEG q0.85 → direct PUT to R2; originals never reach the API; image pipeline code lives in the FE (`features/upload-photos` + `shared/lib/image`), never in Go ← the only practical HEIC decoder for Go is cgo
-- ARCH-20 [o] design system: every generic control is a `shared/ui` primitive and slices never hand-roll one; classes resolve only to tokens registered in `@theme` in `app/styles/index.css` (no stock Tailwind colours, no arbitrary values); borders are the last resort; cards are rare and never nested; the base breakpoint is the phone and `sm:`/`md:` only add upward; `pnpm lint:style` enforces the token half; the full design language lives in THEME
+- ARCH-20 [o] design system: every generic control is a `shared/ui` primitive and slices never hand-roll one; classes resolve only to tokens registered in `@theme` in `app/styles/index.css` (no stock Tailwind colours, no arbitrary values); borders are the last resort; a card is the one lifted plane content sits on and never nests (→THEME-13); the base breakpoint is the phone and `sm:`/`md:` only add upward; `pnpm lint:style` enforces the token half; the full design language lives in THEME
 - ARCH-21 [o] config: no setting is a literal in a component or handler — the FE reads Vite env through `frontend/src/shared/config`, the BE reads env into a typed struct validated at boot in `internal/platform/config`
   - both hold env-derived values and cross-slice/cross-context constants only, and neither imports a domain package ← platform importing a domain inverts ARCH-7
   - a product limit or default (durations, counts, byte caps, token budgets) is a named constant in the owning entity/context (`entities/<noun>/config`, `<context>/limits.go`) that the platform ctor merges env overrides into ← one file that every slice edits is a merge hotspot
@@ -192,6 +192,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r22 261111 ARCH-20✎ cards are rare and never nested→a card is the lifted plane content sits on, never nested (→THEME-13)
 - r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
 - r20 261007 ARCH-70+ ARCH-31✎ separate task submission/integration lifecycle→one dependency-ready task implemented, verified and committed directly on main
 - r21 261102 ARCH-68✎ final-render activation required complete component/output parity and real-device performance→browser final rendering active with those checks as follow-up evidence; activation code-owned and identical on frontend and API

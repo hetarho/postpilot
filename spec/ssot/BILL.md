@@ -1,5 +1,5 @@
 # BILL subscriptions, charges, credit purchase
-> r9 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
+> r10 | Fixed KRW monthly/annual subscriptions, prorated tier upgrades, paid-subscriber credit packs and operator-reviewed refund requests, with payment history on one billing screen.
 
 ## decisions
 - BILL-1 [o] a subscription belongs to the account that pays for it: a signed-in non-master account registers its own payment method, picks its own tier and term, and cancels on its own; `free` needs no payment method; a master account buys nothing (→BILL-20); the operator path (`api setplan`) survives for support and never touches a payment method (→QUOTA-3)
@@ -23,7 +23,7 @@
   - credit compensation for AI faults follows QUOTA-60 and is not a cash refund
 - BILL-12 [o] the product mails what a card statement cannot explain — a renewal charged, a renewal failed with the drop to `free`, a scheduled cancellation taking effect, a purchase, a refund — to the account's verified address (→AUTH) and never leaves any of them visible only behind a login
 - BILL-13 [o] receipts and tax documents are the payment provider's: the product reproduces its own charge history in the app and issues no cash receipt, tax invoice or business-registration collection of its own
-- BILL-14 [o] the authenticated billing screen holds current tier/term, daily/monthly resets and next payment, scheduled changes, payment method, fixed packs, charge/grant history, refund requests/status and cancel/resume. `/plans` owns comparison/entry only (→QUOTA-28); operator refund review is master-only.
+- BILL-14 [o] the authenticated billing screen opens on the credits card and its one 충전 action (→=QUOTA-75), then holds current tier/term, daily/monthly resets and next payment, scheduled changes, payment method, fixed packs, charge/grant history, refund requests/status and cancel/resume. `/plans` owns comparison/entry only (→QUOTA-28); operator refund review is master-only.
 - BILL-15 [o] charge, refund, grant and tier-change history is append-only and shows whole-KRW money, tier/term, provider identity and actual timestamps. Credit-use FX snapshots belong to QUOTA-59 and are not fictitious exchange rates attached to fixed-KRW purchases.
 - BILL-16 [o] the payment provider must offer KRW recurring card billing, hosted card entry, a refund call and server-to-server notifications; card numbers never reach the product or its logs (a provider token stands for the card) and the provider's notification, never the browser's return from checkout, is what makes a charge real ← a user closing the tab mid-redirect must not lose a subscription they paid for; which provider satisfies this is engineering's choice
 - BILL-18 [o] an annual upgrade charges `ceil((new_annual_KRW - current_annual_KRW) × remaining_paid_year / current_paid_year_duration)` without moving annual expiry or the monthly benefit anchor. Current bonus/export top-ups use the remaining benefit-month fraction (→QUOTA-35), future months grant the full higher amounts, and daily credit increases at the next existing reset.
@@ -54,4 +54,5 @@
 - placement: `backend/internal/billing`, its store/RPC adapters, `proto/postpilot/v1/billing.proto`, `frontend/src/entities/subscription` and billing/refund features; the payment adapter stays behind consumer-declared ports
 
 ## chg
+- r10 261111 BILL-14✎ billing screen opening "current tier/term first"→"the credits card with one 충전 (→QUOTA-75), then current tier/term"
 - r9 261005 BILL-22+ a captured payment the product cannot apply is refunded in full automatically by the next billing pass
