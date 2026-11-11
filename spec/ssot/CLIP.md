@@ -1,5 +1,5 @@
 # CLIP generated video projects and templates
-> r73 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r74 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
 - CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
@@ -69,8 +69,8 @@
   - ③ offers download only; ② download sits under the result preview; template/completion-model selection remains in ①, confirmed voice selection is reachable in ① and ②
   - focused running work substitutes cancellation under THEME-40; committing actions flush saves (→CLIP-39 →CLIP-75)
 - CLIP-41 [o] each clip channel's list is a section of 내 글 (`/naver-clip` · `/insta-clip`, →THEME-38), its compact operational history under POST-43/110, preserving owner-scoped direct links, search/status filters and latest-job polling, and presenting no full reading archive
-  - it opens on 이어서 쓰기 — the newest unfinished clip as one large card (→THEME-18) — then 작성 중 and 완성 groups, finished meaning a finished project with no job running; a narrowing shows its matches in the same two groups without 이어서 쓰기
-  - rows identify work title/name and update time with compact template metadata (and the ratio of a 16:9 or 1:1 project), and prioritize running/cancelling, failed/cancelled and draft/refining/finalized state, with continuation/export actions
+  - it opens on 작성 중 and 완성 under the shared compact continuation policy (→!THEME-73); finished means an explicitly finalized project with no job running
+  - rows identify work title/name and update time with compact template metadata (and the ratio of a 16:9 or 1:1 project), and prioritize running/cancelling, failed/cancelled and draft/storyline-ready/refining/finalized display state (→!CLIP-226), with continuation/export actions
   - the search and the status filter wait behind one 찾기 button as POST-68 states for posts
   - its visible heading is 내 글's large title over the hub's chip row; /clips?channel= replaces itself there keeping its filters; creation comes from that section's 새 영상 button or the 만들기 tab (→THEME-67 →THEME-68)
 - CLIP-42 [o] the video-template list and editor follow the post-template surfaces (→TMPL-26): one saved draft shared by a block builder and 원문 (behind 고급 →TMPL-26) with one docked save, and the editor holds the name, the body and the template's design selection, the last chosen beside the preview rather than in front of the body (→CLIP-166 →CLIP-169)
@@ -485,13 +485,10 @@
 - draft preview supports source selection, split cuts, fixed rates, source-audio presence, ready narration and stale-speech feedback, region slot text and per-caption style/position/size verification; frame-identical real-time rendering of all transitions, contrast adaptation, pitch treatment and final loudness on every device is not an established capability
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
+- CLIP-226 [o] clip histories and aggregate 내 글 distinguish 스토리라인 작성 완료 from 초안, 다듬는 중 and 완성 using stored project facts, without changing the creation lifecycle or persisting a new state.
+  - a stored storyline with no edit plan or rendered result is storyline-ready; an edit plan or result remains refining until explicit finalization
+  - running/cancelling, failed and cancelled attempts take precedence over the project display state; storyline-ready remains 작성 중 and never claims a finished/rendered video
+  - channel status filters support storyline-ready; valid existing draft/refining/finished URLs and lifecycle-step routing retain their meaning
+
 ## chg
-- r73 261111 CLIP-3✎ CLIP-41✎ channel history, creation only from 새 영상, spoken voices in 내 설정→a 내 글 section opening on 이어서 쓰기 + 작성 중/완성 behind 찾기, creation from 새 영상 or 만들기, templates/지침/목소리 in 내 스타일; CLIP-36✎ text steps→pills, current inverted; CLIP-221✎ floating 미리보기→in the step bar's row; CLIP-210✎ POST-117/118 meaning→their stored meaning, items folded, no suggestions; CLIP-225+ ① guide strip
-- r72 261103 CLIP-224+ a writer-authored caption the render start refuses is freed to automatic placement, then omitted with a notice and the plan saved as the next revision, instead of refusing the render
-- r71 261102 CLIP-223+ a new clip on an account with no video template offers to make one (wizard returns to the new clip with it selected); CLIP-146✎ no template never named as missing→except that offer, which names the account's directory
-- r70 261030 CLIP-111✎ preset names A 크기만→심플 제목, B 위아래 가로선→위아래 가로선, B 가로선 구분→가로선 구분, E 점수 강조→점수 강조; CLIP-222+ template preview leads with its frame, an 인트로 · 자막 · 아웃트로 switch and design choices move the scrubber to the part they show
-- r69 261030 CLIP-3✎ CLIP-41✎ creation from the channel creation menu→from the 영상 section's 새 영상 button
-- r68 261030 CLIP-3✎ creation the first floating-menu item→새 영상 in the channel creation menu, the history being the 영상 section
-- r67 261030 CLIP-3✎ creation entry + 기록 as secondary history→the channel opens on its clips' history, creation in the floating action menu; CLIP-41✎ history at /clips?channel=, no docked New clip→at /naver-clip · /insta-clip with no heading, /clips?channel= replaces itself there, creation only from the floating action menu
-- r66 261029 CLIP-213✎ template preview at the last (design) step only→the wizard's live preview beside every step from stages on; CLIP-221+ wizard live preview (stage list marking the on-screen stage, design shown read-only before the design step; lg right, else 미리보기 sheet)
-- r65 261029 CLIP-204✎ browser copy audio bitrate unstated (64 kbps, refused on Windows)→accepted by every supported platform encoder and never below the server copy's (96 kbps)
+-

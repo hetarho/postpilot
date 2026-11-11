@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r39 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r40 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -67,7 +67,7 @@
 - THEME-18 [o] applying colour:
   - surfaces move one physical step (a field is recessed on base, a card is raised, a modal is highest — depth is the step plus rarely a shadow, not a border; `surface-lowest` is not a generic dark fill and `surface-highest` is not emphasis)
   - one CTA per view uses `button-cta-*` and every other button is ghost, secondary or rarely outlined ← two filled CTAs means one is lying about its importance
-  - accent is for action and identity — a control, a selected state, a focus ring, a single word — never area outside a promotional surface (→THEME-37) and ONE hero card per screen tinted accent-subtle (`badge-accent-bg`) — 이어서 쓰기 (→THEME-69), the credit balance (→QUOTA-75), waiting guideline candidates (→GUIDE-22), a running writing card (→POST-123) — so the screen's first answer is told at a glance; the screen still has at most one filled CTA and a hero card's own action is never a second one
+  - accent is for action and identity — a control, a selected state, a focus ring, a single word — never area outside a promotional surface (→THEME-37) and ONE hero card per screen tinted accent-subtle (`badge-accent-bg`) — the latest in-progress work (→!THEME-73), the credit balance (→QUOTA-75), waiting guideline candidates (→GUIDE-22), a running writing card (→POST-123) — so the screen's first answer is told at a glance; the screen still has at most one filled CTA and a hero card's own action is never a second one
   - status colour never travels alone
   - inline notices use the notice contract with explanatory text and no border
   - primitives use functions, not foundations
@@ -214,7 +214,7 @@
   - post and clip estimates live below the cards with inline condition controls (→QUOTA-41); both themes, reduced motion, readable surface pairs, keyboard access and 320 px reflow remain supported
   - below the widest desk the plan cards are one sideways snapping row (→=QUOTA-28), the page itself never scrolling horizontally
 - THEME-38 [o] the primary navigation is five tabs — 만들기 (`/create`), 내 글 (`/my`), 내 스타일 (`/style`), AI 고르기 (`/ai-models`) and 나 (`/settings`) — a bottom tab bar on phones and a floating pill centred above the bottom edge from `lg`, each tab an icon with its label under it (beside it from `lg`) ← a busy owner's destinations are what they came to do, where the thumb is
-  - the current tab is marked by accent ink, an indicator plane behind its glyph and `aria-current="page"`; home and the focused flows mark none, and every other route marks the tab its root belongs to
+  - the current tab is marked by accent ink, an indicator plane behind its glyph and `aria-current="page"`; the focused flows mark none, and every other route marks the tab its root belongs to
   - a slim top row holds the brand (home, →THEME-47), from `lg` the credit control (→QUOTA-27) and the interface preferences (→THEME-6), and the account menu (→AUTH-29); there is no second shell row
   - the focused flows — the editor, the clip workspace, template wizards and editors, the spoken-voice wizard, writing tests and first-use setup — hide the tab bar and carry their own location and way back (→THEME-26 →THEME-58); every other screen shows it, and its docks float above it
   - 내 글 holds 전체 (`/my`, →THEME-69), 블로그 (`/naver-blog`, →POST-43), 네이버 클립 (`/naver-clip`) and 인스타 클립 (`/insta-clip`, →CLIP-41)
@@ -246,11 +246,9 @@
 - THEME-46 [o] spoken-voice surfaces visibly distinguish 목소리 from writing 말투; candidate playback, selection and confirmation are separate labelled actions, with names and playable samples for reuse
   - show generation estimate/approval only on a generating action, explicit readiness or failure by text and no automatic generation during navigation, metadata edits or replay
 
-- THEME-47 [o] signed-in home has one equally weighted entry per channel — 네이버 블로그 · 네이버 클립 · 인스타 클립 — each opening that channel's creation, with a strong short message that the product writes only from the owner's own experience.
-  - phones stack message and choices with touch-sized targets; desktop uses the shared board frame with a message/identity region beside generously sized creation choices, without an inner phone-width clamp
-  - no history, metrics, selectors, feeds or creation actions beyond the channel entries populate the canvas; menu/account access stays available
-  - large typography, shared choice primitives and semantic planes supply emphasis; both themes, keyboard, reduced motion, 200% zoom and 320 px reflow remain supported
-  - opening home or a choice creates no record or AI work
+- THEME-47 [o] signed-in home is the canonical creation destination `/create` (→=THEME-68); the brand and ordinary post-login landing open it, and `/` replaces itself with it after authentication.
+  - existing post, clip and contextual return deep links retain their target and parameters; unauthenticated app entry retains login and the public `/about` landing
+  - first-use setup eligibility and its explicit skip/return remain available on `/create`; opening it creates no record or AI work
 - THEME-48 [o] setup is a focused sequence of purposeful screens: choose an acquisition method, supply only that method's input, review when eligible, explicitly create or confirm, then continue.
   - the current title, one short explanation and available actions describe the active step; unrelated methods, later analysis/save and advanced controls do not appear beneath an earlier step
   - method choices are equally readable choice cards with an explanation inside each; a tap marks one and the step bar's 다음 opens it (→!THEME-52)
@@ -286,7 +284,7 @@
   - the back link names its actual destination: a validated contextual return when there is one, otherwise the structural parent; a contextual return never changes the route's structural parent
   - automatic return context comes only from structural ancestors; explicit workflow origins may cross destinations when validated, including an owned source post: writing tests, the template wizard (→TMPL-32) and the guidelines page (→POST-123) opened from a post return to it
   - test results opened directly return to writing tests; results opened from test history retain that filtered history; retained comparison records use test history as their named parent
-  - creation returns to its originating creation destination: home, or the channel's list in 내 글 when started from 만들기 (→THEME-68) or that list's creation button; work opened from a list — 내 글 전체 (→THEME-69) or a channel's list — returns to that list with its filters and scroll position
+  - creation returns to its originating creation destination: the canonical 만들기 (→=THEME-47), or the channel's list in 내 글 when started from 만들기 (→THEME-68) or that list's creation button; work opened from a list — 내 글 전체 (→THEME-69) or a channel's list — returns to that list with its filters and scroll position
   - preserve safe internal entry route, filters and relevant scroll position through autosave minting, reload, child settings and test review
   - direct links with no valid origin use a named domain parent or home; reject external, malformed, deleted-target and other-owner return contexts
   - navigation alone never starts AI, publishes changes or cancels work; existing flush/unsaved-change rules still apply
@@ -327,7 +325,7 @@
   - opening the tab or a card creates no record or AI work
   - `largeTitle`, touch-sized cards (→THEME-13), both themes, keyboard, reduced motion, 200% zoom and 320 px reflow
 - THEME-69 [o] 내 글's 전체 (`/my`) is every post and clip of the account in one place, newest update first ← "what was I doing?" is answered before anything is searched
-  - it opens on 이어서 쓰기: the newest unfinished work as one large card that is a single link (→THEME-18), then 작성 중 and 완성 groups with their counts, each item a card with a status tile, title, status badge, channel and relative time; finished means 확정 or 발행됨 (a clip: finished) with no job running
+  - it opens on 작성 중 and 완성 groups with their counts, following the shared continuation policy (→!THEME-73); each item carries a status tile, title, truthful status badge, channel and relative time; finished means 확정 or 발행됨 (a clip: explicitly finalized) with no job running
   - it reads the first `POSTS_PAGE_SIZE` posts and every clip; while more posts exist, `블로그 모두 보기` opens 블로그
   - it has no search or filter of its own — a channel's list keeps those (→POST-68 →CLIP-41)
   - its creation button is 만들기 (→THEME-67), and work opened here returns here (→THEME-58)
@@ -340,6 +338,15 @@
   - it is near-opaque with backdrop blur (solid where blur is unsupported) so the page under it never competes with the big action
   - it is the screen's one docked bar (→THEME-24), absent on a step holding neither a control nor a refusal
 
+- THEME-72 [o] switching 내 글 sections preserves the mounted hub title and chip row, their geometry and horizontal chip scroll; the selected chip changes in place.
+  - shared section spacing, a reserved toolbar slot and representative list skeletons keep the first work group's origin steady during cold/loading transitions; a partial aggregate query waits for both histories before presenting groups
+  - only the incoming list body may animate with opacity/transform; hub chrome never re-enters or moves on data arrival, and reduced motion disables decorative movement
+  - filters, owner scope, list return/scroll restoration and direct URLs retain their existing meaning (→!THEME-58)
+- THEME-73 [o] aggregate, blog and clip histories present unfinished work once inside 작성 중, followed by 완성; no separate continuation section or oversized hero duplicates the group.
+  - without a search/status narrowing the latest unfinished item has a compact accent-tinted card using shared work-list styles, the same typography/density as its peers and a visible continuation affordance; group counts include it
+  - a narrowed channel history keeps the same two groups without special latest-item emphasis; completed-only and empty histories create no continuation placeholder
+  - running/cancelling and failure/cancellation feedback, recovery/export links, pending comparison routes and persisted list return context remain reachable; status colour always has a truthful text label (→!THEME-18)
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes
@@ -350,7 +357,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
-- r39 261111 THEME-38✎ 3 channel links + 내 설정 menu→5 tabs (만들기, 내 글, 내 스타일, AI 고르기, 나), hubs with title + chips, hidden in focused flows; THEME-67✎ 4 list pages, natural width→every hub section + 만들기, full width on phones; THEME-13✎ cards rare→the lifted plane; THEME-24✎ never on the bottom edge→step bar on it; THEME-27✎ radii 6–20, no shadows→10–28, pill buttons, cards shadow-md; THEME-39✎ colour-only station→inverted pill; THEME-52✎ THEME-48✎ a choice navigates→tap selects, 다음 moves; THEME-26✎ THEME-14✎ wide editor→one centred column; THEME-19✎ body/label/meta/eyebrow 16/14/12/10→17/15/13/12 px, + largeTitle/figure/groupLabel; THEME-20✎ input 16/14→17/16 px; THEME-23✎ CTA 40/44→48 px, + hero 56; THEME-11✎ 10 px eyebrow→12 px floor; THEME-15✎ roles→+ card/tab-bar/chip/progress/checkbox-edge; THEME-18✎ no accent area→one hero card; THEME-12✎ no rings→two rings; THEME-29✎ bare title→labelled well, + hero, + 5 primitives; THEME-58✎ home|channel→+ 만들기, 전체, post returns; THEME-59✎ memo fills the viewport→step bar on the edge; THEME-62✎ legend while on→always; THEME-6✎ 3 mounts→+ 나; THEME-8✎ two→three choices; THEME-28✎ → + guided slide-in; THEME-41✎ stack→swipe row; THEME-57✎ → + largeTitle; THEME-66✎ 2 flows→+ post guide; THEME-68+ 만들기; THEME-69+ 내 글 전체; THEME-70+ 내 스타일 overview; THEME-71+ step bar
-- r38 261030 THEME-67✎ one button opening a menu of the four creations (current nearest)→one button opening the current section's creation directly, no menu; THEME-38✎ list pages carry the creation menu→their section's creation button
-- r37 261030 THEME-38✎ channel = history + floating menu of templates/지침/말투 links→four sections (글/영상 · 템플릿 · 말투 · 지침) with a section tab row under the main header on their list pages; 말투 moved from 내 설정 to a section shared by all channels; THEME-67✎ menu of destinations + creation on the history only→creations only (새 글/영상 · 템플릿 · 말투 · 지침) on every section list page, current section's creation alone nearest the button
-- r36 261030 THEME-38✎ a channel opens on a page of 만들기 · 기록 · 템플릿 · 지침 links→straight onto its history with no heading, the rest in a floating action menu that adds a 말투 shortcut; phone channel links in a row below the main header→in the main header row; current-channel shape+colour→underline, never a background fill; THEME-58✎ breadcrumbs (desktop row, phone header disclosure)→none, one back link on child routes; THEME-67+ floating action menu
+-

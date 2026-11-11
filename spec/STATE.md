@@ -14,6 +14,7 @@
 | ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T17:10Z | - |
 
 ## inbox
+- 261112 decided THEME-47 THEME-72 THEME-73 CLIP-226: UI choices delegated for this run? → use /create for logo and signed-in landing with / as an alias, keep setup eligibility there, reserve shared hub/list geometry and show the latest unfinished item once in 작성 중; derive storyline-ready only before a plan/result and preserve lifecycle semantics (alt: two launch canvases | separate large continuation hero | treat storyline as finished video). T746 supplies the adopted Guide primitives and one-goal hierarchy; no paid generation or backend contract change is required.
 - 261112 decided THEME-47 THEME-68 THEME-69 POST-43 CLIP-41: unattended UI/video scope? → first unify the logo and creation destination, stabilize My work section transitions, distinguish a prepared storyline and replace oversized duplicate continuation emphasis with compact in-progress work; then apply recent blog-workflow decisions and shared design primitives to video creation through self-improve-local (alt: retain duplicate launch/resume surfaces | redesign unrelated features). Questions are waived; the bounded run ends by 2026-11-13T00:00Z (09:00 Asia/Seoul), reserving time for independent review, complete pre-push gates and every triggered workflow. Existing paid/live and hardware gates remain outside this UI scope.
 - 261112 decided -: the inherited sil-261109 group binding prevents vibe loop on main → use a checkout-local detached headless coordinator with durable request, deadline and execution receipts, preserving the existing runtime and all unrelated work (alt: alter package-managed skills/runtime ownership | stop the authorized overnight work). A real Codex bypass-mode push dry-run probe passed; permission is expressly delegated for this run. Retain per-unit commits/pushes under AGENTS.md and diagnose actual remote workflows.
 - 261112 decided T750: no Windows execution environment on this host → finish the bounded driver/transport exploration with all Windows combinations unmeasured and the first three runtime criteria unchecked; retain actual Mac diagnostics separately (alt: substitute historical Windows results | claim Mac data qualifies Windows). All executable fixture/production checks pass before the 90m upper bound; T604 retains Windows/hardware/human qualification.
@@ -141,7 +142,7 @@
 | ARCH | 22 | 22 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 39 | 39 | - | 0 |
-| POST | 46 | 46 | - | 0 |
+| POST | 47 | 47 | - | 0 |
 | VOICE | 20 | 20 | - | 0 |
 | GEN | 31 | 31 | - | 0 |
 | MODEL | 37 | 37 | - | 0 |
@@ -149,10 +150,10 @@
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 39 | 39 | - | 2 |
+| THEME | 40 | 40 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 73 | 73 | - | 2 |
+| CLIP | 74 | 74 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -191,12 +192,19 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
+| T753 | Unify signed-in home and creation | THEME POST CLIP ARCH | - | todo |
+| T754 | Stabilize My work section and loading geometry | THEME POST CLIP ARCH | T753 | todo |
+| T755 | Distinguish prepared storylines in clip histories | THEME POST CLIP ARCH | T754 | todo |
+| T756 | Unify compact emphasized in-progress work | THEME POST CLIP ARCH | T755 | todo |
+
 ## next
-- ui12: complete the explicit navigation/My work/status UI requests, then run independently reviewed self-improve-local cycles over video creation aligned with the recent blog workflow, through 2026-11-13T00:00Z; execution request and receipts are under .git/haeram/v1/launchers/ui12, report spec/reports/261112-ui12.md.
+- ui12: implement T753 → T754 → T755 → T756, per-unit gates/push/workflow inspection; only then begin independently reviewed video self-improve-local cycles. Deadline 2026-11-13T00:00Z; report spec/reports/261112-ui12.md.
 - Preserve the owner-held T539/T550 live voice/human review, T603 semantic truth and T604 Windows/hardware/human/live/distribution gates; no Mac-only or synthetic evidence qualifies them.
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 create-task T753–T756 (ui12): consume THEME r40, POST r47 and CLIP r74; four sequential foreground units, no unrelated pending domain consumed.
+- 261112 update-ssot THEME POST CLIP starts (ui12): canonical creation, stable My work geometry, truthful storyline-ready list state and compact unified continuation; current adopted group has no active attempt and foreground follows ARCH-70.
 - 261112 start-vibe ui12 starts: clean main b1c33087, remote equal, no design; questions waived, UI fixes precede video self-improve-local, deadline 2026-11-13T00:00Z. Preflight, push dry-run and real headless Codex probe pass. Preserve the stale adopted work binding and unrelated workspaces.
 - 261112 cr11 ends: T747–T752 existing executable units are published; T748/T750 bounded explorations retain missing proof and unchecked runtime/graph criteria. T75004202e7c full CI (373349ms) and remote CI43048103909 both jobs pass. Final bookkeeping reuses unchanged source evidence; only owner-held gates remain, with sv8 and unrelated workspaces preserved.
 - 261112 remaining work audited (cr11): no existing runnable task remains. T539/T550 need live voice/human evidence, T603 matched authorized semantic truth, T604 hardware/human/live/distribution evidence, T697 explicit production generation/source-read proof. Retained preview evidence is not substituted for the latter; no new paid/live call is made.
@@ -215,5 +223,3 @@
 - 261111 T752 remote verified (cr11): code push 53dc028d CI 43025005875 and Deploy backend 43025005647 pass, including actual rollout/ranged GET/CORS/R2 gates; completion metadata 740b8437 CI 43025066174 passes. Verify media 43026911492 passes all three jobs; its API head_sha is 740b8437 but every checkout/log binds the tested source to deployed 53dc028d.
 - 261111 T751 starts (cr11): T752 committed and pushed after the complete local gate; immutable remote workflow observation continues. Follow ARCH-70 on main while the stale adopted work binding prevents the detached loop; pin history to acceptance order with deterministic reversed/equal timestamps and unchanged write/schema/RPC contracts.
 - 261111 T752 done (cr11): retain the three original signed x86_64 zlib APKs in both build contexts after 784b5daf's actual remote 404; index-first, hashes/signatures and all pins/budgets unchanged. New tests fail 7/11 on the original prefix and pass 11/11; related dev suite 22/22 and pinned-base no-wget install pass. Full ARCH-31 on 0af16636 passes: FE 593/4721, Go all, deploy Python 69, generated/static/build checks, Compose, both deployable images and all three media gates, both release layouts within the original envelope. Remote results follow after push.
-- 261111 T752 diagnosis (cr11): 784b5daf Deploy backend run 43011959371/build/Build image failed on the pinned zlib-static APK's 404; Verify media was skipped. Recover all three original signed x86_64 APKs at their existing hashes into the build context, preserving index-first installation and mandatory hash/signature checks. Full CI and Compose passed on 9782b5fb; image build cancelled before the repair, never counted as passed.
-- 261111 T752 starts (cr11): claim confirmed on main; rerun the complete docs/verification.md gate after T742 with pinned Node 24.18.0, Go 1.26.4 and linux/amd64 Docker targets. Keep sv8 and unrelated planning records intact.

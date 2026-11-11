@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r46 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r47 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -61,7 +61,7 @@
   - local development runs MinIO with the same four variables and path-style addressing
   - the server refuses to boot without `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET`, naming the missing one, checked before the listener but outside `config.Load` ← `api adduser` must work on a fresh box before a bucket exists
 - POST-43 [o] the Naver Blog channel's list is 내 글's 블로그 section (`/naver-blog`, →THEME-38): its compact operational history of unfinished work, failures, test-result follow-ups and export artifacts, never a blog archive; new writing starts from its section's creation button, 새 글 (→THEME-67), or from the 만들기 tab (→THEME-68)
-  - it opens on 이어서 쓰기 — the newest unfinished post as one large card (→THEME-18) — then 작성 중 and 완성 groups, finished meaning 확정 or 발행됨 with no job running; a narrowing shows its matches in the same two groups without 이어서 쓰기
+  - it opens on 작성 중 and 완성 under the shared compact continuation policy (→!THEME-73); finished means 확정 or 발행됨 with no job running
   - /naver-blog carries the history's search/status narrowing (→POST-68), incremental loading and existing not-found/outage handling; /posts stays a valid address that replaces itself with /naver-blog, keeping its filters; /posts/$slug stays the owner-scoped post address
   - /posts/new is an unminted creation whose context survives its address replacement; the editor has no unconditional post-list button
   - its visible heading is 내 글's large title over the hub's chip row (→THEME-38); with no posts it points to that 새 글 button, never an extra creation button of its own
@@ -277,9 +277,4 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
-- r46 261111 POST-54✎ ① one panel (photos, 가제, switch + guide, fields, memo)→the guided sequence, ③ + 완성됐어요 and a 더 해 보기 card; POST-122+ ① screens 글 종류, 요청, 사진, 템플릿, 내용, 덧붙임, 확인; POST-123+ 확인 summary, empty draft holds 바로 글 쓰기; POST-124+ requirements tracker; POST-117✎ 체험단 글 switch→two kind choices; POST-118✎ no suggestions, items folded→local chips the owner adds, items always shown; POST-51✎ gear + dropdowns on ①'s dock→확인 rows + 템플릿 screen; POST-45✎ line shows save state and status→only a failing save or the job stage, bar fades behind the writing card; POST-53✎ 3:7 phone pair→one step-bar row; POST-56✎ 확정하기 in the heading row→the step bar's big action; POST-68✎ POST-66✎ search on the page→in a 찾기 sheet; POST-43✎ chronological, no heading→이어서 쓰기 + groups under 내 글, + 만들기; POST-47✎ voice warning in the dock→under 확인's 말투; POST-50✎ bare 가제→labelled field on 내용; POST-62✎ after the switch→on 내용; POST-109✎ home-created→home, 만들기 or 새 글, list origin kept
-- r45 261102 POST-121+ a new post on an account with no made voice or no template offers to make it (sheet; 이대로 쓰기 · 다시 묻지 않기), again on every later new post while it is missing
-- r44 261030 POST-43✎ new writing from the channel's floating action menu→from the 글 section's 새 글 button
-- r43 261030 POST-43✎ the channel launches writing and holds a secondary history at /posts→opens on its history at /naver-blog (/posts replaces itself there with its filters), no history heading, new writing from the floating action menu
-- r41 261015 POST-117+ 체험단 글 switch (new posts on, earlier posts off); POST-118+ advertiser guide (free text + counted items); POST-119+ pre-submission checklist; POST-120+ 이 체험으로 클립 만들기; POST-112✎ three→four origin categories (+ 광고주 요청, own color); POST-114✎ wording; POST-43✎ POST-64✎ home/history→Naver Blog channel; POST-54✎ POST-62✎ ① and ③ order; POST-107✎ Tistory/site/Markdown no-rotation line removed with those exports
-- r42 261015 POST-120✎ seeds a new clip→seeds it and links the post as its story (→CLIP-215)
+-
