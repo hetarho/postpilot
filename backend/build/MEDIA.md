@@ -66,6 +66,42 @@ those inputs. Real-image CPU gates remain required for the current source candid
 FFmpeg source and signature: https://ffmpeg.org/releases/ffmpeg-9.0.1.tar.xz
 and `.asc`; the build checks SHA-256 and the official signing fingerprint
 `FCF986EA15E6E293A5644F10B4322F04D67658D8`.
+
+### FFmpeg release availability
+
+Each of the three FFmpeg downloads tries its canonical HTTPS URL first, with the
+existing bounded transfer pattern: 10-second connection timeout, 120-second transfer
+limit and three curl retries. Only a failed transfer admits the corresponding fallback:
+
+| Input | Fallback | Identity retained |
+|---|---|---|
+| 9.0.1 source archive | https://distfiles.macports.org/ffmpeg/ffmpeg-9.0.1.tar.xz | Existing source SHA-256 `cf38e0e28c7e5605942c4a77755349b0145804a397af37eb1fb4c77cb237f635` |
+| Detached signature | Version-bound 520-byte original signature embedded in `media-tools.sh` | SHA-256 `b613a00005232a1245ace7080088781ac23a916119d3e5b0d6c042368eee0177` and the same full GPG signer |
+| Public signing key | https://raw.githubusercontent.com/FFmpeg/web/0745e67732776c48b69ca9441debb54ac9a891e5/htdocs/ffmpeg-devel.asc | Official FFmpeg website repository at immutable revision; full signer `FCF986EA15E6E293A5644F10B4322F04D67658D8` |
+
+The mirrored public key's SHA-256 is
+`397b3becedcd5a98769967ff1ff8501ddc89f8368b8f766e4701377d7dbaabe5`.
+The retained signature was read from
+`usr/share/postpilot-media/sources/ffmpeg.tar.xz.asc` in immutable local image
+`sha256:32d1b6d2d6a0b0ff29371f09e454da965d3e7f4e054cffb316d6b753672ab698`,
+layer `sha256:750ee82e4e536b5940670832b843765544d2146745e7218e29c14e785e614054`.
+It was independently verified against the identical MacPorts release bytes and the
+full official key fingerprint in a fresh keyring and the pinned Go build environment.
+That image supplied only a cached source signature; its compiled contents or labels
+are not evidence that a current build or media gate passed.
+
+The original source hash and full GPG signature checks always run before extraction
+or compilation. Hash, key import and signature verification failures stop the build;
+they do not trigger alternate inputs. No certificate checking, signer requirement,
+source version, tool/configuration option or runtime budget is relaxed. The signature
+fallback rejects any version other than 9.0.1. Mirror retention is not guaranteed;
+if the canonical host and the qualified fallback are both unavailable, the build fails.
+The [MacPorts fetch documentation](https://guide.macports.org/#reference.phases.fetch)
+and [official FFmpeg website source](https://github.com/FFmpeg/web/blob/master/src/download)
+identify the source-cache role and the upstream release verification process.
+The packaging inputs remain outside the font/design asset digest; the current
+candidate still needs all required real-image CPU gates, with foreign/GPU execution
+unqualified by these download checks.
 x264 source: https://code.videolan.org/videolan/x264/-/archive/b35605ace3ddf7c1a5d67a2eb553f034aef41d55/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55.tar.bz2
 
 Corresponding FFmpeg/x264 source archives, their license notices, the build script and
