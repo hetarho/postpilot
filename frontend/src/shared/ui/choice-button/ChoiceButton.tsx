@@ -47,6 +47,9 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
         variant: 'secondary',
         className: clsx(
           'group @container w-full min-w-0 justify-start rounded-lg p-0 text-left',
+          // The chosen card is ringed in the accent, the way ①'s template cards always were, so a
+          // choice reads as made at a glance rather than by a small tick alone.
+          selected && 'ring-stroke-accent ring-2',
           className,
         ),
       })}
@@ -65,8 +68,14 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
           </span>
         )}
         <span className="min-w-0 flex-1">
+          {/* Narrow, the tick sits in the card's corner over space the title always leaves for
+              it. Set above the title as a row of its own, it made the chosen card a row taller
+              and the one let go a row shorter, so every choice jolted the cards under it. */}
           {selected && description && (
-            <span aria-hidden="true" className="text-content-secondary mb-2 block @md:hidden">
+            <span
+              aria-hidden="true"
+              className="text-link-fg-current absolute top-4 right-4 @md:hidden"
+            >
               <Check className="size-5" />
             </span>
           )}
@@ -74,7 +83,7 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
             as="span"
             variant="fieldTitle"
             id={`${id}-title`}
-            className="block break-words"
+            className={clsx('block break-words', description && 'pr-7 @md:pr-0')}
           >
             {title}
           </Typography>
