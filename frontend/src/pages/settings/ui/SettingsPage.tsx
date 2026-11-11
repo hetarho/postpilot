@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { planLabel, useMyPlan } from '@/entities/plan'
+import { BILLING_PACKS_ID } from '@/entities/subscription'
 import {
   ListGroup,
   ListRowIcon,
@@ -36,6 +37,9 @@ export function SettingsPage() {
   const { myPlan, isPending } = useMyPlan()
   const tier = planLabel(myPlan?.plan)
   const unlimited = myPlan?.balance.unlimited ?? false
+  // A free account cannot buy a pack (BILL-9), so its 충전 is subscribing (QUOTA-75 →QUOTA-28);
+  // every other tier, master included, goes to the billing screen's packs (BILL-14 →QUOTA-68).
+  const chargeToPlans = myPlan?.plan === 'free'
   const figure = unlimited
     ? t('balance.unlimited', { ns: 'plans' })
     : myPlan && !isPending
@@ -81,7 +85,8 @@ export function SettingsPage() {
           </p>
         </div>
         <Link
-          to="/billing"
+          to={chargeToPlans ? '/plans' : '/billing'}
+          hash={chargeToPlans ? undefined : BILLING_PACKS_ID}
           className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })}
         >
           <Zap aria-hidden="true" className="size-5" />
