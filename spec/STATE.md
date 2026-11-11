@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T18:49Z | - |
+| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T19:14Z | - |
 
 ## inbox
 - 261112 decided THEME-47 THEME-72 THEME-73 CLIP-226: UI choices delegated for this run? → use /create for logo and signed-in landing with / as an alias, keep setup eligibility there, reserve shared hub/list geometry and show the latest unfinished item once in 작성 중; derive storyline-ready only before a plan/result and preserve lifecycle semantics (alt: two launch canvases | separate large continuation hero | treat storyline as finished video). T746 supplies the adopted Guide primitives and one-goal hierarchy; no paid generation or backend contract change is required.
@@ -193,11 +193,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- ui12: T753–T756 implemented; finish final clip return-filter repair publication/workflow inspection before the independently reviewed video self-improve-local stage. Deadline 2026-11-13T00:00Z; report spec/reports/261112-ui12.md.
+- ui12: foreground T753–T756 and clip return-filter repair are published and all exact-source workflows pass; next invoke self-improve-local with independent headless scout/implementation/review for video creation. Deadline 2026-11-13T00:00Z, stop new work at least2h earlier (expand with measured gates); report spec/reports/261112-ui12.md.
 - Preserve the owner-held T539/T550 live voice/human review, T603 semantic truth and T604 Windows/hardware/human/live/distribution gates; no Mac-only or synthetic evidence qualifies them.
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 foreground accepted (ui12): T753–T756 plus repair05dc604c are on origin/main; all5 code revisions pass full ARCH-31 and every triggered workflow. Repair48/380, full FE595/4748/Python69/Go and CI43083205954 pass. Browser canonical24/warm96/delayed32/alias24 pass. Video has not started; keep active for the next coordinator stage.
 - 261112 fix clip-navigation done (ui12): canonical history states retain storyline_ready on both channel returns; red4→green33 and expanded48 files/380 tests/static/type/build pass. Separate repair unit; complete ARCH-31 and exact-revision workflows follow.
 - 261112 fix clip-navigation starts (ui12), baseline aef8ed75: final return-path audit finds the new storyline_ready filter dropped by the clip history return allowlist. Repair the existing CLIP-226/THEME-58 contract in the lightweight path; no new product policy or persisted format.
 - 261112 T756 done (ui12): single counted 작성 중, shared peer-density accent latest card and compact recovery rows; 7 files/144 tests/static/type/build pass. Final warm96/delayed32 geometry and alias24 browser checks pass; latest360px card259.75→114.25px (56%). Full pre-push follows; video has not started.
@@ -217,4 +218,3 @@
 - 261111 T750 starts (cr11): 90m exploration from 2026-11-11T14:49Z (upper bound 16:19Z), baseline 7aab07a5. Implement the Windows/WSL comparison and production-path driver with exact source/fixture binding, default temporary browser profiles and no serials; current host is Darwin ARM64 without Windows Node/Chrome/Edge. Validate executable transport here while retaining every unavailable Windows combination as unmeasured, never qualified.
 - 261111 T749 gate passes (cr11): complete pre-push CI at c509d1a7 (26 dev, FE593/4721, Python69, full Go, all generated/static/type/build checks); no backend/media workflow input in its diff. T748 a74464d6 remote CI 43037986093 passes both jobs.
 - 261111 T749 done (cr11): whole-frame Pixi WebGL diagnostic at 1a603269; single6/matrix24 runs, 16 contract/PCM comparisons and all output/cleanup checks pass. Identified M1 Max Metal/Chromium153 shows 13.2–24.5% shorter instrumented assembly, decoded mean residual0.660449–0.932307; no pixel acceptance/default/qualification change. Historical data preserved; full pre-push CI follows.
-- 261111 T749 starts (cr11): 2h exploration from 14:24Z (upper bound 16:24Z), after T748 publication a74464d6. Add a diagnostic whole-frame Pixi WebGL arm over the same frozen plan/decoder/audio/mux/verdict; run an exact-commit single case then matrix with expensive local checks stopped. Production frontend remains unchanged; hardware, residuals and missing evidence stay explicit.
