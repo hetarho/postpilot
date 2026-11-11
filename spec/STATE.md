@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T17:10Z | - |
+| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T18:49Z | - |
 
 ## inbox
 - 261112 decided THEME-47 THEME-72 THEME-73 CLIP-226: UI choices delegated for this run? → use /create for logo and signed-in landing with / as an alias, keep setup eligibility there, reserve shared hub/list geometry and show the latest unfinished item once in 작성 중; derive storyline-ready only before a plan/result and preserve lifecycle semantics (alt: two launch canvases | separate large continuation hero | treat storyline as finished video). T746 supplies the adopted Guide primitives and one-goal hierarchy; no paid generation or backend contract change is required.
@@ -192,13 +192,14 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
-
 ## next
-- ui12: implement T753 → T754 → T755 → T756, per-unit gates/push/workflow inspection; only then begin independently reviewed video self-improve-local cycles. Deadline 2026-11-13T00:00Z; report spec/reports/261112-ui12.md.
+- ui12: T753–T756 implemented; finish final clip return-filter repair publication/workflow inspection before the independently reviewed video self-improve-local stage. Deadline 2026-11-13T00:00Z; report spec/reports/261112-ui12.md.
 - Preserve the owner-held T539/T550 live voice/human review, T603 semantic truth and T604 Windows/hardware/human/live/distribution gates; no Mac-only or synthetic evidence qualifies them.
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 fix clip-navigation done (ui12): canonical history states retain storyline_ready on both channel returns; red4→green33 and expanded48 files/380 tests/static/type/build pass. Separate repair unit; complete ARCH-31 and exact-revision workflows follow.
+- 261112 fix clip-navigation starts (ui12), baseline aef8ed75: final return-path audit finds the new storyline_ready filter dropped by the clip history return allowlist. Repair the existing CLIP-226/THEME-58 contract in the lightweight path; no new product policy or persisted format.
 - 261112 T756 done (ui12): single counted 작성 중, shared peer-density accent latest card and compact recovery rows; 7 files/144 tests/static/type/build pass. Final warm96/delayed32 geometry and alias24 browser checks pass; latest360px card259.75→114.25px (56%). Full pre-push follows; video has not started.
 - 261112 T756 starts (ui12), baseline d02a58a0: one counted 작성 중 group, peer-density accent latest card, no duplicate hero. T755 full gate/push passes; T754 remote CI43072913166 passes both jobs. Hourly checkpoint ccf608f7 is local (wip remote rejected generically); main publication is unaffected.
 - 261112 T755 done (ui12): shared storyline-ready history labels/filter with job precedence and unchanged lifecycle/refining URL compatibility; 33 files/205 tests and static/type/build checks pass. Real browser both channels/aggregate/status selection passes without generation. Full pre-push follows.
@@ -217,5 +218,3 @@
 - 261111 T749 gate passes (cr11): complete pre-push CI at c509d1a7 (26 dev, FE593/4721, Python69, full Go, all generated/static/type/build checks); no backend/media workflow input in its diff. T748 a74464d6 remote CI 43037986093 passes both jobs.
 - 261111 T749 done (cr11): whole-frame Pixi WebGL diagnostic at 1a603269; single6/matrix24 runs, 16 contract/PCM comparisons and all output/cleanup checks pass. Identified M1 Max Metal/Chromium153 shows 13.2–24.5% shorter instrumented assembly, decoded mean residual0.660449–0.932307; no pixel acceptance/default/qualification change. Historical data preserved; full pre-push CI follows.
 - 261111 T749 starts (cr11): 2h exploration from 14:24Z (upper bound 16:24Z), after T748 publication a74464d6. Add a diagnostic whole-frame Pixi WebGL arm over the same frozen plan/decoder/audio/mux/verdict; run an exact-commit single case then matrix with expensive local checks stopped. Production frontend remains unchanged; hardware, residuals and missing evidence stay explicit.
-- 261111 T748 gate passes (cr11): complete pre-push CI at 4102342d (26 dev, FE593/4721, Python69, full Go and all generated/static/type/build checks); no backend/media workflow path in its push diff. T747 9812b711 CI 43035630997, Deploy backend 43035630999 and all3 Verify media 43036324398 pass at its actual checkout SHA.
-- 261111 T748 done (cr11): original gitHead lacks Cargo.lock; 39 embedded crate/version lower bounds and 42 unresolved items recorded in both manifests/notices/QA, with all approval flags false. Ten tests, builds, lint/format, stable regeneration and 13 actual static-delivery checks pass at 9fabeddd; full pre-push CI follows.

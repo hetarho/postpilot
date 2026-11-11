@@ -5,6 +5,7 @@ import {
 } from '@/shared/lib/navigation'
 
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
+import { CLIP_HISTORY_STATES, type ClipHistoryState } from '../model/history-state'
 
 export interface ClipEntry {
   /** The list the clip was opened from: its channel's own, or 내 글 전체 (THEME-69). */
@@ -123,7 +124,10 @@ export function clipReturnDestination(
   const filters: Record<string, string> = {}
   if (history) {
     if (entry?.filters.q) filters.q = entry.filters.q
-    if (entry?.filters.status && ['draft', 'refining', 'finished'].includes(entry.filters.status))
+    if (
+      entry?.filters.status &&
+      CLIP_HISTORY_STATES.includes(entry.filters.status as ClipHistoryState)
+    )
       filters.status = entry.filters.status
   }
   const query = new URLSearchParams(filters).toString()

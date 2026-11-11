@@ -380,6 +380,18 @@ it.each([
     expect(await row(/이야기만 준비한 영상/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /편집안이 준비된 영상/ })).toBeNull()
     expect(screen.queryByRole('link', { name: /시작한 초안/ })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '결과 보기' }))
+    await user.click(await row(/이야기만 준비한 영상/))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/clips/ready'))
+    const back = await screen.findByRole('link', {
+      name: `${channel === 'naver_clip' ? '네이버 클립' : '인스타 클립'}으로 돌아가기`,
+    })
+    expect(back).toHaveAttribute('href', `${path}?status=storyline_ready`)
+    await user.click(back)
+    await waitFor(() => expect(router.state.location.pathname).toBe(path))
+    expect(router.state.location.search).toMatchObject({ status: 'storyline_ready' })
+    expect(await row(/이야기만 준비한 영상/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /편집안이 준비된 영상/ })).toBeNull()
   },
 )
 

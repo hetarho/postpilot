@@ -11,6 +11,28 @@ import {
 } from './navigation-context'
 
 beforeEach(() => sessionStorage.clear())
+it.each(['/naver-clip', '/insta-clip'] as const)(
+  'retains the prepared-story filter and scroll on return to %s',
+  (path) => {
+    rememberClipEntry('alice', {
+      path,
+      section: 'clips',
+      filters: { q: '이야기 & 기록', status: 'storyline_ready', private: 'omit' },
+      scrollY: 740,
+      targetId: 'ready',
+    })
+    const destination = clipReturnDestination('alice', 'ready')
+    expect(destination.path).toBe(path)
+    expect(
+      Object.fromEntries(new URL(destination.href, 'https://test.invalid').searchParams),
+    ).toEqual({
+      q: '이야기 & 기록',
+      status: 'storyline_ready',
+    })
+    expect(markClipHistoryReturn('alice', 'ready')).toBe(true)
+    expect(readClipHistoryReturn('alice')).toMatchObject({ path, scrollY: 740 })
+  },
+)
 it('retains creation through minting and reload without adopting another owner or record origin', () => {
   rememberClipEntry('alice', { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 40 })
   expect(retainMintedClipEntry('alice', 'minted')).toBe(true)
