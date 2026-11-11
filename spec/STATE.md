@@ -173,7 +173,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -185,11 +184,12 @@
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- Approved unattended scope: T739 T697 T709 T741 T742 T731 T604 and follow-ups created for them. Close T739/T697/T709 on the retained evidence and exit rule; create the clock-rollback request-history task; reintegrate T741/T742; run T731 within its 2h exit contract; split T604's agent-runnable work from its human/hardware gates. Use the decisions above without reopening the settled investigation.
+- Approved unattended scope: T739 T697 T709 T741 T742 T731 T604 and follow-ups created for them. T709 is closed under its exit rule; close T739/T697 on the retained evidence; create the clock-rollback request-history task; reintegrate T741/T742; run T731 within its 2h exit contract; split T604's agent-runnable work from its human/hardware gates. Use the decisions above without reopening the settled investigation.
 - Run scoped Claude loop sv8 with bypass permission in main, an explicit repository for public-HTML CI observation and the complete ARCH-31 gate. Complete per-task checks and commits, deployment/media gates before each applicable push, and record every remote workflow as observed or unconfirmed. Preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md; prior FE/CI evidence is in reports/261110-sil5.md. T745's provided-data assertion remains an optional inbox suggestion outside this scope.
 - Park T539/T550/T603, INFRA and all active ideation. Preserve the separate ideation/post-faithful-clip resumption: the first caption's place-name hook still needs SSOT coverage (GUIDE-42 or CLIP), while its default caption look (CDS) and unmeasured prompt growth remain open. Owner-only follow-ups include human/hardware evidence, supplier budgets/tariffs, T709's unsettled usage and unavailable remote workflow results.
 
 ## log
+- 261111 T709 done (sv8): closed under its exit rule with the retained cost/outcome matrix (docs/qa/clip-real-pipeline-proof-261028.json); confirmed USD0.010868 plus unresolved USD0.025001 stays within the USD0.20 approval, no further live call; two fresh complete pipelines remain unmet, readiness gates stay closed and the owner's usage reconciliation stays parked.
 - 261111 sv7 stops before any task: worker-probe passes with bypass, ci-access alone fails because the origin uses an SSH alias. Explicit-repo public HTML reads CI run 42989787293 (in progress, unconfirmed); prepare sv8 with a runtime-only repository resolver and explicit complete ARCH-31 commands, preserving Git settings and installed skills.
 - 261111 sv7 prepares the owner-approved scoped unattended continuation: retain the settled T739/T697/T709 closures, resume T741/T742/T731, split T604 and park owner-only gates; preflight spec lint passes, CI access remains unavailable.
 - 261111 ideation: archive 10 converted docs to ideation/done/ after checking SSOT coverage (clip-source-observation-visibility, clip-template-as-preset, post-quality-and-related-links, prompt-engineering, storyline-first, voice-tidy, daily-credit-plans, template-from-request, familiar-video-editing-and-dubbing, campaign-reviewer-focus); settled questions cite their SSOT IDs, undecided ones move to the new open docs instagram-photo-post, related-post-links, unmeasured-search-exposure and job-content-retention; post-faithful-clip returns to ready (its 상호 hook is in no SSOT); domain lines follow the installed FORMAT, spec lint 0 errors
@@ -209,4 +209,3 @@
 - 261110 h12 updates haeram-spec-creator0.11.0→0.12.0,20skills; migrates cfg push to SETTINGS landmain/pushtrue, merges FORMAT with project overrides preserved. Integrity/settings/idempotence pass; existing54lint errors unchanged; no sourcepush while rb1 fullCI fails. Report261110-h12.
 - 261110 rb1 rebases36 local commits onto origin4c3aee81 with exact expected tree and backup; fullCI2b649a96 passes18/19 checks, FE580/4638 and89Go packages, fails two clip/store tests. Measured11.65s wall-clock jumps persist with CPU pinning; preserve source and block push underARCH31. Report261110-rb1.
 - 261109 si4 local closure: reviewedT739 merge72ab/T738 mergef127; actualmain580files/4638tests andallFEchecks pass with stabledotenv. ArchiveT738 underARCH24; blockT739/wholegroup/sourcepush on observedGo failure, preservebackendrollback/archive and olddirtyspaces; endbefore21:00KST.
-- 261109 si4 defersT740/T741/T742: actual release failed after13 passed image/worker stages; observed10.223s Docker clock rollback and latest-job query reproduction, final render cause unresolved. Preserve92daffbe/archive branch and restore backend exactly toorigin0cd at9fa63516; finish FE scope before21:00KST.
