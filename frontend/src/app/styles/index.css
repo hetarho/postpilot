@@ -401,8 +401,11 @@
   --row-bg-active: var(--surface-recessed);
   --divider: var(--stroke-subtle);
 
-  /* compact labels and inline feedback */
-  --badge-neutral-bg: var(--surface-raised);
+  /* compact labels and inline feedback. The neutral chip is a WELL, like a field: Guide sets
+     every list row on a raised card, and a chip in the card's own raised plane had no edge at
+     all — 초안 read as loose text and the draft tile as a glyph with no square under it. A
+     recessed plane shows on the page, on a card and on a hovered card alike. */
+  --badge-neutral-bg: var(--surface-recessed);
   --badge-neutral-fg: var(--content-secondary);
   /* a chip for a state that is "in progress by the user" rather than good/bad/urgent — e.g. a post
      in review. It borrows the accent so it reads as distinct from a neutral draft without claiming
