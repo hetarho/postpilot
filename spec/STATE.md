@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T19:31Z | - |
+| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T17:10Z | 2026-11-11T19:50Z | - |
 
 ## inbox
 - 261112 decided THEME-51 THEME-55 CLIP-180 CLIP-197: video cycle2 scout finds tool-local unsent request lost on preview navigation → adopt review/video-request-retention-261112 F1 as T757 restoring existing retention contracts (alt: discard text | persist globally | broaden generation/process policy). User delegation covers this reversible fix; keep quote hooks local and owner/project boundaries keyed, independently implement/review before main publication.
@@ -188,7 +188,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T757 | Retain storyline requests during preview navigation | ARCH | - | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -196,11 +195,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- ui12: video cycle2 approved T757 only; configure inherited sil-261109 with preserved T733–T736 plus T757, independent headless implementation/review all, then full gates and exact-revision CI. Deadline2026-11-13T00:00Z, new work ends at least2h before; report spec/reports/261112-ui12.md.
+- ui12: video cycle2 T757 reviewed and integrated as eed85f60; run full ARCH-31, publish and inspect every exact-revision workflow. Keep overnight active/report for the next cycle; observed360px clip tool heading/pointer issues need an independent scout before adoption. Deadline2026-11-13T00:00Z; new work ends at least2h before.
 - Preserve the owner-held T539/T550 live voice/human review, T603 semantic truth and T604 Windows/hardware/human/live/distribution gates; no Mac-only or synthetic evidence qualifies them.
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 T757 done (ui12): independent scout→worker→review4d77048d approves eed85f60; exact source fast-forwarded to main after CLI integration metadata refused pre-existing spec warnings. Red4→green4, affected25/266+host113s fast gate and browser4 pass; full ARCH-31/publication follows.
 - 261112 create-task T757 (ui12): adopt independent scout F1; restore existing THEME-51/55 within CLIP-180/197, no new policy/SSOT revision or unrelated pending consumption. Plan-push precedes worker assignment.
 - 261112 self-improve-local video cycle2 starts (ui12): clean main c61f9949; independent read-only work scout dispatched; preserve inherited scope/history and all contracts. Exploration+implementation <=60m; review/full gates/remote CI reserve follows.
 - 261112 foreground accepted (ui12): T753–T756 plus repair05dc604c are on origin/main; all5 code revisions pass full ARCH-31 and every triggered workflow. Repair48/380, full FE595/4748/Python69/Go and CI43083205954 pass. Browser canonical24/warm96/delayed32/alias24 pass. Video has not started; keep active for the next coordinator stage.
@@ -220,4 +220,3 @@
 - 261112 cr11 ends: T747–T752 existing executable units are published; T748/T750 bounded explorations retain missing proof and unchecked runtime/graph criteria. T75004202e7c full CI (373349ms) and remote CI43048103909 both jobs pass. Final bookkeeping reuses unchanged source evidence; only owner-held gates remain, with sv8 and unrelated workspaces preserved.
 - 261112 remaining work audited (cr11): no existing runnable task remains. T539/T550 need live voice/human evidence, T603 matched authorized semantic truth, T604 hardware/human/live/distribution evidence, T697 explicit production generation/source-read proof. Retained preview evidence is not substituted for the latter; no new paid/live call is made.
 - 261112 T750 done (cr11): bounded driver exploration at e2f40117; actual Mac matrix24/comparisons16/production8 passes, matching frozen snapshots and clean recovery. Windows48/comparisons32/production16 remain unmeasured, runtime criteria unchecked; first full CI follows. T749 publication7aab07a5 CI43041827273 passes both jobs.
-- 261111 T750 starts (cr11): 90m exploration from 2026-11-11T14:49Z (upper bound 16:19Z), baseline 7aab07a5. Implement the Windows/WSL comparison and production-path driver with exact source/fixture binding, default temporary browser profiles and no serials; current host is Darwin ARM64 without Windows Node/Chrome/Edge. Validate executable transport here while retaining every unavailable Windows combination as unmeasured, never qualified.
