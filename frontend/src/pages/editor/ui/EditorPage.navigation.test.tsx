@@ -131,6 +131,45 @@ it('returns from the template wizard to the template question of the post', asyn
   expect(await screen.findByRole('heading', { name: '어떤 틀로 써 볼까요?' })).toBeVisible()
 })
 
+// POST-123 →THEME-58: 확인's 지침 row opens the guidelines page with the post as its one way back,
+// and coming back — by that link or the browser's Back — lands on 확인 again. The post holds
+// nothing that would otherwise open it on 확인.
+it('returns from the guidelines page to the post, on 확인', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    posts: { posts: [{ slug: 'saved' }] },
+  })
+  expect(await screen.findByRole('heading', { name: '어떤 글을 쓰시나요?' })).toBeVisible()
+  await guideTo(user, GUIDE.review)
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  await waitFor(() => expect(router.state.location.href).toBe('/guidelines?post=saved'))
+
+  const main = await screen.findByRole('main')
+  const back = await screen.findByRole('link', { name: '글 작성' })
+  expect(back).toHaveAttribute('href', '/posts/saved')
+  // It heads the page, over the hub's title and chips, and it is the page's only way back.
+  expect(back.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.getAllByRole('navigation', { name: '돌아가기' })).toHaveLength(1)
+  await user.click(back)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
+  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/guidelines'))
+  router.history.back()
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
+  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+})
+
+// The guidelines page reached from its own tab is a hub section with no way back (THEME-58).
+it('shows no back link on the guidelines page opened from its tab', async () => {
+  renderAppAt('/guidelines', { user: USER })
+  await screen.findByRole('main')
+  expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).not.toBeInTheDocument()
+})
+
 // 내용 opened on the title as bare display-size text with its name hidden: a second, larger
 // heading under the screen's question, with nothing saying it could be typed in.
 it('draws the title on 내용 as a named field like the answers under it', async () => {

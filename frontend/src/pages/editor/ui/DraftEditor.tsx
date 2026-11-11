@@ -346,14 +346,18 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     },
   })
 
-  // A way out of the draft that keeps every typed word: the autosave and the content queue are
-  // flushed before the router leaves (the same path the grow-voice link takes).
-  const leaveTo = (href: string) => {
+  // 확인's 지침 row: the guidelines page with this post as its explicit way back (POST-123
+  // →THEME-58). A draft not yet saved is saved first, as the template wizard's is, so there is a
+  // post to come back to; and coming back — by the page's 글 작성 or the browser's Back — lands on
+  // 확인, the screen the owner left, not the screen a returning draft would otherwise open on.
+  const openGuidelines = () => {
     void autosave
       .flush()
       .then(async () => {
-        if (post) await flushContentQueue(post.slug)
-        await navigate({ href })
+        const slug = post?.slug ?? (await autosave.ensureSlug())
+        await flushContentQueue(slug)
+        stashGuideStep(slug, 'review')
+        await navigate({ to: '/guidelines', search: { post: slug } })
       })
       .catch(() => {
         /* The draft/content save status retains and explains a refusal. */
@@ -453,7 +457,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         job={jobView.job}
         onWritingCardShown={setWritingCardShown}
         onGo={setGuide}
-        onOpenGuidelines={() => leaveTo('/guidelines')}
+        onOpenGuidelines={openGuidelines}
       />
     ),
   }

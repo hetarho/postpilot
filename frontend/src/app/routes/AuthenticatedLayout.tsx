@@ -167,16 +167,24 @@ export function AuthenticatedLayout() {
       ? '/posts/new'
       : `/posts/${encodeURIComponent(templatePost)}`
     : undefined
+  // The guidelines page opened from a post's 확인 (POST-123) likewise names that post as its way
+  // back, though it is a hub section that otherwise has none (THEME-58).
+  const guidelinesPost =
+    pathname === '/guidelines' && typeof search.post === 'string' ? search.post : ''
+  const guidelinesPostReturn = guidelinesPost
+    ? `/posts/${encodeURIComponent(guidelinesPost)}`
+    : undefined
   const parent = metadata.ancestors.at(-1)
   const returnHref =
     postReturn?.href ??
     clipReturn?.href ??
     ownedSourceReturn ??
     templatePostReturn ??
+    guidelinesPostReturn ??
     origin ??
     parent?.href
   const returnName =
-    ownedSourceReturn || templatePostReturn
+    ownedSourceReturn || templatePostReturn || guidelinesPostReturn
       ? t('location.post')
       : parent && returnHref === parent.href
         ? t(`location.${parent.key}`)
@@ -324,10 +332,19 @@ export function AuthenticatedLayout() {
   }
   const section = currentSection(pathname)
   const backLink =
-    !setup &&
-    !ownReturn &&
-    !isTopLevelDestination(pathname) &&
-    (navigationValue.ancestors.length > 0 || !!navigationValue.returnTo)
+    !!guidelinesPostReturn ||
+    (!setup &&
+      !ownReturn &&
+      !isTopLevelDestination(pathname) &&
+      (navigationValue.ancestors.length > 0 || !!navigationValue.returnTo))
+  const backNav = backLink && (
+    <nav
+      aria-label={t('returnLabel')}
+      className="mx-auto w-full max-w-5xl px-4 pt-2 sm:px-6 lg:px-8"
+    >
+      <ContextualReturn className="-ml-4" />
+    </nav>
+  )
   // Guide: the tab bar is the thumb's home row on every screen except a focused flow, where the
   // flow's own bottom bar owns the thumb zone.
   const tabBar = !isFocusedFlow(pathname)
@@ -417,6 +434,9 @@ export function AuthenticatedLayout() {
             title, with the sibling pages as a chip row under it that scrolls sideways rather than
             wrapping. The page keeps its own (visually hidden) `h1`, so the title is the sighted
             reader's copy of the hub's name, not a second heading in the outline. */}
+        {/* A hub page holds a back link only when a post opened it, and then it heads the page,
+            over the hub's title (THEME-58). */}
+        {section && backNav}
         {section && (
           // The directory column's own width, so the title and chips line up with the list.
           <div className={pageStyles({ width: 'wide', className: 'pt-2 pb-0 sm:pt-6 sm:pb-0' })}>
@@ -468,14 +488,7 @@ export function AuthenticatedLayout() {
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
-          {backLink && (
-            <nav
-              aria-label={t('returnLabel')}
-              className="mx-auto w-full max-w-5xl px-4 pt-2 sm:px-6 lg:px-8"
-            >
-              <ContextualReturn className="-ml-4" />
-            </nav>
-          )}
+          {!section && backNav}
           {defaults.isError && (
             <div className="mx-auto w-full max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
               <Typography variant="body" role="status">
