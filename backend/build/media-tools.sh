@@ -49,10 +49,14 @@ if ! apk add --no-cache build-base bash nasm pkgconf curl xz bzip2 gnupg zlib=1.
       *) printf "%s\n" "The original APK install failed; no complete verified zlib 1.3.2-r1 fallback is available for this architecture." >&2; exit 1 ;;
     esac
     zlib_apk_dir=$(mktemp -d /tmp/postpilot-zlib-apks.XXXXXX)
+    zlib_retained_dir="$(dirname "$0")/zlib-apks/$zlib_arch"
     trap 'rm -rf -- "$zlib_apk_dir"' EXIT
     trap 'exit 1' HUP INT TERM
     for package in zlib zlib-dev zlib-static; do
-      if ! wget -q -T 20 -O "$zlib_apk_dir/$package-1.3.2-r1.apk" "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/$zlib_arch/$package-1.3.2-r1.apk"; then
+      retained_apk="$zlib_retained_dir/$package-1.3.2-r1.apk"
+      if [ -f "$retained_apk" ]; then
+        cp "$retained_apk" "$zlib_apk_dir/$package-1.3.2-r1.apk"
+      elif ! wget -q -T 20 -O "$zlib_apk_dir/$package-1.3.2-r1.apk" "https://dl-cdn.alpinelinux.org/alpine/v3.24/main/$zlib_arch/$package-1.3.2-r1.apk"; then
         printf '%s\n' "Unable to download the pinned $package 1.3.2-r1 artifact." >&2
         exit 1
       fi

@@ -14,10 +14,13 @@ FFmpeg and ffprobe are separate, statically linked musl executables, invoked wit
 ### Retained signed zlib packages
 
 The indexed installation remains the first attempt on every architecture. If it fails,
-`media-tools.sh` can recover the same runtime, development and static **1.3.2-r1**
-packages from `https://dl-cdn.alpinelinux.org/alpine/v3.24/main/<arch>/<package>-1.3.2-r1.apk`.
-BusyBox wget from the pinned base downloads them into an attempt-owned temporary
-directory. All three fixed SHA-256 values are checked before normal `apk add`
+`media-tools.sh` first copies any retained **1.3.2-r1** packages from the adjacent
+`zlib-apks/<arch>/` directory into an attempt-owned temporary directory. Both
+Dockerfiles include the original signed x86_64 runtime, development and static APKs
+in that build context. A missing retained package keeps the existing bounded BusyBox
+wget download from
+`https://dl-cdn.alpinelinux.org/alpine/v3.24/main/<arch>/<package>-1.3.2-r1.apk`.
+All three fixed SHA-256 values are checked before normal `apk add`
 verifies their signatures with the base image's existing architecture keys. No new
 signing key, untrusted-package option or floating version is used. Only that temporary
 APK directory is removed on success or failure; the remaining tool pins and FFmpeg
@@ -41,11 +44,15 @@ The fallback covers the seven sets above, all complete when measured on 2026-11-
 The official mirrors returned 404 for loongarch64's zlib-dev and x86's zlib-static
 artifact. Those architectures and any unknown architecture retain the original indexed
 attempt, but fail clearly if fallback would be needed. Historical artifact retention is
-not guaranteed: missing downloads or changed checksums fail closed and require a
-reviewed repair. On 2026-11-11 `dl-cdn` had already dropped aarch64's zlib-dev,
+not guaranteed for unbundled architectures: missing downloads or changed checksums
+fail closed. On 2026-11-11 `dl-cdn` had already dropped aarch64's zlib-dev,
 ppc64le's zlib-dev and zlib-static, and riscv64's zlib-static artifact; every artifact
-it still served matched the table. Only the x86_64, armhf, armv7 and s390x sets were
-still complete, so the other three architectures now fail at the download step.
+it still served matched the table. The same day's GitHub build received a 404 for
+x86_64's zlib-static while this host's CDN endpoint still served all three files at
+the hashes above. The retained x86_64 copies remove that mirror-retention dependency
+from the deployed CPU builds. Corrupt retained bytes stop at the checksum gate;
+verification failures never switch to a network replacement or bypass signatures.
+Other architectures keep their existing network fallback and remain unqualified.
 
 The official [Alpine package source at 0afa2da0](https://github.com/alpinelinux/aports/blob/0afa2da0e8c8051c6f8f64a7a388e5a259904245/main/zlib/APKBUILD)
 identifies 1.3.2-r1 and includes the adjacent `CVE-2026-85091.patch` backport. This is
