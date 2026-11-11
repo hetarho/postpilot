@@ -13,12 +13,38 @@ const ts = createRequire(dependency + '/frontend/package.json')('typescript')
 const paths = {
   '@/*': [source + '/frontend/src/*'],
 }
-const names = ['contract.ts', 'entry.ts', 'audio-observer.ts', 'worker.ts']
+const names = ['contract.ts', 'entry.ts', 'audio-observer.ts', 'worker.ts', 'pixi-compositor.ts']
 const hashes = () => Object.fromEntries(names.map(name => [name,
   createHash('sha256').update(readFileSync(resolve(candidate, name))).digest('hex')]))
 const adapterSha256 = hashes()
 const head = () => execFileSync('git', ['rev-parse', 'HEAD'], { cwd: source, encoding: 'utf8' }).trim()
 const sourceHeadStart = head()
+const arrayValues = (file, name) => {
+  const tree = ts.createSourceFile(file, readFileSync(resolve(candidate, file), 'utf8'), ts.ScriptTarget.ES2023, true)
+  let values
+  const visit = node => {
+    if (ts.isVariableDeclaration(node) && node.name.getText(tree) === name) {
+      const value = ts.isAsExpression(node.initializer) ? node.initializer.expression : node.initializer
+      if (ts.isArrayLiteralExpression(value)) values = value.elements.map(element => element.text)
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(tree)
+  return values
+}
+const armIds = arrayValues('contract.ts', 'ARM_IDS')
+const runnerArms = arrayValues('runner.mjs', 'arms')
+const worker = readFileSync(resolve(candidate, 'worker.ts'), 'utf8')
+const entry = readFileSync(resolve(candidate, 'entry.ts'), 'utf8')
+const pipelineGuards = {
+  sameArms: JSON.stringify(armIds) === JSON.stringify(runnerArms),
+  wholeFrameArmListed: armIds?.includes('pixi-webgl-compositor') === true,
+  strictSharedAdmission: worker.includes('ARM_IDS.includes(request.arm)') && entry.includes('ARM_IDS.includes(arm)'),
+  sameFrozenEvaluation: worker.includes('compositeBrowserFrame(input,') && entry.includes('freezeBrowserComposition({'),
+  sameSourceIdentity: worker.includes('request.manifest.source.sha256') && entry.includes('manifest.source.sha256'),
+  samePipeline: ['BrowserFootageResources', 'createMp4PacketMux', 'createBoundedMediaOutput', 'measureMp4Output'].every(name => worker.includes(name)),
+  explicitWebGL2Refusal: worker.includes("throw Error('BENCHMARK_WEBGL2_UNAVAILABLE')"),
+}
 const syntax = names.map(name => {
   const result = ts.transpileModule(readFileSync(resolve(candidate, name), 'utf8'), {
     fileName: name, reportDiagnostics: true,
@@ -48,11 +74,11 @@ const diagnostic = value => ({
 })
 console.log(JSON.stringify({
   scope: 'External adapter syntax and own-file semantic diagnostics only; no emit, browser/codec execution or required project CI claim',
-  typescript: ts.version, syntax, ownDiagnosticCount: own.length,
+  typescript: ts.version, syntax, ownDiagnosticCount: own.length, armIds, pipelineGuards,
   sourceRoot: source, sourceHeadStart, sourceHeadEnd: head(), adapterSha256,
   adapterUnchanged: JSON.stringify(adapterSha256) === JSON.stringify(hashes()),
   ownDiagnostics: own.map(diagnostic), importedSourceDiagnosticCount: all.length - own.length,
   importedSourceDiagnostics: all.filter(value => !own.includes(value)).map(diagnostic),
   actualExecution: false, qualification: false,
 }, null, 2))
-if (own.length || syntax.some(value => value.diagnostics.length)) process.exitCode = 1
+if (own.length || syntax.some(value => value.diagnostics.length) || Object.values(pipelineGuards).some(value => !value)) process.exitCode = 1

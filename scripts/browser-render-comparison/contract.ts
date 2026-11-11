@@ -1,7 +1,13 @@
 import type { BrowserCompositionSnapshot } from '@/entities/clip-preview/model/browser-composition'
 import type { BrowserAudioTrack } from '@/features/render-clip-browser/api/render-audio'
 
-export type Arm = 'canvas2d-shared' | 'pixi-scene-canvas2d-hybrid'
+export const ARM_IDS = ['canvas2d-shared', 'pixi-scene-canvas2d-hybrid', 'pixi-webgl-compositor'] as const
+export type Arm = (typeof ARM_IDS)[number]
+export function softwareWebGLRenderer(renderer: string | null, unmasked = true): boolean | null {
+  if (!renderer) return null
+  if (/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer)) return true
+  return unmasked ? false : null
+}
 export interface Fixture {
   id: string
   ratio: 'vertical' | 'horizontal' | 'square'

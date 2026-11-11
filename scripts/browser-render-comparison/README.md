@@ -1,12 +1,14 @@
 # Browser render comparison diagnostic
 
-This retained runner compares the shared Canvas2D composition with Pixi caption scenes copied into the same Canvas2D footage/region composition. It is a hybrid diagnostic, not a whole-GPU compositor or the production video.worker path. Neither arm changes the production default.
+This diagnostic compares three arms: `canvas2d-shared`, `pixi-scene-canvas2d-hybrid` and `pixi-webgl-compositor`. The hybrid copies Pixi caption scenes into Canvas2D footage/regions. The whole-frame arm submits footage, region ink/scrims and the existing Pixi caption builders to one full-frame Pixi WebGL render target on the Worker's OffscreenCanvas. The production video.worker path and default stay unchanged.
 
-Both arms use the same strict frozen plan, source decoder, audio processor, finite packet sink, bounded OPFS MP4 and producing-side verdict. Equal full final-Canvas readback is a separate diagnostic completion cost. Timings include that instrumentation and cannot establish ordinary production throughput or hardware acceleration. Warm retains font/WASM/layout/ink/Pixi caches while source decoders, audio work, encoders and spools restart.
+All arms use the same strict frozen plan, frame evaluator, source decoder, background/component builders, audio processor, finite packet sink, bounded OPFS MP4 and producing-side verdict. The whole-frame paint port uploads and destroys each transient source texture before its decoded-frame lease closes. It reuses the existing native fadeblack GPU helper; it does not composite a full frame on Canvas2D. WebGL2 absence records the arm as unexecuted, with no Canvas fallback.
+
+Every arm pays full final-image diagnostic readback. The WebGL arm additionally reports row-normalization's second logical buffer. Timings include these costs and cannot establish ordinary production throughput or hardware acceleration. The actual Worker WebGL renderer string and software classification are retained; a masked renderer remains unknown. Warm retains font/WASM/layout/ink/Pixi caches while source decoders, audio work, encoders and spools restart.
 
 Four checked-in authorized synthetic fixtures cover blur-in, neon, glitch and ember across all three ratios with three cut rates, dissolve/fadeblack, source-only audio and one synthetic mixed tone. They cover steady captions only. Windows/Edge, lower-resource devices, human listening/appearance review, the complete style/pace matrix and original WASM Rust provenance remain open. Upload is not executed and remains null. Managed allocation counts omit physical driver/process/private codec/DSP peaks. No raw PCM is retained; a diagnostic hash binds normalized pre-encode stereo samples. No human pixel threshold is invented.
 
-Install the pinned workspace dependencies, use the pinned Node, then bind a clean exact commit:
+Install the pinned workspace dependencies, use the pinned Node and installed Playwright Chromium (the default), then bind a clean exact commit. `--chrome PATH` explicitly selects another installed browser and is recorded in each result:
 
 ```sh
 node scripts/browser-render-comparison/static-check.mjs

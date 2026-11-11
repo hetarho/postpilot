@@ -4,7 +4,7 @@ import { browserAudioPreflight } from '@/features/render-clip-browser/model/audi
 import { browserRenderVerdict } from '@/features/render-clip-browser/model/verdict'
 import type { ClipEditPlan } from '@/entities/clip-plan'
 import type { BrowserAudioTrack } from '@/features/render-clip-browser/api/render-audio'
-import { type Manifest, type Fixture, type Arm, Phases, flags, sha256, shaJson } from './contract'
+import { ARM_IDS, softwareWebGLRenderer, type Manifest, type Fixture, type Arm, Phases, flags, sha256, shaJson } from './contract'
 import { observeProductionAudio } from './audio-observer'
 
 declare global {
@@ -100,10 +100,11 @@ window.benchmarkCandidate = {
     return {
       userAgent: navigator.userAgent, hardwareConcurrency: navigator.hardwareConcurrency,
       reportedDeviceMemoryGB: (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? null,
-      renderer, crossOriginIsolated, actualCodecHardwareUse: 'unverified', ...flags,
+      renderer, softwareRasterizer: softwareWebGLRenderer(renderer), crossOriginIsolated, actualCodecHardwareUse: 'unverified', ...flags,
     }
   },
   async run(fixture, arm, temperature) {
+    if (!ARM_IDS.includes(arm)) throw Error('BENCHMARK_UNKNOWN_ARM')
     const phases = new Phases(), started = performance.now(), plan = planFor(fixture)
     const snapshot = await phases.measure('freezeSnapshot', () => freezeBrowserComposition({
       ownerId: 'external-diagnostic', projectId: fixture.id, projectRevision: 1, planRevision: 1,

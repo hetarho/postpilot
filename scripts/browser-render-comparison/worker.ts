@@ -1,4 +1,5 @@
 import { WebGLRenderer, TexturePool, DOMAdapter, WebWorkerAdapter } from 'pixi.js'
+import { PixiFrameCompositor, pixiRendererIdentity } from './pixi-compositor'
 import { BrowserLocalComponents } from '@/entities/clip-preview/model/local-components'
 import { BrowserCaptionScenePixi } from '@/entities/clip-preview/model/ink-caption-pixi'
 import { BrowserFootageResources } from '@/entities/clip-preview/model/browser-footage'
@@ -19,7 +20,7 @@ import { MediaPacketWindow } from '@/shared/lib/media/packet-window'
 import { MediaPhaseRecorder } from '@/shared/lib/media/phase-metrics'
 import { measureMp4Output } from '@/shared/lib/media/measure-mp4'
 import { verifyMp4Audio } from '@/shared/lib/media/verify-mp4-audio'
-import { Phases, flags, sha256, shaJson, type RunRequest } from './contract'
+import { ARM_IDS, softwareWebGLRenderer, Phases, flags, sha256, shaJson, type RunRequest } from './contract'
 
 // Pixi defaults to BrowserAdapter. Select its official OffscreenCanvas Worker
 // environment before creating renderer, shader or scene resources in this realm.
@@ -39,7 +40,8 @@ type Runtime = {
   arm: RunRequest['arm']
   local: BrowserLocalComponents
   canvas: OffscreenCanvas
-  context: OffscreenCanvasRenderingContext2D
+  context?: OffscreenCanvasRenderingContext2D
+  gpu?: PixiFrameCompositor
   pixi?: WebGLRenderer
   scene?: BrowserCaptionScenePixi
   fadeBlack?: NativeFadeBlackSurface
@@ -76,8 +78,8 @@ async function cleanup() {
   if (busy) throw Error('BENCHMARK_CLEANUP_WHILE_RUNNING')
   await release()
   if (!runtime) return { runtime: false, temporaryNames: await names() }
-  const { local, scene, pixi, canvas, fadeBlack } = runtime
-  scene?.destroy(); fadeBlack?.close(); local.destroy()
+  const { local, scene, pixi, canvas, fadeBlack, gpu } = runtime
+  scene?.destroy(); fadeBlack?.close(); local.destroy(); gpu?.destroy()
   const afterLocal = local.measurements(), afterScene = scene?.measurements()
   pixi?.destroy()
   canvas.width = canvas.height = 0
@@ -87,6 +89,7 @@ async function cleanup() {
   return { runtime: false, local: afterLocal, scene: afterScene, canvasPixels: 0, temporaryNames: await names() }
 }
 async function prepare(request: RunRequest, phases: Phases, signal: AbortSignal) {
+  if (!ARM_IDS.includes(request.arm)) throw Error('BENCHMARK_UNKNOWN_ARM')
   // Refuse preview snapshots before resource/encoder/output initialization.
   if (request.snapshot.purpose !== 'export') throw Error('CLIP_SNAPSHOT_EXPORT_PURPOSE_REQUIRED')
   const snapshot = await phases.measure('readSnapshot', () => readBrowserCompositionSnapshot(request.snapshot))
@@ -97,21 +100,26 @@ async function prepare(request: RunRequest, phases: Phases, signal: AbortSignal)
     await phases.measure('componentCanvasInit', async () => {
       const dimensions = clipBrowserEncoderConfig(snapshot.ratio).video
       const canvas = new OffscreenCanvas(dimensions.width, dimensions.height)
-      const context = canvas.getContext('2d', { willReadFrequently: true, alpha: false })
-      if (!context) throw Error('BENCHMARK_CANVAS_UNSUPPORTED')
-      runtime = { snapshot, arm: request.arm, local: new BrowserLocalComponents(snapshot), canvas, context }
+      const context = request.arm === 'pixi-webgl-compositor' ? undefined : canvas.getContext('2d', { willReadFrequently: true, alpha: false })
+      if (request.arm !== 'pixi-webgl-compositor' && !context) throw Error('BENCHMARK_CANVAS_UNSUPPORTED')
+      runtime = { snapshot, arm: request.arm, local: new BrowserLocalComponents(snapshot), canvas, context: context ?? undefined }
     })
-    if (request.arm === 'pixi-scene-canvas2d-hybrid') {
+    if (request.arm !== 'canvas2d-shared') {
       await phases.measure('pixiGraphicsInit', async () => {
         const dimensions = clipBrowserEncoderConfig(snapshot.ratio).video
         const value = new WebGLRenderer()
-        runtime!.pixi = value
+        const whole = request.arm === 'pixi-webgl-compositor'
+        const canvas = whole ? runtime!.canvas : new OffscreenCanvas(dimensions.width, dimensions.height)
+        const gl = whole ? canvas.getContext('webgl2', { alpha: false, preserveDrawingBuffer: true }) : null
+        if (whole && !gl) throw Error('BENCHMARK_WEBGL2_UNAVAILABLE')
         await value.init({
-          canvas: new OffscreenCanvas(dimensions.width, dimensions.height),
+          canvas, ...(gl ? { context: gl } : {}),
           width: dimensions.width, height: dimensions.height, resolution: 1,
           backgroundAlpha: 0, antialias: false, preserveDrawingBuffer: true,
           preferWebGLVersion: 2,
         })
+        runtime!.pixi = value
+        if (whole) runtime!.gpu = new PixiFrameCompositor(value, dimensions.width, dimensions.height)
         runtime!.scene = new BrowserCaptionScenePixi(value, owner => runtime!.local.dropGPU(owner))
       })
     }
@@ -202,6 +210,8 @@ async function run(request: RunRequest) {
   try {
     const current = await prepare(request, phases, signal)
     const snapshot = current.snapshot, config = clipBrowserEncoderConfig(snapshot.ratio).video
+    const context = current.gpu?.context() ?? current.context
+    if (!context) throw Error('BENCHMARK_COMPOSITOR_NOT_INITIALIZED')
     if (snapshot.frameCount !== 450 || snapshot.plan.durationMs !== 15000) throw Error('BENCHMARK_TIMELINE_CONTRACT')
     const sourceAccess = async (id: string, fingerprint: string, accessSignal: AbortSignal) => {
       accessSignal.throwIfAborted()
@@ -252,12 +262,13 @@ async function run(request: RunRequest) {
     for (let frame = 0; frame < snapshot.frameCount; frame++) {
       signal.throwIfAborted()
       const evaluated = await compositeBrowserFrame(input, {
-        context: current.context, footage, measurements: videoPhases,
+        context, footage, measurements: videoPhases,
         assertCurrent: () => signal.throwIfAborted(),
         displayed: positions => displayed.push({ frame, positions }),
         nativeFadeBlack: rest => {
+          current.gpu?.present()
           current.fadeBlack ??= new NativeFadeBlackSurface(config.width, config.height)
-          current.fadeBlack.apply(current.canvas, current.context, rest)
+          current.fadeBlack.apply(current.canvas, context, rest)
         },
         local: async state => {
           const active = background.measurements.filter(m => state.components.some(s =>
@@ -267,15 +278,15 @@ async function run(request: RunRequest) {
             accentWhite: active.some(m => m.instanceId === id && m.accentWhite),
           })))
           try {
-            await phases.measure('effectsDrawSubmitAndHybridCopy', () => {
+            await phases.measure(current.gpu ? 'effectsDrawSubmitWebGL' : 'effectsDrawSubmitAndHybridCopy', () => {
               const painted = resources.map(resource => resource.kind === 'scene' && current.scene ? {
                 ...resource,
                 draw: (ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D) => {
-                  current.scene!.render(resource.scene, undefined, true)
-                  ctx.drawImage(current.pixi!.canvas, 0, 0)
+                  current.scene!.render(resource.scene, current.gpu?.target, !current.gpu)
+                  if (!current.gpu) ctx.drawImage(current.pixi!.canvas, 0, 0)
                 },
               } : resource)
-              drawMeasuredBrowserComponents(current.context, snapshot, state, painted, background)
+              drawMeasuredBrowserComponents(context, snapshot, state, painted, background)
             })
             capture()
             if (selected.has(frame)) await phases.measure('componentContractDiagnostic', async () => contracts.push({
@@ -292,10 +303,10 @@ async function run(request: RunRequest) {
         releaseAssets: () => undefined,
       }, frame)
       if (!evaluated) throw Error('BENCHMARK_FROZEN_FRAME_REQUIRED')
-      // Equal final-image diagnostic completion boundary on BOTH arms. No
-      // Pixi-only gl.finish; hybrid copy cost is measured above, not hidden.
-      const pixels = await phases.measure('finalCanvasReadbackDiagnostic', () => current.context.getImageData(0, 0, config.width, config.height))
-      capture(pixels.data.byteLength)
+      // All arms pay full final-image diagnostic readback. The whole-frame
+      // arm records its GL row-normalization buffer as a separate logical cost.
+      const pixels = await phases.measure('finalCanvasReadbackDiagnostic', () => current.gpu ? current.gpu.readback() : context.getImageData(0, 0, config.width, config.height))
+      capture(pixels.data.byteLength * (current.gpu ? 2 : 1))
       if (selected.has(frame)) await phases.measure('preEncodeSampleDiagnostic', () => addSample(frame, 'preencode', current.canvas, pixels))
       await phases.measure('packetCreditWait', () => packets.reserve())
       await videoPhases.measureAsync('encodeWait', () => waitEncoder(encoder!, signal))
@@ -353,8 +364,10 @@ async function run(request: RunRequest) {
       presentationValid, outputMeasurements, frameCount: snapshot.frameCount, durationUs: 15000000,
     }
     const sourceClockSha256 = await shaJson(displayed), componentContractsSha256 = await shaJson(contracts)
+    const webGL = current.pixi ? pixiRendererIdentity(current.pixi) : null
     const report = {
       fixture: request.fixture.id, arm: request.arm, temperature: request.temperature,
+      webGL: webGL ? { ...webGL, softwareRasterizer: softwareWebGLRenderer(webGL.renderer, webGL.unmasked) } : null,
       snapshotFingerprint: snapshot.snapshotFingerprint, versions: snapshot.versions,
       snapshotSha256: await shaJson(snapshot), sourceClockSha256, componentContractsSha256,
       sourceContract: snapshot.sources, components: snapshot.components.map(c => ({
@@ -363,7 +376,7 @@ async function run(request: RunRequest) {
       backgroundDigest: background.digest, backgroundDiagnostics, video,
       decodedAudio, audioEncodedIdentity: request.audioEncodedIdentity,
       workerPhases: phases.snapshot(), videoPhases: videoPhases.snapshot(), assembledAtMs,
-      managedResources: { ...peaks, encoderQueuePeak: peakEncodeQueue, encoderQueueLimit: CLIP_BROWSER_RENDER.encodeQueueFrames,
+      managedResources: { ...peaks, wholeFramePixi: current.gpu?.measurements() ?? null, encoderQueuePeak: peakEncodeQueue, encoderQueueLimit: CLIP_BROWSER_RENDER.encodeQueueFrames,
         peakLiveOwnedEncoderFrames: peakLiveEncoderFrames, packetWindow: packets.measurements(),
         outputSpool: { kind: activeOutput.kind, ...activeOutput.measurements() }, retainedVideoPackets: 0,
         samplePngBytes: sampleBytes, samplePngLimit: request.manifest.limits.samplePngBytes,
@@ -372,9 +385,9 @@ async function run(request: RunRequest) {
       },
       frameCleanup: { source: afterFootage, liveEncoderFrames: frameLive, encoderClosedAfterRun: true,
         componentLeases: current.local.measurements().leases, cachedRuntimeRetainedForWarm: true },
-      completionBoundary: 'Every frame reads the entire final Canvas2D image before encoder submission; this diagnostic cost is separate and changes production throughput',
+      completionBoundary: current.gpu ? 'Every frame reads the entire final WebGL canvas and normalizes row order before encoder submission; these diagnostic costs change production throughput' : 'Every frame reads the entire final Canvas2D image before encoder submission; this diagnostic cost is separate and changes production throughput',
       cacheTemperature: 'cold=fresh browser/Worker realm; warm=retained font/WASM/layout/ink/Pixi runtime; source decoders, audio processing, encoder and output spool restart',
-      uploadMs: null, privatePromotionExecuted: false, ...flagsAll,
+      uploadMs: null, privatePromotionExecuted: false, ...flagsAll, wholeGpuCompositor: request.arm === 'pixi-webgl-compositor',
     }
     return { report, file, samples }
   } catch (error) {

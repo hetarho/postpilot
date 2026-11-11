@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T14:16Z | - |
+| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T14:24Z | T749 |
 
 ## inbox
 - 261111 decided T748: original npm gitHead has no Cargo.lock and its checked-in WASM differs from npm → close the bounded investigation with an empty derived graph, 39 embedded lower-bound crates and every source/license/notice gap unresolved; leave the original-graph criterion unchecked and all source/distribution flags false (alt: invent a newly resolved lockfile | attribute the independently rebuilt candidate to the original binary). The goal permits naming missing proof; early exit avoids waiting out the 2h upper bound after the required original artifact is demonstrably absent. Remaining distribution/build-provenance review stays with T604.
@@ -187,13 +187,14 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
+| T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | doing@261111.cr11 |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
 
 ## next
 - implement-task T749
 
 ## log
+- 261111 T749 starts (cr11): 2h exploration from 14:24Z (upper bound 16:24Z), after T748 publication a74464d6. Add a diagnostic whole-frame Pixi WebGL arm over the same frozen plan/decoder/audio/mux/verdict; run an exact-commit single case then matrix with expensive local checks stopped. Production frontend remains unchanged; hardware, residuals and missing evidence stay explicit.
 - 261111 T748 gate passes (cr11): complete pre-push CI at 4102342d (26 dev, FE593/4721, Python69, full Go and all generated/static/type/build checks); no backend/media workflow path in its push diff. T747 9812b711 CI 43035630997, Deploy backend 43035630999 and all3 Verify media 43036324398 pass at its actual checkout SHA.
 - 261111 T748 done (cr11): original gitHead lacks Cargo.lock; 39 embedded crate/version lower bounds and 42 unresolved items recorded in both manifests/notices/QA, with all approval flags false. Ten tests, builds, lint/format, stable regeneration and 13 actual static-delivery checks pass at 9fabeddd; full pre-push CI follows.
 - 261111 T748 starts (cr11): bounded 2h investigation from 14:09Z, after T747 publication 9812b711; inspect the original npm gitHead and shipped WASM, retain exact-source gaps and keep distribution approval closed. Prefetched source lacks Cargo.lock; preserve that evidence rather than generating a replacement lockfile.
@@ -213,4 +214,3 @@
 - 261111 create-task T747 T748 T749 T750 (sv8): T604's agent-runnable evidence becomes server-capacity independence, the resvg WASM license graph, a whole-frame PixiJS compositor comparison and Windows Chrome/Edge measurement; T604 keeps human review, integrated-GPU/lower-resource hardware, the live static check and distribution approval, rebased to ARCH@22 CLIP@73 CDS@38 and parked.
 - 261111 T709 done (sv8): closed under its exit rule with the retained cost/outcome matrix (docs/qa/clip-real-pipeline-proof-261028.json); confirmed USD0.010868 plus unresolved USD0.025001 stays within the USD0.20 approval, no further live call; two fresh complete pipelines remain unmet, readiness gates stay closed and the owner's usage reconciliation stays parked.
 - 261111 sv7 stops before any task: worker-probe passes with bypass, ci-access alone fails because the origin uses an SSH alias. Explicit-repo public HTML reads CI run 42989787293 (in progress, unconfirmed); prepare sv8 with a runtime-only repository resolver and explicit complete ARCH-31 commands, preserving Git settings and installed skills.
-- 261111 sv7 prepares the owner-approved scoped unattended continuation: retain the settled T739/T697/T709 closures, resume T741/T742/T731, split T604 and park owner-only gates; preflight spec lint passes, CI access remains unavailable.

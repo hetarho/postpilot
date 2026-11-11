@@ -37,7 +37,7 @@ for (const source of [fixtures.source, fixtures.speech]) {
 const sourcePaths = git('ls-files', 'frontend/src', 'frontend/public/fonts', 'frontend/package.json', 'package.json', '.node-version', 'pnpm-lock.yaml', 'backend/internal/clip/browser_render.go')
   .split('\n').filter(path => path && !/\.(test|spec)\./u.test(path) && !path.startsWith('frontend/src/test/'))
 const sourceHashes = () => Object.fromEntries(sourcePaths.map(path => [path, hashFile(resolve(sourceRoot, path))]))
-const adapterPaths = ['runner.mjs', 'static-check.mjs', 'entry.ts', 'audio-observer.ts', 'worker.ts', 'contract.ts', 'fixtures.json', 'README.md']
+const adapterPaths = ['runner.mjs', 'static-check.mjs', 'entry.ts', 'audio-observer.ts', 'worker.ts', 'pixi-compositor.ts', 'contract.ts', 'fixtures.json', 'README.md']
 const adapterHashes = () => Object.fromEntries(adapterPaths.map(path => [path, hashFile(resolve(candidate, path))]))
 const bindingPath = resolve(option('--binding', resolve(sourceRoot, 'tmp/browser-render-comparison/binding.json')))
 const binding = {
@@ -127,7 +127,7 @@ const server = await createServer({
 await server.listen()
 let browser
 const reports = [], comparisons = [], sessions = []
-const arms = ['canvas2d-shared', 'pixi-scene-canvas2d-hybrid']
+const arms = ['canvas2d-shared', 'pixi-scene-canvas2d-hybrid', 'pixi-webgl-compositor']
 const streams = new Map()
 const aggregateFlags = {
   productionQualified: false, renderingQualified: false, hardwareQualified: false,
@@ -136,7 +136,7 @@ const aggregateFlags = {
 }
 try {
   browser = await chromium.launch({
-    executablePath: option('--chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'),
+    executablePath: option('--chrome', chromium.executablePath()),
     headless: !args.includes('--headed'),
     args: ['--enable-precise-memory-info'],
   })
@@ -185,11 +185,11 @@ try {
         let timer
         const result = await Promise.race([
           page.evaluate(({ fixture, arm, temperature }) => window.benchmarkCandidate.run(fixture, arm, temperature), { fixture, arm, temperature })
-            .catch(error => ({ status: 'failed', reason: error.message })),
+            .catch(error => ({ status: error.message.includes('BENCHMARK_WEBGL2_UNAVAILABLE') ? 'not-executed' : 'failed', reason: error.message })),
           new Promise(resolve => { timer = setTimeout(() => resolve({ status: 'failed', reason: 'HOST_BENCHMARK_DEADLINE' }), fixtures.limits.runTimeoutMs + 30000) }),
         ]).finally(() => clearTimeout(timer))
         const report = { ...result, fixture: fixture.id, arm, temperature, hostObservedElapsedMs: performance.now() - start,
-          environment, browserVersion: await browser.version(), browserLaunch: args.includes('--headed') ? 'headed/default-unverified' : 'headless/default-unverified',
+          environment, browserVersion: await browser.version(), browserExecutable: option('--chrome', chromium.executablePath()), browserLaunch: args.includes('--headed') ? 'headed/default-unverified' : 'headless/default-unverified',
           browserFlags: ['--enable-precise-memory-info'],
           competingWorkReported: args.includes('--competing-work'), sourceBinding: { head: binding.head,
             fixtureManifestSha256: binding.fixtureManifestSha256, lockfileSha256: binding.lockfileSha256 }, ...aggregateFlags }
@@ -215,9 +215,10 @@ try {
   try {
     await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/candidate`)
     await page.waitForFunction(() => !!window.benchmarkCandidate)
-    for (const fixture of cases) for (const temperature of ['cold', 'warm']) {
-      const pair = arms.map(arm => reports.find(report => report.fixture === fixture.id && report.arm === arm && report.temperature === temperature && report.status === 'done'))
-      if (pair.some(report => !report)) { comparisons.push({ fixture: fixture.id, temperature, status: 'not-executed', reason: 'Missing successful arm', qualification: false }); continue }
+    for (const fixture of cases) for (const temperature of ['cold', 'warm']) for (const candidateArm of arms.slice(1)) {
+      const controlArm = 'canvas2d-shared'
+      const pair = [controlArm, candidateArm].map(arm => reports.find(report => report.fixture === fixture.id && report.arm === arm && report.temperature === temperature && report.status === 'done'))
+      if (pair.some(report => !report)) { comparisons.push({ fixture: fixture.id, temperature, controlArm, candidateArm, status: 'not-executed', reason: 'Missing successful arm', qualification: false }); continue }
       const [a, b] = pair
       const equalFields = ['snapshotFingerprint', 'snapshotSha256', 'sourceClockSha256', 'componentContractsSha256', 'backgroundDigest']
       const contracts = Object.fromEntries(equalFields.map(field => [field, a[field] === b[field]]))
@@ -233,7 +234,7 @@ try {
         pixels.push({ kind, frame, rawSha256Equal: left.rawSha256 === right.rawSha256,
           ...await page.evaluate(({ left, right }) => window.benchmarkCandidate.compare(left, right), { left: left.name, right: right.name }) })
       }
-      comparisons.push({ fixture: fixture.id, temperature, status: 'observed', contracts, contractComparisonPassed, audioEncodedIdentityEqual,
+      comparisons.push({ fixture: fixture.id, temperature, controlArm, candidateArm, status: 'observed', contracts, contractComparisonPassed, audioEncodedIdentityEqual,
         decodedAudioMeasurementsEqual, normalizedPcmIdentityEqual, pixels, pixelAcceptanceThreshold: null, humanReviewed: false, qualification: false })
     }
   } finally { await page.evaluate(() => window.benchmarkCandidate?.cleanup()).catch(() => undefined); await context.close() }
@@ -254,7 +255,7 @@ try {
     sourceUnchanged, adapterUnchanged, dependencyManifestsUnchanged, dependencyManifestHashes: binding.dependencyManifestHashes,
     fixturesUnchanged, trackedDirty: binding.trackedDirty,
     reports, comparisons, sessions, ...aggregateFlags,
-    scope: 'Complete MP4 diagnostic: production shared Canvas2D composition versus authored Pixi scene over Canvas2D footage/regions, with equal per-frame full Canvas readback; not the production video.worker path or a whole GPU compositor',
+    scope: 'Complete MP4 diagnostic: shared Canvas2D control, Pixi caption/Canvas2D hybrid and whole-frame Pixi WebGL footage/region/caption composition, with full final-image diagnostic readback on every arm; the production video.worker path is unchanged',
     limits: [
       'Four synthetic 15-second steady-caption cases, not the full style/pace/device/voice/release matrix.',
       'Full Canvas readback, sample PNG encoding, contract hashing and artifact transfer are diagnostic costs; do not infer uninstrumented production throughput.',
