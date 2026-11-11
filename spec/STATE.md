@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T13:38Z | - |
+| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T13:39Z | T747 |
 
 ## inbox
 - 261111 decided T747 T748 T749 T750 T751 T752: unattended continuation scope? → finish the existing dependency-ready tasks on main, starting with T752, then T751 and T747 before the explore tasks; preserve owner-only hardware, listening, live-call/hosting budgets and active ideation (alt: expand into new product planning | leave executable tasks stopped). The user selected unattended mode during T752's verification.
@@ -186,7 +186,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T747 | Prove browser export independence from saturated server-export capacity | ARCH CLIP INFRA | - | todo |
+| T747 | Prove browser export independence from saturated server-export capacity | ARCH CLIP INFRA | - | doing@261111.cr11 |
 | T748 | Reconstruct the shipped resvg WASM's Rust source and license graph | ARCH | - | todo |
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
@@ -195,6 +195,7 @@
 - implement-task T747
 
 ## log
+- 261111 T747 starts (cr11): pin browser admission independently of fully occupied native active/waiting slots and map load/queue/cancellation/restart/resource clauses to current named tests, without live hosting or rental benchmarks. T751 is committed/pushed; its immutable remote workflows remain under observation.
 - 261111 T751 done (cr11): query/sqlc order solely by reverse rowid acceptance, preserving stored timestamps, bodies/kinds, owner/project filters and schema/index. Deterministic reversed/equal-time regression fails original query and passes the repair; full clip/store/app/rpc and 21 FE consumer tests pass. Complete ARCH-31 on 4f357b66 passes (FE 593/4721, deploy Python 69, Go all, static/build/generation/Compose, both deployment images and all three media gates, both layouts); remote results follow after push.
 - 261111 T752 remote verified (cr11): code push 53dc028d CI 43025005875 and Deploy backend 43025005647 pass, including actual rollout/ranged GET/CORS/R2 gates; completion metadata 740b8437 CI 43025066174 passes. Verify media 43026911492 passes all three jobs; its API head_sha is 740b8437 but every checkout/log binds the tested source to deployed 53dc028d.
 - 261111 T751 starts (cr11): T752 committed and pushed after the complete local gate; immutable remote workflow observation continues. Follow ARCH-70 on main while the stale adopted work binding prevents the detached loop; pin history to acceptance order with deterministic reversed/equal timestamps and unchanged write/schema/RPC contracts.

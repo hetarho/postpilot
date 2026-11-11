@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -95,6 +96,111 @@ func nativeAdmission(t *testing.T, h *generationHarness, l clip.RenderCapacity) 
 		t.Fatal(err)
 	}
 	return a
+}
+
+func TestBrowserRenderStartsWhileServerCapacityIsSaturated(t *testing.T) {
+	g := remoteRenderSetup(t, false)
+	h, ctx := g.h, t.Context()
+	limits := clip.DefaultRenderCapacity(clip.Environment{})
+	a := nativeAdmission(t, h, limits)
+	deps := generationDeps(g.finisher, &quotePricing{}, nil)
+	deps.NativeAdmission, deps.Exports = a, h.store
+	deps.PrepareExport = func(context.Context, string) (bool, error) { return false, nil }
+	dispatch, err := clipapp.NewMediaDispatch(h.db.Writer, capacityPorts(h), clip.DefaultMediaStageLimits(clip.Environment{}), h.cfg.Media, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deps.RemoteMedia = dispatch
+	h.service = clipapp.NewGenerationService(h.store, h.projects, h.sources, g.objects, h.media, h.planner, h.renderer, h.clipJobs(), h.cfg, deps)
+	h.queue.OnTerminal(clip.JobKindRender, func(ctx context.Context, j job.Job, at time.Time) error {
+		return errors.Join(h.service.ReleaseExport(ctx, j.ID), h.sources.ReleaseAttempt(ctx, j.UserID, j.ID, at))
+	})
+	now := time.Now().UTC()
+	project := func(user string) capacityInput {
+		t.Helper()
+		in := capacityProject(t, g, user)
+		if err := h.store.OpenExportWindow(ctx, clip.ExportWindow{UserID: user, CoverageID: user, Start: now.Add(-time.Hour), End: now.Add(time.Hour), Allowance: 1}, user); err != nil {
+			t.Fatal(err)
+		}
+		return in
+	}
+	assertWindow := func(user string, reserved int) {
+		t.Helper()
+		w, ok, err := h.store.CurrentExportWindow(ctx, user, now)
+		if err != nil || !ok || w.Reserved != reserved || w.Used != 0 {
+			t.Fatalf("%s export window: %+v, found=%v, error=%v", user, w, ok, err)
+		}
+	}
+	assertCapacity := func(want int) {
+		t.Helper()
+		count, err := h.jobs.ActiveCount(ctx, job.Filter{Kind: clip.JobKindRender})
+		if err != nil || count != want {
+			t.Fatalf("native capacity: got %d, want %d, error=%v", count, want, err)
+		}
+	}
+	// The fixture already owns one slot. Fill every remaining default slot
+	// with a separate account, so per-account admission cannot mask saturation.
+	var cancelInput capacityInput
+	var cancelID string
+	for i := 1; i < limits.Active+limits.Waiting; i++ {
+		in := project(fmt.Sprintf("saturated-%d", i))
+		id, err := a.Admit(ctx, in.start, in.batch.ID, 1, in.task, false)
+		if err != nil || id == "" {
+			t.Fatal(id, err)
+		}
+		assertWindow(in.start.UserID, 1)
+		cancelInput, cancelID = in, id
+	}
+	assertCapacity(limits.Active + limits.Waiting)
+	rejected := project("overloaded")
+	startServer := func() (string, error) {
+		return h.service.StartRender(ctx, rejected.start.UserID, rejected.start.ProjectID, rejected.batch.ID, 1, clip.RenderServer)
+	}
+	if id, err := startServer(); !errors.Is(err, clip.ErrRenderOverloaded) || id != "" {
+		t.Fatal("saturated server admission", id, err)
+	}
+	assertWindow(rejected.start.UserID, 0)
+	b, err := h.store.GetSourceBatch(ctx, rejected.start.UserID, rejected.batch.ID)
+	if err != nil || b.State != "ready" || b.JobID != "" {
+		t.Fatal("refusal consumed sources", b, err)
+	}
+	browser := project("browser-independent")
+	render, sampling, err := h.service.StartBrowserRender(ctx, browser.start.UserID, browser.start.ProjectID, browser.batch.ID, 1)
+	if err != nil || render == "" || sampling == "" {
+		t.Fatal("browser start depended on native capacity", render, sampling, err)
+	}
+	before, err := h.store.GetBrowserRender(ctx, browser.start.UserID, render)
+	if err != nil || before.CancelledAt != nil || before.SampleJobID != sampling {
+		t.Fatal("browser admission not durable", before, err)
+	}
+	sampleJob, err := h.jobs.GetByID(ctx, sampling)
+	if err != nil || sampleJob.Kind != clip.JobKindSampleBrowserRender || sampleJob.Status != job.StatusQueued {
+		t.Fatal("browser sampling used a native job", sampleJob, err)
+	}
+	assertCapacity(limits.Active + limits.Waiting)
+	assertWindow(browser.start.UserID, 0)
+	if _, err := h.queue.Cancel(ctx, cancelInput.start.UserID, job.Subject{Dimension: clip.JobSubject, ID: cancelInput.start.ProjectID}, cancelID); err != nil {
+		t.Fatal(err)
+	}
+	cancelled, err := h.jobs.GetByID(ctx, cancelID)
+	if err != nil || cancelled.Status != job.StatusCancelled {
+		t.Fatal("cancelled server still admitted", cancelled, err)
+	}
+	assertCapacity(limits.Active + limits.Waiting - 1)
+	assertWindow(cancelInput.start.UserID, 0)
+	if id, err := startServer(); err != nil || id == "" {
+		t.Fatal("released native slot not reusable", id, err)
+	}
+	assertCapacity(limits.Active + limits.Waiting)
+	assertWindow(rejected.start.UserID, 1)
+	assertWindow(browser.start.UserID, 0)
+	after, err := h.store.GetBrowserRender(ctx, browser.start.UserID, render)
+	if err != nil || !reflect.DeepEqual(before, after) {
+		t.Fatal("native cancellation/readmission changed the browser render", before, after, err)
+	}
+	if len(h.admitter.calls) != 0 {
+		t.Fatal("render admission spent AI credits")
+	}
 }
 
 func TestNativeCapacityConcurrentAdmissionDuplicateAndAccountBounds(t *testing.T) {
