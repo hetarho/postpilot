@@ -26,7 +26,9 @@ import {
   FindSheet,
   StatusTile,
   WorkGroup,
-  heroCardClass,
+  workCardActionClass,
+  workCardLinkClass,
+  workCardStyles,
 } from '@/widgets/work-list'
 import { appFailureFromConnect } from '@/shared/api'
 import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
@@ -37,7 +39,6 @@ import {
   Notice,
   Typography,
   buttonStyles,
-  cardStyles,
   typographyStyles,
   type BadgeTone,
 } from '@/shared/ui'
@@ -256,18 +257,12 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
             // Guide: a large, friendly card — the status tile, the title in a heading's size, then
             // its state and metadata wrapping under it.
             return (
-              <li
-                key={project.id}
-                className={cardStyles({
-                  padding: 'none',
-                  className: clsx('flex flex-col overflow-hidden', heroCard && heroCardClass),
-                })}
-              >
+              <li key={project.id} className={workCardStyles({ hero: heroCard })}>
                 <Link
                   to="/clips/$clipId"
                   params={{ clipId: project.id }}
                   onClick={() => remember(project.id)}
-                  className="hover:bg-card-bg-hover active:bg-card-bg-active flex min-h-11 min-w-0 items-start gap-4 p-4 transition-colors sm:p-5"
+                  className={workCardLinkClass}
                 >
                   <StatusTile
                     tone={status.tone}
@@ -336,8 +331,15 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                     onClick={() => remember(project.id)}
                     className={
                       heroCard
-                        ? buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })
-                        : buttonStyles({ variant: 'ghost', className: '-ml-3' })
+                        ? buttonStyles({
+                            variant: 'cta',
+                            size: 'hero',
+                            className: clsx('w-full', workCardActionClass),
+                          })
+                        : buttonStyles({
+                            variant: 'ghost',
+                            className: clsx('-ml-3', workCardActionClass),
+                          })
                     }
                   >
                     {historyText(project.finalized || runningJob ? 'open' : 'continue')}
@@ -345,7 +347,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                   {project.result?.downloadUrl ? (
                     <a
                       href={project.result.downloadUrl}
-                      className={buttonStyles({ variant: 'ghost' })}
+                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
                     >
                       {historyText('download')}
                     </a>
@@ -354,7 +356,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                       to="/clips/$clipId"
                       params={{ clipId: project.id }}
                       onClick={() => remember(project.id)}
-                      className={buttonStyles({ variant: 'ghost' })}
+                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
                     >
                       {historyText('export')}
                     </Link>

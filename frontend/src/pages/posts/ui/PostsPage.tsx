@@ -19,7 +19,14 @@ import { matchedTags, PostListControls, type PostNarrowing } from '@/features/fi
 import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
 import { ChannelActions } from '@/widgets/channel-actions'
-import { ContinueSection, FindSheet, WorkGroup, heroCardClass } from '@/widgets/work-list'
+import {
+  ContinueSection,
+  FindSheet,
+  WorkGroup,
+  workCardActionClass,
+  workCardLinkClass,
+  workCardStyles,
+} from '@/widgets/work-list'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
@@ -28,7 +35,6 @@ import {
   Notice,
   Typography,
   buttonStyles,
-  cardStyles,
   typographyStyles,
   type BadgeTone,
   pageStyles,
@@ -336,8 +342,6 @@ export function PostsPage() {
                 </span>
               </>
             )
-            const rowClass =
-              'hover:bg-card-bg-hover active:bg-card-bg-active flex min-h-11 min-w-0 items-start gap-4 p-4 transition-colors sm:p-5'
             const runningJob =
               post.activeJob && !isTerminal(post.activeJob) ? post.activeJob : undefined
             const failedJob =
@@ -348,17 +352,14 @@ export function PostsPage() {
               <li
                 key={post.slug}
                 data-post-slug={post.slug}
-                className={cardStyles({
-                  padding: 'none',
-                  className: clsx('flex flex-col overflow-hidden', heroCard && heroCardClass),
-                })}
+                className={workCardStyles({ hero: heroCard })}
               >
                 {post.pendingExperimentId && !runningJob && !failedJob ? (
                   <Link
                     to="/tests/records/$id"
                     params={{ id: post.pendingExperimentId }}
                     search={{ entry: historyEntry }}
-                    className={rowClass}
+                    className={workCardLinkClass}
                     onClick={() => remember(post)}
                   >
                     {content}
@@ -367,7 +368,7 @@ export function PostsPage() {
                   <Link
                     to="/posts/$slug"
                     params={{ slug: post.slug }}
-                    className={rowClass}
+                    className={workCardLinkClass}
                     onClick={() => remember(post)}
                   >
                     {content}
@@ -398,8 +399,15 @@ export function PostsPage() {
                     onClick={() => remember(post)}
                     className={
                       heroCard
-                        ? buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })
-                        : buttonStyles({ variant: 'ghost', className: '-ml-3' })
+                        ? buttonStyles({
+                            variant: 'cta',
+                            size: 'hero',
+                            className: clsx('w-full', workCardActionClass),
+                          })
+                        : buttonStyles({
+                            variant: 'ghost',
+                            className: clsx('-ml-3', workCardActionClass),
+                          })
                     }
                   >
                     {t(
@@ -415,7 +423,7 @@ export function PostsPage() {
                       params={{ id: post.pendingExperimentId }}
                       search={{ entry: historyEntry }}
                       onClick={() => remember(post)}
-                      className={buttonStyles({ variant: 'ghost' })}
+                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
                     >
                       {t('list.history.result', { ns: 'posts' })}
                     </Link>
@@ -425,7 +433,7 @@ export function PostsPage() {
                       href={post.publishedUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className={buttonStyles({ variant: 'ghost' })}
+                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
                     >
                       {t('list.history.published', { ns: 'posts' })}
                     </a>

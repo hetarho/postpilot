@@ -127,9 +127,6 @@ export function ContinueSection({ children }: { children: ReactNode }) {
   )
 }
 
-/** The hero card's plane: the accent's soft tint, one step more padding and a deeper lift. */
-export const heroCardClass = 'bg-badge-accent-bg shadow-lg'
-
 /** Guide: one status group of a work list — 작성 중 or 완성 — a heading with its count over a
  *  column of cards (two on the desk). */
 export function WorkGroup({

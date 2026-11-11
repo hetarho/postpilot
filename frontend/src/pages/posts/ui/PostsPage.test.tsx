@@ -52,6 +52,26 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /부산/ })).toHaveTextContent('검토')
   })
 
+  // The card's main link covered only its top half, so a hover tinted that half and left the
+  // 이어서 작성 row under it in the card's resting colour.
+  it('answers a hover anywhere on a card with the whole card', async () => {
+    renderList({
+      posts: [
+        { slug: '20260828-jeju', title: '제주 3일' },
+        { slug: '20260820-busan', title: '부산' },
+      ],
+    })
+
+    const main = await screen.findByRole('link', { name: /부산/ })
+    const card = main.closest('li')
+    expect(card).toHaveClass('relative', 'hover:bg-card-bg-hover', 'hover:-translate-y-0.5')
+    // The main link stretches over the card; the row's own link stays a target above it.
+    expect(main).toHaveClass('after:absolute', 'after:inset-0')
+    expect(main).not.toHaveClass('hover:bg-card-bg-hover')
+    const footer = within(card as HTMLElement).getByRole('link', { name: '이어서 작성' })
+    expect(footer).toHaveClass('relative', 'z-10')
+  })
+
   it('marks a post with an active job as generating', async () => {
     renderList({
       posts: [
