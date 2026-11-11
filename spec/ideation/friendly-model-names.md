@@ -46,7 +46,7 @@
 
 ## domains
 - MODEL: model-wide alias assignment/edit, never-reused aliases, operator-confirmed succession and its effect on saved selections, operator visibility, paste-document round trip, frozen alias+version in test history
-- CDS THEME: picker option/detail presentation
+- CDS: (also THEME) picker option/detail presentation
 - QUOTA: grade/plan copy beside short names (locked grades)
 
 ## open

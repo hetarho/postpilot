@@ -73,6 +73,7 @@
 - [o] A/B 비교 opens from 바로 글 쓰기's menu, so ①'s dock keeps two actions; each candidate sets its own storyline and the adopted one stays with the post; no A/B runs from a storyline ← owner 260927
 - [x] A/B beside 이 스토리로 글 쓰기, or a third dock button ← more controls in the space, or three buttons across 360 px
 - [o] 영상 지침 has a candidate queue like 지침, fed by ②'s clip revision requests; a storyline request feeds no candidate queue ← owner 260927: the same screen for posts and clips; a storyline request edits one draft plan
+- [o] settled in update-ssot 260927 (POST-99 CLIP-182 POST-53 GEN-72 GUIDE-7): a photo (a clip: a source) added after the storyline was made makes the space say so and offer 다시 만들기, and writing from the storyline as it stands leaves it out; A/B 비교 moves into 바로 글 쓰기's menu, each candidate setting its own storyline, the adopted one kept, and no A/B runs from a storyline; 영상 지침 gets a candidate queue like 지침, fed by ②'s clip revision requests (a storyline request feeds none)
 
 ## shape
 - layers: system prompt = format only (answer shape, attached files only, block rules) · 기본 지침 = the product's writing direction including grounding and naming, (추천), on by default, switchable per account · 지침 / 영상 지침 = the owner's writing direction · template = form (order, fixed text, photo places, fields, what each place is about) · memo / clip instruction / owner-written storyline = this piece's material, the only source of impressions
@@ -89,8 +90,8 @@
 - POST: ①'s two actions; ② opening on a storyline with no draft; the collapsible storyline space with its own AI request, photo moves, and 이 스토리로 다시 쓰기 confirmed over hand edits →POST
 - CLIP: the same two actions and storyline space for clips; the flow call setting the storyline on the direct path and the narration following it; the project instruction as this clip's material; narration admission with no server content checks left — the experiential drop, the number match and the cite-an-observation omission all leave for 기본 지침 (CLIP-63, CLIP-64, CLIP-72, CLIP-122, CLIP-137); 영상 지침 in the nav (CLIP-3) →CLIP →CDS
 - TMPL: form only: `<note>` and 'AI에게만 하는 말' removed (TMPL-18, TMPL-36), a `<write>` or `<ask>` carries what the place is about, the builder copy and 형식 안내 teach it (TMPL-41); existing notes dropped →TMPL
-- CLIP (video template): the invisible guide removed (CLIP-4, CLIP-59, CLIP-112), a composition stage's line says what the stage is about (CLIP-141) →CLIP
+- CLIP: (video template) the invisible guide removed (CLIP-4, CLIP-59, CLIP-112), a composition stage's line says what the stage is about (CLIP-141) →CLIP
 - QUOTA: the storyline call and its AI revision are LLM jobs admitted and charged like any other (QUOTA-13) →QUOTA
 
 ## open
-- settled in update-ssot 260927: a photo (a clip: a source) added after the storyline was made makes the space say so and offer 다시 만들기, and writing from the storyline as it stands leaves it out; A/B 비교 moves into 바로 글 쓰기's menu, each candidate setting its own storyline, the adopted one kept, and no A/B runs from a storyline; 영상 지침 gets a candidate queue like 지침, fed by ②'s clip revision requests (a storyline request feeds none)
+- -

@@ -32,10 +32,10 @@
 
 ## domains
 - THEME: visible navigation, nested location/return, separate workspace/prose measures, current-step action/result clarity and desktop acceptance.
-- POST CLIP: creation-origin continuity and compact operational history, with retained direct addresses, autosave, lifecycle and exports.
-- EDIT TMPL GUIDE: named saved/working states, shared AI/direct draft, directory summaries, bounded candidate preparation and explicit champion publication.
+- POST: (also CLIP) creation-origin continuity and compact operational history, with retained direct addresses, autosave, lifecycle and exports.
+- EDIT: (also TMPL, GUIDE) named saved/working states, shared AI/direct draft, directory summaries, bounded candidate preparation and explicit champion publication.
 - VOICE: editable learning materials, revision-aware accepted analysis/projection, dirty notices, generated-style provenance and shared-test entry.
-- MODEL GEN QUOTA ARCH: single-factor complete-post experiments, binary brackets, human decisions, once-per-candidate work, receipts, admission/settlement and forward compatibility.
+- MODEL: (also GEN, QUOTA, ARCH) single-factor complete-post experiments, binary brackets, human decisions, once-per-candidate work, receipts, admission/settlement and forward compatibility.
 
 ## open
 - Final navigation layout, history naming/placement and visual dimensions remain design-review items; no mockup or final visual design is approved by this document.

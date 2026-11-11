@@ -3,7 +3,7 @@
 
 ## vision
 - [o] Next priority on 261007: improve post quality first; the owner will publish and observe views, then revisit search/traffic hypotheses after the trial
-- [o] Expand the current exploration into [prompt engineering](prompt-engineering.md), including prompt visibility, composition, quality-oriented changes and later empirical evaluation
+- [o] Expand the current exploration into [prompt engineering](done/prompt-engineering.md), including prompt visibility, composition, quality-oriented changes and later empirical evaluation
 - [o] Core value: more readers arriving at the owner's posts from search; two separate questions matter: how much a query is searched, and whether that query brings readers to the owner's posts
 - [o] The owner's observed queries join a place or shop to a branch, dish, price or other specific detail (구리 양촌리, 스시메이진 구리, 양촌리오리가격, 이디야 아침 메뉴); broad 분야 phrases did not describe these arrivals
 - [o] Available owner data: daily, weekly and monthly inflow queries and search-channel shares, including post-level statistics; the earlier blog-wide-only assumption is superseded
@@ -170,11 +170,11 @@
 - GEN: retire the frozen phrase list and the replacement candidates →GEN
 - GUIDE: retire the 상위 노출 단어 사용 preset →GUIDE
 - POST: retire ②'s replacement spans →POST
-- QUAL or a separate SEARCH candidate: demand versus inflow evidence, source/period/scope interpretation, attribution, uncertainty and owner findings; must resolve current QUAL-16/QUAL-34 and exposure-claim constraints before conversion
-- GEN and GUIDE candidates: one grounded intent policy, account-guidance preview/adoption and relevance gating across title/body/tags
-- QUOTA candidate: optional extraction cost and previously discussed contribution credits; neither pricing nor reward changes are decided
-- AUTH candidate: account-local processing versus optional cross-account contribution, retention and deletion choices
-- POST candidate: published identity/text evidence and future-generation guidance; editing a published post requires a separate policy decision
+- QUAL: (or a separate SEARCH domain) demand versus inflow evidence, source/period/scope interpretation, attribution, uncertainty and owner findings; must resolve current QUAL-16/QUAL-34 and exposure-claim constraints before conversion
+- GEN: (also GUIDE) one grounded intent policy, account-guidance preview/adoption and relevance gating across title/body/tags
+- QUOTA: optional extraction cost and previously discussed contribution credits; neither pricing nor reward changes are decided
+- AUTH: account-local processing versus optional cross-account contribution, retention and deletion choices
+- POST: published identity/text evidence and future-generation guidance; editing a published post requires a separate policy decision
 
 ## open
 - reading a screenshot takes a model call while QUAL-16 says a measurement costs no credit: who pays for reading it

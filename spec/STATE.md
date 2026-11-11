@@ -96,20 +96,14 @@
 ## ideation
 | id | st |
 |---|---|
-| clip-source-observation-visibility | converted@260912 |
-| clip-template-as-preset | converted@260917 |
-| post-quality-and-related-links | converted@260923 |
 | searchable-details | open@261007 |
-| prompt-engineering | converted@261007 |
 | creation-and-comparison-ux | open@261007 |
-| storyline-first | converted@260927 |
-| voice-tidy | converted@260929 |
-| daily-credit-plans | converted@260929 |
-| template-from-request | converted@261001 |
-| familiar-video-editing-and-dubbing | converted@261004 |
 | friendly-model-names | open@261013 |
-| campaign-reviewer-focus | converted@261015 |
-| post-faithful-clip | converted@261015 |
+| post-faithful-clip | ready@261111 |
+| instagram-photo-post | open@261111 |
+| related-post-links | open@261111 |
+| unmeasured-search-exposure | open@261111 |
+| job-content-retention | open@261111 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -176,8 +170,10 @@
 - sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes d95f0f5f after a full local gate on 729ec6d0 (Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback; remote CI passed). T745 (shared DOM test i18n catalogs, setup 1.65 -> 0.73 s per file) follows in a second push after an FE gate on the identical tree. Remote CI passed for both pushes (42802447091, 42808343741). Report reports/261110-sil5.md.
 - Fix the clip/store request history ordering under clock rollback (backend; needs a full gate plus media parity), then close T739. Add the T745 provided-data assertion suggested in the inbox.
 - T741/T742 remain deferred after the 92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
+- update-ssot from ideation/post-faithful-clip (ready): the first caption names the place (상호) from the linked post, which no SSOT holds yet (GUIDE-42's first-caption rule or CLIP); the doc's [?] default caption look (CDS) and its unmeasured prompt growth stay with it.
 
 ## log
+- 261111 ideation: archive 10 converted docs to ideation/done/ after checking SSOT coverage (clip-source-observation-visibility, clip-template-as-preset, post-quality-and-related-links, prompt-engineering, storyline-first, voice-tidy, daily-credit-plans, template-from-request, familiar-video-editing-and-dubbing, campaign-reviewer-focus); settled questions cite their SSOT IDs, undecided ones move to the new open docs instagram-photo-post, related-post-links, unmeasured-search-exposure and job-content-retention; post-faithful-clip returns to ready (its 상호 hook is in no SSOT); domain lines follow the installed FORMAT, spec lint 0 errors
 - 261111 T746 done (hu3): the compared Guide redesign and requirements-led post guide land as merge 4899eb2b with the rule fixes; full local gate (FE 4721 tests, Go 90 packages, deploy tests, media gates) and remote CI, Deploy backend and Verify media pass; A/B worktrees and branches removed
 - 261111 create-task T746: one adoption task consumes the THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH deltas; its implementation is the compared and polished branch
 - 261111 update-ssot THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH: the adopted Guide redesign (ab ui-redesign/b) and the requirements-led post guide (ab post-writing-ux/d, polish a/b/c/d merged on ab/post-writing-polish/final) become the rules; 13 revs, 11 new decisions; code gaps the rules keep (MODEL-24/96, QUOTA-75, THEME-11/18/28/55/58/67/70, ARCH-16, POST-123, VOICE-69, TMPL-32, MKT-11) are fixed on that branch before it lands
@@ -197,7 +193,3 @@
 - 261109 si4 defersT740/T741/T742: actual release failed after13 passed image/worker stages; observed10.223s Docker clock rollback and latest-job query reproduction, final render cause unresolved. Preserve92daffbe/archive branch and restore backend exactly toorigin0cd at9fa63516; finish FE scope before21:00KST.
 - 261109 create-task review/perf-quality-si4-261109 F7 (si4) → T742 same-byte authenticated FFmpeg input fallback; source/signature/key identity proven in pinned base, no gate or runtime change.
 - 261109 si4 deadline clarified by owner: complete before21:00KST; T741 reviewed source integrated, final media gates then staged T739/T738 publication remain.
-- 261109 create-task review/perf-quality-si4-261109 F6 (si4) → T741 same-version signed/checksummed APK fallback; no library upgrade or gate relaxation. Both original media build failures preserved.
-- 261109 T740 done (si4): reviewed c3423b1b, source a89b15b7/submission d796f89b merged6a7bd326; three affected packages and17 regression subcases pass; full CI/media gate before pending T737/source publication.
-- 261109 T740 replan (si4): first gate exposed stale trigger assumption; release340e69d1 before clarifying current0162 (upload-text retains, sampling clears), preserve source fdcc92b7; SQL ownership fix and schema unchanged.
-- 261109 create-task review/perf-quality-si4-261109 F5 (si4) → T740 checkpoint ownership independent of wall clock; actual 10-second rollback and deterministic SQL probe reproduce Go failures; publication held for repair.

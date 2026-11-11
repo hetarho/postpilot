@@ -28,7 +28,7 @@
 - [o] the eight AI-generated styles stay as a starting point for a creator who has never written, labelled AI 말투, and the product nudges toward chat learning so the voice turns personal over time ← owner choice; a new 체험단 creator needs a start, while the philosophy favors the owner's own voice
 - [o] the template wizard is a branching one-question-per-screen flow (progressive disclosure): each answer narrows the next question until the target is specific ← owner direction; a first-time user is guided, not handed a builder
   - v1 targets cover all four 체험단 groups, each split further: 맛집 and 카페 are separate targets; 제품 branches by kind (가전, 화장품, 식품, 생활용품 …) and by review form (언박싱, 실사용 후기 …); 뷰티·헤어·네일 and 숙소·여행·체험 branch the same way ← owner direction; one lumped target produces a composition that fits neither
-  - [?] the exact branch tree (levels, labels, which branches v1 ships)
+  - [o] the exact branch tree (levels, labels, which branches v1 ships): settled at conversion as a code-owned tree of six targets (맛집, 카페, 뷰티, 숙소, 체험·여가, 제품) with their branches and role lists (TMPL-72), and one clip stage arc per leaf (CLIP-213)
 - [o] a target's recommended composition is a product-curated list of section roles (지도, 메뉴판, 가격 …); the owner names each section's heading in their own words (지도 → '오시는 길', '어디로 가면 될까요?'), so templates made on this platform differ per owner and posts made from them do too ← owner direction; identical headings across users would make every post on the platform look the same
   - the wizard reverses TMPL's "no shipped template library" for roles only: the product ships role lists, never finished templates or headings
   - [o] the heading step offers AI-suggested headings written in the owner's voice, editable, beside free input ← owner choice; the most personal option, at the cost of a credit and a wait
@@ -78,7 +78,14 @@
   - [x] keep it in the top navigation ← dilutes the channel-centered structure
   - [x] remove it ← existing test history would be lost
 - [o] home offers the channels as its entries in place of today's two creation choices ← derived from channel menus
-- [?] Instagram Post (images) stays TBD: its menu entry, output (photo set, caption, hashtags) and v1 inclusion are undecided ← owner marked it TBD
+- [x] Deferred to ideation/instagram-photo-post ← owner marked Instagram Post (images) TBD: its menu entry, output (photo set, caption, hashtags) and v1 inclusion are undecided; until decided the navigation shows no entry (THEME-65, itself still [?])
+- [o] open questions settled at conversion (59cb3e37, inbox 261015); Instagram Post (images) is deferred above:
+  - the wizard's branch tree per target group and each target's section-role catalog: TMPL-72 (blog), CLIP-213 (clip)
+  - the disclosure placeholder's wording/format: one placeholder line `대가표시_배너_또는_문구_대가표시` on top of the copied body only, never in canonical content (EXPORT-28)
+  - each clip channel's upload text shape: a description and tags for 네이버 클립, a caption and hashtags for 인스타 클립 (CLIP-211); length and tag-count limits are configuration from the platform's published upload rules, confirmed when implemented (CLIP-212)
+  - AI heading suggestions for an owner with no voice yet: plain style (TMPL-73)
+  - an English output target in a Korean 체험단 product: kept unchanged (LANG-1; LANG-25 switches the disclosure marker's language by provenance)
+  - feasibility of chat learning covering the readiness parts: learning-chat replies count as question answers covering opening, description and closing (VOICE-32 VOICE-65)
 
 ## shape
 - flow (blog): 네이버 블로그 → 새 글(체험단 글 switch, 광고주 가이드, template, voice, memo, photos) → generate(always-on principles + switchable defaults + guide woven in) → review/revise → 제출 전 체크리스트(counted marks + owner ticks) → copy(disclosure placeholder on top when 체험단 글, body with photo markers, photo/caption copies, tags) → 이 체험으로 클립 만들기(optional)
@@ -90,21 +97,15 @@
 - not: campaign schedule/status, campaign discovery/application, product-written disclosure, Tistory/site/Markdown exports, 16:9 and 1:1 clips, 작성 테스트 in the top navigation, changes to the post generation pipeline itself
 
 ## domains
-- [o] GUIDE: always-on principle groups (read-only, no switch) with their clip counterparts; the constructive-honesty rule; inferred flavor and memory impressions as switchable defaults; guidelines owned per channel (blog vs the shared clip set)
-- [o] GEN: prompt wording for constructive honesty, weaving the advertiser guide in naturally, the fourth semantic origin 광고주 요청 (GEN-80), the disclosure placeholder block when 체험단 글 is on, clip upload text generation per channel
-- [o] POST: 체험단 글 switch, advertiser guide field, 광고주 요청 as its own colored origin in ② (POST-112), pre-submission checklist (counted marks + owner ticks), "make a clip from this experience" carry-over
-- [o] EXPORT: Naver Blog output only, disclosure placeholder at the top; Tistory, site and Markdown converters leave
-- [o] TMPL: the wizard (branching target tree, curated section-role catalogs per target, one step per section, owner headings with AI suggestions in the owner's voice), wizard-only creation, advanced 원문/형식 안내; reverses "no shipped library" for roles only
-- CLIP →CLIP: clip template wizard (shared Naver/Instagram composition), channel per clip, 9:16 only, upload text with copy, carry-over from a post
-- VOICE →VOICE: chat learning replacing the ten-question questionnaire, blog-scene steering, AI styles as a nudged starting point
-- THEME →THEME: navigation of four channels + 내 설정, per-channel history replacing 기록, 작성 테스트 under 내 설정 고급, home with channel entries, the always-on principle card, Toss-like wizard steps
-- MKT →MKT: /about positioning — 체험단 automation, fast monetization and 상생, posts only from the owner's own experience as the opposite of AI slop
+- [o] GUIDE: always-on principle groups (read-only, no switch) with their clip counterparts; the constructive-honesty rule; inferred flavor and memory impressions as switchable defaults; guidelines owned per channel (blog vs the shared clip set) →GUIDE
+- [o] GEN: prompt wording for constructive honesty, weaving the advertiser guide in naturally, the fourth semantic origin 광고주 요청 (GEN-80), the disclosure placeholder block when 체험단 글 is on (EXPORT-28), clip upload text generation per channel (CLIP-211 CLIP-212) →GEN →EXPORT →CLIP
+- [o] POST: 체험단 글 switch, advertiser guide field, 광고주 요청 as its own colored origin in ② (POST-112), pre-submission checklist (counted marks + owner ticks), "make a clip from this experience" carry-over →POST
+- [o] EXPORT: Naver Blog output only, disclosure placeholder at the top; Tistory, site and Markdown converters leave →EXPORT
+- [o] TMPL: the wizard (branching target tree, curated section-role catalogs per target, one step per section, owner headings with AI suggestions in the owner's voice), wizard-only creation, advanced 원문/형식 안내; reverses "no shipped library" for roles only →TMPL
+- [o] CLIP: clip template wizard (shared Naver/Instagram composition), channel per clip, 9:16 only, upload text with copy, carry-over from a post →CLIP
+- [o] VOICE: chat learning replacing the ten-question questionnaire, blog-scene steering, AI styles as a nudged starting point →VOICE
+- [o] THEME: navigation of four channels + 내 설정 (the fourth, 인스타 게시물, deferred to ideation/instagram-photo-post), per-channel history replacing 기록, 작성 테스트 under 내 설정 고급, home with channel entries, the always-on principle card (GUIDE-53), Toss-like wizard steps →THEME →GUIDE
+- [o] MKT: /about positioning — 체험단 automation, fast monetization and 상생, posts only from the owner's own experience as the opposite of AI slop →MKT
 
 ## open
-- Instagram Post (images): menu entry, output and v1 inclusion (owner: TBD)
-- the wizard's branch tree per target group, and each target's section-role catalog (blog and clip)
-- the disclosure placeholder's wording/format beside the photo markers
-- each clip channel's upload text shape (length, tag count, fixed lines)
-- how AI heading suggestions behave for an owner with no voice yet
-- whether an English output target (LANG) still fits a Korean 체험단 product
-- [?] feasibility: chat learning must still cover the readiness parts (opening, description, closing) the analysis needs
+- -

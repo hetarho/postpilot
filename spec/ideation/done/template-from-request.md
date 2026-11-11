@@ -74,6 +74,8 @@
     - [x] no preview on a phone ← phone owners would have none
 - [o] calibration: the request box takes 12,000 characters (room for a 10,000-character post and a description), the wishes list at most 5 of 200 characters each, and 약 n 크레딧 is the one-call catalog estimate (→TMPL-58 →TMPL-61 →QUOTA-67) ← owner choice on the box; the estimate because QUOTA-64's figures are per post from generate jobs
 - [o] the reversal is scoped to this one action: TMPL-16 and TMPL-34's "no model writes a template, no template surface makes a provider call" is lifted for an explicit owner request only; nothing is learned from posts, suggested, defaulted or picked automatically ← keep the rest of TMPL's guarantees
+- [o] a template request is a job like every other kind (→TMPL-58 →QUOTA-67) ← owner direction
+- [x] Deferred to ideation/job-content-retention ← how long any finished job keeps its content is open for every kind, not only template requests (`JOB-RETENTION-TODO.md`)
 
 ## shape
 - flow: template editor (new or stored) → one box: a description and/or a sample post, or what to change → 글 작성 모델 with the current draft → parse(fail → back to the model with line + reason, ≤ 3 corrections | still failing → draft untouched + failure shown) → name · description · title area · body in the draft + the wishes that belong to 지침 shown beside it → review in the builder or `원문`(요청 전으로 되돌리기 restores the previous draft) → 저장
@@ -91,4 +93,4 @@
 - GUIDE: no rule change (GUIDE-18 stands); only the 지침 만들기 link from the template result, written in TMPL-61 →TMPL
 
 ## open
-- a template request is a job like every other kind, and how long any job keeps its content is open for every kind in `JOB-RETENTION-TODO.md` ← owner direction
+- -

@@ -76,15 +76,15 @@
   - [x] one 0–100 match score ← it hides which habit went missing
   - derived: the checked prompt's own answer is withheld from that call's excerpts ← otherwise the AI copies the owner's answer
   - derived: a voice with no answered prompt (e.g. the kept voice, made from one pasted post) offers the shared prompts in 검증; the owner answers one there, and that answer is also a new 학습 글 ← 검증 compares against the owner's own answer to the same prompt
-  - [?] a 2~5 sentence AI text makes the ratios swing: a minimum length for the checked text (SSOT calibrates)
-  - [?] feasibility: checking a photo prompt means the call reads the owner's photo — a write model that reads images, or an observe call first (two calls)
+  - [o] a 2~5 sentence AI text makes the ratios swing: 검증 writes `VOICE_CHECK_SENTENCES` (10~15) sentences with an opening and a closing (VOICE-43)
+  - [o] feasibility: checking a photo prompt means the call reads the owner's photo — the call receives the photo, and a photo prompt is offered only while the write model reads images (`vision`), otherwise listed disabled with that reason (VOICE-43)
 - [o] model lab: what the owner wants from a voice comparison is how well an AI reflects the voice ← owner 260929: "얼마나 우리의 말투를 ai가 잘 반영하는지를 보고싶은건데"
 - [o] 말투 반영 비교 takes the 문체 분석 comparison's place in the model lab: pick a voice and one answered prompt → two write models write that prompt in this voice from identical input → both texts beside the owner's answer, each with its per-item fingerprint comparison → the owner picks one; two write calls; the verdict counts toward the write stage's ranking ← owner choice
   - derived: blind until the verdict, with the shared badge catalog, as every lab comparison (MODEL-32, MODEL-61~63)
   - derived: the prompt's own answer is withheld from both calls, and a voice with no answered prompt has the owner answer one first ← as in 검증
 - [o] ② shows this post's fingerprint beside its voice's after each generation and AI 수정, counted with no call ← owner choice; whether the voice held reads on every post
   - derived: a post with 말투 없음 shows none
-  - [?] a post written with a template: whether ② says so, since a gap on headings or the opening line may come from the template (below)
+  - [o] a post written with a template: ② adds no note about the template; the fingerprint is the post's own reading, shown whether or not an item differs (POST-102)
 - [o] derived: the existing precedence holds — the template decides composition, order, what each place covers and any literal line it writes; style and endings follow the voice (the generation `templatePrecedence` sentence, TMPL-1) ← the fingerprint is how sentences sound, the template is the post's form
 - [x] the analyze-model comparison (VOICE-49, the model lab's 문체 분석 tab, analyze apply) ← owner accepted: with most of the fingerprint counted, two analysis models differ only in the AI description; used once on prod against 26 write comparisons
 - [x] a fingerprint on each write A/B candidate ← owner chose 말투 반영 비교 and ② instead
@@ -104,7 +104,8 @@
   - prod 260929: 4 accounts; 3 hold only the empty bootstrap 기본 말투 and no post; the owner holds 7 voices (4 active) and 44 posts, 35 of them on the kept voice
   - derived: every other voice and every learning row (finished-post sources, versions, rules, events) is removed; the 9 posts on a removed voice become 말투 없음 and keep their text
   - derived: the kept voice's old analysis goes with the old shape; it re-enters as `만드는 중`, its readiness counted from the kept post, and the owner makes it again (one analysis call) ← the analysis runs only when the owner makes the voice
-  - [?] feasibility: read as "no data-conversion code"; a fresh or test database still needs the new schema, which is create-task's call
+  - [o] feasibility: read as "no data-conversion code"; a fresh or test database gets the new schema through ordinary migrations (T469), and the prod hand edit ran once (T475)
+- [o] resolved in VOICE r5: the prompt set is 20 (openings 4 · descriptions 12 · closings 4); VOICE-61 names the non-prose lines; 검증 writes 10~15 sentences; a photo prompt is checked only with a write model that reads images (VOICE-43); POST-102 carries no template note
 
 ## shape
 - flow create: 새 말투 만들기 → name → voice listed as `만드는 중` → 글 붙여넣기 | 문항 풀기 (photo prompt on the owner's own photo | situation prompt) → `말투 학습에 필요한 정보 N% 확보` (no model call; 60 sentences + opening, description, closing) → 100% → 말투 만들기 (one analysis call) → 말투 분석
@@ -126,7 +127,7 @@
 - LANG: voices are Korean only (the source-language choice and the English analysis retire); a Korean voice on an English post projects only the language-independent items →LANG
 - TMPL: a post combines at most one voice; the template section follows the voice projection →TMPL
 - ARCH: invariant I4, a post selects at most one voice →ARCH
-- ops (no SSOT): the one-time hand edit of the prod DB keeping `맛집 리뷰 블로거 학습`
+- [x] VOICE: the one-time hand edit of the prod DB keeping `맛집 리뷰 블로거 학습` ← ops, not a product rule, so no SSOT holds it; done once as T475
 
 ## open
-- resolved in VOICE r5: the prompt set is 20 (openings 4 · descriptions 12 · closings 4); VOICE-61 names the non-prose lines; 검증 writes 10~15 sentences; a photo prompt is checked only with a write model that reads images; POST-102 carries no template note
+- -

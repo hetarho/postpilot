@@ -8,8 +8,8 @@
 - [o] Product positioning: AI는 속도를, 글의 주도권은 나에게.
 
 ## explored
-- [o] Current prompt map identifies real composition/code paths and the 995bcee9 tag default; [source map](../../docs/design/prompt-map-2026-10-07.md).
-- [o] [Thirty-one-candidate audit](../../docs/research/prompt-audit-2026-10-07.md), [offline measurements](../../docs/research/prompt-audit-measurements-2026-10-07.json) and [synthetic reproductions](../../docs/research/prompt-audit-reproductions-2026-10-07.json) distinguish observed contracts from untested model-quality claims.
+- [o] Current prompt map identifies real composition/code paths and the 995bcee9 tag default; [source map](../../../docs/design/prompt-map-2026-10-07.md).
+- [o] [Thirty-one-candidate audit](../../../docs/research/prompt-audit-2026-10-07.md), [offline measurements](../../../docs/research/prompt-audit-measurements-2026-10-07.json) and [synthetic reproductions](../../../docs/research/prompt-audit-reproductions-2026-10-07.json) distinguish observed contracts from untested model-quality claims.
 - [o] Three origins classify meaning: directly supplied owner meaning, visual interpretation and AI-added meaning. AI paraphrasing does not itself change origin; visual interpretation is not certified truth.
 - [o] Review by meaningful phrase, including mixed origins within a sentence, across all human-readable post text. Named categories, legend and selectable source details accompany accessible colors.
 - [o] Preserve useful terminology, transitions and richer sensory proposals, visibly identifying new meaning; prohibit unsupported objective experience under grounding and any photo-order-derived chronology.
@@ -24,14 +24,15 @@
 - [o] Korean instructions remain the Korean-writing baseline. English common instruction comparisons preserve Korean facts, voice, examples, output and model conditions; no new user test factor or translation pipeline.
 - [o] Structure/source tests, human prose review, actual usage and response validity measure different outcomes. Economical model JSON/origin success requires real evaluation and is not established by a price grade.
 - [o] Sparse-material composition rules, naturalness density and revision noun freshness retain current policies until separately evaluated; no blanket shortening or unsolicited quality-score/SEO expansion.
-- [o] [Accepted owner-control concept](../../docs/design/owner-controlled-writing-2026-10-07.md) and [interactive synthetic mockup](../../docs/design/writing-origin-review-2026-10-07.html) illustrate review without claiming shipped behavior or actual classification accuracy.
+- [o] [Accepted owner-control concept](../../../docs/design/owner-controlled-writing-2026-10-07.md) and [interactive synthetic mockup](../../../docs/design/writing-origin-review-2026-10-07.html) illustrate review without claiming shipped behavior or actual classification accuracy.
 
 ## shape
 - [o] Owner material → context-free visual observation → optional source-preserving plan → one AI-assisted draft → visible phrase-origin review → owner edits/finalizes → clean manual export/publication → owner view observations.
 - [o] Refactor order: align contracts/boundaries and stage relevance → verify fixed-language composition → evaluate matched writing/source quality → controlled instruction-language comparison → owner trial.
 - [o] Preserve existing ownership, durable jobs, single-writer metering, canonical block content, lifecycle locks, blind comparisons and private-data retention.
 - [o] SSOT conversion leaves wire representation, phrase mapping, storage and exact palette to engineering tasks; those implementation choices are not open product decisions.
-- [o] Reconcile existing T624–T631 scopes and live attempts before task decomposition; [delta/handoff](../../docs/work/prompt-engineering-ssot-2026-10-07.md).
+- [o] Reconcile existing T624–T631 scopes and live attempts before task decomposition; [delta/handoff](../../../docs/work/prompt-engineering-ssot-2026-10-07.md).
+- [o] No open product question remains for this conversion. Existing unrelated SSOT questions retain their original scope; live model accuracy and instruction-language comparisons remain validation obligations (LANG-29, GEN-86).
 
 ## domains
 - [o] GEN: stage contracts, semantic origins, photo chronology, AI assistance, revision and evaluation →GEN
@@ -49,4 +50,4 @@
 - [o] QUAL: product-owned bands distinct from semantic origins and traffic results →QUAL
 
 ## open
-- None for this conversion. Existing unrelated SSOT questions retain their original scope; live model accuracy and instruction-language comparisons remain validation obligations.
+- -

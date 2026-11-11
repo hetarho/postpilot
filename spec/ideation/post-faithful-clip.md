@@ -1,5 +1,5 @@
 # IDEATION post-faithful-clip
-> st:converted@261015 | a clip that tells the finished post's story, cut the way a person would cut it
+> st:ready@261111 | a clip that tells the finished post's story, cut the way a person would cut it
 
 ## vision
 - Problem: the app's clips come out as dry descriptions of the footage. The clip writer never sees the visit as the owner told it. On 261015 the 참선주면옥 clip was made by hand from the same 11 sources and the finished post, and it read like a person's short-form review. That one clip is the bar.
@@ -27,8 +27,10 @@
 - [x] AI composition free of the post's order ← that is what produced the dry, shot-list result.
 - [x] A link only from post to clip (T692 as specced) ← it misses a clip started before its post, which is what happened here.
 - [x] Photos as clip sources ← CLIP-214 keeps them out. Photos still help place the videos in time, but they are not shown.
-- [?] Whether a span marked AI가 보탠 내용 in the post's origins counts as the owner's. Recommendation: yes, because the owner finished the post with it. Revisit if the origin labels become reliable.
-- [?] Whether the default caption look already gives two lines with one highlighted phrase (the hand cut's white plus yellow) through the existing caption styles and accent. If so, it is a default choice, not a new style.
+- [o] A span marked AI가 보탠 내용 in the post's origins counts as the owner's: CLIP-216 passes the linked post's canonical text as the owner's own account, with no exception by origin. ← The owner finished the post with it. Revisit if the origin labels become reliable.
+- [?] Whether the default caption look already gives two lines with one highlighted phrase (the hand cut's white plus yellow) through the existing caption styles and accent. If so, it is a default choice, not a new style. Checked in T699: the default is bold with accent-capable paint and an optional keyword (CDS-25 allows two lines with one accent word); a fixed two-line, one-highlight look was neither added nor visually qualified.
+- [o] Capture time after upload (was open): the browser reads EXIF `DateTimeOriginal` (and MP4/MOV `mvhd`) before decoding and stores it (T700); without a capture time, the camera file sequence, then scene matching places the video (CLIP-218, T701).
+- [o] Collision with in-flight tasks (was open): the SSOT update (CLIP r61) landed before T688 and T692 started; T692 only seeds and T698 adds the link (all done 261016).
 
 ## shape
 - flow: write and finish the post → link it (③'s 이 체험으로 클립 만들기, or the clip's ① 글 연결) → add the videos → 스토리라인 먼저: the post's section order, with videos placed by capture time and confirmed by the analysis → ② review the storyline → 이 스토리로 만들기 → render
@@ -37,18 +39,16 @@
   - Not in: photos as sources, background music, more than one post per clip, re-syncing an attempt already running when the post changes.
 
 ## domains
-- CLIP:
-  - CLIP-214 extended to link the post and carry its content.
-  - New: the clip-side 글 연결, and the post as frozen writing material (with CLIP-69 and CLIP-183).
-  - The storyline follows the post's order (CLIP-177, CLIP-178, CLIP-181).
-  - Capture-time placement.
-  - Empty CLIP-213 stages are left out.
-  - The 상호 hook and the verdict outro, drawn from the post.
-- POST →POST-120: POST-120 links the post as well as seeding the clip.
-- GUIDE →GUIDE-42 GUIDE-52: 내 감상은 그대로 counts a linked post's stated impressions as the owner's.
-- CDS (not converted; checked in the tasks): the default caption look, only if the existing styles cannot give two lines with one highlighted phrase.
+- [o] CLIP: CLIP-214 extended to link the post and carry its content (CLIP-214, CLIP-216) →CLIP
+- [o] CLIP: the clip-side 글 연결, and the post as frozen writing material with CLIP-69 and CLIP-183 (CLIP-215, CLIP-216) →CLIP
+- [o] CLIP: the storyline follows the post's order (CLIP-177, CLIP-178, CLIP-181; CLIP-217) →CLIP
+- [o] CLIP: capture-time placement (CLIP-218) →CLIP
+- [o] CLIP: empty CLIP-213 stages are left out (CLIP-141) →CLIP
+- [o] CLIP: the verdict outro, drawn from the post (GUIDE-42 끝에서 정보 정리) →GUIDE
+- [o] CLIP: the 상호 hook — the first caption names the place from the post; not yet in any SSOT (GUIDE-42's first-caption rule names no 상호)
+- [o] POST: POST-120 links the post as well as seeding the clip (POST-120) →POST
+- [o] GUIDE: 내 감상은 그대로 counts a linked post's stated impressions as the owner's (GUIDE-42, GUIDE-52) →GUIDE
+- [?] CDS: the default caption look, only if the existing styles cannot give two lines with one highlighted phrase (not converted; T699 checked it, see explored)
 
 ## open
-- Do the post's photos keep a usable capture time after upload, or is it stripped? This is a feasibility concern for capture-time placement. The fallback is content matching.
-- How much the post material grows the clip's writing prompt, and whether that slows generation the way the voice profile did for posts. Measure before deciding whether the body needs trimming.
-- Collision with in-flight tasks: T692 implements CLIP-214 as it stands, and T688 builds the clip arc. The SSOT update should land before either is started, or become a follow-up task.
+- How much the post material grows the clip's writing prompt, and whether that slows generation the way the voice profile did for posts. Measure before deciding whether the body needs trimming. T699 sends the title and headed TEXT/QUOTE/LIST sections and refuses an oversized request rather than trimming it; no task has measured prompt size or latency.

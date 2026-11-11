@@ -19,6 +19,9 @@
 - [x] Keeping the twelve discrete anchors (CDS-12) as the only placement ← the point of the editable preview is free placement, and an anchor grid cannot express it.
 - [x] Letting the writer choose freely from every caption style ← sequence-rendered styles cost 34 s per 3.2 s caption, so an unbounded choice makes render time unpredictable.
 - [x] Playing the real footage under the editable preview ← it needs the originals in the browser and collides with the 24-hour retention rule (CLIP-21); a cut frame answers position and contrast at a fraction of the cost.
+- [o] Preview/renderer parity (resolved at conversion): the caption preview states what the render will produce, and a style whose preview and render disagree is not admitted to the set (CDS-83).
+- [o] Ceiling on sequence-rendered captions (carried as CLIP-145 [?] at conversion, settled 260918 in 596668d8): no ceiling limits a clip's frame-dependent captions; generation approval prices the most demanding case its selected styles admit (CLIP-145).
+- [o] Existing templates and projects (resolved at conversion): templates kept their design selection with footage sections carried into the guide as prose (CLIP-140); projects copied the template's design selection and kept each caption's resolved absolute position (CLIP-144). Both decisions later left with the legacy template path.
 
 ## shape
 - flow: create project (template optional) → ① design selection, allowed caption styles, faces, instruction, sources → AI observation → AI assembly → editable preview (position · size · style per caption) → render → ③ finalize.
@@ -31,6 +34,4 @@
 - [x] TMPL: post templates are unchanged ← only the clip side was `exactly one`; TMPL-1 is the shape being copied, not altered.
 
 ## open
-- [?] How the preview guarantees it matches the renderer: the front end must draw the same SVG the renderer rasterises, and resvg and the browser are known to disagree (feDisplacementMap lands in the wrong place in resvg 0.48.1, and filters need `color-interpolation-filters="sRGB"` to match) — each shipped style needs a both-sides check.
-- [?] The ceiling on sequence-rendered captions per project, and whether the ceiling is counted at selection time or at render time.
-- [?] What happens to existing templates and projects: their design selection, their anchor-placed captions and their frozen compositions.
+- -

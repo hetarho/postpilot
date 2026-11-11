@@ -10,22 +10,22 @@
 - [o] Investigate editing discoverability against familiar video-editor conventions.
 - [o] Verify whether a TTS model can generate narration that reaches the final exported video.
 - [o] Current editing behavior, verified from the implementation:
-  - [ClipTimeline](../../frontend/src/features/correct-clip/ui/ClipTimeline.tsx) renders selectable footage and text bars; it has no bar dragging, edge trimming, timeline-background seeking or draggable playhead.
-  - [ClipCorrectionWorkspace](../../frontend/src/features/correct-clip/ui/ClipCorrectionWorkspace.tsx) opens a bottom sheet on selection and suspends the composed preview while it is open. Cut ordering uses up/down buttons; trimming uses a separate source-time range slider and numeric fields in the sheet.
-  - Caption positioning can be dragged inside the sheet's [ClipCaptionStage](../../frontend/src/features/correct-clip/ui/ClipCaptionStage.tsx); it is not direct selection and movement in the main preview.
+  - [ClipTimeline](../../../frontend/src/features/correct-clip/ui/ClipTimeline.tsx) renders selectable footage and text bars; it has no bar dragging, edge trimming, timeline-background seeking or draggable playhead.
+  - [ClipCorrectionWorkspace](../../../frontend/src/features/correct-clip/ui/ClipCorrectionWorkspace.tsx) opens a bottom sheet on selection and suspends the composed preview while it is open. Cut ordering uses up/down buttons; trimming uses a separate source-time range slider and numeric fields in the sheet.
+  - Caption positioning can be dragged inside the sheet's [ClipCaptionStage](../../../frontend/src/features/correct-clip/ui/ClipCaptionStage.tsx); it is not direct selection and movement in the main preview.
   - Track names are accessibility labels rather than visible track headers. The add-caption button appears only when the plan already has a narration caption.
-  - [ClipWorkspace](../../frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx) places the storyline space before the preview and timeline when a storyline or region slots exist; the persistent bottom dock carries AI revision requests and render/finalization controls.
-- [?] Discoverability hypothesis: The timeline looks like a video-editor surface but behaves as a selector for separate forms; the location of editing tools and the source/output time distinction must be learned before a basic edit.
+  - [ClipWorkspace](../../../frontend/src/widgets/clip-workspace/ui/ClipWorkspace.tsx) places the storyline space before the preview and timeline when a storyline or region slots exist; the persistent bottom dock carries AI revision requests and render/finalization controls.
+- [o] Discoverability hypothesis, adopted as the basis of the editor redesign (CLIP-17 CLIP-53 CLIP-54 CLIP-55 CLIP-67 CLIP-197, THEME-44 THEME-45): The timeline looks like a video-editor surface but behaves as a selector for separate forms; the location of editing tools and the source/output time distinction must be learned before a basic edit.
   - A desktop owner cannot continuously inspect preview, timeline and selected-item controls together in the current sheet-based workflow.
   - Storyline forms and the persistent AI request composer may draw attention away from manual editing; their effect needs confirmation against the owner's actual device and tasks.
 - [o] Familiar reference patterns:
   - [Adobe Premiere Properties](https://helpx.adobe.com/premiere/desktop/edit-projects/intro-to-editing/edit-video-using-the-properties-panel.html): Timeline selection exposes contextual clip controls in a properties panel.
   - [CapCut desktop voiceover](https://www.capcut.com/tools/ai-voice-generator-pc): Generate speech from a script, keep it on the editing timeline, and align it with captions and footage before export.
 - [o] Current TTS status: Spoken narration generation is absent from the inspected application path.
-  - CLIP-134 and CLIP-135 define narration as timed captions; [clip.proto](../../proto/postpilot/v1/clip.proto) has captions and original-source audio settings but no synthesized narration asset or voice setting.
-  - [llm.Provider](../../backend/internal/llm/provider.go) returns completion text; [openaicompat.Client](../../backend/internal/llm/openaicompat/client.go) calls chat completions, not speech synthesis.
-  - MODEL-13 defines five catalog purposes without speech; MODEL-17 and [catalog fetching](../../backend/internal/modelcatalog/openrouter/client.go) request text/image/video outputs, excluding speech-only models.
-  - [Server composition](../../backend/internal/clip/media/composition_render.go) creates audio only from owner-enabled selected originals carrying sound; [browserAudioPlan](../../frontend/src/entities/clip-preview/model/browser-audio-plan.ts) and [browser audio export](../../frontend/src/features/render-clip-browser/api/render-audio.ts) likewise consume original footage audio only.
+  - CLIP-134 and CLIP-135 define narration as timed captions; [clip.proto](../../../proto/postpilot/v1/clip.proto) has captions and original-source audio settings but no synthesized narration asset or voice setting.
+  - [llm.Provider](../../../backend/internal/llm/provider.go) returns completion text; [openaicompat.Client](../../../backend/internal/llm/openaicompat/client.go) calls chat completions, not speech synthesis.
+  - MODEL-13 defines five catalog purposes without speech; MODEL-17 and [catalog fetching](../../../backend/internal/modelcatalog/openrouter/client.go) request text/image/video outputs, excluding speech-only models.
+  - [Server composition](../../../backend/internal/clip/media/composition_render.go) creates audio only from owner-enabled selected originals carrying sound; [browserAudioPlan](../../../frontend/src/entities/clip-preview/model/browser-audio-plan.ts) and [browser audio export](../../../frontend/src/features/render-clip-browser/api/render-audio.ts) likewise consume original footage audio only.
   - Original sound defaults off under CLIP-18. A captioned video can therefore export with no audio stream.
   - Registering a model alone cannot enable a dubbing workflow.
 - [o] TTS feasibility, checked against official documentation on 261004:
@@ -83,6 +83,9 @@
 - delivery order: Finalize the spoken-voice domain and its acceptance first → implement and verify creation, audition, confirmation and voice reuse → introduce narration and independent captions in the editor → verify narrated preview and both exports.
 - validation: The owner can find trim, reorder and caption-edit actions without a walkthrough; speech is audible and synchronized in preview and the downloaded MP4, including a clip with original audio disabled.
 - verification boundary: Current-state conclusions come from SSOT/code inspection and official service documentation; no live production UI session, paid TTS trial or new media export has been tested.
+- conversion record (moved from open; none is an open product question):
+  - No unresolved product choices for v1. Provider/model selection, Korean voice quality, custom-voice reuse, billing and both export paths remain engineering verification obligations. Live qualification tasks: T539 (Korean voice creation), T550 (narrated editing, delivery and asset lifecycle).
+  - All domains are converted into their SSOTs; implementation and live qualification remain task work.
 
 ## domains
 - DUB: Spoken-voice creation, audition, confirmation, account ownership/reuse, speech generation and selected-segment regeneration; separate from VOICE's writing-style learning. →DUB
@@ -93,5 +96,4 @@
 - THEME: Desktop and phone editor arrangements, visible track identities and selected-item controls. →THEME
 
 ## open
-- No unresolved product choices for v1. Provider/model selection, Korean voice quality, custom-voice reuse, billing and both export paths remain engineering verification obligations.
-- All domains are converted into their SSOTs; implementation and live qualification remain task work.
+- -
