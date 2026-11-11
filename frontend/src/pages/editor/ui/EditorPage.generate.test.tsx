@@ -105,7 +105,9 @@ describe('opening a post', () => {
       jobs: { jobs: [{ ...active, progressTotal: 4 }] },
     })
 
-    expect(await screen.findByText('글을 쓰고 있어요')).toBeInTheDocument()
+    const writing = await screen.findByText('글을 쓰고 있어요')
+    // The card's one moving progress is its bar: a spinner beside it said "working" twice.
+    expect(writing.closest('div')?.querySelector('.animate-spin')).toBeNull()
     // Still the page's one announced progressbar; only its paint steps aside for the card's.
     const bar = screen.getByRole('progressbar', { name: '작업 진행률' })
     await waitFor(() => expect(bar.closest('.sticky')).toHaveClass('opacity-0'))

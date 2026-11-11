@@ -4,7 +4,8 @@ import { useGuidelines } from '@/entities/guideline'
 import { isTerminal, progressRatio, type GenerationJob } from '@/entities/generation-job'
 import { Thumbnail } from '@/entities/image'
 import type { PostDraft } from '@/entities/post'
-import { Button, Spinner, Typography, cardStyles, typographyStyles } from '@/shared/ui'
+import { PenLine } from 'lucide-react'
+import { Button, Typography, cardStyles, typographyStyles } from '@/shared/ui'
 import type { GuideStep } from '../model/guide'
 
 /** Guide: 확인 — the short summary 글 생성 ends on. Each part of what the run will be given is one
@@ -236,8 +237,14 @@ function WritingCard({ job, onShown }: { job: GenerationJob; onShown?: (shown: b
         className: 'bg-badge-accent-bg flex items-center gap-4 shadow-none',
       })}
     >
-      <span className="text-badge-accent-fg flex size-12 shrink-0 items-center justify-center rounded-full">
-        <Spinner className="size-7 border-[3px]" />
+      {/* A still mark, not a spinner: the bar below is the card's one moving progress. A spinner
+          beside it said "working" twice, and while the write stage has no ratio both of them
+          swept with nothing to tell apart. */}
+      <span
+        aria-hidden="true"
+        className="text-badge-accent-fg flex size-12 shrink-0 items-center justify-center rounded-full"
+      >
+        <PenLine className="size-7" />
       </span>
       <span className="min-w-0 flex-1">
         {/* The stage itself is the status line's, at the top; this card only says it is working
