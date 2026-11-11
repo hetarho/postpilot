@@ -725,3 +725,28 @@ describe('the Naver Blog channel', () => {
     expect(router.state.location.search).toEqual({ q: '제주', status: 'review' })
   })
 })
+
+it('counts the latest unfinished post once and removes emphasis under a narrowing', async () => {
+  const view = renderList({
+    posts: [
+      { slug: 'latest', title: '최근 초안', status: 'draft', updatedAt: '2026-11-10T00:00:00Z' },
+      { slug: 'older', title: '이전 초안', status: 'draft', updatedAt: '2026-11-09T00:00:00Z' },
+    ],
+  })
+  const heading = await screen.findByRole('heading', { name: /^작성 중/ })
+  expect(heading).toHaveTextContent(/^작성 중\s*2$/)
+  expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
+  expect(screen.getAllByRole('link', { name: /최근 초안/ })).toHaveLength(1)
+  expect(screen.getByRole('link', { name: /최근 초안/ }).closest('.ui-card')).toHaveClass(
+    'bg-badge-accent-bg',
+  )
+  expect(screen.getByRole('link', { name: /이전 초안/ }).closest('.ui-card')).not.toHaveClass(
+    'bg-badge-accent-bg',
+  )
+  await act(() => view.router.navigate({ to: '/naver-blog', search: { status: 'draft' } }))
+  await waitFor(() =>
+    expect(screen.getByRole('main').querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(
+      0,
+    ),
+  )
+})

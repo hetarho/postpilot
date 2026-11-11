@@ -11,9 +11,19 @@ export function WorkListToolbar({
   children?: ReactNode
   className?: string
 }) {
+  const { t } = useTranslation('channel')
   return (
-    <div data-work-toolbar className={clsx('min-h-10 pointer-coarse:min-h-11', className)}>
-      {children}
+    <div
+      data-work-toolbar
+      className={clsx(
+        'flex min-h-10 items-center justify-between gap-4 pointer-coarse:min-h-11',
+        className,
+      )}
+    >
+      <Typography variant="meta" className="min-w-0 truncate">
+        {t('work.newestFirst')}
+      </Typography>
+      {children && <div className="shrink-0">{children}</div>}
     </div>
   )
 }

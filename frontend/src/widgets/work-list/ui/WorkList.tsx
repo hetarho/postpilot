@@ -1,17 +1,8 @@
 import { useId, useState, type ComponentType, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { ArrowRight, Search, X } from 'lucide-react'
-import {
-  Badge,
-  Button,
-  Sheet,
-  Typography,
-  buttonStyles,
-  cardStyles,
-  typographyStyles,
-  type BadgeTone,
-} from '@/shared/ui'
+import { Search, X } from 'lucide-react'
+import { Button, Sheet, Typography, typographyStyles, type BadgeTone } from '@/shared/ui'
 
 const TILE_TONE: Record<BadgeTone, string> = {
   neutral: 'bg-badge-neutral-bg text-badge-neutral-fg',
@@ -28,106 +19,20 @@ const TILE_TONE: Record<BadgeTone, string> = {
 export function StatusTile({
   tone,
   icon: Icon,
-  size = 'md',
 }: {
   tone: BadgeTone
   icon: ComponentType<{ className?: string }>
-  size?: 'md' | 'lg'
 }) {
   return (
     <span
       aria-hidden="true"
       className={clsx(
-        'flex shrink-0 items-center justify-center rounded-lg',
-        size === 'lg' ? 'size-16' : 'size-12 sm:size-14',
+        'flex size-12 shrink-0 items-center justify-center rounded-lg sm:size-14',
         TILE_TONE[tone],
       )}
     >
-      <Icon className={size === 'lg' ? 'size-8' : 'size-6'} />
+      <Icon className="size-6" />
     </span>
-  )
-}
-
-/** Guide: 이어서 쓰기 — the latest unfinished work as the one big card a list opens on, so a busy
- *  owner coming back taps once. The whole card is the link (`renderLink`), its 계속하기 a picture
- *  of the press rather than a second target — and never a second filled CTA: the screen's one is
- *  its creation button, and the card's tint already says it comes first (THEME-18). */
-export function ContinueHero({
-  kind,
-  title,
-  status,
-  icon,
-  meta,
-  renderLink,
-}: {
-  /** Which channel the work is — 블로그, 네이버 클립 … */
-  kind: string
-  title: string
-  status: { label: string; tone: BadgeTone }
-  icon: ComponentType<{ className?: string }>
-  meta?: ReactNode
-  renderLink: (props: { className: string; children: ReactNode }) => ReactNode
-}) {
-  const { t } = useTranslation('channel')
-  const id = useId()
-  return (
-    <section aria-labelledby={id} className="min-w-0">
-      <Typography variant="title" as="h2" id={id} className="mb-3">
-        {t('work.continue')}
-      </Typography>
-      {renderLink({
-        className: cardStyles({
-          interactive: true,
-          padding: 'lg',
-          // The one card on the screen in the accent's soft tint: it is the screen's first answer.
-          className:
-            'bg-badge-accent-bg hover:bg-badge-accent-bg active:bg-badge-accent-bg relative flex flex-col gap-5 overflow-hidden',
-        }),
-        children: (
-          <>
-            <span className="flex min-w-0 items-start gap-4">
-              <StatusTile tone={status.tone} icon={icon} size="lg" />
-              <span className="flex min-w-0 flex-1 flex-col gap-2">
-                <span className="flex flex-wrap items-center gap-2">
-                  <span className={typographyStyles({ variant: 'label' })}>{kind}</span>
-                  <Badge tone={status.tone}>{status.label}</Badge>
-                </span>
-                <Typography variant="title" as="span" className="line-clamp-2">
-                  {title}
-                </Typography>
-                {meta && <span className={typographyStyles({ variant: 'meta' })}>{meta}</span>}
-              </span>
-            </span>
-            <span
-              aria-hidden="true"
-              className={buttonStyles({
-                variant: 'secondary',
-                className: 'pointer-events-none w-full',
-              })}
-            >
-              {t('work.continueAction')}
-              <ArrowRight className="size-5" />
-            </span>
-          </>
-        ),
-      })}
-    </section>
-  )
-}
-
-/** Guide: 이어서 쓰기 as a list's first section — the list's own card for its newest unfinished
- *  work, rendered large (`heroCardStyles`) under the heading, so the card keeps every link and
- *  label it has in the list and the owner's next tap is the 계속하기 on it. */
-export function ContinueSection({ children }: { children: ReactNode }) {
-  const { t } = useTranslation('channel')
-  const id = useId()
-  return (
-    <section aria-labelledby={id} className="min-w-0">
-      <Typography variant="title" as="h2" id={id} className="mb-3">
-        {t('work.continue')}
-      </Typography>
-      <ul>{children}</ul>
-    </section>
   )
 }
 

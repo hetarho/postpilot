@@ -72,7 +72,7 @@ const mount = (path = '/naver-clip', clips: FakeClipsOptions = {}) =>
     user: { id: 'alice' },
     clips: { templates: [{ ...template }], projects, ...clips },
   })
-// Guide: the directory is one region holding 이어서 쓰기 and the 작성 중 / 완성 groups.
+// The directory holds one counted 작성 중 group followed by 완성.
 const row = async (name: RegExp) =>
   within(await screen.findByRole('region', { name: '저장된 클립' })).findByRole('link', { name })
 // Guide: the search and the filter wait behind one 찾기 button, in a bottom sheet.
@@ -239,9 +239,8 @@ describe('clip directory', () => {
     expect(await row(/제목 없는 클립/)).toHaveAttribute('href', '/clips/untitled')
   })
 
-  // Guide: the newest unfinished clip leads as 이어서 쓰기; the rest split into 작성 중 and 완성,
-  // each clip shown once.
-  it('leads with the newest unfinished clip and groups the rest by status', async () => {
+  // The newest unfinished clip is emphasized inside 작성 중 and counted once.
+  it('emphasizes and counts the latest unfinished clip inside its group', async () => {
     mount('/naver-clip', {
       // Newest first, the order the server lists them in.
       projects: [
@@ -258,16 +257,25 @@ describe('clip directory', () => {
         { ...base, id: 'old', title: '오래된 초안' },
       ],
     })
-    const hero = (await screen.findByRole('heading', { name: '이어서 쓰기' })).closest('section')!
-    expect(await within(hero).findByRole('link', { name: /새 초안/ })).toBeInTheDocument()
-    const inProgress = screen.getByRole('heading', { name: /^작성 중/ }).closest('section')!
-    expect(within(inProgress).getByRole('link', { name: /오래된 초안/ })).toBeInTheDocument()
-    expect(within(inProgress).queryByRole('link', { name: /새 초안/ })).toBeNull()
+    const inProgress = (await screen.findByRole('heading', { name: /^작성 중/ })).closest(
+      'section',
+    )!
+    expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
+    expect(
+      within(inProgress)
+        .getByRole('link', { name: /새 초안/ })
+        .closest('.ui-card'),
+    ).toHaveClass('bg-badge-accent-bg')
+    expect(
+      within(inProgress)
+        .getByRole('link', { name: /오래된 초안/ })
+        .closest('.ui-card'),
+    ).not.toHaveClass('bg-badge-accent-bg')
+    expect(screen.getByRole('heading', { name: /^작성 중/ })).toHaveTextContent(/^작성 중\s*2$/)
     const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
     expect(within(done).getByRole('link', { name: /끝난 클립/ })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /새 초안/ })).toHaveLength(1)
-    // THEME-18: the hero's 계속하기 is no filled CTA; the screen's one is its creation button.
-    expect(within(hero).getByRole('link', { name: '이어서 편집' })).not.toHaveClass('ui-button-cta')
+    expect(within(inProgress).getAllByRole('link', { name: '이어서 편집' })).toHaveLength(2)
     expect(screen.getByRole('main').querySelectorAll('.ui-button-cta')).toHaveLength(1)
   })
 
@@ -374,3 +382,16 @@ it.each([
     expect(screen.queryByRole('link', { name: /시작한 초안/ })).toBeNull()
   },
 )
+
+it('keeps a narrowed clip list compact without special latest-item emphasis', async () => {
+  mount('/naver-clip?status=draft', {
+    projects: [
+      { ...base, id: 'one', title: '첫 초안' },
+      { ...base, id: 'two', title: '둘째 초안' },
+    ],
+  })
+  const heading = await screen.findByRole('heading', { name: /^작성 중/ })
+  expect(heading).toHaveTextContent(/^작성 중\s*2$/)
+  expect(screen.getByRole('main').querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(0)
+  expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
+})

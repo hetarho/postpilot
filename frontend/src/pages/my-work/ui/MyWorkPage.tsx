@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Clapperboard, Film, PenLine, Plus } from 'lucide-react'
+import { ArrowRight, Clapperboard, Film, PenLine, Plus } from 'lucide-react'
 import {
   displayTitle,
   isPostStatus,
@@ -28,18 +28,18 @@ import {
   Notice,
   Typography,
   buttonStyles,
-  cardStyles,
   pageStyles,
   typographyStyles,
   type BadgeTone,
 } from '@/shared/ui'
 import {
-  ContinueHero,
   StatusTile,
   WorkGroup,
   WorkListToolbar,
   WorkListBody,
   WorkListLoading,
+  workCardStyles,
+  workCardLinkClass,
 } from '@/widgets/work-list'
 import { useMyWorkScrollReturn } from '../model/useMyWorkScrollReturn'
 
@@ -56,7 +56,7 @@ interface WorkItem {
   remember: () => void
 }
 
-/** The one link a work card or the hero is: the editor for a post, the workspace for a clip. */
+/** The one link a work card is: the editor for a post, the workspace for a clip. */
 function WorkLink({
   item,
   className,
@@ -94,10 +94,7 @@ const POST_TONE: Record<string, BadgeTone> = {
   published: 'done',
 }
 
-/** Guide: 내 글 — every post and every clip in one place, newest first. It opens on the latest
- *  unfinished work as a big 이어서 쓰기 card, then the rest in two groups — 작성 중 and 완성 — so the
- *  question "what was I doing?" is answered before anything is searched. A channel's own list (the
- *  chips above) keeps its search and filters; this one is the whole picture. */
+/** Every work appears once in its counted group; the latest unfinished item is quietly emphasized. */
 export function MyWorkPage() {
   const { t } = useTranslation(['channel', 'posts', 'clips', 'common', 'nav'])
   const { user } = useSession()
@@ -162,22 +159,15 @@ export function MyWorkPage() {
   const items = [...posts.posts.map(postItem), ...(clips.data ?? []).map(clipItem)].sort((a, b) =>
     b.updatedAt.localeCompare(a.updatedAt),
   )
-  const hero = items.find((item) => !item.finished)
-  const inProgress = items.filter((item) => !item.finished && item !== hero)
+  const latest = items.find((item) => !item.finished)
+  const inProgress = items.filter((item) => !item.finished)
   const done = items.filter((item) => item.finished)
   const pending = posts.isPending || clips.isPending
   const failed = posts.isError || clips.isError
   useMyWorkScrollReturn(ownerId, !pending && !failed)
   const card = (item: WorkItem) => (
-    <li key={item.key}>
-      <WorkLink
-        item={item}
-        className={cardStyles({
-          interactive: true,
-          padding: 'sm',
-          className: 'flex min-h-11 items-center gap-4 sm:p-5',
-        })}
-      >
+    <li key={item.key} className={workCardStyles({ latest: item === latest })}>
+      <WorkLink item={item} className={workCardLinkClass}>
         <StatusTile tone={item.status.tone} icon={item.icon} />
         <span className="flex min-w-0 flex-1 flex-col gap-1.5">
           <Typography variant="fieldTitle" as="span" className="line-clamp-2">
@@ -193,6 +183,15 @@ export function MyWorkPage() {
             </time>
           </span>
         </span>
+        {item === latest && (
+          <>
+            <span className="sr-only">{t('work.continueAction')}</span>
+            <ArrowRight
+              aria-hidden="true"
+              className="text-link-fg-current my-auto size-5 shrink-0"
+            />
+          </>
+        )}
       </WorkLink>
     </li>
   )
@@ -217,25 +216,11 @@ export function MyWorkPage() {
       )}
       {!failed && !pending && items.length === 0 && (
         <Typography variant="body" role="status" className="text-content-tertiary mt-6">
-          {t('list.empty', { ns: 'posts' })}
+          {t('work.empty')}
         </Typography>
       )}
       <WorkListBody>
         <WorkListLoading pending={pending} />
-        {!pending && hero && (
-          <ContinueHero
-            kind={t(`work.kind.${hero.kind}`)}
-            title={hero.title}
-            status={hero.status}
-            icon={hero.icon}
-            meta={formatRelativeTime(hero.updatedAt)}
-            renderLink={({ className, children }) => (
-              <WorkLink item={hero} className={className}>
-                {children}
-              </WorkLink>
-            )}
-          />
-        )}
         {!pending && inProgress.length > 0 && (
           <WorkGroup heading={t('work.inProgress')} count={inProgress.length}>
             {inProgress.map(card)}

@@ -6,14 +6,14 @@ import { cardStyles } from '@/shared/ui'
  *  (`workCardLinkClass`), so a hover or a press anywhere on it — the title, the gap, the row of
  *  links under it — tints and lifts the whole card; the link used to tint only the half it
  *  covered. The row's own links sit above the stretch (`workCardActionClass`) and stay their own
- *  targets. The hero keeps its accent tint and a deeper lift, and only rises. */
-export function workCardStyles({ hero = false }: { hero?: boolean } = {}) {
+ *  targets. The latest unfinished card keeps its accent tint with the same density as its peers. */
+export function workCardStyles({ latest = false }: { latest?: boolean } = {}) {
   return cardStyles({
     padding: 'none',
     interactive: true,
     className: clsx(
       'relative flex flex-col overflow-hidden',
-      hero && 'bg-badge-accent-bg hover:bg-badge-accent-bg active:bg-badge-accent-bg shadow-lg',
+      latest && 'bg-badge-accent-bg hover:bg-badge-accent-bg active:bg-badge-accent-bg',
     ),
   })
 }
@@ -24,3 +24,7 @@ export const workCardLinkClass =
 
 /** A link in the card's lower row, lifted above the main link's stretched area. */
 export const workCardActionClass = 'relative z-10'
+
+/** Recovery/export targets share one compact row across the card's useful phone width. */
+export const workCardFooterClass =
+  'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 sm:px-5'

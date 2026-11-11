@@ -192,7 +192,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
-| T756 | Unify compact emphasized in-progress work | THEME POST CLIP ARCH | T755 | todo |
 
 ## next
 - ui12: implement T753 → T754 → T755 → T756, per-unit gates/push/workflow inspection; only then begin independently reviewed video self-improve-local cycles. Deadline 2026-11-13T00:00Z; report spec/reports/261112-ui12.md.
@@ -200,6 +199,8 @@
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 T756 done (ui12): single counted 작성 중, shared peer-density accent latest card and compact recovery rows; 7 files/144 tests/static/type/build pass. Final warm96/delayed32 geometry and alias24 browser checks pass; latest360px card259.75→114.25px (56%). Full pre-push follows; video has not started.
+- 261112 T756 starts (ui12), baseline d02a58a0: one counted 작성 중 group, peer-density accent latest card, no duplicate hero. T755 full gate/push passes; T754 remote CI43072913166 passes both jobs. Hourly checkpoint ccf608f7 is local (wip remote rejected generically); main publication is unaffected.
 - 261112 T755 done (ui12): shared storyline-ready history labels/filter with job precedence and unchanged lifecycle/refining URL compatibility; 33 files/205 tests and static/type/build checks pass. Real browser both channels/aggregate/status selection passes without generation. Full pre-push follows.
 - 261112 T755 starts (ui12), baseline 42cdc156: browser reproduces storyline-only and built clips both labelled 다듬는 중 on both channels and aggregate. T754 full gate/push passes; exact-revision CI remains tracked before the next push. Keep lifecycle state and render/finalization unchanged.
 - 261112 T754 done (ui12): shared toolbar/padding/body/skeleton, aggregate waits for both reads, stable scrollbar space; 139 tests plus lint/format/FSD/style/build pass. Loaded warm96 and delayed32 browser traces keep chrome and one group Y per width; T753 remote CI43069662263 passes both jobs. Full pre-push follows.
@@ -218,5 +219,3 @@
 - 261111 T749 starts (cr11): 2h exploration from 14:24Z (upper bound 16:24Z), after T748 publication a74464d6. Add a diagnostic whole-frame Pixi WebGL arm over the same frozen plan/decoder/audio/mux/verdict; run an exact-commit single case then matrix with expensive local checks stopped. Production frontend remains unchanged; hardware, residuals and missing evidence stay explicit.
 - 261111 T748 gate passes (cr11): complete pre-push CI at 4102342d (26 dev, FE593/4721, Python69, full Go and all generated/static/type/build checks); no backend/media workflow path in its push diff. T747 9812b711 CI 43035630997, Deploy backend 43035630999 and all3 Verify media 43036324398 pass at its actual checkout SHA.
 - 261111 T748 done (cr11): original gitHead lacks Cargo.lock; 39 embedded crate/version lower bounds and 42 unresolved items recorded in both manifests/notices/QA, with all approval flags false. Ten tests, builds, lint/format, stable regeneration and 13 actual static-delivery checks pass at 9fabeddd; full pre-push CI follows.
-- 261111 T748 starts (cr11): bounded 2h investigation from 14:09Z, after T747 publication 9812b711; inspect the original npm gitHead and shipped WASM, retain exact-source gaps and keep distribution approval closed. Prefetched source lacks Cargo.lock; preserve that evidence rather than generating a replacement lockfile.
-- 261111 T747 gate passes (cr11): complete ARCH-31 at 8a452082; full CI, Compose/deployment images and all three CPU media gates/both release layouts pass. T751 b6f65d5f remote CI 43030996760, Deploy backend 43030996744 and all3 Verify media 43031747206 pass at its actual checkout SHA.

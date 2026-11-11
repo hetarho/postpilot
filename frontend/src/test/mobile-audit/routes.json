@@ -88,24 +88,24 @@
     }
   },
   "/": {
-    "heading": "내가 겪은 것만으로,채널에 맞게 써 드려요.",
-    "expectedPath": "/",
-    "expectedLeaf": "/authenticated/",
+    "heading": "무엇을 만들까요?",
+    "expectedPath": "/create",
+    "expectedLeaf": "/authenticated/create",
     "sourceReview": {
       "source": "frontend/src/pages/create/ui/CreatePage.tsx",
       "status": "changed",
-      "finding": "Three peer channel entries open creation without record or AI work.",
+      "finding": "The authenticated root is an alias for the canonical creation canvas; opening a choice starts no record or AI work.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
   "/library": {
-    "heading": "내가 겪은 것만으로,채널에 맞게 써 드려요.",
-    "expectedPath": "/",
-    "expectedLeaf": "/authenticated/",
+    "heading": "내 글",
+    "expectedPath": "/my",
+    "expectedLeaf": "/authenticated/my",
     "sourceReview": {
       "source": "frontend/src/app/routes/creation.ts",
       "status": "changed",
-      "finding": "Authenticated legacy library address redirects to home.",
+      "finding": "The authenticated library alias opens the aggregate My work hub.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },

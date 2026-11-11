@@ -12,9 +12,8 @@ const clip = {
   disclosure: 'ad' as const,
 }
 
-// Guide: 내 글 holds every post and every clip. The newest unfinished work leads as 이어서 쓰기;
-// the rest is grouped 작성 중 / 완성, each item once, with its channel named.
-it('leads with the newest unfinished work and groups posts and clips by status', async () => {
+// Every item appears once in a counted group; the latest unfinished card is compact and emphasized.
+it('counts and emphasizes the latest unfinished work inside its single group', async () => {
   const calls: string[] = []
   renderAppAt('/my', {
     user: { id: 'alice' },
@@ -39,15 +38,15 @@ it('leads with the newest unfinished work and groups posts and clips by status',
   })
 
   expect(await screen.findByRole('heading', { level: 1, name: '내 글' })).toBeInTheDocument()
-  const hero = (await screen.findByRole('heading', { name: '이어서 쓰기' })).closest('section')!
+  expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
   const inProgress = (await screen.findByRole('heading', { name: /^작성 중/ })).closest('section')!
   const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
   // The clip's fake timestamp is "two hours ago", newer than either post, so it leads.
-  expect(within(hero).getByRole('link', { name: /부산 클립/ })).toHaveAttribute(
+  expect(within(inProgress).getByRole('link', { name: /부산 클립/ })).toHaveAttribute(
     'href',
     '/clips/clip-draft',
   )
-  expect(within(hero).getByText('네이버 클립')).toBeInTheDocument()
+  expect(within(inProgress).getByText('네이버 클립')).toBeInTheDocument()
   expect(within(inProgress).getByRole('link', { name: /제주 초안/ })).toHaveAttribute(
     'href',
     '/posts/draft-post',
@@ -56,8 +55,16 @@ it('leads with the newest unfinished work and groups posts and clips by status',
   expect(screen.getAllByRole('link', { name: /부산 클립/ })).toHaveLength(1)
   // The page's one big creation leads to 만들기 (as the tab does), and reading starts nothing.
   const main = screen.getByRole('main')
+  expect(within(main).getByText('최근 수정 순')).toBeInTheDocument()
   expect(within(main).getByRole('link', { name: '만들기' })).toHaveAttribute('href', '/create')
-  // THEME-18: the screen's one filled CTA is 만들기; the tinted hero's 계속하기 is not a second.
+  expect(screen.getByRole('heading', { name: /^작성 중/ })).toHaveTextContent(/^작성 중\s*2$/)
+  expect(
+    within(inProgress)
+      .getByRole('link', { name: /부산 클립/ })
+      .closest('.ui-card'),
+  ).toHaveClass('bg-badge-accent-bg')
+  expect(main.querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(1)
+  // Creation remains the one filled CTA.
   expect([...main.querySelectorAll('.ui-button-cta')].map((node) => node.textContent)).toEqual([
     '만들기',
   ])
@@ -190,4 +197,37 @@ it('keeps both channels’ prepared stories unfinished and gives cancelled attem
   )
   expect(await screen.findByRole('link', { name: /취소된 이야기/ })).toHaveTextContent('취소됨')
   expect(screen.queryByRole('heading', { name: /^완성/ })).toBeNull()
+})
+
+it('keeps completed-only work in 완성 without a continuation placeholder', async () => {
+  renderAppAt('/my', {
+    user: { id: 'alice' },
+    posts: { posts: [{ slug: 'done-only', title: '완성한 글', status: 'finalized' }] },
+    clips: { projects: [] },
+  })
+  const group = (await screen.findByRole('heading', { name: /^완성/ })).closest('section')!
+  expect(within(group).getByRole('link', { name: /완성한 글/ })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /^작성 중|이어서 쓰기/ })).toBeNull()
+  expect(screen.getByRole('main').querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(0)
+})
+it('points an empty aggregate to its actual creation destination', async () => {
+  renderAppAt('/my', { user: { id: 'alice' }, posts: { posts: [] }, clips: { projects: [] } })
+  expect(
+    await screen.findByText('아직 만든 글이나 영상이 없어요. 만들기에서 시작해 보세요.'),
+  ).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /^작성 중|이어서 쓰기/ })).toBeNull()
+  expect(within(screen.getByRole('main')).getByRole('link', { name: '만들기' })).toHaveAttribute(
+    'href',
+    '/create',
+  )
+})
+it('retains a failed aggregate read and its retry without inventing resumable work', async () => {
+  renderAppAt('/my', {
+    user: { id: 'alice' },
+    posts: { posts: [] },
+    clips: { projectListFails: true },
+  })
+  expect(await screen.findByRole('alert')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: /^작성 중|이어서 쓰기/ })).toBeNull()
 })

@@ -20,15 +20,16 @@ import { TemplateRefLabel } from '@/entities/template'
 import { VoiceRefLabel } from '@/entities/voice'
 import { ChannelActions } from '@/widgets/channel-actions'
 import {
-  ContinueSection,
   WorkListBody,
   WorkListToolbar,
   WorkListLoading,
   FindSheet,
+  StatusTile,
   WorkGroup,
   workCardActionClass,
   workCardLinkClass,
   workCardStyles,
+  workCardFooterClass,
 } from '@/widgets/work-list'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
@@ -79,44 +80,21 @@ function postStatusTone(status: string): BadgeTone {
   return isPostStatus(status) ? STATUS_TONE[status] : 'neutral'
 }
 
-/** Guide: the card's leading tile — a soft square in the status chip's own tone with a glyph for
- *  where the post is, so the list is scanned by shape and colour before a word is read. The list
- *  carries no photo, so the state is the picture. */
-const TILE_TONE: Record<BadgeTone, string> = {
-  neutral: 'bg-badge-neutral-bg text-badge-neutral-fg',
-  accent: 'bg-badge-accent-bg text-badge-accent-fg',
-  success: 'bg-notice-success-bg text-notice-success-fg',
-  done: 'bg-badge-done-bg text-badge-done-fg',
-  warning: 'bg-notice-warning-bg text-notice-warning-fg',
-  info: 'bg-notice-info-bg text-notice-info-fg',
-  danger: 'bg-notice-danger-bg text-notice-danger-fg',
-}
-function StatusTile({ tone, status }: { tone: BadgeTone; status: string }) {
-  const Icon =
-    tone === 'info'
-      ? Sparkles
-      : tone === 'danger'
-        ? TriangleAlert
-        : tone === 'warning'
-          ? Scale
-          : status === 'published'
-            ? Send
-            : status === 'finalized'
-              ? CircleCheck
-              : status === 'review'
-                ? Sparkles
-                : PenLine
-  return (
-    <span
-      aria-hidden="true"
-      className={clsx(
-        'flex size-12 shrink-0 items-center justify-center rounded-lg sm:size-14',
-        TILE_TONE[tone],
-      )}
-    >
-      <Icon className="size-6" />
-    </span>
-  )
+/** The post keeps its state-specific glyph; the tile's geometry and semantic tones are shared. */
+function postStatusIcon(tone: BadgeTone, status: string) {
+  return tone === 'info'
+    ? Sparkles
+    : tone === 'danger'
+      ? TriangleAlert
+      : tone === 'warning'
+        ? Scale
+        : status === 'published'
+          ? Send
+          : status === 'finalized'
+            ? CircleCheck
+            : status === 'review'
+              ? Sparkles
+              : PenLine
 }
 
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's posts,
@@ -152,15 +130,14 @@ export function PostsPage() {
     })
   const narrowed = posts.map((post) => ({ post, matchedTags: matchedTags(post, settledQ) }))
   // Guide: 완성 is a post finished writing (확정 or 발행) with no run going; everything else is
-  // still 작성 중. The newest unfinished post leads the page as 이어서 쓰기 — unless a narrowing is
-  // on, when the page is answering a search instead.
+  // still 작성 중. The latest unfinished post is emphasized inside that group unless a narrowing is on.
   const finished = ({ post }: (typeof narrowed)[number]) =>
     (post.status === 'finalized' || post.status === 'published') &&
     !(post.activeJob && !isTerminal(post.activeJob))
   const isNarrowedNow = (narrowing.q ?? '').trim() !== '' || narrowing.status !== undefined
-  const hero = isNarrowedNow ? undefined : narrowed.find((item) => !finished(item))
+  const latest = isNarrowedNow ? undefined : narrowed.find((item) => !finished(item))
   const groups = [
-    { key: 'inProgress', items: narrowed.filter((item) => !finished(item) && item !== hero) },
+    { key: 'inProgress', items: narrowed.filter((item) => !finished(item)) },
     { key: 'done', items: narrowed.filter(finished) },
   ] as const
   // The page-top notice is for a list with nothing to show; a page further down that fails keeps
@@ -267,9 +244,7 @@ export function PostsPage() {
         </div>
       )}
 
-      {/* Guide: the latest unfinished post as the big 이어서 쓰기 card, then the rest in two groups
-          — 작성 중 and 완성 — each a column of large, friendly cards (two on the desk). A
-          narrowing shows its matches in the same two groups, without the hero. */}
+      {/* Every item appears once; latest-item emphasis never adds another section or density. */}
       <WorkListBody
         label={t('list.history.directory', { ns: 'posts' })}
         className="px-4 sm:px-6 lg:px-8"
@@ -277,11 +252,10 @@ export function PostsPage() {
         <WorkListLoading pending={isPending} />
         {(() => {
           // One post's card: the status tile, the title in a heading's size, its state as a chip,
-          // and the recovery links under it. The hero is the same card, large, its 이어서 작성 the
-          // screen's one big button.
+          // and the recovery links under it. Continuation stays a compact link on every card.
           const renderPost = (
             { post, matchedTags }: (typeof narrowed)[number],
-            heroCard = false,
+            latestCard = false,
           ) => {
             const status = rowStatus(
               post,
@@ -294,7 +268,7 @@ export function PostsPage() {
             // (POST-25). A post with 말투 없음 shows none: an absence is not metadata.
             const content = (
               <>
-                <StatusTile tone={status.tone} status={post.status} />
+                <StatusTile tone={status.tone} icon={postStatusIcon(status.tone, post.status)} />
                 <span className="flex min-w-0 flex-1 flex-col gap-2">
                   <Typography
                     variant="fieldTitle"
@@ -355,7 +329,7 @@ export function PostsPage() {
               <li
                 key={post.slug}
                 data-post-slug={post.slug}
-                className={workCardStyles({ hero: heroCard })}
+                className={workCardStyles({ latest: latestCard })}
               >
                 {post.pendingExperimentId && !runningJob && !failedJob ? (
                   <Link
@@ -380,12 +354,7 @@ export function PostsPage() {
                 {/* Each recovery target is a sibling of the work link. Export has no link of its
                   own: it lives in the opened post's 글 완성 step, one step press from wherever the
                   post opens (POST-64). */}
-                <div
-                  className={clsx(
-                    'flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 sm:px-5',
-                    heroCard ? 'pb-5 sm:pb-6' : 'pl-[4.75rem] sm:pl-[5.25rem]',
-                  )}
-                >
+                <div className={workCardFooterClass}>
                   {(runningJob || failure) && (
                     <Typography
                       variant={runningJob ? 'meta' : 'body'}
@@ -400,19 +369,14 @@ export function PostsPage() {
                     to="/posts/$slug"
                     params={{ slug: post.slug }}
                     onClick={() => remember(post)}
-                    className={
-                      // The hero's 계속하기 is its card's own way in, never a second filled CTA
-                      // beside the list's creation button (THEME-18).
-                      heroCard
-                        ? buttonStyles({
-                            variant: 'secondary',
-                            className: clsx('w-full', workCardActionClass),
-                          })
-                        : buttonStyles({
-                            variant: 'ghost',
-                            className: clsx('-ml-3', workCardActionClass),
-                          })
-                    }
+                    className={buttonStyles({
+                      variant: 'ghost',
+                      className: clsx(
+                        '-ml-3',
+                        workCardActionClass,
+                        latestCard && 'text-link-fg-current',
+                      ),
+                    })}
                   >
                     {t(
                       post.status === 'published' || post.status === 'finalized' || runningJob
@@ -448,7 +412,6 @@ export function PostsPage() {
           }
           return (
             <>
-              {hero && <ContinueSection>{renderPost(hero, true)}</ContinueSection>}
               {groups.map(
                 (group) =>
                   group.items.length > 0 && (
@@ -457,7 +420,7 @@ export function PostsPage() {
                       heading={t(`work.${group.key}`, { ns: 'channel' })}
                       count={group.items.length}
                     >
-                      {group.items.map((item) => renderPost(item))}
+                      {group.items.map((item) => renderPost(item, item === latest))}
                     </WorkGroup>
                   ),
               )}

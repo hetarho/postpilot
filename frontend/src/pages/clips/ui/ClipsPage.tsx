@@ -22,7 +22,6 @@ import { Clapperboard, Film } from 'lucide-react'
 import { ChannelActions } from '@/widgets/channel-actions'
 import { clsx } from 'clsx'
 import {
-  ContinueSection,
   WorkListBody,
   WorkListToolbar,
   WorkListLoading,
@@ -32,6 +31,7 @@ import {
   workCardActionClass,
   workCardLinkClass,
   workCardStyles,
+  workCardFooterClass,
 } from '@/widgets/work-list'
 import { appFailureFromConnect } from '@/shared/api'
 import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
@@ -101,17 +101,17 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
     })
   const listed = (projects.data ?? []).filter((project) => clipChannel(project.channel) === channel)
   const narrowed = narrowClips(listed, narrowing)
-  // Guide: 완성 is a finalized clip with no run going; everything else is 작성 중. The newest
-  // unfinished clip leads as 이어서 쓰기, unless a narrowing is on.
+  // Guide: 완성 is a finalized clip with no run going; everything else is 작성 중. The latest
+  // unfinished clip is emphasized inside that group unless a narrowing is on.
   const finished = (project: ClipProject) =>
     clipState(project) === 'finished' && !(project.latestJob && !isTerminal(project.latestJob))
   const isNarrowed = (narrowing.q ?? '').trim() !== '' || narrowing.status !== undefined
   // The server lists the projects newest first, so the first unfinished one is the newest.
-  const hero = isNarrowed ? undefined : narrowed.find((project) => !finished(project))
+  const latest = isNarrowed ? undefined : narrowed.find((project) => !finished(project))
   const groups = [
     {
       key: 'inProgress',
-      items: narrowed.filter((project) => !finished(project) && project !== hero),
+      items: narrowed.filter((project) => !finished(project)),
     },
     { key: 'done', items: narrowed.filter(finished) },
   ] as const
@@ -206,8 +206,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
         </div>
       )}
 
-      {/* Guide: the newest unfinished clip as the big 이어서 쓰기 card, then 작성 중 and 완성 as
-          columns of cards. A narrowing shows its matches in the same groups, without the hero. */}
+      {/* Every item appears once; latest-item emphasis never adds another section or density. */}
       <WorkListBody
         label={t('project.directory', { ns: 'clips' })}
         className="px-4 sm:px-6 lg:px-8"
@@ -215,9 +214,8 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
         <WorkListLoading pending={projects.isPending} />
         {(() => {
           // One clip's card: a status tile, the title, its state, template, ratio and time, and
-          // the recovery links under it. The hero is the same card, large, its 이어서 만들기 the
-          // screen's one big button.
-          const renderClip = (project: ClipProject, heroCard = false) => {
+          // the recovery links under it. Continuation stays a compact link on every card.
+          const renderClip = (project: ClipProject, latestCard = false) => {
             const status = clipHistoryStatus(project)
             const template = templates.templates.find((v) => v.id === project.videoTemplateId)
             const runningJob =
@@ -227,7 +225,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
             // Guide: a large, friendly card — the status tile, the title in a heading's size, then
             // its state and metadata wrapping under it.
             return (
-              <li key={project.id} className={workCardStyles({ hero: heroCard })}>
+              <li key={project.id} className={workCardStyles({ latest: latestCard })}>
                 <Link
                   to="/clips/$clipId"
                   params={{ clipId: project.id }}
@@ -279,12 +277,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                     </span>
                   </span>
                 </Link>
-                <div
-                  className={clsx(
-                    'flex shrink-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 pb-3 sm:px-5',
-                    heroCard ? 'pb-5 sm:pb-6' : 'pl-[4.75rem] sm:pl-[5.25rem]',
-                  )}
-                >
+                <div className={workCardFooterClass}>
                   {(runningJob || failure) && (
                     <Typography
                       variant={runningJob ? 'meta' : 'body'}
@@ -299,19 +292,14 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                     to="/clips/$clipId"
                     params={{ clipId: project.id }}
                     onClick={() => remember(project.id)}
-                    className={
-                      // The hero's 계속하기 is its card's own way in, never a second filled CTA
-                      // beside the list's creation button (THEME-18).
-                      heroCard
-                        ? buttonStyles({
-                            variant: 'secondary',
-                            className: clsx('w-full', workCardActionClass),
-                          })
-                        : buttonStyles({
-                            variant: 'ghost',
-                            className: clsx('-ml-3', workCardActionClass),
-                          })
-                    }
+                    className={buttonStyles({
+                      variant: 'ghost',
+                      className: clsx(
+                        '-ml-3',
+                        workCardActionClass,
+                        latestCard && 'text-link-fg-current',
+                      ),
+                    })}
                   >
                     {historyText(project.finalized || runningJob ? 'open' : 'continue')}
                   </Link>
@@ -338,7 +326,6 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
           }
           return (
             <>
-              {hero && <ContinueSection>{renderClip(hero, true)}</ContinueSection>}
               {groups.map(
                 (group) =>
                   group.items.length > 0 && (
@@ -347,7 +334,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                       heading={t(`work.${group.key}`, { ns: 'channel' })}
                       count={group.items.length}
                     >
-                      {group.items.map((item) => renderClip(item))}
+                      {group.items.map((item) => renderClip(item, item === latest))}
                     </WorkGroup>
                   ),
               )}
