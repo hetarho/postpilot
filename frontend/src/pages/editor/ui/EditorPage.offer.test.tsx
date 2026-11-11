@@ -124,6 +124,25 @@ describe('the new-post offer', () => {
     await expectNoOffer()
   })
 
+  // TMPL-32: the offer's wizard saves back to a new draft open on 템플릿, its template chosen —
+  // not on 글 종류, where nothing would show what was just made.
+  it('opens the handed-back new draft on 템플릿 with the template chosen', async () => {
+    renderAppAt(`/posts/new?template=${TEMPLATE.id}`, {
+      user: USER,
+      creationOffers: true,
+      ...NO_VOICE,
+      ...WITH_TEMPLATE,
+    })
+    expect(await screen.findByRole('heading', { name: '어떤 틀로 써 볼까요?' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: '어떤 글을 쓰시나요?' })).toBeNull()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /방문 후기/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    )
+  })
+
   it('does not ask when first-use setup opened the creation', async () => {
     renderAppAt('/posts/new?from=setup', { user: USER, creationOffers: true, ...NO_VOICE })
     await expectNoOffer()

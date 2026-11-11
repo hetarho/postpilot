@@ -121,9 +121,12 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const { voiceId, templateId, targetLanguage } = assignments
 
   // Which writing screen is up. It crosses the mint's remount through a stash,
-  // the way the caret does, so the first saved input never throws the owner elsewhere.
+  // the way the caret does, so the first saved input never throws the owner elsewhere. A new draft
+  // the template wizard handed a template to opens on 템플릿 with it chosen — the wizard was opened
+  // from the new post's offer, and 템플릿 is where the owner sees what they made (TMPL-32).
   const [guide, setGuide] = useState<GuideStep>(
-    () => takeGuideStep(post?.slug) ?? initialGuideStep(post),
+    () =>
+      takeGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
   )
   const guideRef = useRef(guide)
   useEffect(() => {
