@@ -106,7 +106,7 @@ func TestProbeUsesDecodedClockAndRotation(t *testing.T) {
 		if !reflect.DeepEqual(r.calls[0].Args, []string{"-v", "error", "-protocol_whitelist", "file,pipe", "-show_streams", "-show_format", "-of", "json", p}) {
 			t.Fatal(r.calls[0])
 		}
-		if !strings.Contains(strings.Join(r.calls[1].Args, " "), "-xerror") || !strings.Contains(strings.Join(r.calls[1].Args, " "), "-progress pipe:2") {
+		if !strings.Contains(strings.Join(r.calls[1].Args, " "), "-xerror") || !strings.Contains(strings.Join(r.calls[1].Args, " "), "-progress pipe:1") {
 			t.Fatal(r.calls[1])
 		}
 		return nil
@@ -450,10 +450,49 @@ func TestConstantCadenceRequiresCompleteDecodedIntervalEvidence(t *testing.T) {
 		{"[Parsed_vfrdet_0 @ 0xff] VFR:nan (0/0)\n[Parsed_vfrdet_0 @ 0xfe] VFR:0.000000 (0/239)", true},
 		{"[Parsed_vfrdet_0 @ 0xff] VFR:0.000000 (0/100)\n[Parsed_vfrdet_0 @ 0xfe] VFR:0.000000 (0/239)", false},
 		{"", false},
+		// T731: the shapes another thread's output gives the same report. The
+		// prefix and the message are separate writes, so a -progress block on
+		// the same descriptor can stand between them (captured from FFmpeg
+		// 9.0.1 over the worker parity fixture), and a line another thread
+		// left open makes FFmpeg drop the prefix. Neither changes the verdict.
+		{"[Parsed_vfrdet_0 @ 0xff] frame=1200\nfps=107.48\nout_time_us=19178667\nprogress=continue\nVFR:0.000000 (0/1199)\n", true},
+		{"[out#0/null @ 0xfe] video:497KiB muxing overhead: VFR:0.000000 (0/1199)unknown\n", true},
+		// A genuinely varying report stays refused however it arrives.
+		{"[Parsed_vfrdet_0 @ 0xff] frame=1200\nprogress=continue\nVFR:0.004184 (1/238) min: 256 max: 512 avg: 384\n", false},
+		{"[out#0/null @ 0xfe] muxing overhead: VFR:0.004184 (1/238)unknown\n", false},
+		// The negotiation graph's early-closed (0/0) report is no evidence
+		// either way, prefixed or not.
+		{"VFR:-nan (0/0)\n[Parsed_vfrdet_0 @ 0xfe] frame=1200\nprogress=continue\nVFR:0.000000 (0/1199)\n", true},
+		{"[Parsed_vfrdet_0 @ 0xff] frame=0\nprogress=continue\nVFR:-nan (0/0)\n", false},
+		// A second measured graph leaves the step across its boundary unmeasured.
+		{"VFR:0.000000 (0/100)\n[Parsed_vfrdet_0 @ 0xfe] VFR:0.000000 (0/239)", false},
+		// A message broken across lines is not a report.
+		{"VFR:0.000000\n(0/239)", false},
 	} {
 		if got := constantCadenceReport([]byte(tc.report)); got != tc.want {
 			t.Fatalf("%q verified=%v, want %v", tc.report, got, tc.want)
 		}
+	}
+}
+
+// T731: Verify media's worker parity failed with every measurement equal but the
+// cadence. The split log still settles frames and clock on its final block, and
+// its cadence now reads as the unchanged source's does. Both measuring commands
+// keep -progress off the log's descriptor.
+func TestDecodeMeasurementReadsTheSplitParityLog(t *testing.T) {
+	log := "[Parsed_vfrdet_0 @ 0xfa] VFR:-nan (0/0)\n" +
+		"[Parsed_vfrdet_0 @ 0xfb] frame=1200\nfps=107.48\nout_time_us=19178667\nprogress=continue\nVFR:0.000000 (0/1199)\n" +
+		"[out#0/null @ 0xfc] video:497KiB audio:0KiB muxing overhead: unknown\n" +
+		"frame= 1200 fps=104 q=-0.0 Lq=32.0 size=N/A time=00:00:20.00 bitrate=N/A speed=1.73x elapsed=0:00:11.54    \n" +
+		"frame=1200\nout_time_us=20000000\nprogress=end\n"
+	measured, complete := decodeMeasurement([]byte(log))
+	if !complete || !measured.Constant || measured.Frames != 1200 || measured.Micros != 20000000 {
+		t.Fatalf("measured %+v complete=%v", measured, complete)
+	}
+	a := newAdapter(t, &fakeRunner{})
+	source := clip.MediaSource{Path: "/work/source.mp4", SourceID: "one", Fingerprint: "hash", Info: clip.MediaInfo{DurationMS: 20000, Width: 1080, Height: 1920, HasAudio: true}}
+	if args := strings.Join(a.chunkArgs(source, clip.AnalysisChunk{Path: "/work/proxy-one-0.mp4", DurationMS: 20000}, a.cfg.VideoMaxRate, a.cfg.VideoBufferSize), " "); !strings.Contains(args, "-progress pipe:1") {
+		t.Fatal(args)
 	}
 }
 

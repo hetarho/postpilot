@@ -42,6 +42,9 @@ func TestMediaRunnerHelper(t *testing.T) {
 		time.Sleep(time.Minute)
 	case "args":
 		fmt.Print(strings.Join(os.Args[marker+2:], "\n"))
+	case "progress":
+		fmt.Fprint(os.Stderr, "[Parsed_vfrdet_0 @ 0x1] VFR:0.000000 (0/1199)\n")
+		fmt.Print("frame=1200\nout_time_us=20000000\nprogress=end\n")
 	}
 	os.Exit(0)
 }
@@ -85,6 +88,27 @@ func TestExecRunnerBoundsOutputAndCancels(t *testing.T) {
 	argsCommand.Args = append(argsCommand.Args, "literal:$(touch NO);*'\"")
 	if out, err := r.Run(t.Context(), argsCommand); err != nil || string(out) != "literal:$(touch NO);*'\"" {
 		t.Fatalf("%s %v", out, err)
+	}
+}
+
+// A measuring command reports -progress on stdout and its filters on stderr,
+// and one parse reads both: the progress comes back ahead of the log.
+func TestCapturedLogCarriesStdoutProgressAheadOfStderr(t *testing.T) {
+	binary, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := ExecRunner{StdoutLimit: 1024, StderrLimit: 1024, WaitDelay: time.Second}
+	log, err := r.Run(t.Context(), Command{Binary: binary, Dir: t.TempDir(), Args: []string{"-test.run=^TestMediaRunnerHelper$", "--", "--media-helper", "progress"}, CaptureStderr: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "frame=1200\nout_time_us=20000000\nprogress=end\n[Parsed_vfrdet_0 @ 0x1] VFR:0.000000 (0/1199)\n"; string(log) != want {
+		t.Fatalf("captured %q", log)
+	}
+	measured, complete := decodeMeasurement(log)
+	if !complete || !measured.Constant || measured.Frames != 1200 || measured.Micros != 20000000 {
+		t.Fatalf("measured %+v complete=%v", measured, complete)
 	}
 }
 

@@ -144,7 +144,7 @@ func (a *Adapter) chunkArgs(source clip.MediaSource, chunk clip.AnalysisChunk, m
 	// verification output comes FIRST because -progress reports frame= for the
 	// first output, so the source decode is measured exactly as before while
 	// out_time_us stays the maximum across both (CLIP-33, CLIP-124).
-	args := []string{"-hide_banner", "-nostdin", "-v", "info", "-xerror", "-n", "-nostats", "-stats_period", "3600", "-progress", "pipe:2", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-filter_complex_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(chunk.OffsetMS), "-i", source.Path,
+	args := []string{"-hide_banner", "-nostdin", "-v", "info", "-xerror", "-n", "-nostats", "-stats_period", "3600", "-progress", "pipe:1", "-filter_threads", strconv.Itoa(a.cfg.EncodeThreads), "-filter_complex_threads", strconv.Itoa(a.cfg.EncodeThreads), "-threads", strconv.Itoa(a.cfg.DecodeThreads), "-protocol_whitelist", "file,pipe", "-ss", seconds(chunk.OffsetMS), "-i", source.Path,
 		"-map", "0:V:0", "-vf", "vfrdet", "-fps_mode", "passthrough", "-an", "-sn", "-dn", "-t", seconds(chunk.DurationMS), "-f", "null", "-",
 		"-t", seconds(chunk.DurationMS), "-map", "0:V:0"}
 	if source.Info.HasAudio {
