@@ -149,10 +149,22 @@ async function serve(root, expectedHead) {
   return { server, binding, baseURL: `http://localhost:${server.httpServer.address().port}` }
 }
 
+function projectWindowsDevice(value) {
+  const text = value => typeof value === 'string' && value.trim() ? value.trim() : null
+  const windows = { osVersion: text(value?.osVersion), osBuild: text(value?.osBuild),
+    cpu: Array.isArray(value?.cpu) ? value.cpu.map(text).filter(Boolean) : [],
+    memoryBytes: Number.isSafeInteger(value?.memoryBytes) && value.memoryBytes > 0 ? value.memoryBytes : null,
+    gpu: Array.isArray(value?.gpu) ? value.gpu.filter(item => text(item?.name)).map(item => ({ name: text(item.name), driverVersion: text(item.driverVersion) })) : [] }
+  const complete = windows.osVersion && windows.osBuild && windows.cpu.length && windows.memoryBytes && windows.gpu.length && windows.gpu.every(value => value.driverVersion)
+  return { status: complete ? 'observed' : 'unmeasured', windows,
+    ...(complete ? {} : { reason: 'Windows WMI projection lacks required OS, CPU, RAM or GPU/driver metadata' }),
+    integratedWindowsEvidence: false, lowerResourceEvidence: false }
+}
+
 function windowsDevice() {
   if (process.platform !== 'win32') return { status: 'unmeasured', reason: `Current host is ${process.platform}/${process.arch}; no Windows execution or WMI data`, windows: null }
-  const command = `[Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $postpilotOs=Get-CimInstance Win32_OperatingSystem; $postpilotCpu=Get-CimInstance Win32_Processor; $postpilotRam=Get-CimInstance Win32_ComputerSystem; $postpilotGpu=Get-CimInstance Win32_VideoController; @{osVersion=$postpilotOs.Version;osBuild=$postpilotOs.BuildNumber;cpu=@($postpilotCpu|ForEach-Object {$_.Name});memoryBytes=$postpilotRam.TotalPhysicalMemory;gpu=@($postpilotGpu|ForEach-Object {@{name=$_.Name;driverVersion=$_.DriverVersion}})}|ConvertTo-Json -Depth 4 -Compress`
-  try { return { status: 'observed', windows: JSON.parse(execFileSync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command], { encoding: 'utf8', timeout: cleanupTimeoutMs })) } }
+  const command = `$ErrorActionPreference='Stop'; [Console]::OutputEncoding=[System.Text.UTF8Encoding]::new($false); $postpilotOs=Get-CimInstance Win32_OperatingSystem; $postpilotCpu=Get-CimInstance Win32_Processor; $postpilotRam=Get-CimInstance Win32_ComputerSystem; $postpilotGpu=Get-CimInstance Win32_VideoController; @{osVersion=$postpilotOs.Version;osBuild=$postpilotOs.BuildNumber;cpu=@($postpilotCpu|ForEach-Object {$_.Name});memoryBytes=$postpilotRam.TotalPhysicalMemory;gpu=@($postpilotGpu|ForEach-Object {@{name=$_.Name;driverVersion=$_.DriverVersion}})}|ConvertTo-Json -Depth 4 -Compress`
+  try { return projectWindowsDevice(JSON.parse(execFileSync('powershell.exe', ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', command], { encoding: 'utf8', timeout: cleanupTimeoutMs }))) }
   catch (error) { return { status: 'unmeasured', reason: `Windows device metadata failed: ${error.message}`, windows: null } }
 }
 
@@ -345,6 +357,18 @@ async function runClient(root, baseURL, expectedHead, diagnosticExecutable) {
 async function main() {
   const root = path.resolve(option('--workspace', process.cwd()))
   const { manifest, arms } = workspaceInput(root)
+  if (args.includes('--self-test')) {
+    const projected = projectWindowsDevice({ osVersion: 'fixture OS', osBuild: 'fixture build', cpu: ['fixture CPU'], memoryBytes: 1024,
+      SerialNumber: 'MUST_NOT_PERSIST', gpu: [{ name: 'fixture GPU', driverVersion: 'fixture driver', PNPDeviceID: 'MUST_NOT_PERSIST' }] })
+    assert.equal(projected.status, 'observed')
+    assert(!JSON.stringify(projected).includes('MUST_NOT_PERSIST'))
+    assert.equal(projectWindowsDevice({ osVersion: null, osBuild: null, cpu: [], memoryBytes: null, gpu: [] }).status, 'unmeasured')
+    assert.equal(projectWindowsDevice({ ...projected.windows, gpu: [{ name: 'fixture GPU' }] }).status, 'unmeasured')
+    const missing = missingWindows(manifest, arms, 'fixture unavailable')
+    assert.equal(missing.reports.length, manifest.cases.length * arms.length * temperatures.length * 2)
+    assert(missing.reports.every(value => value.status === 'not-executed' && value.verdict === null && value.managedResources === null))
+    console.log(JSON.stringify({ fixtureChecks: 'passed', metadataPrivacyAndMissingEvidence: true, windowsExecution: false, qualification: false })); return
+  }
   const expectedHead = option('--expected-head', '')
   if (!expectedHead) throw Error('Pass --expected-head and an explicit --workspace for Windows stdin execution')
   const diagnostic = option('--diagnostic-browser', '')
