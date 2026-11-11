@@ -130,3 +130,22 @@ it('returns from the template wizard to the template question of the post', asyn
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
   expect(await screen.findByRole('heading', { name: '어떤 틀로 써 볼까요?' })).toBeVisible()
 })
+
+// 내용 opened on the title as bare display-size text with its name hidden: a second, larger
+// heading under the screen's question, with nothing saying it could be typed in.
+it('draws the title on 내용 as a named field like the answers under it', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/posts/saved', {
+    user: USER,
+    posts: { posts: [{ slug: 'saved', title: '' }] },
+  })
+  await guideTo(user, GUIDE.details)
+
+  const title = await screen.findByRole('textbox', { name: '제목' })
+  expect(title).toHaveAttribute('placeholder', '예: 손님이 다시 찾는 이유')
+  expect(title).toHaveClass('bg-field-bg')
+  expect(title).not.toHaveClass('text-[1.875rem]')
+  const label = document.querySelector('label[for="post-title"]')
+  expect(label).toHaveTextContent('제목')
+  expect(label).not.toHaveClass('sr-only')
+})
