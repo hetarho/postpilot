@@ -1,4 +1,5 @@
 import { useState, type ReactNode, type Ref } from 'react'
+import { useTranslation } from 'react-i18next'
 import { isTerminal } from '@/entities/generation-job'
 import { isPublished, type GenerationOptionsSet, type PostDraft } from '@/entities/post'
 import { usePrefetchAccountQuality } from '@/entities/quality'
@@ -65,6 +66,7 @@ export function useEditorChoices({
 } {
   // Read from the post it holds: a published post (POST-86) takes no post write here, and none of
   // these fields names a reason — ① says it once, above its actions.
+  const { t } = useTranslation('posts')
   const published = post ? isPublished(post) : false
   const jobRunning = Boolean(post?.activeJob && !isTerminal(post.activeJob))
   // The picker's `새 말투 만들기` opens the directory's own create sheet (VOICE-53). Its open state
@@ -77,7 +79,7 @@ export function useEditorChoices({
   const brief = (
     <GenerationBrief
       ref={briefRef}
-      trigger="change"
+      changeLabel={t('guide.change')}
       targetLanguage={targetLanguage}
       contentLanguage={post?.contentLanguage}
       frozenLanguage={
