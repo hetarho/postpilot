@@ -11,8 +11,10 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
+| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T23:10Z | 2026-11-11T23:10Z | T758 |
 
 ## inbox
+- 261112 decided T758: continue after the device handoff? → follow the owner's latest one-hour continuation, restore approved partial T758 in a fresh headless worker, independently review, integrate and push at the end (alt: remain stopped | start another scope). Source cutoff2026-11-11T23:37:11Z; target remote inspection2026-11-12T00:02:11Z, validation-only hard tail00:17:11Z. Historical stop/handoff records remain.
 - 261112 decided T758: move all current work to another device? → stop ui12 coordinator/runner, release the partial attempt, publish completed main plus the full16-file T758 recovery patch, hashes, scout/browser evidence and restore instructions in docs/handoff/ui12 (alt: omit unfinished work | integrate unreviewed partial source). T758 remains todo and requires completion, checks and independent review; automatic work on this machine is stopped at the user's request.
 - 261112 decided CLIP-225 CLIP-227 T758 review/video-preparation-guide-261112: which video redesign slice follows the completed foreground/T757? → adopt independent scout F1, retained preparation with latest-local review and shared step bar, via CLIP r75 and T758 (alt: another isolated bug | rewrite the whole editor at once). T746/POST-122/123/124 plus real browser baseline support the sequence; preserve backend/credit/owner/export contracts and plan later storyline/edit/delivery slices separately. Original deadline unchanged; closing reserve expanded to3h.
 - 261112 decided ARCH-31 T757: resume after the remote-only blocker? → GitHub CI43094556625 for0af0cf99 is now completed/success with both jobs successful, so resume the remaining explicitly delegated video workflow redesign on main under the original deadline and existing review/verification requirements (alt: leave the temporary run stopped | call one retention bug fix a complete video redesign). The user requested status; no cancellation or scope reduction was given.
@@ -200,11 +202,11 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Device handoff: fetch origin/main, read docs/handoff/ui12/README.md and recover the16-file partial T758 patch in its newly assigned checkout before continuing spec/tasks/T758.guide-video-preparation-and-review.md. Patch baseada6afc2, SHA-256 and per-file verification are recorded alongside it. T758 is not completed/reviewed/integrated; completed T753–T757 remain on main.
-- This machine's ui12 coordinator/runner stopped by user request and attemptb1df8608 is released; fresh devices must establish new ownership rather than copy .git runtime. The broader video-process redesign continues after T758 under its own evidence/planning/review gates. Resume with /start-vibe; details and full journey are in the report and review/video-preparation-guide-261112.
-- Preserve owner-held T539/T550 live voice/human review, T603 semantic truth, T604 hardware/human/live/distribution, T697 production source-read and T709 unresolved budget; unrelated INFRA/ideation stay outside this handoff.
+- Finish only approved T758 from the portable recovery under the owner's bounded continuation: fresh worker/reviewer, affected/browser/full checks, main integration and end-of-run publication. No T759 or overnight recurrence.
+- If acceptance cannot finish within the bound, preserve all newer files/evidence in the recoverable handoff and publish safe main records; keep T758 todo with exact gaps. Preserve excluded tasks and unrelated groups.
 
 ## log
+- 261112 ui12: resume T758 only for the owner-authorized extra hour; fresh worker/review and final publication.
 - 261112 ui12 device handoff: all own processes stopped, T758 attempt released, original dirty worker kept. Preserve all16 partial files in docs/handoff/ui12/T758.patch with exact recovery hashes and portable scout/browser evidence; main implementation stays through reviewed T757. Latest planning ada6afc2 was already pushed. Owner requested all current work remotely, no continued local automation.
 - 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
 - 261112 update-ssot CLIP start (ui12 video cycle3): adopt independent scout preparation-flow proposal under explicit reversible UX delegation; preserve whole-journey plan and excluded contracts.
@@ -224,4 +226,3 @@
 - 261112 T754 done (ui12): shared toolbar/padding/body/skeleton, aggregate waits for both reads, stable scrollbar space; 139 tests plus lint/format/FSD/style/build pass. Loaded warm96 and delayed32 browser traces keep chrome and one group Y per width; T753 remote CI43069662263 passes both jobs. Full pre-push follows.
 - 261112 T754 starts (ui12), baseline 8cf585bb: actual browser hub/title/chips stay mounted; missing aggregate toolbar and clip padding shift first groups by 48px then 8px (desktop 48px/16px). T753 full gate/push passed; immutable remote CI remains under observation before the next push.
 - 261112 T753 done (ui12): canonical /create with / alias, logo/login/setup preserved; 24 files/288 consumer tests, lint/FSD/style/build and Chromium fixture proof pass. Full pre-push gate follows.
-- 261112 T753 starts (ui12), baseline 1baf181e: canonical /create, preserve setup/deep links/public auth.
