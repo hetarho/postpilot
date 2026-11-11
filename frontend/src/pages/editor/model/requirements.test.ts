@@ -39,7 +39,7 @@ describe('local guide suggestions', () => {
     expect(
       suggestRequirements('2026년 11월 방문. 사진 50장 이상. 30자 이상. 사진 5장 이하.'),
     ).toEqual([])
-    expect(suggestRequirements('#Cafe #cafe #카페\n키워드: 성수 카페, 성수카페')).toHaveLength(3)
+    expect(suggestRequirements('#Brunch #brunch #카페\n키워드: 성수 카페, 성수카페')).toHaveLength(3)
     expect(suggestRequirements('')).toEqual([])
     expect(editSuggestion('minPhotos', '31')).toBeUndefined()
     expect(editSuggestion('keywords', 'x'.repeat(41))).toBeUndefined()
