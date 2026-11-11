@@ -11,7 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T14:38Z | - |
+| cr11 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T11:56Z | 2026-11-11T14:49Z | T750 |
 
 ## inbox
 - 261111 decided T748: original npm gitHead has no Cargo.lock and its checked-in WASM differs from npm → close the bounded investigation with an empty derived graph, 39 embedded lower-bound crates and every source/license/notice gap unresolved; leave the original-graph criterion unchecked and all source/distribution flags false (alt: invent a newly resolved lockfile | attribute the independently rebuilt candidate to the original binary). The goal permits naming missing proof; early exit avoids waiting out the 2h upper bound after the required original artifact is demonstrably absent. Remaining distribution/build-provenance review stays with T604.
@@ -187,12 +187,13 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
+| T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | doing@261111.cr11 |
 
 ## next
 - implement-task T750
 
 ## log
+- 261111 T750 starts (cr11): 90m exploration from 2026-11-11T14:49Z (upper bound 16:19Z), baseline 7aab07a5. Implement the Windows/WSL comparison and production-path driver with exact source/fixture binding, default temporary browser profiles and no serials; current host is Darwin ARM64 without Windows Node/Chrome/Edge. Validate executable transport here while retaining every unavailable Windows combination as unmeasured, never qualified.
 - 261111 T749 gate passes (cr11): complete pre-push CI at c509d1a7 (26 dev, FE593/4721, Python69, full Go, all generated/static/type/build checks); no backend/media workflow input in its diff. T748 a74464d6 remote CI 43037986093 passes both jobs.
 - 261111 T749 done (cr11): whole-frame Pixi WebGL diagnostic at 1a603269; single6/matrix24 runs, 16 contract/PCM comparisons and all output/cleanup checks pass. Identified M1 Max Metal/Chromium153 shows 13.2–24.5% shorter instrumented assembly, decoded mean residual0.660449–0.932307; no pixel acceptance/default/qualification change. Historical data preserved; full pre-push CI follows.
 - 261111 T749 starts (cr11): 2h exploration from 14:24Z (upper bound 16:24Z), after T748 publication a74464d6. Add a diagnostic whole-frame Pixi WebGL arm over the same frozen plan/decoder/audio/mux/verdict; run an exact-commit single case then matrix with expensive local checks stopped. Production frontend remains unchanged; hardware, residuals and missing evidence stay explicit.
@@ -212,4 +213,3 @@
 - 261111 T741 done (sv8): reintegrated cd2571d6 — the indexed zlib=1.3.2-r1 install stays first, and after its failure the fixed-checksum signed official artifacts recover the same version. Offline install-prefix harness 36/36 in the pinned base (original prefix fails all 7 recovery controls) and an actual linux/amd64 signed install of all three 1.3.2-r1 packages. `dl-cdn` now 404s aarch64 zlib-dev, ppc64le zlib-dev/static and riscv64 zlib-static, so only x86_64/armhf/armv7/s390x recover; MEDIA.md records it and an inbox suggestion asks for a durable source.
 - 261111 T731 done (sv8): Verify media's parity flip was vfrdet's report losing its prefix — FFmpeg 9.0.1 writes prefix, message and newline as separate writev calls and the two-output copy command's intermediate `-progress pipe:2` block lands between them when the null output finishes (forced with a ptrace hold on the parity fixture; 461 unforced runs intact). Probe and the copy command now report progress on stdout and the cadence report is read by its message; exactly one measured graph with v=0 still required. Parity preparation passed 15/15 in the rebuilt worker smoke image.
 - 261111 T739 done (sv8): closed on its retained evidence (20-file Node split on origin/main, gates 729ec6d0 FE 580/4642 and 08edc691 FE 581/4643, remote CI 42802447091 and 42808343741 green); create-task T751 moves the clip/store request-history ordering under a clock rollback into a backend task that orders by acceptance with no migration.
-- 261111 create-task T747 T748 T749 T750 (sv8): T604's agent-runnable evidence becomes server-capacity independence, the resvg WASM license graph, a whole-frame PixiJS compositor comparison and Windows Chrome/Edge measurement; T604 keeps human review, integrated-GPU/lower-resource hardware, the live static check and distribution approval, rebased to ARCH@22 CLIP@73 CDS@38 and parked.
