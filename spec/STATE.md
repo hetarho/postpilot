@@ -187,11 +187,10 @@
 | T749 | Compare a whole-frame PixiJS WebGL compositor with the Canvas 2D control | ARCH CLIP CDS | - | todo |
 | T750 | Measure the render comparison and final-render path on identified Windows Chrome and Edge | ARCH CLIP CDS | T749 | todo |
 | T751 | Keep the request history newest first across a clock rollback | CLIP ARCH | - | todo |
+| T752 | Fix final gate failure | ARCH | - | todo |
 
 ## next
-- Approved unattended scope: T739 T697 T709 T741 T742 T731 T604 and follow-ups created for them. T709 is closed under its exit rule and T739 on its retained evidence; close T697 on the retained evidence; run T751, the clock-rollback request-history fix; reintegrate T742; run T747–T750, split from T604 (T750 after T749), and keep T604 parked on its owner-held gates. Use the decisions above without reopening the settled investigation.
-- Run scoped Claude loop sv8 with bypass permission in main, an explicit repository for public-HTML CI observation and the complete ARCH-31 gate. Complete per-task checks and commits, deployment/media gates before each applicable push, and record every remote workflow as observed or unconfirmed. Preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md; prior FE/CI evidence is in reports/261110-sil5.md. T745's provided-data assertion remains an optional inbox suggestion outside this scope.
-- Park T539/T550/T603, INFRA and all active ideation. Preserve the separate ideation/post-faithful-clip resumption: the first caption's place-name hook still needs SSOT coverage (GUIDE-42 or CLIP), while its default caption look (CDS) and unmeasured prompt growth remain open. Owner-only follow-ups include human/hardware evidence, supplier budgets/tariffs, T709's unsettled usage and unavailable remote workflow results.
+- implement-task T752
 
 ## log
 - 261111 T741 done (sv8): reintegrated cd2571d6 — the indexed zlib=1.3.2-r1 install stays first, and after its failure the fixed-checksum signed official artifacts recover the same version. Offline install-prefix harness 36/36 in the pinned base (original prefix fails all 7 recovery controls) and an actual linux/amd64 signed install of all three 1.3.2-r1 packages. `dl-cdn` now 404s aarch64 zlib-dev, ppc64le zlib-dev/static and riscv64 zlib-static, so only x86_64/armhf/armv7/s390x recover; MEDIA.md records it and an inbox suggestion asks for a durable source.
