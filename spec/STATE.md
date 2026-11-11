@@ -161,7 +161,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T746 | Land the Guide redesign and the requirements-led post guide | ARCH BILL CLIP GUIDE LANG MEM MKT MODEL POST QUOTA THEME TMPL VOICE | - | doing@261111.hu3 |
 | T709 | Prove the real clip pipeline within the approved live budget | ARCH CLIP QUOTA | T708 | blocked@261028 |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
@@ -174,12 +173,12 @@
 | T742 | Keep pinned FFmpeg downloads available during an origin outage | ARCH | - | todo |
 
 ## next
-- T746 lands ab/post-writing-polish/final on main after the full gate (backend/media part passed on backend tree d84db359), then push and check CI, Deploy backend and Verify media
 - sil5 integrates T743 (ClipCampaign autosave remount, the former FE gate failure) and T744 (abandoned photo preview URL) and pushes d95f0f5f after a full local gate on 729ec6d0 (Go reuses the identical-tree evidence because clip/store failed on a wall-clock rollback; remote CI passed). T745 (shared DOM test i18n catalogs, setup 1.65 -> 0.73 s per file) follows in a second push after an FE gate on the identical tree. Remote CI passed for both pushes (42802447091, 42808343741). Report reports/261110-sil5.md.
 - Fix the clip/store request history ordering under clock rollback (backend; needs a full gate plus media parity), then close T739. Add the T745 provided-data assertion suggested in the inbox.
 - T741/T742 remain deferred after the 92daffbe release failure; preserve archive/si4-backend-candidate-261109 and reports/261109-si4.md. Existing T731 and other blocked qualification/planning work remain outside this request; no automatic continuation is enabled.
 
 ## log
+- 261111 T746 done (hu3): the compared Guide redesign and requirements-led post guide land as merge 4899eb2b with the rule fixes; full local gate (FE 4721 tests, Go 90 packages, deploy tests, media gates) and remote CI, Deploy backend and Verify media pass; A/B worktrees and branches removed
 - 261111 create-task T746: one adoption task consumes the THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH deltas; its implementation is the compared and polished branch
 - 261111 update-ssot THEME POST CLIP TMPL GUIDE MEM VOICE MODEL QUOTA BILL LANG MKT ARCH: the adopted Guide redesign (ab ui-redesign/b) and the requirements-led post guide (ab post-writing-ux/d, polish a/b/c/d merged on ab/post-writing-polish/final) become the rules; 13 revs, 11 new decisions; code gaps the rules keep (MODEL-24/96, QUOTA-75, THEME-11/18/28/55/58/67/70, ARCH-16, POST-123, VOICE-69, TMPL-32, MKT-11) are fixed on that branch before it lands
 - 261111 hu2 updates haeram-spec-creator 0.12.0→0.12.2 (8 skill files, no conflicts; no structural migration, FORMAT overrides unchanged, 54 existing lint errors identical) and refreshes the browser ink identity for the new lockfile SHA (catalog, canonical identity, both asset-version constants; styles/fonts/WASM unchanged). clip/design, clip, store codec, go vet/build and 46 FE files/294 tests, tsc, prettier, eslint pass; no push.
