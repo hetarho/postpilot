@@ -386,6 +386,10 @@
   --field-label: var(--content-secondary);
   --field-placeholder: var(--content-tertiary);
   --field-error: var(--intent-danger);
+  /* The unticked box's own edge. A box drawn only as a recessed well vanished into the page in
+     Day and read as a bullet in Night (출처 보기 unticked); the edge takes the placeholder's
+     ink, which clears 3:1 against every plane a box sits on in both themes. */
+  --checkbox-edge: var(--content-tertiary);
 
   /* navigation and rows */
   --link-fg: var(--content-secondary);
@@ -888,6 +892,7 @@
 
   /* fields */
   --color-field-bg: var(--field-bg);
+  --color-checkbox-edge: var(--checkbox-edge);
   --color-field-bg-hover: var(--field-bg-hover);
   --color-field-bg-focus: var(--field-bg-focus);
   --color-field-fg: var(--field-fg);

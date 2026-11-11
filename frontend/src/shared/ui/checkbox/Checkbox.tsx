@@ -26,8 +26,10 @@ export const Checkbox = forwardRef<
       <span
         aria-hidden="true"
         // The glyph is always rendered and only its colour changes, because `peer-checked:` reaches
-        // this sibling but not its descendants — so the tick rides on `currentColor`.
-        className="bg-field-bg peer-checked:bg-button-cta-bg peer-checked:text-button-cta-fg peer-focus-visible:outline-focus-ring inline-flex size-5 items-center justify-center rounded-sm text-transparent transition-colors peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-disabled:opacity-50"
+        // this sibling but not its descendants — so the tick rides on `currentColor`. Unticked,
+        // the box carries an inset edge so it reads as a box on any plane; ticked, the fill is
+        // the edge and the ring fades out with it.
+        className="bg-field-bg ring-checkbox-edge peer-checked:bg-button-cta-bg peer-checked:text-button-cta-fg peer-focus-visible:outline-focus-ring inline-flex size-5 items-center justify-center rounded-sm text-transparent ring-2 transition-[background-color,color,box-shadow] ring-inset peer-checked:ring-transparent peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-disabled:opacity-50"
       >
         <Check className="size-3.5" strokeWidth={3} />
       </span>

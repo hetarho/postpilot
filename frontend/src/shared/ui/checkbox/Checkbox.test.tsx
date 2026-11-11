@@ -15,4 +15,14 @@ describe('Checkbox', () => {
     expect(checkbox).toBeChecked()
     expect(ref.current).toBe(checkbox)
   })
+
+  // Unticked, the box was only a recessed well: it vanished on Day's page and read as a bullet
+  // in Night (출처 보기). It carries an edge until it is ticked and the fill takes over.
+  it('draws an edge on the unticked box that the tick fill replaces', () => {
+    render(<Checkbox aria-label="출처 보기" />)
+
+    const box = screen.getByRole('checkbox', { name: '출처 보기' }).nextElementSibling
+    expect(box).toHaveClass('ring-2', 'ring-inset', 'ring-checkbox-edge')
+    expect(box).toHaveClass('peer-checked:ring-transparent', 'peer-checked:bg-button-cta-bg')
+  })
 })
