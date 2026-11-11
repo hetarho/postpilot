@@ -215,6 +215,13 @@ describe('PostsPage', () => {
     const [review, empty, published] = await within(history).findAllByRole('listitem')
     const resume = within(review).getByRole('link', { name: '이어서 작성' })
     expect(resume).toHaveAttribute('href', '/posts/review-content')
+    // THEME-18: the hero's 계속하기 is no second filled CTA beside 새 글.
+    expect(resume).not.toHaveClass('ui-button-cta')
+    expect(
+      [...screen.getByRole('main').querySelectorAll('.ui-button-cta')].map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['새 글'])
     expect(within(review).getByText('내보내기 가능')).toBeInTheDocument()
     expect(within(empty).queryByText('내보내기 가능')).not.toBeInTheDocument()
     expect(within(history).queryByRole('link', { name: '내보내기' })).not.toBeInTheDocument()
@@ -387,8 +394,9 @@ describe('PostsPage', () => {
     expect(await screen.findByRole('link', { name: /성수 카페/ })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /서울 산책/ })).toBeNull()
     expect(screen.queryByRole('link', { name: /부산 밥상/ })).toBeNull()
-    // The 찾기 button counts the narrowing that is on.
-    expect(screen.getByRole('button', { name: '찾기 · 1' })).toBeInTheDocument()
+    // The 찾기 button counts the narrowing that is on, and stays a secondary button: the screen's
+    // one filled CTA is 새 글 (THEME-18).
+    expect(screen.getByRole('button', { name: '찾기 · 1' })).not.toHaveClass('ui-button-cta')
     await openFind()
     expect(screen.getByRole('combobox', { name: /^상태/ })).toHaveTextContent('발행됨')
   })

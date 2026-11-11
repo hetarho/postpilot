@@ -50,7 +50,8 @@ export function StatusTile({
 
 /** Guide: 이어서 쓰기 — the latest unfinished work as the one big card a list opens on, so a busy
  *  owner coming back taps once. The whole card is the link (`renderLink`), its 계속하기 a picture
- *  of the press rather than a second target. */
+ *  of the press rather than a second target — and never a second filled CTA: the screen's one is
+ *  its creation button, and the card's tint already says it comes first (THEME-18). */
 export function ContinueHero({
   kind,
   title,
@@ -99,7 +100,10 @@ export function ContinueHero({
             </span>
             <span
               aria-hidden="true"
-              className={buttonStyles({ variant: 'cta', className: 'pointer-events-none w-full' })}
+              className={buttonStyles({
+                variant: 'secondary',
+                className: 'pointer-events-none w-full',
+              })}
             >
               {t('work.continueAction')}
               <ArrowRight className="size-5" />
@@ -113,7 +117,7 @@ export function ContinueHero({
 
 /** Guide: 이어서 쓰기 as a list's first section — the list's own card for its newest unfinished
  *  work, rendered large (`heroCardStyles`) under the heading, so the card keeps every link and
- *  label it has in the list and the owner's next tap is the big 계속하기 on it. */
+ *  label it has in the list and the owner's next tap is the 계속하기 on it. */
 export function ContinueSection({ children }: { children: ReactNode }) {
   const { t } = useTranslation('channel')
   const id = useId()
@@ -164,7 +168,8 @@ export function WorkGroup({
 
 /** Guide: search and filters live behind ONE 찾기 button that opens a bottom sheet, so the list
  *  opens on its work rather than on a form. While a narrowing is on, the button says how many
- *  parts are active and a ✕ beside it clears them in one press. */
+ *  parts are active and a ✕ beside it clears them in one press; it stays a secondary button, since
+ *  the screen's one filled CTA is its creation button (THEME-18). */
 export function FindSheet({
   active,
   onClear,
@@ -181,7 +186,7 @@ export function FindSheet({
   return (
     <div className="flex items-center gap-2">
       <Button
-        variant={active ? 'cta' : 'secondary'}
+        variant="secondary"
         onClick={() => setOpen(true)}
         aria-haspopup="dialog"
         className="shadow-sm"

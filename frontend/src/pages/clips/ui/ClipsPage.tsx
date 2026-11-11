@@ -330,10 +330,11 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                     params={{ clipId: project.id }}
                     onClick={() => remember(project.id)}
                     className={
+                      // The hero's 계속하기 is its card's own way in, never a second filled CTA
+                      // beside the list's creation button (THEME-18).
                       heroCard
                         ? buttonStyles({
-                            variant: 'cta',
-                            size: 'hero',
+                            variant: 'secondary',
                             className: clsx('w-full', workCardActionClass),
                           })
                         : buttonStyles({

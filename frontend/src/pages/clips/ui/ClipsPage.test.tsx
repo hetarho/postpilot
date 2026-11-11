@@ -266,6 +266,9 @@ describe('clip directory', () => {
     const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
     expect(within(done).getByRole('link', { name: /끝난 클립/ })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /새 초안/ })).toHaveLength(1)
+    // THEME-18: the hero's 계속하기 is no filled CTA; the screen's one is its creation button.
+    expect(within(hero).getByRole('link', { name: '이어서 편집' })).not.toHaveClass('ui-button-cta')
+    expect(screen.getByRole('main').querySelectorAll('.ui-button-cta')).toHaveLength(1)
   })
 
   it('keeps the secondary history free of a docked new-clip action', async () => {

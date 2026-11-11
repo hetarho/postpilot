@@ -54,5 +54,9 @@ it('leads with the newest unfinished work and groups posts and clips by status',
   // The page's one big creation leads to 만들기 (as the tab does), and reading starts nothing.
   const main = screen.getByRole('main')
   expect(within(main).getByRole('link', { name: '만들기' })).toHaveAttribute('href', '/create')
+  // THEME-18: the screen's one filled CTA is 만들기; the tinted hero's 계속하기 is not a second.
+  expect([...main.querySelectorAll('.ui-button-cta')].map((node) => node.textContent)).toEqual([
+    '만들기',
+  ])
   expect(calls.filter((call) => /^(Start|Create|Generate|Save)/.test(call))).toEqual([])
 })
