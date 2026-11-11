@@ -108,3 +108,18 @@ it('shows no description and no 템플릿 관리 link', async () => {
   expect(screen.queryByText('협찬 방문 리뷰')).not.toBeInTheDocument()
   expect(screen.queryByRole('link', { name: '템플릿 관리' })).not.toBeInTheDocument()
 })
+
+it('offers large, directly selectable cards and the creation path in the writing flow', async () => {
+  const user = userEvent.setup()
+  const create = vi.fn()
+  const { onSelect } = renderSelect({ presentation: 'cards', onCreateTemplate: create })
+  const template = await screen.findByRole('button', { name: '정보성 식당 리뷰' })
+  await waitFor(() => expect(template).toBeEnabled())
+  expect(screen.getByRole('button', { name: '없음' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByText('협찬 방문 리뷰')).toBeVisible()
+  await user.click(template)
+  expect(onSelect).toHaveBeenCalledWith('template-review')
+  await waitFor(() => expect(template).toHaveAttribute('aria-pressed', 'true'))
+  await user.click(screen.getByRole('button', { name: '새 템플릿 만들기' }))
+  expect(create).toHaveBeenCalledOnce()
+})

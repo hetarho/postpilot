@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { FOCUSABLE_SELECTOR, focusablesIn } from '../focus/focusable'
 import { lockBodyScroll } from './scroll-lock'
 

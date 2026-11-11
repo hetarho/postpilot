@@ -6,7 +6,16 @@ import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
 import { MemoryEditForm } from '@/features/edit-memory'
-import { ActionBar, Badge, Button, Notice, Typography, pageStyles } from '@/shared/ui'
+import {
+  ActionBar,
+  Badge,
+  Button,
+  Notice,
+  Typography,
+  cardStyles,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 
 /** The account's 기억 (MEM-24). Composition only — every action is its own feature.
  *
@@ -46,10 +55,15 @@ export function MemoriesPage() {
   }, [removed, memories, t])
 
   return (
-    <main ref={page} className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
-      <Typography variant="display">{t('title', { ns: 'memories' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.description', { ns: 'memories' })}
+    <main
+      ref={page}
+      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
+    >
+      {/* Guide: the hub's title and the 기억 chip say where this is; the page leads with what the
+          list IS — what the AI remembers — and the facts themselves. */}
+      <h1 className="sr-only">{t('title', { ns: 'memories' })}</h1>
+      <Typography variant="display" as="p" aria-hidden="true">
+        {t('page.lead', { ns: 'memories' })}
       </Typography>
 
       {isError && (
@@ -76,14 +90,18 @@ export function MemoriesPage() {
           {memories.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-labelledby="memories-heading" className="mt-8">
-              <Typography variant="title" id="memories-heading">
-                {t('page.saved', { ns: 'memories' })}
-              </Typography>
-              <Typography variant="body" as="p" className="text-content-secondary mt-1">
+            <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-6">
+              <h2 className="flex items-baseline gap-2">
+                <span className={typographyStyles({ variant: 'title' })}>
+                  {t('page.saved', { ns: 'memories' })}
+                </span>
+                <span className={typographyStyles({ variant: 'label' })}>{memories.length}</span>
+              </h2>
+              <Typography variant="meta" as="p" className="mt-1">
                 {t('page.order', { ns: 'memories' })}
               </Typography>
-              <ul ref={list} className="divide-divider mt-3 divide-y">
+              {/* Guide: each fact on its own card, its kind and tags under it. */}
+              <ul ref={list} className="mt-3 grid gap-3 lg:grid-cols-2">
                 {memories.map((memory, index) => (
                   <MemoryRow
                     key={memory.id}
@@ -98,12 +116,14 @@ export function MemoriesPage() {
 
           {/* The page is the list; authoring happens behind this one trigger, the shape every
               sibling directory uses (MEM-24, THEME-24). */}
+          {/* The full width on a phone and a right-aligned pill from `sm:`, like every section's
+              creation button (THEME-67). */}
           <ActionBar
             dock="list"
             ariaLabel={t('create.dockAria', { ns: 'memories' })}
-            className="mt-auto"
+            className="mt-auto w-full sm:w-fit"
           >
-            <CreateMemorySheet ownerId={ownerId} />
+            <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
           </ActionBar>
         </>
       )}
@@ -171,7 +191,7 @@ function MemoryRow({
 
   if (form.editing)
     return (
-      <li className="py-3">
+      <li className={cardStyles({ padding: 'sm', className: 'shadow-sm' })}>
         <MemoryEditForm
           memory={memory}
           save={update.save}
@@ -186,10 +206,11 @@ function MemoryRow({
     )
 
   return (
-    <li className="py-3">
+    <li className={cardStyles({ padding: 'sm', className: 'shadow-sm' })}>
       <div className="flex flex-wrap items-start gap-1">
         <Typography
-          variant="body"
+          variant="fieldTitle"
+          as="p"
           className="text-content-primary min-w-0 flex-1 pt-2 whitespace-pre-wrap"
         >
           {memory.text}

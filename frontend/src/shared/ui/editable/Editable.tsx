@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Pencil } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Button } from '../button/Button'
 import { FOCUSABLE_SELECTOR, focusablesIn } from '../focus/focusable'
 

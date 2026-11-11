@@ -10,7 +10,7 @@ import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 import { readVideoMetadata } from '@/shared/lib/media'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 import { renderAppAt } from '@/test/app'
-import { USER, openStep, resetEditorTest } from '@/test/editor'
+import { GUIDE, USER, guideTo, openStep, resetEditorTest } from '@/test/editor'
 import {
   finalizedPostRow,
   publishedPostRow,
@@ -254,7 +254,8 @@ describe('making a clip from a finished post', () => {
     await openStep(user, '글 생성')
     await user.clear(screen.getByLabelText('메모'))
     await user.type(screen.getByLabelText('메모'), '방금 쓴 메모')
-    await user.click(screen.getByRole('switch', { name: '체험단 글' }))
+    await guideTo(user, GUIDE.kind)
+    await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
     await openStep(user, '글 완성')
     await confirm(user)
     await arrived(view)

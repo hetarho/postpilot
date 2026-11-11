@@ -1,5 +1,5 @@
 import { forwardRef, type LabelHTMLAttributes } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export const FieldLabel = forwardRef<HTMLLabelElement, LabelHTMLAttributes<HTMLLabelElement>>(
   function FieldLabel({ className, ...props }, ref) {

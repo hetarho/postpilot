@@ -4,7 +4,21 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useSetup } from '@/features/complete-setup'
-import { Button, Notice, ProgressBar, Typography, pageStyles } from '@/shared/ui'
+import { ChevronRight, Clapperboard, House, PenLine } from 'lucide-react'
+import {
+  Button,
+  ListRowIcon,
+  Notice,
+  ProgressBar,
+  StepBar,
+  StepBarActions,
+  StepBarBack,
+  StepBarCta,
+  Typography,
+  cardStyles,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 import type { VoiceLearningNavigation } from '@/features/prepare-writing-voice'
 import { VoiceSetup } from './VoiceSetup'
 import { TemplateSetup } from './TemplateSetup'
@@ -73,17 +87,16 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
       </main>
     )
   return (
+    // Guide: a conversation — one friendly question per screen in one centred column, its answers
+    // as big tiles, and the way back and the skip in the thumb zone.
     <main
-      className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-16' })}
+      className={pageStyles({
+        width: templateStep ? 'wide' : 'prose',
+        className: 'flex flex-1 flex-col pt-4 pb-0 sm:pt-12 sm:pb-0',
+      })}
     >
-      <div className="grid w-full gap-4 md:grid-cols-2 md:items-start md:gap-12 xl:grid-cols-3">
-        <section
-          ref={heading}
-          className={clsx(
-            'min-w-0',
-            templateStep ? 'md:col-span-2 xl:col-span-3' : 'md:col-span-1',
-          )}
-        >
+      <div key={state.step} className="animate-step-in flex w-full flex-1 flex-col gap-6">
+        <section ref={heading} className="min-w-0">
           <div className="flex items-center justify-between gap-4">
             <Typography variant="meta">{t('setup.progress')}</Typography>
             {state.plan.length > 0 && (
@@ -101,81 +114,92 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
             total={Math.max(1, state.plan.length)}
             className="mt-2 md:mt-3"
           />
+          {/* The question, large, on every screen and every width. */}
           <Typography
-            variant={introStep ? 'display' : 'title'}
+            variant="stepTitle"
             as="h1"
             tabIndex={-1}
-            className={clsx(
-              'focus:outline-none',
-              introStep ? 'mt-6 md:mt-10' : 'sr-only md:not-sr-only md:mt-10',
-            )}
+            className="mt-6 text-balance focus:outline-none md:mt-10"
           >
             {t(`setup.${state.step}.title`)}
           </Typography>
-          <Typography
-            variant="body"
-            className={clsx(
-              'text-content-secondary max-w-measure mt-4',
-              !introStep && 'hidden md:block',
-            )}
-          >
+          <Typography variant="body" className="text-content-secondary max-w-measure mt-3">
             {t(`setup.${state.step}.description`)}
           </Typography>
-          {introStep && (
-            <>
-              <div className="mt-6 flex flex-wrap gap-2 md:mt-8 md:gap-3">
-                {state.step === 'welcome' ? (
-                  <>
-                    <Button variant="cta" onClick={() => controller.next()}>
-                      {t('setup.welcome.action')}
-                    </Button>
-                    <Button variant="ghost" onClick={() => controller.defer('/')}>
-                      {t('setup.later')}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <Button variant="cta" onClick={() => controller.finish('/')}>
-                      {t('setup.ready.home')}
-                    </Button>
-                    <Button variant="ghost" onClick={() => controller.finish('/posts/new')}>
-                      {t('setup.ready.post')}
-                    </Button>
-                    <Button variant="ghost" onClick={() => controller.finish('/clips/new')}>
-                      {t('setup.ready.clip')}
-                    </Button>
-                  </>
-                )}
-              </div>
-              <Typography variant="meta" className="mt-6 block">
-                {t('setup.optional')}
-              </Typography>
-            </>
+          {state.step === 'ready' && (
+            // The last answer as three big tiles: where to go now.
+            <div className="mt-8 grid gap-3">
+              {(
+                [
+                  ['/', 'setup.ready.home', House],
+                  ['/posts/new', 'setup.ready.post', PenLine],
+                  ['/clips/new', 'setup.ready.clip', Clapperboard],
+                ] as const
+              ).map(([target, label, Icon], position) => (
+                <button
+                  key={target}
+                  type="button"
+                  onClick={() => controller.finish(target)}
+                  className={cardStyles({
+                    interactive: true,
+                    className: clsx(
+                      'flex min-h-20 w-full items-center gap-4 text-left',
+                      position === 0 && 'bg-badge-accent-bg',
+                    ),
+                  })}
+                >
+                  <ListRowIcon icon={Icon} size="lg" />
+                  <span className={typographyStyles({ variant: 'title', className: 'flex-1' })}>
+                    {t(label)}
+                  </span>
+                  <ChevronRight
+                    aria-hidden="true"
+                    className="text-content-tertiary size-6 shrink-0"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+          {/* A template step's foot is the wizard's step bar, so its note stands up here. */}
+          {(introStep || templateStep) && (
+            <Typography variant="meta" className="mt-6 block">
+              {t('setup.optional')}
+            </Typography>
           )}
         </section>
-        <div
-          className={clsx(
-            'min-w-0',
-            templateStep ? 'md:col-span-2 xl:col-span-3' : 'md:col-span-1 xl:col-span-2',
-          )}
-        >
-          <div>
-            {introStep && state.plan.length > 0 && (
-              <ol
-                aria-label={t('setup.overview.label')}
-                className="grid gap-4 sm:grid-cols-2 md:gap-8 xl:grid-cols-3"
-              >
+        {/* A template wizard ends on its own step bar, which meets the screen's bottom edge only
+            down a chain of flex columns. */}
+        <div className={clsx('min-w-0', templateStep && 'flex flex-1 flex-col')}>
+          <div className={clsx(templateStep && 'flex flex-1 flex-col')}>
+            {state.step === 'welcome' && state.plan.length > 0 && (
+              // What the conversation will ask, as numbered cards.
+              <ol aria-label={t('setup.overview.label')} className="grid gap-3">
                 {state.plan.map((form, position) => (
-                  <li key={form} className="min-w-0 space-y-3">
-                    <Typography variant="meta" className="text-content-tertiary block">
-                      {String(position + 1).padStart(2, '0')}
-                    </Typography>
-                    <Typography variant="fieldTitle" as="h2">
-                      {t(`setup.overview.${form}.title`)}
-                    </Typography>
-                    <Typography variant="body" className="text-content-secondary">
-                      {t(`setup.overview.${form}.description`)}
-                    </Typography>
+                  <li
+                    key={form}
+                    className={cardStyles({
+                      padding: 'sm',
+                      className: 'flex min-w-0 items-start gap-4 shadow-sm',
+                    })}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={typographyStyles({
+                        variant: 'label',
+                        className:
+                          'bg-badge-accent-bg text-badge-accent-fg flex size-10 shrink-0 items-center justify-center rounded-full',
+                      })}
+                    >
+                      {position + 1}
+                    </span>
+                    <span className="flex min-w-0 flex-col gap-1">
+                      <Typography variant="fieldTitle" as="h2">
+                        {t(`setup.overview.${form}.title`)}
+                      </Typography>
+                      <Typography variant="body" className="text-content-secondary">
+                        {t(`setup.overview.${form}.description`)}
+                      </Typography>
+                    </span>
                   </li>
                 ))}
               </ol>
@@ -195,33 +219,64 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                 ownerId={ownerId}
                 kind={state.step}
                 controller={controller}
+                host={{
+                  back: controller.back,
+                  backDisabled: busy,
+                  footer: (
+                    <Button
+                      variant="ghost"
+                      className="w-full"
+                      disabled={busy}
+                      onClick={controller.skip}
+                    >
+                      {t('setup.skip')}
+                    </Button>
+                  ),
+                }}
               />
             )}
           </div>
-          {state.step !== 'welcome' && state.step !== 'ready' && (
-            <div className="mt-4 flex flex-wrap justify-between gap-3 md:mt-8">
-              <Button
-                variant="ghost"
-                disabled={busy}
-                onClick={() => {
-                  if (state.step === 'voice' && voiceNavigation.current?.back()) return
-                  controller.back()
-                }}
-              >
-                {t('setup.back')}
-              </Button>
-              <Button variant="ghost" disabled={busy} onClick={controller.skip}>
-                {t('setup.skip')}
-              </Button>
-            </div>
-          )}
-          {!introStep && (
+          {!introStep && !templateStep && (
             <Typography variant="meta" className="mt-4 block md:mt-8">
               {t('setup.optional')}
             </Typography>
           )}
         </div>
       </div>
+      {/* The thumb zone, on the step bar every stepped screen shares: the screen's one big
+          answer on the welcome, and the way back and the skip on the voice question. A template
+          question's bar is its wizard's, which carries setup's way back and skip. */}
+      {state.step === 'welcome' && (
+        <StepBar>
+          <StepBarActions>
+            <StepBarCta onClick={() => controller.next()}>{t('setup.welcome.action')}</StepBarCta>
+          </StepBarActions>
+          <Button variant="ghost" className="w-full" onClick={() => controller.defer('/')}>
+            {t('setup.later')}
+          </Button>
+        </StepBar>
+      )}
+      {state.step !== 'welcome' && state.step !== 'ready' && !templateStep && (
+        <StepBar>
+          <StepBarActions
+            back={
+              <StepBarBack
+                label={t('setup.back')}
+                disabled={busy}
+                onClick={() => {
+                  if (state.step === 'voice' && voiceNavigation.current?.back()) return
+                  controller.back()
+                }}
+              />
+            }
+            className="justify-between"
+          >
+            <Button variant="ghost" disabled={busy} onClick={controller.skip}>
+              {t('setup.skip')}
+            </Button>
+          </StepBarActions>
+        </StepBar>
+      )}
     </main>
   )
 }

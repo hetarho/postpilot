@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Button } from './Button'
 import { buttonStyles } from './buttonStyles'
+import { cardStyles } from '../card/cardStyles'
 
 describe('Button', () => {
   it('is a non-submitting button by default and forwards its ref', () => {
@@ -30,7 +31,6 @@ describe('Button', () => {
   })
 
   it.each([
-    ['cta', 'bg-button-cta-bg'],
     ['secondary', 'bg-button-secondary-bg'],
     ['ghost', 'bg-button-ghost-bg'],
     ['danger', 'text-button-danger-quiet-fg'],
@@ -39,6 +39,15 @@ describe('Button', () => {
     // The pointer floor (THEME-23): 40px under a mouse, the 44px touch floor under a thumb.
     expect(buttonStyles({ variant })).toContain('min-h-10')
     expect(buttonStyles({ variant })).toContain('pointer-coarse:min-h-11')
+  })
+
+  // Guide: a committing action is at least 48px at every pointer, and the step's one big action
+  // takes the 56px hero size.
+  it('gives the committing cta 48px and the hero action 56px at every pointer', () => {
+    expect(buttonStyles({ variant: 'cta' })).toContain('bg-button-cta-bg')
+    expect(buttonStyles({ variant: 'cta' })).toContain('min-h-12')
+    expect(buttonStyles({ variant: 'cta', size: 'hero' })).toContain('min-h-14')
+    expect(buttonStyles({ variant: 'cta' })).toContain('rounded-full')
   })
 
   it('keeps icon actions square at the pointer floor', () => {
@@ -54,6 +63,22 @@ describe('Button', () => {
     const styles = buttonStyles({ size: 'compact' })
     expect(styles).toContain('min-h-8')
     expect(styles).toContain('pointer-coarse:min-h-9')
+  })
+
+  // A secondary pill is the card's own plane; on a card the stylesheet gives it the card's well
+  // through these two hooks, so 기억으로 저장 on 더 해 보기 reads as a button, not loose text.
+  it('marks a secondary button and a card for the on-card plane', () => {
+    render(
+      <section className={cardStyles()}>
+        <Button>기억으로 저장</Button>
+        <Button variant="ghost">닫기</Button>
+      </section>,
+    )
+    expect(screen.getByRole('button', { name: '기억으로 저장' })).toHaveClass('ui-button-secondary')
+    expect(screen.getByRole('button', { name: '닫기' })).not.toHaveClass('ui-button-secondary')
+    expect(screen.getByRole('button', { name: '기억으로 저장' }).parentElement).toHaveClass(
+      'ui-card',
+    )
   })
 
   it('marks styled links and file labels for the same contextual dock sizing as buttons', () => {

@@ -1,4 +1,5 @@
 import { useEffect, useId, useState, type ReactNode } from 'react'
+import { clsx } from 'clsx'
 import { useTranslation } from 'react-i18next'
 import {
   originContentMatches,
@@ -28,6 +29,14 @@ const CATEGORY_STYLES: Record<SemanticOriginCategory, string> = {
 }
 const UNCONFIRMED_STYLE =
   'text-origin-unconfirmed-foreground bg-origin-unconfirmed-highlight decoration-wavy'
+/** The legend while 출처 보기 is off: every category in the same quiet grey, told apart only by
+ *  its line, so the key stays readable without claiming the colours the draft is not wearing. */
+const CATEGORY_MUTED: Record<SemanticOriginCategory, string> = {
+  owner_input: 'text-content-tertiary decoration-solid',
+  photo_interpretation: 'text-content-tertiary decoration-dashed',
+  advertiser_request: 'text-content-tertiary decoration-double',
+  ai_added: 'text-content-tertiary decoration-dotted',
+}
 
 interface WritingOriginReviewProps {
   ownerId: string
@@ -116,7 +125,7 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
         <SelectableText
           key={`${segment.start}:${segment.end}`}
           data-writing-origin-phrase
-          className={`underline underline-offset-4 ${
+          className={`duration-base underline underline-offset-4 transition-opacity starting:opacity-0 ${
             segment.state === 'supported' && segment.category
               ? CATEGORY_STYLES[segment.category]
               : UNCONFIRMED_STYLE
@@ -149,52 +158,47 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
 
   return (
     <>
-      <div className="my-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-4">
-          <label className="inline-flex cursor-pointer items-center gap-3">
+      {/* One steady bar: the toggle only shows or hides the colours. Nothing in it appears or
+          leaves — 문구 출처 찾기 stays and is disabled while the colours are off — and the legend
+          is always there, coloured while the draft wears its colours and grey while it does not,
+          so a press never moves the draft under the owner's thumb. The two longer notes live in
+          문구 출처 찾기's sheet, where the owner goes to read about a phrase. */}
+      <div className="my-4 space-y-2">
+        <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-3">
             <Checkbox checked={visible} onChange={(event) => setVisible(event.target.checked)} />
             <Typography variant="body" as="span">
               {t('originReview.toggle', { ns: 'posts' })}
             </Typography>
           </label>
-          {visible && (
-            <Button
-              variant="ghost"
-              aria-haspopup="dialog"
-              aria-expanded={pickerOpen}
-              onClick={() => {
-                setSelection(null)
-                setPickerFence(fence)
-              }}
-            >
-              {t('originReview.find', { ns: 'posts' })}
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            disabled={!visible}
+            aria-haspopup="dialog"
+            aria-expanded={pickerOpen}
+            onClick={() => {
+              setSelection(null)
+              setPickerFence(fence)
+            }}
+          >
+            {t('originReview.find', { ns: 'posts' })}
+          </Button>
         </div>
-        {visible && (
-          <>
-            <ul
-              aria-label={t('originReview.legend', { ns: 'posts' })}
-              className="flex flex-wrap gap-3"
-            >
-              {SEMANTIC_ORIGIN_CATEGORIES.map((category) => (
-                <Typography variant="body" as="li" key={category}>
-                  <span
-                    className={`rounded-sm underline underline-offset-4 ${CATEGORY_STYLES[category]}`}
-                  >
-                    {t(`originReview.category.${category}`, { ns: 'posts' })}
-                  </span>
-                </Typography>
-              ))}
-            </ul>
-            <Typography variant="body" className="text-content-secondary">
-              {t('originReview.help', { ns: 'posts' })}
+        <ul aria-label={t('originReview.legend', { ns: 'posts' })} className="flex flex-wrap gap-3">
+          {SEMANTIC_ORIGIN_CATEGORIES.map((category) => (
+            <Typography variant="body" as="li" key={category}>
+              <span
+                data-origin-legend={visible ? 'on' : 'off'}
+                className={clsx(
+                  'duration-base rounded-sm underline underline-offset-4 transition-colors',
+                  visible ? CATEGORY_STYLES[category] : CATEGORY_MUTED[category],
+                )}
+              >
+                {t(`originReview.category.${category}`, { ns: 'posts' })}
+              </span>
             </Typography>
-            <Typography variant="body" className="text-content-secondary">
-              {t('originReview.unconfirmedHelp', { ns: 'posts' })}
-            </Typography>
-          </>
-        )}
+          ))}
+        </ul>
       </div>
       <div className="contents" onCopy={copyOriginSelection}>
         {children({
@@ -239,6 +243,14 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
             <OriginDetail selection={selected} review={review} />
           ) : (
             <>
+              <div className="mb-4 space-y-3">
+                <Typography variant="body" className="text-content-secondary">
+                  {t('originReview.help', { ns: 'posts' })}
+                </Typography>
+                <Typography variant="body" className="text-content-secondary">
+                  {t('originReview.unconfirmedHelp', { ns: 'posts' })}
+                </Typography>
+              </div>
               <Typography variant="body" className="mb-4">
                 {t('originReview.pickerHelp', { ns: 'posts' })}
               </Typography>

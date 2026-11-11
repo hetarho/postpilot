@@ -4,7 +4,7 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'templates',
   ko: {
-    picker: { create: '새 템플릿 만들기' },
+    picker: { create: '새 템플릿 만들기', without: '템플릿 없이 사진과 메모로 쓸게요.' },
     assignment: {
       runningJob:
         '진행 중인 AI 작업은 시작할 때의 템플릿으로 끝나요. 바꾼 템플릿은 다음 생성부터 적용됩니다.',
@@ -15,7 +15,7 @@ export const i18n = {
     },
   },
   en: {
-    picker: { create: 'New template' },
+    picker: { create: 'New template', without: 'Write from my photos and notes.' },
     assignment: {
       runningJob:
         'A running AI job finishes with the template it started with. A change applies from the next generation.',

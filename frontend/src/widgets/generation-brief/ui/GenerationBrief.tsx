@@ -52,6 +52,10 @@ interface GenerationBriefProps {
     onOpen: () => Promise<void> | void
     disabled?: boolean
   }
+  /** Guide: given, the trigger is a summary row's quiet text button wearing this label (확인's
+   *  바꾸기) instead of the dock's gear glyph. The caller names it, since the row it stands in is
+   *  the caller's (ARCH-16); the button keeps the brief's name either way. */
+  changeLabel?: string
   /** The run-options form. Absent for a draft with no post yet: the form has no slug to save
    *  against, and appears after the draft's first save (POST-89). */
   options?: {
@@ -92,6 +96,7 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
       onClose,
       locked = false,
       writingTest,
+      changeLabel,
       options,
     },
     ref,
@@ -129,8 +134,11 @@ export const GenerationBrief = forwardRef<PopoverHandle, GenerationBriefProps>(
         // exists to produce (owner decision, 2026-09-01). The 말투 and 템플릿 it used to name now sit
         // beside this glyph as their own dropdowns, so the two expensive-to-get-wrong fields are
         // visible WITHOUT opening anything, which is what naming them in the trigger was for.
-        triggerSize="icon"
-        triggerLabel={<Settings aria-hidden="true" className="size-5" />}
+        triggerSize={changeLabel ? 'default' : 'icon'}
+        triggerVariant={changeLabel ? 'ghost' : 'secondary'}
+        triggerClassName={changeLabel ? 'text-link-fg-current' : undefined}
+        triggerLabel={changeLabel ?? <Settings aria-hidden="true" className="size-5" />}
+        placement={changeLabel ? 'below' : 'above'}
         align="end"
         phone="sheet"
         className="shrink-0"

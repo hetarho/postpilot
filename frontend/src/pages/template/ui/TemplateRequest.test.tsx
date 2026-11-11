@@ -23,7 +23,9 @@ const source = finalizedPostRow({
 })
 async function target(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: /^맛집/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^식사/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '이런 글은 보통 이렇게 구성돼요' })
 }
 describe('template creation from post headings', () => {
@@ -53,6 +55,7 @@ describe('template creation from post headings', () => {
       expect(screen.queryByText(new RegExp(text))).not.toBeInTheDocument()
     await user.click(screen.getAllByRole('button', { name: '이전' })[0]!)
     await user.click(await screen.findByRole('button', { name: /^식사/ }))
+    await user.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getAllByRole('checkbox', { name: '첫인상과 공간' })).toHaveLength(1)
     expect(calls.filter((name) => /Create|Start/.test(name))).toEqual([])
   })

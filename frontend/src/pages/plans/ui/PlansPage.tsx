@@ -236,6 +236,7 @@ export function PlansPage() {
               )}
             </div>
             <PlanLadder
+              layout="swipe"
               className="mt-2 md:mt-6"
               offers={myPlan.offers}
               currentPlan={myPlan.plan}

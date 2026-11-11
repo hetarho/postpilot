@@ -8,6 +8,8 @@ export {
   markClipHistoryReturn,
   readClipHistoryReturn,
   completeClipHistoryReturn,
+  readMyWorkClipReturn,
+  completeMyWorkClipReturn,
   forgetClipEntry,
   isClipHistoryEntry,
   type ClipEntry,

@@ -1,5 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Plus } from 'lucide-react'
 import {
   MemoryKindField,
   MemoryTagsField,
@@ -13,7 +14,8 @@ import { Button, FieldLabel, FieldMessage, Sheet, Textarea, Typography } from '@
 
 /** The directory's one committing action and the overlay it opens (MEM-24). The trigger is
  *  rendered here rather than by the page so the open state stays with the form it opens, and so
- *  there is exactly one of each at every width.
+ *  there is exactly one of each at every width. It is the section's creation button, the same
+ *  `hero` pill with its plus glyph as every sibling section's (THEME-67).
  *
  *  A fact the author knows on day one should not require generating a post first (MEM-25), which
  *  is what this is for: the same field rules as an approval, with no post behind it. */
@@ -22,7 +24,8 @@ export function CreateMemorySheet({ ownerId, className }: { ownerId: string; cla
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button variant="cta" className={className} onClick={() => setOpen(true)}>
+      <Button variant="cta" size="hero" className={className} onClick={() => setOpen(true)}>
+        <Plus aria-hidden="true" className="size-6 shrink-0" />
         {t('create.open')}
       </Button>
       {open && <CreateMemoryPanel ownerId={ownerId} onClose={() => setOpen(false)} />}

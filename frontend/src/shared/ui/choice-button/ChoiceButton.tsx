@@ -34,6 +34,8 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
   ref,
 ) {
   const id = useId()
+  // `selected` given at all makes this one option among peers; absent, the card is an action.
+  const choice = selected !== undefined
   return (
     <button
       ref={ref}
@@ -47,6 +49,9 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
         variant: 'secondary',
         className: clsx(
           'group @container w-full min-w-0 justify-start rounded-lg p-0 text-left',
+          // The chosen card is ringed in the accent, the way ①'s template cards always were, so a
+          // choice reads as made at a glance rather than by a small tick alone.
+          selected && 'ring-stroke-accent ring-2',
           className,
         ),
       })}
@@ -60,21 +65,30 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
         )}
       >
         {icon && (
-          <span aria-hidden="true" className="text-content-secondary hidden shrink-0 @md:block">
+          <span
+            aria-hidden="true"
+            className={clsx(
+              'hidden shrink-0 transition-colors @md:block',
+              selected ? 'text-link-fg-current' : 'text-content-secondary',
+            )}
+          >
             {icon}
           </span>
         )}
         <span className="min-w-0 flex-1">
-          {selected && description && (
-            <span aria-hidden="true" className="text-content-secondary mb-2 block @md:hidden">
-              <Check className="size-5" />
+          {/* Narrow, the mark sits in the card's corner over space the title always leaves for
+              it. Set above the title as a row of its own, it made the chosen card a row taller
+              and the one let go a row shorter, so every choice jolted the cards under it. */}
+          {choice && description && (
+            <span aria-hidden="true" className="absolute top-4 right-4 @md:hidden">
+              <ChoiceMark selected={selected} />
             </span>
           )}
           <Typography
             as="span"
             variant="fieldTitle"
             id={`${id}-title`}
-            className="block break-words"
+            className={clsx('block break-words', choice && description && 'pr-8 @md:pr-0')}
           >
             {title}
           </Typography>
@@ -93,8 +107,10 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
           aria-hidden="true"
           className={clsx('text-content-secondary shrink-0', description && 'hidden @md:block')}
         >
+          {/* A choice shows whether it is chosen; only a card that leads somewhere carries the
+              chevron, so a list of options never reads as a list of links. */}
           {trailing ??
-            (selected ? <Check className="size-5" /> : <ChevronRight className="size-5" />)}
+            (choice ? <ChoiceMark selected={selected} /> : <ChevronRight className="size-5" />)}
         </span>
       </span>
       {pending && (
@@ -105,3 +121,20 @@ export const ChoiceButton = forwardRef<HTMLButtonElement, ChoiceButtonProps>(fun
     </button>
   )
 })
+
+/** The round mark of a peer choice: an empty ring until chosen, then filled in the accent with a
+ *  tick — the radio counterpart of `Checkbox`, on the same roles. */
+function ChoiceMark({ selected }: { selected?: boolean }) {
+  return (
+    <span
+      className={clsx(
+        'inline-flex size-6 items-center justify-center rounded-full ring-2 transition-[background-color,color,box-shadow] ring-inset',
+        selected
+          ? 'bg-button-cta-bg text-button-cta-fg ring-transparent'
+          : 'bg-field-bg ring-checkbox-edge text-transparent',
+      )}
+    >
+      <Check className="size-4" strokeWidth={3} />
+    </span>
+  )
+}

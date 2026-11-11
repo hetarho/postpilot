@@ -1,7 +1,7 @@
-import { Outlet } from '@tanstack/react-router'
+import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { Calculator, Coins, Gift, KeyRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { TabLinks, Typography, type TabLink, pageStyles } from '@/shared/ui'
+import { Typography, chipStyles, type TabLink, pageStyles } from '@/shared/ui'
 
 /** The operator surfaces, in one list so the row and the routes cannot drift — the same
  *  reason `VoiceLayout` keeps one `VOICE_TABS`. Each carries an icon and a short caption so the
@@ -29,19 +29,35 @@ const ADMIN_TABS: readonly (Omit<TabLink, 'label' | 'shortLabel'> & {
  *  by other means still reads nothing. */
 export function AdminLayout() {
   const { t } = useTranslation('plans')
+  const pathname = useRouterState({ select: (state) => state.location.pathname }).replace(
+    /\/+$/u,
+    '',
+  )
 
   return (
-    <main className={pageStyles()}>
-      <Typography variant="display">{t('admin.title')}</Typography>
-      <TabLinks
-        items={ADMIN_TABS.map(({ labelKey, ...tab }) => ({
-          ...tab,
-          label: t(`admin.tab.${labelKey}`),
-          shortLabel: t(`admin.tabShort.${labelKey}`),
-        }))}
-        ariaLabel={t('admin.title')}
-        className="mt-4"
-      />
+    <main className={pageStyles({ width: 'wide' })}>
+      <Typography variant="largeTitle">{t('admin.title')}</Typography>
+      {/* Guide: the operator's screens as the same sideways chip row every hub uses, each chip
+          led by its glyph. */}
+      <nav
+        aria-label={t('admin.title')}
+        className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
+      >
+        {ADMIN_TABS.map(({ labelKey, to, icon: Icon }) => {
+          const current = pathname === to
+          return (
+            <Link
+              key={to}
+              to={to}
+              aria-current={current ? 'page' : undefined}
+              className={chipStyles({ current })}
+            >
+              {Icon && <Icon aria-hidden="true" className="size-4" />}
+              {t(`admin.tab.${labelKey}`)}
+            </Link>
+          )
+        })}
+      </nav>
       <Outlet />
     </main>
   )

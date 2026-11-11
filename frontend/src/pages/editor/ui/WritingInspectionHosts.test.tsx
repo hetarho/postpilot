@@ -19,7 +19,7 @@ import {
 } from '@/shared/api'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
 import { renderAppAt } from '@/test/app'
-import { resetEditorTest } from '@/test/editor'
+import { GUIDE, guideTo, resetEditorTest } from '@/test/editor'
 
 afterEach(() => {
   cleanup()
@@ -150,6 +150,8 @@ it('unsaved owner source edits invalidate the opened technical view and prevent 
     },
   })
   renderAppAt('/posts/edit-post', { transport: inspectedTransport(base, procedures) })
+  // The memo is 글 생성's first screen.
+  await guideTo(user, GUIDE.story)
   await user.click(await screen.findByRole('button', { name: '요청 기술 보기' }))
   await screen.findByText('Frozen owner source')
   const before = procedures.filter((name) => name === 'GetPostRequestInspection').length

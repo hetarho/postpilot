@@ -1,16 +1,19 @@
 import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FieldLabel, Textarea, Typography, typographyStyles } from '@/shared/ui'
+import { FieldLabel, Textarea } from '@/shared/ui'
 
 /** The 가제 belongs to 글 생성 alone (POST-50). From 글 다듬기 on there is exactly one
  *  title on the screen and it is `content.title`, edited through the block editor's header — two
  *  title fields side by side is a question the user cannot answer.
  *
- *  A textarea, not an input: a Korean title fits ~14 characters across a 360px screen at the
- *  display size, and a single-line input would scroll the rest of it out of a field that has no
- *  well to show it scrolled (THEME-8 — the title is one of the largest things on the screen, so it
- *  wraps instead). Its value and its autosave stay in `DraftEditor`, so unmounting it on another
- *  step cannot strand a queued save. */
+ *  It is the first field of 내용, so it is drawn as one: a named well, like the template answers
+ *  under it. As bare display-size text with its name hidden it sat under the screen's question as a
+ *  second, larger heading, and nothing said it could be typed in.
+ *
+ *  A textarea, not an input: a Korean title fits only a short line across a 360px screen, and a
+ *  single-line input would scroll the rest of it out of sight, so it wraps instead. Its value and
+ *  its autosave stay in `DraftEditor`, so unmounting it on another step cannot strand a queued
+ *  save. */
 export function TitleField({
   value,
   onChange,
@@ -28,18 +31,12 @@ export function TitleField({
   const { t } = useTranslation('posts')
   return (
     <>
-      <FieldLabel htmlFor="post-title" className="sr-only">
+      <FieldLabel htmlFor="post-title" className="mt-4 flex min-h-11 items-center">
         {t('editor.title')}
       </FieldLabel>
-      {/* The visible title remains an editable field, so this mirrors its current value into the
-          document outline without replacing the field or creating a second tab stop. */}
-      <Typography variant="display" className="sr-only">
-        {value.trim() || t('editor.titlePlaceholder')}
-      </Typography>
       <Textarea
         id="post-title"
         ref={fieldRef}
-        appearance="bare"
         rows={1}
         autoGrow
         value={value}
@@ -55,13 +52,11 @@ export function TitleField({
           event.preventDefault()
           nextRef.current?.focus()
         }}
-        placeholder={t('editor.titlePlaceholder')}
+        placeholder={t('guide.titlePlaceholder')}
         enterKeyHint="next"
         autoCapitalize="off"
         autoComplete="off"
-        // The bare editor's caller owns the field's type (THEME-29): the title wears the display role —
-        // the post title is the largest thing on the screen (THEME-8).
-        className={typographyStyles({ variant: 'display', className: 'mt-6' })}
+        className="mt-1"
       />
     </>
   )

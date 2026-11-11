@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes } from 'react'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   appearance?: 'well' | 'bare'
@@ -25,7 +25,9 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
               // phone gets 16px and the desktop keeps its density from 640px up.
               // `px-4` against the ~10–12px of effective vertical padding the floor produces is
               // the THEME-23 ratio.
-              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus rounded-md px-4 py-2 text-base sm:text-sm'
+              // Guide: 17px on a phone, 16px from `sm:` — never under the iOS zoom floor — and a
+              // 48px well under a thumb.
+              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus text-body rounded-md px-4 py-2 sm:text-base pointer-coarse:min-h-12'
             : 'bg-transparent',
           className,
         ),

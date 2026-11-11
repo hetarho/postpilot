@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** How far a job that is running RIGHT NOW has got, as a hairline track.
  *

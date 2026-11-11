@@ -1,15 +1,17 @@
 // ① 글 생성: starting a run, the re-observation picker, the photos and the writing brief's run
 // options and quality rows.
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
   BRIEF_TRIGGER,
+  GUIDE,
   M1_OVER_BAND,
   USER,
   briefField,
+  guideTo,
   openBrief,
   resetEditorTest,
 } from '@/test/editor'
@@ -30,6 +32,7 @@ async function confirmNoPhotos(user: ReturnType<typeof userEvent.setup>) {
 }
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   resetEditorTest()
   // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
@@ -76,6 +79,45 @@ describe('opening a post', () => {
     expect(bar).toHaveAttribute('aria-valuemax', '4')
     expect(screen.queryByText(/사진 2\/4/)).not.toBeInTheDocument()
     expect(calls).toContain('GetGeneration')
+  })
+
+  // The owner saw two bars for one run: the page-top hairline over 확인's writing card and its own.
+  it('fades the page-top bar while the writing card is on screen', async () => {
+    const observed: Element[] = []
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(private readonly report: IntersectionObserverCallback) {}
+        observe(node: Element) {
+          observed.push(node)
+          this.report(
+            [{ isIntersecting: true, target: node } as unknown as IntersectionObserverEntry],
+            this as unknown as IntersectionObserver,
+          )
+        }
+        disconnect() {}
+      },
+    )
+    const active = { id: 'job-1', status: 'running', stage: 'observe', progressDone: 1 }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ slug: '20260820-jeju', activeJob: { ...active, progressTotal: 4 } }] },
+      jobs: { jobs: [{ ...active, progressTotal: 4 }] },
+    })
+
+    const writing = await screen.findByText('글을 쓰고 있어요')
+    // The card's one moving progress is its bar: a spinner beside it said "working" twice.
+    expect(writing.closest('div')?.querySelector('.animate-spin')).toBeNull()
+    // It moves on transform alone, never on a layout property (THEME-28): a quarter done is the
+    // full-width fill slid three quarters out of its track.
+    const fill = writing.closest('div')?.querySelector<HTMLElement>('[data-writing-fill]')
+    expect(fill).toHaveClass('w-full', 'transition-transform')
+    expect(fill?.style.transform).toBe('translateX(-75%)')
+    expect(fill?.style.width).toBe('')
+    // Still the page's one announced progressbar; only its paint steps aside for the card's.
+    const bar = screen.getByRole('progressbar', { name: '작업 진행률' })
+    await waitFor(() => expect(bar.closest('.sticky')).toHaveClass('opacity-0'))
+    expect(observed).toHaveLength(1)
   })
 
   it('refreshes observations while running and renders the review draft after completion', async () => {
@@ -214,8 +256,10 @@ describe('opening a post', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
     // Neither voice refusal — deleted or not yet made — has anything to say.
     expect(screen.queryByText(/말투예요/)).not.toBeInTheDocument()
-    expect(screen.getByLabelText('글 작업').previousElementSibling).toHaveClass('h-6')
-    expect(screen.getByLabelText('글 작업').previousElementSibling).not.toHaveClass('mt-auto')
+    // Guide: 생성 is the summary's one big action, in the step bar along the screen's bottom.
+    const bar = screen.getByLabelText('글 작업')
+    expect(bar).toHaveAttribute('data-action-bar', 'step')
+    expect(within(bar).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
 
     const brief = await openBrief(user)
     expect(within(brief).getByText('사진이 없어 관찰 모델은 필요하지 않아요.')).toBeInTheDocument()
@@ -247,18 +291,24 @@ describe('opening a post', () => {
       },
     })
 
-    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
-    const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
+    // The draft holds a story, so it opens on 확인, where both writing paths are.
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     const storyline = screen.getByRole('button', { name: '스토리라인 먼저' })
+    expect(screen.queryByRole('textbox', { name: /방문 계기/ })).toBeNull()
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
+    // The refused press brings the 내용 screen up with the missing answer focused.
+    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
     expect(screen.getByText('필수 입력란을 확인해 주세요: 방문 계기')).toBeInTheDocument()
-    expect(answer).toHaveFocus()
+    await waitFor(() => expect(answer).toHaveFocus())
     expect(calls).not.toContain('StartGeneration')
+    await guideTo(user, GUIDE.review)
     await user.click(storyline)
     expect(calls).not.toContain('StartStoryline')
+    expect(screen.getByRole('textbox', { name: /방문 계기/ })).toBe(answer)
 
     await user.type(answer, '퇴근길에 간판을 보고 처음 들어갔다.')
+    await guideTo(user, GUIDE.review)
     await user.click(storyline)
     await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartStoryline'))
@@ -299,15 +349,16 @@ describe('opening a post', () => {
       },
     })
 
-    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
-    expect(answer).toBeEnabled()
-    const generate = screen.getByRole('button', { name: '바로 글 쓰기' })
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
     expect(calls).not.toContain('StartGeneration')
-    expect(answer).toHaveFocus()
+    const answer = await screen.findByRole('textbox', { name: /방문 계기/ })
+    expect(answer).toBeEnabled()
+    await waitFor(() => expect(answer).toHaveFocus())
 
     await user.click(screen.getByRole('button', { name: '기존 답변 사용하기' }))
+    await guideTo(user, GUIDE.review)
     await user.click(generate)
     await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartGeneration'))
@@ -543,6 +594,25 @@ describe('the brief run options', () => {
     renderAppAt(`/posts/${SLUG}`, { transport: first.transport })
     await shows()
     expect(optionSaves).toHaveLength(1)
+  })
+
+  // A draft nothing has been entered into is not saved yet, so 확인 has no run to start. The bar
+  // used to hold only ←, and the owner could not tell where 바로 글 쓰기 had gone.
+  it('says why 바로 글 쓰기 is unavailable on an empty draft and leads to the photos', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/new', { user: USER })
+
+    await guideTo(user, GUIDE.review)
+    const write = await screen.findByRole('button', { name: '바로 글 쓰기' })
+    expect(write).toBeDisabled()
+    expect(write).toHaveAccessibleDescription('아직 쓸 내용이 없어요. 사진이나 내용을 더해 주세요.')
+
+    await user.click(screen.getByRole('button', { name: '사진 넣기' }))
+    const progress = screen.getByRole('navigation', { name: /^(글쓰기 단계|Writing steps)$/ })
+    expect(within(progress).getByRole('button', { name: GUIDE.photos })).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
   })
 
   it('offers no run options before the first save, and the create carries no 분야', async () => {

@@ -5,7 +5,7 @@ export const libraryRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/library',
   beforeLoad: () => {
-    throw redirect({ to: '/', replace: true })
+    throw redirect({ to: '/my', replace: true })
   },
 })
 export const settingsRoute = createRoute({
@@ -19,4 +19,28 @@ export const setupRoute = createRoute({
   validateSearch: setupSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/setup'), 'SetupPage'),
 })
-export const creationRoutes = [libraryRoute, settingsRoute, setupRoute]
+/** Guide: the three tabs that are new places rather than renamed ones — 만들기 (one question),
+ *  내 글 (every post and clip) and 내 스타일 (what the owner taught the AI). */
+export const createPageRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/create',
+  component: lazyRouteComponent(() => import('@/pages/create'), 'CreatePage'),
+})
+export const myWorkRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/my',
+  component: lazyRouteComponent(() => import('@/pages/my-work'), 'MyWorkPage'),
+})
+export const styleRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/style',
+  component: lazyRouteComponent(() => import('@/pages/style'), 'StylePage'),
+})
+export const creationRoutes = [
+  libraryRoute,
+  settingsRoute,
+  setupRoute,
+  createPageRoute,
+  myWorkRoute,
+  styleRoute,
+]

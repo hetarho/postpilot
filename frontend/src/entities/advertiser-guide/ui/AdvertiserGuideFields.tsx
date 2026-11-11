@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from 'react'
+import { useId, useState, type ReactNode, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import {
@@ -22,16 +22,19 @@ import type { AdvertiserGuide, AdvertiserGuideItem } from '../model/types'
 
 const ALL_ITEMS: readonly AdvertiserGuideItem[] = ['keywords', 'minChars', 'minPhotos', 'hashtags']
 
-/** The advertiser guide as the owner pastes and counts it (POST-118, CLIP-210): the guide's text,
- *  then a closed `셀 수 있는 항목` disclosure holding the items the product can check without a
- *  model call. Controlled and dumb: every bound is checked here so the server's refusal is the
- *  exception, and the host decides when the guide shows and how it is saved. */
+/** Controlled guide inputs shared by posts and clips. The host chooses an expanded or compact
+ *  list and owns persistence; every input enforces the same advertiser-guide bounds. */
 export function AdvertiserGuideFields({
   value,
   onChange,
   items = ALL_ITEMS,
   disabled = false,
+  expanded = false,
+  afterText,
 }: {
+  /** Posts keep every requirement visible; clips retain their compact presentation. */
+  expanded?: boolean
+  afterText?: ReactNode
   value: AdvertiserGuide
   onChange: (next: AdvertiserGuide) => void
   /** The counted items this host offers; a clip has no character or photo minimum. */
@@ -65,12 +68,11 @@ export function AdvertiserGuideFields({
           max: ADVERTISER_GUIDE_MAX_CHARS,
         })}
       </Typography>
+      {afterText}
       {items.length > 0 && (
-        <Disclosure
-          size="row"
-          headingLevel={4}
-          title={t('advertiserGuide.counted')}
-          className="mt-2"
+        <Requirements
+          expanded={expanded}
+          title={t(expanded ? 'advertiserGuide.requirements' : 'advertiserGuide.counted')}
         >
           <div className="space-y-4 pb-2">
             {items.includes('keywords') && (
@@ -113,9 +115,32 @@ export function AdvertiserGuideFields({
               />
             )}
           </div>
-        </Disclosure>
+        </Requirements>
       )}
     </div>
+  )
+}
+
+function Requirements({
+  expanded,
+  title,
+  children,
+}: {
+  expanded: boolean
+  title: string
+  children: ReactNode
+}) {
+  return expanded ? (
+    <section className="mt-6" aria-label={title}>
+      <Typography variant="fieldTitle" as="h3" className="mb-4">
+        {title}
+      </Typography>
+      {children}
+    </section>
+  ) : (
+    <Disclosure size="row" headingLevel={4} title={title} className="mt-2">
+      {children}
+    </Disclosure>
   )
 }
 
@@ -169,6 +194,7 @@ function ItemList({
                 type="button"
                 variant="secondary"
                 size="compact"
+                className="min-h-11"
                 disabled={disabled}
                 aria-label={t('advertiserGuide.remove', { item: prefix + item })}
                 onClick={() => onChange(values.filter((existing) => existing !== item))}
@@ -219,6 +245,12 @@ function MinimumField({
   const id = useId()
   const [text, setText] = useState(value === undefined ? '' : String(value))
   const [refusal, setRefusal] = useState('')
+  const [shownValue, setShownValue] = useState(value)
+  if (shownValue !== value) {
+    setShownValue(value)
+    setText(value === undefined ? '' : String(value))
+    setRefusal('')
+  }
   const commit = (raw: string) => {
     setText(raw)
     const trimmed = raw.trim()

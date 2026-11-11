@@ -5,6 +5,7 @@ export const i18n = {
   namespace: 'voices',
   ko: {
     page: {
+      lead: '이런 말투로 써요',
       empty: '아직 말투가 없어요. 직접 쓴 글이나 문항 답으로 나만의 말투를 만들어 보세요.',
       making: '만드는 중 {{percent}}%',
       meta: '학습 글 {{count}}편 · {{date}} 분석',
@@ -18,6 +19,7 @@ export const i18n = {
   },
   en: {
     page: {
+      lead: 'How your posts sound',
       empty:
         'No voices yet. Make your own from posts you wrote by hand or from your answers to the prompts.',
       making: 'Being made {{percent}}%',

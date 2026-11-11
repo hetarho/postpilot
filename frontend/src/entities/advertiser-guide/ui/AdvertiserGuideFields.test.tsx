@@ -118,3 +118,18 @@ it('offers only the items its host names', async () => {
   expect(screen.queryByLabelText('최소 글자 수')).not.toBeInTheDocument()
   expect(screen.queryByLabelText('최소 사진 수')).not.toBeInTheDocument()
 })
+
+it('keeps post requirements visible and reflects confirmed minimum suggestions', () => {
+  const change = vi.fn()
+  const { rerender } = render(
+    <AdvertiserGuideFields value={EMPTY_GUIDE} expanded onChange={change} />,
+  )
+  expect(screen.getByLabelText('최소 사진 수')).toHaveValue('')
+  expect(screen.getByLabelText('필수 키워드')).toBeVisible()
+  expect(screen.queryByRole('button', { name: '셀 수 있는 항목' })).toBeNull()
+  rerender(
+    <AdvertiserGuideFields value={{ ...EMPTY_GUIDE, minPhotos: 8 }} expanded onChange={change} />,
+  )
+  expect(screen.getByLabelText('최소 사진 수')).toHaveValue('8')
+  expect(change).not.toHaveBeenCalled()
+})

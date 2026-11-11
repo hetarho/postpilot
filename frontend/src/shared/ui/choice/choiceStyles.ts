@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** Two peer destinations with room for a visible icon, name and explanation. */
 export function choiceStyles(className?: string) {

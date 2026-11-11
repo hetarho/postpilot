@@ -7,8 +7,10 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
+  GUIDE,
   USER,
   briefField,
+  guideTo,
   openBrief,
   openStep,
   resetEditorTest,
@@ -511,9 +513,9 @@ describe('the post template', () => {
 
   async function pickTemplate(user: ReturnType<typeof userEvent.setup>, name: string) {
     const picker = await templateField(user)
-    await waitFor(() => expect(picker).toBeEnabled())
-    await user.click(picker)
-    await user.click(await screen.findByRole('option', { name }))
+    const card = await within(picker).findByRole('button', { name })
+    await waitFor(() => expect(card).toBeEnabled())
+    await user.click(card)
     return picker
   }
 
@@ -640,6 +642,7 @@ describe('the template data fields in ①', () => {
   ]
 
   it('seeds the fields from what the post already answered', async () => {
+    const user = userEvent.setup()
     const draftSaves: FakeDraftSave[] = []
     renderAppAt('/posts/20260301-jeju', {
       user: USER,
@@ -659,7 +662,8 @@ describe('the template data fields in ①', () => {
       templates: { templates: WITH_FIELDS },
     })
 
-    // Both fields, in body order, with the stored answer and switch on the second.
+    // Both fields, in body order, with the stored answer and switch on the second — on 내용.
+    await guideTo(user, GUIDE.details)
     expect(await screen.findByLabelText('방문일')).toHaveValue('')
     const rated = screen.getByLabelText('총평 별점')
     expect(rated).toHaveValue('4.5점')
@@ -693,37 +697,48 @@ describe('the template data fields in ①', () => {
   const before = (a: Element, b: Element) =>
     Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
 
-  it('lays out 가제, the fields in body order, then the memo', async () => {
+  // The title and selected-template fields precede the optional closing memo.
+  it('puts the closing memo after the title and fields in body order', async () => {
+    const user = userEvent.setup()
     renderJeju()
-    const visited = await screen.findByLabelText('방문일')
-    const rated = screen.getByLabelText('총평 별점')
-    const title = screen.getByLabelText('제목')
+    await guideTo(user, GUIDE.details)
+    const visited = await screen.findByRole('textbox', { name: '방문일' })
+    const rated = screen.getByRole('textbox', { name: '총평 별점' })
+    const title = screen.getByRole('textbox', { name: '제목' })
+    // The story is not on this screen.
+    expect(screen.queryByRole('textbox', { name: '메모' })).toBeNull()
     const memo = screen.getByLabelText('메모')
+    expect(before(rated, memo)).toBe(true)
     expect(before(title, visited)).toBe(true)
     expect(before(visited, rated)).toBe(true)
-    expect(before(rated, memo)).toBe(true)
+    await guideTo(user, GUIDE.story)
+    expect(screen.getByRole('textbox', { name: '메모' })).toBe(memo)
+    expect(screen.queryByRole('textbox', { name: '제목' })).toBeNull()
   })
 
   it('moves Enter in the 가제 to the first field that takes typing', async () => {
     const user = userEvent.setup()
     renderJeju([{ label: '방문일', text: '', enabled: false }])
-    await screen.findByLabelText('방문일')
-    await user.click(screen.getByLabelText('제목'))
+    await guideTo(user, GUIDE.details)
+    await screen.findByRole('textbox', { name: '방문일' })
+    await user.click(screen.getByRole('textbox', { name: '제목' }))
     await user.keyboard('{Enter}')
     // 방문일 is switched off, so the next field on screen that takes typing is 총평 별점.
     expect(screen.getByLabelText('총평 별점')).toHaveFocus()
     expect(screen.getByLabelText('제목')).toHaveValue('제주')
   })
 
-  it('moves Enter in the 가제 to the memo when the post has no field to fill', async () => {
+  it('keeps Enter in the 가제, without a newline, when the screen has no field to fill', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260301-jeju', {
       user: USER,
       posts: { posts: [{ slug: '20260301-jeju', title: '제주', memo: '갔다' }] },
     })
-    await user.click(await screen.findByLabelText('제목'))
+    await guideTo(user, GUIDE.details)
+    await user.click(await screen.findByRole('textbox', { name: '제목' }))
     await user.keyboard('{Enter}')
-    expect(screen.getByLabelText('메모')).toHaveFocus()
+    expect(screen.getByLabelText('제목')).toHaveFocus()
+    expect(screen.getByLabelText('제목')).toHaveValue('제주')
   })
 
   it('autosaves an answer on the memo’s own queue', async () => {

@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** Neutral by default; a STATUS chip takes the tone that matches its meaning. Colour is never the
  *  only signal — the chip always carries its text label too (THEME-18, THEME-29). `done` is
@@ -30,8 +30,10 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(function Badge(
       className={twMerge(
         // `shrink-0 whitespace-nowrap`: a badge in a flex row must never be the thing that gives
         // way, and a two-syllable Korean label must never break across two lines. `px-2 py-0.5` is
-        // the THEME-23 ratio for a box this small.
-        'inline-flex shrink-0 items-center rounded-sm px-2 py-0.5 text-xs font-medium whitespace-nowrap',
+        // the THEME-23 ratio for a box this small. The label is a STATE (초안 · 검토 · 확정), the
+        // one word a row is scanned for, so it reads a step above the 13px `meta` beside it; at
+        // 12px it was the smallest text on the card.
+        'inline-flex shrink-0 items-center rounded-sm px-2 py-0.5 text-sm font-semibold whitespace-nowrap',
         TONE_STYLES[tone],
         className,
       )}

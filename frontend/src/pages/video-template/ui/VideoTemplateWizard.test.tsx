@@ -17,7 +17,9 @@ it('creates a 카페 video template end to end', async () => {
     clips: { templates: [], writes, calls },
   })
   await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   expect(
     await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' }),
   ).toBeInTheDocument()
@@ -121,7 +123,9 @@ it('requests one clip heading batch and keeps manual stage names until an explic
     },
   })
   await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   const field = screen.getByLabelText('훅 (첫 장면) 단계 이름')
@@ -172,9 +176,11 @@ it('shows the live preview from the stages step on, none on the target questions
     clips: { templates: [], writes: [], calls: [] },
   })
   await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   expect(screen.queryByRole('region', { name: '구성 미리보기' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '미리보기' })).not.toBeInTheDocument()
   await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
   const stages = () => within(screen.getByRole('region', { name: '구성 단계' }))
   expect(stages().getAllByRole('listitem')).toHaveLength(7)
@@ -191,7 +197,7 @@ it('shows the live preview from the stages step on, none on the target questions
   await user.clear(hook)
   await user.type(hook, '처음 만난 카페')
   expect(stages().getByText('처음 만난 카페').closest('li')).toHaveAttribute('aria-current', 'step')
-  // Below lg the same preview opens from the floating button.
+  // Below lg the same preview opens from 미리보기 in the step bar.
   await user.click(screen.getByRole('button', { name: '미리보기' }))
   const sheet = within(screen.getByRole('dialog', { name: '미리보기' }))
   expect(sheet.getByText('처음 만난 카페')).toBeInTheDocument()

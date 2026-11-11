@@ -5,7 +5,15 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { USER, openBrief, openStep, resetEditorTest, stubBrowserImagePipeline } from '@/test/editor'
+import {
+  GUIDE,
+  USER,
+  guideTo,
+  openBrief,
+  openStep,
+  resetEditorTest,
+  stubBrowserImagePipeline,
+} from '@/test/editor'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
 import { FAKE_STORAGE_ORIGIN, finalizedPostRow } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
@@ -26,7 +34,8 @@ describe('opening a post', () => {
     expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일')
     expect(screen.getByRole('heading', { level: 1, name: '제주 3일' })).toBeInTheDocument()
     expect(screen.getByLabelText('메모')).toHaveValue('첫날은 비')
-    expect(screen.getByLabelText('메모')).toHaveClass('bg-field-bg')
+    // Guide: the story is its screen's one task, written on a raised card.
+    expect(screen.getByLabelText('메모')).toHaveClass('bg-card-bg')
     expect(screen.queryByRole('heading', { name: '내보내기' })).not.toBeInTheDocument()
   })
 
@@ -63,6 +72,8 @@ describe('opening a post', () => {
 
     await openStep(user, '글 생성')
     fireEvent.change(screen.getByLabelText('메모'), { target: { value: '마지막 기록' } })
+    // The retained result rides with 생성, on the 확인 screen.
+    await guideTo(user, GUIDE.review)
     const retained = await screen.findByRole('link', { name: 'A/B 결과 확인' })
     expect(retained).toHaveAttribute(
       'href',
@@ -151,7 +162,9 @@ describe('a new draft', () => {
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { calls } })
 
     // A JPEG, so the stubbed native decoder is the path taken; the HEIC worker path is
-    // covered by shared/lib/image's own tests (jsdom has no Worker).
+    // covered by shared/lib/image's own tests (jsdom has no Worker). Photos are 글 생성's
+    // second screen.
+    await guideTo(user, GUIDE.photos)
     await user.upload(
       await screen.findByLabelText('사진·영상 추가'),
       new File(['jpeg'], 'IMG_1.JPG', { type: 'image/jpeg' }),
@@ -183,6 +196,7 @@ describe('a new draft', () => {
     const user = userEvent.setup()
     renderAppAt('/posts/new', { user: USER, posts: { failSaves: 1 } })
 
+    await guideTo(user, GUIDE.photos)
     await user.upload(await screen.findByLabelText('사진·영상 추가'), new File(['x'], 'IMG_1.jpg'))
 
     expect(await screen.findByText('글을 만드는 중…')).toBeInTheDocument()
@@ -201,6 +215,7 @@ describe('a new draft', () => {
     const user = userEvent.setup({ applyAccept: false })
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { calls } })
 
+    await guideTo(user, GUIDE.photos)
     await user.upload(await screen.findByLabelText('사진·영상 추가'), new File(['x'], 'setup.exe'))
 
     expect(await screen.findByRole('heading', { name: '건너뜀' })).toBeInTheDocument()
@@ -374,10 +389,13 @@ describe('the editor lifecycle steps', () => {
     expect(within(dock).getByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     await openStep(user, '글 생성')
+    await guideTo(user, GUIDE.review)
     const generateDock = await screen.findByLabelText('글 작업')
     expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
     expect(within(generateDock).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
-    expect(within(generateDock).getByRole('button', { name: /옵션/ })).toBeInTheDocument()
+    // Guide: the brief is a row of the 확인 summary the bar ends, not a glyph in the bar.
+    expect(within(generateDock).queryByRole('button', { name: /옵션/ })).toBeNull()
+    expect(screen.getByRole('button', { name: '글쓰기 옵션' })).toBeInTheDocument()
     expect(within(generateDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
 
     await openStep(user, '글 완성')
@@ -395,6 +413,7 @@ describe('the editor lifecycle steps', () => {
     })
 
     const WRITE = '활성 작성 모델을 선택하세요.'
+    await guideTo(user, GUIDE.review)
     const dock = await screen.findByLabelText('글 작업')
     const generate = await within(dock).findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
@@ -459,27 +478,38 @@ describe('the editor lifecycle steps', () => {
     expect(tab.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  // POST-54: the photos are the material the post is written from, so ① starts with them — on a
-  // saved draft and on a /posts/new that has no post yet alike.
-  it('puts the photos above the title, and the memo under it', async () => {
+  // Campaign context leads; photos precede writing inputs, and optional notes come last.
+  it('puts campaign context before photos, then template inputs and closing notes', async () => {
     const following = (first: Node, second: Node) =>
       Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
-    const expectPhotosFirst = async () => {
+    const expectPhotoBeforeWriting = async () => {
       const picker = await screen.findByLabelText('사진·영상 추가')
+      const memo = screen.getByLabelText('메모')
       const title = screen.getByLabelText('제목')
+      expect(following(title, memo)).toBe(true)
       expect(following(picker, title)).toBe(true)
-      expect(following(title, screen.getByLabelText('메모'))).toBe(true)
+      const progress = screen.getByRole('navigation', { name: '글쓰기 단계' })
+      expect(
+        within(progress)
+          .getAllByRole('button')
+          .map((step) => step.textContent),
+      ).toEqual(['글 종류', '요청', '사진', '템플릿', '내용', '덧붙임', '확인'])
     }
 
     const saved = renderAppAt('/posts/20260820-jeju', {
       user: USER,
-      posts: { posts: [{ ...reviewPost, status: 'draft' }] },
+      posts: { posts: [{ ...reviewPost, status: 'draft', campaign: true }] },
     })
-    await expectPhotosFirst()
+    await expectPhotoBeforeWriting()
     saved.unmount()
 
     renderAppAt('/posts/new', { user: USER })
-    await expectPhotosFirst()
+    await expectPhotoBeforeWriting()
+    // A new draft opens on its two plain post-type choices.
+    expect(screen.getByRole('heading', { name: '어떤 글을 쓰시나요?' })).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '메모' })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: '제목' })).toBeNull()
+    expect(screen.getByRole('button', { name: '글 종류' })).toHaveAttribute('aria-current', 'step')
   })
 
   // POST-100: ①'s strip opens a saved attachment large and walks it in the strip's order.
@@ -510,6 +540,7 @@ describe('the editor lifecycle steps', () => {
       },
     })
 
+    await guideTo(user, GUIDE.photos)
     const tile = await screen.findByRole('button', { name: 'IMG_1.jpg 크게 보기' })
     await user.click(tile)
     const first = screen.getByRole('dialog', { name: 'IMG_1.jpg' })
@@ -548,6 +579,9 @@ describe('the editor status region', () => {
     // A7: the status IS the report. The 이 revision을 확정했어요 notice that used to stand on
     // 글 완성 said the same thing as an event that nothing ever took down.
     await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
+    // The editor's one word on where the post is reads at the label step, not as a 13px caption.
+    expect(statusLine()).toHaveClass('font-semibold')
+    expect(statusLine()).not.toHaveClass('text-meta')
     expect(screen.queryByText('이 revision을 확정했어요.')).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })

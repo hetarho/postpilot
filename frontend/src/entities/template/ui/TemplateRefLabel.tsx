@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import type { TemplateRef } from '../model/types'
 
 /** The 템플릿 a post is assigned to, as text beside the voice.

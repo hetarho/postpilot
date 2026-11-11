@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { voiceRefLabel, type VoiceRef } from '../model/types'
 
 /** The voice a post is written in, as text. A tombstone says so in words — `삭제된 말투 · {name}` —

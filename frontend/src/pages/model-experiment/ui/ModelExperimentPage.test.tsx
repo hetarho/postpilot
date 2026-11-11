@@ -41,8 +41,8 @@ const entries = [
   {
     path: '/posts/experiments/review-1?from=posts&q=Draft&status=draft',
     back: '/naver-blog?q=Draft&status=draft',
-    ko: '네이버 블로그',
-    en: 'Naver Blog',
+    ko: '블로그 글',
+    en: 'Blog posts',
   },
 ] as const
 
@@ -133,7 +133,7 @@ it('carries the narrowed post list through a pending result and back', async () 
   expect(recordUrl.searchParams.get('entry')).toBe('/naver-blog?q=Draft&status=draft')
   await user.click(record)
   await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/review-1'))
-  await user.click(await screen.findByRole('link', { name: '네이버 블로그' }))
+  await user.click(await screen.findByRole('link', { name: '블로그 글' }))
   await waitFor(() => expect(router.state.location.href).toBe('/naver-blog?q=Draft&status=draft'))
   expect(await screen.findByRole('link', { name: /Draft/ })).toBeInTheDocument()
 })
@@ -169,7 +169,7 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
 
 it.each([
   ['/ai-models/experiments/review-1?from=compare&stage=write', '테스트 기록', '/tests/history'],
-  ['/posts/experiments/review-1?from=posts&q=Draft', '네이버 블로그', '/naver-blog?q=Draft'],
+  ['/posts/experiments/review-1?from=posts&q=Draft', '블로그 글', '/naver-blog?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {
   let release!: () => void
   const readGate = new Promise<void>((resolve) => {

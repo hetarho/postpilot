@@ -9,6 +9,7 @@ export const i18n = {
     page: {
       description:
         '글 한 편에 담기지 않는, 글쓴이에 대한 사실입니다. ① 에서 기억 사용을 켠 글만 이 사실들을 함께 씁니다.',
+      lead: 'AI가 기억하는 것',
       saved: '저장된 기억',
       order: '최근에 쓰인 기억이 먼저 옵니다. 글에 들어가는 순서도 같아요.',
       empty: '아직 기억이 없어요',
@@ -24,6 +25,7 @@ export const i18n = {
     page: {
       description:
         'Facts about you that no single post carries. Only a post with 기억 사용 turned on in ① is written with them.',
+      lead: 'What the AI remembers',
       saved: 'Saved memories',
       order: 'Most recently used first — the same order a post is given them in.',
       empty: 'No memories yet',

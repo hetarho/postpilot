@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronUp, GripVertical } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Button } from '../button/Button'
 
 export interface SortableItem {

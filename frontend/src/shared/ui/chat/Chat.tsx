@@ -1,6 +1,6 @@
 import { useEffect, useRef, type FormEvent, type ReactNode, type Ref } from 'react'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Button } from '../button/Button'
 import { Textarea } from '../field/Textarea'
 

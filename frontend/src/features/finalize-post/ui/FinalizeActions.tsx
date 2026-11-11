@@ -7,10 +7,10 @@ import {
   useFinalizePost,
 } from '@/entities/post'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
-import { AppFailureMessage, Button, Notice } from '@/shared/ui'
+import { AppFailureMessage, Notice, StepBarCta } from '@/shared/ui'
 
-/** The boundary that ends the drafting loop, as ONE control at the top-right of 글 다듬기's
- *  revision row (`widgets/refine-dock`).
+/** The boundary that ends the drafting loop, as ONE control: the big action of 글 다듬기's step bar
+ *  (`widgets/refine-dock`), under the revision field.
  *
  *  확정하기 finalizes at once (POST-56): nothing stands between the press and the run, because a
  *  finalize is reversed by the next content save, which returns the post to `review`. It flushes
@@ -18,10 +18,10 @@ import { AppFailureMessage, Button, Notice } from '@/shared/ui'
  *  carries the user to 글 완성, so finishing a step is one gesture rather than a press plus a tab
  *  change.
  *
- *  The control lands wherever `children` puts it — inside the revision row's heading, a row too
- *  narrow to carry a sentence — so its failures render HERE, across the whole dock and above the
- *  row holding the control they explain: the software keyboard may hide a control but never its
- *  reason (THEME-31). */
+ *  The control lands wherever `children` puts it — the bar's action row, beside the way back and
+ *  too narrow to carry a sentence — so its failures render HERE, across the whole bar and above
+ *  the row holding the control they explain: the software keyboard may hide a control but never
+ *  its reason (THEME-31). */
 export function FinalizeActions({
   post,
   beforeFinalize,
@@ -78,22 +78,13 @@ export function FinalizeActions({
   // is a standing STATE rather than an event — so nothing took it down, and the first changed
   // content save returns the post to `review` and brings 확정하기 back on its own (owner decision
   // 2026-09-02). 글 완성 reports the finalize; this step only has to offer the road there.
+  // Either way it is the step's one big action (THEME-23), filling the row beside the way back.
   const control = finalized ? (
-    <Button variant="secondary" className="flex-1" onClick={() => onFinalized(post.title)}>
-      {t('finalize.goFinish')}
-    </Button>
+    <StepBarCta onClick={() => onFinalized(post.title)}>{t('finalize.goFinish')}</StepBarCta>
   ) : (
-    <Button
-      variant="cta"
-      // It FILLS the heading row's remaining width rather than shrinking to its two words: this is
-      // the step's way out, and the row exists to hold it beside the field's name (THEME-23).
-      className="flex-1"
-      disabled={!post.canFinalize}
-      pending={preparing}
-      onClick={() => void run()}
-    >
+    <StepBarCta disabled={!post.canFinalize} pending={preparing} onClick={() => void run()}>
       {t('finalize.action')}
-    </Button>
+    </StepBarCta>
   )
 
   return (

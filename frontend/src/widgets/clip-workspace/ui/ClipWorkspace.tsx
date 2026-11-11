@@ -39,7 +39,19 @@ import { ClipUploadText } from '@/features/clip-upload-text'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
+import {
+  ActionBar,
+  Button,
+  GuideProgress,
+  Sheet,
+  SegmentedControl,
+  ProgressBar,
+  Typography,
+} from '@/shared/ui'
+
+/** Guide: the four parts of a clip's settings, in the order a guided sequence asks for them. */
+const CLIP_GUIDE = ['sources', 'story', 'style', 'make'] as const
+type ClipGuideStep = (typeof CLIP_GUIDE)[number]
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps } from '../model/steps'
@@ -54,7 +66,10 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   const destination = clipReturnDestination(ownerId, project.id, undefined, project.channel)
   const returnTo = {
     href: destination.href,
-    label: t('navigation.returnCreation', { channel: t(`channel.${destination.channel}`) }),
+    label:
+      destination.path === '/my'
+        ? t('navigation.returnMine')
+        : t('navigation.returnCreation', { channel: t(`channel.${destination.channel}`) }),
     onReturn: async (replace = false) => {
       markClipHistoryReturn(ownerId, project.id)
       await navigate({ href: destination.href, replace })
@@ -73,6 +88,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   // A finalized project is READ in ① and ②: the same steps, the same places, values instead of
   // controls, and no original behind them (CLIP-160, CLIP-76).
   const reading = !!project.finalized
+  const [guide, setGuide] = useState<ClipGuideStep>('sources')
   const job = run.job
   const browserStatus = (
     <ClipBrowserRenderStatus
@@ -189,6 +205,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         )}
       {/* Bind a whole source to an item before generating, where footage of one
           cut of meat carries nothing that tells it from another (CLIP-123). */}
+      <span id="clip-guide-sources" aria-hidden="true" className="block scroll-mt-40" />
       {!reading && (
         <ClipSourcePicker
           upload={upload}
@@ -201,6 +218,7 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       )}
       {observationPanel}
       {requestRecord}
+      <span id="clip-guide-make" aria-hidden="true" className="block scroll-mt-40" />
       {!reading && (
         <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
           <Typography id="clip-models-heading" variant="title">
@@ -809,6 +827,24 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         />
       )}
       {!run.focused && step !== 'refine' && browserStatus}
+      {!run.focused && step === 'generate' && !reading && (
+        // Guide: the clip's settings as a guided sequence — 소스 → 이야기 → 스타일 → 만들기 — a
+        // slim strip that stays under the header and takes the owner to each part in turn; the
+        // one big 만들기 action stays in the bottom dock.
+        <div className="bg-surface-base/90 sticky top-[var(--spacing-chrome)] z-20 -mx-4 mt-2 px-4 py-1 backdrop-blur-xl sm:mx-0 sm:px-0">
+          <GuideProgress
+            steps={CLIP_GUIDE.map((value) => ({ value, label: t(`guide.${value}`) }))}
+            current={guide}
+            onSelect={(value) => {
+              setGuide(value)
+              document
+                .getElementById(`clip-guide-${value}`)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            ariaLabel={t('guide.aria')}
+          />
+        </div>
+      )}
       {!run.focused && (
         <div id={STEP_PANEL_ID} role="tabpanel" aria-label={clipStepLabel(step)}>
           {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}

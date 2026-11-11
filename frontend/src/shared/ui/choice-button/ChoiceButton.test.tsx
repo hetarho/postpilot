@@ -39,6 +39,67 @@ describe('ChoiceButton', () => {
     expect(choose).not.toHaveBeenCalled()
   })
 
+  // On a phone the tick was a row of its own above the chosen title, so choosing made one card a
+  // row taller and the other a row shorter, and the cards under them jolted with each tap.
+  it('marks the choice without changing the height of either card', () => {
+    const { rerender } = render(
+      <>
+        <ChoiceButton title="체험단" description="광고주가 부탁한 내용을 먼저 봐요." selected />
+        <ChoiceButton title="내 돈으로" description="내 경험으로 써요." selected={false} />
+      </>,
+    )
+    const chosen = screen.getByRole('button', { name: '체험단', pressed: true })
+    const other = screen.getByRole('button', { name: '내 돈으로', pressed: false })
+    expect(chosen).toHaveClass('ring-2', 'ring-stroke-accent')
+    expect(other).not.toHaveClass('ring-2')
+    // The narrow mark is laid over the corner the title always leaves free, on both cards: an
+    // empty ring on the one not chosen, so the pair reads as options rather than as links.
+    for (const card of [chosen, other]) {
+      const mark = card.querySelector('.absolute.top-4.right-4')
+      expect(mark).not.toBeNull()
+      expect(mark).toHaveClass('@md:hidden')
+    }
+    expect(chosen.querySelector('.absolute .bg-button-cta-bg')).not.toBeNull()
+    expect(other.querySelector('.absolute .ring-checkbox-edge')).not.toBeNull()
+    for (const title of [screen.getByText('체험단'), screen.getByText('내 돈으로')])
+      expect(title).toHaveClass('pr-8', '@md:pr-0')
+
+    rerender(
+      <>
+        <ChoiceButton
+          title="체험단"
+          description="광고주가 부탁한 내용을 먼저 봐요."
+          selected={false}
+        />
+        <ChoiceButton title="내 돈으로" description="내 경험으로 써요." selected />
+      </>,
+    )
+    const released = screen.getByRole('button', { name: '체험단' })
+    expect(released.querySelector('.absolute .ring-checkbox-edge')).not.toBeNull()
+    expect(released.querySelector('.bg-button-cta-bg')).toBeNull()
+    expect(screen.getByText('체험단')).toHaveClass('pr-8')
+  })
+
+  it('shows a choice mark, not a chevron, on an option and keeps the chevron for an action', () => {
+    render(
+      <>
+        <ChoiceButton title="편안한 말투" selected={false} />
+        <ChoiceButton title="또박또박한 말투" selected icon={<svg data-testid="voice-icon" />} />
+        <ChoiceButton title="대화로 만들기" />
+      </>,
+    )
+    const option = screen.getByRole('button', { name: '편안한 말투' })
+    expect(option.querySelector('.lucide-chevron-right')).toBeNull()
+    expect(option.querySelector('.ring-checkbox-edge')).not.toBeNull()
+    const chosen = screen.getByRole('button', { name: '또박또박한 말투' })
+    expect(chosen.querySelector('.bg-button-cta-bg')).not.toBeNull()
+    // The chosen card's own icon takes the accent too, not only its ring.
+    expect(screen.getByTestId('voice-icon').parentElement).toHaveClass('text-link-fg-current')
+    const action = screen.getByRole('button', { name: '대화로 만들기' })
+    expect(action).not.toHaveAttribute('aria-pressed')
+    expect(action.querySelector('.lucide-chevron-right')).not.toBeNull()
+  })
+
   it('exposes an explicitly selected comparison choice', () => {
     render(<ChoiceButton title="편안한 말투" description="친구에게 이야기하듯 써요." selected />)
     expect(screen.getByRole('button', { name: '편안한 말투', pressed: true })).toBeInTheDocument()

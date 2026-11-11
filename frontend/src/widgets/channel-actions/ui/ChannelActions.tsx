@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
+import { twMerge } from '@/shared/lib'
 import { useSession } from '@/entities/session'
 import { rememberPostEntry } from '@/entities/post'
 import { clipChannelPath, rememberClipEntry, type ClipChannel } from '@/entities/clip-project'
@@ -59,14 +60,16 @@ export function ChannelActions({
         scrollY: window.scrollY,
       })
   }
+  // Guide: the section's one big action, anchored in the thumb zone — the whole width of a phone,
+  // a generous pill at the desk's right edge.
   return (
-    <ActionBar dock="list" className={className}>
+    <ActionBar dock="list" className={twMerge(className, 'w-full sm:w-fit')}>
       <Link
         href={href}
         onClick={section === 'work' ? rememberCreation : undefined}
-        className={buttonStyles({ variant: 'cta', className: 'rounded-full' })}
+        className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full sm:w-auto' })}
       >
-        <Plus aria-hidden="true" className="size-5 shrink-0" />
+        <Plus aria-hidden="true" className="size-6 shrink-0" />
         {t(`button.${section === 'work' && channel ? 'video' : section}`)}
       </Link>
     </ActionBar>

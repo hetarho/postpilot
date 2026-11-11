@@ -71,27 +71,32 @@ export function AboutPage() {
           {/* A real ordered list: the steps happen in this order, and that is semantic
               information a screen reader has to get from the markup, not from the numerals. */}
           <ol className="mt-4 space-y-5">
-            {(['step1', 'step2', 'step3', 'step4', 'step5'] as const).map((step, index) => (
-              <li key={step} className="flex gap-3">
-                {/* Decorative: the ordinal is already in the list semantics, so it is hidden
+            {(['step1', 'step2', 'step3', 'step4', 'step5', 'step6', 'step7'] as const).map(
+              (step, index) => (
+                <li key={step} className="flex gap-3">
+                  {/* Decorative: the ordinal is already in the list semantics, so it is hidden
                     rather than read out twice. */}
-                <Typography
-                  variant="label"
-                  aria-hidden="true"
-                  className="bg-surface-raised mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full"
-                >
-                  {index + 1}
-                </Typography>
-                <div className="min-w-0">
-                  <Typography variant="label" as="h3">
-                    {t(`flow.${step}.title`)}
+                  <Typography
+                    variant="label"
+                    aria-hidden="true"
+                    className="bg-surface-raised mt-0.5 inline-flex size-7 shrink-0 items-center justify-center rounded-full"
+                  >
+                    {index + 1}
                   </Typography>
-                  <Typography variant="body" className="text-content-secondary max-w-measure mt-1">
-                    {t(`flow.${step}.body`)}
-                  </Typography>
-                </div>
-              </li>
-            ))}
+                  <div className="min-w-0">
+                    <Typography variant="label" as="h3">
+                      {t(`flow.${step}.title`)}
+                    </Typography>
+                    <Typography
+                      variant="body"
+                      className="text-content-secondary max-w-measure mt-1"
+                    >
+                      {t(`flow.${step}.body`)}
+                    </Typography>
+                  </div>
+                </li>
+              ),
+            )}
           </ol>
         </Section>
 

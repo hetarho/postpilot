@@ -1,15 +1,16 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
 import { useTranslation } from 'react-i18next'
 import { useBlocker } from '@tanstack/react-router'
 import { useCreateTemplate } from '@/entities/template'
 import { formatAppFailure } from '@/shared/lib'
-import { Button, Dialog, Typography, WizardFrame, WizardPreviewDock } from '@/shared/ui'
+import { Dialog, Typography, WizardFrame, WizardPreviewDock } from '@/shared/ui'
 import { templateTargetAt } from '@/entities/template'
 import { toWizardBody } from '../lib/to-body'
 import {
   checkedSections,
   finishProblem,
+  pickedTarget,
   wizardHasAnswers,
   wizardProgress,
   wizardMachine,
@@ -25,6 +26,7 @@ import { TargetStep } from './TargetStep'
 import { WizardPreview } from './WizardPreview'
 import { useWizardHeadingSuggestions as useHeadingSuggestions } from '@/entities/template'
 import { saveTemplateMachine } from '../model/save-template-machine'
+import { useTargetSeeds } from '../model/target-seeds'
 
 interface Props {
   ownerId: string
@@ -32,17 +34,29 @@ interface Props {
   seedHeadings?: readonly string[]
   beforeSave?: () => boolean
   onSaveFailure?: () => void
+  /** A flow the wizard sits in (setup): its way back once the wizard is on its first question,
+   *  and its own action under the step bar's row, so the screen keeps ONE bar. */
+  host?: { back: () => void; backDisabled?: boolean; footer?: ReactNode }
 }
 
 /** 새 템플릿 as a guided wizard (TMPL-71): one question per screen, Back that keeps every answer,
- *  one emphasized next action, and nothing written before 저장 — which saves an ordinary template
- *  through the standard create. Leaving with answers asks before discarding them. */
+ *  one emphasized next action in the step bar every stepped screen shares, and nothing written
+ *  before 저장 — which saves an ordinary template through the standard create. Leaving with
+ *  answers asks before discarding them. */
 export function TemplateWizard(props: Props) {
   return <OwnedTemplateWizard key={props.ownerId} {...props} />
 }
 
-function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSaveFailure }: Props) {
+function OwnedTemplateWizard({
+  ownerId,
+  onSaved,
+  seedHeadings,
+  beforeSave,
+  onSaveFailure,
+  host,
+}: Props) {
   const { t } = useTranslation('templates')
+  const seedsFor = useTargetSeeds()
   const actor = useActorRef(wizardMachine, { input: { seedHeadings } })
   const state = useSelector(actor, wizardStateOf)
   const send = actor.send
@@ -98,11 +112,7 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
   }
 
   const back = { label: t('wizard.back'), onClick: () => send({ type: 'back' }) }
-  const next = (
-    <Button variant="cta" onClick={() => send({ type: 'next' })}>
-      {t('wizard.next')}
-    </Button>
-  )
+  const next = { label: t('wizard.next'), forward: true, onClick: () => send({ type: 'next' }) }
   // The preview stands beside every step from sections on (TMPL-75). Counting the body's changes
   // during render — React's pattern for a value derived from the previous one — tells the
   // phone's 미리보기 button when to glow without an effect.
@@ -130,13 +140,16 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
         </Typography>
       )}
       {previewing ? (
-        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:items-start lg:gap-12">
-          <div className="min-w-0 lg:max-w-2xl">
+        // Flex columns down to the frame, so its step bar meets the screen's bottom edge; on a
+        // desk the grid's one row stretches to the column's height for the same reason.
+        <div className="flex flex-1 flex-col lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-12">
+          <div className="flex min-w-0 flex-1 flex-col lg:max-w-2xl">
             <WizardFrame
               screen={screenOf(state)}
               progress={progress}
               {...frame(state)}
-              beforeActions={
+              barFooter={host?.footer}
+              barAction={
                 <WizardPreviewDock
                   changes={seen.changes}
                   label={t('wizard.preview.open')}
@@ -149,12 +162,17 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
           </div>
           {/* Below the app's sticky chrome, like the authoring editor's preview, with its own
               scroll so a long post never pushes the step's actions away. */}
-          <aside className="sticky top-[calc(var(--spacing-chrome)+1.5rem)] hidden max-h-[calc(100dvh-var(--spacing-chrome)-3rem)] min-w-0 overflow-y-auto lg:block">
+          <aside className="sticky top-[calc(var(--spacing-chrome)+1.5rem)] hidden max-h-[calc(100dvh-var(--spacing-chrome)-3rem)] min-w-0 self-start overflow-y-auto lg:block">
             <WizardPreview sections={state.sections} currentId={currentId} />
           </aside>
         </div>
       ) : (
-        <WizardFrame screen={screenOf(state)} progress={progress} {...frame(state)} />
+        <WizardFrame
+          screen={screenOf(state)}
+          progress={progress}
+          {...frame(state)}
+          barFooter={host?.footer}
+        />
       )}
       <Dialog
         open={blocker.status === 'blocked'}
@@ -173,10 +191,29 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
     switch (current.step) {
       case 'target': {
         const node = templateTargetAt(current.path.slice(0, current.depth))
+        const picked = pickedTarget(current)
         return {
           title: t(`questions.${(node?.key ?? 'root') as 'root'}`, { ns: 'templateTargets' }),
           help: t('wizard.targetHelp'),
-          back: current.depth > 0 ? back : undefined,
+          // On the first question the way back is the host flow's, when there is one.
+          back:
+            current.depth > 0
+              ? back
+              : host && {
+                  label: t('wizard.back'),
+                  onClick: host.back,
+                  disabled: host.backDisabled,
+                },
+          // A tap only chooses; 다음 moves on with the chosen answer, held until there is one.
+          next: {
+            label: t('wizard.next'),
+            forward: true,
+            disabled: !picked,
+            reason: picked ? undefined : t('wizard.pickFirst'),
+            onClick: () => {
+              if (picked) send({ type: 'choose', key: picked.key, seeds: seedsFor(picked) })
+            },
+          },
           children: <TargetStep state={current} send={send} />,
         }
       }
@@ -225,11 +262,7 @@ function OwnedTemplateWizard({ ownerId, onSaved, seedHeadings, beforeSave, onSav
         return {
           title: t('wizard.finish.title'),
           back: saving ? undefined : back,
-          next: (
-            <Button variant="cta" pending={saving} onClick={save}>
-              {t('wizard.save')}
-            </Button>
-          ),
+          next: { label: t('wizard.save'), pending: saving, onClick: save },
           children: <FinishStep state={current} send={send} refusal={refusal} disabled={saving} />,
         }
     }

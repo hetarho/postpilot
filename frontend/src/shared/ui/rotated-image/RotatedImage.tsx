@@ -1,6 +1,5 @@
 import type { ImgHTMLAttributes, Ref } from 'react'
-import { twMerge } from 'tailwind-merge'
-import { quarterTurn } from '@/shared/lib'
+import { quarterTurn, twMerge } from '@/shared/lib'
 
 export interface RotatedImageProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, 'style'> {
   /** The photo's clockwise turn in degrees; anything but 90, 180 or 270 is none (POST-107). */

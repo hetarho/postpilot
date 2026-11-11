@@ -1,8 +1,7 @@
 import { useRef, type CSSProperties, type PointerEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
 import { PROMO_TILT_MAX_DEG, PROMO_TILT_PERSPECTIVE_PX } from './config'
-import { prefersReducedMotion } from '@/shared/lib'
+import { prefersReducedMotion, twMerge } from '@/shared/lib'
 
 /** A promotional frame: content on its own surface, inside a still stroke of accent gradient,
  *  that TILTS toward a fine pointer and carries a spotlight under it.

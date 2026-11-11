@@ -5,8 +5,10 @@ import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import {
+  GUIDE,
   M1_OVER_BAND,
   USER,
+  guideTo,
   openBrief,
   openStep,
   resetEditorTest,
@@ -153,9 +155,13 @@ describe('a published post', () => {
     expect(screen.queryByRole('button', { name: '문단 추가' })).toBeNull()
     expect(screen.queryByRole('button', { name: /번째 블록/ })).toBeNull()
 
+    // The step bar every step shares: the way back and the road onward, and nothing to revise.
     const dock = screen.getByLabelText('글 작업')
     const onward = within(dock).getByRole('button', { name: '글 완성으로 가기' })
-    expect(within(dock).getAllByRole('button')).toEqual([onward])
+    expect(within(dock).getAllByRole('button')).toEqual([
+      within(dock).getByRole('button', { name: '이전' }),
+      onward,
+    ])
     expect(screen.queryByLabelText('수정 요청을 입력하세요')).toBeNull()
 
     await user.click(onward)
@@ -170,27 +176,34 @@ describe('a published post', () => {
     await screen.findByRole('button', { name: '기억으로 저장' })
 
     await openStep(user, '글 생성')
-    const title = await screen.findByLabelText('제목')
+    // Visit the material screens to check their published locks.
+    await guideTo(user, GUIDE.details)
+    const title = await screen.findByRole('textbox', { name: '제목' })
     expect(title).toHaveAttribute('readonly')
     expect(title).toHaveValue('성수 카페 투어')
-    const memo = screen.getByLabelText('메모')
-    expect(memo).toHaveAttribute('readonly')
-    expect(memo).toHaveValue('라떼가 맛있었다')
     // Typing into a read-only field changes nothing, so nothing is queued.
     await user.type(title, ' 후기')
-    await user.type(memo, ' 또')
     expect(title).toHaveValue('성수 카페 투어')
-
     expect(await screen.findByLabelText('방문일')).toBeDisabled()
     expect(screen.getByLabelText('방문일')).toHaveValue('9월 20일')
     expect(screen.getByRole('switch', { name: '총평 별점 넣기' })).toBeDisabled()
+
+    await guideTo(user, GUIDE.story)
+    const memo = screen.getByRole('textbox', { name: '메모' })
+    expect(memo).toHaveAttribute('readonly')
+    expect(memo).toHaveValue('라떼가 맛있었다')
+    await user.type(memo, ' 또')
+    expect(memo).toHaveValue('라떼가 맛있었다')
+
+    await guideTo(user, GUIDE.photos)
     // The picker's two file inputs, each labelled by its button-styled label.
     expect(screen.getByLabelText('사진·영상 추가')).toBeDisabled()
     expect(screen.getByLabelText('촬영')).toBeDisabled()
     expect(screen.getByRole('img', { name: 'IMG_1.jpg' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /삭제$/ })).toBeNull()
+    for (const card of within(await templateField(user)).getAllByRole('button'))
+      expect(card).toBeDisabled()
     expect(await voiceField(user)).toBeDisabled()
-    expect(await templateField(user)).toBeDisabled()
 
     const dock = screen.getByLabelText('글 작업')
     await waitFor(() =>

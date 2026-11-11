@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { startAurora } from './aurora'
 
 /** The ground a promotional surface stands on: a recessed panel with an aurora moving behind

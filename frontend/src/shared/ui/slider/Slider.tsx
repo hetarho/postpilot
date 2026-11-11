@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 interface SliderBase {
   value: number

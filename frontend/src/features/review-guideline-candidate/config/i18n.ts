@@ -5,11 +5,11 @@ export const i18n = {
   namespace: 'guidelines',
   ko: {
     candidate: {
-      summary: '지침 후보 {{count}}개',
-      // GUIDE-22: a full queue is said while the disclosure is still closed.
-      summaryFull: '지침 후보 {{count}}개 · 가득 참',
-      summaryClip: '영상 지침 후보 {{count}}개',
-      summaryClipFull: '영상 지침 후보 {{count}}개 · 가득 참',
+      summary: '새 지침 후보 {{count}}개',
+      // GUIDE-22: a full queue is said on the banner, before the review is opened.
+      summaryFull: '새 지침 후보 {{count}}개 · 가득 참',
+      summaryClip: '새 영상 지침 후보 {{count}}개',
+      summaryClipFull: '새 영상 지침 후보 {{count}}개 · 가득 참',
       approveAll: '전부 수락',
       dismissAll: '전부 거절',
       dismissAllTitle: '후보 {{count}}개를 전부 거절할까요?',
@@ -31,8 +31,15 @@ export const i18n = {
       sourceClipGone: '요청한 영상이 삭제됐어요',
       queueFull:
         '후보가 가득 차서 새로 들어온 요청은 기록되지 않아요. 하나를 승인하거나 무시하면 다시 기록돼요.',
-      approve: '승인',
+      approve: '저장',
       dismiss: '무시',
+      reviewStart: '하나씩 보기',
+      reviewTitle: '새 지침 후보',
+      reviewTitleClip: '새 영상 지침 후보',
+      reviewProgress: '{{current}} / {{total}}',
+      skip: '넘기기',
+      reviewDone: '다 봤어요',
+      close: '닫기',
       approveTitle: '지침으로 승인',
       approveSubmit: '지침으로 저장',
       approveDescription:
@@ -42,10 +49,10 @@ export const i18n = {
   },
   en: {
     candidate: {
-      summary: 'Guideline candidates ({{count}})',
-      summaryFull: 'Guideline candidates ({{count}}) · full',
-      summaryClip: 'Video guideline candidates ({{count}})',
-      summaryClipFull: 'Video guideline candidates ({{count}}) · full',
+      summary: '{{count}} new guideline candidates',
+      summaryFull: '{{count}} new guideline candidates · full',
+      summaryClip: '{{count}} new video guideline candidates',
+      summaryClipFull: '{{count}} new video guideline candidates · full',
       approveAll: 'Accept all',
       dismissAll: 'Dismiss all',
       dismissAllTitle: 'Dismiss all {{count}} candidates?',
@@ -67,8 +74,15 @@ export const i18n = {
       sourceClipGone: 'That clip was deleted',
       queueFull:
         'The candidate list is full, so new requests are no longer recorded. Approve or dismiss one to start recording again.',
-      approve: 'Approve',
+      approve: 'Save',
       dismiss: 'Dismiss',
+      reviewStart: 'Review one by one',
+      reviewTitle: 'New guideline candidates',
+      reviewTitleClip: 'New video guideline candidates',
+      reviewProgress: '{{current}} / {{total}}',
+      skip: 'Skip',
+      reviewDone: 'All reviewed',
+      close: 'Close',
       approveTitle: 'Approve as a guideline',
       approveSubmit: 'Save as a guideline',
       approveDescription:

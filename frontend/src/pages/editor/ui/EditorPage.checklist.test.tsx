@@ -54,7 +54,7 @@ describe('the pre-submission checklist', () => {
     expect(following(checklist, within(panel).getByRole('heading', { name: '내보내기' }))).toBe(
       true,
     )
-    const counted = within(checklist).getByRole('list', { name: '셀 수 있는 항목' })
+    const counted = within(checklist).getByRole('list', { name: '글에 꼭 담을 내용' })
     const rows = within(counted)
       .getAllByRole('listitem')
       .map((row) => row.textContent)

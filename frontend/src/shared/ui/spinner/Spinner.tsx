@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** The in-place pending indicator. Exists so `Button` can show a pending state without changing
  *  size (THEME-28) — a label swap moves the target out from under the thumb that just

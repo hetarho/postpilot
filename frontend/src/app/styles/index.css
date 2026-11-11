@@ -281,6 +281,10 @@
   --promo-hue-a: var(--palette-violet-500);
   --promo-hue-b: var(--palette-blue-500);
   --promo-hue-c: var(--palette-gold-300);
+
+  /* How dark a lifted plane's shadow is. A raised step card on the night ground needs a deep,
+     wide shadow to read as lifted; on the light day ground the same mix is a smudge. */
+  --shadow-strength: 55%;
 }
 
 /* `day`: the same semantic roles on a light ground. */
@@ -347,6 +351,8 @@
   --promo-hue-a: var(--palette-violet-400);
   --promo-hue-b: var(--palette-blue-400);
   --promo-hue-c: var(--palette-gold-300);
+
+  --shadow-strength: 14%;
 }
 
 /* ── Tier 3: functional roles ──────────────────────────────────────────────────────────────── */
@@ -380,6 +386,10 @@
   --field-label: var(--content-secondary);
   --field-placeholder: var(--content-tertiary);
   --field-error: var(--intent-danger);
+  /* The unticked box's own edge. A box drawn only as a recessed well vanished into the page in
+     Day and read as a bullet in Night (출처 보기 unticked); the edge takes the placeholder's
+     ink, which clears 3:1 against every plane a box sits on in both themes. */
+  --checkbox-edge: var(--content-tertiary);
 
   /* navigation and rows */
   --link-fg: var(--content-secondary);
@@ -395,8 +405,11 @@
   --row-bg-active: var(--surface-recessed);
   --divider: var(--stroke-subtle);
 
-  /* compact labels and inline feedback */
-  --badge-neutral-bg: var(--surface-raised);
+  /* compact labels and inline feedback. The neutral chip is a WELL, like a field: Guide sets
+     every list row on a raised card, and a chip in the card's own raised plane had no edge at
+     all — 초안 read as loose text and the draft tile as a glyph with no square under it. A
+     recessed plane shows on the page, on a card and on a hovered card alike. */
+  --badge-neutral-bg: var(--surface-recessed);
   --badge-neutral-fg: var(--content-secondary);
   /* a chip for a state that is "in progress by the user" rather than good/bad/urgent — e.g. a post
      in review. It borrows the accent so it reads as distinct from a neutral draft without claiming
@@ -484,6 +497,36 @@
      re-skins with the theme instead of being a second, frozen palette living inside an .svg. */
   --brand-wordmark: var(--content-primary);
   --brand-mark: var(--intent-accent);
+
+  /* Guide — the raised step card. One task per screen sits on ONE lifted plane, so the card is
+     what the eye lands on; the page ground recedes around it. */
+  --card-bg: var(--surface-raised);
+  --card-bg-hover: var(--surface-highest);
+  --card-bg-active: var(--surface-recessed);
+  /* A quiet inner well inside a card (a summary row's value, a photo tray). */
+  --card-well: var(--surface-base);
+
+  /* The bottom tab bar (phone) and floating pill (desk). Translucent like the docks, with the solid
+     role as the no-blur fallback. */
+  --tab-bar-solid: var(--surface-highest);
+  --tab-bar-bg: color-mix(in oklab, var(--surface-highest) 86%, transparent);
+  --tab-bar-fg: var(--content-tertiary);
+  --tab-bar-fg-current: var(--intent-accent);
+  --tab-bar-indicator: var(--intent-accent-subtle);
+
+  /* The section chip row under a large page title. The current chip is INVERTED — ink on paper
+     flips to paper on ink — so it is told at a glance without borrowing the accent the one big
+     action on the screen owns. */
+  --chip-bg: var(--surface-raised);
+  --chip-bg-hover: var(--surface-highest);
+  --chip-fg: var(--content-secondary);
+  --chip-bg-current: var(--content-primary);
+  --chip-fg-current: var(--surface-base);
+
+  /* The guided flow's slim progress: steps behind and the one on screen are filled, steps ahead
+     are a recess. */
+  --progress-step-done: var(--intent-accent);
+  --progress-step-todo: var(--surface-lowest);
 }
 
 /* ── Tailwind theme: the roles become utilities; stock colours are removed ─────────────────── */
@@ -498,10 +541,30 @@
     'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji',
     sans-serif;
 
-  --radius-sm: 0.375rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 0.875rem;
-  --radius-xl: 1.25rem;
+  /* Guide: the type steps (THEME-19), each named by the role that sets it, and changed HERE, never
+     at a call site (THEME-11). Tailwind's stock scale already holds 12 (`xs`), 18 (`lg`), 24
+     (`2xl`), 30/36 (`3xl`/`4xl`) and 60 (`6xl`). A step carries no line height of its own, as an
+     arbitrary size did not, so a recipe's `leading-*` still decides it — except the large title,
+     whose 1.15 belongs to the step. shared/lib/style/tw-merge.ts lists the names. */
+  --text-meta: 0.8125rem; /* 13 */
+  --text-label: 0.9375rem; /* 15 */
+  --text-body: 1.0625rem; /* 17 */
+  --text-title: 1.3125rem; /* 21 */
+  --text-step-title: 1.75rem; /* 28 */
+  --text-step-title-wide: 2rem; /* 32 */
+  --text-large-title: 2.125rem; /* 34 */
+  --text-large-title--line-height: 1.15;
+  --text-large-title-wide: 2.625rem; /* 42 */
+  --text-large-title-wide--line-height: 1.15;
+  --text-figure: 2.75rem; /* 44 */
+
+  /* Guide: soft and round. A control's well is 14px, a panel 20px, a step card 24px; buttons are
+     full pills (buttonStyles). */
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 1.75rem;
 
   --duration-fast: 120ms;
   --duration-base: 200ms;
@@ -518,11 +581,16 @@
      Name that content breakpoint so TabLinks never guesses with an arbitrary query value. */
   --container-tabs: 38rem;
 
-  /* One compact sticky header and viewport-edge docks at every width. */
-  --spacing-header: 4rem;
+  /* Guide: a slim top bar (brand · credits · account) and a bottom tab bar. */
+  --spacing-header: 3.5rem;
   --spacing-chrome: var(--spacing-header);
   --spacing-safe-t: env(safe-area-inset-top, 0px);
   --spacing-safe-b: env(safe-area-inset-bottom, 0px);
+  /* The bottom tab bar's own height on a phone, and the floating pill's on the desk. */
+  --spacing-tab-bar: 4rem;
+  --spacing-tab-pill: 3.75rem;
+  /* What the screen's bottom edge is taken by. Bare safe area by default; a shell showing the tab
+     bar re-declares it (see `[data-tab-bar]` below) so every dock floats above the bar. */
   --spacing-nav: env(safe-area-inset-bottom, 0px);
   /* A below-header popover must keep its final action reachable in phone landscape. */
   --spacing-popover-below-max: calc(100dvh - 5rem - env(safe-area-inset-top, 0px));
@@ -656,7 +724,23 @@
      stroke's halo swells and fades ONCE, on opacity and transform alone. It ends invisible, so
      the reduced-motion rule, which jumps to the last frame, leaves no glow at all. */
   --animate-preview-glow: preview-glow 1.2s var(--ease-standard) both;
+  /* Guide: a step screen ARRIVING. One gentle, one-time slide-and-fade on mount — forward steps
+     come in from the right, a step back from the left — on transform and opacity alone. */
+  --animate-step-in: step-in var(--duration-slow) var(--ease-emphasized) both;
+  --animate-step-back: step-back var(--duration-slow) var(--ease-emphasized) both;
 
+  @keyframes step-in {
+    from {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+  }
+  @keyframes step-back {
+    from {
+      opacity: 0;
+      transform: translateX(-1.5rem);
+    }
+  }
   @keyframes scrim-in {
     from {
       opacity: 0;
@@ -775,6 +859,24 @@
   z-index: 60;
 }
 
+/* The three motion steps as duration utilities. Tailwind has no `--duration-*` theme namespace,
+   so `duration-base` in a class list compiled to nothing: a card's hover, a fold, the guide's
+   progress segments all ran at the 150ms default whatever step they named. Each sets the
+   variable `transition-*` reads as well as the property, the way the stock `duration-<n>` does,
+   so it holds in either order. */
+@utility duration-fast {
+  --tw-duration: var(--duration-fast);
+  transition-duration: var(--duration-fast);
+}
+@utility duration-base {
+  --tw-duration: var(--duration-base);
+  transition-duration: var(--duration-base);
+}
+@utility duration-slow {
+  --tw-duration: var(--duration-slow);
+  transition-duration: var(--duration-slow);
+}
+
 @theme inline {
   --color-clip-coral: var(--palette-clip-coral);
   --color-clip-amber: var(--palette-clip-amber);
@@ -822,6 +924,7 @@
 
   /* fields */
   --color-field-bg: var(--field-bg);
+  --color-checkbox-edge: var(--checkbox-edge);
   --color-field-bg-hover: var(--field-bg-hover);
   --color-field-bg-focus: var(--field-bg-focus);
   --color-field-fg: var(--field-fg);
@@ -890,10 +993,32 @@
   --color-brand-wordmark: var(--brand-wordmark);
   --color-brand-mark: var(--brand-mark);
 
-  /* shadows are mixed from the physical role so they re-skin with the theme */
-  --shadow-sm: 0 1px 2px color-mix(in oklab, var(--shadow-color) 40%, transparent);
-  --shadow-md: 0 6px 18px color-mix(in oklab, var(--shadow-color) 45%, transparent);
-  --shadow-lg: 0 18px 48px color-mix(in oklab, var(--shadow-color) 50%, transparent);
+  /* Guide: cards, tab bar, chips, guided progress */
+  --color-card-bg: var(--card-bg);
+  --color-card-bg-hover: var(--card-bg-hover);
+  --color-card-bg-active: var(--card-bg-active);
+  --color-card-well: var(--card-well);
+  --color-tab-bar-solid: var(--tab-bar-solid);
+  --color-tab-bar-bg: var(--tab-bar-bg);
+  --color-tab-bar-fg: var(--tab-bar-fg);
+  --color-tab-bar-fg-current: var(--tab-bar-fg-current);
+  --color-tab-bar-indicator: var(--tab-bar-indicator);
+  --color-chip-bg: var(--chip-bg);
+  --color-chip-bg-hover: var(--chip-bg-hover);
+  --color-chip-fg: var(--chip-fg);
+  --color-chip-bg-current: var(--chip-bg-current);
+  --color-chip-fg-current: var(--chip-fg-current);
+  --color-progress-step-done: var(--progress-step-done);
+  --color-progress-step-todo: var(--progress-step-todo);
+
+  /* Shadows are mixed from the physical role so they re-skin with the theme, at the theme's own
+     strength: soft and wide, the way a card lifts off the page. */
+  --shadow-sm: 0 1px 3px
+    color-mix(in oklab, var(--shadow-color) var(--shadow-strength), transparent);
+  --shadow-md: 0 8px 24px -6px
+    color-mix(in oklab, var(--shadow-color) var(--shadow-strength), transparent);
+  --shadow-lg: 0 20px 48px -12px
+    color-mix(in oklab, var(--shadow-color) calc(var(--shadow-strength) * 1.4), transparent);
 }
 
 /* Keep these in the utility layer: the compound selector wins over the ordinary/coarse pointer
@@ -916,7 +1041,8 @@
     }
   }
 
-  [data-action-bar='always'] {
+  [data-action-bar='always'],
+  [data-action-bar='step'] {
     background-color: var(--color-action-dock-solid);
   }
 
@@ -926,6 +1052,22 @@
       -webkit-backdrop-filter: blur(var(--blur-md));
       backdrop-filter: blur(var(--blur-md));
     }
+    /* The step bar carries the screen's one big action, so it stays nearly opaque: the page under
+       it must not compete with the button. */
+    [data-action-bar='step'] {
+      background-color: var(--color-tab-bar-bg);
+      -webkit-backdrop-filter: blur(var(--blur-xl));
+      backdrop-filter: blur(var(--blur-xl));
+    }
+  }
+
+  /* A secondary button is a `surface-raised` pill, which is exactly what a Guide card is made of:
+     on a card it had no plane at all, and 기억으로 저장 · 이 글 형식으로 템플릿 만들기 read as
+     loose bold text indented by padding. On a card it takes the card's inner well instead; its
+     hover and press planes are unchanged. A card that IS a secondary button (a choice card) keeps
+     its own plane. */
+  .ui-card .ui-button-secondary:not(.ui-card) {
+    --button-secondary-bg: var(--card-well);
   }
 
   [data-action-bar] button,
@@ -944,6 +1086,36 @@
     width: calc(var(--spacing) * 12);
     height: calc(var(--spacing) * 12);
     padding: 0;
+  }
+
+  /* A phone's step bar holds ←, a second action and the big one in a single row. At 24px a side
+     the big action's label broke over two lines on a 360–375px phone (바로 글 / 쓰기), so the
+     bar's labels take a narrower side there; the targets keep their 48px height. */
+  @media (width < 40rem) {
+    [data-action-bar='step'] button,
+    [data-action-bar='step'] summary,
+    [data-action-bar='step'] .ui-button {
+      padding-inline: calc(var(--spacing) * 4);
+    }
+
+    [data-action-bar='step'] .ui-button.ui-button-cta {
+      padding-inline: calc(var(--spacing) * 5);
+    }
+  }
+}
+
+/* Guide: a shell that shows the bottom tab bar (phone) or the floating pill (desk) hands its height
+   to every dock below it, so a committing bar or a list's creation button floats ABOVE the bar
+   rather than under it. Focused flows (the editor, the clip workspace, the wizards) hide the bar
+   and keep the bare safe area. */
+[data-tab-bar='shown'] {
+  --spacing-nav: calc(var(--spacing-tab-bar) + env(safe-area-inset-bottom, 0px));
+  --spacing-dock-nav: calc(var(--spacing-tab-bar) + env(safe-area-inset-bottom, 0px) + 0.75rem);
+  --spacing-popover-above-max: calc(100dvh - var(--spacing-dock-nav) - 6rem);
+
+  @media (min-width: 64rem) {
+    --spacing-nav: calc(var(--spacing-tab-pill) + 1.5rem + env(safe-area-inset-bottom, 0px));
+    --spacing-dock-nav: calc(var(--spacing-tab-pill) + 2.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 

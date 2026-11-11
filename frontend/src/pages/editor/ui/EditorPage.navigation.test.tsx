@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { rememberPostEntry, readPostReturnContext } from '@/entities/post'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 import { renderAppAt } from '@/test/app'
-import { USER, resetEditorTest, openBrief } from '@/test/editor'
+import { GUIDE, USER, guideTo, resetEditorTest, openBrief } from '@/test/editor'
 import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 
 afterEach(() => {
@@ -107,4 +107,84 @@ it('preserves channel scroll through first draft mount and address minting', asy
   })
   const slug = view.router.state.location.pathname.split('/').at(-1)!
   expect(readPostReturnContext(USER.id, slug)).toMatchObject({ path: '/naver-blog', scrollY: 480 })
+})
+
+// From the template question, 새 템플릿 만들기 left the owner on a wizard whose two back links both
+// led to the template list, and a return to the post opened on the summary instead of the
+// question they had left.
+it('returns from the template wizard to the template question of the post', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    posts: { posts: [{ slug: 'saved', memo: '바다를 보고 왔다' }] },
+    templates: { templates: [] },
+  })
+  await guideTo(user, GUIDE.template)
+  await user.click(screen.getByRole('button', { name: '새 템플릿 만들기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/templates/new'))
+
+  const back = await screen.findByRole('link', { name: '글 작성' })
+  expect(back).toHaveAttribute('href', '/posts/saved')
+  expect(screen.queryByRole('link', { name: /템플릿/ })).not.toBeInTheDocument()
+  await user.click(back)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
+  expect(await screen.findByRole('heading', { name: '어떤 틀로 써 볼까요?' })).toBeVisible()
+})
+
+// POST-123 →THEME-58: 확인's 지침 row opens the guidelines page with the post as its one way back,
+// and coming back — by that link or the browser's Back — lands on 확인 again. The post holds
+// nothing that would otherwise open it on 확인.
+it('returns from the guidelines page to the post, on 확인', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    posts: { posts: [{ slug: 'saved' }] },
+  })
+  expect(await screen.findByRole('heading', { name: '어떤 글을 쓰시나요?' })).toBeVisible()
+  await guideTo(user, GUIDE.review)
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  await waitFor(() => expect(router.state.location.href).toBe('/guidelines?post=saved'))
+
+  const main = await screen.findByRole('main')
+  const back = await screen.findByRole('link', { name: '글 작성' })
+  expect(back).toHaveAttribute('href', '/posts/saved')
+  // It heads the page, over the hub's title and chips, and it is the page's only way back.
+  expect(back.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(screen.getAllByRole('navigation', { name: '돌아가기' })).toHaveLength(1)
+  await user.click(back)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
+  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/guidelines'))
+  router.history.back()
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
+  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+})
+
+// The guidelines page reached from its own tab is a hub section with no way back (THEME-58).
+it('shows no back link on the guidelines page opened from its tab', async () => {
+  renderAppAt('/guidelines', { user: USER })
+  await screen.findByRole('main')
+  expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).not.toBeInTheDocument()
+})
+
+// 내용 opened on the title as bare display-size text with its name hidden: a second, larger
+// heading under the screen's question, with nothing saying it could be typed in.
+it('draws the title on 내용 as a named field like the answers under it', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/posts/saved', {
+    user: USER,
+    posts: { posts: [{ slug: 'saved', title: '' }] },
+  })
+  await guideTo(user, GUIDE.details)
+
+  const title = await screen.findByRole('textbox', { name: '제목' })
+  expect(title).toHaveAttribute('placeholder', '예: 손님이 다시 찾는 이유')
+  expect(title).toHaveClass('bg-field-bg')
+  expect(title).not.toHaveClass('text-3xl')
+  const label = document.querySelector('label[for="post-title"]')
+  expect(label).toHaveTextContent('제목')
+  expect(label).not.toHaveClass('sr-only')
 })

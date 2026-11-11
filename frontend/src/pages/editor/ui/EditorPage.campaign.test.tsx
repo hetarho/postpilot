@@ -1,192 +1,160 @@
-// POST-117, POST-118: ①'s 체험단 글 switch and the advertiser guide under it.
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import { USER, openStep, resetEditorTest } from '@/test/editor'
+import { GUIDE, USER, guideTo, openStep, resetEditorTest } from '@/test/editor'
 import { publishedPostRow, type FakeDraftSave } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 afterEach(() => {
   resetEditorTest()
-  // Module state, so an unconsumed handoff would leak into the next test.
   clearCaret()
+  vi.restoreAllMocks()
 })
+const AUTOSAVED = { timeout: 4_000 }
+const SLUG = '20260820-seongsu'
+const guideText = () => screen.queryByRole('textbox', { name: '광고주 가이드' })
 
-describe('the 체험단 글 switch', () => {
-  const AUTOSAVED = { timeout: 4_000 }
-  const SLUG = '20260820-seongsu'
-  const TEMPLATES = [
-    { id: 'visit', name: '방문 기록', body: '<write>인트로</write>\n<ask label="방문일"/>' },
-  ]
-  const following = (first: Node, second: Node) =>
-    Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
-  const campaignSwitch = () => screen.findByRole('switch', { name: '체험단 글' })
-  const guideText = () => screen.queryByRole('textbox', { name: '광고주 가이드' })
-
-  it('lays out the switch and guide between the 가제 and the fields', async () => {
-    renderAppAt(`/posts/${SLUG}`, {
-      user: USER,
-      posts: {
-        posts: [{ slug: SLUG, title: '성수 카페', campaign: true, template: TEMPLATES[0] }],
-        templates: [{ id: 'visit', name: '방문 기록' }],
-      },
-      templates: { templates: TEMPLATES },
-    })
-
-    const answer = await screen.findByLabelText('방문일')
-    const title = screen.getByLabelText('제목')
-    const toggle = await campaignSwitch()
-    const guide = guideText()!
-    const memo = screen.getByLabelText('메모')
-    expect(following(title, toggle)).toBe(true)
-    expect(following(toggle, guide)).toBe(true)
-    expect(following(guide, answer)).toBe(true)
-    expect(following(answer, memo)).toBe(true)
-    expect(screen.getByText('0 / 3000자')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '셀 수 있는 항목' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
-  })
-
-  it('autosaves the switch and the guide', async () => {
-    const draftSaves: FakeDraftSave[] = []
+describe('campaign-led writing', () => {
+  it('starts sponsored, shows every requirement directly, and applies only tapped suggestions', async () => {
     const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
     renderAppAt(`/posts/${SLUG}`, {
       user: USER,
-      posts: { draftSaves, posts: [{ slug: SLUG, title: '성수 카페', campaign: true }] },
+      posts: { draftSaves, posts: [{ slug: SLUG, campaign: true }] },
     })
-
-    await campaignSwitch()
-    await user.type(guideText()!, '대표 메뉴를 꼭 넣어 주세요')
-    await user.click(screen.getByRole('button', { name: '셀 수 있는 항목' }))
-    await user.type(screen.getByRole('textbox', { name: '필수 키워드' }), '성수 카페{Enter}')
-
+    await guideTo(user, GUIDE.kind)
+    expect(screen.getByRole('button', { name: '체험단으로 다녀왔어요' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    // THEME-55: the new question takes focus, so a screen reader hears the screen changed.
+    expect(
+      screen.getByRole('heading', { name: '광고주가 부탁한 내용을 알려 주세요' }),
+    ).toHaveFocus()
+    expect(screen.queryByText('셀 수 있는 항목')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '글에 꼭 담을 내용' })).toBeVisible()
+    for (const name of ['필수 키워드', '최소 글자 수', '최소 사진 수', '필수 해시태그'])
+      expect(screen.getByRole('textbox', { name })).toBeVisible()
+    fireEvent.change(guideText()!, {
+      target: { value: '사진 8장 이상, 1,500자 이상\n키워드: 성수 카페\n#성수맛집' },
+    })
+    expect(screen.getByLabelText('최소 사진 수')).toHaveValue('')
+    await user.click(screen.getByRole('button', { name: '사진 최소 8장 추가' }))
+    expect(screen.getByLabelText('최소 사진 수')).toHaveValue('8')
+    await user.click(screen.getByRole('button', { name: '키워드 · 성수 카페 추가' }))
+    await user.click(screen.getByRole('button', { name: '#성수맛집 제안 지우기' }))
     await waitFor(
       () =>
-        expect(draftSaves.at(-1)?.advertiserGuide).toEqual({
-          text: '대표 메뉴를 꼭 넣어 주세요',
+        expect(draftSaves.at(-1)?.advertiserGuide).toMatchObject({
+          minPhotos: 8,
           keywords: ['성수 카페'],
-          minChars: undefined,
-          minPhotos: undefined,
           hashtags: [],
+          minChars: undefined,
         }),
       AUTOSAVED,
     )
-    // An ordinary title save carries no campaign part it did not change.
-    expect(draftSaves.every((save) => save.campaign === undefined)).toBe(true)
-    const saves = draftSaves.length
-    await user.type(screen.getByLabelText('제목'), ' 투어')
-    await waitFor(() => expect(draftSaves.length).toBeGreaterThan(saves), AUTOSAVED)
-    expect(draftSaves.at(-1)).toMatchObject({
-      campaign: undefined,
-      advertiserGuide: undefined,
-      checklistTicks: undefined,
-    })
+    await guideTo(user, GUIDE.photos)
+    expect(screen.getByRole('complementary', { name: '광고주 요청 챙기기' })).toHaveTextContent(
+      '사진 0 / 8장',
+    )
+    await guideTo(user, GUIDE.story)
+    await user.click(screen.getByRole('button', { name: '건너뛰고 확인' }))
+    expect(screen.getByRole('heading', { name: '이대로 써 볼까요?' })).toBeInTheDocument()
+    expect(screen.getByText('아직 입력하지 않은 키워드: 성수 카페')).toBeInTheDocument()
   })
-
-  it('hides but keeps the guide while the switch is off', async () => {
-    const draftSaves: FakeDraftSave[] = []
+  it('hides the guide and its tracker for self-paid posts, preserving the guide when switched back', async () => {
     const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
     renderAppAt(`/posts/${SLUG}`, {
       user: USER,
       posts: {
         draftSaves,
-        posts: [
-          {
-            slug: SLUG,
-            title: '성수 카페',
-            campaign: true,
-            advertiserGuide: { text: '대표 메뉴를 꼭 넣어 주세요' },
-          },
-        ],
+        posts: [{ slug: SLUG, campaign: true, advertiserGuide: { text: '대표 메뉴' } }],
       },
     })
-
-    const toggle = await campaignSwitch()
-    expect(toggle).toBeChecked()
-    expect(guideText()).toHaveValue('대표 메뉴를 꼭 넣어 주세요')
-    await user.click(toggle)
-    expect(guideText()).toBeNull()
-
+    await guideTo(user, GUIDE.kind)
+    await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
     await waitFor(() => expect(draftSaves.at(-1)?.campaign).toBe(false), AUTOSAVED)
-    // Only the switch moved: the guide stays as the server holds it.
     expect(draftSaves.at(-1)?.advertiserGuide).toBeUndefined()
-
-    await user.click(toggle)
-    expect(guideText()).toHaveValue('대표 메뉴를 꼭 넣어 주세요')
+    expect(
+      within(screen.getByRole('navigation', { name: '글쓰기 단계' })).queryByRole('button', {
+        name: '요청',
+      }),
+    ).toBeNull()
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(screen.getByRole('heading', { name: '사진을 골라 주세요' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary')).toBeNull()
+    await guideTo(user, GUIDE.kind)
+    await user.click(screen.getByRole('button', { name: '체험단으로 다녀왔어요' }))
+    await guideTo(user, GUIDE.requirements)
+    expect(guideText()).toHaveValue('대표 메뉴')
   })
-
-  it('starts a new post with the switch on', async () => {
-    const draftSaves: FakeDraftSave[] = []
+  it('keeps the requirements screen through the first save mint', async () => {
     const user = userEvent.setup()
-    const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
-
-    const toggle = await campaignSwitch()
-    expect(toggle).toBeChecked()
-    // The unminted order is the same: 가제 → the switch with its guide → memo.
-    expect(following(screen.getByLabelText('제목'), toggle)).toBe(true)
-    expect(following(toggle, guideText()!)).toBe(true)
-    expect(following(guideText()!, screen.getByLabelText('메모'))).toBe(true)
-    await user.type(screen.getByLabelText('제목'), '성수')
-
+    const { router } = renderAppAt('/posts/new', { user: USER })
+    await guideTo(user, GUIDE.kind)
+    expect(screen.getByRole('button', { name: '체험단으로 다녀왔어요' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await guideTo(user, GUIDE.requirements)
+    fireEvent.change(guideText()!, { target: { value: '사진 5장 이상' } })
     await waitFor(
-      () => expect(router.state.location.pathname).toBe('/posts/20260828-성수'),
+      () => expect(router.state.location.pathname).toBe('/posts/20260828-untitled'),
       AUTOSAVED,
     )
-    // A new post is a 체험단 post on the server too, so the create need not say so.
-    expect(draftSaves[0]?.campaign).toBeUndefined()
-    expect(await campaignSwitch()).toBeChecked()
+    expect(await screen.findByRole('textbox', { name: '광고주 가이드' })).toHaveValue(
+      '사진 5장 이상',
+    )
+    expect(screen.getByRole('button', { name: '요청' })).toHaveAttribute('aria-current', 'step')
+    expect(screen.getByLabelText('최소 사진 수')).toHaveValue('')
   })
-
-  // Switching it off is a new draft's first edit, so it mints the post — and the page must stay
-  // where the owner was rather than jump to its top under the switch.
-  it('mints a new post from switching it off without moving the page', async () => {
-    const draftSaves: FakeDraftSave[] = []
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
+  it('mints from the self-paid choice without scrolling or losing the choice', async () => {
     const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
-
-    const toggle = await campaignSwitch()
-    // The saved post's inspection entry already stands, so the mint inserts nothing above ①.
-    expect(screen.getByRole('button', { name: '요청 기술 보기' })).toBeInTheDocument()
-    scrollTo.mockClear()
-    await user.click(toggle)
-
+    await guideTo(user, GUIDE.kind)
+    const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
+    await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
     await waitFor(
       () => expect(router.state.location.pathname).toBe('/posts/20260828-untitled'),
       AUTOSAVED,
     )
     expect(draftSaves[0]?.campaign).toBe(false)
-    expect(await campaignSwitch()).not.toBeChecked()
-    expect(scrollTo).not.toHaveBeenCalled()
-    scrollTo.mockRestore()
+    expect(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(scroll).not.toHaveBeenCalled()
   })
-
-  it('shows a post saved as not a 체험단 post with the switch off', async () => {
-    renderAppAt(`/posts/${SLUG}`, {
+  it('flushes the guide before opening the template wizard with this post as its return', async () => {
+    const user = userEvent.setup()
+    const draftSaves: FakeDraftSave[] = []
+    const { router } = renderAppAt(`/posts/${SLUG}`, {
       user: USER,
-      posts: { posts: [{ slug: SLUG, title: '성수 카페', campaign: false }] },
+      posts: { draftSaves, posts: [{ slug: SLUG, campaign: true }] },
     })
-
-    expect(await campaignSwitch()).not.toBeChecked()
-    expect(guideText()).toBeNull()
+    await guideTo(user, GUIDE.requirements)
+    fireEvent.change(guideText()!, { target: { value: '마지막으로 넣은 안내' } })
+    await guideTo(user, GUIDE.template)
+    await user.click(screen.getByRole('button', { name: '새 템플릿 만들기' }))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/templates/new'), AUTOSAVED)
+    expect(router.state.location.search).toMatchObject({ post: SLUG })
+    expect(draftSaves.at(-1)?.advertiserGuide?.text).toBe('마지막으로 넣은 안내')
   })
-
-  it('says a refused guide under the guide and takes it back', async () => {
+  it('shows refused guide saves and restores the saved value', async () => {
     const user = userEvent.setup()
     renderAppAt(`/posts/${SLUG}`, {
       user: USER,
       posts: {
-        posts: [{ slug: SLUG, title: '성수 카페', campaign: true }],
+        posts: [{ slug: SLUG, campaign: true }],
         refuseGuide: 'ADVERTISER_GUIDE_ITEM_INVALID',
       },
     })
-
-    await campaignSwitch()
+    await guideTo(user, GUIDE.requirements)
     await user.type(guideText()!, '대표 메뉴')
-
     expect(
       await screen.findByText(
         '광고주 가이드 항목을 확인해 주세요. 범위를 벗어났거나 빈 항목이 있어요.',
@@ -196,26 +164,21 @@ describe('the 체험단 글 switch', () => {
     ).toBeInTheDocument()
     expect(guideText()).toHaveValue('')
   })
-
-  it('shows a published post’s switch and guide read-only', async () => {
+  it('keeps a published post’s choices and guide read-only', async () => {
     const user = userEvent.setup()
     renderAppAt(`/posts/${SLUG}`, {
       user: USER,
       posts: {
         posts: [
-          publishedPostRow({
-            slug: SLUG,
-            title: '성수 카페',
-            campaign: true,
-            advertiserGuide: { text: '대표 메뉴를 꼭 넣어 주세요' },
-          }),
+          publishedPostRow({ slug: SLUG, campaign: true, advertiserGuide: { text: '대표 메뉴' } }),
         ],
       },
     })
-
-    // A published post opens on 글 완성; ① still shows its material.
     await openStep(user, '글 생성')
-    expect(await campaignSwitch()).toBeDisabled()
+    await guideTo(user, GUIDE.kind)
+    expect(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' })).toBeDisabled()
+    await guideTo(user, GUIDE.requirements)
     expect(guideText()).toBeDisabled()
+    expect(screen.getByLabelText('최소 사진 수')).toBeDisabled()
   })
 })

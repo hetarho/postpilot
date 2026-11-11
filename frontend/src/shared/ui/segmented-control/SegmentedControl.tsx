@@ -2,7 +2,7 @@ import { Fragment, useId, type KeyboardEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -84,9 +84,16 @@ export function SegmentedControl<T extends string>({
       // page or to the browser's back gesture (THEME-25).
       className={twMerge(
         clsx(
+          // `@container`: the stations measure the room the row leaves them, not the screen.
+          // Between a 44px back button and a 44px delete, three stations and two chevrons need
+          // ~262px and a 390px phone leaves 238px, a 360px one 208px; centred, the overflow went
+          // out of BOTH ends, so 글 생성 slid under the back button and 글 완성 under the
+          // delete. Narrow, the stations tighten, then the chevrons shrink, and only on the
+          // narrowest row (a 360px phone) do they go; `justify-center-safe`
+          // sends any overflow that is left past the end rather than under the leading control.
           steps
-            ? 'flex min-h-10 items-center justify-center gap-1 select-none pointer-coarse:min-h-11'
-            : 'bg-surface-recessed flex gap-1 overflow-x-auto overscroll-x-contain rounded-md p-1 select-none',
+            ? '@container flex min-h-10 items-center justify-center-safe gap-1 select-none pointer-coarse:min-h-11'
+            : 'bg-surface-recessed flex gap-1 overflow-x-auto overscroll-x-contain rounded-full p-1 select-none',
           !steps &&
             (compact ? 'min-h-8 pointer-coarse:min-h-9' : 'min-h-10 pointer-coarse:min-h-11'),
           disabled && 'opacity-50',
@@ -98,7 +105,10 @@ export function SegmentedControl<T extends string>({
         <Fragment key={option.value}>
           {/* The path between stations. Decoration: the tabs' order already says it. */}
           {steps && index > 0 && (
-            <ChevronRight aria-hidden="true" className="text-content-tertiary size-4 shrink-0" />
+            <ChevronRight
+              aria-hidden="true"
+              className="text-content-tertiary size-4 shrink-0 @max-[17rem]:size-3.5 @max-[15.5rem]:-mx-1 @max-[15.5rem]:size-3 @max-[13.5rem]:hidden"
+            />
           )}
           <button
             type="button"
@@ -118,17 +128,18 @@ export function SegmentedControl<T extends string>({
             // inside a `p-1` container paints across the neighbouring tabs.
             className={twMerge(
               steps
-                ? clsx(
-                    'inline-flex min-h-10 shrink-0 items-center rounded-sm px-2 text-sm whitespace-nowrap transition-colors pointer-coarse:min-h-11',
+                ? // Guide: a lifecycle station is a pill; the one the post is in is inverted ink.
+                  clsx(
+                    'text-label inline-flex min-h-10 shrink-0 items-center rounded-full px-3 font-semibold whitespace-nowrap transition-colors @max-[17rem]:px-2.5 @max-[15.5rem]:px-2 pointer-coarse:min-h-11',
                     option.value === value
-                      ? 'text-content-primary font-medium'
+                      ? 'bg-chip-bg-current text-chip-fg-current'
                       : 'text-content-tertiary hover:text-content-secondary active:text-content-secondary',
                   )
                 : clsx(
-                    'relative flex-1 shrink-0 rounded-sm whitespace-nowrap transition-colors',
+                    'relative flex-1 shrink-0 rounded-full font-semibold whitespace-nowrap transition-colors',
                     compact
                       ? 'min-h-8 px-2 text-xs pointer-coarse:min-h-9'
-                      : 'min-h-10 px-4 text-sm pointer-coarse:min-h-11',
+                      : 'text-label min-h-10 px-4 pointer-coarse:min-h-11',
                     option.value === value
                       ? 'text-content-primary'
                       : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
@@ -140,7 +151,7 @@ export function SegmentedControl<T extends string>({
                 aria-hidden="true"
                 layoutId={thumbId}
                 transition={{ duration: reduced ? 0 : 0.2, ease: [0.2, 0, 0, 1] }}
-                className="bg-surface-raised absolute inset-0 rounded-sm shadow-sm"
+                className="bg-surface-raised absolute inset-0 rounded-full shadow-sm"
               />
             )}
             {/* Above the travelling plane, which is painted inside the same button box. */}

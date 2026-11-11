@@ -57,7 +57,11 @@ it.each(['/posts/new', '/clips/new?channel=naver_clip'])(
   'keeps the creation button off the writing screen %s',
   async (path) => {
     renderAppAt(path, { user: { id: 'alice' } })
-    await screen.findByRole('navigation', { name: '주요' })
+    // Guide: a writing screen is a focused flow — no tab bar, no section chips, no creation
+    // button; only the account menu stays in the slim top bar.
+    await screen.findByRole('button', { name: '내 계정' })
+    await screen.findByRole('main')
+    expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
     expect(screen.queryByRole('link', { name: /^새 (글|영상)$/ })).toBeNull()
     expect(screen.queryByRole('navigation', { name: '채널 메뉴' })).toBeNull()
   },

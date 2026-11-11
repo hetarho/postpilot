@@ -173,6 +173,15 @@ describe('GenerationBrief', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
+  // ARCH-16: the text trigger's label is the caller's — 확인's row names its own 바꾸기 — so the
+  // widget reads no key another slice owns; the button keeps the brief's name.
+  it('wears the label its caller names on a text trigger', async () => {
+    renderBrief({ changeLabel: '옵션 바꾸기' })
+    const trigger = await screen.findByRole('button', { name: '글쓰기 옵션' })
+    expect(trigger).toHaveTextContent('옵션 바꾸기')
+    expect(trigger.querySelector('svg')).toBeNull()
+  })
+
   // A1, narrowed: ONE surface holds every SETTING the run consumes, in the order it consumes them.
   // 말투 and 템플릿 are excepted — both are per-draft choices and both ride the dock's own row beside
   // this trigger, so getting either wrong is visible without opening anything.

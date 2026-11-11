@@ -9,6 +9,9 @@ import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
 import { i18n as creationOfferI18n } from '@/features/offer-creation-setup/config/i18n'
 import { i18n as channelI18n } from '@/widgets/channel-actions/config/i18n'
 import { i18n as homeI18n } from '@/pages/home/config/i18n'
+import { i18n as workListI18n } from '@/widgets/work-list/config/i18n'
+import { i18n as createI18n } from '@/pages/create/config/i18n'
+import { i18n as guideHubsI18n } from '@/pages/style/config/i18n'
 import { i18n as libraryI18n } from '@/pages/library/config/i18n'
 import { i18n as settingsI18n } from '@/pages/settings/config/i18n'
 import { spokenVoiceResources } from '@/entities/spoken-voice/config/i18n'
@@ -121,6 +124,7 @@ import { i18n as writingOriginsI18n } from '@/features/review-writing-origins/co
 import { i18n as requestInspectionI18n } from '@/features/inspect-writing-request/config/i18n'
 import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
+import { i18n as editorGuideI18n } from '@/pages/editor/config/guide-i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
 import { i18n as renameVoiceI18n } from '@/features/rename-voice/config/i18n'
 import { i18n as reviewGuidelineCandidateI18n } from '@/features/review-guideline-candidate/config/i18n'
@@ -170,6 +174,9 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   creationOfferI18n,
   homeI18n,
   channelI18n,
+  workListI18n,
+  createI18n,
+  guideHubsI18n,
   libraryI18n,
   settingsI18n,
   { namespace: 'spokenVoice', ...spokenVoiceResources },
@@ -261,6 +268,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   postI18n,
   writingOriginsI18n,
   postsI18n,
+  editorGuideI18n,
   uploadPhotosI18n,
   deleteTemplateI18n,
   selectPostTemplateI18n,
@@ -292,9 +300,11 @@ export const resources = {
     requestInspection: requestInspectionI18n.ko,
     authoring: { ...authoringI18n.ko },
     voicePreparation: { ...voicePreparationI18n.ko },
-    channel: channelI18n.ko,
+    channel: { ...channelI18n.ko, ...workListI18n.ko },
     creation: {
       ...homeI18n.ko,
+      ...createI18n.ko,
+      ...guideHubsI18n.ko,
       ...libraryI18n.ko,
       ...settingsI18n.ko,
       ...setupI18n.ko,
@@ -331,6 +341,7 @@ export const resources = {
       ...postI18n.ko,
       ...writingOriginsI18n.ko,
       ...postsI18n.ko,
+      ...editorGuideI18n.ko,
       ...uploadPhotosI18n.ko,
     },
     voices: {
@@ -444,9 +455,11 @@ export const resources = {
     requestInspection: requestInspectionI18n.en,
     authoring: { ...authoringI18n.en },
     voicePreparation: { ...voicePreparationI18n.en },
-    channel: channelI18n.en,
+    channel: { ...channelI18n.en, ...workListI18n.en },
     creation: {
       ...homeI18n.en,
+      ...createI18n.en,
+      ...guideHubsI18n.en,
       ...libraryI18n.en,
       ...settingsI18n.en,
       ...setupI18n.en,
@@ -483,6 +496,7 @@ export const resources = {
       ...postI18n.en,
       ...writingOriginsI18n.en,
       ...postsI18n.en,
+      ...editorGuideI18n.en,
       ...uploadPhotosI18n.en,
     },
     voices: {

@@ -200,11 +200,13 @@ describe('the post language', () => {
   })
 })
 
-// POST-54, POST-72, POST-103: ③ is what the finished post is for — 기억으로 저장 and 이 글 형식으로
-// 템플릿 만들기 side by side, the manual export and the 발행 URL field at its foot — and nothing else. 말투 학습 and 문장 의견 left it with learning from
-// finalized posts (VOICE r5): a finalized post teaches its voice nothing.
+// POST-54, POST-72, POST-103: ③ is what the finished post is for — Guide: the manual export first
+// (the 완성 screen is about getting the post out), then 기억으로 저장 and 이 글 형식으로 템플릿 만들기
+// side by side under 더 해 보기, and the 발행 URL field at its foot — and nothing else. 말투 학습 and
+// 문장 의견 left it with learning from finalized posts (VOICE r5): a finalized post teaches its
+// voice nothing.
 describe('the finish panel', () => {
-  it('holds 기억으로 저장, the template link, the export and the 발행 URL field in that order, and no learning', async () => {
+  it('holds the export, then 기억으로 저장 and the template link, then the 발행 URL field, and no learning', async () => {
     const calls: string[] = []
     renderAppAt('/posts/20260820-final', {
       user: USER,
@@ -221,9 +223,11 @@ describe('the finish panel', () => {
     const FOLLOWING = Node.DOCUMENT_POSITION_FOLLOWING
     // The link opens a new template with this post as its sample, and starts nothing (POST-103).
     expect(templateLink).toHaveAttribute('href', '/templates/new?from=20260820-final')
+    expect(within(panel).getByRole('heading', { name: '완성됐어요' })).toBeInTheDocument()
+    expect(exportHeading.compareDocumentPosition(memories) & FOLLOWING).toBeTruthy()
     expect(memories.compareDocumentPosition(templateLink) & FOLLOWING).toBeTruthy()
-    expect(templateLink.compareDocumentPosition(exportHeading) & FOLLOWING).toBeTruthy()
-    expect(exportHeading.compareDocumentPosition(publish) & FOLLOWING).toBeTruthy()
+    expect(templateLink.compareDocumentPosition(publish) & FOLLOWING).toBeTruthy()
+    expect(within(panel).getByRole('region', { name: '더 해 보기' })).toContainElement(memories)
 
     expect(within(panel).queryByRole('heading', { name: '말투 학습' })).not.toBeInTheDocument()
     for (const gone of ['말투 학습', '문장 의견', '수정 없이도 마음에 들어요']) {

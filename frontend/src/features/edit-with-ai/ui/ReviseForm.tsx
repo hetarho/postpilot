@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useImperativeHandle, useState, type ReactNode } from 'react'
+import { forwardRef, useCallback, useImperativeHandle, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SendHorizontal } from 'lucide-react'
 import { isTerminal, useStartRevision, type GenerationJob } from '@/entities/generation-job'
@@ -24,11 +24,6 @@ interface ReviseFormProps {
   jobPending?: boolean
   onStarted: (jobId: string) => void
   beforeStart?: () => Promise<void>
-  /** Rendered at the top-right of the row's own heading. `widgets/refine-dock` puts 확정하기 there:
-   *  the step's way OUT belongs beside the name of the loop it leaves, not underneath the field
-   *  that continues it. A slot rather than an import, because a feature may not reach a sibling
-   *  feature (ARCH-13). */
-  action?: ReactNode
 }
 
 export interface ReviseFormHandle {
@@ -37,10 +32,10 @@ export interface ReviseFormHandle {
 
 /** Replaces the current canonical content through one durable `revise` job.
  *
- *  It is the body of 글 다듬기's dock (`widgets/refine-dock`) and renders no surface of its own: a
- *  4,000px draft used to put this form past the end of the page, which is exactly where THEME-24 says
- *  a committing action may not live. It DOES render the row's heading, with the step's way out
- *  (확정하기) in the `action` slot beside it.
+ *  It is the composer of 글 다듬기's step bar (`widgets/refine-dock`) and renders no surface of its
+ *  own: a 4,000px draft used to put this form past the end of the page, which is exactly where
+ *  THEME-24 says a committing action may not live. It renders the field's own heading; the step's
+ *  way out (확정하기) is the bar's big action in the row under it.
  *
  *  Its SECONDARY controls — the counter and 지침으로 저장 — collapse while the field is empty and
  *  unfocused. The dock is over the draft the whole time, so the row that is not being used is
@@ -48,17 +43,7 @@ export interface ReviseFormHandle {
  *  character, and for as long as a revision is running or has failed, because that is when their
  *  state is worth reading. */
 export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function ReviseForm(
-  {
-    ownerId,
-    postSlug,
-    voice,
-    template,
-    activeJob,
-    jobPending = false,
-    onStarted,
-    beforeStart,
-    action,
-  },
+  { ownerId, postSlug, voice, template, activeJob, jobPending = false, onStarted, beforeStart },
   ref,
 ) {
   const { t } = useTranslation('posts')
@@ -132,27 +117,22 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
         void start()
       }}
     >
-      {/* The row's own heading, with the step's way out beside it. The label is VISIBLE: it used
-          to be `sr-only`, which left the field's prompt to a placeholder — `meta`-sized,
-          `content-tertiary`, and gone the moment a character was typed — so the one bar holding
-          both the revision loop and the actions that end it named neither of them (owner decision
-          2026-09-02). It is still the field's own `<label>`, so the accessible name is the text
-          the user can read.
-          `fieldTitle`, not `title`: this is a field's name standing beside the step's way out, not
-          a second step heading, so it is smaller than the step title and heavier than a caption
-          (THEME-19). Keep the step action at its natural label width; when it cannot fit beside
-          the field label, the heading row wraps without splitting its button into characters. */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Typography
-          variant="fieldTitle"
-          as="label"
-          htmlFor="revision-instruction"
-          className="min-w-0"
-        >
-          {t('revision.instruction')}
-        </Typography>
-        {action && <div className="min-w-0 shrink-0">{action}</div>}
-      </div>
+      {/* The field's own heading. The label is VISIBLE: it used to be `sr-only`, which left the
+          field's prompt to a placeholder — `meta`-sized, `content-tertiary`, and gone the moment a
+          character was typed — so the one bar holding both the revision loop and the action that
+          ends it named neither of them (owner decision 2026-09-02). It is still the field's own
+          `<label>`, so the accessible name is the text the user can read.
+          `fieldTitle`, not `title`: this is a field's name above the step's way out, not a second
+          step heading, so it is smaller than the step title and heavier than a caption
+          (THEME-19). */}
+      <Typography
+        variant="fieldTitle"
+        as="label"
+        htmlFor="revision-instruction"
+        className="min-w-0"
+      >
+        {t('revision.instruction')}
+      </Typography>
       {/* Validation and failure sit ABOVE the controls, so the keyboard covering the bottom ~40%
           of the screen hides at most a button and never the reason it is disabled (THEME-31). */}
       {blocker && (
@@ -170,8 +150,8 @@ export const ReviseForm = forwardRef<ReviseFormHandle, ReviseFormProps>(function
           )}
         </Notice>
       )}
-      {/* The focus tracking is on the CONTROLS, not on the form: the heading row holds 확정하기,
-          and pressing it must not expand the secondary row underneath the field it never touched. */}
+      {/* The focus tracking is on the CONTROLS, not on the form: only the field and its own
+          buttons open the secondary row underneath it. */}
       <div
         className="grid gap-2"
         onFocus={() => setFocused(true)}

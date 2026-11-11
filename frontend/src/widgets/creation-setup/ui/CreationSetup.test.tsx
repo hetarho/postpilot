@@ -158,6 +158,22 @@ it('omits made voices and existing templates, showing only the missing clip temp
     await screen.findByRole('heading', { name: '이제, 당신의 이야기를 만들어요.' }),
   ).toBeInTheDocument()
 })
+// A template question keeps ONE step bar, its wizard's: setup's way back stands in it on the
+// wizard's first question and setup's skip under its row, where they used to be a second bar
+// under the wizard's own 이전 / 다음.
+it('keeps one step bar on a template question, carrying setup’s way back and skip', async () => {
+  resumeSetup()
+  renderAppAt('/', { ...READY, clips: { templates: [] } })
+  const user = await start()
+  await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' })
+  const bars = document.querySelectorAll<HTMLElement>('[data-action-bar="step"]')
+  expect(bars).toHaveLength(1)
+  const bar = within(bars[0]!)
+  expect(bar.getByRole('button', { name: '다음' })).toBeDisabled()
+  expect(bar.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
+  await user.click(bar.getByRole('button', { name: '이전' }))
+  expect(await screen.findByRole('button', { name: '내 작업 공간 준비하기' })).toBeInTheDocument()
+})
 it('defers once, survives reload and does not share the acknowledgement with another account', async () => {
   const user = userEvent.setup()
   const first = mountFresh()
@@ -263,7 +279,9 @@ it('retains the failed step and returns to all three methods on explicit Back wi
 })
 async function finishPostWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole('button', { name: /^맛집/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^식사/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '이런 글은 보통 이렇게 구성돼요' })
   for (const box of screen.getAllByRole('checkbox')) {
     if (!box.closest('label')?.textContent?.startsWith('방문 계기')) await user.click(box)
@@ -398,7 +416,9 @@ it('creates a valid post template exactly once and advances from its confirmed s
 })
 async function finishClipWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(await screen.findByRole('button', { name: /^카페/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await user.click(await screen.findByRole('button', { name: /^디저트/ }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
   await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
   for (const box of screen.getAllByRole('checkbox')) {
     if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)

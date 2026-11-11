@@ -20,19 +20,34 @@ describe('the template wizard', () => {
       templates: { templates: [], creates, calls },
     })
 
-    // The target, one question per screen; Back shows the earlier question with its answer kept.
+    // The target, one question per screen. A tap only chooses — the card is marked and the
+    // question stays — and 다음 in the step bar moves on; until there is an answer it is held,
+    // with the reason above it naming it.
     await title('어떤 체험을 글로 남기나요?')
+    expect(next()).toBeDisabled()
+    expect(next()).toHaveAccessibleDescription('하나를 골라 주세요.')
+    expect(next().closest('[data-action-bar="step"]')).not.toBeNull()
     await user.click(screen.getByRole('button', { name: /^맛집/ }))
+    expect(screen.getByRole('button', { name: /^맛집/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      screen.getByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
+    ).toBeInTheDocument()
+    expect(next()).toBeEnabled()
+    expect(screen.queryByText('하나를 골라 주세요.')).not.toBeInTheDocument()
+    await user.click(next())
     await title('어떤 식당인가요?')
     await user.click(screen.getByRole('button', { name: /^식사/ }))
+    await user.click(next())
     await title('이런 글은 보통 이렇게 구성돼요')
     const service = screen.getByRole('checkbox', { name: /^서비스·응대/ })
     expect(service).toBeChecked()
     expect(screen.getByRole('checkbox', { name: /^아쉬운 점/ })).toBeChecked()
     await user.click(service)
+    // Back shows the earlier question with its answer kept, and 다음 takes the same answer on.
     await user.click(screen.getByRole('button', { name: '이전' }))
     await title('어떤 식당인가요?')
-    await user.click(screen.getByRole('button', { name: /^식사/ }))
+    expect(screen.getByRole('button', { name: /^식사/ })).toHaveAttribute('aria-pressed', 'true')
+    await user.click(next())
     expect(await screen.findByRole('checkbox', { name: /^서비스·응대/ })).not.toBeChecked()
     await user.click(next())
 
@@ -92,7 +107,9 @@ describe('the template wizard', () => {
       templates: { templates: [], creates },
     })
     await user.click(await screen.findByRole('button', { name: /^맛집/ }))
+    await user.click(next())
     await user.click(await screen.findByRole('button', { name: /^식사/ }))
+    await user.click(next())
     await title('이런 글은 보통 이렇게 구성돼요')
     for (const box of screen.getAllByRole('checkbox'))
       if (!box.closest('label')?.textContent?.startsWith('방문 계기')) await user.click(box)
@@ -111,7 +128,8 @@ describe('the template wizard', () => {
     })
     await title('어떤 체험을 글로 남기나요?')
     await user.click(screen.getByRole('button', { name: /^카페/ }))
-    await user.click(screen.getByRole('link', { name: '← 템플릿 목록' }))
+    // The shell's one way back (THEME-58); the page no longer draws a second one.
+    await user.click(screen.getByRole('link', { name: '글 템플릿' }))
 
     expect(
       await screen.findByRole('dialog', { name: '템플릿 만들기를 그만둘까요?' }),

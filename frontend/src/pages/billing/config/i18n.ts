@@ -4,6 +4,7 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'billing',
   ko: {
+    hero: { credits: '남은 크레딧', charge: '충전하기' },
     refundReview: {
       heading: '환불 심사',
       loading: '심사 요청을 불러오는 중입니다.',
@@ -101,6 +102,7 @@ export const i18n = {
     loadFailed: '결제 정보를 불러오지 못했습니다.',
   },
   en: {
+    hero: { credits: 'Credits left', charge: 'Top up' },
     refundReview: {
       heading: 'Refund review',
       loading: 'Loading review requests.',

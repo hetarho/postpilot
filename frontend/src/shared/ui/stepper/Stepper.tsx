@@ -1,6 +1,6 @@
 import { useId, type KeyboardEvent } from 'react'
 import { Minus, Plus } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Button } from '../button/Button'
 
 export interface StepperProps {

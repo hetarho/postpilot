@@ -1,5 +1,5 @@
 import type { ComponentPropsWithoutRef, ElementType } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Typography } from '../typography/Typography'
 import type { TypographyVariant } from '../typography/typographyStyles'
 

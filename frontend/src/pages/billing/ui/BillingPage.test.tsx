@@ -138,7 +138,9 @@ describe('BillingPage', () => {
     const headings = screen
       .getAllByRole('heading', { level: 2 })
       .map((heading) => heading.textContent)
+    // Guide: the 남은 크레딧 hero leads, with one 충전 that goes straight to 크레딧 구매.
     expect(headings).toEqual([
+      '남은 크레딧',
       '혜택과 잔액',
       '구독',
       '결제 수단',
@@ -146,12 +148,48 @@ describe('BillingPage', () => {
       '크레딧 구매',
       '환불 요청',
     ])
+    // A free account cannot buy a pack (BILL-9): its 충전 goes to /plans (QUOTA-75).
+    expect(screen.getByRole('link', { name: '충전하기' })).toHaveAttribute('href', '/plans')
+    expect(document.getElementById('billing-charge')?.querySelector('h2')?.textContent).toBe(
+      '크레딧 구매',
+    )
     expect(screen.getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
     expect(screen.getByText('등록된 결제 수단이 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('아직 결제 기록이 없습니다.')).toBeInTheDocument()
     expect(screen.getByText('아직 구매한 크레딧이 없습니다.')).toBeInTheDocument()
     expect(calls.filter((call) => call === 'GetMyBilling')).toHaveLength(1)
     expect(screen.getByRole('button', { name: '환불 요청하기' })).toBeDisabled()
+  })
+
+  // BILL-14 →QUOTA-75: a paid tier's 충전 is the packs — the hero's own press scrolls there, and
+  // 나's 충전, arriving as /billing#billing-charge, lands there once billing has loaded.
+  it('takes a paid tier to the packs, from the hero and from 나', async () => {
+    const scrolled: Element[] = []
+    const scrollIntoView = Element.prototype.scrollIntoView
+    Element.prototype.scrollIntoView = function (this: Element) {
+      scrolled.push(this)
+    }
+    try {
+      renderAppAt('/billing#billing-charge', {
+        user: { id: 'alice', plan: ProtoPlan.PRO },
+        plans: { plan: ProtoPlan.PRO },
+        billing: { paymentMethod: true, subscription: true },
+      })
+      expect(await screen.findByRole('link', { name: '충전하기' })).toHaveAttribute(
+        'href',
+        '#billing-charge',
+      )
+      const packs = await waitFor(() => {
+        const element = document.getElementById('billing-charge')
+        expect(element).not.toBeNull()
+        return element!
+      })
+      await waitFor(() => expect(scrolled).toEqual([packs]))
+      await userEvent.setup().click(screen.getByRole('link', { name: '충전하기' }))
+      expect(scrolled).toEqual([packs, packs])
+    } finally {
+      Element.prototype.scrollIntoView = scrollIntoView
+    }
   })
 
   // BILL-20, QUOTA-68: a master account is never charged, but it sees the customer's screen:
@@ -173,6 +211,11 @@ describe('BillingPage', () => {
     expect(headings).toContain('결제 수단')
     expect(headings).toContain('환불 요청')
     expect(screen.getByRole('button', { name: '크레딧 구매' })).toBeDisabled()
+    // Its 충전 reaches that disabled state, as a paid tier's reaches the packs (QUOTA-75).
+    expect(screen.getByRole('link', { name: '충전하기' })).toHaveAttribute(
+      'href',
+      '#billing-charge',
+    )
     // The plan's own name stays; no notice explains an operator exemption.
     expect(screen.queryByText(/운영자 계정|면제|참고 사용량/)).not.toBeInTheDocument()
   })

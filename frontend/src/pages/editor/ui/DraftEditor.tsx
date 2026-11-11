@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { ArrowLeft } from 'lucide-react'
@@ -13,7 +21,7 @@ import {
   type PostTemplateAnswer,
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
-import { useTemplates } from '@/entities/template'
+import { noTemplateLabel, useTemplates } from '@/entities/template'
 import type { Voice } from '@/entities/voice'
 import {
   discardContentQueue,
@@ -34,25 +42,30 @@ import {
 } from '@/features/fill-template-answers'
 import {
   SegmentedControl,
-  typographyStyles,
+  buttonStyles,
+  ChoiceButton,
   type PopoverHandle,
   pageStyles,
-  proseStyles,
   Typography,
 } from '@/shared/ui'
+import { ContactSheet } from '@/widgets/contact-sheet'
 import { editorNavigationCopy } from '../config/i18n'
+import { initialGuideStep, stashGuideStep, takeGuideStep, type GuideStep } from '../model/guide'
 import { editorSteps } from '../model/steps'
 import { useDraftAssignments } from '../model/useDraftAssignments'
 import { useDraftSteps } from '../model/useDraftSteps'
 import { useEditorJob } from '../model/useEditorJob'
 import { EditorPhotos } from './EditorPhotos'
 import { EditorProgressBar, EditorStatusLine } from './EditorStatus'
-import { EditorDock } from './EditorDock'
-import { EditorDockHeader } from './EditorDockHeader'
+import { useEditorChoices } from './EditorDockHeader'
+import { EditorGuide } from './EditorGuide'
+import { EditorReview } from './EditorReview'
+import { EditorVoiceWarning } from './EditorVoiceWarning'
 import { LifecycleSteps } from './LifecycleSteps'
 import { MemoField } from './MemoField'
 import { TitleField } from './TitleField'
 import { CampaignMaterial } from './CampaignMaterial'
+import { CampaignTracker } from './CampaignTracker'
 
 const STEP_PANEL_ID = 'editor-step-panel'
 
@@ -83,6 +96,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const ownerId = user?.id ?? ''
   const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   const returnTo = useMemo(() => postReturnDestination(ownerId, post?.slug), [ownerId, post?.slug])
+  const returnLabel = returnTo.path === '/my' ? copy.mine : copy.home
   useLayoutEffect(() => {
     if (!post && !readPostReturnContext(ownerId))
       rememberPostEntry(ownerId, {
@@ -106,6 +120,19 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const assignments = useDraftAssignments(post, defaultVoice, post ? '' : handedTemplate)
   const { voiceId, templateId, targetLanguage } = assignments
 
+  // Which writing screen is up. It crosses the mint's remount through a stash,
+  // the way the caret does, so the first saved input never throws the owner elsewhere. A new draft
+  // the template wizard handed a template to opens on 템플릿 with it chosen — the wizard was opened
+  // from the new post's offer, and 템플릿 is where the owner sees what they made (TMPL-32).
+  const [guide, setGuide] = useState<GuideStep>(
+    () =>
+      takeGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
+  )
+  const guideRef = useRef(guide)
+  useEffect(() => {
+    guideRef.current = guide
+  }, [guide])
+
   // ①'s text and its lock are the autosave's (POST-86); the page only lays the SELECTED template's
   // fields over it (POST-62).
   const { templates } = useTemplates(ownerId)
@@ -123,10 +150,11 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     targetLanguage,
     onMinted: (slug) => {
       caret.stash(slug)
+      stashGuideStep(slug, guideRef.current)
       retainMintedPostEntry(ownerId, slug)
       // Replace the unminted address without changing its creation/history context. The scroll
-      // stays: the mint is the first edit's side effect — a toggle of the 체험단 switch halfway
-      // down ① is one — and the router's reset would yank the page to its top under the owner.
+      // stays: the mint is an edit’s side effect, and a router reset would move the input
+      // away from the owner.
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
@@ -162,6 +190,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   // The durable job is watched HERE, not inside the step panels: the page-top status region
   // reports it and the panels act on it, and one poll has to serve both ([I5]).
   const jobView = useEditorJob(post)
+  // 확인's writing card has a bar of its own; while it is in view the page-top one fades out.
+  const [writingCardShown, setWritingCardShown] = useState(false)
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
@@ -176,7 +206,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     if (missingRequiredAnswers(fields).length === 0) return true
     setShowRequiredErrors(true)
     setStep('generate')
-    // The field lives in ①, which may have to mount again after leaving the storyline step.
+    setGuide('details')
+    // The field lives on ①'s 내용 screen, which may have to mount again first.
     window.setTimeout(() => {
       document.querySelector<HTMLTextAreaElement>('[data-required-answer-missing="true"]')?.focus()
     }, 0)
@@ -214,31 +245,32 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   // The run a press of 생성 or A/B 비교 was refused for, while the brief that press opened is up:
   // the brief marks what that run is missing. The count restarts the marked fields' shake.
   const [briefRefusal, setBriefRefusal] = useState<{ mode: GenerationMode; count: number }>()
+  // The brief lives on 확인. A press refused anywhere else first brings that screen up, then
+  // opens the brief once it has mounted.
+  const [briefPending, setBriefPending] = useState(false)
   const openBriefFor = (mode: GenerationMode) => {
     setBriefRefusal((previous) => ({ mode, count: (previous?.count ?? 0) + 1 }))
-    briefRef.current?.open()
+    if (step === 'generate' && guide === 'review' && briefRef.current) briefRef.current.open()
+    else {
+      setStep('generate')
+      setGuide('review')
+      setBriefPending(true)
+    }
   }
+  useEffect(() => {
+    if (!briefPending || !briefRef.current) return
+    setBriefPending(false)
+    briefRef.current.open()
+  }, [briefPending, guide, step])
 
-  // ① is 가제 → the 체험단 글 switch with its guide → the template's fields → memo (POST-54), in
-  // both the minted and the unminted order, so the switch rides with the 가제.
   const titleField = (
-    <>
-      <TitleField
-        value={autosave.title}
-        onChange={autosave.setTitle}
-        fieldRef={titleRef}
-        // The next text field on screen: the template's first field, or the memo.
-        nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : memoRef}
-        readOnly={published}
-      />
-      <CampaignMaterial
-        on={autosave.campaign.on}
-        guide={autosave.campaign.guide}
-        refusal={autosave.campaignRefusal}
-        readOnly={published}
-        onChange={({ on, guide }) => autosave.setCampaign({ ...autosave.campaign, on, guide })}
-      />
-    </>
+    <TitleField
+      value={autosave.title}
+      onChange={autosave.setTitle}
+      fieldRef={titleRef}
+      nextRef={firstEnabledAnswer(fields) ? firstAnswerRef : titleRef}
+      readOnly={published}
+    />
   )
   const memoField = (
     <MemoField
@@ -259,73 +291,231 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       }
     />
   )
-  const dockHeader = (
-    <EditorDockHeader
-      ref={briefRef}
-      post={post}
-      ownerId={ownerId}
-      voiceId={voiceId}
-      templateId={templateId}
-      targetLanguage={targetLanguage}
-      targetLength={brief.targetLength}
-      tagCount={brief.tagCount}
-      onVoiceSelect={post ? autosave.reassign : assignments.setVoiceId}
-      onGrowVoice={(voiceId) => {
-        void autosave
-          .flush()
-          .then(async () => {
-            if (post) await flushContentQueue(post.slug)
-            await navigate({
-              to: '/voices/$voiceId/materials',
-              params: { voiceId },
-              search: { learn: 'chat' },
-            })
+  const choices = useEditorChoices({
+    briefRef,
+    post,
+    ownerId,
+    voiceId,
+    templateId,
+    targetLanguage,
+    targetLength: brief.targetLength,
+    tagCount: brief.tagCount,
+    onVoiceSelect: post ? autosave.reassign : assignments.setVoiceId,
+    onGrowVoice: (voiceId) => {
+      void autosave
+        .flush()
+        .then(async () => {
+          if (post) await flushContentQueue(post.slug)
+          await navigate({
+            to: '/voices/$voiceId/materials',
+            params: { voiceId },
+            search: { learn: 'chat' },
           })
-          .catch(() => {
-            /* The draft/content save status retains and explains a refusal. */
-          })
-      }}
-      onTemplateSelect={post ? autosave.assignTemplate : assignments.setTemplateId}
-      onTargetLanguageSelect={post ? autosave.assignTargetLanguage : assignments.setTargetLanguage}
-      onBriefSaved={(set) => {
-        brief.setTargetLength(set.targetLength)
-        brief.setTagCount(set.tagCount)
-      }}
-      refusal={briefRefusal}
-      onBriefClosed={() => setBriefRefusal(undefined)}
-      writingTest={{
-        href: post ? `/tests?sourcePost=${encodeURIComponent(post.slug)}` : '/tests',
-        onOpen: async () => {
-          await autosave.flush()
+        })
+        .catch(() => {
+          /* The draft/content save status retains and explains a refusal. */
+        })
+    },
+    onTemplateSelect: post ? autosave.assignTemplate : assignments.setTemplateId,
+    onTemplateCreate: () => {
+      void autosave
+        .flush()
+        .then(async () => {
           const slug = await autosave.ensureSlug()
-          await flushContentQueue(slug)
-          await navigate({ href: `/tests?sourcePost=${encodeURIComponent(slug)}` })
-        },
-      }}
+          // Back from the wizard, or saved there, the owner returns to the screen they left —
+          // the template question, now with the new template to pick — not to the summary a
+          // returning draft otherwise opens on.
+          stashGuideStep(slug, 'template')
+          await navigate({ to: '/templates/new', search: { post: slug } })
+        })
+        .catch(() => {
+          /* The autosave status explains a save refusal. */
+        })
+    },
+    onTargetLanguageSelect: post ? autosave.assignTargetLanguage : assignments.setTargetLanguage,
+    onBriefSaved: (set) => {
+      brief.setTargetLength(set.targetLength)
+      brief.setTagCount(set.tagCount)
+    },
+    refusal: briefRefusal,
+    onBriefClosed: () => setBriefRefusal(undefined),
+    writingTest: {
+      href: post ? `/tests?sourcePost=${encodeURIComponent(post.slug)}` : '/tests',
+      onOpen: async () => {
+        await autosave.flush()
+        const slug = await autosave.ensureSlug()
+        await flushContentQueue(slug)
+        await navigate({ href: `/tests?sourcePost=${encodeURIComponent(slug)}` })
+      },
+    },
+  })
+
+  // 확인's 지침 row: the guidelines page with this post as its explicit way back (POST-123
+  // →THEME-58). A draft not yet saved is saved first, as the template wizard's is, so there is a
+  // post to come back to; and coming back — by the page's 글 작성 or the browser's Back — lands on
+  // 확인, the screen the owner left, not the screen a returning draft would otherwise open on.
+  const openGuidelines = () => {
+    void autosave
+      .flush()
+      .then(async () => {
+        const slug = post?.slug ?? (await autosave.ensureSlug())
+        await flushContentQueue(slug)
+        stashGuideStep(slug, 'review')
+        await navigate({ to: '/guidelines', search: { post: slug } })
+      })
+      .catch(() => {
+        /* The draft/content save status retains and explains a refusal. */
+      })
+  }
+
+  // Each writing screen holds one task; the summary links back to every input.
+  const guideScreens: Record<GuideStep, ReactNode> = {
+    kind: (
+      <div role="group" aria-label={t('guide.questions.kind')} className="mt-6 space-y-3">
+        <ChoiceButton
+          title={t('guide.sponsored')}
+          description={t('guide.sponsoredHelp')}
+          selected={autosave.campaign.on}
+          disabled={published}
+          onClick={() => autosave.setCampaign({ ...autosave.campaign, on: true })}
+        />
+        <ChoiceButton
+          title={t('guide.selfPaid')}
+          description={t('guide.selfPaidHelp')}
+          selected={!autosave.campaign.on}
+          disabled={published}
+          onClick={() => autosave.setCampaign({ ...autosave.campaign, on: false })}
+        />
+      </div>
+    ),
+    requirements: (
+      <CampaignMaterial
+        guide={autosave.campaign.guide}
+        refusal={autosave.campaignRefusal}
+        readOnly={published}
+        onChange={(guide) => autosave.setCampaign({ ...autosave.campaign, guide })}
+      />
+    ),
+    story: (
+      <div className="mt-6">
+        <Typography variant="body" as="p" className="mb-4">
+          {t('guide.memoHelp')}
+        </Typography>
+        {memoField}
+      </div>
+    ),
+    template: (
+      <div className="mt-6">
+        <Typography variant="body" as="p" className="mb-4">
+          {t('guide.templateHelp')}
+        </Typography>
+        {choices.template}
+      </div>
+    ),
+    photos: (
+      <div className="mt-4">
+        <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
+        {post && post.images.length > 0 && (
+          <ContactSheet
+            images={post.images}
+            videos={post.videos}
+            observations={post.observations}
+            activeJob={jobView.job}
+          />
+        )}
+      </div>
+    ),
+    details: (
+      <div className="mt-2 flex flex-col">
+        {titleField}
+        <Typography variant="meta" as="p" className="mt-2">
+          {t('guide.titleHelp')}
+        </Typography>
+        {fields.length > 0 ? (
+          <>
+            <Typography variant="label" as="p" className="mt-5">
+              {selectedTemplate?.name}
+            </Typography>
+            {answerFieldsPanel}
+          </>
+        ) : (
+          <Typography variant="body" as="p" className="mt-6">
+            {t(templateId ? 'guide.noFields' : 'guide.withoutTemplateFields')}
+          </Typography>
+        )}
+      </div>
+    ),
+    review: (
+      <EditorReview
+        post={post}
+        ownerId={ownerId}
+        sponsored={autosave.campaign.on}
+        memo={autosave.memo}
+        title={autosave.title}
+        templateName={selectedTemplate?.name || post?.template.name || noTemplateLabel()}
+        voice={choices.voice}
+        voiceWarning={
+          post ? <EditorVoiceWarning ownerId={ownerId} voice={post.voice} /> : undefined
+        }
+        brief={choices.brief}
+        job={jobView.job}
+        onWritingCardShown={setWritingCardShown}
+        onGo={setGuide}
+        onOpenGuidelines={openGuidelines}
+      />
+    ),
+  }
+  const renderGuide = (slots?: { actions: (back: ReactNode) => ReactNode; notice: ReactNode }) => (
+    <EditorGuide
+      step={guide}
+      sponsored={autosave.campaign.on}
+      closingHasText={Boolean(autosave.memo.trim())}
+      tracker={
+        autosave.campaign.on && guide !== 'kind' && guide !== 'requirements' ? (
+          <CampaignTracker
+            guide={autosave.campaign.guide}
+            photoCount={post?.images.length ?? 0}
+            title={autosave.title}
+            memo={autosave.memo}
+            answers={fields}
+            step={guide}
+            onEdit={() => setGuide('requirements')}
+          />
+        ) : undefined
+      }
+      onStepChange={setGuide}
+      screens={guideScreens}
+      actions={slots?.actions}
+      notice={guide === 'review' ? slots?.notice : undefined}
     />
   )
 
   return (
-    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col' })}>
+    // Guide: the whole flow sits in one comfortable centred column, phone and desk alike, and the
+    // guided bar meets the screen's bottom edge (no page padding under it).
+    <main
+      className={pageStyles({
+        width: 'prose',
+        className: 'flex flex-1 flex-col pt-3 pb-0 sm:pt-6 sm:pb-0',
+      })}
+    >
       {/* First child of the flow on template: a sticky box can only be pinned by the box it sits
           in, and this one has to hold the page's top edge while a draft thousands of pixels tall
           scrolls past it. It adds no layout height. */}
-      <EditorProgressBar job={jobView.job} />
-      {/* ONE row holding the way out, the step bar and the delete, the way the clip workspace's
-          top row does (CLIP-37) — so the two detail screens present their lifecycle identically.
-          `flex-wrap` so the delete refusal, which asks for the full width, drops to its own line
-          rather than crushing the way out beside it (THEME-32). The Korean refusal copy is over 40
-          characters, which is more than a 360px row can hold beside anything. */}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-        {/* The word is underlined: `link-fg` resolves to `content-secondary`, so at rest an
-            un-underlined way out is pixel-identical to ordinary copy and the only thing marking it
-            was a `hover:` colour no touchscreen ever matches (THEME-28). On a phone a post's row also
-            holds the step bar and the delete, so the glyph stands for the word there, as it does
-            in the clip workspace; the name stays the word at every width. `/posts/new` has neither
-            neighbour and keeps the word. */}
+      <EditorProgressBar job={jobView.job} muted={writingCardShown} />
+      {/* The 가제 is an editable field on the 내용 screen; this mirrors its value into the document
+          outline on every screen, without a second field or tab stop. */}
+      <Typography variant="display" className="sr-only">
+        {autosave.title.trim() || t('editor.titlePlaceholder')}
+      </Typography>
+      {/* ONE row holding the way out, the lifecycle stations and the delete, the way the clip
+          workspace's top row does (CLIP-37). `flex-wrap` so the delete refusal, which asks for the
+          full width, drops to its own line rather than crushing the way out beside it. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        {/* Guide: a round 44px back button — the glyph is the control, the destination its name. */}
         <a
           href={returnTo.href}
-          aria-label={copy.home}
+          aria-label={returnLabel}
           onClick={(event) => {
             if (
               event.button !== 0 ||
@@ -347,28 +537,15 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
                 /* The autosave's status region exposes the refusal. */
               })
           }}
-          className={typographyStyles({
-            variant: 'label',
-            className:
-              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1',
-          })}
+          className={buttonStyles({ variant: 'secondary', size: 'icon', className: 'shadow-sm' })}
         >
           <ArrowLeft aria-hidden="true" className="size-5" />
-          <span className={post ? 'sr-only underline sm:not-sr-only' : 'underline'}>
-            {copy.home}
-          </span>
+          <span className="sr-only">{returnLabel}</span>
         </a>
-        <Typography variant="label" as="span">
-          {copy.location}
-        </Typography>
 
-        {/* A post with a lifecycle navigates it first. `/posts/new` has none, so it shows no bar.
-            Drawn as stations — 글 생성 › 글 다듬기 › 글 완성, the current one told by colour — rather
-            than as a row of pills, which read as three more buttons parked in the chrome (THEME-39).
-            It shares the row with the way out and the delete at every width, between their two
-            44px glyphs on a phone (owner decision 2026-09-25): a line of its own spent a whole row
-            of the screen's top on three words. */}
-        {post && (
+        {/* A post with a lifecycle navigates it first: three stations, the one the post is in an
+            inverted pill (THEME-39). `/posts/new` has none and names the place instead. */}
+        {post ? (
           <SegmentedControl
             value={step}
             options={editorSteps()}
@@ -378,6 +555,10 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
             variant="steps"
             className="min-w-0 flex-1"
           />
+        ) : (
+          <Typography variant="label" as="span" className="text-content-primary">
+            {copy.location}
+          </Typography>
         )}
 
         {post && (
@@ -409,7 +590,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
           status={post?.status ?? ''}
           photoCount={post?.images.length ?? 0}
           videoCount={post?.videos.length ?? 0}
-          className="order-last w-full sm:text-right"
+          className="order-last w-full px-1 sm:text-right"
         />
       </div>
 
@@ -419,17 +600,13 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
           ownerId={ownerId}
           step={step}
           onStepChange={setStep}
-          titleField={titleField}
-          memoField={memoField}
-          answerFields={answerFieldsPanel}
-          dockHeader={dockHeader}
+          renderGuide={renderGuide}
           onOpenBrief={openBriefFor}
           targetLength={brief.targetLength}
           onTitleFinalized={autosave.setTitle}
           beforeStart={autosave.flush}
           clipMaterial={{ title: autosave.title, memo: autosave.memo }}
           checkRequiredAnswers={checkRequiredAnswers}
-          ensureSlug={autosave.ensureSlug}
           jobView={jobView}
           storyline={{
             paragraphs: autosave.storyline,
@@ -456,20 +633,12 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
               className="my-2 self-end"
             />
           )}
-          {/* No lifecycle yet, so no step bar — just the step ① surfaces that work without a post. */}
-          <div className={proseStyles()}>
-            <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
-            {titleField}
-            {answerFieldsPanel}
-            {memoField}
-          </div>
-          {/* No voice warning here: a draft can hold only 말투 없음 or a made, active voice, so
-              there is nothing to warn about before the post exists. */}
-          {/* A draft with no post yet has no committing action, but its 말투 and the rest of the
-              brief still have to be reachable before the first word is typed. */}
-          <EditorDock header={dockHeader} />
+          {/* No lifecycle yet: the same guided screens, with no 생성 until the first save has
+              made a post to start a run on. */}
+          <div className="flex flex-1 flex-col">{renderGuide()}</div>
         </>
       )}
+      {choices.sheet}
     </main>
   )
 }

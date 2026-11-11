@@ -5,15 +5,22 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { ExperimentSource, PostCreditsBasis, ProtoPlan, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
-import { chooseOption } from '@/test/listbox'
 import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
 beforeEach(() => sessionStorage.clear())
 
 afterEach(() => initializeI18n('ko'))
 
+/** Guide: each stage is a row whose 바꾸기 opens a picker sheet of radio cards; a tap saves. */
+async function pick(user: ReturnType<typeof userEvent.setup>, stage: string, model: RegExp) {
+  await user.click(screen.getByRole('button', { name: `바꾸기 · ${stage}` }))
+  const sheet = within(await screen.findByRole('dialog', { name: `${stage} AI 고르기` }))
+  await user.click(await sheet.findByRole('radio', { name: model }))
+  return sheet
+}
+
 const destinations = [
-  ['/ai-models', '/ai-models', '모델 변경', 'Change models'],
+  ['/ai-models', '/ai-models', 'AI 고르기', 'Pick AI'],
   ['/ai-models/compare', '/tests', '글쓰기 테스트', 'Writing tests'],
   ['/ai-models/experiments', '/tests/history', '테스트 기록', 'Test history'],
   ['/ai-models/leaderboard', '/tests/history', '테스트 기록', 'Test history'],
@@ -27,10 +34,13 @@ it.each(['ko', 'en'] as const)(
       user: { id: 'alice', plan: ProtoPlan.FREE },
     })
     const main = within(await screen.findByRole('main'))
-    expect(main.getAllByRole('combobox')).toHaveLength(3)
+    // Three plain stage rows — 글 쓰기 · 사진 보기 · 말투 분석 — each with its own 바꾸기.
     expect(
-      main.getByRole('combobox', {
-        name: locale === 'ko' ? /문체 분석 모델/ : /Analyze voice model/,
+      main.getAllByRole('button', { name: locale === 'ko' ? /^바꾸기 · / : /^Change · / }),
+    ).toHaveLength(3)
+    expect(
+      main.getByRole('button', {
+        name: locale === 'ko' ? '바꾸기 · 말투 분석' : 'Change · Learning your style',
       }),
     ).toBeVisible()
     expect(procedures).not.toContain('ListWritingTests')
@@ -72,14 +82,21 @@ it('saves an active model only after a model change, separately from comparison 
     },
   })
   const main = within(await screen.findByRole('main'))
-  await waitFor(() =>
-    expect(main.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Recommended Vision'),
-  )
+  const observeRow = () =>
+    within(main.getByRole('button', { name: '바꾸기 · 사진 보기' }).parentElement!)
+  await waitFor(() => expect(observeRow().getByText('Recommended Vision')).toBeInTheDocument())
   expect(calls).not.toContain('SaveSelection')
-  await chooseOption(user, main.getByRole('combobox', { name: /관찰/ }), 'Vision')
+  const sheet = await pick(user, '사진 보기', /^(?!.*Recommended).*Vision/)
   await waitFor(() => expect(calls).toContain('SaveSelection'))
   expect(calls.filter((call) => call === 'SaveSelection')).toHaveLength(1)
-  expect(main.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Vision')
+  await waitFor(() =>
+    expect(sheet.getByRole('radio', { name: /^(?!.*Recommended).*Vision/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    ),
+  )
+  await user.click(sheet.getByRole('button', { name: '완료' }))
+  await waitFor(() => expect(observeRow().getByText('Vision')).toBeInTheDocument())
   expect(calls).not.toContain('SaveComparisonPair')
   expect(main.queryByRole('button', { name: '비교 시작' })).not.toBeInTheDocument()
 })
@@ -108,8 +125,8 @@ it('offers named common test entries and optional A/B settings without changing 
   })
   const main = within(await screen.findByRole('main'))
   for (const [name, stage] of [
-    ['글 작성 모델로 테스트하기', 'write'],
-    ['관찰 모델로 테스트하기', 'observe'],
+    ['비교해 보기', 'write'],
+    ['사진 보는 AI 비교', 'observe'],
   ] as const) {
     const link = main.getByRole('link', { name })
     const url = new URL(link.getAttribute('href')!, 'https://postpilot.test')
@@ -121,11 +138,11 @@ it('offers named common test entries and optional A/B settings without changing 
       entry: '/ai-models',
     })
   }
-  expect(main.getByRole('link', { name: '내 테스트 기록 보기' })).toHaveAttribute(
+  expect(main.getByRole('link', { name: '지난 비교' })).toHaveAttribute(
     'href',
     '/tests/history?entry=%2Fai-models',
   )
-  expect(main.getAllByRole('combobox')).toHaveLength(3)
+  expect(main.getAllByRole('button', { name: /^바꾸기 · / })).toHaveLength(3)
   await user.click(main.getByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }))
   const pair = within(await main.findByRole('region', { name: '글 작성 두 모델 후보' }))
   await waitFor(() =>
@@ -137,8 +154,79 @@ it('offers named common test entries and optional A/B settings without changing 
   expect(calls.filter((name) => /^(Save|Start|Estimate|Adopt|Apply)/.test(name))).toEqual([])
 })
 
-// QUOTA-66, MODEL-27: the selected model's line says what it can hold, never a supplier price.
+// MODEL-96 →MODEL-57: the picker opens on the grade order — 무료, then 가성비 up to 최고, the
+// unclassified last, the catalog's order inside a grade — with none of the named lenses on; 품질
+// 먼저 reorders only once the owner picks it.
+it('opens the stage picker free first and applies 품질 먼저 only when picked', async () => {
+  const user = userEvent.setup()
+  const graded = (modelId: string, level?: 'free' | 'value' | 'balanced' | 'premium' | 'top') => ({
+    providerId: 'openrouter',
+    modelId,
+    label: modelId,
+    levels: level ? { [Stage.WRITE]: level } : {},
+  })
+  renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    providers: {
+      models: [
+        graded('Top', 'top'),
+        graded('Plain'),
+        graded('Balanced', 'balanced'),
+        graded('Value One', 'value'),
+        graded('Free', 'free'),
+        graded('Value Two', 'value'),
+      ],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  await waitFor(() => expect(main.getByRole('button', { name: '바꾸기 · 글 쓰기' })).toBeEnabled())
+  await user.click(main.getByRole('button', { name: '바꾸기 · 글 쓰기' }))
+  const sheet = within(await screen.findByRole('dialog', { name: '글 쓰기 AI 고르기' }))
+  const order = () =>
+    sheet
+      .getAllByRole('radio')
+      .map(
+        (radio) => radio.textContent?.match(/(Free|Value One|Value Two|Balanced|Top|Plain)/)?.[0],
+      )
+  await waitFor(() =>
+    expect(order()).toEqual(['Free', 'Value One', 'Value Two', 'Balanced', 'Top', 'Plain']),
+  )
+  for (const lens of ['품질 먼저', '균형', '가격 먼저'])
+    expect(sheet.getByRole('tab', { name: lens })).toHaveAttribute('aria-selected', 'false')
+  await user.click(sheet.getByRole('tab', { name: '품질 먼저' }))
+  expect(sheet.getByRole('tab', { name: '품질 먼저' })).toHaveAttribute('aria-selected', 'true')
+  expect(order()).toEqual(['Top', 'Balanced', 'Value One', 'Value Two', 'Free', 'Plain'])
+})
+
+// MODEL-24: a failed catalog read is a failure with a retry, never 고르지 않음 — that would read
+// as the saved choice being gone.
+it('shows a failed catalog read as a failure with a retry', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    providers: {
+      calls,
+      listFails: true,
+      models: [{ providerId: 'openrouter', modelId: 'pen', label: 'Pen' }],
+      selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'pen' }],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  expect(await main.findAllByText('쓰는 AI를 못 불러왔어요.')).toHaveLength(3)
+  expect(main.queryByText('고르지 않음')).not.toBeInTheDocument()
+  expect(main.queryByRole('button', { name: '바꾸기 · 글 쓰기' })).not.toBeInTheDocument()
+  const reads = () => calls.filter((call) => call === 'ListModels').length
+  const before = reads()
+  await user.click(main.getByRole('button', { name: '다시 시도 · 글 쓰기' }))
+  await waitFor(() => expect(reads()).toBeGreaterThan(before))
+  expect(main.getAllByText('쓰는 AI를 못 불러왔어요.')).toHaveLength(3)
+  expect(calls).not.toContain('SaveSelection')
+})
+
+// QUOTA-66, MODEL-27: the chosen model's row and its picker card never show a supplier price.
 it('describes a chosen model without any price', async () => {
+  const user = userEvent.setup()
   renderAppAt('/ai-models', {
     user: { id: 'alice' },
     providers: {
@@ -147,13 +235,20 @@ it('describes a chosen model without any price', async () => {
   })
   const main = within(await screen.findByRole('main'))
   await waitFor(() =>
-    expect(main.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Vision'),
+    expect(
+      within(main.getByRole('button', { name: '바꾸기 · 사진 보기' }).parentElement!).getByText(
+        'Vision',
+      ),
+    ).toBeInTheDocument(),
   )
-  const selectedField = within(
-    main.getByRole('combobox', { name: /관찰/ }).parentElement!.parentElement!,
-  )
-  expect(await selectedField.findByText('컨텍스트 0')).toBeInTheDocument()
   expect(main.queryByText(/\$|1M 토큰|가격 미확인/)).not.toBeInTheDocument()
+  await user.click(main.getByRole('button', { name: '바꾸기 · 사진 보기' }))
+  const sheet = await screen.findByRole('dialog', { name: '사진 보기 AI 고르기' })
+  expect(await within(sheet).findByRole('radio', { name: /Vision/ })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  )
+  expect(within(sheet).queryByText(/\$|1M 토큰|가격 미확인/)).not.toBeInTheDocument()
 })
 
 // QUOTA-64: under each stage the chosen model says what one post costs that stage in credits,
@@ -185,13 +280,14 @@ it('shows per-post credits for the chosen model and the saved pair', async () =>
     },
   })
   const main = within(await screen.findByRole('main'))
-  expect(
-    await main.findByText('컨텍스트 0 · 최근 사용량 기준 글 1개당 약 20크레딧'),
-  ).toBeInTheDocument()
+  expect(await main.findByText('최근 사용량 기준 글 1개당 약 20크레딧')).toBeInTheDocument()
   // With no write model yet there is no post to price.
   expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
-  await chooseOption(user, main.getByRole('combobox', { name: /작성/ }), 'Pen')
-  expect(await main.findByText('컨텍스트 0 · 예상 글 1개당 약 10크레딧')).toBeInTheDocument()
+  const sheet = await pick(user, '글 쓰기', /Pen/)
+  // The picker card names what one post costs, in credits.
+  expect(sheet.getByRole('radio', { name: /Pen/ })).toHaveTextContent('예상 글 1개당 약 10크레딧')
+  await user.click(sheet.getByRole('button', { name: '완료' }))
+  expect(await main.findByText('예상 글 1개당 약 10크레딧')).toBeInTheDocument()
   expect(await main.findByText('남은 크레딧으로 약 3편 쓸 수 있어요')).toBeInTheDocument()
   expect(main.getByText(/예상 글 1개당 약 30크레딧/)).toBeInTheDocument()
 })
@@ -215,7 +311,8 @@ it('shows the operator the per-post figure without a posts count', async () => {
     },
   })
   const main = within(await screen.findByRole('main'))
-  expect(await main.findByText('최근 사용량 기준 글 1개당 약 10크레딧')).toBeInTheDocument()
+  // The 글 쓰기 row and the page's estimate both name the per-post figure.
+  expect(await main.findAllByText('최근 사용량 기준 글 1개당 약 10크레딧')).not.toHaveLength(0)
   expect(main.queryByText(/남은 크레딧으로/)).not.toBeInTheDocument()
 })
 

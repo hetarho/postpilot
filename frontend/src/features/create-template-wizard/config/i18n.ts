@@ -18,6 +18,7 @@ export const i18n = {
       leaveBody: '지금까지 고른 답이 사라져요.',
       leave: '그만두기',
       targetHelp: '고르면 그런 글이 보통 어떻게 구성되는지 보여 드려요.',
+      pickFirst: '하나를 골라 주세요.',
       sections: {
         title: '이런 글은 보통 이렇게 구성돼요',
         help: '넣을 부분만 체크해 두세요. 순서와 제목은 다음 단계에서 정해요.',
@@ -117,6 +118,7 @@ export const i18n = {
       leaveBody: 'The answers you chose so far will be lost.',
       leave: 'Stop',
       targetHelp: 'Pick one and you will see how such a post is usually built.',
+      pickFirst: 'Choose one to continue.',
       sections: {
         title: 'Such a post is usually built like this',
         help: 'Keep the parts you want checked. You set their order and headings next.',

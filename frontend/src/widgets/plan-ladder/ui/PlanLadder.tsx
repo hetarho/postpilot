@@ -1,4 +1,4 @@
-import type { ComponentType, ReactNode } from 'react'
+import { useEffect, useRef, type ComponentType, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { Check, Crown, Gift, Leaf, Rocket, Sparkles, Zap } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -27,8 +27,12 @@ export function PlanLadder({
   action,
   term,
   headingLevel = 'h2',
+  layout = 'grid',
   className,
 }: {
+  /** Guide: `swipe` is one plan per screen on a phone and tablet — a sideways, snapping row that
+   *  opens on the recommended plan — and the grid again on the widest desk. */
+  layout?: 'grid' | 'swipe'
   offers: readonly PlanOffer[]
   /** The rung the reader is on, which carries the one state label it may have. */
   currentPlan?: PlanName
@@ -42,10 +46,38 @@ export function PlanLadder({
   headingLevel?: 'h2' | 'h3'
   className?: string
 }) {
+  const swipe = layout === 'swipe'
+  // The ladder keeps its order (cheapest to richest), but a swipe OPENS on the recommended plan:
+  // the first screen is the one the owner most likely wants, and the others are one swipe away
+  // either side. Once, on mount — the owner's own swiping is never overridden.
+  const list = useRef<HTMLUListElement>(null)
+  const recommended = offers.findIndex((offer) => offer.recommended)
+  useEffect(() => {
+    const node = list.current
+    if (!swipe || !node || recommended < 0) return
+    const card = node.children[recommended] as HTMLElement | undefined
+    if (card && node.scrollWidth > node.clientWidth)
+      node.scrollLeft = card.offsetLeft - (node.clientWidth - card.clientWidth) / 2
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once, on mount
+  }, [])
+  const ordered = offers
   return (
-    <ul className={clsx('grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5 xl:gap-4', className)}>
-      {offers.map((offer, index) => (
-        <li key={offer.plan} className="min-w-0">
+    <ul
+      ref={list}
+      className={clsx(
+        swipe
+          ? '-mx-4 flex min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 pt-3 pb-4 sm:-mx-6 sm:px-6 xl:mx-0 xl:grid xl:grid-cols-5 xl:gap-4 xl:overflow-visible xl:px-0'
+          : 'grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-5 xl:gap-4',
+        className,
+      )}
+    >
+      {ordered.map((offer, index) => (
+        <li
+          key={offer.plan}
+          className={
+            swipe ? 'w-[85%] shrink-0 snap-center sm:w-[55%] xl:w-auto xl:min-w-0' : 'min-w-0'
+          }
+        >
           <PlanCard
             offer={offer}
             index={index}

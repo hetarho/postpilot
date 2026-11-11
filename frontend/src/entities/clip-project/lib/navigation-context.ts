@@ -7,7 +7,8 @@ import {
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 
 export interface ClipEntry {
-  path: '/naver-clip' | '/insta-clip'
+  /** The list the clip was opened from: its channel's own, or 내 글 전체 (THEME-69). */
+  path: '/naver-clip' | '/insta-clip' | '/my'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
@@ -27,7 +28,11 @@ export interface ClipReturnDestination {
  *  channel's address and the section tells them apart. A `/clips` entry stored before that still
  *  names the history. */
 export function isClipHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'>): boolean {
-  return entry.section === 'clips' || entry.path === '/clips'
+  return entry.path !== '/my' && (entry.section === 'clips' || entry.path === '/clips')
+}
+/** Work opened from 내 글 전체 returns there, with its scroll (THEME-58 →THEME-69). */
+function isMyWorkEntry(entry: Pick<ReturnContext, 'path'>): boolean {
+  return entry.path === '/my'
 }
 function storedChannel(entry: ReturnContext | undefined): ClipChannel {
   return CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
@@ -55,7 +60,7 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
     },
     {
       isAccessible: (path) =>
-        ['/naver-clip', '/insta-clip', '/clips', '/', '/library'].includes(path),
+        ['/naver-clip', '/insta-clip', '/clips', '/', '/library', '/my'].includes(path),
     },
   )
 }
@@ -103,6 +108,14 @@ export function clipReturnDestination(
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
   const currentChannel = channel ?? storedChannel(entry)
+  if (entry && isMyWorkEntry(entry))
+    return {
+      channel: currentChannel,
+      path: '/my',
+      href: '/my',
+      section: entry.section,
+      scrollY: entry.scrollY,
+    }
   // The channel's address carries the channel; a history entry adds its own narrowing. A clip
   // moved to the other channel returns to that channel's history (CLIP-209).
   const path = clipChannelPath(currentChannel)
@@ -152,7 +165,7 @@ export function markClipHistoryReturn(
   storage = browserStorage(),
 ): boolean {
   const entry = readClipReturnContext(ownerId, clipId, storage)
-  if (!storage || !entry || !isClipHistoryEntry(entry)) return false
+  if (!storage || !entry || !(isClipHistoryEntry(entry) || isMyWorkEntry(entry))) return false
   return store(ownerId, storage).write({
     ...entry,
     filters: { ...entry.filters, restoreScroll: 'true' },
@@ -176,13 +189,33 @@ export function completeClipHistoryReturn(ownerId: string, storage = browserStor
   )
   store(ownerId, storage).write({ ...entry, filters })
 }
+/** A return to 내 글 전체 that has yet to restore its scroll, marked by `markClipHistoryReturn`. */
+export function readMyWorkClipReturn(
+  ownerId: string,
+  storage = browserStorage(),
+): ReturnContext | undefined {
+  if (!storage) return undefined
+  const entry = store(ownerId, storage).read()
+  return entry && isMyWorkEntry(entry) && entry.filters.restoreScroll === 'true' ? entry : undefined
+}
+export function completeMyWorkClipReturn(ownerId: string, storage = browserStorage()): void {
+  const entry = readMyWorkClipReturn(ownerId, storage)
+  if (!storage || !entry) return
+  const filters = Object.fromEntries(
+    Object.entries(entry.filters).filter(([key]) => key !== 'restoreScroll'),
+  )
+  store(ownerId, storage).write({ ...entry, filters })
+}
 /** Confirmed deletion removes the record's origin while retaining a pending directory scroll. */
 export function forgetClipEntry(ownerId: string, clipId: string, storage = browserStorage()): void {
   if (!storage) return
   store(ownerId, storage, clipId).clear()
   const current = store(ownerId, storage).read()
   if (current?.targetId !== clipId) return
-  if (isClipHistoryEntry(current) && current.filters.restoreScroll === 'true') {
+  if (
+    (isClipHistoryEntry(current) || isMyWorkEntry(current)) &&
+    current.filters.restoreScroll === 'true'
+  ) {
     const history = { ...current }
     delete history.targetId
     store(ownerId, storage).write(history)

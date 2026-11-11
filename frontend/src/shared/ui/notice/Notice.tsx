@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** An inline block of feedback on the page — the THEME-18 notice contract, made a primitive because
  *  eight slices were inlining the same `bg-notice-*-bg text-notice-*-fg rounded-md px-3 py-2`

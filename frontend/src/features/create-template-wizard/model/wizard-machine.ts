@@ -6,7 +6,12 @@ import {
   TEMPLATE_NAME_MAX_CHARS,
   TEMPLATE_PHOTO_ROW_MAX,
 } from '@/entities/template'
-import { templateTargetAt, type RoleKey, type SectionContent } from '@/entities/template'
+import {
+  templateTargetAt,
+  type RoleKey,
+  type SectionContent,
+  type TargetNode,
+} from '@/entities/template'
 
 /** One section as the owner shapes it (TMPL-71, TMPL-74). Every answer starts at the catalog
  *  default, so 다음 always works until the owner changes something into an invalid state. */
@@ -53,8 +58,11 @@ export interface WizardState {
 }
 
 export type WizardEvent =
-  /** A target answer. The seeds are the leaf's sections, resolved by the screen in the owner's
-   *  language, and are read only when the choice reaches a leaf. */
+  /** A tap on a target answer: it is chosen and marked, and the screen stays (TMPL-72). */
+  | { type: 'pick'; key: string }
+  /** 다음 on a target question, with the chosen answer. The seeds are the leaf's sections,
+   *  resolved by the screen in the owner's language, and are read only when the choice reaches a
+   *  leaf. */
   | { type: 'choose'; key: string; seeds?: readonly SectionDraft[] }
   | { type: 'back' | 'next' }
   | { type: 'toggle'; id: string; checked: boolean }
@@ -190,9 +198,16 @@ export const wizardMachine = setup({
     finishValid: ({ context }) => finishProblem(context) === undefined,
   },
   actions: {
+    pick: assign(({ context, event }) => {
+      // The same answer again keeps the answers given after it; another one starts them over.
+      if (event.type !== 'pick' || context.path[context.depth] === event.key) return {}
+      return { path: chosen(context, event.key).path }
+    }),
     narrow: assign(({ context, event }) => {
       if (event.type !== 'choose') return {}
-      return { path: chosen(context, event.key).path, depth: context.depth + 1 }
+      const path =
+        context.path[context.depth] === event.key ? context.path : chosen(context, event.key).path
+      return { path, depth: context.depth + 1 }
     }),
     reachLeaf: assign(({ context, event }) => {
       if (event.type !== 'choose') return {}
@@ -289,6 +304,7 @@ export const wizardMachine = setup({
   states: {
     target: {
       on: {
+        pick: { actions: 'pick' },
         choose: [
           { guard: 'choiceIsLeaf', target: 'sections', actions: 'reachLeaf' },
           { guard: 'choiceIsBranch', actions: 'narrow' },
@@ -373,6 +389,12 @@ export function wizardTransition(state: WizardState, event: WizardEvent): Wizard
   return next.context === snapshot.context && next.value === snapshot.value
     ? state
     : wizardStateOf(next)
+}
+
+/** The answer chosen on the question on screen, if any. */
+export function pickedTarget(state: WizardState): TargetNode | undefined {
+  const node = templateTargetAt(state.path.slice(0, state.depth))
+  return node?.children?.find((child) => child.key === state.path[state.depth])
 }
 
 /** Whether the owner has answered anything, which is what leaving asks about (TMPL-71). */
