@@ -65,11 +65,12 @@ function originalProductionAdapter(root, candidate) {
   const returned = '          mode: request.mode,'
   if (code.split(returned).length !== 2) throw Error('Production result boundary changed')
   code = code.replace(returned, '          fixture: fixture.id,\n          snapshotFingerprint: snapshot.snapshotFingerprint,\n' + returned)
-  const syntax = ts.transpileModule(code, { fileName: 'windows-final-entry.ts', reportDiagnostics: true,
-    compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } }).diagnostics ?? []
+  const transpiled = ts.transpileModule(code, { fileName: 'windows-final-entry.ts', reportDiagnostics: true,
+    compilerOptions: { target: ts.ScriptTarget.ES2023, module: ts.ModuleKind.ESNext } })
+  const syntax = transpiled.diagnostics ?? []
   if (syntax.length) throw Error('Generated production adapter has syntax diagnostics')
-  return { code, provenance: { comparisonEntrySHA256: sha(comparison), originalExportEntrySHA256: sha(original),
-    sharedPlanBuilderSHA256: sha(builders[0]), sharedSnapshotBuilderSHA256: sha(freezes[0]), generatedAdapterSHA256: sha(code),
+  return { code: transpiled.outputText, provenance: { comparisonEntrySHA256: sha(comparison), originalExportEntrySHA256: sha(original),
+    sharedPlanBuilderSHA256: sha(builders[0]), sharedSnapshotBuilderSHA256: sha(freezes[0]), generatedTypeScriptSHA256: sha(code), generatedAdapterSHA256: sha(transpiled.outputText),
     scope: 'Original export fixture production pipeline with the exact shared comparison plan/snapshot builders; no production module is changed' } }
 }
 
