@@ -108,6 +108,12 @@ describe('opening a post', () => {
     const writing = await screen.findByText('글을 쓰고 있어요')
     // The card's one moving progress is its bar: a spinner beside it said "working" twice.
     expect(writing.closest('div')?.querySelector('.animate-spin')).toBeNull()
+    // It moves on transform alone, never on a layout property (THEME-28): a quarter done is the
+    // full-width fill slid three quarters out of its track.
+    const fill = writing.closest('div')?.querySelector<HTMLElement>('[data-writing-fill]')
+    expect(fill).toHaveClass('w-full', 'transition-transform')
+    expect(fill?.style.transform).toBe('translateX(-75%)')
+    expect(fill?.style.width).toBe('')
     // Still the page's one announced progressbar; only its paint steps aside for the card's.
     const bar = screen.getByRole('progressbar', { name: '작업 진행률' })
     await waitFor(() => expect(bar.closest('.sticky')).toHaveClass('opacity-0'))

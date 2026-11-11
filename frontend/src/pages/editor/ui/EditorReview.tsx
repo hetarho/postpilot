@@ -259,9 +259,12 @@ function WritingCard({ job, onShown }: { job: GenerationJob; onShown?: (shown: b
           {share === undefined ? (
             <span className="bg-meter-fill animate-progress-sweep block h-full w-1/4 rounded-full" />
           ) : (
+            // A full-width fill slid in from the left, so the bar moves on `transform` alone
+            // (THEME-28) and its leading end keeps its round cap, which a scale would squash.
             <span
-              className="bg-meter-fill duration-slow block h-full rounded-full transition-[width]"
-              style={{ width: `${share}%` }}
+              data-writing-fill
+              className="bg-meter-fill duration-slow ease-standard block h-full w-full rounded-full transition-transform"
+              style={{ transform: `translateX(${share - 100}%)` }}
             />
           )}
         </span>
