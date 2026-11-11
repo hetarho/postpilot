@@ -590,6 +590,25 @@ describe('the brief run options', () => {
     expect(optionSaves).toHaveLength(1)
   })
 
+  // A draft nothing has been entered into is not saved yet, so 확인 has no run to start. The bar
+  // used to hold only ←, and the owner could not tell where 바로 글 쓰기 had gone.
+  it('says why 바로 글 쓰기 is unavailable on an empty draft and leads to the photos', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/posts/new', { user: USER })
+
+    await guideTo(user, GUIDE.review)
+    const write = await screen.findByRole('button', { name: '바로 글 쓰기' })
+    expect(write).toBeDisabled()
+    expect(write).toHaveAccessibleDescription('아직 쓸 내용이 없어요. 사진이나 내용을 더해 주세요.')
+
+    await user.click(screen.getByRole('button', { name: '사진 넣기' }))
+    const progress = screen.getByRole('navigation', { name: /^(글쓰기 단계|Writing steps)$/ })
+    expect(within(progress).getByRole('button', { name: GUIDE.photos })).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+  })
+
   it('offers no run options before the first save, and the create carries no 분야', async () => {
     const user = userEvent.setup()
     const calls: string[] = []

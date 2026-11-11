@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { ActionBar, Button, GuideProgress, StepScreen } from '@/shared/ui'
+import { ActionBar, Button, GuideProgress, StepScreen, Typography } from '@/shared/ui'
 import {
   GUIDE_STEPS,
   activeGuideSteps,
@@ -41,6 +41,7 @@ export function EditorGuide({
   notice?: ReactNode
 }) {
   const { t } = useTranslation('posts')
+  const emptyReasonId = useId()
   // Which way the owner is moving, so a step back slides in from the left — derived from the step
   // last drawn, adjusted during render (React's "state from a changed prop" pattern).
   const [shown, setShown] = useState(step)
@@ -125,7 +126,34 @@ export function EditorGuide({
               {actions(backTo(previousGuideStep(summary, sponsored)))}
             </div>
           ) : (
-            !next && back && <div className="flex items-center gap-2">{back}</div>
+            // A draft nothing has been entered into has not been saved, so there is no post for
+            // 생성 to run on. The button still stands where the owner expects it, disabled, with
+            // the reason above it and the shortest way to fix it — a bar holding only ← left them
+            // wondering where the button went.
+            !next && (
+              <div className="flex min-w-0 flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <Typography variant="label" as="p" id={emptyReasonId} className="min-w-0">
+                    {t('guide.emptyDraft.reason')}
+                  </Typography>
+                  <Button variant="ghost" size="compact" onClick={() => go('photos')}>
+                    {t('guide.emptyDraft.addPhotos')}
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  {back}
+                  <Button
+                    variant="cta"
+                    size="hero"
+                    className="min-w-0 flex-1"
+                    disabled
+                    aria-describedby={emptyReasonId}
+                  >
+                    {t('generation.writeNow')}
+                  </Button>
+                </div>
+              </div>
+            )
           )}
         </div>
       </ActionBar>

@@ -28,6 +28,10 @@ export const i18n = {
       next: '다음',
       toReview: '확인하기',
       skipMemo: '건너뛰고 확인',
+      emptyDraft: {
+        reason: '아직 쓸 내용이 없어요. 사진이나 내용을 더해 주세요.',
+        addPhotos: '사진 넣기',
+      },
       sponsored: '체험단으로 다녀왔어요',
       sponsoredHelp: '제공받은 경험이에요. 광고주가 부탁한 내용을 먼저 확인해요.',
       selfPaid: '내 돈으로 다녀왔어요',
@@ -122,6 +126,10 @@ export const i18n = {
       next: 'Next',
       toReview: 'Review',
       skipMemo: 'Skip to review',
+      emptyDraft: {
+        reason: 'There’s nothing to write from yet. Add a photo or some details.',
+        addPhotos: 'Add photos',
+      },
       sponsored: 'It was a sponsored visit',
       sponsoredHelp: 'I received something for this visit. Check the sponsor’s requests first.',
       selfPaid: 'I paid for it myself',
