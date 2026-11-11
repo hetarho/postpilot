@@ -318,6 +318,10 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         .flush()
         .then(async () => {
           const slug = await autosave.ensureSlug()
+          // Back from the wizard, or saved there, the owner returns to the screen they left —
+          // the template question, now with the new template to pick — not to the summary a
+          // returning draft otherwise opens on.
+          stashGuideStep(slug, 'template')
           await navigate({ to: '/templates/new', search: { post: slug } })
         })
         .catch(() => {

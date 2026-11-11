@@ -158,16 +158,31 @@ export function AuthenticatedLayout() {
     source.isSuccess && source.data?.context.sourcePostSlug === sourceSlug && sourceSlug
       ? `/posts/${encodeURIComponent(sourceSlug)}`
       : undefined
+  // A template wizard opened from a post's 템플릿 question (TMPL-32) returns to that post: the
+  // owner was writing it, and the template list was never where they came from.
+  const templatePost =
+    pathname === '/templates/new' && typeof search.post === 'string' ? search.post : ''
+  const templatePostReturn = templatePost
+    ? templatePost === 'new'
+      ? '/posts/new'
+      : `/posts/${encodeURIComponent(templatePost)}`
+    : undefined
   const parent = metadata.ancestors.at(-1)
   const returnHref =
-    postReturn?.href ?? clipReturn?.href ?? ownedSourceReturn ?? origin ?? parent?.href
-  const returnName = ownedSourceReturn
-    ? t('location.post')
-    : parent && returnHref === parent.href
-      ? t(`location.${parent.key}`)
-      : returnHref
-        ? t(`location.${routeLocation(returnHref, channel).current}`)
-        : undefined
+    postReturn?.href ??
+    clipReturn?.href ??
+    ownedSourceReturn ??
+    templatePostReturn ??
+    origin ??
+    parent?.href
+  const returnName =
+    ownedSourceReturn || templatePostReturn
+      ? t('location.post')
+      : parent && returnHref === parent.href
+        ? t(`location.${parent.key}`)
+        : returnHref
+          ? t(`location.${routeLocation(returnHref, channel).current}`)
+          : undefined
   const immersive = pathname === '/plans'
   const quiet = pathname === '/' || pathname === '/setup'
   const setup = pathname === '/setup'

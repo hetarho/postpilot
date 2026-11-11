@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { usePost } from '@/entities/post'
 import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
@@ -9,7 +9,7 @@ import { TemplateDirectEditor } from '@/features/edit-template'
 import { TemplateWizard } from '@/features/create-template-wizard'
 import { BlockType } from '@/shared/api'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
-import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import { Button, Notice, Typography, pageStyles } from '@/shared/ui'
 
 export function TemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
@@ -26,7 +26,6 @@ export function TemplatePage() {
   if (isError)
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <BackLink />
         <Notice tone="danger" role="alert" className="mt-4">
           {t('loadFailed', { ns: 'templates' })}
           <Button variant="ghost" onClick={refetch} pending={isFetching}>
@@ -38,7 +37,6 @@ export function TemplatePage() {
   if (templateId && (isPending || (!stored && isFetching)))
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <BackLink />
         <Typography variant="body" role="status" className="mt-8">
           {t('state.loading', { ns: 'common' })}
         </Typography>
@@ -47,7 +45,6 @@ export function TemplatePage() {
   if (templateId && !stored && !isFetching)
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <BackLink />
         <Notice tone="danger" role="alert" className="mt-4">
           {t('screen.notFound', { ns: 'templates' })}
         </Notice>
@@ -114,7 +111,6 @@ function TemplateAuthoringPage({
     <main
       className={pageStyles({ width: 'board', className: 'flex flex-1 flex-col py-4 sm:py-8' })}
     >
-      <BackLink />
       <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
         {named.name}
       </Typography>
@@ -319,21 +315,5 @@ function TemplateAuthoringPage({
         />
       )}
     </main>
-  )
-}
-
-function BackLink() {
-  const { t } = useTranslation('templates')
-  return (
-    <Link
-      to="/templates"
-      className={typographyStyles({
-        variant: 'label',
-        className:
-          'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center underline',
-      })}
-    >
-      {t('screen.backToList')}
-    </Link>
   )
 }

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { rememberPostEntry, readPostReturnContext } from '@/entities/post'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 import { renderAppAt } from '@/test/app'
-import { USER, resetEditorTest, openBrief } from '@/test/editor'
+import { GUIDE, USER, guideTo, resetEditorTest, openBrief } from '@/test/editor'
 import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 
 afterEach(() => {
@@ -107,4 +107,26 @@ it('preserves channel scroll through first draft mount and address minting', asy
   })
   const slug = view.router.state.location.pathname.split('/').at(-1)!
   expect(readPostReturnContext(USER.id, slug)).toMatchObject({ path: '/naver-blog', scrollY: 480 })
+})
+
+// From the template question, 새 템플릿 만들기 left the owner on a wizard whose two back links both
+// led to the template list, and a return to the post opened on the summary instead of the
+// question they had left.
+it('returns from the template wizard to the template question of the post', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    posts: { posts: [{ slug: 'saved', memo: '바다를 보고 왔다' }] },
+    templates: { templates: [] },
+  })
+  await guideTo(user, GUIDE.template)
+  await user.click(screen.getByRole('button', { name: '새 템플릿 만들기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/templates/new'))
+
+  const back = await screen.findByRole('link', { name: '글 작성' })
+  expect(back).toHaveAttribute('href', '/posts/saved')
+  expect(screen.queryByRole('link', { name: /템플릿/ })).not.toBeInTheDocument()
+  await user.click(back)
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
+  expect(await screen.findByRole('heading', { name: '어떤 틀로 써 볼까요?' })).toBeVisible()
 })

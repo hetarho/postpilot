@@ -111,7 +111,8 @@ describe('the template wizard', () => {
     })
     await title('어떤 체험을 글로 남기나요?')
     await user.click(screen.getByRole('button', { name: /^카페/ }))
-    await user.click(screen.getByRole('link', { name: '← 템플릿 목록' }))
+    // The shell's one way back (THEME-58); the page no longer draws a second one.
+    await user.click(screen.getByRole('link', { name: '글 템플릿' }))
 
     expect(
       await screen.findByRole('dialog', { name: '템플릿 만들기를 그만둘까요?' }),
