@@ -198,6 +198,32 @@ it('opens the stage picker free first and applies 품질 먼저 only when picked
   expect(order()).toEqual(['Top', 'Balanced', 'Value One', 'Value Two', 'Free', 'Plain'])
 })
 
+// MODEL-24: a failed catalog read is a failure with a retry, never 고르지 않음 — that would read
+// as the saved choice being gone.
+it('shows a failed catalog read as a failure with a retry', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    providers: {
+      calls,
+      listFails: true,
+      models: [{ providerId: 'openrouter', modelId: 'pen', label: 'Pen' }],
+      selections: [{ stage: Stage.WRITE, providerId: 'openrouter', modelId: 'pen' }],
+    },
+  })
+  const main = within(await screen.findByRole('main'))
+  expect(await main.findAllByText('쓰는 AI를 못 불러왔어요.')).toHaveLength(3)
+  expect(main.queryByText('고르지 않음')).not.toBeInTheDocument()
+  expect(main.queryByRole('button', { name: '바꾸기 · 글 쓰기' })).not.toBeInTheDocument()
+  const reads = () => calls.filter((call) => call === 'ListModels').length
+  const before = reads()
+  await user.click(main.getByRole('button', { name: '다시 시도 · 글 쓰기' }))
+  await waitFor(() => expect(reads()).toBeGreaterThan(before))
+  expect(main.getAllByText('쓰는 AI를 못 불러왔어요.')).toHaveLength(3)
+  expect(calls).not.toContain('SaveSelection')
+})
+
 // QUOTA-66, MODEL-27: the chosen model's row and its picker card never show a supplier price.
 it('describes a chosen model without any price', async () => {
   const user = userEvent.setup()

@@ -10,7 +10,9 @@ import {
   postCreditLabel,
   refKey,
   stagePostFigure,
+  useModels,
   useSaveSelection,
+  useSelections,
   useStageSelection,
   type CatalogModel,
   type StageName,
@@ -19,6 +21,7 @@ import {
   AppFailureMessage,
   Badge,
   Button,
+  Notice,
   SegmentedControl,
   Sheet,
   Typography,
@@ -63,13 +66,28 @@ function orderByLens(
   return [...models].sort((a, b) => key(a) - key(b))
 }
 
+/** A failed catalog or selections read is its own answer (MODEL-24): neither one may read as
+ *  "nothing chosen", and its retry asks both again. */
+function useCatalogRead() {
+  const models = useModels()
+  const selections = useSelections()
+  return {
+    failed: models.isError || selections.isError,
+    retry: () => {
+      models.refetch()
+      selections.refetch()
+    },
+  }
+}
+
 /** Guide: one stage's AI as a row — the plain name of the stage, the model in use with its grade
  *  and what one post costs — whose 바꾸기 opens the picker as a bottom sheet. The picker is a
  *  list of big radio cards, opening free first and resorted by what the owner says matters first
  *  (품질 · 균형 · 가격), and a tap saves the choice at once: the same save the old dropdown made. */
 export function StageModelRow({ stage }: { stage: StageName }) {
-  const { t } = useTranslation('models')
+  const { t } = useTranslation(['models', 'common'])
   const active = useStageSelection(stage)
+  const read = useCatalogRead()
   const [open, setOpen] = useState(false)
   const reference = active.selected ?? active.unavailable?.ref
   const current = reference
@@ -83,9 +101,15 @@ export function StageModelRow({ stage }: { stage: StageName }) {
     <div className="flex min-h-16 items-center gap-3 px-4 py-3">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className={typographyStyles({ variant: 'label' })}>{t(`picker.stage.${stage}`)}</span>
-        <span className={typographyStyles({ variant: 'fieldTitle', className: 'truncate' })}>
-          {active.isPending ? '—' : name}
-        </span>
+        {read.failed ? (
+          <span className={typographyStyles({ variant: 'body', className: 'text-field-error' })}>
+            {t('picker.rowFailed')}
+          </span>
+        ) : (
+          <span className={typographyStyles({ variant: 'fieldTitle', className: 'truncate' })}>
+            {active.isPending ? '—' : name}
+          </span>
+        )}
         <span className="flex flex-wrap items-center gap-2">
           {level && <Badge tone="accent">{t(`level.${level}`)}</Badge>}
           {figure && (
@@ -98,14 +122,24 @@ export function StageModelRow({ stage }: { stage: StageName }) {
           )}
         </span>
       </div>
-      <Button
-        variant="secondary"
-        onClick={() => setOpen(true)}
-        aria-label={`${t('picker.change')} · ${t(`picker.stage.${stage}`)}`}
-        disabled={active.isPending || active.isError}
-      >
-        {t('picker.change')}
-      </Button>
+      {read.failed ? (
+        <Button
+          variant="secondary"
+          onClick={read.retry}
+          aria-label={`${t('action.retry', { ns: 'common' })} · ${t(`picker.stage.${stage}`)}`}
+        >
+          {t('action.retry', { ns: 'common' })}
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          onClick={() => setOpen(true)}
+          aria-label={`${t('picker.change')} · ${t(`picker.stage.${stage}`)}`}
+          disabled={active.isPending}
+        >
+          {t('picker.change')}
+        </Button>
+      )}
       <Sheet
         open={open}
         labelledBy={headingId}
@@ -133,8 +167,9 @@ export function StageModelRow({ stage }: { stage: StageName }) {
 /** The picker itself: a lens switch, none of whose lenses is on until the owner picks one, and
  *  the stage's models as radio cards. */
 export function ModelPicker({ stage }: { stage: StageName }) {
-  const { t } = useTranslation('models')
+  const { t } = useTranslation(['models', 'common'])
   const active = useStageSelection(stage)
+  const read = useCatalogRead()
   const save = useSaveSelection()
   const [lens, setLens] = useState<Lens>('grade')
   const selectedKey = active.selected ? refKey(active.selected) : ''
@@ -146,6 +181,15 @@ export function ModelPicker({ stage }: { stage: StageName }) {
         })
       : ''
   const models = orderByLens(active.models, stage, lens)
+  if (read.failed)
+    return (
+      <Notice tone="danger" role="alert">
+        {t('picker.listFailed')}
+        <Button variant="ghost" className="mt-3" onClick={read.retry}>
+          {t('action.retry', { ns: 'common' })}
+        </Button>
+      </Notice>
+    )
   return (
     <div className="flex flex-col gap-4">
       <SegmentedControl
