@@ -11,9 +11,10 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T22:42Z | 2026-11-11T22:42Z | - |
+| ui12 | ihaelam-ui-MacBookPro | autopilot | 2026-11-11T22:42Z | 2026-11-11T22:45Z | - |
 
 ## inbox
+- 261112 decided CLIP-225 CLIP-227 T758 review/video-preparation-guide-261112: which video redesign slice follows the completed foreground/T757? → adopt independent scout F1, retained preparation with latest-local review and shared step bar, via CLIP r75 and T758 (alt: another isolated bug | rewrite the whole editor at once). T746/POST-122/123/124 plus real browser baseline support the sequence; preserve backend/credit/owner/export contracts and plan later storyline/edit/delivery slices separately. Original deadline unchanged; closing reserve expanded to3h.
 - 261112 decided ARCH-31 T757: resume after the remote-only blocker? → GitHub CI43094556625 for0af0cf99 is now completed/success with both jobs successful, so resume the remaining explicitly delegated video workflow redesign on main under the original deadline and existing review/verification requirements (alt: leave the temporary run stopped | call one retention bug fix a complete video redesign). The user requested status; no cancellation or scope reduction was given.
 - 261112 parked ARCH-31 T757: T757 sourceeed85f60/completion5114f7d5 is reviewed, integrated, published and source CI43091754368 passes. Final record0af0cf99 CI43094556625 has every step successful but run/jobs/checks remain in_progress with null conclusions; REST/GraphQL agree. Force and normal cancel both reject as completed, full rerun rejects as already running. No source fix or repeated retry is justified; keep exact runtime evidence and await GitHub state reconciliation. The blocker report is local-only to avoid another unverifiable main push.
 - 261112 decided THEME-51 THEME-55 CLIP-180 CLIP-197: video cycle2 scout finds tool-local unsent request lost on preview navigation → adopt review/video-request-retention-261112 F1 as T757 restoring existing retention contracts (alt: discard text | persist globally | broaden generation/process policy). User delegation covers this reversible fix; keep quote hooks local and owner/project boundaries keyed, independently implement/review before main publication.
@@ -156,7 +157,7 @@
 | THEME | 40 | 40 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 74 | 74 | - | 2 |
+| CLIP | 75 | 75 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -169,6 +170,7 @@
 ## review
 | id | st |
 |---|---|
+| video-preparation-guide-261112 | converted@261112 |
 | video-request-retention-261112 | converted@261112 |
 | diff-260908 | converted@260908 |
 | clip-project-update-260914 | converted@260914 |
@@ -194,6 +196,7 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
+| T758 | Guide video preparation through retained screens and review | CLIP THEME ARCH | - | todo |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
@@ -202,6 +205,8 @@
 - T697 still needs explicit production generation/source-read evidence without replaying T709's unresolved paid budget; unrelated active ideation and INFRA planning stay outside this UI/video scope.
 
 ## log
+- 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
+- 261112 update-ssot CLIP start (ui12 video cycle3): adopt independent scout preparation-flow proposal under explicit reversible UX delegation; preserve whole-journey plan and excluded contracts.
 - 261112 ui12 resumes after status audit: foreground T753–T756 and T757 are published; GitHub43094556625 now completed/success (updated21:01:03Z, verified22:41Z). The prior host parked20:49Z and did not auto-resume. Continue the still-authorized full video UX scope under the same hard deadline, without calling the retention fix the requested redesign.
 - 261112 ui12 parked: latest metadata CI43094556625 cannot be certified; all steps success but REST/GraphQL conclusions null, cancellation says completed/rerun says running. T757 source/main acceptance and CI43091754368 pass. Remove own active; preserve sv8/excluded tasks and evidence.
 - 261112 video cycle2 complete (ui12): T757 independently reviewed4d77048d, sourceeed85f60/completion5114f7d5 on origin/main; local full ARCH-31 362s and remote CI43091754368 frontend/backend pass. Browser4 and affected25/266 pass; source unchanged after review, own workspaces cleaned. Next independent scout may assess observed360px heading/pointer issues.
@@ -220,5 +225,3 @@
 - 261112 T753 done (ui12): canonical /create with / alias, logo/login/setup preserved; 24 files/288 consumer tests, lint/FSD/style/build and Chromium fixture proof pass. Full pre-push gate follows.
 - 261112 T753 starts (ui12), baseline 1baf181e: canonical /create, preserve setup/deep links/public auth.
 - 261112 create-task T753–T756 (ui12): consume THEME r40, POST r47 and CLIP r74; four sequential foreground units, no unrelated pending domain consumed.
-- 261112 update-ssot THEME POST CLIP starts (ui12): canonical creation, stable My work geometry, truthful storyline-ready list state and compact unified continuation; current adopted group has no active attempt and foreground follows ARCH-70.
-- 261112 start-vibe ui12 starts: clean main b1c33087, remote equal, no design; questions waived, UI fixes precede video self-improve-local, deadline 2026-11-13T00:00Z. Preflight, push dry-run and real headless Codex probe pass. Preserve the stale adopted work binding and unrelated workspaces.
