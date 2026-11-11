@@ -30,6 +30,17 @@ afterEach(() => {
   vi.unstubAllGlobals()
   audio = undefined
 })
+// THEME-67: 목소리's creation button is its siblings' — 새 목소리, a hero pill with its plus glyph,
+// the full width on a phone and a right-aligned pill from `sm:`.
+it('draws 새 목소리 as the section creation button every sibling has', async () => {
+  renderAppAt('/spoken-voices', { user: { id: 'alice' } })
+  const create = await screen.findByRole('link', { name: '새 목소리' })
+  expect(create).toHaveAttribute('href', '/spoken-voices/new')
+  expect(create).toHaveClass('ui-button-cta', 'min-h-14', 'w-full', 'sm:w-auto')
+  expect(create.querySelector('svg')).not.toBeNull()
+  expect(create.closest('[data-action-bar]')).toHaveClass('w-full', 'sm:w-fit')
+})
+
 describe('spoken voice creation and reuse', () => {
   it('keeps a failed approved request available for an explicit same-key retry', async () => {
     const f = spokenVoiceFixture(),

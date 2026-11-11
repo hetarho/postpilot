@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
@@ -79,8 +80,14 @@ export function SpokenVoicesPage() {
           </ul>
         </section>
       )}
-      <ActionBar dock="list" className="mt-auto">
-        <Link to="/spoken-voices/new" className={buttonStyles({ variant: 'cta' })}>
+      {/* The section's creation button: the full width on a phone and a right-aligned pill from
+          `sm:`, like every sibling section's (THEME-67). */}
+      <ActionBar dock="list" className="mt-auto w-full sm:w-fit">
+        <Link
+          to="/spoken-voices/new"
+          className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full sm:w-auto' })}
+        >
+          <Plus aria-hidden="true" className="size-6 shrink-0" />
           {t('new')}
         </Link>
       </ActionBar>

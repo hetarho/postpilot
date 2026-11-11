@@ -78,6 +78,16 @@ describe('the memory directory', () => {
     expect(await screen.findByRole('button', { name: '새 기억' })).toBeInTheDocument()
   })
 
+  // THEME-67: the section's creation button is the siblings' — a hero pill with its plus glyph,
+  // the full width on a phone and a right-aligned pill from `sm:`.
+  it('draws 새 기억 as the section creation button every sibling has', async () => {
+    renderMemories({ memories: [] })
+    const create = await screen.findByRole('button', { name: '새 기억' })
+    expect(create).toHaveClass('ui-button-cta', 'min-h-14', 'w-full', 'sm:w-auto')
+    expect(create.querySelector('svg')).not.toBeNull()
+    expect(create.closest('[data-action-bar]')).toHaveClass('w-full', 'sm:w-fit')
+  })
+
   it('renders the failure with a retry rather than an empty directory', async () => {
     renderMemories({ listFails: true })
     expect(await screen.findByRole('alert')).toHaveTextContent('기억을 불러오지 못했어요.')

@@ -1,7 +1,7 @@
 export const spokenVoicesResources = {
   ko: {
     title: '내 목소리',
-    new: '목소리 만들기',
+    new: '새 목소리',
     about: '영상 더빙에 사용할 목소리예요. 글의 말투와는 별도로 관리합니다.',
     empty: '아직 확정한 목소리가 없어요.',
     loading: '목소리를 불러오고 있어요.',
@@ -17,7 +17,7 @@ export const spokenVoicesResources = {
   },
   en: {
     title: 'My spoken voices',
-    new: 'Create a voice',
+    new: 'New spoken voice',
     about: 'Voices for video narration, managed separately from your writing style.',
     empty: 'No confirmed voices yet.',
     loading: 'Loading voices.',

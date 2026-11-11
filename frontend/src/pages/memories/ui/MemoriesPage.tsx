@@ -116,12 +116,14 @@ export function MemoriesPage() {
 
           {/* The page is the list; authoring happens behind this one trigger, the shape every
               sibling directory uses (MEM-24, THEME-24). */}
+          {/* The full width on a phone and a right-aligned pill from `sm:`, like every section's
+              creation button (THEME-67). */}
           <ActionBar
             dock="list"
             ariaLabel={t('create.dockAria', { ns: 'memories' })}
-            className="mt-auto"
+            className="mt-auto w-full sm:w-fit"
           >
-            <CreateMemorySheet ownerId={ownerId} />
+            <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
           </ActionBar>
         </>
       )}
