@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Image as ImageIcon, Repeat2, Sparkles } from 'lucide-react'
 import { Typography } from '@/shared/ui'
 

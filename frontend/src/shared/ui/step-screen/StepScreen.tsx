@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { typographyStyles } from '../typography/typographyStyles'
 
 /** Guide: one screen of a guided flow — ONE question, large, and the one task under it. It

@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes } from 'react'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export interface TextFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   appearance?: 'well' | 'bare'
@@ -27,7 +27,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
               // the THEME-23 ratio.
               // Guide: 17px on a phone, 16px from `sm:` — never under the iOS zoom floor — and a
               // 48px well under a thumb.
-              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus rounded-md px-4 py-2 text-[1.0625rem] sm:text-base pointer-coarse:min-h-12'
+              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus text-body rounded-md px-4 py-2 sm:text-base pointer-coarse:min-h-12'
             : 'bg-transparent',
           className,
         ),

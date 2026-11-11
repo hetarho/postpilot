@@ -1,9 +1,8 @@
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { twMerge } from 'tailwind-merge'
 import type { PostImage } from '@/entities/image'
 import type { PhotoFit } from '@/entities/post'
-import { presignExpired } from '@/shared/lib'
+import { presignExpired, twMerge } from '@/shared/lib'
 import { RotatedImage, Typography } from '@/shared/ui'
 import type { FailedCopyKind } from '../model/copy-target'
 

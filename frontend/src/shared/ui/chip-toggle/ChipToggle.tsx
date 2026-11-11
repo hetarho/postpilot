@@ -1,5 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** A chip that is pressed or not: one option in a set where any number may be chosen at once, or
  *  — where the caller releases the others as it presses one, as ①'s 분야 does — exactly one.

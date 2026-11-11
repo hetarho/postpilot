@@ -1,4 +1,4 @@
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** Stroke settings shared by the glyphs. The source artwork paints a 12-unit stroke of the glyph's
  *  own colour UNDER the fill (`paint-order`), which is what rounds the terminals and gives the

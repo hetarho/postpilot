@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** Guide: the raised card — the one lifted plane a step screen, a list item or a settings group
  *  sits on. 24px corners, a soft wide shadow, generous padding. Styles, not a component, so a
@@ -38,7 +38,7 @@ export function chipStyles({
 }: { current?: boolean; className?: string } = {}) {
   return twMerge(
     clsx(
-      'duration-fast ease-standard inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-[0.9375rem] font-semibold whitespace-nowrap transition-colors pointer-coarse:min-h-11',
+      'duration-fast ease-standard inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 rounded-full px-4 text-label font-semibold whitespace-nowrap transition-colors pointer-coarse:min-h-11',
       current
         ? 'bg-chip-bg-current text-chip-fg-current'
         : 'bg-chip-bg text-chip-fg hover:bg-chip-bg-hover active:bg-card-bg-active shadow-sm',

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { useSession } from '@/entities/session'
 import { rememberPostEntry } from '@/entities/post'
 import { clipChannelPath, rememberClipEntry, type ClipChannel } from '@/entities/clip-project'

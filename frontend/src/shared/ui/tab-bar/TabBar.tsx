@@ -15,7 +15,9 @@ function NativeLink(props: NavigationLinkProps) {
 
 /** Guide: the app's primary destinations as a bottom tab bar — the thumb's home row on a phone —
  *  that becomes a centred floating pill on the desk (from `lg:`). Every destination is visible at
- *  every width; there is no hamburger (THEME-26).
+ *  every width; there is no hamburger (THEME-26). A tab's label is the 13px meta step at every
+ *  width — copy the owner acts on, so never smaller (THEME-19) — and the bar's padding is the
+ *  home-indicator inset (THEME-31).
  *
  *  The current destination is told three ways: the accent ink, a soft pill behind its glyph and
  *  `aria-current="page"`. The shell that mounts this marks itself `data-tab-bar="shown"` so every
@@ -29,7 +31,7 @@ export function TabBar({ items, ariaLabel }: { items: readonly TabBarItem[]; ari
     >
       <ul
         className={clsx(
-          'bg-tab-bar-bg grid auto-cols-[minmax(0,1fr)] grid-flow-col rounded-t-2xl px-1 pb-[env(safe-area-inset-bottom,0px)] shadow-lg backdrop-blur-xl',
+          'bg-tab-bar-bg pb-safe-b grid auto-cols-[minmax(0,1fr)] grid-flow-col rounded-t-2xl px-1 shadow-lg backdrop-blur-xl',
           'lg:flex lg:gap-1 lg:rounded-full lg:p-1.5',
         )}
       >
@@ -39,8 +41,8 @@ export function TabBar({ items, ariaLabel }: { items: readonly TabBarItem[]; ari
               href={href}
               aria-current={current ? 'page' : undefined}
               className={clsx(
-                'group duration-fast ease-standard flex h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl text-[0.75rem] leading-none font-semibold transition-colors',
-                'lg:h-12 lg:flex-row lg:gap-2 lg:rounded-full lg:px-5 lg:text-[0.9375rem]',
+                'group duration-fast ease-standard text-meta flex h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl leading-none font-semibold transition-colors',
+                'lg:h-12 lg:flex-row lg:gap-2 lg:rounded-full lg:px-5',
                 current
                   ? 'text-tab-bar-fg-current lg:bg-tab-bar-indicator'
                   : 'text-tab-bar-fg hover:text-content-primary active:text-content-primary lg:hover:bg-card-bg-hover',
@@ -53,7 +55,7 @@ export function TabBar({ items, ariaLabel }: { items: readonly TabBarItem[]; ari
                   current && 'bg-tab-bar-indicator lg:bg-transparent',
                 )}
               >
-                <Icon className="size-[1.375rem] lg:size-5" />
+                <Icon className="size-5.5 lg:size-5" />
               </span>
               <span className="max-w-full truncate">{label}</span>
             </Link>

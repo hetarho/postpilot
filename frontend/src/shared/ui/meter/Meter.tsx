@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** How much of a bounded allowance has been used.
  *

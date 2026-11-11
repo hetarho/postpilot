@@ -6,7 +6,7 @@ import {
   type TextareaHTMLAttributes,
 } from 'react'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   appearance?: 'well' | 'bare'
@@ -133,7 +133,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
           grow && 'overflow-hidden',
           appearance === 'well'
             ? // Guide: 17px and roomy — the owner writes the story here with a thumb.
-              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus rounded-md px-4 py-3 text-[1.0625rem] leading-relaxed sm:text-base'
+              'bg-field-bg hover:bg-field-bg-hover focus:bg-field-bg-focus text-body rounded-md px-4 py-3 leading-relaxed sm:text-base'
             : 'bg-transparent',
           className,
         ),

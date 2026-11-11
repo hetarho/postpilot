@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { Check, ChevronDown } from 'lucide-react'
 import {
   LISTBOX_MAX_VIEWPORT_RATIO,
@@ -205,7 +205,7 @@ export function Listbox<T>({
         onKeyDown={onTriggerKeyDown}
         // The field well the native select wore, minus the native control. `px-4` against the
         // ~12px the 44px floor produces is the THEME-23 ratio; the type is the `input` role (THEME-20).
-        className="bg-field-bg text-field-fg hover:bg-field-bg-hover focus:bg-field-bg-focus disabled:text-content-disabled flex min-h-10 w-full items-center gap-2 rounded-md px-4 py-2 text-left text-[1.0625rem] disabled:opacity-50 sm:text-base pointer-coarse:min-h-12"
+        className="bg-field-bg text-field-fg hover:bg-field-bg-hover focus:bg-field-bg-focus disabled:text-content-disabled text-body flex min-h-10 w-full items-center gap-2 rounded-md px-4 py-2 text-left disabled:opacity-50 sm:text-base pointer-coarse:min-h-12"
       >
         <span
           id={valueId}

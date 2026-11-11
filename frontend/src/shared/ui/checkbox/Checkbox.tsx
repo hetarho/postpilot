@@ -1,6 +1,6 @@
 import { forwardRef, type InputHTMLAttributes } from 'react'
 import { Check } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** A 20px box with a real 44px hit area. The PRIMITIVE owes the touch target, not the caller
  *  (THEME-23): a bare 20x20 input is 21% of the area a thumb needs, and relying on

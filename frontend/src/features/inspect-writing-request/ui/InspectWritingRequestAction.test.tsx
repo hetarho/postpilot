@@ -189,11 +189,11 @@ describe('optional technical request inspection', () => {
     expect(within(sheet).getByText('facts-only')).toBeInTheDocument()
     expect(
       within(sheet).getByText('현재 설정과 자료를 보여 줍니다. 실제 전송한 요청이 아닙니다.'),
-    ).toHaveClass('text-[1.0625rem]')
+    ).toHaveClass('text-body')
     expect(within(sheet).queryByText('{"required":["body"]}')).not.toBeInTheDocument()
     await user.click(within(sheet).getByRole('button', { name: '출력 스키마·원문 문법' }))
     expect(within(sheet).getByText('{"required":["body"]}')).toHaveClass(
-      'text-[1.0625rem]',
+      'text-body',
       'whitespace-pre-wrap',
     )
     expect(backend.calls).toHaveLength(1)
@@ -521,8 +521,8 @@ describe('optional technical request inspection', () => {
       expect(sheet.className).toContain('w-full')
       expect(sheet.className).toContain('max-h-sheet')
       // Explanations keep the 17px body role, never the metadata size (THEME-19 →THEME-57).
-      expect(within(sheet).getByText(/System·User 역할과/)).toHaveClass('text-[1.0625rem]')
-      expect(within(sheet).getByText(/문자 수와 UTF-8 바이트는/)).toHaveClass('text-[1.0625rem]')
+      expect(within(sheet).getByText(/System·User 역할과/)).toHaveClass('text-body')
+      expect(within(sheet).getByText(/문자 수와 UTF-8 바이트는/)).toHaveClass('text-body')
       await user.tab()
       expect(within(sheet).getByRole('button', { name: '닫기' })).toHaveFocus()
       await user.tab({ shift: true })

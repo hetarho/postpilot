@@ -1,6 +1,6 @@
 import { forwardRef, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { ActionBar } from '../action-bar/ActionBar'
 import { Button, type ButtonProps } from '../button/Button'
 import { Typography } from '../typography/Typography'

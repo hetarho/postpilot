@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { typographyStyles } from '../typography/typographyStyles'
 
 /** Guide: an iOS-settings style group — a small heading over ONE raised card whose rows are
@@ -32,7 +32,7 @@ export function ListGroup({
       <ul className="bg-card-bg divide-divider divide-y overflow-hidden rounded-xl shadow-sm">
         {children}
       </ul>
-      {footer && <div className="text-content-tertiary mt-2 px-4 text-[0.8125rem]">{footer}</div>}
+      {footer && <div className="text-content-tertiary text-meta mt-2 px-4">{footer}</div>}
     </div>
   )
 }

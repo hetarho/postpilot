@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** How wide a screen's content column is allowed to grow (THEME-26).
  *

@@ -1,5 +1,5 @@
 import { forwardRef, type HTMLAttributes } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** Neutral by default; a STATUS chip takes the tone that matches its meaning. Colour is never the
  *  only signal — the chip always carries its text label too (THEME-18, THEME-29). `done` is

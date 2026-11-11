@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export type ButtonVariant = 'cta' | 'secondary' | 'ghost' | 'danger' | 'scrim'
 export type ButtonSize = 'default' | 'compact' | 'icon' | 'hero'
@@ -49,7 +49,7 @@ function sizeStyles(size: ButtonSize, variant: ButtonVariant): string {
   if (size === 'compact') return 'min-h-8 pointer-coarse:min-h-9 px-4'
   // Guide: the ONE big action a step screen ends on — 생성, 다음, 완성. 56px at every pointer, the
   // full width of the thumb zone it sits in, in the heaviest label the app has.
-  if (size === 'hero') return 'min-h-14 px-7 text-[1.0625rem] font-bold'
+  if (size === 'hero') return 'min-h-14 px-7 text-body font-bold'
   // Guide: every committing action is at least 48px, whatever the pointer (THEME-23 raised).
   return variant === 'cta'
     ? 'min-h-12 px-6 text-base font-bold'
@@ -75,7 +75,7 @@ export function buttonStyles({
       // single line every other button has, `items-center` makes the tighter line box invisible.
       // Guide: every button is a full pill — soft, unmistakably a button at any size — and a
       // press sinks it a touch (scale), the friendly feedback a thumb feels.
-      'duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-[0.9375rem] leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
+      'duration-fast ease-standard relative inline-flex items-center justify-center gap-2 rounded-full text-label leading-snug font-semibold transition-[background-color,transform] active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50',
       // Stable CSS hooks give dock-contained buttons, links and file labels the same larger
       // targets without changing their pointer sizing anywhere else, including portalled panels.
       'ui-button',

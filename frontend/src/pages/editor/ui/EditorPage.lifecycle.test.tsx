@@ -581,7 +581,7 @@ describe('the editor status region', () => {
     await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
     // The editor's one word on where the post is reads at the label step, not as a 13px caption.
     expect(statusLine()).toHaveClass('font-semibold')
-    expect(statusLine()).not.toHaveClass('text-[0.8125rem]')
+    expect(statusLine()).not.toHaveClass('text-meta')
     expect(screen.queryByText('이 revision을 확정했어요.')).not.toBeInTheDocument()
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
   })

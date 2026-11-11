@@ -1,5 +1,5 @@
 import { forwardRef, useRef, type HTMLAttributes } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 interface SelectableTextProps extends Omit<
   HTMLAttributes<HTMLSpanElement>,

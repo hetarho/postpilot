@@ -1,5 +1,5 @@
 import { forwardRef, type InputHTMLAttributes } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** A two-state switch: ON means this row's value comes from OUTSIDE the text (THEME-29). It is
  *  deliberately not a `Checkbox` — a checkbox says "selected", and 데이터 받기 says "the post's

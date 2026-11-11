@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 /** Both shapes stay docked at every width so long content cannot hide its committing action. */
 export type ActionBarDock =

@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 import { BlockType, type PostContent } from '@/shared/api'
 import { RotatedImage, Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'

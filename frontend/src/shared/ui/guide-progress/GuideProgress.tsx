@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export interface GuideStep<T extends string> {
   value: T
@@ -47,7 +47,7 @@ export function GuideProgress<T extends string>({
               />
               <span
                 className={clsx(
-                  'block truncate text-[0.8125rem] leading-tight',
+                  'text-meta block truncate leading-tight',
                   here ? 'text-content-primary font-bold' : 'text-content-tertiary font-medium',
                 )}
               >

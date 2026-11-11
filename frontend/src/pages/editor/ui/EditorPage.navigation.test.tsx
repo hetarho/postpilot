@@ -144,7 +144,7 @@ it('draws the title on 내용 as a named field like the answers under it', async
   const title = await screen.findByRole('textbox', { name: '제목' })
   expect(title).toHaveAttribute('placeholder', '예: 손님이 다시 찾는 이유')
   expect(title).toHaveClass('bg-field-bg')
-  expect(title).not.toHaveClass('text-[1.875rem]')
+  expect(title).not.toHaveClass('text-3xl')
   const label = document.querySelector('label[for="post-title"]')
   expect(label).toHaveTextContent('제목')
   expect(label).not.toHaveClass('sr-only')

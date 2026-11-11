@@ -141,6 +141,9 @@ function runProbe() {
     { source: 'sm:text-lg', gated: true },
     { source: 'text-3xl', gated: true },
     { source: 'text-display', gated: true },
+    // The Guide's type steps are theme tokens like any other: a slice reaches them through a role.
+    { source: 'text-meta', gated: true },
+    { source: 'sm:text-large-title-wide', gated: true },
     { source: 'text-[10px]', gated: true },
     { source: 'text-[.875rem]', gated: true },
     { source: 'text-[medium]', gated: true },

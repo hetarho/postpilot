@@ -2,7 +2,7 @@ import { Fragment, useId, type KeyboardEvent, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { motion, useReducedMotion } from 'motion/react'
 import { ChevronRight } from 'lucide-react'
-import { twMerge } from 'tailwind-merge'
+import { twMerge } from '@/shared/lib'
 
 export interface SegmentedOption<T extends string> {
   value: T
@@ -130,7 +130,7 @@ export function SegmentedControl<T extends string>({
               steps
                 ? // Guide: a lifecycle station is a pill; the one the post is in is inverted ink.
                   clsx(
-                    'inline-flex min-h-10 shrink-0 items-center rounded-full px-3 text-[0.9375rem] font-semibold whitespace-nowrap transition-colors @max-[17rem]:px-2.5 @max-[15.5rem]:px-2 pointer-coarse:min-h-11',
+                    'text-label inline-flex min-h-10 shrink-0 items-center rounded-full px-3 font-semibold whitespace-nowrap transition-colors @max-[17rem]:px-2.5 @max-[15.5rem]:px-2 pointer-coarse:min-h-11',
                     option.value === value
                       ? 'bg-chip-bg-current text-chip-fg-current'
                       : 'text-content-tertiary hover:text-content-secondary active:text-content-secondary',
@@ -139,7 +139,7 @@ export function SegmentedControl<T extends string>({
                     'relative flex-1 shrink-0 rounded-full font-semibold whitespace-nowrap transition-colors',
                     compact
                       ? 'min-h-8 px-2 text-xs pointer-coarse:min-h-9'
-                      : 'min-h-10 px-4 text-[0.9375rem] pointer-coarse:min-h-11',
+                      : 'text-label min-h-10 px-4 pointer-coarse:min-h-11',
                     option.value === value
                       ? 'text-content-primary'
                       : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',

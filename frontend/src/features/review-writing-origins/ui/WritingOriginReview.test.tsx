@@ -258,7 +258,7 @@ describe('WritingOriginReview', () => {
     ]) {
       await user.click(phrase(text!, category!))
       const dialog = screen.getByRole('dialog', { name: '문구의 출처' })
-      expect(within(dialog).getByText(source!)).toHaveClass('text-[1.0625rem]', 'leading-relaxed')
+      expect(within(dialog).getByText(source!)).toHaveClass('text-body', 'leading-relaxed')
       expect(within(dialog).queryByText('현재 메모는 변경되었다.')).not.toBeInTheDocument()
       expect(dialog.textContent).not.toContain('signature=')
       if (text === '사진 관찰') expect(within(dialog).getByText('IMG_1.jpg')).toBeInTheDocument()
