@@ -206,12 +206,12 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T770 | Fix final gate failure | ARCH | - | doing@261112.vd1 |
 
 ## next
-- implement-task T770
+- no runnable task: resolve blocked, parked or deps
 
 ## log
+- 261112 T770 done
 - 261112 T769 done
 - 261112 T767 done
 - 261112 T766 done
@@ -231,4 +231,3 @@
 - 261112 T758 done
 - 261112 ui12 final bounded follow-up: source checkpoint99b79a95 combines approved voice fix74e456ca and refusal-test correction75f4eb8c,41 files recovered byte-for-byte; bundle verifies against publishedada6afc2. Main product source remains through T757; four diagnosed cases and T758 whole-task gates remain open. Publish all progress as recovery data, with no continuing local automation.
 - 261112 ui12: preserve latest40-file T758 recovery after independent P2 and5 remaining frontend failures; task todo, source not integrated.
-- 261112 ui12: resume T758 only for the owner-authorized extra hour; fresh worker/review and final publication.
