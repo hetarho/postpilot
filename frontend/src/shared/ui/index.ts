@@ -72,3 +72,4 @@ export {
   type NavigationDestination,
   type NavigationLinkProps,
 } from './navigation/context'
+export { WorkspaceHeader } from './workspace-header/WorkspaceHeader'

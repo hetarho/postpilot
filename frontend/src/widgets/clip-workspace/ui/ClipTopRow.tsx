@@ -1,66 +1,19 @@
-import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ReactNode } from 'react'
-import { Button, Typography, typographyStyles } from '@/shared/ui'
+import { Button, Typography, WorkspaceHeader } from '@/shared/ui'
 
 export const STEP_PANEL_ID = 'clip-step-panel'
 
 /** Contextual return, persisted lifecycle steps and delete share the clip's own chrome.
  * The title identifies the record while its active task or running stage supplies the heading. */
-export function ClipTopRow({
-  status,
-  steps,
-  actions,
-  returnTo,
-  contextTitle,
-}: {
+export function ClipTopRow(props: {
   status: ReactNode
   steps?: ReactNode
   actions?: ReactNode
   returnTo: { href: string; label: string; onReturn?: () => void | Promise<void> }
   contextTitle?: string
 }) {
-  return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-      {contextTitle && (
-        <Typography variant="label" as="p" className="text-content-secondary w-full break-words">
-          {contextTitle}
-        </Typography>
-      )}
-      <a
-        href={returnTo.href}
-        onClick={(event) => {
-          if (
-            !returnTo.onReturn ||
-            event.defaultPrevented ||
-            event.button !== 0 ||
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.altKey
-          )
-            return
-          event.preventDefault()
-          void returnTo.onReturn()
-        }}
-        className={typographyStyles({
-          variant: 'label',
-          className:
-            'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 max-w-full min-w-11 shrink items-center justify-center gap-1 sm:justify-start',
-        })}
-      >
-        <ArrowLeft aria-hidden="true" className="size-5 shrink-0" />
-        <span className="min-w-0 break-words underline">{returnTo.label}</span>
-      </a>
-      {steps && (
-        <div className="order-last w-full min-w-0 overflow-x-auto overscroll-x-contain sm:order-none sm:w-auto sm:flex-1">
-          {steps}
-        </div>
-      )}
-      {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
-      {status}
-    </div>
-  )
+  return <WorkspaceHeader {...props} />
 }
 
 /** A step the project has not reached yet. Never a disabled tab: the point of showing all three

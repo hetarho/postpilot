@@ -9,7 +9,6 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
-import { ArrowLeft } from 'lucide-react'
 import {
   isPublished,
   postReturnDestination,
@@ -42,7 +41,7 @@ import {
 } from '@/features/fill-template-answers'
 import {
   SegmentedControl,
-  buttonStyles,
+  WorkspaceHeader,
   ChoiceButton,
   type PopoverHandle,
   pageStyles,
@@ -508,25 +507,12 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       <Typography variant="display" className="sr-only">
         {autosave.title.trim() || t('editor.titlePlaceholder')}
       </Typography>
-      {/* ONE row holding the way out, the lifecycle stations and the delete, the way the clip
-          workspace's top row does (CLIP-37). `flex-wrap` so the delete refusal, which asks for the
-          full width, drops to its own line rather than crushing the way out beside it. */}
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        {/* Guide: a round 44px back button — the glyph is the control, the destination its name. */}
-        <a
-          href={returnTo.href}
-          aria-label={returnLabel}
-          onClick={(event) => {
-            if (
-              event.button !== 0 ||
-              event.metaKey ||
-              event.ctrlKey ||
-              event.shiftKey ||
-              event.altKey
-            )
-              return
-            event.preventDefault()
-            void autosave
+      <WorkspaceHeader
+        returnTo={{
+          href: returnTo.href,
+          label: returnLabel,
+          onReturn: () =>
+            autosave
               .flush()
               .then(async () => {
                 if (post) markPostHistoryReturn(ownerId, post.slug)
@@ -535,38 +521,27 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
               })
               .catch(() => {
                 /* The autosave's status region exposes the refusal. */
-              })
-          }}
-          className={buttonStyles({ variant: 'secondary', size: 'icon', className: 'shadow-sm' })}
-        >
-          <ArrowLeft aria-hidden="true" className="size-5" />
-          <span className="sr-only">{returnLabel}</span>
-        </a>
-
-        {/* A post with a lifecycle navigates it first: three stations, the one the post is in an
-            inverted pill (THEME-39). `/posts/new` has none and names the place instead. */}
-        {post ? (
-          <SegmentedControl
-            value={step}
-            options={editorSteps()}
-            onChange={setStep}
-            ariaLabel={t('editor.stepAria')}
-            controls={STEP_PANEL_ID}
-            variant="steps"
-            className="min-w-0 flex-1"
-          />
-        ) : (
-          <Typography variant="label" as="span" className="text-content-primary">
-            {copy.location}
-          </Typography>
-        )}
-
-        {post && (
-          <div className="ml-auto flex shrink-0 items-center gap-2">
-            {/* A queue outlives its editor, so a retry left running would keep saving a slug the
-                server no longer has and report that failure for a post the user destroyed on
-                template (POST-12). Discarded before the navigation unmounts the
-                editor, and only for this slug. */}
+              }),
+        }}
+        steps={
+          post ? (
+            <SegmentedControl
+              value={step}
+              options={editorSteps()}
+              onChange={setStep}
+              ariaLabel={t('editor.stepAria')}
+              controls={STEP_PANEL_ID}
+              variant="steps"
+              className="min-w-0 flex-1"
+            />
+          ) : (
+            <Typography variant="label" as="span" className="text-content-primary">
+              {copy.location}
+            </Typography>
+          )
+        }
+        actions={
+          post && (
             <DeletePostButton
               post={post}
               returnTo={returnTo}
@@ -576,23 +551,19 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
                 markPostHistoryReturn(ownerId, post.slug)
               }}
             />
-          </div>
-        )}
-
-        {/* The editor's ONE state indicator. It replaced the status badge that stood here: the
-            row may not carry two of them (POST-45). Mounted for `/posts/new` as well, which
-            has no status of its own but does have an autosave that can fail — and no save
-            button anywhere to fall back on (PRD F-2). It takes the row's last line whole, so a
-            message never competes with the step names for width. */}
-        <EditorStatusLine
-          job={jobView.job}
-          saveState={autosave.state}
-          status={post?.status ?? ''}
-          photoCount={post?.images.length ?? 0}
-          videoCount={post?.videos.length ?? 0}
-          className="order-last w-full px-1 sm:text-right"
-        />
-      </div>
+          )
+        }
+        status={
+          <EditorStatusLine
+            job={jobView.job}
+            saveState={autosave.state}
+            status={post?.status ?? ''}
+            photoCount={post?.images.length ?? 0}
+            videoCount={post?.videos.length ?? 0}
+            className="order-last w-full overflow-visible px-1 break-words text-clip whitespace-normal sm:text-right"
+          />
+        }
+      />
 
       {post ? (
         <LifecycleSteps

@@ -854,7 +854,7 @@ export function ClipWorkspace({
               upload={upload}
               correction={correctionStatus}
               save={workspace.saveStatus}
-              className="order-last w-full"
+              className="order-last w-full overflow-visible! break-words text-clip! whitespace-normal!"
             />
           )
         }
