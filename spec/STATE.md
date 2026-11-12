@@ -212,7 +212,6 @@
 |---|---|---|---|---|
 | T780 | Avoid preview restarts on first retained capability publication | ARCH | T778 | todo |
 | T781 | Continue an active preview after an equal-content save acknowledgment | ARCH | T780 | todo |
-| T778 | Batch retained-source audio reads with a bounded small window | ARCH | T777 | todo |
 | T779 | Share consistent editor workspace navigation chrome | ARCH | T778 | todo |
 | T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
@@ -226,12 +225,13 @@
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
-| si8-261113 | 1 | 7 | 2 | 5 | 0 | 0 | 0 | 2026-11-12T16:42:27.160Z | [history](work/si8-261113.json) |
+| si8-261113 | 1 | 7 | 3 | 4 | 0 | 0 | 0 | 2026-11-12T17:01:30.289Z | [history](work/si8-261113.json) |
 
 ## next
-- si8 approved work: T778 → T780 → T781 → T779, then shared UI source reductions within the08:00KST cutoff; final90min reserved.
+- inspect work board for remaining tasks
 
 ## log
+- 261112 T778 integrated
 - 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.
 - 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
@@ -251,4 +251,3 @@
 - 261112 create-task ARCH r23: T771 moves the CI and pre-push skill check to gusta, drops the haeram-spec-creator devDependency and refreshes the ink identity; ARCH fully tasked
 - 261112 update-ssot ARCH r23: ARCH-30 verifies skills with gusta through npx at the .gusta-lock.json version; ARCH-31 cites it unchanged and no active task cites ARCH-30
 - 261112 updates haeram-spec-creator 0.13.0→gusta 0.15.0 (rename without a compatibility layer: 20 skills and the old lock removed, 120 files created through npx, no conflicts; no structural migration, no unset settings). FORMAT takes the gusta skill and GUSTA_* names, the 0.15.0 session-mode, inbox, needs-sketch, verification-owner and ideation lines and principle 5's policy-approval sentence; the 65a1f82b overrides stay. SETTINGS preamble renamed. Lint identical before/after (0 errors, 80 warnings).
-- 261112 T770 done

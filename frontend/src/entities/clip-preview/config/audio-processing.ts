@@ -8,6 +8,7 @@ export const CLIP_AUDIO_PROCESSING = {
   maxReadBytes: CLIP_VIDEO_DECODING.maxReadBytes,
   maxReadTotalBytes: CLIP_VIDEO_DECODING.maxReadTotalBytes,
   maxCacheBytes: CLIP_VIDEO_DECODING.maxCacheBytes,
+  readAheadBytes: 32 * 1024,
   timeoutMs: CLIP_VIDEO_DECODING.timeoutMs,
   maxPcmBytes: CLIP_BROWSER_RENDER.audioDecodedBytes,
   maxChannels: 2,

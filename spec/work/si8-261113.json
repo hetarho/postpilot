@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T16:42:27.160Z",
-  "sourceCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+  "snapshotAt": "2026-11-12T17:01:30.289Z",
+  "sourceCommit": "55f7d8f96969c31a53af1c8614d336f6d40a110d",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -17,21 +17,21 @@
     "taskScope": [
       "T773",
       "T774",
-      "T775",
-      "T776",
       "T777",
       "T778",
-      "T779"
+      "T779",
+      "T780",
+      "T781"
     ]
   },
   "summary": {
     "total": 7,
-    "completed": 2,
-    "remaining": 5,
+    "completed": 3,
+    "remaining": 4,
     "running": 0,
     "review": 0,
     "blocked": 0,
-    "unassigned": 5
+    "unassigned": 4
   },
   "tasks": [
     {
@@ -43,34 +43,26 @@
       "status": "todo"
     },
     {
-      "id": "T775",
-      "title": "Share the clip design radio tile control",
-      "dep": [
-        "T774"
-      ],
-      "status": "todo"
-    },
-    {
-      "id": "T776",
-      "title": "Share dropdown directional focus movement",
-      "dep": [
-        "T775"
-      ],
-      "status": "todo"
-    },
-    {
-      "id": "T778",
-      "title": "Batch retained-source audio reads with a bounded small window",
-      "dep": [
-        "T777"
-      ],
-      "status": "todo"
-    },
-    {
       "id": "T779",
       "title": "Share consistent editor workspace navigation chrome",
       "dep": [
         "T778"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T780",
+      "title": "Avoid preview restarts on first retained capability publication",
+      "dep": [
+        "T778"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T781",
+      "title": "Continue an active preview after an equal-content save acknowledgment",
+      "dep": [
+        "T780"
       ],
       "status": "todo"
     }
@@ -149,6 +141,8 @@
       "submittedBase": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
       "submissionId": "5e58e307-7b83-4855-8855-df90829a7d1d",
       "submittedAt": "2026-11-12T16:38:42.495Z",
+      "integratedCommit": "a02e34ccc87047cf5dde91bef1695afdeac1235f",
+      "integratedAt": "2026-11-12T16:43:18.335Z",
       "risk": null,
       "review": {
         "id": "fe4de5d0-9f53-419b-9862-3b5992a4c4d8",
@@ -168,6 +162,57 @@
           "taskId": "T777",
           "commit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
           "at": "2026-11-12T16:38:42.485Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T16:42:27.993Z",
+          "finishedAt": "2026-11-12T16:43:17.969Z"
+        }
+      ]
+    },
+    {
+      "id": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "group": "si8-261113",
+      "taskId": "T778",
+      "tasks": [
+        "T778"
+      ],
+      "lane": null,
+      "owner": "si8-worker",
+      "contributors": [
+        "si8-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T16:43:43.394Z",
+      "startCommit": "a02e34ccc87047cf5dde91bef1695afdeac1235f",
+      "verifiedCommit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+      "submittedBase": "855e2b73df6c744ff7df898e193cec0b3699492c",
+      "submissionId": "35debc55-b53b-4286-88c9-51f999f189a2",
+      "submittedAt": "2026-11-12T16:57:17.390Z",
+      "risk": null,
+      "review": {
+        "id": "72a863b1-3b67-4561-8c09-155114b898b9",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T778: Reviewed the entire task-start a02e34cc and native base 855e2b73 deltas through exact submission 2ce7324908f6d327bfdc5c469bb472dae8751138, unchanged ARCH@23 brief/21/24/63, task/F6 and fresh-v2 authorization. Production changes only the owning audio config by adding 32 KiB readAheadBytes. Confirmed actual forwarding through composition-audio, spread Worker limits and decodeOriginalAudioRange into the finite URL reader; Blob laziness, existing resource caps, response/error/abort handling and PCM/mix/source/speech rules remain intact. The three new production-config reader regressions test exact detached clustered packets/nonzero EOF, pre-await full-window wire admission and pending abort; inspected red 2-fail/1-pass, core 31 and broad 78-file/530-test evidence plus lint/format/FSD/style/probe/type/build/spec/package logs. Verified 1,518 hashes including all 1,493 frozen production/dependency files, both durable/raw artifacts, four real originals and changed tests; only audio config differs and T777 reader is identical. Independently reran the unchanged v2 evaluator: candidate median 5.283 s/45 GET/1,295,457 conservative bytes meets unchanged 10 s/80 GET/2 MiB bounds, with exact eight PCM channel hashes, full mix schedule, original metadata and 768,000 stereo 48 kHz frames. Original v1 applicability rejection/history remain immutable; v2 uses a fresh actual current-reader baseline and disables virtual product transforms. Extra 745,807 response bytes and one fresh baseline sample are explicit tradeoffs/limits, with no statistical production-route or clock-fix claim. No extra product tests were needed; coordinator owns integration and full FE/CI/browser-audio/export gates.",
+        "findings": [],
+        "commit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+        "baseCommit": "855e2b73df6c744ff7df898e193cec0b3699492c",
+        "submissionId": "35debc55-b53b-4286-88c9-51f999f189a2",
+        "createdAt": "2026-11-12T16:58:09.698Z",
+        "finishedAt": "2026-11-12T17:00:32.789Z"
+      },
+      "steps": [
+        {
+          "taskId": "T778",
+          "commit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+          "at": "2026-11-12T16:57:17.379Z",
           "verification": []
         }
       ],
@@ -609,6 +654,221 @@
       "group": "si8-261113",
       "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
       "taskId": "T777",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 25,
+      "at": "2026-11-12T16:43:18.251Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T16:42:27.993Z",
+            "finishedAt": "2026-11-12T16:43:17.969Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 26,
+      "at": "2026-11-12T16:43:18.335Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "a02e34ccc87047cf5dde91bef1695afdeac1235f",
+        "integratedAt": "2026-11-12T16:43:18.335Z"
+      }
+    },
+    {
+      "sequence": 27,
+      "at": "2026-11-12T16:43:43.394Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "353199fd-be9e-4d50-bc22-ecff8003f886",
+        "group": "si8-261113",
+        "taskId": "T778",
+        "tasks": [
+          "T778"
+        ],
+        "lane": null,
+        "owner": "si8-worker",
+        "contributors": [
+          "si8-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T16:43:43.394Z",
+        "startCommit": "a02e34ccc87047cf5dde91bef1695afdeac1235f"
+      }
+    },
+    {
+      "sequence": 28,
+      "at": "2026-11-12T16:43:44.821Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 29,
+      "at": "2026-11-12T16:47:26.974Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T773",
+          "T774",
+          "T775",
+          "T776",
+          "T777",
+          "T778",
+          "T779",
+          "T780",
+          "T781"
+        ]
+      }
+    },
+    {
+      "sequence": 30,
+      "at": "2026-11-12T16:57:17.211Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 31,
+      "at": "2026-11-12T16:57:17.390Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+        "submittedBase": "855e2b73df6c744ff7df898e193cec0b3699492c",
+        "submissionId": "35debc55-b53b-4286-88c9-51f999f189a2",
+        "submittedAt": "2026-11-12T16:57:17.390Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T778",
+            "commit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+            "at": "2026-11-12T16:57:17.379Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 32,
+      "at": "2026-11-12T16:58:09.698Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "72a863b1-3b67-4561-8c09-155114b898b9",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+          "baseCommit": "855e2b73df6c744ff7df898e193cec0b3699492c",
+          "submissionId": "35debc55-b53b-4286-88c9-51f999f189a2",
+          "createdAt": "2026-11-12T16:58:09.698Z"
+        }
+      }
+    },
+    {
+      "sequence": 33,
+      "at": "2026-11-12T16:59:27.369Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T773",
+          "T774",
+          "T777",
+          "T778",
+          "T779",
+          "T780",
+          "T781"
+        ]
+      }
+    },
+    {
+      "sequence": 34,
+      "at": "2026-11-12T17:00:32.789Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "72a863b1-3b67-4561-8c09-155114b898b9",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T778: Reviewed the entire task-start a02e34cc and native base 855e2b73 deltas through exact submission 2ce7324908f6d327bfdc5c469bb472dae8751138, unchanged ARCH@23 brief/21/24/63, task/F6 and fresh-v2 authorization. Production changes only the owning audio config by adding 32 KiB readAheadBytes. Confirmed actual forwarding through composition-audio, spread Worker limits and decodeOriginalAudioRange into the finite URL reader; Blob laziness, existing resource caps, response/error/abort handling and PCM/mix/source/speech rules remain intact. The three new production-config reader regressions test exact detached clustered packets/nonzero EOF, pre-await full-window wire admission and pending abort; inspected red 2-fail/1-pass, core 31 and broad 78-file/530-test evidence plus lint/format/FSD/style/probe/type/build/spec/package logs. Verified 1,518 hashes including all 1,493 frozen production/dependency files, both durable/raw artifacts, four real originals and changed tests; only audio config differs and T777 reader is identical. Independently reran the unchanged v2 evaluator: candidate median 5.283 s/45 GET/1,295,457 conservative bytes meets unchanged 10 s/80 GET/2 MiB bounds, with exact eight PCM channel hashes, full mix schedule, original metadata and 768,000 stereo 48 kHz frames. Original v1 applicability rejection/history remain immutable; v2 uses a fresh actual current-reader baseline and disables virtual product transforms. Extra 745,807 response bytes and one fresh baseline sample are explicit tradeoffs/limits, with no statistical production-route or clock-fix claim. No extra product tests were needed; coordinator owns integration and full FE/CI/browser-audio/export gates.",
+          "findings": [],
+          "commit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
+          "baseCommit": "855e2b73df6c744ff7df898e193cec0b3699492c",
+          "submissionId": "35debc55-b53b-4286-88c9-51f999f189a2",
+          "createdAt": "2026-11-12T16:58:09.698Z",
+          "finishedAt": "2026-11-12T17:00:32.789Z"
+        }
+      }
+    },
+    {
+      "sequence": 35,
+      "at": "2026-11-12T17:01:28.157Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {
