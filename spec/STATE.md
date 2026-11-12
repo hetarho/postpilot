@@ -207,17 +207,17 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T762 | Run /clips/new as the unminted guide and mint on its first save | ARCH CLIP POST THEME | T759 T761 T768 | todo |
-| T765 | Dock ②'s revision field and 확정하기 the way the post's 글 다듬기 does | ARCH CLIP POST THEME QUOTA | T759 T760 T763 | todo |
 | T766 | Render, review and finalize the confirmed clip in ③ 영상 완성 | ARCH CLIP POST THEME | T765 T768 | todo |
 | T767 | Add ③'s checklist, upload text and 더 해 보기 card | ARCH CLIP POST TMPL EXPORT | T766 | todo |
 | T768 | Show the six clip states in histories and name an untitled clip | ARCH CLIP THEME POST | T759 | todo |
 
 ## next
-- implement-task T765 T768
+- implement-task T768
 - T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 T765 done
 - 261112 T764 done
 - 261112 T763 done
 - 261112 T761 done
@@ -237,4 +237,3 @@
 - 261112 ui12 resumes after status audit: foreground T753–T756 and T757 are published; GitHub43094556625 now completed/success (updated21:01:03Z, verified22:41Z). The prior host parked20:49Z and did not auto-resume. Continue the still-authorized full video UX scope under the same hard deadline, without calling the retention fix the requested redesign.
 - 261112 ui12 parked: latest metadata CI43094556625 cannot be certified; all steps success but REST/GraphQL conclusions null, cancellation says completed/rerun says running. T757 source/main acceptance and CI43091754368 pass. Remove own active; preserve sv8/excluded tasks and evidence.
 - 261112 video cycle2 complete (ui12): T757 independently reviewed4d77048d, sourceeed85f60/completion5114f7d5 on origin/main; local full ARCH-31 362s and remote CI43091754368 frontend/backend pass. Browser4 and affected25/266 pass; source unchanged after review, own workspaces cleaned. Next independent scout may assess observed360px heading/pointer issues.
-- 261112 T757 done (ui12): independent scout→worker→review4d77048d approves eed85f60; exact source fast-forwarded to main after CLI integration metadata refused pre-existing spec warnings. Red4→green4, affected25/266+host113s fast gate and browser4 pass; full ARCH-31/publication follows.
