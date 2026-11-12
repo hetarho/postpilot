@@ -232,6 +232,17 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     file: entry.file,
     fingerprint: entry.metadata.fingerprint,
     url: entry.previewURL,
+    retainedAccess:
+      entry.playbackGeneration === undefined
+        ? undefined
+        : {
+            generation: entry.playbackGeneration,
+            state: JSON.stringify([
+              entry.availability,
+              entry.retentionExpiresAt,
+              entry.playbackError,
+            ]),
+          },
   }))
   /** Everything a run has to say while it owns the screen. */
   const run = {

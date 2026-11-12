@@ -43,6 +43,8 @@ export interface LocalClipSource {
   retainOriginalAudio?: boolean
   retentionExpiresAt?: string
   playbackExpiresAt?: string
+  /** Runtime publication history; never part of a retained manifest or plan. */
+  playbackGeneration?: number
   availability?: ClipSourceAvailability
   playbackError?: 'expired' | 'missing' | 'unavailable'
   previewURL: string
@@ -151,6 +153,10 @@ export class ClipSourceSession {
               retainOriginalAudio: source.retainOriginalAudio,
               previewURL:
                 prior?.file || prior?.sourceId === source.id ? (prior?.previewURL ?? '') : '',
+              playbackGeneration:
+                prior && (prior.file || prior.sourceId === source.id)
+                  ? prior.playbackGeneration
+                  : 0,
               percent: source.state === 'ready' ? 100 : 0,
               confirmed: source.state === 'ready',
               retentionExpiresAt: source.retentionExpiresAt,
@@ -254,8 +260,16 @@ export class ClipSourceSession {
     }
     if (!this.active || !entry) return Promise.reject(new ClipSourceAccessError('unavailable'))
     if (entry.file && entry.previewURL) return Promise.resolve(entry.previewURL)
-    if (this.playbackRequests.has(fingerprint)) return this.playbackRequests.get(fingerprint)!
+    let authorityError: unknown
+    try {
+      this.checkRetainedAccess(entry)
+    } catch (error) {
+      authorityError = error
+    }
+    if (!authorityError && this.playbackRequests.has(fingerprint))
+      return this.playbackRequests.get(fingerprint)!
     if (
+      !authorityError &&
       !refresh &&
       entry.previewURL &&
       entry.playbackExpiresAt &&
@@ -266,22 +280,14 @@ export class ClipSourceSession {
     const currentMedia = () => this.active && epoch === this.mediaEpoch
     const request = (async () => {
       try {
-        if (!entry.sourceId || !this.pipeline.playback)
-          throw new ClipSourceAccessError('unavailable')
-        if (
-          !entry.retentionExpiresAt ||
-          Date.parse(entry.retentionExpiresAt) <= Date.now() ||
-          ['expired', 'cleanup_pending'].includes(entry.availability ?? '')
-        )
-          throw new ClipSourceAccessError('expired')
-        if (entry.availability === 'missing') throw new ClipSourceAccessError('missing')
+        if (authorityError) throw authorityError
         if (refresh) {
           if (this.playbackRetried.has(fingerprint)) throw new ClipSourceAccessError('unavailable')
           this.playbackRetried.add(fingerprint)
         }
-        const capability = await this.pipeline.playback(
+        const capability = await this.pipeline.playback!(
           this.projectId,
-          entry.sourceId,
+          entry.sourceId!,
           fingerprint,
           this.playbackController.signal,
         )
@@ -289,9 +295,11 @@ export class ClipSourceSession {
         const current = this.entries.get(fingerprint)
         if (!current || current.sourceId !== entry.sourceId)
           throw new ClipSourceAccessError('unavailable')
+        this.checkRetainedAccess(current)
         this.entries.set(fingerprint, {
           ...current,
           previewURL: capability.url,
+          playbackGeneration: this.nextPlaybackGeneration(current, capability.url),
           playbackExpiresAt: capability.expiresAt,
           playbackError: undefined,
         })
@@ -310,8 +318,14 @@ export class ClipSourceSession {
               : failure.reason === 'CLIP_SOURCE_MISSING'
                 ? 'missing'
                 : 'unavailable'
-        if (currentMedia()) {
-          this.entries.set(fingerprint, { ...entry, previewURL: '', playbackError: reason })
+        const current = this.entries.get(fingerprint)
+        if (currentMedia() && current && current.sourceId === entry.sourceId) {
+          this.entries.set(fingerprint, {
+            ...current,
+            previewURL: '',
+            playbackError: reason,
+            playbackGeneration: this.nextPlaybackGeneration(current, '', reason),
+          })
           this.publish(this.state.phase, {
             readyBatch: this.state.readyBatch,
             summaries: this.state.summaries,
@@ -325,6 +339,32 @@ export class ClipSourceSession {
     })
     this.playbackRequests.set(fingerprint, request)
     return request
+  }
+
+  private checkRetainedAccess(entry: LocalClipSource) {
+    if (!entry.sourceId || !this.pipeline.playback) throw new ClipSourceAccessError('unavailable')
+    if (
+      !entry.retentionExpiresAt ||
+      Date.parse(entry.retentionExpiresAt) <= Date.now() ||
+      ['expired', 'cleanup_pending'].includes(entry.availability ?? '')
+    )
+      throw new ClipSourceAccessError('expired')
+    if (entry.availability === 'missing') throw new ClipSourceAccessError('missing')
+  }
+  private nextPlaybackGeneration(
+    entry: LocalClipSource,
+    url: string,
+    error?: LocalClipSource['playbackError'],
+  ) {
+    const generation = entry.playbackGeneration
+    if (generation === undefined || !Number.isSafeInteger(generation) || generation < 0)
+      return undefined
+    if (entry.previewURL === url && entry.playbackError === error) return generation
+    const next =
+      generation === 0 && !entry.previewURL && !entry.playbackError && url && !error
+        ? 1
+        : Math.max(2, generation + 1)
+    return Number.isSafeInteger(next) ? next : undefined
   }
 
   private publish(
@@ -463,6 +503,7 @@ export class ClipSourceSession {
         this.entries.set(metadata.fingerprint, {
           file,
           previewURL: this.pipeline.createURL(file),
+          playbackGeneration: 0,
           metadata,
           percent: 0,
           confirmed: false,

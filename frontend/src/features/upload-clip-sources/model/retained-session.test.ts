@@ -253,3 +253,178 @@ it('does not let a retained read started before a sound acknowledgment restore t
   expect(session.getSnapshot().entries[0].retainOriginalAudio).toBe(true)
   expect(session.getSnapshot().readyBatch?.sources[0].retainOriginalAudio).toBe(true)
 })
+
+it('publishes an authoritative first capability and preserves it across identical metadata and URL refreshes', async () => {
+  const { session, pipeline, metadata } = retainedFixture()
+  await session.refreshRetained()
+  expect(session.getSnapshot().entries[0]?.playbackGeneration).toBe(0)
+  const url = await session.ensurePlayback(metadata.fingerprint)
+  expect(session.getSnapshot().entries[0]?.playbackGeneration).toBe(1)
+  await session.refreshRetained()
+  expect(await session.ensurePlayback(metadata.fingerprint)).toBe(url)
+  expect(pipeline.playback).toHaveBeenCalledTimes(1)
+  expect(session.getSnapshot().entries[0]).toMatchObject({ previewURL: url, playbackGeneration: 1 })
+  await session.ensurePlayback(metadata.fingerprint, true)
+  expect(pipeline.playback).toHaveBeenCalledTimes(2)
+  expect(session.getSnapshot().entries[0]?.playbackGeneration).toBe(1)
+})
+
+it('records acquisition and a distinct renewal even if the consumer coalesces their publications', async () => {
+  const { session, pipeline, metadata } = retainedFixture()
+  await session.refreshRetained()
+  const before = session.getSnapshot()
+  await session.ensurePlayback(metadata.fingerprint)
+  pipeline.playback.mockResolvedValueOnce({
+    url: 'https://private.test/new',
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+  })
+  await session.ensurePlayback(metadata.fingerprint, true)
+  expect(before.entries[0]?.playbackGeneration).toBe(0)
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    previewURL: 'https://private.test/new',
+    playbackGeneration: 2,
+  })
+  await session.refreshRetained()
+  expect(session.getSnapshot().entries[0]?.playbackGeneration).toBe(2)
+})
+
+it('increments withdrawal once and preserves the latest metadata through repeated quota refusals', async () => {
+  const { session, pipeline, batch, metadata } = retainedFixture()
+  await session.refreshRetained()
+  await session.ensurePlayback(metadata.fingerprint)
+  await session.ensurePlayback(metadata.fingerprint, true)
+  batch.sources[0]!.retainOriginalAudio = true
+  await session.refreshRetained()
+  await expect(session.ensurePlayback(metadata.fingerprint, true)).rejects.toMatchObject({
+    reason: 'unavailable',
+  })
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    previewURL: '',
+    playbackGeneration: 2,
+    playbackError: 'unavailable',
+    retainOriginalAudio: true,
+  })
+  await expect(session.ensurePlayback(metadata.fingerprint, true)).rejects.toMatchObject({
+    reason: 'unavailable',
+  })
+  expect(session.getSnapshot().entries[0]?.playbackGeneration).toBe(2)
+  expect(pipeline.playback).toHaveBeenCalledTimes(2)
+})
+
+it('does not overwrite current metadata when an older in-flight capability fails', async () => {
+  const { session, pipeline, batch, metadata } = retainedFixture()
+  await session.refreshRetained()
+  let fail!: (error: unknown) => void
+  pipeline.playback.mockImplementationOnce(
+    () =>
+      new Promise((_resolve, reject) => {
+        fail = reject
+      }),
+  )
+  const pending = session.ensurePlayback(metadata.fingerprint)
+  batch.sources[0]!.retainOriginalAudio = true
+  await session.refreshRetained()
+  fail(new Error('unavailable'))
+  await expect(pending).rejects.toMatchObject({ reason: 'unavailable' })
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    retainOriginalAudio: true,
+    playbackGeneration: 2,
+    playbackError: 'unavailable',
+  })
+})
+
+it.each(['missing', 'expired', 'cleanup_pending', 'retention'] as const)(
+  'withdraws a cached capability on existing retained authority refusal: %s',
+  async (state) => {
+    const { session, pipeline, batch, metadata } = retainedFixture()
+    await session.refreshRetained()
+    await session.ensurePlayback(metadata.fingerprint)
+    if (state === 'retention')
+      batch.sources[0]!.retentionExpiresAt = new Date(Date.now() - 1).toISOString()
+    else batch.sources[0]!.availability = state
+    await session.refreshRetained()
+    const reason = state === 'missing' ? 'missing' : 'expired'
+    await expect(session.ensurePlayback(metadata.fingerprint)).rejects.toMatchObject({ reason })
+    expect(session.getSnapshot().entries[0]).toMatchObject({
+      previewURL: '',
+      playbackError: reason,
+      playbackGeneration: 2,
+    })
+    await expect(session.ensurePlayback(metadata.fingerprint)).rejects.toMatchObject({ reason })
+    expect(session.getSnapshot().entries[0]?.playbackGeneration).toBe(2)
+    expect(pipeline.playback).toHaveBeenCalledOnce()
+  },
+)
+
+it('rejects pending access after retained authority withdrawal without resurrecting metadata or URL', async () => {
+  const { session, pipeline, batch, metadata } = retainedFixture()
+  await session.refreshRetained()
+  let finish!: (value: { url: string; expiresAt: string }) => void
+  pipeline.playback.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  const pending = session.ensurePlayback(metadata.fingerprint)
+  batch.sources[0]!.availability = 'missing'
+  batch.sources[0]!.retainOriginalAudio = true
+  await session.refreshRetained()
+  await expect(session.ensurePlayback(metadata.fingerprint)).rejects.toMatchObject({
+    reason: 'missing',
+  })
+  finish({
+    url: 'https://private.test/too-late',
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+  })
+  await expect(pending).rejects.toMatchObject({ reason: 'missing' })
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    availability: 'missing',
+    retainOriginalAudio: true,
+    previewURL: '',
+    playbackGeneration: 2,
+    playbackError: 'missing',
+  })
+  expect(pipeline.playback).toHaveBeenCalledOnce()
+})
+
+it('cannot overwrite a replacement source entry with an old source response or failure', async () => {
+  const { session, pipeline, batch, metadata } = retainedFixture()
+  await session.refreshRetained()
+  let finish!: (value: { url: string; expiresAt: string }) => void
+  pipeline.playback.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  const pending = session.ensurePlayback(metadata.fingerprint)
+  batch.sources[0]!.id = 'replacement'
+  await session.refreshRetained()
+  finish({ url: 'https://private.test/old', expiresAt: new Date(Date.now() + 60000).toISOString() })
+  await expect(pending).rejects.toMatchObject({ reason: 'unavailable' })
+  expect(session.getSnapshot().entries[0]).toMatchObject({
+    sourceId: 'replacement',
+    previewURL: '',
+    playbackGeneration: 0,
+  })
+  expect(session.getSnapshot().entries[0]?.playbackError).toBeUndefined()
+})
+
+it('keeps local File precedence over retained expiry and preserves conservative legacy generation', async () => {
+  const { session, pipeline, batch, metadata } = retainedFixture()
+  await session.refreshRetained()
+  await session.ensurePlayback(metadata.fingerprint)
+  delete session.getSnapshot().entries[0]!.playbackGeneration
+  pipeline.playback.mockResolvedValueOnce({
+    url: 'https://private.test/legacy-renewed',
+    expiresAt: new Date(Date.now() + 60000).toISOString(),
+  })
+  await session.ensurePlayback(metadata.fingerprint, true)
+  expect(session.getSnapshot().entries[0]?.playbackGeneration).toBeUndefined()
+  await session.select([new File(['pixels'], metadata.filename)])
+  batch.sources[0]!.availability = 'missing'
+  await session.refreshRetained()
+  expect(await session.ensurePlayback(metadata.fingerprint)).toBe('blob:local-original')
+  expect(pipeline.playback).toHaveBeenCalledTimes(2)
+})

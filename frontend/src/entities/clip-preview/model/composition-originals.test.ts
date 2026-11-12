@@ -39,6 +39,60 @@ const snapshot = () =>
     ],
   })
 describe('owned original runtime access', () => {
+  it('refuses a wrong source id or fingerprint before invoking retained authority', async () => {
+    const load = vi.fn(async () => 'https://authorized.test/original')
+    const originals = new BrowserCompositionOriginals(
+      await snapshot(),
+      [],
+      load,
+      new AbortController().signal,
+    )
+    await expect(
+      originals.source('wrong', 'a'.repeat(64), new AbortController().signal),
+    ).rejects.toMatchObject({ code: 'CLIP_SOURCE_IDENTITY_MISMATCH' })
+    await expect(
+      originals.source('source', 'b'.repeat(64), new AbortController().signal),
+    ).rejects.toMatchObject({ code: 'CLIP_SOURCE_IDENTITY_MISMATCH' })
+    expect(load).not.toHaveBeenCalled()
+    originals.dispose()
+  })
+  it('keeps runtime retained hints out of the snapshot and honors an independent explicit refresh', async () => {
+    const frozen = await snapshot()
+    const load = vi.fn(async (_fp: string, refresh?: boolean) =>
+      refresh ? 'https://authorized.test/new' : 'https://authorized.test/old',
+    )
+    const originals = new BrowserCompositionOriginals(
+      frozen,
+      [
+        {
+          sourceId: 'source',
+          fingerprint: 'a'.repeat(64),
+          url: 'https://untrusted.test/ignored',
+          retainedAccess: { generation: 1, state: 'runtime-only' },
+        },
+      ],
+      load,
+      new AbortController().signal,
+    )
+    const signal = new AbortController().signal
+    expect(await originals.source('source', 'a'.repeat(64), signal)).toEqual({
+      kind: 'url',
+      url: 'https://authorized.test/old',
+    })
+    originals.refresh()
+    expect(await originals.audioSource('a'.repeat(64), signal)).toEqual({
+      kind: 'url',
+      url: 'https://authorized.test/new',
+    })
+    expect(load.mock.calls).toEqual([
+      ['a'.repeat(64), false],
+      ['a'.repeat(64), true],
+    ])
+    expect(JSON.stringify(frozen)).not.toMatch(
+      /retainedAccess|runtime-only|authorized.test|untrusted.test/u,
+    )
+    originals.dispose()
+  })
   it('cannot use a File from another source id, even with the same fingerprint', async () => {
     const load = vi.fn(async () => 'https://authorized.test/original'),
       owner = new AbortController()
