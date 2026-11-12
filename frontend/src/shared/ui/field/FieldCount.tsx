@@ -10,14 +10,22 @@ import { Typography } from '../typography/Typography'
  *
  *  Over the bound it becomes a `FieldMessage` with `role="status"` — the same red the field's own
  *  refusal uses, announced politely because the user is still typing. */
-export function FieldCount({ left, className }: { left: number; className?: string }) {
+export function FieldCount({
+  left,
+  className,
+  id,
+}: {
+  left: number
+  className?: string
+  id?: string
+}) {
   const { t } = useTranslation('common')
   return left < 0 ? (
-    <FieldMessage role="status" className={className ?? 'mt-2'}>
+    <FieldMessage id={id} role="status" className={className ?? 'mt-2'}>
       {t('count.exceeded', { count: -left })}
     </FieldMessage>
   ) : (
-    <Typography variant="meta" as="p" className={className ?? 'mt-2'}>
+    <Typography variant="meta" as="p" id={id} className={className ?? 'mt-2'}>
       {t('count.remaining', { count: left })}
     </Typography>
   )

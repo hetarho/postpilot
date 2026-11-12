@@ -11,7 +11,15 @@ import {
   type GuidelineKind,
   type GuidelineScope,
 } from '@/entities/guideline'
-import { Button, FieldLabel, FieldMessage, Sheet, Textarea, Typography } from '@/shared/ui'
+import {
+  Button,
+  FieldCount,
+  FieldLabel,
+  FieldMessage,
+  Sheet,
+  Textarea,
+  Typography,
+} from '@/shared/ui'
 
 /** The directory's one committing action and the overlay it opens (GUIDE-20). The trigger is
  *  rendered here rather than by the page so the open state stays with the form it opens, and so
@@ -117,7 +125,7 @@ function CreateGuidelinePanel({
           aria-describedby={`${countId} ${helpId}${create.isError ? ` ${errorId}` : ''}`}
           className="mt-1"
         />
-        <CharCount id={countId} value={text} />
+        <FieldCount id={countId} left={remainingGuidelineChars(text)} />
         <Typography variant="body" as="p" id={helpId} className="text-content-secondary mt-2">
           {t('create.help', { ns: 'guidelines' })}
         </Typography>
@@ -149,21 +157,5 @@ function CreateGuidelinePanel({
         </div>
       </form>
     </Sheet>
-  )
-}
-
-/** Counts down rather than up: what a writer needs to know is how much room is left, and the count
- *  goes negative rather than clamping so an over-long paste says how much to cut. */
-function CharCount({ id, value }: { id: string; value: string }) {
-  const { t } = useTranslation('common')
-  const left = remainingGuidelineChars(value)
-  return left < 0 ? (
-    <FieldMessage id={id} role="status" className="mt-2">
-      {t('count.exceeded', { count: -left })}
-    </FieldMessage>
-  ) : (
-    <Typography variant="meta" as="p" id={id} className="mt-2">
-      {t('count.remaining', { count: left })}
-    </Typography>
   )
 }

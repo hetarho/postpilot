@@ -11,7 +11,7 @@ import {
   type MemoryKind,
   type MemoryPatch,
 } from '@/entities/memory'
-import { Button, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
+import { Button, FieldCount, FieldLabel, FieldMessage, Textarea } from '@/shared/ui'
 
 /** One memory's whole edit (MEM-30): the text, the kind and the tags in one form, saved together
  *  by one 저장. The kind and the tags were always one decision about retrieval — the kind says
@@ -84,15 +84,7 @@ export function MemoryEditForm({
         aria-describedby={`${countId}${showSaveError ? ` ${errorId}` : ''}`}
         className="mt-1"
       />
-      {exceeded ? (
-        <FieldMessage id={countId} role="status" className="mt-2">
-          {t('count.exceeded', { ns: 'common', count: -left })}
-        </FieldMessage>
-      ) : (
-        <Typography variant="meta" as="p" id={countId} className="mt-2">
-          {t('count.remaining', { ns: 'common', count: left })}
-        </Typography>
-      )}
+      <FieldCount id={countId} left={left} />
       <MemoryKindField
         id={`${id}-kind`}
         value={kind}

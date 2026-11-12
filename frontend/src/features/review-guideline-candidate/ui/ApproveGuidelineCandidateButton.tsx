@@ -13,7 +13,15 @@ import {
   type GuidelineCandidate,
   type GuidelineScope,
 } from '@/entities/guideline'
-import { Button, Dialog, FieldLabel, FieldMessage, Textarea, Typography } from '@/shared/ui'
+import {
+  Button,
+  FieldCount,
+  Dialog,
+  FieldLabel,
+  FieldMessage,
+  Textarea,
+  Typography,
+} from '@/shared/ui'
 
 /** 승인 — turns a recorded candidate into a saved guideline through the standard create.
  *
@@ -145,15 +153,7 @@ export function ApproveGuidelineCandidateButton({
           aria-describedby={`${countId}${showCreateError ? ` ${errorId}` : ''}`}
           className="mt-1"
         />
-        {exceeded ? (
-          <FieldMessage id={countId} role="status" className="mt-2">
-            {t('count.exceeded', { ns: 'common', count: -left })}
-          </FieldMessage>
-        ) : (
-          <Typography variant="meta" as="p" id={countId} className="mt-2">
-            {t('count.remaining', { ns: 'common', count: left })}
-          </Typography>
-        )}
+        <FieldCount id={countId} left={left} />
         {/* The entity's own scope control, not a second one: the create form and this dialog must
             offer the same scopes, and the whole template directory belongs in both. */}
         <GuidelineScopeField
