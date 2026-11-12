@@ -16,11 +16,16 @@ const response = (start: number, end: number, size = 80, bytes = new Uint8Array(
     },
   })
 
-function windowed(total = 32, size = 80) {
+function windowed(
+  total = 32,
+  size = 80,
+  onFetch?: (start: number, end: number) => void | Promise<void>,
+) {
   const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {
     const range = (init!.headers as Record<string, string>).Range.match(/bytes=(\d+)-(\d+)/u)!
     const start = Number(range[1]),
       end = Number(range[2]) + 1
+    if (onFetch) await onFetch(start, end)
     return response(
       start,
       end,
@@ -66,12 +71,157 @@ describe('finite original access', () => {
     expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16 })
     reader.dispose()
   })
-  it('clamps a final window to EOF and preserves direct reads spanning windows', async () => {
-    const { reader } = windowed(32, 19)
+  it('reuses a boundary-spanning packet window for adjacent bytes without retaining returned slices', async () => {
+    const { reader, fetcher } = windowed()
+    const packet = await reader.read(6, 10)
+    expect([...packet]).toEqual([6, 7, 8, 9])
+    packet[0] = 99
+    expect([...(await reader.read(10, 14))]).toEqual([10, 11, 12, 13])
+    expect([...(await reader.read(6, 10))]).toEqual([6, 7, 8, 9])
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(reader.measurements()).toMatchObject({ reads: 1, bytesRead: 8, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('reuses a cached packet prefix and the following aligned window within the original wire budget', async () => {
+    const { reader, fetcher } = windowed(16)
+    expect([...(await reader.read(2, 4))]).toEqual([2, 3])
+    const packet = await reader.read(6, 10)
+    expect([...packet]).toEqual([6, 7, 8, 9])
+    expect(packet.buffer.byteLength).toBe(4)
+    packet[2] = 99
+    expect([...(await reader.read(8, 16))]).toEqual([8, 9, 10, 11, 12, 13, 14, 15])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('shares the next aligned window between concurrent prefix-spanning and following packets', async () => {
+    const { reader, fetcher } = windowed(16)
+    await reader.read(2, 4)
+    const values = await Promise.all([reader.read(6, 10), reader.read(10, 12), reader.read(12, 16)])
+    expect(values.map((value) => [...value])).toEqual([
+      [6, 7, 8, 9],
+      [10, 11],
+      [12, 13, 14, 15],
+    ])
+    expect(values.map((value) => value.buffer.byteLength)).toEqual([4, 2, 4])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16 })
+    reader.dispose()
+  })
+  it('reuses a prefix at EOF without reserving those cached bytes again', async () => {
+    const { reader, fetcher } = windowed(11, 19)
+    await reader.read(9, 10)
+    expect([...(await reader.read(14, 18))]).toEqual([14, 15, 16, 17])
+    expect([...(await reader.read(18, 19))]).toEqual([18])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 11, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('never returns a copied packet prefix when its pending remainder is aborted', async () => {
+    let release!: () => void,
+      started!: () => void,
+      hold = false
+    const pendingStarted = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const pendingResponse = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { reader, fetcher, controller } = windowed(16, 80, async () => {
+      if (!hold) return
+      started()
+      await pendingResponse
+    })
+    await reader.read(2, 4)
+    hold = true
+    const packet = reader.read(6, 10)
+    await pendingStarted
+    controller.abort()
+    release()
+    await expect(packet).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(reader.read(8, 9)).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    reader.dispose()
+  })
+  it('shares concurrent crossing packets and waits before fetching the next bounded window', async () => {
+    let release!: () => void, started!: () => void
+    const firstStarted = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const firstResponse = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    let held = false
+    const { reader, fetcher } = windowed(32, 80, async (start, end) => {
+      if ((start === 0 && end === 1) || held) return
+      held = true
+      started()
+      await firstResponse
+    })
+    const pending = Promise.all([
+      reader.read(6, 10),
+      reader.read(10, 14),
+      reader.read(14, 18),
+      reader.read(18, 22),
+    ])
+    await firstStarted
+    expect.soft(fetcher).toHaveBeenCalledTimes(2)
+    release()
+    expect((await pending).map((value) => [...value])).toEqual([
+      [6, 7, 8, 9],
+      [10, 11, 12, 13],
+      [14, 15, 16, 17],
+      [18, 19, 20, 21],
+    ])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('clamps a crossing packet window at EOF and reuses its final adjacent byte', async () => {
+    const { reader, fetcher } = windowed(32, 19)
+    expect([...(await reader.read(14, 18))]).toEqual([14, 15, 16, 17])
+    expect([...(await reader.read(18, 19))]).toEqual([18])
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(reader.measurements()).toMatchObject({ reads: 1, bytesRead: 5, largestReadBytes: 5 })
+    reader.dispose()
+  })
+  it('refuses a crossing read-ahead reservation before fetch when the total allowance is too small', async () => {
+    const { reader, fetcher } = windowed(7)
+    await expect(reader.read(6, 10)).rejects.toThrow('CLIP_SOURCE_MEMORY_LIMIT')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(reader.measurements()).toMatchObject({ reads: 0, bytesRead: 0 })
+    reader.dispose()
+  })
+  it('fences a late crossing window after abort and never publishes or fetches it again', async () => {
+    let release!: () => void, started!: () => void
+    const firstStarted = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const firstResponse = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { reader, fetcher, controller } = windowed(32, 80, async (start, end) => {
+      if (start === 0 && end === 1) return
+      started()
+      await firstResponse
+    })
+    const pending = reader.read(6, 10)
+    await firstStarted
+    controller.abort()
+    release()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(reader.read(10, 11)).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetcher).toHaveBeenCalledTimes(2)
+    expect(fetcher.mock.calls[1][1]?.signal?.aborted).toBe(true)
+    reader.dispose()
+  })
+  it('clamps a final window to EOF and keeps larger-than-window reads direct', async () => {
+    const { reader, fetcher } = windowed(32, 19)
     expect([...(await reader.read(18, 19))]).toEqual([18])
     expect(reader.measurements()).toMatchObject({ reads: 1, bytesRead: 3 })
-    expect([...(await reader.read(6, 10))]).toEqual([6, 7, 8, 9])
-    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 7 })
+    expect([...(await reader.read(6, 16))]).toEqual([6, 7, 8, 9, 10, 11, 12, 13, 14, 15])
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 13, largestReadBytes: 10 })
+    expect((fetcher.mock.calls[2][1]!.headers as Record<string, string>).Range).toBe('bytes=6-15')
     reader.dispose()
   })
   it('refuses another window before fetching when actual wire bytes exhaust the total limit', async () => {

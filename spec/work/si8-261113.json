@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T16:21:20.569Z",
-  "sourceCommit": "2ce82281370912af86bb8bf124b44d2f365338cd",
+  "snapshotAt": "2026-11-12T16:42:27.160Z",
+  "sourceCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -26,12 +26,12 @@
   },
   "summary": {
     "total": 7,
-    "completed": 1,
-    "remaining": 6,
+    "completed": 2,
+    "remaining": 5,
     "running": 0,
     "review": 0,
     "blocked": 0,
-    "unassigned": 6
+    "unassigned": 5
   },
   "tasks": [
     {
@@ -55,14 +55,6 @@
       "title": "Share dropdown directional focus movement",
       "dep": [
         "T775"
-      ],
-      "status": "todo"
-    },
-    {
-      "id": "T777",
-      "title": "Reuse bounded read-ahead for boundary-spanning media packets",
-      "dep": [
-        "T773"
       ],
       "status": "todo"
     },
@@ -104,6 +96,8 @@
       "submittedBase": "f7ee729943310fd406c3d5a47faa7819adee2394",
       "submissionId": "b0ea02ea-de8c-4862-a26f-862de33c82ea",
       "submittedAt": "2026-11-12T15:54:49.331Z",
+      "integratedCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+      "integratedAt": "2026-11-12T16:21:52.209Z",
       "risk": null,
       "review": {
         "id": "889793a0-85f6-49d4-80f7-3daf3ef429a9",
@@ -123,6 +117,57 @@
           "taskId": "T773",
           "commit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
           "at": "2026-11-12T15:54:49.321Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T16:21:21.345Z",
+          "finishedAt": "2026-11-12T16:21:52.031Z"
+        }
+      ]
+    },
+    {
+      "id": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "group": "si8-261113",
+      "taskId": "T777",
+      "tasks": [
+        "T777"
+      ],
+      "lane": null,
+      "owner": "si8-worker",
+      "contributors": [
+        "si8-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T16:22:35.743Z",
+      "startCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+      "verifiedCommit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+      "submittedBase": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+      "submissionId": "5e58e307-7b83-4855-8855-df90829a7d1d",
+      "submittedAt": "2026-11-12T16:38:42.495Z",
+      "risk": null,
+      "review": {
+        "id": "fe4de5d0-9f53-419b-9862-3b5992a4c4d8",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T777: Reviewed the full91523c4813d6d5b6f87bbbb90de362531e2a1fac...495849211d9274f0bdfed5ce2692ca8b2627c584 delta, base brief/ARCH-24/63, F5 and renewed candidate2 approval. Prefix bytes are copied synchronously into one bounded requested-size destination and the previous full cache is released before tail await; private readPart fills the same destination. Pending serialization, rejection/finally behavior, exact detached bytes, EOF, abort/late-result fencing, direct large reads, strict206/body validation and pre-await total-wire admission remain intact. Inspected42core and527consumer-test logs plus all fast checks and source hashes matchingb55dbe8c; final commit adds only task evidence. Independently verified19 frozen/input/source hashes including all9 actual originals and reran the unchanged strict evaluator without a browser:17,700.6->11,411.5ms median,172->113GET,53,345,777->51,572,246reserved bytes; complete9-caption/27s/810-frame snapshot,27background samplepoints and frame0RGBA match. Initial inconclusive candidate and renewed approval are preserved, with no threshold/workload relaxation. No further product tests were necessary. Full final CI/integration and relevant browser-media gates remain coordinator-owned; no authenticated-route/production-network/full810-frame export or clock-oscillation resolution claim is accepted.",
+        "findings": [],
+        "commit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+        "baseCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+        "submissionId": "5e58e307-7b83-4855-8855-df90829a7d1d",
+        "createdAt": "2026-11-12T16:39:13.941Z",
+        "finishedAt": "2026-11-12T16:41:56.412Z"
+      },
+      "steps": [
+        {
+          "taskId": "T777",
+          "commit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+          "at": "2026-11-12T16:38:42.485Z",
           "verification": []
         }
       ],
@@ -361,6 +406,209 @@
       "group": "si8-261113",
       "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
       "taskId": "T773",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 14,
+      "at": "2026-11-12T16:21:52.170Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T16:21:21.345Z",
+            "finishedAt": "2026-11-12T16:21:52.031Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 15,
+      "at": "2026-11-12T16:21:52.209Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "reason": null,
+        "integratedCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+        "integratedAt": "2026-11-12T16:21:52.209Z"
+      }
+    },
+    {
+      "sequence": 16,
+      "at": "2026-11-12T16:22:35.743Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "50f94c02-0792-4041-b196-0be6b9e8a555",
+        "group": "si8-261113",
+        "taskId": "T777",
+        "tasks": [
+          "T777"
+        ],
+        "lane": null,
+        "owner": "si8-worker",
+        "contributors": [
+          "si8-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T16:22:35.743Z",
+        "startCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac"
+      }
+    },
+    {
+      "sequence": 17,
+      "at": "2026-11-12T16:22:36.684Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 18,
+      "at": "2026-11-12T16:30:04.145Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "doing",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "T777 candidate1 inconclusive: time-23.93%, requests-23.26% misses25%, bytes+15.35%, correctness passes. Source94e1c9a3; evidence/proposal in .git/gusta/v1/launchers/si8/T777/candidate-1-inconclusive-proposal.json. Renewed approval needed; no submit/integration or relaxed thresholds."
+      }
+    },
+    {
+      "sequence": 19,
+      "at": "2026-11-12T16:30:48.686Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 20,
+      "at": "2026-11-12T16:38:42.319Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 21,
+      "at": "2026-11-12T16:38:42.495Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "verifiedCommit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+        "submittedBase": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+        "submissionId": "5e58e307-7b83-4855-8855-df90829a7d1d",
+        "submittedAt": "2026-11-12T16:38:42.495Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T777",
+            "commit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+            "at": "2026-11-12T16:38:42.485Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 22,
+      "at": "2026-11-12T16:39:13.941Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "fe4de5d0-9f53-419b-9862-3b5992a4c4d8",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+          "baseCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+          "submissionId": "5e58e307-7b83-4855-8855-df90829a7d1d",
+          "createdAt": "2026-11-12T16:39:13.941Z"
+        }
+      }
+    },
+    {
+      "sequence": 23,
+      "at": "2026-11-12T16:41:56.413Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "fe4de5d0-9f53-419b-9862-3b5992a4c4d8",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T777: Reviewed the full91523c4813d6d5b6f87bbbb90de362531e2a1fac...495849211d9274f0bdfed5ce2692ca8b2627c584 delta, base brief/ARCH-24/63, F5 and renewed candidate2 approval. Prefix bytes are copied synchronously into one bounded requested-size destination and the previous full cache is released before tail await; private readPart fills the same destination. Pending serialization, rejection/finally behavior, exact detached bytes, EOF, abort/late-result fencing, direct large reads, strict206/body validation and pre-await total-wire admission remain intact. Inspected42core and527consumer-test logs plus all fast checks and source hashes matchingb55dbe8c; final commit adds only task evidence. Independently verified19 frozen/input/source hashes including all9 actual originals and reran the unchanged strict evaluator without a browser:17,700.6->11,411.5ms median,172->113GET,53,345,777->51,572,246reserved bytes; complete9-caption/27s/810-frame snapshot,27background samplepoints and frame0RGBA match. Initial inconclusive candidate and renewed approval are preserved, with no threshold/workload relaxation. No further product tests were necessary. Full final CI/integration and relevant browser-media gates remain coordinator-owned; no authenticated-route/production-network/full810-frame export or clock-oscillation resolution claim is accepted.",
+          "findings": [],
+          "commit": "495849211d9274f0bdfed5ce2692ca8b2627c584",
+          "baseCommit": "91523c4813d6d5b6f87bbbb90de362531e2a1fac",
+          "submissionId": "5e58e307-7b83-4855-8855-df90829a7d1d",
+          "createdAt": "2026-11-12T16:39:13.941Z",
+          "finishedAt": "2026-11-12T16:41:56.412Z"
+        }
+      }
+    },
+    {
+      "sequence": 24,
+      "at": "2026-11-12T16:42:25.582Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "50f94c02-0792-4041-b196-0be6b9e8a555",
+      "taskId": "T777",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {

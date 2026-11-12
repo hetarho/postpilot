@@ -208,7 +208,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T777 | Reuse bounded read-ahead for boundary-spanning media packets | ARCH | T773 | todo |
 | T778 | Batch retained-source audio reads with a bounded small window | ARCH | T777 | todo |
 | T779 | Share consistent editor workspace navigation chrome | ARCH | T778 | todo |
 | T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
@@ -223,12 +222,13 @@
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
-| si8-261113 | 1 | 7 | 1 | 6 | 0 | 0 | 0 | 2026-11-12T16:21:20.569Z | [history](work/si8-261113.json) |
+| si8-261113 | 1 | 7 | 2 | 5 | 0 | 0 | 0 | 2026-11-12T16:42:27.160Z | [history](work/si8-261113.json) |
 
 ## next
 - inspect work board for remaining tasks
 
 ## log
+- 261112 T777 integrated
 - 261112 T773 integrated
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
 - 261113 si8: user confirmed Mac/Chrome, delegated all needed permissions and no questions through08:00KST; specifically prioritize blog/video back-button and page-layout consistency after performance.
@@ -248,4 +248,3 @@
 - 261112 T769 done
 - 261112 T767 done
 - 261112 T766 done
-- 261112 T762 done
