@@ -749,7 +749,9 @@ function ClipLegacyDraftPreview({
             )}
             {editingOverlay}
           </div>
-          <div className="absolute top-2 right-2 z-30 flex items-center gap-1">
+          {/* The controls never reach past the frame: a narrow frame (the compact preview pinned on
+              a phone) wraps them into another row inside it rather than over the page beside it. */}
+          <div className="absolute top-2 right-2 z-30 flex max-w-[calc(100%-1rem)] flex-wrap items-center justify-end gap-1">
             {/* The simulation has no sound, so the audio control stands only over the video. */}
             {!flow && (
               <Button
