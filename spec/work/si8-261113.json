@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T20:27:27.141Z",
-  "sourceCommit": "08c1a243b8e30912e164436ea50147f87ebe5d19",
+  "snapshotAt": "2026-11-12T20:35:28.177Z",
+  "sourceCommit": "067c94777d8a1536f8f688f332f9e63d9e4f3000",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -11,6 +11,26 @@
       "workers": 1,
       "reviewers": 1,
       "maxPending": 8
+    },
+    "verified": {
+      "commit": "067c94777d8a1536f8f688f332f9e63d9e4f3000",
+      "checks": [
+        {
+          "command": "python3 /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/full-ci.py",
+          "startedAt": "2026-11-12T20:29:04.276Z",
+          "finishedAt": "2026-11-12T20:35:27.132Z"
+        }
+      ],
+      "at": "2026-11-12T20:35:27.198Z",
+      "excluded": [
+        "T539",
+        "T550",
+        "T603",
+        "T604",
+        "T697",
+        "T775",
+        "T776"
+      ]
     },
     "push": null,
     "review": "all",
@@ -468,6 +488,8 @@
       "submittedBase": "08c1a243b8e30912e164436ea50147f87ebe5d19",
       "submissionId": "b91e57b0-d40a-4f59-89c4-fad933e74e9c",
       "submittedAt": "2026-11-12T20:22:39.874Z",
+      "integratedCommit": "9aaab4384f3f0ee6cfb8ceaf88d9430b57094c40",
+      "integratedAt": "2026-11-12T20:27:58.219Z",
       "risk": null,
       "review": {
         "id": "011baa7d-81b9-4df1-81b5-9b1808d17caf",
@@ -490,7 +512,14 @@
           "verification": []
         }
       ],
-      "verification": []
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T20:27:27.668Z",
+          "finishedAt": "2026-11-12T20:27:58.027Z"
+        }
+      ]
     }
   ],
   "history": [
@@ -2305,6 +2334,70 @@
       "status": "integrating",
       "changes": {
         "status": "integrating"
+      }
+    },
+    {
+      "sequence": 96,
+      "at": "2026-11-12T20:27:58.179Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T20:27:27.668Z",
+            "finishedAt": "2026-11-12T20:27:58.027Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 97,
+      "at": "2026-11-12T20:27:58.219Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "9aaab4384f3f0ee6cfb8ceaf88d9430b57094c40",
+        "integratedAt": "2026-11-12T20:27:58.219Z"
+      }
+    },
+    {
+      "sequence": 98,
+      "at": "2026-11-12T20:35:27.200Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "verified": {
+          "commit": "067c94777d8a1536f8f688f332f9e63d9e4f3000",
+          "checks": [
+            {
+              "command": "python3 /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/full-ci.py",
+              "startedAt": "2026-11-12T20:29:04.276Z",
+              "finishedAt": "2026-11-12T20:35:27.132Z"
+            }
+          ],
+          "at": "2026-11-12T20:35:27.198Z",
+          "excluded": [
+            "T539",
+            "T550",
+            "T603",
+            "T604",
+            "T697",
+            "T775",
+            "T776"
+          ]
+        }
       }
     }
   ]
