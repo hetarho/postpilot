@@ -206,7 +206,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T770 | Fix final gate failure | ARCH | - | todo |
+| T770 | Fix final gate failure | ARCH | - | doing@261112.vd1 |
 
 ## next
 - implement-task T770

@@ -114,6 +114,10 @@ func TestClipSpeechLifecycleFinalizationKeepsExactResultAndOnlyUsedAssets(t *tes
 	p, _ = h.plan(t)
 	f := clipapp.NewFinalizer(h.f.handle.Writer, clipTxPorts(h.f.ledger, nil, h.f.admission.plans), h.store, clip.DefaultRenderConfig(clip.Environment{}), nil)
 	service := clipapp.NewService(h.store, clip.DefaultLimits(), sources, f)
+	// Finalization takes the plan 확정하기 confirmed (CLIP-76); narration must be ready for it.
+	if _, err = service.ConfirmProject(t.Context(), clip.ConfirmationRequest{UserID: "alice", ProjectID: h.project, ExpectedPlanRevision: p.EditPlanRevision}); err != nil {
+		t.Fatal("narrated confirmation", err)
+	}
 	req := clip.FinalizationRequest{UserID: "alice", ProjectID: h.project, ExpectedRevision: p.EditPlanRevision, ExpectedResultID: p.Result.ID}
 	final, err := service.FinalizeProject(t.Context(), req)
 	if err != nil || final.Finalized == nil || clip.SpeechFingerprint(final.Result.Speech) != clip.SpeechFingerprint(result.Speech) {

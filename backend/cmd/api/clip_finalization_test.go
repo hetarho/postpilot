@@ -112,11 +112,21 @@ func newFinalizationHarness(t *testing.T) *finalizationHarness {
 		t.Fatal(err)
 	}
 	h.objects.objects[result.Key] = clip.SourceObjectInfo{Bytes: 50, ContentType: "video/mp4"}
-	h.project, err = h.clips.GetProject(t.Context(), "alice", "clip")
+	h.confirm(t)
+	return h
+}
+
+// confirm is 확정하기 on the current plan, which finalization requires (CLIP-76); a later
+// plan save unconfirms the clip (CLIP-229), so a fixture that saves again confirms again.
+func (h *finalizationHarness) confirm(t *testing.T) {
+	t.Helper()
+	p, err := h.clips.GetProject(t.Context(), "alice", "clip")
 	if err != nil {
 		t.Fatal(err)
 	}
-	return h
+	if h.project, err = h.service.ConfirmProject(t.Context(), clip.ConfirmationRequest{UserID: "alice", ProjectID: "clip", ExpectedPlanRevision: p.EditPlanRevision}); err != nil || !clip.Confirmed(h.project) {
+		t.Fatal("confirmation", h.project, err)
+	}
 }
 func (h *finalizationHarness) request() clip.FinalizationRequest {
 	return clip.FinalizationRequest{UserID: "alice", ProjectID: "clip", ExpectedRevision: h.project.EditPlanRevision, ExpectedResultID: h.project.Result.ID}
@@ -234,7 +244,7 @@ func TestClipFinalizationCleanupFailureAndLateUploadNeverReopenEditing(t *testin
 }
 
 func TestClipFinalizationRejectsForeignStaleInvalidAndActiveRequests(t *testing.T) {
-	for _, mode := range []string{"foreign", "revision", "result", "missing result", "invalid plan", "queued", "running", "cancelling", "deleting"} {
+	for _, mode := range []string{"foreign", "revision", "result", "missing result", "invalid plan", "unconfirmed", "queued", "running", "cancelling", "deleting"} {
 		t.Run(mode, func(t *testing.T) {
 			h := newFinalizationHarness(t)
 			req := h.request()
@@ -251,6 +261,11 @@ func TestClipFinalizationRejectsForeignStaleInvalidAndActiveRequests(t *testing.
 				}
 			case "invalid plan":
 				if _, err := h.db.Writer.Exec("UPDATE clip_projects SET edit_plan_json='invalid' WHERE id='clip'"); err != nil {
+					t.Fatal(err)
+				}
+			case "unconfirmed":
+				// A matching render alone never finalizes: 확정하기 comes first (CLIP-76).
+				if _, err := h.db.Writer.Exec("UPDATE clip_projects SET confirmed_plan_revision=NULL, confirmed_at=NULL WHERE id='clip'"); err != nil {
 					t.Fatal(err)
 				}
 			case "deleting":
@@ -441,10 +456,7 @@ func TestClipFinalizationSurvivesReusableTemplateDeletion(t *testing.T) {
 	if err = h.clips.SaveRender(t.Context(), "alice", "clip", p.EditPlanRevision, r); err != nil {
 		t.Fatal(err)
 	}
-	h.project, err = h.clips.GetProject(t.Context(), "alice", "clip")
-	if err != nil {
-		t.Fatal(err)
-	}
+	h.confirm(t)
 	if _, err = h.service.FinalizeProject(t.Context(), h.request()); err != nil {
 		t.Fatal(err)
 	}
