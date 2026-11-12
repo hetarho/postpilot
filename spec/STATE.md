@@ -213,7 +213,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T782 | Refresh paused frame after running external seek | ARCH | T781 | todo |
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
 | T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
@@ -225,12 +224,13 @@
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
-| si8-261113 | 1 | 7 | 7 | 0 | 0 | 0 | 0 | 2026-11-12T19:55:17.423Z | [history](work/si8-261113.json) |
+| si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:27:27.141Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T782
+- inspect work board for remaining tasks
 
 ## log
+- 261112 T782 integrated
 - 261113 gusta-create-task review/performance-design-system-261113 F10: T782 fixes the confirmed paused-frame redraw gap after running block selection; unchanged actual-control oracle and existing source/clock/cancellation contracts, no SSOT rev/pending change.
 - 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
 - 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
@@ -250,4 +250,3 @@
 - 261112 T780 integrated
 - 261112 T778 integrated
 - 261112 T777 integrated
-- 261112 T773 integrated

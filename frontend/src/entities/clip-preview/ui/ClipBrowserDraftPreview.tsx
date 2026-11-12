@@ -559,6 +559,9 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
         invalidate()
         localClock.current = props.timeMs
         setLocalTime(props.timeMs)
+        // The committed playing ref still describes the clock we just paused.
+        draw.current(props.timeMs)
+        return
       }
     }
     if (!playingRef.current) draw.current(props.timeMs ?? localClock.current)

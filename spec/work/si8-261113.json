@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T19:55:17.423Z",
-  "sourceCommit": "a7b319da0f30567ffc1783179d1e984191250e06",
+  "snapshotAt": "2026-11-12T20:27:27.141Z",
+  "sourceCommit": "08c1a243b8e30912e164436ea50147f87ebe5d19",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -21,12 +21,13 @@
       "T778",
       "T779",
       "T780",
-      "T781"
+      "T781",
+      "T782"
     ]
   },
   "summary": {
-    "total": 7,
-    "completed": 7,
+    "total": 8,
+    "completed": 8,
     "remaining": 0,
     "running": 0,
     "review": 0,
@@ -414,6 +415,8 @@
       "submittedBase": "a7b319da0f30567ffc1783179d1e984191250e06",
       "submissionId": "b1d1a451-a351-402a-a806-aff365e76937",
       "submittedAt": "2026-11-12T19:48:50.477Z",
+      "integratedCommit": "b4c63389d5c56e86c66b67ba5f7622ce2256e328",
+      "integratedAt": "2026-11-12T19:55:48.496Z",
       "risk": null,
       "review": {
         "id": "f1583c79-3b57-48f7-b580-03ff3535bad8",
@@ -433,6 +436,57 @@
           "taskId": "T774",
           "commit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
           "at": "2026-11-12T19:48:50.466Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T19:55:18.064Z",
+          "finishedAt": "2026-11-12T19:55:48.317Z"
+        }
+      ]
+    },
+    {
+      "id": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "group": "si8-261113",
+      "taskId": "T782",
+      "tasks": [
+        "T782"
+      ],
+      "lane": null,
+      "owner": "si8-seek-frame-worker",
+      "contributors": [
+        "si8-seek-frame-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T20:15:27.169Z",
+      "startCommit": "1cb414401e34f4675621b0b39dcc3b8b46e5db60",
+      "verifiedCommit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+      "submittedBase": "08c1a243b8e30912e164436ea50147f87ebe5d19",
+      "submissionId": "b91e57b0-d40a-4f59-89c4-fad933e74e9c",
+      "submittedAt": "2026-11-12T20:22:39.874Z",
+      "risk": null,
+      "review": {
+        "id": "011baa7d-81b9-4df1-81b5-9b1808d17caf",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T782 exact submission e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84 reviewed against native base08c1a243 and entire original author start1cb41440 delta. Only the approved player/test paths and own task completion metadata change; base difference is an unrelated report, normalized task contract unchanged. The three-line production addition requests the authoritative external seek through the existing bounded draw path after private-intent cancellation, transport pause, epoch invalidation and time assignment, then returns. It preserves ordinary running parent echoes, avoids old-time callback/stop(), autoplay, retry/reprepare or extra owner, and retains all T781 runtime/source/revision/lease/cancellation fences. Tests meaningfully reproduce running props-only8000→actual frame240 and delayed old53/240→latest4000/frame120 with obsolete bitmap closure and no replay; normal echo control stays running. Independently verified original-source RED2/GREEN3 test-byte identity, both source hashes, all27 durable artifacts, and exact checked-tree core92, related211files/1955tests, explicit22files/139tests and fast receipts. Coordinator followup on this exact submitted source also independently checked: unchanged V4 cut3/frame240 and cut1/frame0 before next Play, pause-seek, and V3 ACK continuation pass with errors/external0; all intentional negative deltas remain recorded and stable negatives0. Old failed controls remain failures. No P1/P2 findings. Final integration/fullCI remain coordinator gates; no global oscillation, deployment, speed/FPS or physical-audibility claim.",
+        "findings": [],
+        "commit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+        "baseCommit": "08c1a243b8e30912e164436ea50147f87ebe5d19",
+        "submissionId": "b91e57b0-d40a-4f59-89c4-fad933e74e9c",
+        "createdAt": "2026-11-12T20:22:58.644Z",
+        "finishedAt": "2026-11-12T20:27:09.195Z"
+      },
+      "steps": [
+        {
+          "taskId": "T782",
+          "commit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+          "at": "2026-11-12T20:22:39.865Z",
           "verification": []
         }
       ],
@@ -2040,6 +2094,213 @@
       "group": "si8-261113",
       "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
       "taskId": "T774",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 85,
+      "at": "2026-11-12T19:55:48.450Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T19:55:18.064Z",
+            "finishedAt": "2026-11-12T19:55:48.317Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 86,
+      "at": "2026-11-12T19:55:48.496Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "b4c63389d5c56e86c66b67ba5f7622ce2256e328",
+        "integratedAt": "2026-11-12T19:55:48.496Z"
+      }
+    },
+    {
+      "sequence": 87,
+      "at": "2026-11-12T20:15:20.719Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T773",
+          "T774",
+          "T777",
+          "T778",
+          "T779",
+          "T780",
+          "T781",
+          "T782"
+        ]
+      }
+    },
+    {
+      "sequence": 88,
+      "at": "2026-11-12T20:15:27.169Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+        "group": "si8-261113",
+        "taskId": "T782",
+        "tasks": [
+          "T782"
+        ],
+        "lane": null,
+        "owner": "si8-seek-frame-worker",
+        "contributors": [
+          "si8-seek-frame-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T20:15:27.169Z",
+        "startCommit": "1cb414401e34f4675621b0b39dcc3b8b46e5db60"
+      }
+    },
+    {
+      "sequence": 89,
+      "at": "2026-11-12T20:15:28.743Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 90,
+      "at": "2026-11-12T20:19:34.188Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "reason": null
+      }
+    },
+    {
+      "sequence": 91,
+      "at": "2026-11-12T20:22:39.708Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 92,
+      "at": "2026-11-12T20:22:39.874Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "verifiedCommit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+        "submittedBase": "08c1a243b8e30912e164436ea50147f87ebe5d19",
+        "submissionId": "b91e57b0-d40a-4f59-89c4-fad933e74e9c",
+        "submittedAt": "2026-11-12T20:22:39.874Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T782",
+            "commit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+            "at": "2026-11-12T20:22:39.865Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 93,
+      "at": "2026-11-12T20:22:58.644Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "011baa7d-81b9-4df1-81b5-9b1808d17caf",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+          "baseCommit": "08c1a243b8e30912e164436ea50147f87ebe5d19",
+          "submissionId": "b91e57b0-d40a-4f59-89c4-fad933e74e9c",
+          "createdAt": "2026-11-12T20:22:58.644Z"
+        }
+      }
+    },
+    {
+      "sequence": 94,
+      "at": "2026-11-12T20:27:09.195Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "011baa7d-81b9-4df1-81b5-9b1808d17caf",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T782 exact submission e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84 reviewed against native base08c1a243 and entire original author start1cb41440 delta. Only the approved player/test paths and own task completion metadata change; base difference is an unrelated report, normalized task contract unchanged. The three-line production addition requests the authoritative external seek through the existing bounded draw path after private-intent cancellation, transport pause, epoch invalidation and time assignment, then returns. It preserves ordinary running parent echoes, avoids old-time callback/stop(), autoplay, retry/reprepare or extra owner, and retains all T781 runtime/source/revision/lease/cancellation fences. Tests meaningfully reproduce running props-only8000→actual frame240 and delayed old53/240→latest4000/frame120 with obsolete bitmap closure and no replay; normal echo control stays running. Independently verified original-source RED2/GREEN3 test-byte identity, both source hashes, all27 durable artifacts, and exact checked-tree core92, related211files/1955tests, explicit22files/139tests and fast receipts. Coordinator followup on this exact submitted source also independently checked: unchanged V4 cut3/frame240 and cut1/frame0 before next Play, pause-seek, and V3 ACK continuation pass with errors/external0; all intentional negative deltas remain recorded and stable negatives0. Old failed controls remain failures. No P1/P2 findings. Final integration/fullCI remain coordinator gates; no global oscillation, deployment, speed/FPS or physical-audibility claim.",
+          "findings": [],
+          "commit": "e1d8cd7ab1a131d58c0d5b0ffc11c116d2e4ff84",
+          "baseCommit": "08c1a243b8e30912e164436ea50147f87ebe5d19",
+          "submissionId": "b91e57b0-d40a-4f59-89c4-fad933e74e9c",
+          "createdAt": "2026-11-12T20:22:58.644Z",
+          "finishedAt": "2026-11-12T20:27:09.195Z"
+        }
+      }
+    },
+    {
+      "sequence": 95,
+      "at": "2026-11-12T20:27:26.026Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "b0612052-8e5f-4749-b5ad-3dea792f8a00",
+      "taskId": "T782",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {
