@@ -9,11 +9,13 @@ import {
   ClipEditingStateSchema,
 } from '@/shared/api'
 import { clipPlanToProto, toClipEditingState } from '@/entities/clip-plan'
+import * as clipPlan from '@/entities/clip-plan'
 import { toClipProject, type ClipProject } from '@/entities/clip-project'
 import { clipEditingFixture, clipTimelineFixture } from '@/test/clip-editing'
+import { clipObservationsFixture } from '@/test/clip-observations'
 import { connectAppError } from '@/test/app-error'
 import { createTestQueryClient, withProviders } from '@/test/session'
-import { CLIP_TIMELINE } from '@/entities/clip-design'
+import { CLIP_TIMELINE, clipCaptionSizes } from '@/entities/clip-design'
 import { useClipCorrection } from './useClipCorrection'
 
 function setup(editing = clipEditingFixture()) {
@@ -77,12 +79,130 @@ function setup(editing = clipEditingFixture()) {
   }
 }
 beforeEach(() => vi.useFakeTimers())
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.restoreAllMocks()
+})
 const tick = async (ms: number = CLIP_TIMELINE.autosaveMs) => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(ms)
   })
 }
+
+it('reuses the draft key and validation across 300 seeks, selection and unrelated rerenders', () => {
+  const key = vi.spyOn(clipPlan, 'clipDraftKey')
+  const validate = vi.spyOn(clipPlan, 'validateTimelinePlan')
+  const view = setup(clipTimelineFixture())
+  const { draft, validation } = view.result.current
+  const keyCalls = key.mock.calls.length
+  const validationCalls = validate.mock.calls.length
+
+  for (let timeMs = 0; timeMs < 300; timeMs++)
+    act(() => view.result.current.dispatch({ type: 'seek', timeMs }))
+  expect(view.result.current.timeline.timeMs).toBe(299)
+  act(() =>
+    view.result.current.dispatch({ type: 'select', selection: { kind: 'cut', id: 'cut-b' } }),
+  )
+  view.rerender({ project: { ...view.project, title: 'Only the project title changed' } })
+
+  expect(view.result.current.draft).toBe(draft)
+  expect({ key: key.mock.calls.length, validation: validate.mock.calls.length }).toEqual({
+    key: keyCalls,
+    validation: validationCalls,
+  })
+  expect(view.result.current.validation).toBe(validation)
+  expect(view.result.current.dirty).toBe(false)
+  expect(view.writes).toEqual([])
+})
+
+it('refreshes the key on edits and undo and validation on changed or absent editing contracts', () => {
+  const directValidation = clipPlan.validateTimelinePlan
+  const validate = vi.spyOn(clipPlan, 'validateTimelinePlan')
+  const view = setup(clipTimelineFixture())
+  const editing = view.project.editing!
+  const original = view.result.current.validation
+
+  act(() =>
+    view.result.current.change({ type: 'cut', id: 'cut-a', patch: { volumePermille: 800 } }),
+  )
+  expect(view.result.current.dirty).toBe(true)
+  expect(view.result.current.validation).not.toBe(original)
+  expect(view.result.current.validation).toEqual(
+    directValidation(view.result.current.draft, editing),
+  )
+  act(() => view.result.current.dispatch({ type: 'undo' }))
+  expect(view.result.current.dirty).toBe(false)
+  expect(view.result.current.validation?.saveable).toBe(true)
+
+  const draft = view.result.current.draft
+  const restricted = { ...editing, maxCuts: 1 }
+  view.rerender({ project: { ...view.project, editing: restricted } })
+  expect(view.result.current.draft).toBe(draft)
+  expect(view.result.current.validation).toEqual(directValidation(draft, restricted))
+  expect(view.result.current.validation?.saveable).toBe(false)
+  expect(view.result.current.dirty).toBe(false)
+
+  const beforeAbsent = validate.mock.calls.length
+  view.rerender({ project: { ...view.project, editing: undefined } })
+  expect(view.result.current.validation).toBeUndefined()
+  expect(validate).toHaveBeenCalledTimes(beforeAbsent)
+  view.rerender({ project: view.project })
+  expect(validate).toHaveBeenCalledTimes(beforeAbsent + 1)
+  expect(view.result.current.validation).toEqual(directValidation(draft, editing))
+  expect(view.result.current.validation?.saveable).toBe(true)
+})
+
+it('revalidates unchanged authored cuts when the server observations change', () => {
+  const directValidation = clipPlan.validateTimelinePlan
+  const view = setup(clipTimelineFixture())
+  act(() => view.result.current.change({ type: 'cut', id: 'cut-a', patch: { startMs: 3500 } }))
+  expect(view.result.current.validation?.saveable).toBe(true)
+  const draft = view.result.current.draft
+  const editing = view.project.editing!
+  const unavailableEvidence = { status: 'available' as const, sources: [] }
+
+  view.rerender({ project: { ...view.project, observations: unavailableEvidence } })
+  expect(view.result.current.draft).toBe(draft)
+  expect(view.result.current.validation).toEqual(
+    directValidation(draft, editing, unavailableEvidence),
+  )
+  expect(view.result.current.validation?.cuts[0]).toMatchObject({ evidence: true })
+  expect(view.result.current.validation?.saveable).toBe(false)
+
+  const observations = clipObservationsFixture()
+  view.rerender({ project: { ...view.project, observations } })
+  expect(view.result.current.validation).toEqual(directValidation(draft, editing, observations))
+  expect(view.result.current.validation?.cuts[0]).toMatchObject({ evidence: false })
+  expect(view.result.current.validation?.saveable).toBe(true)
+  expect(view.result.current.dirty).toBe(true)
+})
+
+it('revalidates the retained caption size when the project AI style set changes', () => {
+  const directValidation = clipPlan.validateTimelinePlan
+  const editing = clipTimelineFixture()
+  editing.plan.elements![0] = {
+    ...editing.plan.elements![0],
+    style: 'auto',
+    ownerSizePx: clipCaptionSizes('keynote').max,
+  }
+  const view = setup(editing)
+  const draft = view.result.current.draft
+  expect(view.result.current.validation?.elements[0].size).toBe(true)
+  expect(view.result.current.validation?.saveable).toBe(false)
+
+  view.rerender({ project: { ...view.project, allowedCaptionStyles: ['keynote'] } })
+  expect(view.result.current.draft).toBe(draft)
+  expect(view.result.current.validation).toEqual(
+    directValidation(draft, view.project.editing!, view.project.observations, ['keynote']),
+  )
+  expect(view.result.current.validation?.elements[0].size).toBe(false)
+  expect(view.result.current.validation?.saveable).toBe(true)
+  expect(view.result.current.dirty).toBe(false)
+
+  view.rerender({ project: view.project })
+  expect(view.result.current.validation?.elements[0].size).toBe(true)
+  expect(view.result.current.validation?.saveable).toBe(false)
+})
 
 it('debounces edits, keeps typing during save and uses the accepted revision for the next save and undo', async () => {
   const view = setup()

@@ -59,15 +59,20 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
   }, [])
   const [transientPlan, setTransientPlan] = useState<ClipEditPlan>()
   const draft = timeline.plan
-  const dirty = clipDraftKey(draft) !== baseline
-  const validation = project.editing
-    ? validateTimelinePlan(
-        draft,
-        project.editing,
-        project.observations,
-        project.allowedCaptionStyles,
-      )
-    : undefined
+  const draftKey = useMemo(() => clipDraftKey(draft), [draft])
+  const dirty = draftKey !== baseline
+  const validation = useMemo(
+    () =>
+      project.editing
+        ? validateTimelinePlan(
+            draft,
+            project.editing,
+            project.observations,
+            project.allowedCaptionStyles,
+          )
+        : undefined,
+    [draft, project.editing, project.observations, project.allowedCaptionStyles],
+  )
   const current = useRef({
     draft,
     revision,
