@@ -216,6 +216,7 @@
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
 - 261112 T768 done
 - 261112 T765 done
 - 261112 T764 done
@@ -235,4 +236,3 @@
 - 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
 - 261112 update-ssot CLIP start (ui12 video cycle3): adopt independent scout preparation-flow proposal under explicit reversible UX delegation; preserve whole-journey plan and excluded contracts.
 - 261112 ui12 resumes after status audit: foreground T753–T756 and T757 are published; GitHub43094556625 now completed/success (updated21:01:03Z, verified22:41Z). The prior host parked20:49Z and did not auto-resume. Continue the still-authorized full video UX scope under the same hard deadline, without calling the retention fix the requested redesign.
-- 261112 ui12 parked: latest metadata CI43094556625 cannot be certified; all steps success but REST/GraphQL conclusions null, cancellation says completed/rerun says running. T757 source/main acceptance and CI43091754368 pass. Remove own active; preserve sv8/excluded tasks and evidence.

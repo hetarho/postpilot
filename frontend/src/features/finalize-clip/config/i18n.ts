@@ -59,8 +59,8 @@ export const i18n = {
       downloadRevision: 'Download render {{revision}}',
       refusal: {
         finalized: 'This clip is already complete.',
-        unconfirmed: 'Confirm the clip in Refine before marking it complete.',
         busy: 'Wait for the current job before confirming.',
+        unconfirmed: 'Confirm the clip in Refine before marking it complete.',
         missing_render: 'Use Render to make a video before marking it complete.',
         stale_render: 'Use Render to output the current edits before marking it complete.',
         invalid_plan: 'Fix the editing errors and render again.',
