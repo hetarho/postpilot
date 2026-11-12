@@ -181,9 +181,11 @@ export function createFiniteMediaSource(
       // an unbounded set of adjacent-read buffers.
       return read(start, end)
     }
-    const first = Math.floor(start / readAhead) * readAhead
+    // A small packet can cross an aligned boundary. Keep it in one finite
+    // window so the following adjacent packet reuses the bytes already read.
+    const aligned = Math.floor(start / readAhead) * readAhead
+    const first = end > aligned + readAhead ? start : aligned
     const last = Math.min(size, first + readAhead)
-    if (end > last) return load(start, end, size)
     cached = undefined
     const own = { start: first, end: last, bytes: load(first, last, size) }
     pending = own
