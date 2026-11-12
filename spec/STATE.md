@@ -13,6 +13,7 @@
 | si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
 
 ## inbox
+- 261113 decided review/performance-design-system-261113: actual reported video symptoms take priority? → reproduce slow 다듬기 entry and oscillating playback using supplied Photos 001 media before UI refactoring (alt: treat memoization as a complete fix | continue UI tasks first). User grants needed permissions; split independent read-only scouts between entry/readiness and playback time synchronization, preserve paid/provider and production state.
 - 261113 decided review/performance-design-system-261113 T773 T774 T775 T776: performance-first improvement order? → adopt redundant unchanged-plan validation first, then FieldCount/radio tiles/dropdown focus consolidation with net production source reduction (alt: unmeasured broad optimization | blanket native-control replacement). Direct self-improve delegation preserves all behavior; independent review and full gates required before push.
 - 261112 decided CDS-25 CDS-55 T772: what happens to an accent keyword a grounded shorter sentence lacks? → dropped at every shorter-copy fallback and on decode of stored portable plans, persisted by the next save (alt: keep it and refuse saves | pick another accent word automatically) — CDS-25 lets one word of the caption take the accent, and a word the text lacks cannot.
 - 261112 decided ARCH-30 T771: the unpushed gusta migration fails CI's old skill check → finish the queued T771 in this session before pushing (alt: push and let CI fail | leave the migration unpushed). No other session held T771.
@@ -219,6 +220,7 @@
 - gusta-implement-task T773 through approved si8 work-group assignment
 
 ## log
+- 261113 si8 steering: prioritize measured real-media slow refine entry and jumping playback time; T773 bounded redundant-work fix continues separately, UI tasks wait for symptom diagnosis.
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
@@ -238,4 +240,3 @@
 - 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
 - 261112 T768 done
 - 261112 T765 done
-- 261112 T764 done
