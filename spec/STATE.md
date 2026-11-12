@@ -206,7 +206,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T760 | Let one revision request decide its own target within two approved writing calls | ARCH CLIP QUOTA DUB GUIDE | - | todo |
 | T761 | Ask ①'s clip preparation one question per screen in the post guide's order | ARCH CLIP POST THEME | - | todo |
 | T762 | Run /clips/new as the unminted guide and mint on its first save | ARCH CLIP POST THEME | T759 T761 T768 | todo |
 | T763 | Edit step ② as scene blocks beside a preview kept in view | ARCH CLIP THEME | - | todo |
@@ -217,11 +216,12 @@
 | T768 | Show the six clip states in histories and name an untitled clip | ARCH CLIP THEME POST | T759 | todo |
 
 ## next
-- implement-task T760 T761 T763
+- implement-task T761 T763 T768
 - T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 T760 done
 - 261112 T759 done
 - 261112 create-task CLIP r76 THEME r41 (vd1): T759–T768 for the post-shaped clip journey; CLIP and THEME fully tasked
 - 261112 update-ssot CLIP r76 THEME r41 (vd1): clip journey mirrors the post guide from /clips/new to ③; no active task cites the changed decisions
@@ -241,4 +241,3 @@
 - 261112 create-task T757 (ui12): adopt independent scout F1; restore existing THEME-51/55 within CLIP-180/197, no new policy/SSOT revision or unrelated pending consumption. Plan-push precedes worker assignment.
 - 261112 self-improve-local video cycle2 starts (ui12): clean main c61f9949; independent read-only work scout dispatched; preserve inherited scope/history and all contracts. Exploration+implementation <=60m; review/full gates/remote CI reserve follows.
 - 261112 foreground accepted (ui12): T753–T756 plus repair05dc604c are on origin/main; all5 code revisions pass full ARCH-31 and every triggered workflow. Repair48/380, full FE595/4748/Python69/Go and CI43083205954 pass. Browser canonical24/warm96/delayed32/alias24 pass. Video has not started; keep active for the next coordinator stage.
-- 261112 fix clip-navigation done (ui12): canonical history states retain storyline_ready on both channel returns; red4→green33 and expanded48 files/380 tests/static/type/build pass. Separate repair unit; complete ARCH-31 and exact-revision workflows follow.
