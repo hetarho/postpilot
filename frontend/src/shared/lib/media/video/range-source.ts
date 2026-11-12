@@ -155,7 +155,11 @@ export function createFiniteMediaSource(
     ports.read?.(count, performance.now() - began)
     return bytes
   }
-  const read = async (start: number, end: number): Promise<Uint8Array> => {
+  const readPart = async (
+    start: number,
+    end: number,
+    destination?: { bytes: Uint8Array; offset: number },
+  ): Promise<Uint8Array> => {
     check()
     const size = await getSize()
     const count = end - start
@@ -169,17 +173,30 @@ export function createFiniteMediaSource(
     )
       fail('CLIP_SOURCE_MEMORY_LIMIT')
     if (!readAhead || count > readAhead) return load(start, end, size)
+    const copy = (bytes: Uint8Array, from: number) => {
+      if (!destination) return bytes.slice(from, from + count)
+      destination.bytes.set(bytes.subarray(from, from + count), destination.offset)
+      return destination.bytes
+    }
     if (cached && cached.start <= start && end <= cached.end)
-      return cached.bytes.slice(start - cached.start, end - cached.start)
+      return copy(cached.bytes, start - cached.start)
+    if (cached && cached.start <= start && start < cached.end) {
+      const split = cached.end
+      const output = destination ?? { bytes: new Uint8Array(count), offset: 0 }
+      output.bytes.set(cached.bytes.subarray(start - cached.start), output.offset)
+      // Retain only the requested prefix, never the old full window while
+      // awaiting the next aligned window. Both parts fill one detached result.
+      cached = undefined
+      return readPart(split, end, { bytes: output.bytes, offset: output.offset + split - start })
+    }
     if (pending) {
       const own = pending
       const bytes = await own.bytes
       check()
-      if (own.start <= start && end <= own.end)
-        return bytes.slice(start - own.start, end - own.start)
+      if (own.start <= start && end <= own.end) return copy(bytes, start - own.start)
       // Serialize different windows, so parallel parser requests cannot retain
       // an unbounded set of adjacent-read buffers.
-      return read(start, end)
+      return readPart(start, end, destination)
     }
     // A small packet can cross an aligned boundary. Keep it in one finite
     // window so the following adjacent packet reuses the bytes already read.
@@ -194,11 +211,12 @@ export function createFiniteMediaSource(
       check()
       cached = { start: first, end: last, bytes }
       // The parser must not retain an entire window behind a tiny subarray.
-      return bytes.slice(start - first, end - first)
+      return copy(bytes, start - first)
     } finally {
       if (pending === own) pending = undefined
     }
   }
+  const read = (start: number, end: number) => readPart(start, end)
   const source = new CustomSource({
     getSize,
     read,

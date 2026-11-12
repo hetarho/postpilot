@@ -82,6 +82,67 @@ describe('finite original access', () => {
     expect(reader.measurements()).toMatchObject({ reads: 1, bytesRead: 8, largestReadBytes: 8 })
     reader.dispose()
   })
+  it('reuses a cached packet prefix and the following aligned window within the original wire budget', async () => {
+    const { reader, fetcher } = windowed(16)
+    expect([...(await reader.read(2, 4))]).toEqual([2, 3])
+    const packet = await reader.read(6, 10)
+    expect([...packet]).toEqual([6, 7, 8, 9])
+    expect(packet.buffer.byteLength).toBe(4)
+    packet[2] = 99
+    expect([...(await reader.read(8, 16))]).toEqual([8, 9, 10, 11, 12, 13, 14, 15])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('shares the next aligned window between concurrent prefix-spanning and following packets', async () => {
+    const { reader, fetcher } = windowed(16)
+    await reader.read(2, 4)
+    const values = await Promise.all([reader.read(6, 10), reader.read(10, 12), reader.read(12, 16)])
+    expect(values.map((value) => [...value])).toEqual([
+      [6, 7, 8, 9],
+      [10, 11],
+      [12, 13, 14, 15],
+    ])
+    expect(values.map((value) => value.buffer.byteLength)).toEqual([4, 2, 4])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 16 })
+    reader.dispose()
+  })
+  it('reuses a prefix at EOF without reserving those cached bytes again', async () => {
+    const { reader, fetcher } = windowed(11, 19)
+    await reader.read(9, 10)
+    expect([...(await reader.read(14, 18))]).toEqual([14, 15, 16, 17])
+    expect([...(await reader.read(18, 19))]).toEqual([18])
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    expect(reader.measurements()).toMatchObject({ reads: 2, bytesRead: 11, largestReadBytes: 8 })
+    reader.dispose()
+  })
+  it('never returns a copied packet prefix when its pending remainder is aborted', async () => {
+    let release!: () => void,
+      started!: () => void,
+      hold = false
+    const pendingStarted = new Promise<void>((resolve) => {
+      started = resolve
+    })
+    const pendingResponse = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { reader, fetcher, controller } = windowed(16, 80, async () => {
+      if (!hold) return
+      started()
+      await pendingResponse
+    })
+    await reader.read(2, 4)
+    hold = true
+    const packet = reader.read(6, 10)
+    await pendingStarted
+    controller.abort()
+    release()
+    await expect(packet).rejects.toMatchObject({ name: 'AbortError' })
+    await expect(reader.read(8, 9)).rejects.toMatchObject({ name: 'AbortError' })
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    reader.dispose()
+  })
   it('shares concurrent crossing packets and waits before fetching the next bounded window', async () => {
     let release!: () => void, started!: () => void
     const firstStarted = new Promise<void>((resolve) => {
