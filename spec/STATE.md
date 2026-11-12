@@ -11,6 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
+| vd1 | DESKTOP-VKPLS8P | pair | 2026-11-12T02:18Z | 2026-11-12T02:18Z | - |
 
 ## inbox
 - 261112 decided T758: use the remaining additional-hour budget? → preserve the last independently reviewed style-sample P2 fix and one visible-editor refusal assertion correction in the latest41-file unintegrated recovery snapshot99b79a95 plus a Git bundle (alt: omit post-cutoff work | mark the unfinished guide complete). Voice checks86+6 pass and type/lint/format pass; the refusal file31 tests passes, while four named cases and whole-task final gates remain open. Publish all source/review/diagnosis records as recovery data; keep T758todo and verified main product unchanged.
@@ -157,10 +158,10 @@
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 40 | 40 | - | 2 |
+| THEME | 41 | 40 | THEME-44✎ THEME-45✎ | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 75 | 75 | - | 2 |
+| CLIP | 76 | 75 | CLIP-17✎ CLIP-36✎ CLIP-39✎ CLIP-40✎ CLIP-41✎ CLIP-53✎ CLIP-54- CLIP-55✎ CLIP-57✎ CLIP-75✎ CLIP-76✎ CLIP-121✎ CLIP-130✎ CLIP-131✎ CLIP-132✎ CLIP-143✎ CLIP-149✎ CLIP-152✎ CLIP-153✎ CLIP-156✎ CLIP-158✎ CLIP-160✎ CLIP-197✎ CLIP-210✎ CLIP-211✎ CLIP-225✎ CLIP-226✎ CLIP-227✎ CLIP-228+ CLIP-229+ CLIP-230+ CLIP-231+ CLIP-232+ CLIP-233+ | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -203,10 +204,12 @@
 
 ## next
 - T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
-- Later video redesign slices (storyline/build, editing, delivery/resume) remain unscoped candidates in review/video-preparation-guide-261112 and need their own planning before tasks.
+- create-task CLIP THEME (vd1): CLIP r76/THEME r41 redesign the whole clip journey after the post — unminted ① guide minted by its first save, scene-block ② with one revision field, reversible 확정 then ③ render/checklist/upload text/더 해 보기/게시 URL finalization.
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 update-ssot CLIP r76 THEME r41 (vd1): clip journey mirrors the post guide from /clips/new to ③; no active task cites the changed decisions
+- 261112 update-ssot CLIP start (vd1)
 - 261112 updates haeram-spec-creator 0.12.2→0.13.0 (50 skill files updated, 2 created, no conflicts; no structural migration, no unset settings). FORMAT takes the 0.13.0 task start/done CLI, CI-unchecked and reports exception lines plus the permission-mode/headless-mcp settings keys; the four 65a1f82b overrides (decision n, [x], chg pruning, log history) stay. Lint identical before/after (0 errors, 82 warnings). 12c1f59a refreshes the browser ink identity for the new lockfile SHA; clip/clip-design Go, 46 FE files/294 tests, tsc, eslint, prettier, gofmt, vet pass. No code push.
 - 261112 T758 done
 - 261112 ui12 final bounded follow-up: source checkpoint99b79a95 combines approved voice fix74e456ca and refusal-test correction75f4eb8c,41 files recovered byte-for-byte; bundle verifies against publishedada6afc2. Main product source remains through T757; four diagnosed cases and T758 whole-task gates remain open. Publish all progress as recovery data, with no continuing local automation.
@@ -225,5 +228,3 @@
 - 261112 fix clip-navigation done (ui12): canonical history states retain storyline_ready on both channel returns; red4→green33 and expanded48 files/380 tests/static/type/build pass. Separate repair unit; complete ARCH-31 and exact-revision workflows follow.
 - 261112 fix clip-navigation starts (ui12), baseline aef8ed75: final return-path audit finds the new storyline_ready filter dropped by the clip history return allowlist. Repair the existing CLIP-226/THEME-58 contract in the lightweight path; no new product policy or persisted format.
 - 261112 T756 done (ui12): single counted 작성 중, shared peer-density accent latest card and compact recovery rows; 7 files/144 tests/static/type/build pass. Final warm96/delayed32 geometry and alias24 browser checks pass; latest360px card259.75→114.25px (56%). Full pre-push follows; video has not started.
-- 261112 T756 starts (ui12), baseline d02a58a0: one counted 작성 중 group, peer-density accent latest card, no duplicate hero. T755 full gate/push passes; T754 remote CI43072913166 passes both jobs. Hourly checkpoint ccf608f7 is local (wip remote rejected generically); main publication is unaffected.
-- 261112 T755 done (ui12): shared storyline-ready history labels/filter with job precedence and unchanged lifecycle/refining URL compatibility; 33 files/205 tests and static/type/build checks pass. Real browser both channels/aggregate/status selection passes without generation. Full pre-push follows.

@@ -227,7 +227,7 @@
 - POST-118 [o] the advertiser guide is what the campaign asks of the post, autosaved with the draft as an option save:
   - free text: the guide as pasted, trimmed, ≤ `ADVERTISER_GUIDE_MAX_CHARS` (3000) Unicode scalar values
   - optional counted items: 필수 키워드 (≤ `ADVERTISER_KEYWORD_MAX` (10), each ≤ 40 characters), 최소 글자 수 (`POST_TARGET_LENGTH_MIN` … `POST_TARGET_LENGTH_MAX`), 최소 사진 수 (1 … `UPLOAD_MAX_PHOTOS_PER_POST`), 필수 해시태그 (≤ `POST_TAG_OUTPUT_MAX`, each ≤ 40 characters)
-  - on a post the counted items are always shown under `글에 꼭 담을 내용`, below the free text (a clip keeps them in its closed disclosure, →CLIP-210)
+  - on a post the counted items are always shown under `글에 꼭 담을 내용`, below the free text (a clip shows its two the same way under `영상에 꼭 담을 내용`, →CLIP-210)
   - the free text is scanned in the browser, with no model call or request, for candidate items — `#`hashtags, a minimum character count, a minimum photo count, `키워드:` lists and quoted phrases asked to be included — shown as chips the owner adds (+), edits and adds, or dismisses (×); only an added chip becomes a counted item, under the same bounds, and an item already added or a full list is refused in place ← a guide states its requirements in prose, and retyping them is where they get lost
   - a dismissal is not saved and lasts while the screen is mounted
   - nothing is parsed or filled from the free text by AI, and nothing found in it becomes a counted item until the owner adds it ← the counted items are what the checklist can count without a model call

@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r40 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r41 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -237,11 +237,11 @@
 - THEME-42 [o] keyboard in an anchored panel: Tab and Shift+Tab move through the panel's own controls in order, a composite control moved through by arrow keys (a `Listbox`) counting as one; Tab from the last or Shift+Tab from the first closes the panel and continues from its trigger in page order ← handing focus back on any Tab leaves every control after the first unreachable (→THEME-33)
 - THEME-43 [o] a read-only document the operator copies from inside a sheet — 일괄 편집's current document (→MODEL-55) — is capped at `max-h-field` with `overflow-y-auto`, is a keyboard-focusable named region, and carries an icon copy control pinned to its top-right corner over the text, which leaves room for it ← an export runs to hundreds of lines and would push the paste field a sheet's height below it, and the control stays in reach however far the text is scrolled
 
-- THEME-44 [o] clip editing uses familiar responsive composition under CLIP-53/54: a preview, shared time ruler/playhead and visibly named tracks, with selected-item properties alongside them from `md:` and contextual tools plus explicitly opened detail sheets on phones
-  - desktop properties use the document's scroller rather than an independently scrolling panel; the timeline's horizontal navigation remains THEME-25's strip exception
+- THEME-44 [o] clip editing uses the post editor's composition under CLIP-17/53: one vertical list of scene blocks edited in place beside a preview that stays in view — alongside the list from `lg:`, pinned compactly above it on narrower screens — with details in explicitly opened sheets
+  - the list uses the document's scroller rather than an independently scrolling panel
   - selection and pointer tools never require a modal before showing the change; drag handles, active selection and output/source units are visible and keyboard/touch alternatives remain under THEME-32/33
-  - an empty track exposes its first add action; the selected object's state is attached to that object, while global save/job state remains THEME-39's one region
-- THEME-45 [o] a clip draft's manual editing tools precede long storyline, spoken-script and AI request forms; those forms open through named entries without hiding preview/timeline context
+  - an empty list exposes its first add action; the selected block's state is attached to that block, while global save/job state remains THEME-39's one region
+- THEME-45 [o] a clip draft's scene blocks precede long storyline and spoken-script forms, and the AI request is the step bar's field; those forms open through named entries without hiding the preview
   - retain one step ActionBar and one committing primary action; a compact contextual toolbar is not a second committing dock
 - THEME-46 [o] spoken-voice surfaces visibly distinguish 목소리 from writing 말투; candidate playback, selection and confirmation are separate labelled actions, with names and playable samples for reuse
   - show generation estimate/approval only on a generating action, explicit readiness or failure by text and no automatic generation during navigation, metadata edits or replay
@@ -357,4 +357,4 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
--
+- r41 261112 THEME-44✎ preview + time ruler + named tracks + properties panel→scene-block list beside/under a preview kept in view; THEME-45✎ manual tools before AI request form→scene blocks first, AI request in the step bar
