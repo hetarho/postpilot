@@ -207,7 +207,7 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T771 | Verify skills with gusta and drop the haeram-spec-creator dependency | ARCH | - | todo |
-| T772 | Drop an accent keyword its shorter copy lost and name every caption problem in ② | CDS CLIP ARCH | - | todo |
+| T772 | Drop an accent keyword its shorter copy lost and name every caption problem in ② | CDS CLIP ARCH | - | doing@261112.fx1 |
 
 ## next
 - gusta-implement-task T772 (fx1): a production clip refused every save and 확정하기 behind an unnamed caption error

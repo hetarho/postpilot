@@ -113,9 +113,14 @@ func TestAutomaticRepairUsesOnlyRetainedGroundedAlternatives(t *testing.T) {
 	plan := declaredPlan(t, `<clip version="1" intro="b" caption="bold" outro="e"><scene id="scene"><text id="copy" kind="ai" role="caption" basis="cut">Describe the scene.</text></scene><text id="empty-hook" kind="fixed" role="hook" basis="output-start"/><text id="empty-ending" kind="fixed" role="ending" basis="output-end"/></clip>`, "vertical")
 	plan.Portable.Elements[0].Resolved.Text = strings.Repeat("매우 긴 장면 설명 ", 30)
 	plan.Portable.Elements[0].Alternatives = []clip.CopyAlternative{{Text: "현재 장면"}}
+	plan.Portable.Elements[0].Keyword = "장면 설명"
 	layout := measuredDeclared(t, plan)
 	if layout.plan.Portable.Elements[0].Resolved.Text != "현재 장면" || layout.plan.Portable.Elements[0].FallbackReason != "shorter_copy" {
 		t.Fatal("approved alternative not used")
+	}
+	// The shorter copy lacks the accent word, so it keeps none (CDS-25).
+	if layout.plan.Portable.Elements[0].Keyword != "" {
+		t.Fatal("the shorter copy kept an accent word it lacks", layout.plan.Portable.Elements[0].Keyword)
 	}
 	if plan.Portable.Elements[0].Resolved.Text == "현재 장면" {
 		t.Fatal("mutated original plan")

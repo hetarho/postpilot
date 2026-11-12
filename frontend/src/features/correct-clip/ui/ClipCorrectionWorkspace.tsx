@@ -38,6 +38,7 @@ import {
   useVisualViewport,
 } from '@/shared/ui'
 import type { useClipCorrection } from '../model/useClipCorrection'
+import { textExcerpt, textIssues } from '../model/caption-issues'
 import { ClipSceneBlocks } from './ClipSceneBlocks'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipSceneBlockSheet, type ClipCutSound } from './ClipSceneBlockSheet'
@@ -592,6 +593,41 @@ export function ClipCorrectionWorkspace({
               </Button>
             ) : null
           })}
+          {/* Each text that holds the save names itself and what is wrong, and opens its own
+              sheet to fix it (CDS-213): the generic line above never says which one it is. */}
+          {correction.validation?.elements.map((error) => {
+            const reasons = textIssues(error)
+            const issueText = draft.elements?.find((e) => e.instanceId === error.id)
+            if (!reasons.length || !issueText) return null
+            const interval = textInterval(draft, issueText)
+            const label =
+              issueText.role === 'hook'
+                ? t('sceneBlocks.intro')
+                : issueText.role === 'ending'
+                  ? t('sceneBlocks.outro')
+                  : issueText.role === 'badge' || issueText.role === 'disclosure'
+                    ? t('sceneBlocks.badge')
+                    : issueText.role === 'caption'
+                      ? t('sceneBlocks.caption', {
+                          start: clipSeconds(interval.startMs),
+                          end: clipSeconds(interval.endMs),
+                        })
+                      : t('assembly.text')
+            const excerpt = textExcerpt(issueText)
+            const reason = reasons.map((issue) => t(`textIssues.${issue}`)).join(' ')
+            return (
+              <Button
+                key={error.id}
+                variant="ghost"
+                className="text-left"
+                onClick={() => open({ kind: 'text', id: issueText.instanceId })}
+              >
+                {excerpt
+                  ? t('assembly.textIssue', { label, excerpt, reason })
+                  : t('assembly.textIssueBare', { label, reason })}
+              </Button>
+            )
+          })}
           {correction.validation?.timeline && (
             <FieldMessage>
               {t('correction.timelineError', {
@@ -684,6 +720,9 @@ export function ClipCorrectionWorkspace({
               (e) =>
                 e.id === text.instanceId &&
                 Object.entries(e).some(([key, value]) => key !== 'id' && value),
+            ),
+            issues: textIssues(
+              correction.validation?.elements.find((e) => e.id === text.instanceId),
             ),
           }}
           failure={correction.failure}

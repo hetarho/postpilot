@@ -16,6 +16,7 @@ import { Button, Sheet, Typography } from '@/shared/ui'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipTextControls } from './ClipTextControls'
 import { ClipTextReading } from './ClipItemReading'
+import type { ClipTextIssue } from '../model/caption-issues'
 
 /** A caption's own sheet (CLIP-143, CLIP-191): its interval, phrases, position, size and style
  *  sample, placed over a representative frame from the cut its interval starts in. A badge or a
@@ -51,7 +52,7 @@ export function ClipCaptionSheet({
     localSources: ReadonlyArray<{ fingerprint: string; url: string }>
     resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
   }
-  validation?: { invalid: boolean; regionOverlap?: boolean }
+  validation?: { invalid: boolean; regionOverlap?: boolean; issues?: readonly ClipTextIssue[] }
   failure?: AppFailure
   notices?: readonly ClipNotice[]
   language?: 'ko' | 'en'
@@ -138,6 +139,7 @@ export function ClipCaptionSheet({
             change={change}
             regionOverlap={validation?.regionOverlap}
             invalid={!!validation?.invalid}
+            issues={validation?.issues}
           />
         </fieldset>
       )}

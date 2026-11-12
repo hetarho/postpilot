@@ -317,6 +317,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 		for _, alternative := range text.Alternatives {
 			candidate := visual
 			candidate.text.Resolved.Text, candidate.text.Resolved.Rows = alternative.Text, slices.Clone(alternative.Rows)
+			candidate.text.Keyword = clip.KeywordWithin(alternative.Text, candidate.text.Keyword)
 			candidate.manifest.Text, candidate.manifest.Rows = alternative.Text, slices.Clone(alternative.Rows)
 			result, alternativeError := r.layoutDeclaredRole(ctx, ws, canvas, plan.Ratio, candidate, selection, placement, elements)
 			if alternativeError == nil {
@@ -419,7 +420,7 @@ func (r *Rendering) layoutDeclaredElement(ctx context.Context, ws clip.MediaWork
 					continue
 				}
 				visual.copy, visual.caption, visual.glyphFallback, visual.styleFallback = copy, layout, glyphFallback, styleFallback
-				visual.text.Resolved.Text = candidate.Text
+				visual.text.Resolved.Text, visual.text.Keyword = candidate.Text, clip.KeywordWithin(candidate.Text, text.Keyword)
 				visual.manifest.Text, visual.manifest.Style, visual.manifest.Position, visual.manifest.Region = candidate.Text, style, anchor, layout.Region
 				// The motion is the chosen style's, not the authored element's:
 				// declaredManifest computed it before a style was picked, and a

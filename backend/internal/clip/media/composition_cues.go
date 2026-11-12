@@ -128,6 +128,7 @@ func scheduleNarration(plan clip.EditPlan, result []clip.PortableText, dropped m
 		}
 		if shorter != "" {
 			text.Resolved.Text, text.FallbackReason = shorter, "shorter_copy"
+			text.Keyword = clip.KeywordWithin(shorter, text.Keyword)
 			previousEnd = text.Resolved.EndMS
 			continue
 		}
@@ -187,7 +188,7 @@ func (r *Rendering) layoutDeclaredRapid(ctx context.Context, ws clip.MediaWorksp
 			continue
 		}
 		parent := text
-		parent.Resolved.Text = candidate.Text
+		parent.Resolved.Text, parent.Keyword = candidate.Text, clip.KeywordWithin(candidate.Text, parent.Keyword)
 		if index > 0 {
 			parent.FallbackReason = "shorter_copy"
 		}

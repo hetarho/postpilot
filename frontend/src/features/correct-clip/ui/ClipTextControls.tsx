@@ -28,6 +28,7 @@ import {
 } from '@/shared/ui'
 import { ClipCaptionStylePicker } from './ClipCaptionStylePicker'
 import { ClipTimeField } from './ClipTimeField'
+import type { ClipTextIssue } from '../model/caption-issues'
 
 const regionRole = (role: string) => role === 'hook' || role === 'ending'
 
@@ -36,6 +37,7 @@ export function ClipTextControls({
   text,
   change,
   invalid,
+  issues = [],
   regionOverlap,
   notices = [],
   language,
@@ -50,6 +52,8 @@ export function ClipTextControls({
   text: ClipEditableText
   change: (edit: TimelineEdit, group?: string) => void
   invalid: boolean
+  /** What holds this text's save, each stated on its own (CDS-213). */
+  issues?: readonly ClipTextIssue[]
   regionOverlap?: boolean
   /** The project's AI caption set (CLIP-142). It bounds what a writer picks, not the owner:
    *  here it only says what a caption naming no style is drawn in. */
@@ -122,7 +126,9 @@ export function ClipTextControls({
       </Typography>
       {invalid && (
         <FieldMessage>
-          {t(regionOverlap ? 'timeline.captionRegionOverlap' : 'timeline.textInvalid')}
+          {issues.length
+            ? issues.map((issue) => t(`textIssues.${issue}`)).join(' ')
+            : t(regionOverlap ? 'timeline.captionRegionOverlap' : 'timeline.textInvalid')}
         </FieldMessage>
       )}
       {refusal && (

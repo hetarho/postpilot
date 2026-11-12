@@ -530,7 +530,13 @@ it('preserves invalid authored intervals and disables rerender until repaired', 
   expect(screen.getByLabelText('표시 끝 (초)')).toHaveValue(12)
   expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
-  expect(screen.getByText(/이 문구의 내용·위치·시간/)).toBeInTheDocument()
+  // The sheet states what is wrong with this caption, and ② names it among the issues (CDS-213).
+  expect(
+    within(screen.getByRole('dialog')).getByText(/표시 시간이 영상 범위를 벗어났어요/),
+  ).toBeInTheDocument()
+  expect(
+    screen.getByRole('button', { name: /「caption a」 · 표시 시간이 영상 범위를 벗어났어요/ }),
+  ).toBeInTheDocument()
   // The autosave does not take an invalid draft either, so nothing reaches the server.
   await new Promise((resolve) => setTimeout(resolve, 900))
   expect(calls).not.toContain('SaveClipEditPlan')
@@ -950,6 +956,26 @@ it('selects each caption by its identity, several on one cut and one across cuts
   await selectText('컷을 건너가는 자막')
   expect(screen.getByLabelText('자막 원문')).toHaveValue('컷을 건너가는 자막')
   expect(styleRadio('기본 스타일')).toHaveAttribute('aria-checked', 'true')
+})
+
+// A save held by one caption names that caption and its reason, and opens its own sheet
+// (CDS-213): an accent word its text lacks once held every save behind an unnamed error.
+it('names the caption whose accent word its text lacks and opens it', async () => {
+  const project = fixture()
+  project.editing!.plan.elements![0] = {
+    ...project.editing!.plan.elements![0],
+    keyword: '든든한 한 끼',
+  }
+  await mount({ projects: [project] })
+  expect(screen.getByText(/확인이 필요한 편집이 있어요/)).toBeInTheDocument()
+  const issue = screen.getByRole('button', {
+    name: /^자막 · 0\.12–3\.88 s 「caption a」 · 강조 단어가 문구 안에 없어요/,
+  })
+  await userEvent.click(issue)
+  const sheet = await screen.findByRole('dialog')
+  expect(within(sheet).getByLabelText('자막 원문')).toHaveValue('caption a')
+  expect(within(sheet).getByText(/강조 단어가 문구 안에 없어요/)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /「caption b」/ })).not.toBeInTheDocument()
 })
 
 vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)

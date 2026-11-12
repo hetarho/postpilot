@@ -87,6 +87,15 @@ func TestNarrationFloorTakesTheShorterTextThenTheFreeRoom(t *testing.T) {
 	if len(kept) != 2 || kept[0].Resolved.Text != "짧은 문장" || kept[0].FallbackReason != "shorter_copy" {
 		t.Fatal("the shorter sentence was not used", kept)
 	}
+	// The accent word goes with the copy that carried it (CDS-25): a shorter sentence
+	// without it keeps no keyword, one that still holds it keeps it.
+	for keyword, want := range map[string]string{"아주 긴": "", "문장": "문장"} {
+		short.Keyword = keyword
+		kept, _ = scheduleDeclaredCaptions(narrationPlan(t, short, narrationText("narration-2", "다음 자막", short.Resolved.EndMS, 12000)))
+		if kept[0].Resolved.Text != "짧은 문장" || kept[0].Keyword != want {
+			t.Fatalf("keyword %q after the shorter sentence: %q, want %q", keyword, kept[0].Keyword, want)
+		}
+	}
 	// Neither fits: the caption is omitted with the floor's own reason.
 	plan = narrationPlan(t, narrationText("narration-1", long, 1000, 1300), narrationText("narration-2", "다음 자막", 1300, 6000))
 	kept, drops = scheduleDeclaredCaptions(plan)

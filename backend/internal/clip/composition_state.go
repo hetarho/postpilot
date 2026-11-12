@@ -71,6 +71,32 @@ type PortableText struct {
 	// renderer may select one for readability without asking a model again.
 	Alternatives []CopyAlternative
 }
+
+// KeywordWithin is the accent keyword a text keeps once its words are text: one
+// word of the caption may take the accent (CDS-25), so a word the text no longer
+// carries — a grounded shorter sentence replaced the copy (CDS-41, CDS-55) — is
+// not a keyword, and keeping it would refuse every later save of the plan.
+func KeywordWithin(text, keyword string) string {
+	if keyword == "" || strings.Contains(text, keyword) {
+		return keyword
+	}
+	return ""
+}
+
+// healKeywords drops every stored keyword its own text lacks: plans written before
+// the fallbacks applied KeywordWithin carry one, which the next save then persists.
+func healKeywords(p EditPlan, err error) (EditPlan, error) {
+	if err != nil || p.Portable == nil {
+		return p, err
+	}
+	for _, texts := range [][]PortableText{p.Portable.Elements, p.Portable.RetiredElements} {
+		for i := range texts {
+			texts[i].Keyword = KeywordWithin(texts[i].Resolved.Text, texts[i].Keyword)
+		}
+	}
+	return p, nil
+}
+
 type EditablePhrase struct {
 	Text           string
 	StartMS, EndMS int

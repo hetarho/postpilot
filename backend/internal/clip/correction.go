@@ -208,11 +208,11 @@ func DecodeEditPlan(raw string) (EditPlan, error) {
 	// against CompositionPlanVersion would read one of them with the wrong reader.
 	switch marker.Version {
 	case CompositionPlanVersion:
-		return decodeSpokenPlan(raw)
+		return healKeywords(decodeSpokenPlan(raw))
 	case assemblyPlanVersion:
-		return decodeAssemblyPlan(raw)
+		return healKeywords(decodeAssemblyPlan(raw))
 	case portablePlanVersion:
-		return decodePortablePlan(raw)
+		return healKeywords(decodePortablePlan(raw))
 	}
 	raw = migrateStoredPlan(raw)
 	var s storedEditPlan
