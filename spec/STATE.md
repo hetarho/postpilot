@@ -13,6 +13,7 @@
 | si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
 
 ## inbox
+- 261113 decided review/performance-design-system-261113 T780 T781: fix verified lifecycle disruptions without weakening revision/access fences? → authoritative first-capability generation, then one guarded same-transport continuation after equal-content ACK (alt: ignore everyURL/revision | keep extra owners | rewrite clock). Full snapshots/access/cancellation/limits remain; bounded rebuffer accepted, no seamless/oscillation claim. Existing canonical helper reused and memoized; user waives questions until08:00KST.
 - 261113 decided review/performance-design-system-261113 T777 T778 T779: actual-media priorities and audio byte tradeoff? → fix duplicate boundary packet reads, then32KiB audio read-ahead, then shared blog/video header (alt:512KiB audio window at24.4xwire | speculative playhead rewrite | generic UI first). Real-source PCM/pixels/analysis and all caps remain exact; header aligns within existingTHEME-26/39/58 without outer-width policy change. User waives questions until08:00KST; reserve last90min.
 - 261113 decided review/performance-design-system-261113: align the reported blog/video back control and layout? → inspect and reuse the blog/reference shared page primitives after the confirmed performance fixes, preserving return destinations/history/drafts/accessibility (alt: prioritize generic counters first | redesign all flows). User requests no questions through08:00KST and delegates choices; conflicting product policy must be recorded before changing it.
 - 261113 decided review/performance-design-system-261113: actual reported video symptoms take priority? → reproduce slow 다듬기 entry and oscillating playback using supplied Photos 001 media before UI refactoring (alt: treat memoization as a complete fix | continue UI tasks first). User grants needed permissions; split independent read-only scouts between entry/readiness and playback time synchronization, preserve paid/provider and production state.
@@ -208,6 +209,8 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T780 | Avoid preview restarts on first retained capability publication | ARCH | T778 | todo |
+| T781 | Continue an active preview after an equal-content save acknowledgment | ARCH | T780 | todo |
 | T778 | Batch retained-source audio reads with a bounded small window | ARCH | T777 | todo |
 | T779 | Share consistent editor workspace navigation chrome | ARCH | T778 | todo |
 | T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
@@ -225,9 +228,10 @@
 | si8-261113 | 1 | 7 | 2 | 5 | 0 | 0 | 0 | 2026-11-12T16:42:27.160Z | [history](work/si8-261113.json) |
 
 ## next
-- inspect work board for remaining tasks
+- si8 approved work: T778 → T780 → T781 → T779, then shared UI source reductions within the08:00KST cutoff; final90min reserved.
 
 ## log
+- 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
 - 261112 T777 integrated
 - 261112 T773 integrated
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
@@ -247,4 +251,3 @@
 - 261112 T770 done
 - 261112 T769 done
 - 261112 T767 done
-- 261112 T766 done
