@@ -143,6 +143,7 @@
 - 261015 suggest T677 T678 T679 T680 T681: review-code over the five campaign tasks done so far (principle tier, advertiser guide storage and editor fields, advertiser origin)
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
+- 261113 decided T780 review/performance-design-system-261113: valid distinct-URL explicit refresh fails because every rebuilt owner repeats force? → add a hook-owned once-per-explicit-attempt transaction with pending sharing/failure retention, keeping actual renewal invalidation and the existing session quota (alt: raise retry cap | suppress all HTTP renewal | simple Set with failure fallback). Unstarted claim72043a21 released before replan; no worker/source edits existed.
 
 ## ideation
 | id | st |
@@ -221,7 +222,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T780 | Avoid preview restarts on first retained capability publication | ARCH | T778 | todo |
+| T780 | Stabilize retained preview capability publication and refresh | ARCH | T778 | todo |
 | T781 | Continue an active preview after an equal-content save acknowledgment | ARCH | T780 | todo |
 
 ## next
@@ -236,6 +237,7 @@
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
+- 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
 - 261112 T771 done
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
 - 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
@@ -243,7 +245,6 @@
 - 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
 - 261112 create-task ARCH r23: T771 moves the CI and pre-push skill check to gusta, drops the haeram-spec-creator devDependency and refreshes the ink identity; ARCH fully tasked
 - 261112 update-ssot ARCH r23: ARCH-30 verifies skills with gusta through npx at the .gusta-lock.json version; ARCH-31 cites it unchanged and no active task cites ARCH-30
-- 261112 updates haeram-spec-creator 0.13.0→gusta 0.15.0 (rename without a compatibility layer: 20 skills and the old lock removed, 120 files created through npx, no conflicts; no structural migration, no unset settings). FORMAT takes the gusta skill and GUSTA_* names, the 0.15.0 session-mode, inbox, needs-sketch, verification-owner and ideation lines and principle 5's policy-approval sentence; the 65a1f82b overrides stay. SETTINGS preamble renamed. Lint identical before/after (0 errors, 80 warnings).
 - 261112 T770 done
 - 261112 T769 done
 - 261112 T767 done
