@@ -144,6 +144,7 @@
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
 - 261113 decided T780 review/performance-design-system-261113: valid distinct-URL explicit refresh fails because every rebuilt owner repeats force? → add a hook-owned once-per-explicit-attempt transaction with pending sharing/failure retention, keeping actual renewal invalidation and the existing session quota (alt: raise retry cap | suppress all HTTP renewal | simple Set with failure fallback). Unstarted claim72043a21 released before replan; no worker/source edits existed.
+- 261113 decided T781 review/performance-design-system-261113: real changed-save leases hydrate after ACK and can stop playback again? → preserve full access invalidation and add a private-intent exception only for producer-bound typed, same-generation, confirmed available strictly future lease extensions at identical composition/revisions (alt: omit expiry from access key | parse opaque hints | claim constant-lease fixture covers production). Two runtime DTO wiring paths added before claim; shortening/withdrawal/malformed/generation change and all explicit cancellation fail closed, fresh source/frame gates required. Independent design safety review passed; source approval remains separate.
 
 ## ideation
 | id | st |
@@ -238,13 +239,13 @@
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
+- 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
 - 261112 T771 done
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
 - 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
 - 261112 T772 done
 - 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
 - 261112 create-task ARCH r23: T771 moves the CI and pre-push skill check to gusta, drops the haeram-spec-creator devDependency and refreshes the ink identity; ARCH fully tasked
-- 261112 update-ssot ARCH r23: ARCH-30 verifies skills with gusta through npx at the .gusta-lock.json version; ARCH-31 cites it unchanged and no active task cites ARCH-30
 - 261112 T770 done
 - 261112 T769 done
 - 261112 T767 done
