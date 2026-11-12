@@ -211,6 +211,7 @@
 - no runnable task: resolve blocked, parked or deps
 
 ## log
+- 261112 updates haeram-spec-creator 0.13.0→gusta 0.15.0 (rename without a compatibility layer: 20 skills and the old lock removed, 120 files created through npx, no conflicts; no structural migration, no unset settings). FORMAT takes the gusta skill and GUSTA_* names, the 0.15.0 session-mode, inbox, needs-sketch, verification-owner and ideation lines and principle 5's policy-approval sentence; the 65a1f82b overrides stay. SETTINGS preamble renamed. Lint identical before/after (0 errors, 80 warnings).
 - 261112 T770 done
 - 261112 T769 done
 - 261112 T767 done
@@ -230,4 +231,3 @@
 - 261112 updates haeram-spec-creator 0.12.2→0.13.0 (50 skill files updated, 2 created, no conflicts; no structural migration, no unset settings). FORMAT takes the 0.13.0 task start/done CLI, CI-unchecked and reports exception lines plus the permission-mode/headless-mcp settings keys; the four 65a1f82b overrides (decision n, [x], chg pruning, log history) stay. Lint identical before/after (0 errors, 82 warnings). 12c1f59a refreshes the browser ink identity for the new lockfile SHA; clip/clip-design Go, 46 FE files/294 tests, tsc, eslint, prettier, gofmt, vet pass. No code push.
 - 261112 T758 done
 - 261112 ui12 final bounded follow-up: source checkpoint99b79a95 combines approved voice fix74e456ca and refusal-test correction75f4eb8c,41 files recovered byte-for-byte; bundle verifies against publishedada6afc2. Main product source remains through T757; four diagnosed cases and T758 whole-task gates remain open. Publish all progress as recovery data, with no continuing local automation.
-- 261112 ui12: preserve latest40-file T758 recovery after independent P2 and5 remaining frontend failures; task todo, source not integrated.
