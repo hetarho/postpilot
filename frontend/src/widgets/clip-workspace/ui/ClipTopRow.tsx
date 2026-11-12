@@ -52,7 +52,11 @@ export function ClipTopRow({
         <ArrowLeft aria-hidden="true" className="size-5 shrink-0" />
         <span className="min-w-0 break-words underline">{returnTo.label}</span>
       </a>
-      {steps}
+      {steps && (
+        <div className="order-last w-full min-w-0 overflow-x-auto overscroll-x-contain sm:order-none sm:w-auto sm:flex-1">
+          {steps}
+        </div>
+      )}
       {actions && <div className="ml-auto flex shrink-0 items-center gap-2">{actions}</div>}
       {status}
     </div>

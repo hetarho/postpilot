@@ -73,6 +73,9 @@ function SamplePlayer({
       if (abort.current.signal.aborted) return
       await audio.current?.play()
     } catch (error) {
+      // A pause before playback starts (the owner's, or a hidden screen's) interrupts the play
+      // request with AbortError; the sample itself did not fail.
+      if (error instanceof DOMException && error.name === 'AbortError') return
       if (!abort.current.signal.aborted) onFailure?.(error)
     } finally {
       if (!abort.current.signal.aborted) setLoading(false)

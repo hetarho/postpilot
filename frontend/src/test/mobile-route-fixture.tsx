@@ -195,10 +195,12 @@ if (scenario === 'finalized') {
     resultId: 'render-1',
   }
 }
-if (scenario === 'draft') {
+if (scenario === 'draft' || scenario === 'draft-instagram') {
   options.posts!.posts![0] = { ...options.posts!.posts![0], status: 'draft', content: undefined }
   options.clips!.projects![0] = {
     ...options.clips!.projects![0],
+    // The same saved, not yet generated clip resumed in the other clip channel.
+    ...(scenario === 'draft-instagram' && { channel: 'instagram_clip' as const }),
     editing: undefined,
     result: undefined,
     editPlanRevision: 0,

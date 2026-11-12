@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { afterEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -45,6 +46,7 @@ describe('template-defined project inputs', () => {
         ],
       },
     })
+    await clipGuideTo('story')
     const names = await screen.findAllByLabelText('메뉴 이름')
     expect(names).toHaveLength(2)
     expect(names[0]).toHaveValue('파스타')
@@ -91,25 +93,31 @@ describe('template-defined project inputs', () => {
         ],
       },
     })
+    await clipGuideTo('story')
     await screen.findByLabelText('클립 제목')
     expect(screen.queryByRole('combobox', { name: /체험단|프리셋/ })).not.toBeInTheDocument()
     // The group holds a required field, so it opens at one item (CLIP-119) and
     // that item cannot be removed; one more makes the pair this case removes from.
+    await clipGuideTo('story')
     expect(screen.getAllByLabelText('메뉴 이름')).toHaveLength(1)
     expect(screen.queryByRole('button', { name: '메뉴 1 삭제' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '메뉴 추가' }))
+    await clipGuideTo('story')
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[0], { target: { value: '파스타' } })
+    await clipGuideTo('story')
     fireEvent.change(screen.getAllByLabelText('메뉴 이름')[1], { target: { value: '피자' } })
     // Let the autosave those edits started land before pressing anything. It re-seeds the form
     // from its own answer, which replaces these rows' nodes; a click captured before that
     // lands on a node React has already dropped, and the removal silently never happens.
     await waitFor(() => expect(writes.length).toBeGreaterThan(0))
     const beforeRemoval = writes.length
+    await clipGuideTo('story')
     const secondId = screen.getAllByLabelText('메뉴 이름')[1].id
     await user.click(screen.getByRole('button', { name: '메뉴 1 삭제' }))
     // Asserted together on the state the form settles into, rather than one line at a time:
     // a save that was already on its way re-seeds the fields from the answer it gets, so the
     // removed row can flash back for a frame before the newer draft wins.
+    await clipGuideTo('story')
     await waitFor(() => {
       const names = screen.getAllByLabelText('메뉴 이름')
       expect(names).toHaveLength(1)
@@ -155,11 +163,15 @@ describe('template-defined project inputs', () => {
         ],
       },
     })
+    await clipGuideTo('story')
     expect(await screen.findByLabelText('바뀐 장소 이름')).toHaveValue('서울')
     expect(writes).toHaveLength(0)
+    await clipGuideTo('story')
     await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
     await user.click(await screen.findByRole('option', { name: '다른 구성' }))
+    await clipGuideTo('story')
     expect(screen.getByLabelText('바뀐 장소 이름')).toHaveValue('')
+    await clipGuideTo('story')
     fireEvent.change(screen.getByLabelText('바뀐 장소 이름'), { target: { value: '제주' } })
     await waitFor(() =>
       expect(writes).toContainEqual(
@@ -202,6 +214,7 @@ describe('template-defined project inputs', () => {
         ],
       },
     })
+    await clipGuideTo('story')
     expect(await screen.findByLabelText('촬영 장소')).toHaveValue('서울')
     expect(screen.getByLabelText('추가 정보')).toHaveValue('')
     expect(writes).toHaveLength(0)

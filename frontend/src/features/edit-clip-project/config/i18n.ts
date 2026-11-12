@@ -4,6 +4,23 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    preparation: {
+      optionalEmpty: '입력한 내용 없음 (선택 사항)',
+      titleEmpty: '제목을 입력해 주세요.',
+      durationEmpty: '목표 길이를 정해 주세요.',
+      campaignOn: '체험단 글 · 광고주 가이드 사용',
+      campaignOff: '체험단 글 아님 · 보관한 가이드는 사용하지 않아요.',
+      keywords: '필수 키워드: {{value}}',
+      hashtags: '필수 해시태그: {{value}}',
+      answers: '템플릿 답변',
+      narrationOn: '더빙 사용',
+      narrationOff: '더빙 사용 안 함 · 원본 소리는 소스별 선택을 따라요.',
+      voice: '확정 목소리: {{name}}',
+      voiceLoading: '확정 목소리를 확인하는 중이에요.',
+      voiceFailed: '확정 목소리를 불러오지 못했어요. 스타일에서 다시 확인해 주세요.',
+      voiceMissing: '사용할 수 있는 확정 목소리를 스타일에서 선택해 주세요.',
+      disclosureOff: '영상에 광고·협찬 표시 안 함',
+    },
     linkedPost: {
       title: '글 연결',
       none: '없음',
@@ -124,6 +141,23 @@ export const i18n = {
     },
   },
   en: {
+    preparation: {
+      optionalEmpty: 'Not entered (optional)',
+      titleEmpty: 'Enter a title.',
+      durationEmpty: 'Choose a target duration.',
+      campaignOn: 'Campaign content · use advertiser guide',
+      campaignOff: 'Not campaign content · retained guide is not used.',
+      keywords: 'Required keywords: {{value}}',
+      hashtags: 'Required hashtags: {{value}}',
+      answers: 'Template answers',
+      narrationOn: 'Use dubbing',
+      narrationOff: 'No dubbing · original sound follows each source’s selection.',
+      voice: 'Confirmed voice: {{name}}',
+      voiceLoading: 'Checking the confirmed voice.',
+      voiceFailed: 'Could not load the confirmed voice. Check again in Style.',
+      voiceMissing: 'Choose an available confirmed voice in Style.',
+      disclosureOff: 'Do not show campaign disclosure in the video',
+    },
     linkedPost: {
       title: 'Linked post',
       none: 'None',

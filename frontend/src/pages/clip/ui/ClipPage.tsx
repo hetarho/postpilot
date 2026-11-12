@@ -114,7 +114,15 @@ export function ClipPage() {
     // `flex-1 flex-col` here plus `mt-auto` on a dock is what puts the bar at the BOTTOM of a
     // short panel: `sticky` can only pull an element up toward the scrollport edge, never push
     // one down.
-    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-8' })}>
+    // Only the preparation guide's step dock meets a phone's bottom edge; every other view keeps
+    // the page padding under its content or its own dock.
+    <main
+      className={pageStyles({
+        width: 'workspace',
+        className:
+          'flex flex-1 flex-col pb-8 max-sm:has-[[data-action-bar=step]:not([hidden]_*)]:pb-0',
+      })}
+    >
       {!clipId ? (
         <NewClip
           key={`${ownerId}-${channel}-${search.template ?? ''}`}
@@ -126,15 +134,17 @@ export function ClipPage() {
         />
       ) : query.data ? (
         <>
-          <ClipImportFeedback
-            key={`import-${ownerId}-${clipId}`}
-            ownerId={ownerId}
-            clipId={clipId}
-          />
           <ClipWorkspace
             key={`${user?.id}-${clipId}`}
             ownerId={user?.id ?? ''}
             project={query.data}
+            sourceFeedback={
+              <ClipImportFeedback
+                key={`import-${ownerId}-${clipId}`}
+                ownerId={ownerId}
+                clipId={clipId}
+              />
+            }
           />
         </>
       ) : query.isPending ? (

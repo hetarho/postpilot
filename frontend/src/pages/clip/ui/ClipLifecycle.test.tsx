@@ -330,7 +330,9 @@ it('opens a plan with no render as a plan to review, not as a missing result', a
   expect(screen.getByRole('region', { name: '편집 중인 영상' })).toBeVisible()
   expect(screen.getByText('수정됨 · 다시 출력 필요')).toBeVisible()
   expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()
-  expect(screen.queryByText(/실패/)).not.toBeInTheDocument()
+  // ①'s retained review (hidden on ②) states the credit policy for failed work; nothing
+  // visible says this attempt failed.
+  for (const text of screen.queryAllByText(/실패/)) expect(text).not.toBeVisible()
   expect(screen.queryByText(/아직 다듬을 편집안이 없어요/)).not.toBeInTheDocument()
   // 확정하기 waits for a render to confirm (CLIP-40, CLIP-152): until then the dock's one action
   // is the render, and it carries the step's own emphasis.

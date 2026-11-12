@@ -1,3 +1,5 @@
+import { discardClipDraftQueues } from '@/features/edit-clip-project'
+import { clipGuideTo } from '@/test/clip-preparation'
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -24,6 +26,7 @@ import type { FakePlansOptions } from '@/test/plans'
 
 /** ①'s 바로 만들기 opens its own quote and approval (CLIP-177): open it, then the approve button. */
 async function openApproval(amount: number) {
+  await clipGuideTo('review')
   const trigger = await screen.findByRole('button', { name: '바로 만들기' })
   await waitFor(() => expect(trigger).toBeEnabled())
   if (trigger.getAttribute('aria-expanded') !== 'true') await userEvent.click(trigger)
@@ -90,6 +93,7 @@ afterEach(() => {
   preparationFixture.qualified = true
   preparationFixture.profile = 'clip-browser-analysis-v2'
   discardClipStorylineQueues()
+  discardClipDraftQueues()
   initializeI18n('ko')
 })
 
@@ -192,7 +196,7 @@ it('reopens a waiting media job, keeps its focused controls through recovery, an
     )
   await screen.findByRole('progressbar', { name: '영상 렌더링 대기 중' })
   expect(screen.getByRole('button', { name: '취소' })).toBeEnabled()
-  expect(screen.queryByLabelText('클립 제목')).not.toBeInTheDocument()
+  expect(screen.queryByRole('textbox', { name: '클립 제목' })).not.toBeInTheDocument()
   for (const [stage, label] of [
     ['render', '영상 렌더링'],
     ['render_retry', '영상 렌더링 재시도 대기 중'],
@@ -230,9 +234,11 @@ it.each(['CLIP_MEDIA_UNAVAILABLE', 'CLIP_MEDIA_RETRY_EXHAUSTED', 'CLIP_MEDIA_TIM
       { jobs: [job] },
     )
     await goToStep('생성')
+    await clipGuideTo('review')
     expect(
       await screen.findByText(/잠시 후 다시 시도하세요\. 완료된 분석과 이전 결과는 유지됩니다/),
     ).toBeVisible()
+    await clipGuideTo('review')
     expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
     expect(starts).toHaveLength(0)
     await goToStep('수정')
@@ -259,11 +265,14 @@ async function selectSource() {
   vi.mocked(putBlobWithProgress).mockResolvedValue()
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:clip-source')
   const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+  await clipGuideTo('sources')
   const input = await screen.findByLabelText(/^원본 영상 (다시 )?선택$/)
   await waitFor(() => expect(input).toBeEnabled())
   const user = userEvent.setup()
   await user.upload(input, file)
+  await clipGuideTo('sources')
   await screen.findByText('업로드 확인 완료')
+  await clipGuideTo('review')
   return { user, revoke }
 }
 // CDS-81: the approval says what the frame-by-frame captions add to the render
@@ -336,14 +345,17 @@ it('approves once, retains local previews after terminal and refetches the resul
     cancellationPolicyVersion: 1,
   })
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
-    'src',
-    'blob:clip-source',
-  )
-  expect(screen.queryByLabelText('클립 제목')).not.toBeInTheDocument()
+  expect(
+    within(screen.getByRole('region', { name: '클립 작업 진행' })).getByLabelText('clip.mp4', {
+      selector: 'video',
+    }),
+  ).toHaveAttribute('src', 'blob:clip-source')
+  expect(screen.queryByRole('textbox', { name: '클립 제목' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
   expect(screen.queryByRole('combobox', { name: /관찰/ })).not.toBeInTheDocument()
   expect(screen.getAllByRole('progressbar')).toHaveLength(1)
+  // The focused run owns the screen: ①'s retained panel leaves no empty step panel exposed.
+  expect(screen.queryByRole('tabpanel')).not.toBeInTheDocument()
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuemax', '3')
   job.status = 'done'
@@ -361,7 +373,7 @@ it('approves once, retains local previews after terminal and refetches the resul
   // A successful render stays unfinalized in correction.
   const video = await screen.findByLabelText('클립 미리보기')
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.queryByLabelText('clip.mp4')).not.toBeInTheDocument()
+  for (const local of screen.queryAllByLabelText('clip.mp4')) expect(local).not.toBeVisible()
   expect(video).toHaveAttribute('src', result.viewUrl)
   expect(video).toHaveAttribute('controls')
   expect(video).toHaveAttribute('preload', 'metadata')
@@ -445,10 +457,12 @@ it('keeps an older result visible on a durable credit refusal and requires a new
   }
   mount({ projects: [{ ...project, result, latestJob: job }] }, { jobs: [job] })
   await goToStep('생성')
-  // Explicit AI retry is on the generation step; the previous render stays in correction.
+  // Explicit AI retry is on review; the previous render stays in correction.
+  await clipGuideTo('review')
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   expect(screen.getByText('원본 준비 중 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
+  await clipGuideTo('review')
   expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   // The previous successful result is untouched, one tab away (CLIP-26).
   await goToStep('수정')
@@ -476,6 +490,8 @@ it.each([
         {
           id: 'source',
           state: 'ready',
+          // A ready retained source carries the bytes the server verified on upload.
+          actualBytes: 5n,
           availability,
           retentionExpiresAt:
             availability === 'available' ? '2099-01-01T00:00:00Z' : '2020-01-01T00:00:00Z',
@@ -498,6 +514,7 @@ it.each([
       '보관 기간이 지나 원본 영상이 없어요. 다시 만들려면 원본 영상을 새로 선택해 주세요.'
     if (asked) expect(await screen.findByText(line)).toBeInTheDocument()
     else {
+      await clipGuideTo('review')
       await waitFor(() => expect(screen.getByRole('button', { name: '바로 만들기' })).toBeEnabled())
       expect(screen.queryByText(line)).not.toBeInTheDocument()
     }
@@ -535,11 +552,13 @@ it('blocks an observer the server refuses, says why, and never substitutes anoth
     eligibility: [{ providerId: 'p', modelId: 'o', status: 'video_input_absent' }],
   })
   await selectSource()
+  await clipGuideTo('review')
   expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   expect(starts).toHaveLength(0)
   expect(calls).not.toContain('QuoteClipGeneration')
   // The saved choice stays selected and the reason sits beside the field and in the
   // action's readiness line; nothing was saved over it.
+  await clipGuideTo('review')
   const observe = screen.getByRole('combobox', { name: /관찰 모델/ })
   expect(observe).toHaveTextContent('Video observer')
   expect(screen.getAllByText('영상 입력을 받지 않는 모델이에요').length).toBeGreaterThanOrEqual(1)
@@ -615,6 +634,7 @@ it('greys every ineligible observer with its one reason and keeps the refused sa
     many,
   )
   const user = userEvent.setup()
+  await clipGuideTo('review')
   const observe = await screen.findByRole('combobox', { name: /관찰 모델/ })
   await waitFor(() => expect(observe).toBeEnabled())
   // The refused saved choice is still the field's value, with its reason described.
@@ -642,7 +662,9 @@ it('fails the clip action closed while eligibility loads or cannot be read, and 
   const calls: string[] = []
   mount({ eligibilityFails: () => down, calls })
   await selectSource()
+  await clipGuideTo('review')
   expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
+  await clipGuideTo('review')
   await screen.findAllByText(/관찰 모델이 클립 분석에 쓸 수 있는지 확인하지 못했어요/)
   expect(calls).not.toContain('QuoteClipGeneration')
   expect(screen.queryByText(/NETWORK_UNAVAILABLE/)).not.toBeInTheDocument()
@@ -702,11 +724,14 @@ it('resolves a lost accepted response by owned identity reads without replaying 
   await waitFor(() => expect(screen.queryByText(/요청의 접수 여부를 확인/)).not.toBeInTheDocument())
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
-    'src',
-    'blob:clip-source',
-  )
-  expect(screen.queryByLabelText(/^원본 영상 (다시 )?선택$/)).not.toBeInTheDocument()
+  expect(
+    within(screen.getByRole('region', { name: '클립 작업 진행' })).getByLabelText('clip.mp4', {
+      selector: 'video',
+    }),
+  ).toHaveAttribute('src', 'blob:clip-source')
+  // ①'s retained picker stays mounted behind the focused run, but nothing offers a reselection.
+  for (const picker of screen.queryAllByLabelText(/^원본 영상 (다시 )?선택$/))
+    expect(picker).not.toBeVisible()
   view.unmount()
   expect(revoke).toHaveBeenCalledExactlyOnceWith('blob:clip-source')
   expect(calls).not.toContain('DiscardClipSourceBatch')
@@ -739,10 +764,12 @@ it('does not attach an ambiguous selection to a different tab’s terminal job',
   await user.click(screen.getByRole('button', { name: '접수된 작업 다시 확인' }))
   expect(starts).toHaveLength(1)
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
-    'src',
-    'blob:clip-source',
-  )
+  // The unresolved local run stays focused, so its visible read-only selection keeps the file.
+  expect(
+    within(screen.getByRole('region', { name: '클립 작업 진행' })).getByLabelText('clip.mp4', {
+      selector: 'video',
+    }),
+  ).toHaveAttribute('src', 'blob:clip-source')
   view.unmount()
 })
 
@@ -751,19 +778,46 @@ it('does not attach an ambiguous selection to a different tab’s terminal job',
 it('keeps the open quote while ① is typed in and saves the settings before starting', async () => {
   const calls: string[] = [],
     starts: unknown[] = [],
-    writes: ClipProjectDraft[] = []
-  mount({ calls, generationStarts: starts, projectWrites: writes })
+    writes: ClipProjectDraft[] = [],
+    quotes: unknown[] = []
+  mount({ calls, generationStarts: starts, projectWrites: writes, quoteRequests: quotes })
   const { user } = await selectSource()
   await openApproval(20)
+  await clipGuideTo('story')
   fireEvent.change(screen.getByLabelText('클립 제목'), { target: { value: '제주 여행 2' } })
-  expect(screen.getByRole('button', { name: /승인하고 생성/ })).toBeInTheDocument()
+  await clipGuideTo('sources')
   expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeEnabled()
-  const approve = await screen.findByRole('button', { name: /승인하고 생성/ })
+  // The approval stayed open behind the other questions, and typing never re-read its quote.
+  await clipGuideTo('review')
+  expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  )
+  expect(quotes).toHaveLength(1)
+  const approve = await openApproval(20)
   await waitFor(() => expect(approve).toBeEnabled())
   await user.click(approve)
   await waitFor(() => expect(starts).toHaveLength(1))
   expect(writes.at(-1)?.title).toBe('제주 여행 2')
   expect(calls.lastIndexOf('UpdateClipProject')).toBeLessThan(calls.indexOf('StartClipGeneration'))
+})
+
+it('starts no work after a failed preparation flush and keeps the local edit and save retry reachable', async () => {
+  const calls: string[] = [],
+    starts: unknown[] = []
+  mount({ calls, generationStarts: starts, projectSaveFails: true })
+  const { user } = await selectSource()
+  await clipGuideTo('story')
+  fireEvent.change(screen.getByRole('textbox', { name: '클립 제목' }), {
+    target: { value: '저장 실패해도 남는 제목' },
+  })
+  await user.click(await openApproval(20))
+  await screen.findByText('저장하지 못했어요. 입력을 확인하고 저장을 다시 시도해 주세요.')
+  expect(starts).toHaveLength(0)
+  expect(calls).not.toContain('StartClipGeneration')
+  expect(screen.getByRole('button', { name: '바로잡기' })).toBeEnabled()
+  await clipGuideTo('story')
+  expect(screen.getByRole('textbox', { name: '클립 제목' })).toHaveValue('저장 실패해도 남는 제목')
 })
 
 it('refreshes the quote after a model change and never starts while that choice is saving', async () => {
@@ -782,9 +836,14 @@ it('refreshes the quote after a model change and never starts while that choice 
   )
   const { user } = await selectSource()
   await openApproval(20)
+  // The models sit on review beside the open approval; changing one re-reads its quote.
   await user.click(screen.getByRole('combobox', { name: /작성/ }))
   await user.click(screen.getByRole('option', { name: 'Writer two' }))
   await waitFor(() => expect(quotes).toHaveLength(2))
+  expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  )
   expect(quotes[1]).toMatchObject({ writeModel: { providerId: 'p', modelId: 'w2' } })
   expect(starts).toHaveLength(0)
 })
@@ -817,10 +876,11 @@ it('finishes the locally owned job even when another tab becomes the latest proj
     view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
   )
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
-    'src',
-    'blob:clip-source',
-  )
+  expect(
+    within(screen.getByRole('region', { name: '클립 작업 진행' })).getByLabelText('clip.mp4', {
+      selector: 'video',
+    }),
+  ).toHaveAttribute('src', 'blob:clip-source')
   own.status = 'failed'
   await act(() =>
     view.queryClient.refetchQueries({
@@ -832,14 +892,18 @@ it('finishes the locally owned job even when another tab becomes the latest proj
       }),
     }),
   )
+  // The other tab's job is still running and stays focused; the visible read-only selection
+  // keeps the local file and offers no reselection.
+  const progress = () => within(screen.getByRole('region', { name: '클립 작업 진행' }))
   await waitFor(() =>
-    expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
+    expect(progress().getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
       'src',
       'blob:clip-source',
     ),
   )
   expect(revoke).not.toHaveBeenCalled()
-  expect(screen.queryByLabelText(/^원본 영상 (다시 )?선택$/)).not.toBeInTheDocument()
+  for (const picker of screen.queryAllByLabelText(/^원본 영상 (다시 )?선택$/))
+    expect(picker).not.toBeVisible()
 })
 
 it('replaces source-bound quotes and sends only the newly displayed quote', async () => {
@@ -849,6 +913,12 @@ it('replaces source-bound quotes and sends only the newly displayed quote', asyn
   await selectSource()
   await openApproval(20)
   const { user } = await selectSource()
+  // The approval stayed open behind the source screen; back on review it shows the quote for
+  // the new sources, read without reopening it.
+  expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAttribute(
+    'aria-expanded',
+    'true',
+  )
   await waitFor(() => expect(quotes).toHaveLength(2))
   await user.click(await openApproval(20))
   await waitFor(() => expect(starts).toHaveLength(1))
@@ -949,6 +1019,7 @@ it('displays a pricing refusal beside generation while leaving the previous resu
   await goToStep('생성')
   await selectSource()
   // The quote is read from the action that asks for it (CLIP-177), and its refusal is said there.
+  await clipGuideTo('review')
   const trigger = await screen.findByRole('button', { name: '바로 만들기' })
   await waitFor(() => expect(trigger).toBeEnabled())
   await userEvent.click(trigger)
@@ -1030,10 +1101,11 @@ it('releases previews immediately on logout and pagehide without discarding an a
   const { user, revoke } = await selectSource()
   await user.click(await openApproval(20))
   await screen.findByRole('progressbar', { name: '원본 준비 중' })
-  expect(screen.getByLabelText('clip.mp4', { selector: 'video' })).toHaveAttribute(
-    'src',
-    'blob:clip-source',
-  )
+  expect(
+    within(screen.getByRole('region', { name: '클립 작업 진행' })).getByLabelText('clip.mp4', {
+      selector: 'video',
+    }),
+  ).toHaveAttribute('src', 'blob:clip-source')
   expect(screen.queryByRole('button', { name: '선택 취소' })).not.toBeInTheDocument()
   expect(calls).not.toContain('CancelClipJob')
   act(endSession)
@@ -1053,14 +1125,16 @@ it('opens a separate approval for 스토리라인 먼저 and starts the storylin
   mount({ storylineStarts, generationStarts })
   await goToStep('생성')
   await selectSource()
+  await clipGuideTo('review')
   const dock = (await screen.findByRole('button', { name: '바로 만들기' })).closest(
     '[data-action-bar]',
   )!
   expect(
     within(dock as HTMLElement)
       .getAllByRole('button')
-      .map((button) => button.textContent),
-  ).toEqual(['스토리라인 먼저', '바로 만들기'])
+      .map((button) => button.getAttribute('aria-label') || button.textContent),
+  ).toEqual(['스타일로 이전', '스토리라인 먼저', '바로 만들기'])
+  await clipGuideTo('review')
   const trigger = screen.getByRole('button', { name: '스토리라인 먼저' })
   await waitFor(() => expect(trigger).toBeEnabled())
   await userEvent.click(trigger)
@@ -1327,6 +1401,7 @@ it('does not activate a qualified readiness record for a different analysis prof
   preparationFixture.profile = 'unrecognized-profile'
   mount()
   const { user } = await selectSource()
+  await clipGuideTo('review')
   await user.click(await screen.findByRole('button', { name: '바로 만들기' }))
   expect(await screen.findByText('서버에서 원본 영상을 준비하고 분석해요.')).toBeVisible()
   expect(preparationFixture.runs).toBe(0)

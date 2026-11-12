@@ -107,3 +107,33 @@ it('abandons an in-flight private download without playback or acknowledgment on
   expect(played).not.toHaveBeenCalled()
   expect(URL.createObjectURL).not.toHaveBeenCalled()
 })
+
+it('treats a play request interrupted by a pause as no failure, but reports a refused one', async () => {
+  const f = spokenVoiceFixture(),
+    failed = vi.fn(),
+    user = userEvent.setup()
+  vi.mocked(HTMLMediaElement.prototype.play)
+    .mockRejectedValueOnce(new DOMException('The play() request was interrupted.', 'AbortError'))
+    .mockRejectedValueOnce(new DOMException('Autoplay is not allowed.', 'NotAllowedError'))
+  render(
+    <TransportProvider transport={f.transport}>
+      <QueryClientProvider client={createTestQueryClient()}>
+        <SpokenSamplePlayer
+          ownerId="alice"
+          assetId={'4'.repeat(32)}
+          name="Sample"
+          durationMs={1500}
+          onFailure={failed}
+        />
+      </QueryClientProvider>
+    </TransportProvider>,
+  )
+  await user.tab()
+  await user.keyboard('{Enter}')
+  await waitFor(() => expect(HTMLMediaElement.prototype.play).toHaveBeenCalledOnce())
+  await waitFor(() => expect(document.activeElement).toBeEnabled())
+  expect(failed).not.toHaveBeenCalled()
+  await user.keyboard('{Enter}')
+  await waitFor(() => expect(failed).toHaveBeenCalledOnce())
+  expect(failed.mock.calls[0]?.[0]).toMatchObject({ name: 'NotAllowedError' })
+})

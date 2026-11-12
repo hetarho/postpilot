@@ -28,6 +28,7 @@ export interface ClipGenerationContext {
   ready: boolean
   pending: boolean
   preparationRoute?: ClipAnalysisPreparationRoute
+  describedBy?: string
   onApprove(mode: ClipQuoteMode, quote: ClipQuote): void
 }
 
@@ -35,24 +36,39 @@ export interface ClipGenerationContext {
  *  path left and the committing one right; enlarged text can give each a full row. Each opens its own
  *  quote and approval from itself (a popover, a sheet on a phone), so the ceiling the owner
  *  approves is the one for the work that button starts. The quote is read only while it is open. */
-export function ClipGenerationActions(context: ClipGenerationContext) {
+export function ClipGenerationActions({
+  stepBar = false,
+  ...context
+}: ClipGenerationContext & { stepBar?: boolean }) {
   const { t } = useTranslation('clips')
-  return (
-    <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:items-center sm:justify-end">
+  const actions = (
+    <>
       <ClipQuotedPopover
         {...context}
         mode="storyline"
-        className="min-w-0 grow-[3] basis-28 sm:grow-0 sm:basis-auto"
+        className={stepBar ? 'min-w-0' : 'min-w-0 grow-[3] basis-28 sm:grow-0 sm:basis-auto'}
         label={t('generation.storylineFirst')}
         variant="secondary"
       />
       <ClipQuotedPopover
         {...context}
         mode="generate"
-        className="min-w-0 grow-[7] basis-28 sm:grow-0 sm:basis-auto"
+        hero={stepBar}
+        // In the step bar the committing action keeps its label on one line while a row can
+        // hold it; a row too narrow for all three moves it to a full row of its own instead.
+        className={
+          stepBar ? 'min-w-fit flex-1' : 'min-w-0 grow-[7] basis-28 sm:grow-0 sm:basis-auto'
+        }
         label={t('generation.makeNow')}
         variant="cta"
       />
+    </>
+  )
+  return stepBar ? (
+    actions
+  ) : (
+    <div className="flex w-full flex-wrap gap-3 sm:w-auto sm:items-center sm:justify-end">
+      {actions}
     </div>
   )
 }
@@ -118,6 +134,7 @@ export function ClipStorylineBuildActions(
 /** One generation action: its trigger, and the quote and approval it opens from itself. */
 function ClipQuotedPopover({
   className,
+  hero = false,
   mode,
   label,
   variant,
@@ -127,6 +144,7 @@ function ClipQuotedPopover({
   label: string
   variant: 'secondary' | 'cta'
   className?: string
+  hero?: boolean
 }) {
   const {
     ownerId,
@@ -139,6 +157,7 @@ function ClipQuotedPopover({
     pending,
     onApprove,
     preparationRoute,
+    describedBy,
   } = context
   const live = ready && !!batch && !!observe && !!write
   return (
@@ -148,7 +167,9 @@ function ClipQuotedPopover({
       triggerLabel={label}
       triggerVariant={variant}
       triggerPending={pending}
-      triggerClassName="w-full sm:w-auto"
+      triggerClassName={hero ? 'w-full' : 'w-full sm:w-auto'}
+      triggerSize={hero ? 'hero' : undefined}
+      triggerAttributes={{ 'aria-describedby': !live ? describedBy : undefined }}
       disabled={!live || pending}
       placement="above"
       align="end"

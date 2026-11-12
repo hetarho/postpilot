@@ -218,7 +218,9 @@ async function select(ids = ['a', 'b']) {
   const revoke = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
   await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
-  const input = screen.getByLabelText('원본 영상 선택')
+  const input = within(screen.getByRole('dialog', { name: '원본 소스' })).getByLabelText(
+    '원본 영상 선택',
+  )
   await waitFor(() => expect(input).toBeEnabled())
   await userEvent.upload(input, files)
   await userEvent.keyboard('{Escape}')
@@ -837,7 +839,10 @@ it('shows a refused server render at once and keeps ② usable', async () => {
   await userEvent.click(screen.getByRole('button', { name: RENDER }))
   await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
   await waitFor(() => expect(calls).toContain('StartClipRender'))
-  expect(await screen.findByText('영상의 2번째 자막을 확인해 주세요.')).toBeVisible()
+  const editor = within(screen.getByRole('region', { name: '컷·자막 수정' }))
+  expect(
+    within(await editor.findByRole('alert')).getByText('영상의 2번째 자막을 확인해 주세요.'),
+  ).toBeVisible()
   expect(screen.queryByText(/요청의 접수 여부를 확인하는 중이에요/)).not.toBeInTheDocument()
   await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
 })

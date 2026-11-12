@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -74,6 +75,7 @@ it('links a post from the picker with title matches first', async () => {
     { id: 'clip', linkedPostSlug: 'match-2', fields: ['id', 'linkedPostSlug'] },
   ])
   expect(calls.filter((name) => /^(Start|Generate|Analyze|Create|SavePost)/.test(name))).toEqual([])
+  await clipGuideTo('story')
   expect(screen.getByRole('textbox', { name: '클립 제목' })).toHaveValue('카페')
 })
 

@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { Blob as NodeBlob, File as NodeFile } from 'node:buffer'
 import { webcrypto } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -321,6 +322,7 @@ describe('making a clip from a finished post', () => {
         },
       }),
     )
+    await clipGuideTo('story')
     await screen.findByRole('textbox', { name: '클립 제목' })
     expect(screen.queryByText(/private.mp4/)).not.toBeInTheDocument()
     await waitFor(() => expect(view.router.state.location.state.clipImport).toBeUndefined())

@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { localSamplesForControls } from '@/test/clip-local-samples'
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
@@ -8,7 +9,7 @@ import { Code } from '@connectrpc/connect'
 import { Stage, ClipSourceBatchSchema, GetMeResponseSchema } from '@/shared/api'
 import { create } from '@bufbuild/protobuf'
 import { clipRegionRows } from '@/entities/clip-plan'
-import { clipProjectsKey, type ClipProject } from '@/entities/clip-project'
+import { clipProjectsKey, emptyCompositionInputs, type ClipProject } from '@/entities/clip-project'
 import { myPlanQueryKey } from '@/entities/plan'
 import { seedSessionCache } from '@/entities/session'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
@@ -577,8 +578,11 @@ it('writes the slots on ② before any template, storyline or plan', async () =>
 it('turns a region off and on from ①, keeping its slots', async () => {
   const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
   await mount(bare(), { regionWrites }, {}, 'tab')
+  await clipGuideTo('style')
   await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+  await clipGuideTo('style')
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+  await clipGuideTo('style')
   const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
   expect(within(intro).getByRole('radio', { name: '심플 제목' })).toHaveAttribute(
     'aria-checked',
@@ -619,13 +623,17 @@ it('shows the server’s seed when ① chooses a template, the owner’s words k
     {},
     'tab',
   )
+  await clipGuideTo('style')
   await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+  await clipGuideTo('style')
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   expect(within(intro).getByRole('radio', { name: '사용 안 함' })).toHaveAttribute(
     'aria-checked',
     'true',
   )
+  await clipGuideTo('story')
   await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '여행')
+  await clipGuideTo('style')
   await waitFor(
     () =>
       expect(within(intro).getByRole('radio', { name: '심플 제목' })).toHaveAttribute(
@@ -710,7 +718,9 @@ it('keeps unused words, moves them into a slot and restores them with room', asy
 
   // A preset with three slots draws the third again.
   await user.click(screen.getByRole('tab', { name: '생성' }))
+  await clipGuideTo('style')
   await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+  await clipGuideTo('style')
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
   await user.click(screen.getByRole('tab', { name: '수정' }))
@@ -770,7 +780,9 @@ async function selectSources(ids = ['a', 'b']) {
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
   await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   await userEvent.click(screen.getByRole('tab', { name: '원본 영상' }))
-  const input = screen.getByLabelText('원본 영상 선택')
+  const input = within(screen.getByRole('dialog', { name: '원본 소스' })).getByLabelText(
+    '원본 영상 선택',
+  )
   await waitFor(() => expect(input).toBeEnabled())
   await userEvent.upload(input, files)
   await userEvent.keyboard('{Escape}')
@@ -904,8 +916,13 @@ it('shares one set of region words between the storyline block and the correctio
 /** A clip whose plan draws its intro and whose current render matches it, with an id a
  *  finalization can name: the state every committing action below starts from. */
 function rendered(): FakeClipProject {
+  // A project that reached a render was generated, so it froze the grammar's minimum
+  // document even without a template (CLIP-5).
+  const inputs = emptyCompositionInputs()
   const project = storylined({
     videoTemplateId: '',
+    composition: { snapshot: { version: 1, body: '<clip version="1"/>', templateId: '' }, inputs },
+    compositionInputs: inputs,
     introPreset: 'a',
     outroPreset: 'b',
     editPlanRevision: 1,
@@ -1002,6 +1019,21 @@ it('holds the render while a slot holds words it cannot draw', async () => {
   expect(field).toHaveAttribute('aria-invalid', 'true')
   expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
   expect(field).toHaveValue('갂')
+  await userEvent.click(screen.getByRole('tab', { name: '생성' }))
+  await clipGuideTo('review')
+  const create = screen.getByRole('button', { name: '바로 만들기' })
+  expect(create).toBeDisabled()
+  expect(create).toHaveAccessibleDescription(/스토리라인에서 표시된 문구를 바로잡아/)
+  expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
+  await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
+  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
+  // The route lands keyboard focus in the storyline editor it opened, not on the page body.
+  await waitFor(() => expect(document.activeElement).not.toBe(document.body))
+  expect(screen.getByRole('dialog', { name: '스토리라인' }).contains(document.activeElement)).toBe(
+    true,
+  )
+  expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('갂')
+  expect(calls).not.toContain('StartClipGeneration')
   expect(calls).not.toContain('StartClipRender')
 })
 

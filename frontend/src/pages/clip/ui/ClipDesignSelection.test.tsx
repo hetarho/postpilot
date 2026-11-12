@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import {
   failLocalPresetSamplesForControls,
   localSamplesForControls,
@@ -43,8 +44,10 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projectWrites: writes },
     })
+    await clipGuideTo('story')
     const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
     expect(picker).toHaveAccessibleName('영상 템플릿 없음')
+    await clipGuideTo('story')
     await user.type(await screen.findByLabelText('클립 제목'), '고기')
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -61,10 +64,13 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], regionSampleLabels: labels },
     })
+    await clipGuideTo('style')
     await userEvent
       .setup()
       .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+    await clipGuideTo('style')
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
+    await clipGuideTo('style')
     const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
     // Every preset of each region is offered (CLIP-111, CDS-70).
     expect(within(intro).getAllByRole('radio')).toHaveLength(8)
@@ -103,9 +109,11 @@ describe('① chooses the design, the caption styles and an optional template', 
         regionSamplesFail: true,
       },
     })
+    await clipGuideTo('style')
     await userEvent
       .setup()
       .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+    await clipGuideTo('style')
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
     expect(intro.querySelector('svg')).not.toBeInTheDocument()
     await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
@@ -124,9 +132,11 @@ describe('① chooses the design, the caption styles and an optional template', 
         sequenceStyles: ['word-pop'],
       },
     })
+    await clipGuideTo('style')
     await userEvent
       .setup()
       .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+    await clipGuideTo('style')
     const styles = await screen.findByRole('group', { name: '자막 스타일' })
     // An empty selection is not "unset": it reads as the default style alone.
     expect(screen.getByText('아무것도 고르지 않으면 크게 강조 하나만 써요.')).toBeInTheDocument()
@@ -150,9 +160,11 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projects: [project], projectWrites: writes },
     })
+    await clipGuideTo('style')
     await userEvent
       .setup()
       .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+    await clipGuideTo('style')
     const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
     await user.click(within(intro).getByRole('radio', { name: '심플 제목' }))
     await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('a'), { timeout: 4000 })
@@ -172,6 +184,7 @@ describe('① chooses the design, the caption styles and an optional template', 
     expect(within(intro).getByRole('radio', { name: '위아래 가로선' })).toHaveFocus()
     await user.keyboard('{ArrowLeft}{ArrowLeft}')
     await waitFor(() => expect(writes.at(-1)?.introPreset).toBe('sticker'), { timeout: 4000 })
+    await clipGuideTo('style')
     const outro = screen.getByRole('radiogroup', { name: '아웃트로 디자인' })
     await user.click(within(outro).getByRole('radio', { name: '칩 줄' }))
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('chips'), { timeout: 4000 })
@@ -192,12 +205,15 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [designed], projects: [project], projectWrites: writes },
     })
+    await clipGuideTo('style')
     await userEvent
       .setup()
       .click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
+    await clipGuideTo('style')
     const outro = await screen.findByRole('radiogroup', { name: '아웃트로 디자인' })
     await user.click(within(outro).getByRole('radio', { name: '원형 도장' }))
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('stamp'), { timeout: 4000 })
+    await clipGuideTo('story')
     const picker = screen.getByRole('combobox', { name: /^영상 템플릿/ })
     await chooseOption(user, picker, '여행')
     await waitFor(
@@ -212,6 +228,7 @@ describe('① chooses the design, the caption styles and an optional template', 
       },
       { timeout: 4000 },
     )
+    await clipGuideTo('style')
     const intro = screen.getByRole('radiogroup', { name: '인트로 디자인' })
     expect(within(intro).getByRole('radio', { name: '매거진 커버' })).toHaveAttribute(
       'aria-checked',
@@ -221,12 +238,14 @@ describe('① chooses the design, the caption styles and an optional template', 
       'aria-checked',
       'true',
     )
+    await clipGuideTo('style')
     const styles = screen.getByRole('group', { name: '자막 스타일' })
     expect(within(styles).getByRole('checkbox', { name: /네온 사인/ })).toBeChecked()
     // The settled form is in sync: no further write pushes the old selection back.
     const settled = writes.length
     await new Promise((resolve) => setTimeout(resolve, 1500))
     expect(writes).toHaveLength(settled)
+    await clipGuideTo('story')
     await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '없음')
     await waitFor(
       () => {
@@ -247,7 +266,9 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [designed], projectWrites: writes },
     })
+    await clipGuideTo('story')
     await chooseOption(user, await screen.findByRole('combobox', { name: /^영상 템플릿/ }), '여행')
+    await clipGuideTo('story')
     await user.type(screen.getByLabelText('클립 제목'), '고기')
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -267,14 +288,18 @@ it('opens the phone gallery explicitly and retains the selected design and curre
     calls,
     clips: { templates: [template], projects: [project], projectWrites: writes, calls },
   })
+  await clipGuideTo('style')
   const toggle = await screen.findByRole('button', { name: '디자인과 자막 스타일' })
   expect(toggle).toHaveAttribute('aria-expanded', 'false')
   expect(screen.queryByRole('radiogroup', { name: '인트로 디자인' })).not.toBeInTheDocument()
+  await clipGuideTo('style')
   expect(
     screen.getByText(/인트로 위아래 가로선.*아웃트로 점수 강조.*자막 스타일 1종/),
   ).toBeInTheDocument()
+  await clipGuideTo('story')
   const request = screen.getByLabelText('클립에 담고 싶은 내용 (선택)')
   await user.type(request, '모바일에서 입력하던 요청')
+  await clipGuideTo('style')
   await user.click(toggle)
   await user.click(
     within(screen.getByRole('radiogroup', { name: '인트로 디자인' })).getByRole('radio', {
@@ -282,9 +307,13 @@ it('opens the phone gallery explicitly and retains the selected design and curre
     }),
   )
   await user.click(toggle)
+  await clipGuideTo('story')
+  expect(request).toBeVisible()
   expect(request).toHaveValue('모바일에서 입력하던 요청')
+  await clipGuideTo('style')
   expect(screen.getByText(/인트로 심플 제목.*아웃트로 점수 강조/)).toBeInTheDocument()
   await user.click(toggle)
+  await clipGuideTo('style')
   expect(
     within(screen.getByRole('radiogroup', { name: '인트로 디자인' })).getByRole('radio', {
       name: '심플 제목',

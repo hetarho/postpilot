@@ -6,3 +6,5 @@ export {
   type ClipGenerationContext,
 } from './ui/ClipGenerationActions'
 export { ClipCreditSettlement } from './ui/ClipCreditSettlement'
+
+export { readyClipBatch } from './model/preconditions'

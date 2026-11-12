@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { afterEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -28,7 +29,9 @@ describe("the project's own instruction", () => {
   it('is not asked for before there is footage to describe', async () => {
     const user = userEvent.setup()
     renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { templates: [template] } })
+    await clipGuideTo('story')
     await user.type(await screen.findByLabelText('클립 제목'), '고기')
+    await clipGuideTo('story')
     await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
     await user.click(await screen.findByRole('option', { name: '여러 메뉴' }))
     expect(screen.queryByLabelText(/클립에 담고 싶은 내용/)).not.toBeInTheDocument()
@@ -42,6 +45,7 @@ describe("the project's own instruction", () => {
       user: { id: 'alice' },
       clips: { templates: [savedTemplate], projects: [project], projectWrites: writes },
     })
+    await clipGuideTo('story')
     const instruction = await screen.findByLabelText(/클립에 담고 싶은 내용/)
     expect(instruction).toHaveValue('')
     // Nothing is pressed: ①'s settings save themselves a beat after the typing
@@ -58,6 +62,7 @@ describe("the project's own instruction", () => {
       clips: { templates: [savedTemplate], projects: [project] },
     })
     const max = CLIP_PROJECT_LIMITS.instruction
+    await clipGuideTo('story')
     const instruction = await screen.findByLabelText(/클립에 담고 싶은 내용/)
     fireEvent.change(instruction, { target: { value: '가'.repeat(max) } })
     expect(instruction).toHaveValue('가'.repeat(max))
@@ -80,6 +85,7 @@ describe("the project's own instruction", () => {
       clips: { templates: [savedTemplate], projects: [project], projectWrites: writes },
     })
     const max = CLIP_PROJECT_LIMITS.instruction
+    await clipGuideTo('story')
     const instruction = await screen.findByLabelText(/클립에 담고 싶은 내용/)
     // 1200 characters, only 600 of them syllables.
     const pasted = '가 '.repeat(600)

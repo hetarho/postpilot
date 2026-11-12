@@ -438,6 +438,9 @@ export function useGenerateClip(
         ['failed', 'cancelled'].includes(project.latestJob?.status ?? '')),
     availability,
     eligibility,
+    retryEligibility: () => {
+      void eligibilityQuery.refetch()
+    },
     observeStatus,
     accounting,
     observeRef: observe.selected,

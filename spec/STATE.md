@@ -11,6 +11,7 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
+| t7w | DESKTOP-VKPLS8P | pair | 2026-11-12T00:57Z | 2026-11-12T01:38Z | - |
 
 ## inbox
 - 261112 decided T758: use the remaining additional-hour budget? → preserve the last independently reviewed style-sample P2 fix and one visible-editor refusal assertion correction in the latest41-file unintegrated recovery snapshot99b79a95 plus a Git bundle (alt: omit post-cutoff work | mark the unfinished guide complete). Voice checks86+6 pass and type/lint/format pass; the refusal file31 tests passes, while four named cases and whole-task final gates remain open. Publish all source/review/diagnosis records as recovery data; keep T758todo and verified main product unchanged.
@@ -199,15 +200,15 @@
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
-| T758 | Guide video preparation through retained screens and review | CLIP THEME ARCH | - | todo |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- Device continuation: fetch origin/main, read docs/handoff/ui12/README.md, and restore the latest41-file T758.patch in a freshly assigned checkout. Snapshot99b79a95 contains corrected preparation, independently approved late voice-playback gating and the narrow refusal-test correction; T758.bundle preserves its exact checkpoint history. T758 remains todo/unintegrated.
-- Finish the four named cases in T758-regression-diagnosis.json without weakening owner isolation/render/availability assertions, then rerun meaningful affected/full checks, browser proof and independent whole-task review before actual integration/publication. T758-validation.json describes the earlier5-failure candidate, not a passing final snapshot. Later storyline/editing/delivery work remains in review/video-preparation-guide-261112.
-- This machine's workers/coordinators are stopped after the bounded additional-hour handoff. Establish fresh ownership on the other device; preserve unrelated T539/T550/T603/T604/T697, T709 budget and INFRA/ideation gates. Do not import archived .git runtime as live assignments.
+- T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
+- Later video redesign slices (storyline/build, editing, delivery/resume) remain unscoped candidates in review/video-preparation-guide-261112 and need their own planning before tasks.
+- Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 T758 done
 - 261112 ui12 final bounded follow-up: source checkpoint99b79a95 combines approved voice fix74e456ca and refusal-test correction75f4eb8c,41 files recovered byte-for-byte; bundle verifies against publishedada6afc2. Main product source remains through T757; four diagnosed cases and T758 whole-task gates remain open. Publish all progress as recovery data, with no continuing local automation.
 - 261112 ui12: preserve latest40-file T758 recovery after independent P2 and5 remaining frontend failures; task todo, source not integrated.
 - 261112 ui12: resume T758 only for the owner-authorized extra hour; fresh worker/review and final publication.
@@ -227,4 +228,3 @@
 - 261112 T756 starts (ui12), baseline d02a58a0: one counted 작성 중 group, peer-density accent latest card, no duplicate hero. T755 full gate/push passes; T754 remote CI43072913166 passes both jobs. Hourly checkpoint ccf608f7 is local (wip remote rejected generically); main publication is unaffected.
 - 261112 T755 done (ui12): shared storyline-ready history labels/filter with job precedence and unchanged lifecycle/refining URL compatibility; 33 files/205 tests and static/type/build checks pass. Real browser both channels/aggregate/status selection passes without generation. Full pre-push follows.
 - 261112 T755 starts (ui12), baseline 42cdc156: browser reproduces storyline-only and built clips both labelled 다듬는 중 on both channels and aggregate. T754 full gate/push passes; exact-revision CI remains tracked before the next push. Keep lifecycle state and render/finalization unchanged.
-- 261112 T754 done (ui12): shared toolbar/padding/body/skeleton, aggregate waits for both reads, stable scrollbar space; 139 tests plus lint/format/FSD/style/build pass. Loaded warm96 and delayed32 browser traces keep chrome and one group Y per width; T753 remote CI43069662263 passes both jobs. Full pre-push follows.

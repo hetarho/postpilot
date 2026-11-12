@@ -25,6 +25,9 @@ import {
   validClipProject,
   validNewClipProject,
 } from '@/entities/clip-project'
+import { useSpokenLibrary } from '@/entities/spoken-voice'
+import type { ClipPreparationContent } from '../model/preparation'
+import { clipPreparationRows } from './ClipPreparationSummary'
 import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
@@ -80,8 +83,10 @@ export function ClipProjectForm({
   regions,
   dubbing,
   initialTemplateId,
+  layout,
 }: {
   ownerId: string
+  layout?: (content: ClipPreparationContent) => ReactNode
   /** `/clips/new` only: the video template the new-clip offer's wizard just saved (CLIP-223). */
   initialTemplateId?: string
   dubbing?: (
@@ -282,326 +287,387 @@ export function ClipProjectForm({
       submitting.current = false
     }
   }
+  const guided = !!layout && !!stored && !readOnly
+  const voiceLibrary = useSpokenLibrary(
+    draft.dubbing?.enabled || draft.dubbing?.voiceId ? ownerId : '',
+    false,
+    false,
+  )
+  const voiceReady =
+    !draft.dubbing?.enabled ||
+    (!voiceLibrary.voicesQuery.isPending &&
+      !voiceLibrary.voicesQuery.isError &&
+      voiceLibrary.voices.some((voice) => voice.id === draft.dubbing?.voiceId && !voice.removedAt))
+  const storyFields = (
+    <fieldset disabled={locked} className="min-w-0 space-y-6">
+      <div>
+        <FieldLabel htmlFor="clip-title">{t('project.name')}</FieldLabel>
+        <TextField
+          id="clip-title"
+          type="text"
+          inputMode="text"
+          {...INPUT}
+          value={draft.title}
+          onChange={(event) => change('title', event.target.value)}
+          aria-invalid={
+            !draft.title.trim() || Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title
+          }
+        />
+        {(!draft.title.trim() ||
+          Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title) && (
+          <FieldMessage>{t('project.titleLimit')}</FieldMessage>
+        )}
+      </div>
+      <div>
+        <FieldLabel id="clip-template-label" htmlFor="clip-template">
+          {t('project.template')}
+        </FieldLabel>
+        <Listbox
+          id="clip-template"
+          aria-labelledby="clip-template-label"
+          value={draft.videoTemplateId}
+          onChange={(value) => change('videoTemplateId', value)}
+          options={[
+            { value: '', label: t('project.chooseTemplate') },
+            ...templates.templates.map((v) => ({ value: v.id, label: v.name })),
+          ]}
+        />
+        <Typography variant="body" className="text-content-secondary mt-2">
+          {t('project.templateOptional')}
+        </Typography>
+        {templates.isPending && <Typography variant="body">{t('project.loading')}</Typography>}
+        {templates.isError && (
+          <div role="alert">
+            <AppFailureMessage failure={appFailureFromConnect(templates.error)} />
+            <Button variant="ghost" onClick={() => void templates.refetch()}>
+              {t('project.retry')}
+            </Button>
+          </div>
+        )}
+        {!templates.isPending && !templates.isError && !templates.templates.length && (
+          <Typography variant="body" className="mt-2">
+            {t('project.noTemplates')}{' '}
+            <Link to="/video-templates/new" className={buttonStyles({ variant: 'ghost' })}>
+              {t('directory.create')}
+            </Link>
+          </Typography>
+        )}
+        {!selected && !!draft.videoTemplateId && (
+          <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
+        )}
+      </div>
+      {templateChanged && (
+        <section className="space-y-3">
+          <Typography variant="body">{t('composition.templateChanged')}</Typography>
+          <Button
+            variant="ghost"
+            disabled={
+              !document || !validClipProject({ ...draft, compositionInputs: inputs }, document)
+            }
+            onClick={() => change('compositionInputs', inputs)}
+          >
+            {t('composition.applyTemplate')}
+          </Button>
+        </section>
+      )}
+      {!creating && document && (
+        <ClipCompositionInputFields
+          document={document}
+          presets={{
+            intro: draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro,
+            outro: draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro,
+          }}
+          ratio={draft.ratio}
+          value={inputs}
+          onChange={(inputs) => change('compositionInputs', inputs)}
+        />
+      )}
+      {/* The owner's own instruction sits with the answers it accompanies
+              and is optional; an empty one is indistinguishable from never
+              having written one (CLIP-121). */}
+      {!creating && (
+        <div>
+          <FieldLabel htmlFor="clip-instruction">
+            {t('project.instruction')} {t('composition.optionalSuffix')}
+          </FieldLabel>
+          <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
+            {t('project.instructionPrompt')}
+          </Typography>
+          <Textarea
+            id="clip-instruction"
+            inputMode="text"
+            {...INPUT}
+            autoGrow
+            value={draft.instruction ?? ''}
+            onChange={(event) =>
+              change(
+                'instruction',
+                boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
+              )
+            }
+          />
+          <FieldCount
+            left={CLIP_PROJECT_LIMITS.instruction - freeTextLength(draft.instruction ?? '')}
+          />
+        </div>
+      )}
+    </fieldset>
+  )
+  const sourceFields = (
+    <fieldset disabled={locked} className="min-w-0 space-y-6">
+      {!creating && (
+        <ClipCampaignMaterial
+          campaign={draft.campaign ?? false}
+          guide={draft.advertiserGuide}
+          disabled={disabled || readOnly}
+          onCampaign={(on) => change('campaign', on)}
+          onGuide={(guide) => change('advertiserGuide', guide)}
+        />
+      )}
+      {stored && (
+        <ClipLinkedPost
+          key={`${ownerId}:${stored.id}`}
+          ownerId={ownerId}
+          project={stored}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
+      )}
+      {stored && (
+        <MoveClipChannel
+          ownerId={ownerId}
+          project={stored}
+          disabled={disabled}
+          readOnly={readOnly}
+        />
+      )}
+    </fieldset>
+  )
+  const styleFields = (
+    <>
+      <fieldset disabled={locked} className="min-w-0 space-y-6">
+        <div>
+          <Typography variant="fieldTitle" as="p">
+            {t('project.ratio')}
+          </Typography>
+          <Typography variant="body" className="mt-2">
+            {t(`ratio.${stored?.ratio ?? 'vertical'}`)}
+          </Typography>
+          <Typography variant="body" className="text-content-secondary mt-2">
+            {t(stored ? 'project.fixedRatio' : 'project.verticalOnly')}
+          </Typography>
+        </div>
+        {!creating && (
+          <div>
+            <FieldLabel htmlFor="clip-duration">{t('project.duration')}</FieldLabel>
+            <TextField
+              id="clip-duration"
+              type="number"
+              inputMode="decimal"
+              {...INPUT}
+              min={CLIP_PROJECT_LIMITS.minSeconds}
+              max={CLIP_PROJECT_LIMITS.maxSeconds}
+              step="any"
+              value={seconds}
+              onChange={(event) => {
+                setSeconds(event.target.value)
+                change('targetDurationMs', Math.round(Number(event.target.value) * 1000))
+              }}
+              aria-invalid={
+                !Number.isFinite(draft.targetDurationMs) ||
+                draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
+                draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
+              }
+            />
+            <Typography variant="body" className="text-content-secondary mt-2">
+              {t('project.durationHelp')}
+            </Typography>
+          </div>
+        )}
+      </fieldset>
+
+      {stored && !stored.composition && stored.disclosure && (
+        <section className="space-y-3">
+          <Typography variant="body">
+            {t('composition.retainedDisclosure', {
+              text: t(`disclosure.${stored.disclosure}`),
+            })}
+          </Typography>
+          <label className="flex min-h-11 items-center gap-3">
+            <Checkbox
+              disabled={locked}
+              checked={!draft.hideDisclosure}
+              onChange={(e) => change('hideDisclosure', !e.target.checked)}
+            />
+            {t('project.showDisclosure')}
+          </label>
+        </section>
+      )}
+
+      {/* Appearance choices stay after duration; phones open them explicitly.
+              The project draft and other inputs remain mounted above this view. */}
+      {!creating && (
+        <Disclosure
+          title={t('project.designChoices')}
+          size="row"
+          className="mt-6"
+          open={wide ? designExpanded.desktop : designExpanded.phone}
+          onOpenChange={(open) =>
+            setDesignExpanded((current) => ({
+              ...current,
+              [wide ? 'desktop' : 'phone']: open,
+            }))
+          }
+          lead={
+            <Typography variant="body" as="p" className="text-content-secondary break-words">
+              {t('project.designSummary', {
+                intro:
+                  regions && !regions.enabled.intro
+                    ? t('project.regionOff')
+                    : t(
+                        `composition.design.intro_${draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro}`,
+                      ),
+                outro:
+                  regions && !regions.enabled.outro
+                    ? t('project.regionOff')
+                    : t(
+                        `composition.design.outro_${draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro}`,
+                      ),
+                pace: t(`pace.${draft.captionPace || 'steady'}`),
+                accent: t(`accent.${draft.accent || 'none'}`),
+                count: draft.allowedCaptionStyles?.length || 1,
+              })}
+            </Typography>
+          }
+        >
+          <fieldset disabled={locked} className="space-y-3">
+            <Typography variant="fieldTitle" as="p">
+              {t('pace.label')}
+            </Typography>
+            <SegmentedControl
+              ariaLabel={t('pace.label')}
+              value={draft.captionPace || 'steady'}
+              options={[
+                { value: 'steady' as const, label: t('pace.steady') },
+                { value: 'rapid' as const, label: t('pace.rapid') },
+              ]}
+              onChange={(captionPace) => change('captionPace', captionPace)}
+            />
+            <Typography variant="body" className="text-content-secondary">
+              {t('pace.help')}
+            </Typography>
+            <Typography variant="fieldTitle" as="p">
+              {t('project.accent')}
+            </Typography>
+            <div
+              role="radiogroup"
+              aria-label={t('project.accent')}
+              className="flex flex-wrap gap-2"
+            >
+              {CLIP_ACCENTS.map((value) => (
+                <Button
+                  key={value || 'none'}
+                  variant={(draft.accent ?? '') === value ? 'secondary' : 'ghost'}
+                  role="radio"
+                  aria-checked={(draft.accent ?? '') === value}
+                  onClick={() => change('accent', value)}
+                >
+                  <span className="flex items-center gap-2">
+                    {value && (
+                      <span
+                        aria-hidden="true"
+                        className="size-4 rounded-full"
+                        style={{ backgroundColor: CLIP_DESIGN.accent[value] }}
+                      />
+                    )}
+                    {t(`accent.${value || 'none'}`)}
+                  </span>
+                </Button>
+              ))}
+            </div>
+            <Typography variant="body" className="text-content-secondary">
+              {t('project.accentHelp')}
+            </Typography>
+
+            <ClipDesignSelection
+              projectId={stored.id}
+              draft={draft}
+              onChange={patch}
+              regions={regions}
+            />
+          </fieldset>
+        </Disclosure>
+      )}
+
+      {!creating &&
+        dubbing?.(draft.dubbing ?? { enabled: false, voiceId: '' }, (value) =>
+          change('dubbing', value),
+        )}
+    </>
+  )
+  const notices = (
+    <>
+      {refusal}
+      {failure && (
+        <div role="alert" className="mb-3">
+          <AppFailureMessage failure={appFailureFromConnect(failure)} />
+        </div>
+      )}
+    </>
+  )
+  const generationActions = actions?.(valid && voiceReady && !disabled && !templateChanged, dirty)
+  const summary = clipPreparationRows({
+    t,
+    draft,
+    document,
+    inputs,
+    selected,
+    templates,
+    stored,
+    regions,
+    voiceLibrary,
+  })
   return (
     <>
       <form
         id="clip-project-form"
-        className="mt-6"
+        className={guided ? 'mt-2 flex flex-1 flex-col' : 'mt-6'}
         onSubmit={(event) => {
           event.preventDefault()
           void submit()
         }}
       >
-        <fieldset disabled={locked} className="min-w-0 space-y-6">
-          <div>
-            <FieldLabel htmlFor="clip-title">{t('project.name')}</FieldLabel>
-            <TextField
-              id="clip-title"
-              type="text"
-              inputMode="text"
-              {...INPUT}
-              value={draft.title}
-              onChange={(event) => change('title', event.target.value)}
-              aria-invalid={
-                !draft.title.trim() ||
-                Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title
-              }
-            />
-            {(!draft.title.trim() ||
-              Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title) && (
-              <FieldMessage>{t('project.titleLimit')}</FieldMessage>
-            )}
-          </div>
-          <div>
-            <FieldLabel id="clip-template-label" htmlFor="clip-template">
-              {t('project.template')}
-            </FieldLabel>
-            <Listbox
-              id="clip-template"
-              aria-labelledby="clip-template-label"
-              value={draft.videoTemplateId}
-              onChange={(value) => change('videoTemplateId', value)}
-              options={[
-                { value: '', label: t('project.chooseTemplate') },
-                ...templates.templates.map((v) => ({ value: v.id, label: v.name })),
-              ]}
-            />
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t('project.templateOptional')}
-            </Typography>
-            {templates.isPending && <Typography variant="body">{t('project.loading')}</Typography>}
-            {templates.isError && (
-              <div role="alert">
-                <AppFailureMessage failure={appFailureFromConnect(templates.error)} />
-                <Button variant="ghost" onClick={() => void templates.refetch()}>
-                  {t('project.retry')}
-                </Button>
-              </div>
-            )}
-            {!templates.isPending && !templates.isError && !templates.templates.length && (
-              <Typography variant="body" className="mt-2">
-                {t('project.noTemplates')}{' '}
-                <Link to="/video-templates/new" className={buttonStyles({ variant: 'ghost' })}>
-                  {t('directory.create')}
-                </Link>
-              </Typography>
-            )}
-            {!selected && !!draft.videoTemplateId && (
-              <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
-            )}
-          </div>
-          {stored && !stored.composition && stored.disclosure && (
-            <section className="space-y-3">
-              <Typography variant="body">
-                {t('composition.retainedDisclosure', {
-                  text: t(`disclosure.${stored.disclosure}`),
-                })}
-              </Typography>
-              <label className="flex min-h-11 items-center gap-3">
-                <Checkbox
-                  checked={!draft.hideDisclosure}
-                  onChange={(e) => change('hideDisclosure', !e.target.checked)}
-                />
-                {t('project.showDisclosure')}
-              </label>
-            </section>
-          )}
-          {templateChanged && (
-            <section className="space-y-3">
-              <Typography variant="body">{t('composition.templateChanged')}</Typography>
-              <Button
-                variant="ghost"
-                disabled={
-                  !document || !validClipProject({ ...draft, compositionInputs: inputs }, document)
-                }
-                onClick={() => change('compositionInputs', inputs)}
-              >
-                {t('composition.applyTemplate')}
-              </Button>
-            </section>
-          )}
-          {/* Guide: where the clip's 이야기 starts, for the workspace's step strip. */}
-          <span id="clip-guide-story" aria-hidden="true" className="block scroll-mt-40" />
-          {!creating && document && (
-            <ClipCompositionInputFields
-              document={document}
-              presets={{
-                intro: draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro,
-                outro: draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro,
-              }}
-              ratio={draft.ratio}
-              value={inputs}
-              onChange={(inputs) => change('compositionInputs', inputs)}
-            />
-          )}
-          {/* The owner's own instruction sits with the answers it accompanies
-              and is optional; an empty one is indistinguishable from never
-              having written one (CLIP-121). */}
-          {!creating && (
-            <div>
-              <FieldLabel htmlFor="clip-instruction">
-                {t('project.instruction')} {t('composition.optionalSuffix')}
-              </FieldLabel>
-              <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
-                {t('project.instructionPrompt')}
-              </Typography>
-              <Textarea
-                id="clip-instruction"
-                inputMode="text"
-                {...INPUT}
-                autoGrow
-                value={draft.instruction ?? ''}
-                onChange={(event) =>
-                  change(
-                    'instruction',
-                    boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
-                  )
-                }
-              />
-              <FieldCount
-                left={CLIP_PROJECT_LIMITS.instruction - freeTextLength(draft.instruction ?? '')}
-              />
-            </div>
-          )}
-          {!creating && (
-            <ClipCampaignMaterial
-              campaign={draft.campaign ?? false}
-              guide={draft.advertiserGuide}
-              disabled={disabled || readOnly}
-              onCampaign={(on) => change('campaign', on)}
-              onGuide={(guide) => change('advertiserGuide', guide)}
-            />
-          )}
-          {stored && (
-            <ClipLinkedPost
-              key={`${ownerId}:${stored.id}`}
-              ownerId={ownerId}
-              project={stored}
-              disabled={disabled}
-              readOnly={readOnly}
-            />
-          )}
-          {stored && (
-            <MoveClipChannel
-              ownerId={ownerId}
-              project={stored}
-              disabled={disabled}
-              readOnly={readOnly}
-            />
-          )}
-          {/* Guide: where the clip's 스타일 starts — its shape, length, look and voice. */}
-          <span id="clip-guide-style" aria-hidden="true" className="block scroll-mt-40" />
-          <div>
-            <Typography variant="fieldTitle" as="p">
-              {t('project.ratio')}
-            </Typography>
-            <Typography variant="body" className="mt-2">
-              {t(`ratio.${stored?.ratio ?? 'vertical'}`)}
-            </Typography>
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t(stored ? 'project.fixedRatio' : 'project.verticalOnly')}
-            </Typography>
-          </div>
-          {!creating && (
-            <div>
-              <FieldLabel htmlFor="clip-duration">{t('project.duration')}</FieldLabel>
-              <TextField
-                id="clip-duration"
-                type="number"
-                inputMode="decimal"
-                {...INPUT}
-                min={CLIP_PROJECT_LIMITS.minSeconds}
-                max={CLIP_PROJECT_LIMITS.maxSeconds}
-                step="any"
-                value={seconds}
-                onChange={(event) => {
-                  setSeconds(event.target.value)
-                  change('targetDurationMs', Math.round(Number(event.target.value) * 1000))
-                }}
-                aria-invalid={
-                  !Number.isFinite(draft.targetDurationMs) ||
+        {guided && layout ? (
+          layout({
+            screens: { sources: sourceFields, story: storyFields, style: styleFields },
+            rows: summary,
+            actions: generationActions,
+            refusal: notices,
+            inputRefusal: !voiceReady
+              ? 'style'
+              : !valid || templateChanged
+                ? !Number.isFinite(draft.targetDurationMs) ||
                   draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
                   draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
-                }
-              />
-              <Typography variant="body" className="text-content-secondary mt-2">
-                {t('project.durationHelp')}
-              </Typography>
-            </div>
-          )}
-        </fieldset>
-        {/* Appearance choices stay after duration; phones open them explicitly.
-              The project draft and other inputs remain mounted above this view. */}
-        {!creating && (
-          <Disclosure
-            title={t('project.designChoices')}
-            size="row"
-            className="mt-6"
-            open={wide ? designExpanded.desktop : designExpanded.phone}
-            onOpenChange={(open) =>
-              setDesignExpanded((current) => ({
-                ...current,
-                [wide ? 'desktop' : 'phone']: open,
-              }))
-            }
-            lead={
-              <Typography variant="body" as="p" className="text-content-secondary break-words">
-                {t('project.designSummary', {
-                  intro:
-                    regions && !regions.enabled.intro
-                      ? t('project.regionOff')
-                      : t(
-                          `composition.design.intro_${draft.introPreset || CLIP_DEFAULT_REGION_PRESETS.intro}`,
-                        ),
-                  outro:
-                    regions && !regions.enabled.outro
-                      ? t('project.regionOff')
-                      : t(
-                          `composition.design.outro_${draft.outroPreset || CLIP_DEFAULT_REGION_PRESETS.outro}`,
-                        ),
-                  pace: t(`pace.${draft.captionPace || 'steady'}`),
-                  accent: t(`accent.${draft.accent || 'none'}`),
-                  count: draft.allowedCaptionStyles?.length || 1,
-                })}
-              </Typography>
-            }
-          >
-            <fieldset disabled={locked} className="space-y-3">
-              <Typography variant="fieldTitle" as="p">
-                {t('pace.label')}
-              </Typography>
-              <SegmentedControl
-                ariaLabel={t('pace.label')}
-                value={draft.captionPace || 'steady'}
-                options={[
-                  { value: 'steady' as const, label: t('pace.steady') },
-                  { value: 'rapid' as const, label: t('pace.rapid') },
-                ]}
-                onChange={(captionPace) => change('captionPace', captionPace)}
-              />
-              <Typography variant="body" className="text-content-secondary">
-                {t('pace.help')}
-              </Typography>
-              <Typography variant="fieldTitle" as="p">
-                {t('project.accent')}
-              </Typography>
-              <div
-                role="radiogroup"
-                aria-label={t('project.accent')}
-                className="flex flex-wrap gap-2"
-              >
-                {CLIP_ACCENTS.map((value) => (
-                  <Button
-                    key={value || 'none'}
-                    variant={(draft.accent ?? '') === value ? 'secondary' : 'ghost'}
-                    role="radio"
-                    aria-checked={(draft.accent ?? '') === value}
-                    onClick={() => change('accent', value)}
-                  >
-                    <span className="flex items-center gap-2">
-                      {value && (
-                        <span
-                          aria-hidden="true"
-                          className="size-4 rounded-full"
-                          style={{ backgroundColor: CLIP_DESIGN.accent[value] }}
-                        />
-                      )}
-                      {t(`accent.${value || 'none'}`)}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-              <Typography variant="body" className="text-content-secondary">
-                {t('project.accentHelp')}
-              </Typography>
-
-              <ClipDesignSelection
-                projectId={stored.id}
-                draft={draft}
-                onChange={patch}
-                regions={regions}
-              />
-            </fieldset>
-          </Disclosure>
+                  ? 'style'
+                  : 'story'
+                : undefined,
+          })
+        ) : (
+          // New and finalized read-only views keep the one spaced column; a new clip has no
+          // source fields yet.
+          <div className="min-w-0 space-y-6">
+            {storyFields}
+            {!creating && sourceFields}
+            {styleFields}
+          </div>
         )}
       </form>
-      {!creating &&
-        dubbing?.(draft.dubbing ?? { enabled: false, voiceId: '' }, (value) =>
-          change('dubbing', value),
-        )}
       {children}
-      {/* A reading commits nothing, so it docks nothing (CLIP-160, CLIP-40). */}
-      {!readOnly && (
+      {!readOnly && !guided && (
         <ActionBar className="mt-auto">
-          {refusal}
-          {failure && (
-            <div role="alert" className="mb-3">
-              <AppFailureMessage failure={appFailureFromConnect(failure)} />
-            </div>
-          )}
+          {notices}
           <div className="flex flex-wrap justify-end gap-3">
-            {/* Only `/clips/new` commits by hand (CLIP-39). An existing project has no 저장: the
-              queue saves it a beat after each pause and the page's one status line says so. */}
             {!stored && (
               <Button
                 form="clip-project-form"
@@ -614,7 +680,7 @@ export function ClipProjectForm({
                 {t('project.create')}
               </Button>
             )}
-            {actions?.(valid && !disabled && !templateChanged, dirty)}
+            {generationActions}
           </div>
         </ActionBar>
       )}

@@ -1,5 +1,5 @@
 import { ClipBrowserPreparationStatus } from '@/features/prepare-clip-browser'
-import { useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
@@ -16,7 +16,11 @@ import { ClipStorylineRequest } from '@/features/request-clip-storyline'
 import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { FinalizeClipAction } from '@/features/finalize-clip'
 import { CancelClipAction } from '@/features/cancel-clip'
-import { ClipProjectForm, MoveClipChannel } from '@/features/edit-clip-project'
+import {
+  ClipProjectForm,
+  MoveClipChannel,
+  type ClipPreparationScreen,
+} from '@/features/edit-clip-project'
 import {
   ClipVoiceChoice,
   ClipDubbingEditor,
@@ -32,6 +36,7 @@ import {
   ClipCreditSettlement,
   ClipDownloadAction,
   ClipResult,
+  readyClipBatch,
 } from '@/features/generate-clip'
 import { ClipBrowserRenderStatus } from '@/features/render-clip-browser'
 import { ClipRevisionRequest } from '@/features/revise-clip'
@@ -39,28 +44,29 @@ import { ClipUploadText } from '@/features/clip-upload-text'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import {
-  ActionBar,
-  Button,
-  GuideProgress,
-  Sheet,
-  SegmentedControl,
-  ProgressBar,
-  Typography,
-} from '@/shared/ui'
+import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
 
-/** Guide: the four parts of a clip's settings, in the order a guided sequence asks for them. */
-const CLIP_GUIDE = ['sources', 'story', 'style', 'make'] as const
-type ClipGuideStep = (typeof CLIP_GUIDE)[number]
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps } from '../model/steps'
+import { ClipPreparationGuide } from './ClipPreparationGuide'
+import { ClipPreparationSources } from './ClipPreparationSources'
+import { RetainedPreparationMedia } from './RetainedPreparationMedia'
+import { usePreparationClock } from '../model/usePreparationClock'
 import { ClipStepWaiting, ClipTopRow, STEP_PANEL_ID } from './ClipTopRow'
 import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipStatus'
 
 /** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
-export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: ClipProject }) {
+export function ClipWorkspace({
+  ownerId,
+  project,
+  sourceFeedback,
+}: {
+  ownerId: string
+  project: ClipProject
+  sourceFeedback?: ReactNode
+}) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
   const destination = clipReturnDestination(ownerId, project.id, undefined, project.channel)
@@ -88,7 +94,13 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
   // A finalized project is READ in ① and ②: the same steps, the same places, values instead of
   // controls, and no original behind them (CLIP-160, CLIP-76).
   const reading = !!project.finalized
-  const [guide, setGuide] = useState<ClipGuideStep>('sources')
+  const [guide, setGuide] = useState<ClipPreparationScreen>('sources')
+  const reasonId = useId()
+  const now = usePreparationClock([
+    upload.readyBatch?.expiresAt,
+    ...upload.entries.map((entry) => entry.retentionExpiresAt),
+  ])
+  const sourceReady = readyClipBatch(upload.readyBatch, project.id, now)
   const job = run.job
   const browserStatus = (
     <ClipBrowserRenderStatus
@@ -142,63 +154,8 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       (entry) =>
         !entry.file && ['expired', 'missing', 'cleanup_pending'].includes(entry.availability ?? ''),
     )
-  const generatePanel = (
-    <ClipProjectForm
-      ownerId={ownerId}
-      stored={project}
-      disabled={pending || reading}
-      readOnly={reading}
-      onUploadAllowed={sources.allow}
-      dubbing={(value, change) => (
-        <ClipVoiceChoice
-          ownerId={ownerId}
-          enabled={value.enabled}
-          voiceId={value.voiceId}
-          disabled={pending || reading}
-          onChange={change}
-        />
-      )}
-      regions={
-        regions.regions && {
-          enabled: { intro: regions.regions.intro.enabled, outro: regions.regions.outro.enabled },
-          setEnabled: regions.setEnabled,
-        }
-      }
-      refusal={reading ? undefined : <ClipFailureNotice failure={generation.failure} />}
-      actions={
-        reading
-          ? undefined
-          : (ready) => (
-              <ClipGenerationActions
-                preparationRoute={generation.preparationRoute}
-                ownerId={ownerId}
-                project={project}
-                batch={upload.readyBatch}
-                observe={generation.observeRef}
-                write={generation.writeRef}
-                observeStatus={generation.observeStatus}
-                ready={
-                  ready &&
-                  generation.canQuote &&
-                  !generation.busy &&
-                  !render.browser.busy &&
-                  !regions.invalid
-                }
-                pending={generation.starting}
-                // The queue is flushed BEFORE the run starts, so an approval can never be committed
-                // against settings the server has not taken (CLIP-39). A refusal stops the start; the
-                // status line is already saying the save failed.
-                onApprove={(mode, quote) => {
-                  void flushAll()
-                    .then(() =>
-                      generation.start(upload.readyBatch, ready, quote, generation.ownership, mode),
-                    )
-                    .catch(() => undefined)
-                }}
-              />
-            )
-      }
-    >
+  const sourcePanel = (
+    <>
       {!reading &&
         originalsGone &&
         (project.result || job?.status === 'failed' || job?.status === 'cancelled') && (
@@ -208,7 +165,6 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         )}
       {/* Bind a whole source to an item before generating, where footage of one
           cut of meat carries nothing that tells it from another (CLIP-123). */}
-      <span id="clip-guide-sources" aria-hidden="true" className="block scroll-mt-40" />
       {!reading && (
         <ClipSourcePicker
           upload={upload}
@@ -221,7 +177,10 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
       )}
       {observationPanel}
       {requestRecord}
-      <span id="clip-guide-make" aria-hidden="true" className="block scroll-mt-40" />
+    </>
+  )
+  const modelsPanel = (
+    <>
       {!reading && (
         <section aria-labelledby="clip-models-heading" className="mt-10 mb-8 space-y-4">
           <Typography id="clip-models-heading" variant="title">
@@ -258,6 +217,143 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
           </Typography>
         </section>
       )}
+    </>
+  )
+  const generatePanel = (
+    <ClipProjectForm
+      ownerId={ownerId}
+      stored={project}
+      disabled={pending || reading}
+      readOnly={reading}
+      onUploadAllowed={sources.allow}
+      dubbing={(value, change) => (
+        <RetainedPreparationMedia
+          active={!run.focused && step === 'generate' && (reading || guide === 'style')}
+        >
+          <ClipVoiceChoice
+            ownerId={ownerId}
+            enabled={value.enabled}
+            voiceId={value.voiceId}
+            disabled={pending || reading}
+            onChange={change}
+          />
+        </RetainedPreparationMedia>
+      )}
+      regions={
+        regions.regions && {
+          enabled: { intro: regions.regions.intro.enabled, outro: regions.regions.outro.enabled },
+          setEnabled: regions.setEnabled,
+        }
+      }
+      refusal={reading ? undefined : <ClipFailureNotice failure={generation.failure} />}
+      layout={
+        reading
+          ? undefined
+          : (content) => (
+              <ClipPreparationGuide
+                screen={guide}
+                onSelect={setGuide}
+                reasonId={reasonId}
+                screens={{
+                  ...content.screens,
+                  sources: (
+                    <>
+                      {content.screens.sources}
+                      {sourceFeedback}
+                      <RetainedPreparationMedia
+                        active={!run.focused && step === 'generate' && guide === 'sources'}
+                      >
+                        {sourcePanel}
+                      </RetainedPreparationMedia>
+                    </>
+                  ),
+                }}
+                rows={[
+                  {
+                    id: 'sources',
+                    label: t('guide.sourceSummary'),
+                    screen: 'sources',
+                    value: (
+                      <ClipPreparationSources sources={sources} ready={sourceReady} now={now} />
+                    ),
+                  },
+                  ...content.rows,
+                ]}
+                models={modelsPanel}
+                actions={content.actions}
+                refusal={content.refusal}
+                correction={
+                  content.inputRefusal
+                    ? {
+                        screen: content.inputRefusal,
+                        label: t('guide.inputRefusal', {
+                          screen: t(`guide.${content.inputRefusal}`),
+                        }),
+                      }
+                    : regions.invalid
+                      ? {
+                          retry: () => {
+                            setEditorPanel('storyline')
+                            setStep('refine')
+                          },
+                          label: t('guide.regionRefusal'),
+                        }
+                      : save.failing || regions.status.failing
+                        ? {
+                            retry: () => {
+                              void flushAll(true).catch(() => undefined)
+                            },
+                            label: t('guide.saveRefusal'),
+                          }
+                        : !sourceReady
+                          ? { screen: 'sources', label: t('guide.sourceRefusal') }
+                          : !generation.canQuote
+                            ? { retry: generation.retryEligibility, label: t('guide.modelRefusal') }
+                            : pending || generation.busy || render.browser.busy
+                              ? { label: t('guide.busyRefusal') }
+                              : undefined
+                }
+              />
+            )
+      }
+      actions={
+        reading
+          ? undefined
+          : (ready) => (
+              <ClipGenerationActions
+                stepBar
+                describedBy={reasonId}
+                preparationRoute={generation.preparationRoute}
+                ownerId={ownerId}
+                project={project}
+                batch={upload.readyBatch}
+                observe={generation.observeRef}
+                write={generation.writeRef}
+                observeStatus={generation.observeStatus}
+                ready={
+                  ready &&
+                  sourceReady &&
+                  generation.canQuote &&
+                  !generation.busy &&
+                  !render.browser.busy &&
+                  !regions.invalid
+                }
+                pending={generation.starting}
+                // The queue is flushed BEFORE the run starts, so an approval can never be committed
+                // against settings the server has not taken (CLIP-39). A refusal stops the start; the
+                // status line is already saying the save failed.
+                onApprove={(mode, quote) => {
+                  void flushAll(true)
+                    .then(() =>
+                      generation.start(upload.readyBatch, ready, quote, generation.ownership, mode),
+                    )
+                    .catch(() => undefined)
+                }}
+              />
+            )
+      }
+    >
+      {reading && sourcePanel}
     </ClipProjectForm>
   )
 
@@ -832,29 +928,21 @@ export function ClipWorkspace({ ownerId, project }: { ownerId: string; project: 
         />
       )}
       {!run.focused && step !== 'refine' && browserStatus}
-      {!run.focused && step === 'generate' && !reading && (
-        // Guide: the clip's settings as a guided sequence — 소스 → 이야기 → 스타일 → 만들기 — a
-        // slim strip that stays under the header and takes the owner to each part in turn; the
-        // one big 만들기 action stays in the bottom dock.
-        <div className="bg-surface-base/90 sticky top-[var(--spacing-chrome)] z-20 -mx-4 mt-2 px-4 py-1 backdrop-blur-xl sm:mx-0 sm:px-0">
-          <GuideProgress
-            steps={CLIP_GUIDE.map((value) => ({ value, label: t(`guide.${value}`) }))}
-            current={guide}
-            onSelect={(value) => {
-              setGuide(value)
-              document
-                .getElementById(`clip-guide-${value}`)
-                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-            }}
-            ariaLabel={t('guide.aria')}
-          />
+      {/* A focused run owns the screen: the panel stays mounted for ①'s retained inputs, but
+          leaves the accessibility tree and the column's free height to the run. */}
+      <div
+        id={STEP_PANEL_ID}
+        role="tabpanel"
+        aria-label={clipStepLabel(step)}
+        hidden={run.focused}
+        className="flex flex-1 flex-col"
+      >
+        <div hidden={step !== 'generate'} className="flex flex-1 flex-col">
+          {generatePanel}
         </div>
-      )}
-      {!run.focused && (
-        <div id={STEP_PANEL_ID} role="tabpanel" aria-label={clipStepLabel(step)}>
-          {step === 'generate' ? generatePanel : step === 'refine' ? refinePanel : finishPanel}
-        </div>
-      )}
+        {!run.focused && step === 'refine' && refinePanel}
+        {!run.focused && step === 'finish' && finishPanel}
+      </div>
       {/* ONE dock per step: ① and ② carry their own (the settings form's and the correction
           workspace's), so the page docks only ③'s 다운로드 (CLIP-40). */}
       {project.finalized && step === 'finish' && project.result?.downloadUrl && (

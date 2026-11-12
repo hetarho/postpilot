@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { webcrypto } from 'node:crypto'
 import { create } from '@bufbuild/protobuf'
 import { act, screen, waitFor, within } from '@testing-library/react'
@@ -229,6 +230,7 @@ it('keeps ② interactive and reports one monotonic scale from encoding through 
   expect(await screen.findByRole('dialog', { name: '원본 소스' })).toBeInTheDocument()
   await userEvent.keyboard('{Escape}')
   await userEvent.click(screen.getByRole('tab', { name: '생성' }))
+  await clipGuideTo('story')
   expect(screen.getByLabelText('클립 제목')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('tab', { name: '수정' }))
   await act(async () => encoded.resolve(track))
