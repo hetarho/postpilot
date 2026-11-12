@@ -233,7 +233,6 @@
 
 ## log
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
-- 261112 T778 integrated
 - 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.
 - 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
@@ -243,6 +242,7 @@
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
+- 261112 T778 integrated
 - 261112 T777 integrated
 - 261112 T773 integrated
 - 261112 T771 done
