@@ -53,32 +53,38 @@ export function clipPreparationRows({
           }))
         : [{ key: field.id, label: field.label, text: inputs.values[field.id] }],
     ) ?? []
-  return [
+  const rows: ClipPreparationRow[] = [
     {
-      id: 'campaign',
+      id: 'kind',
       label: t('project.campaign'),
-      screen: 'sources',
+      screen: 'kind',
+      value: t(draft.campaign ? 'project.kindSponsored' : 'project.kindSelfPaid'),
+    },
+  ]
+  if (draft.campaign)
+    rows.push({
+      id: 'requirements',
+      label: t('preparation.guide'),
+      screen: 'requirements',
       value: (
         <>
-          <p>{t(draft.campaign ? 'preparation.campaignOn' : 'preparation.campaignOff')}</p>
-          {draft.campaign && (
-            <>
-              <p className="whitespace-pre-wrap">{draft.advertiserGuide?.text || none}</p>
-              <p>
-                {t('preparation.keywords', {
-                  value: draft.advertiserGuide?.keywords.join(', ') || none,
-                })}
-              </p>
-              <p>
-                {t('preparation.hashtags', {
-                  value: draft.advertiserGuide?.hashtags.join(', ') || none,
-                })}
-              </p>
-            </>
-          )}
+          <p className="whitespace-pre-wrap">{draft.advertiserGuide?.text || none}</p>
+          <p>
+            {t('preparation.keywords', {
+              value: draft.advertiserGuide?.keywords.join(', ') || none,
+            })}
+          </p>
+          <p>
+            {t('preparation.hashtags', {
+              value: draft.advertiserGuide?.hashtags.join(', ') || none,
+            })}
+          </p>
         </>
       ),
-    },
+    })
+  // CLIP-227's order: the workspace places its source row after the linked post.
+  return [
+    ...rows,
     {
       id: 'post',
       label: t('linkedPost.title'),
@@ -86,15 +92,9 @@ export function clipPreparationRows({
       value: stored?.linkedPost?.title || t('linkedPost.none'),
     },
     {
-      id: 'title',
-      label: t('project.name'),
-      screen: 'story',
-      value: draft.title || t('preparation.titleEmpty'),
-    },
-    {
       id: 'template',
       label: t('project.template'),
-      screen: 'story',
+      screen: 'template',
       value: !draft.videoTemplateId
         ? t('project.noTemplate')
         : selected?.name ||
@@ -107,9 +107,15 @@ export function clipPreparationRows({
           ),
     },
     {
+      id: 'title',
+      label: t('project.name'),
+      screen: 'content',
+      value: draft.title || t('preparation.titleEmpty'),
+    },
+    {
       id: 'answers',
       label: t('preparation.answers'),
-      screen: 'story',
+      screen: 'content',
       value: answers.length ? (
         <dl className="space-y-2">
           {answers.map((answer) => (
@@ -122,12 +128,6 @@ export function clipPreparationRows({
       ) : (
         none
       ),
-    },
-    {
-      id: 'instruction',
-      label: t('project.instruction'),
-      screen: 'story',
-      value: draft.instruction || none,
     },
     {
       id: 'duration',
@@ -190,6 +190,12 @@ export function clipPreparationRows({
           )}
         </>
       ),
+    },
+    {
+      id: 'instruction',
+      label: t('project.instruction'),
+      screen: 'note',
+      value: draft.instruction || none,
     },
   ]
 }

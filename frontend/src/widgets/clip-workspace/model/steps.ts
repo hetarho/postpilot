@@ -27,3 +27,15 @@ const BY_STATE: Record<ClipState, ClipStep> = {
 export function stepForProject(project: ClipProject): ClipStep {
   return BY_STATE[clipState(project)]
 }
+
+/** ①'s first screen: a project holding an instruction, a source or a running job opens on 확인,
+ *  any other on 영상 종류 (CLIP-225). */
+export function preparationOpening(material: {
+  instruction?: string
+  sources: number
+  running: boolean
+}): 'review' | 'kind' {
+  return material.instruction?.trim() || material.sources > 0 || material.running
+    ? 'review'
+    : 'kind'
+}

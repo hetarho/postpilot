@@ -52,7 +52,7 @@ describe("the clip's own caption pace and accent", () => {
   it('is not asked for before the clip exists', async () => {
     const user = userEvent.setup()
     renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { templates: [template] } })
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '고기')
     expect(screen.queryByRole('radiogroup', { name: '강조 색상' })).not.toBeInTheDocument()
   })

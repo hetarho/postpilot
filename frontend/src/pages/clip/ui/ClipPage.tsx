@@ -138,6 +138,10 @@ export function ClipPage() {
             key={`${user?.id}-${clipId}`}
             ownerId={user?.id ?? ''}
             project={query.data}
+            // Back from the template wizard: ① opens on 템플릿 (CLIP-225).
+            initialGuide={
+              (search as { guide?: unknown }).guide === 'template' ? 'template' : undefined
+            }
             sourceFeedback={
               <ClipImportFeedback
                 key={`import-${ownerId}-${clipId}`}

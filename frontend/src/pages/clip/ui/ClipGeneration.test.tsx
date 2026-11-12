@@ -783,7 +783,7 @@ it('keeps the open quote while ① is typed in and saves the settings before sta
   mount({ calls, generationStarts: starts, projectWrites: writes, quoteRequests: quotes })
   const { user } = await selectSource()
   await openApproval(20)
-  await clipGuideTo('story')
+  await clipGuideTo('content')
   fireEvent.change(screen.getByLabelText('클립 제목'), { target: { value: '제주 여행 2' } })
   await clipGuideTo('sources')
   expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeEnabled()
@@ -807,7 +807,7 @@ it('starts no work after a failed preparation flush and keeps the local edit and
     starts: unknown[] = []
   mount({ calls, generationStarts: starts, projectSaveFails: true })
   const { user } = await selectSource()
-  await clipGuideTo('story')
+  await clipGuideTo('content')
   fireEvent.change(screen.getByRole('textbox', { name: '클립 제목' }), {
     target: { value: '저장 실패해도 남는 제목' },
   })
@@ -816,7 +816,7 @@ it('starts no work after a failed preparation flush and keeps the local edit and
   expect(starts).toHaveLength(0)
   expect(calls).not.toContain('StartClipGeneration')
   expect(screen.getByRole('button', { name: '바로잡기' })).toBeEnabled()
-  await clipGuideTo('story')
+  await clipGuideTo('content')
   expect(screen.getByRole('textbox', { name: '클립 제목' })).toHaveValue('저장 실패해도 남는 제목')
 })
 
@@ -1133,7 +1133,7 @@ it('opens a separate approval for 스토리라인 먼저 and starts the storylin
     within(dock as HTMLElement)
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label') || button.textContent),
-  ).toEqual(['스타일로 이전', '스토리라인 먼저', '바로 만들기'])
+  ).toEqual(['덧붙임로 이전', '스토리라인 먼저', '바로 만들기'])
   await clipGuideTo('review')
   const trigger = screen.getByRole('button', { name: '스토리라인 먼저' })
   await waitFor(() => expect(trigger).toBeEnabled())
@@ -1325,6 +1325,7 @@ it('lists a storyline request in the request record', async () => {
   })
   await screen.findByRole('button', { name: '스토리라인' })
   await goToStep('생성')
+  await clipGuideTo('sources')
   await userEvent.click(await screen.findByText(/AI에 요청한 내용 1건/))
   expect(screen.getByText(/스토리라인 수정 요청/)).toBeVisible()
   expect(screen.getByText('가게 소개를 먼저')).toBeVisible()

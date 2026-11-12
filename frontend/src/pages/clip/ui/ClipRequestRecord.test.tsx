@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { afterEach, expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -34,6 +35,7 @@ it('reads back what was asked for, newest first, including a generation with no 
     providers: { models: [] },
     clips: { templates: [template], projects: [project] },
   })
+  await clipGuideTo('sources')
   await userEvent.click(await screen.findByText('AI에 요청한 내용 2건'))
   const entries = within(screen.getByRole('list', { name: 'AI에 요청한 내용 2건' })).getAllByRole(
     'listitem',

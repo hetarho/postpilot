@@ -34,6 +34,9 @@ vi.mock('@/entities/clip-template', async (original) => ({
         name: '선택한 구성',
         compositionBody:
           '<clip version="1"><field id="place" label="장소" required="true" /></clip>',
+        introPreset: '',
+        outroPreset: '',
+        allowedCaptionStyles: [],
       },
     ],
     isPending: ports.templatePending,
@@ -65,8 +68,21 @@ const project: ClipProject = {
   renderedPlanRevision: 0,
 }
 let ready: boolean
-function Form({ stored = project }: { stored?: ClipProject }) {
-  const [part, select] = useState<'sources' | 'story' | 'style' | 'review'>('story')
+const refusal = () => document.querySelector('[data-refusal]')?.getAttribute('data-refusal')
+const SCREENS = ['kind', 'requirements', 'sources', 'template', 'content', 'style', 'note'] as const
+type Screen = (typeof SCREENS)[number] | 'review'
+const NAMES: Record<Screen, string> = {
+  kind: '종류로',
+  requirements: '요청으로',
+  sources: '영상으로',
+  template: '템플릿으로',
+  content: '내용으로',
+  style: '스타일로',
+  note: '덧붙임으로',
+  review: '검토',
+}
+function Form({ stored = project, start = 'content' }: { stored?: ClipProject; start?: Screen }) {
+  const [part, select] = useState<Screen>(start)
   return (
     <ClipProjectForm
       ownerId="alice"
@@ -85,34 +101,36 @@ function Form({ stored = project }: { stored?: ClipProject }) {
         ready = value
         return null
       }}
-      layout={(content) => (
-        <>
-          {(['sources', 'story', 'style'] as const).map((screen) => (
-            <div key={screen} hidden={part !== screen}>
-              {content.screens[screen]}
-            </div>
-          ))}
-          <div hidden={part !== 'review'}>
-            {content.rows.map((row) => (
-              <section aria-label={row.label} key={row.id}>
-                {row.value}
-              </section>
+      layout={(content) => {
+        return (
+          <>
+            <p data-refusal={content.inputRefusal ?? ''} />
+            {SCREENS.map((screen) => (
+              <div key={screen} hidden={part !== screen}>
+                {content.screens[screen]}
+              </div>
             ))}
-          </div>
-          <button type="button" onClick={() => select('review')}>
-            검토
-          </button>
-          <button type="button" onClick={() => select('story')}>
-            이야기
-          </button>
-          <button type="button" onClick={() => select('style')}>
-            스타일
-          </button>
-        </>
-      )}
+            <div hidden={part !== 'review'}>
+              {content.rows.map((row) => (
+                <section aria-label={row.label} key={row.id} data-screen={row.screen}>
+                  {row.value}
+                </section>
+              ))}
+            </div>
+            {(Object.keys(NAMES) as Screen[]).map((screen) => (
+              <button key={screen} type="button" onClick={() => select(screen)}>
+                {NAMES[screen]}
+              </button>
+            ))}
+          </>
+        )
+      }}
     />
   )
 }
+const open = (screen: Screen) =>
+  userEvent.click(screen === 'review' ? byName('검토') : byName(NAMES[screen]))
+const byName = (name: string | RegExp) => screen.getByRole('button', { name })
 // The component's transport, router and library reads are explicit injected mocks; no app route tree.
 beforeEach(() => {
   ports.save.mockImplementation(async ({ draft }: { draft: ClipProjectDraft }) => ({
@@ -139,9 +157,10 @@ it('summarizes queued local values before a delayed save and retains them after 
       }),
   )
   render(<Form />)
-  const title = screen.getByRole('textbox', { name: '클립 제목' })
+  const title = screen.getByRole('textbox', { name: /클립 제목/ })
   fireEvent.compositionStart(title)
   fireEvent.input(title, { target: { value: '저장 대기 한글' }, isComposing: true })
+  await open('note')
   fireEvent.change(screen.getByRole('textbox', { name: /클립에 담고 싶은 내용/ }), {
     target: { value: '정확한 원문 🥗\n두 번째 줄' },
   })
@@ -152,7 +171,7 @@ it('summarizes queued local values before a delayed save and retains them after 
   await act(async () => {
     await Promise.resolve()
   })
-  await userEvent.click(screen.getByRole('button', { name: '검토' }))
+  await open('review')
   expect(
     within(screen.getByRole('region', { name: '클립 제목' })).getByText('저장 대기 한글'),
   ).toBeVisible()
@@ -163,31 +182,123 @@ it('summarizes queued local values before a delayed save and retains them after 
     reject(new Error('save failed'))
     await flushing
   })
-  await userEvent.click(screen.getByRole('button', { name: '이야기' }))
-  expect(screen.getByRole('textbox', { name: '클립 제목' })).toBe(title)
+  await open('content')
+  expect(screen.getByRole('textbox', { name: /클립 제목/ })).toBe(title)
   expect(title).toHaveValue('저장 대기 한글')
 })
 
-it('starts from a queued draft and refuses invalid local input without clearing it', async () => {
+it('starts from a queued draft, keeps an empty title optional and refuses only an overlong one', async () => {
   queueClipDraft('one', { ...project, title: '큐의 제목' }, async () => {})
   render(<Form />)
-  expect(screen.getByRole('textbox', { name: '클립 제목' })).toHaveValue('큐의 제목')
-  fireEvent.change(screen.getByRole('textbox', { name: '클립 제목' }), { target: { value: '' } })
+  const title = screen.getByRole('textbox', { name: /클립 제목/ })
+  expect(title).toHaveValue('큐의 제목')
+  expect(title).toHaveAttribute('placeholder', '예: 성수동 감성 카페 브이로그')
+  expect(title).toHaveAccessibleDescription(/비워 두어도 괜찮아요/)
+  fireEvent.change(title, { target: { value: '' } })
+  expect(ready).toBe(true)
+  expect(title).toHaveAttribute('aria-invalid', 'false')
+  await open('review')
+  expect(screen.getByText('제목 없는 영상 (비워 두어도 괜찮아요)')).toBeVisible()
+  await open('content')
+  fireEvent.change(title, { target: { value: 'x'.repeat(101) } })
   expect(ready).toBe(false)
-  await userEvent.click(screen.getByRole('button', { name: '검토' }))
-  expect(screen.getByText('제목을 입력해 주세요.')).toBeVisible()
-  await userEvent.click(screen.getByRole('button', { name: '이야기' }))
-  expect(screen.getByRole('textbox', { name: '클립 제목' })).toHaveValue('')
+  expect(title).toHaveAttribute('aria-invalid', 'true')
+})
+
+it('saves 영상 종류 as two explicit choices, each tap only marking its card', async () => {
+  render(<Form stored={{ ...project, campaign: false }} start="kind" />)
+  const sponsored = byName(/체험단으로 다녀왔어요/)
+  const paid = byName(/내 돈으로 다녀왔어요/)
+  expect(paid).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(sponsored)
+  expect(sponsored).toHaveAttribute('aria-pressed', 'true')
+  await act(async () => {
+    await flushClipDraft('one', true)
+  })
+  expect(ports.save).toHaveBeenLastCalledWith(
+    expect.objectContaining({ draft: expect.objectContaining({ campaign: true }) }),
+  )
+  await open('review')
+  expect(screen.getByRole('region', { name: '체험단 글' })).toHaveTextContent(
+    '체험단으로 다녀왔어요',
+  )
+  expect(screen.getByRole('region', { name: '광고주 가이드' })).toBeVisible()
+})
+
+it('offers 없음 beside every template and reads the choice back', async () => {
+  render(<Form start="template" />)
+  const none = byName(/^없음/)
+  const chosen = byName(/선택한 구성/)
+  expect(none).toHaveAttribute('aria-pressed', 'true')
+  await userEvent.click(chosen)
+  expect(chosen).toHaveAttribute('aria-pressed', 'true')
+  expect(none).toHaveAttribute('aria-pressed', 'false')
+  await open('review')
+  expect(screen.getByRole('region', { name: '영상 템플릿' })).toHaveTextContent('선택한 구성')
+  await open('template')
+  await userEvent.click(none)
+  await open('review')
+  expect(screen.getByRole('region', { name: '영상 템플릿' })).toHaveTextContent('템플릿 없음')
+})
+
+it('routes a missing required answer to 내용, where the answer is marked invalid', async () => {
+  const body = '<clip version="1"><field id="place" label="장소" required="true" /></clip>'
+  render(
+    <Form
+      stored={{
+        ...project,
+        videoTemplateId: 'template',
+        composition: {
+          snapshot: { version: 1, body, templateId: 'template' },
+          inputs: { values: {}, items: {}, associations: [] },
+        },
+      }}
+    />,
+  )
+  expect(refusal()).toBe('content')
+  expect(screen.getByLabelText('장소')).toHaveAttribute('aria-invalid', 'true')
+  fireEvent.change(screen.getByLabelText('장소'), { target: { value: '성수' } })
+  expect(refusal()).toBe('')
+})
+
+it('lists the rows in CLIP-227 order, each routed to its screen', async () => {
+  render(
+    <Form
+      stored={{
+        ...project,
+        campaign: true,
+        advertiserGuide: { text: '가이드', keywords: [], hashtags: [] },
+      }}
+    />,
+  )
+  await open('review')
+  expect(
+    Array.from(document.querySelectorAll('section[data-screen]')).map(
+      (row) => `${row.getAttribute('aria-label')}:${row.getAttribute('data-screen')}`,
+    ),
+  ).toEqual([
+    '체험단 글:kind',
+    '광고주 가이드:requirements',
+    '글 연결:sources',
+    '영상 템플릿:template',
+    '클립 제목:content',
+    '템플릿 답변:content',
+    '목표 길이 (초):style',
+    '화면 비율:style',
+    '디자인과 자막 스타일:style',
+    '더빙 사용:style',
+    '클립에 담고 싶은 내용:note',
+  ])
 })
 
 it('keeps the retained disclosure control on style and summarizes its latest local visibility', async () => {
   render(<Form stored={{ ...project, composition: undefined, disclosure: 'ad' }} />)
   expect(screen.queryByRole('checkbox', { name: '영상에 광고·협찬 표시' })).toBeNull()
-  await userEvent.click(screen.getByRole('button', { name: '스타일' }))
+  await open('style')
   const checkbox = screen.getByRole('checkbox', { name: '영상에 광고·협찬 표시' })
   expect(checkbox).toBeChecked()
   await userEvent.click(checkbox)
-  await userEvent.click(screen.getByRole('button', { name: '검토' }))
+  await open('review')
   expect(screen.getByRole('region', { name: '디자인과 자막 스타일' })).toHaveTextContent(
     '영상에 광고·협찬 표시 안 함',
   )
@@ -209,11 +320,11 @@ it.each(['naver_clip', 'instagram_clip'] as const)(
       />,
     )
     fireEvent.change(screen.getByLabelText('장소'), { target: { value: '내가 입력한 장소' } })
-    await userEvent.click(screen.getByRole('button', { name: '스타일' }))
+    await open('style')
     fireEvent.change(screen.getByRole('spinbutton', { name: '목표 길이 (초)' }), {
       target: { value: '42' },
     })
-    await userEvent.click(screen.getByRole('button', { name: '검토' }))
+    await open('review')
     expect(screen.queryByRole('textbox', { name: '장소' })).toBeNull()
     expect(
       within(screen.getByRole('region', { name: '템플릿 답변' })).getByText('내가 입력한 장소'),
@@ -223,8 +334,8 @@ it.each(['naver_clip', 'instagram_clip'] as const)(
       within(screen.getByRole('region', { name: '영상 템플릿' })).getByText('선택한 구성'),
     ).toBeVisible()
     expect(screen.getByText('내 글')).toBeVisible()
-    expect(screen.getByRole('region', { name: '체험단 글' })).toHaveTextContent('광고주 원문')
-    expect(screen.getByRole('region', { name: '체험단 글' })).toHaveTextContent(
+    expect(screen.getByRole('region', { name: '광고주 가이드' })).toHaveTextContent('광고주 원문')
+    expect(screen.getByRole('region', { name: '광고주 가이드' })).toHaveTextContent(
       '필수 키워드: 키워드',
     )
     expect(screen.getByRole('region', { name: '화면 비율' })).toHaveTextContent('세로 9:16')
@@ -239,7 +350,7 @@ it.each(['missing', 'loading', 'failed', 'confirmed'] as const)(
     ports.voices =
       state === 'confirmed' ? [{ id: 'voice', name: '차분한 목소리', removedAt: '' }] : []
     render(<Form stored={{ ...project, dubbing: { enabled: true, voiceId: 'voice' } }} />)
-    await userEvent.click(screen.getByRole('button', { name: '검토' }))
+    await open('review')
     const narration = screen.getByRole('region', { name: '더빙 사용' })
     expect(ready).toBe(state === 'confirmed')
     expect(narration).toHaveTextContent(
@@ -251,9 +362,9 @@ it.each(['missing', 'loading', 'failed', 'confirmed'] as const)(
             ? '불러오지 못했어요'
             : '사용할 수 있는 확정 목소리',
     )
-    await userEvent.click(screen.getByRole('button', { name: '스타일' }))
+    await open('style')
     await userEvent.click(screen.getByRole('checkbox', { name: '더빙 선택' }))
-    await userEvent.click(screen.getByRole('button', { name: '검토' }))
+    await open('review')
     expect(narration).toHaveTextContent('더빙 사용 안 함 · 원본 소리는 소스별 선택을 따라요.')
   },
 )

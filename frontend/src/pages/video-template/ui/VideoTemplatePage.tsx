@@ -55,7 +55,7 @@ export function VideoTemplatePage() {
       ownerId={ownerId}
       stored={stored}
       sessionId={session}
-      returnToNewClip={!stored && clip === 'new'}
+      returnToClip={stored ? undefined : clip}
       onPublished={refetch}
     />
   )
@@ -64,14 +64,15 @@ function VideoTemplateHost({
   ownerId,
   stored,
   sessionId,
-  returnToNewClip,
+  returnToClip,
   onPublished,
 }: {
   ownerId: string
   stored?: ClipTemplate
   sessionId?: string
-  /** A new clip's offer opened this creation (CLIP-223). */
-  returnToNewClip: boolean
+  /** `new`: a new clip's offer opened this creation (CLIP-223); an id: a saved clip's 템플릿
+   *  screen did, and 저장 goes back to that screen (CLIP-225). */
+  returnToClip?: string
   onPublished: () => void
 }) {
   const { t } = useTranslation(['clips', 'authoring', 'common'])
@@ -79,18 +80,25 @@ function VideoTemplateHost({
   // A new template opens its own page, unless a new clip's offer sent the owner here: then 저장
   // goes back to a new clip in that channel starting from it.
   const openCreated = (templateId: string) =>
-    returnToNewClip
+    returnToClip === 'new'
       ? navigate({
           to: '/clips/new',
           search: ({ channel }) => ({ channel, template: templateId }),
           replace: true,
         })
-      : navigate({
-          to: '/video-templates/$templateId',
-          params: { templateId },
-          search: ({ channel }) => ({ channel }),
-          replace: true,
-        })
+      : returnToClip
+        ? navigate({
+            to: '/clips/$clipId',
+            params: { clipId: returnToClip },
+            search: ({ channel }) => ({ channel, guide: 'template' }),
+            replace: true,
+          })
+        : navigate({
+            to: '/video-templates/$templateId',
+            params: { templateId },
+            search: ({ channel }) => ({ channel }),
+            replace: true,
+          })
   const [method, setMethod] = useState<'ai' | 'direct' | 'design' | null>(sessionId ? 'ai' : null)
   const [activeSession, setActiveSession] = useState(sessionId)
   const [published, setPublished] = useState<AuthoringSavedRef>()

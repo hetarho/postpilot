@@ -212,6 +212,7 @@ describe('making a clip from a finished post', () => {
     const notice = await screen.findByText(/가져오지 못한 영상:/)
     expect(notice).toHaveTextContent('bad.mp4')
     expect(notice).not.toHaveTextContent('good.mp4')
+    await clipGuideTo('sources')
     expect(await screen.findByRole('button', { name: 'good.mp4 선택' })).toBeInTheDocument()
     expect(putBlobWithProgress).toHaveBeenCalledTimes(2)
     expect(await vi.mocked(putBlobWithProgress).mock.calls[0][2].text()).toBe(
@@ -322,7 +323,7 @@ describe('making a clip from a finished post', () => {
         },
       }),
     )
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await screen.findByRole('textbox', { name: '클립 제목' })
     expect(screen.queryByText(/private.mp4/)).not.toBeInTheDocument()
     await waitFor(() => expect(view.router.state.location.state.clipImport).toBeUndefined())

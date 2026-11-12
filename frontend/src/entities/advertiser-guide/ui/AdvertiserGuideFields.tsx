@@ -30,8 +30,11 @@ export function AdvertiserGuideFields({
   items = ALL_ITEMS,
   disabled = false,
   expanded = false,
+  requirementsTitle = 'post',
   afterText,
 }: {
+  /** Whose requirements the expanded list names: 글에 꼭 담을 내용 or 영상에 꼭 담을 내용. */
+  requirementsTitle?: 'post' | 'clip'
   /** Posts keep every requirement visible; clips retain their compact presentation. */
   expanded?: boolean
   afterText?: ReactNode
@@ -72,7 +75,13 @@ export function AdvertiserGuideFields({
       {items.length > 0 && (
         <Requirements
           expanded={expanded}
-          title={t(expanded ? 'advertiserGuide.requirements' : 'advertiserGuide.counted')}
+          title={t(
+            !expanded
+              ? 'advertiserGuide.counted'
+              : requirementsTitle === 'clip'
+                ? 'advertiserGuide.requirementsClip'
+                : 'advertiserGuide.requirements',
+          )}
         >
           <div className="space-y-4 pb-2">
             {items.includes('keywords') && (

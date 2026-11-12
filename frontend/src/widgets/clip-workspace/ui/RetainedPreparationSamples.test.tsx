@@ -73,9 +73,15 @@ function fixture() {
             <ClipPreparationGuide
               screen={selected}
               onSelect={() => {}}
+              campaign={false}
+              noteEmpty
               screens={{
+                kind: null,
+                requirements: null,
+                template: null,
+                note: null,
                 sources: <input aria-label="Upload" type="file" />,
-                story: <input aria-label="Title" defaultValue="Retained title" />,
+                content: <input aria-label="Title" defaultValue="Retained title" />,
                 style: (
                   <RetainedPreparationMedia active={!lifecycle && selected === 'style'}>
                     <input aria-label="Duration" defaultValue="42" />

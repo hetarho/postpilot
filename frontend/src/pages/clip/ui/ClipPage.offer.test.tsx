@@ -21,7 +21,7 @@ const OFFER = '영상 템플릿이 아직 없어요'
 const offerDialog = () => screen.findByRole('dialog', { name: OFFER })
 /** The form standing is the page having decided; only then is "no dialog" an answer. */
 async function expectNoOffer() {
-  await clipGuideTo('story')
+  await clipGuideTo('content')
   expect(await screen.findByLabelText('클립 제목')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 }
@@ -81,12 +81,12 @@ describe('the new-clip offer', () => {
     expect(router.state.location.search).toMatchObject({ channel: 'instagram_clip' })
     const templateId = (router.state.location.search as { template?: string }).template
     expect(templateId).toBeTruthy()
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
     await waitFor(() => expect(picker).toHaveAccessibleName('영상 템플릿 내 카페 클립'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(screen.getByLabelText('클립 제목'), '디저트 투어')
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -101,10 +101,10 @@ describe('the new-clip offer', () => {
       creationOffers: true,
       clips: { templates: [TEMPLATE], projectWrites: writes },
     })
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
     await waitFor(() => expect(picker).toHaveAccessibleName('영상 템플릿 카페 구성'))
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(screen.getByLabelText('클립 제목'), '라떼')
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -120,7 +120,7 @@ describe('the new-clip offer', () => {
       creationOffers: true,
       clips: { templates: [TEMPLATE] },
     })
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     expect(await screen.findByRole('combobox', { name: /^영상 템플릿/ })).toHaveAccessibleName(
       '영상 템플릿 없음',
     )
@@ -193,7 +193,7 @@ describe('the new-clip offer', () => {
         ],
       },
     })
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(await screen.findByLabelText('클립 제목')).toHaveValue('제주 여행')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })

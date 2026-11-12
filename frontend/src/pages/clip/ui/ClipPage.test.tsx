@@ -58,9 +58,9 @@ afterEach(() => {
 })
 async function fillSetup() {
   const user = userEvent.setup()
-  await clipGuideTo('story')
+  await clipGuideTo('template')
   await user.type(await screen.findByLabelText('클립 제목'), ' 새 경험 ')
-  await clipGuideTo('story')
+  await clipGuideTo('template')
   await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
   await user.click(await screen.findByRole('option', { name: '여행' }))
   return user
@@ -72,12 +72,15 @@ describe('clip directory and setup', () => {
     const view = mount('/clips/project', {
       projects: [{ ...project, videoTemplateId: '' }],
     })
-    await clipGuideTo('story')
-    expect(await screen.findByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('없음')
+    await clipGuideTo('template')
+    expect(await screen.findByRole('button', { name: /^없음/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     expect(screen.queryByText(/연결된 영상 템플릿이 없어요/)).not.toBeInTheDocument()
     view.unmount()
     mount('/clips/project', { projects: [{ ...project, videoTemplateId: 'deleted' }] })
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     expect(await screen.findByText(/연결된 영상 템플릿이 없어요/)).toBeInTheDocument()
   })
 
@@ -127,7 +130,7 @@ describe('clip directory and setup', () => {
     await waitFor(() => expect(link).toHaveTextContent('여행'))
     expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
     await user.click(link)
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(await screen.findByLabelText('클립 제목')).toHaveValue('제주 여행')
     expect(screen.queryByRole('combobox', { name: /^화면 비율/ })).not.toBeInTheDocument()
     await clipGuideTo('style')
@@ -170,7 +173,7 @@ describe('clip directory and setup', () => {
     // ① is where the rest is asked for, and the length it was minted without is empty there.
     await clipGuideTo('style')
     expect(await screen.findByLabelText('목표 길이 (초)')).toHaveValue(null)
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(await screen.findByLabelText('장소')).toBeInTheDocument()
     await clipGuideTo('sources')
     expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()
@@ -185,7 +188,7 @@ describe('clip directory and setup', () => {
     expect(document.querySelector('aside')).toBeNull()
     directory.unmount()
     mount('/clips/project')
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await screen.findByLabelText('클립 제목')
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
     expect(document.querySelector('aside')).toBeNull()
@@ -217,13 +220,13 @@ describe('clip directory and setup', () => {
     const { router } = mount('/clips/new', { projectSaveFails: true })
     const user = await fillSetup()
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     expect(
       await screen.findByText('클립 또는 영상 템플릿의 입력값과 제한을 확인해 주세요.'),
     ).toBeInTheDocument()
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     expect(screen.getByLabelText('클립 제목')).toHaveValue(' 새 경험 ')
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     expect(screen.getByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('여행')
     expect(router.state.location.pathname).toBe('/clips/new')
   })
@@ -232,7 +235,7 @@ describe('clip directory and setup', () => {
     const { router } = mount('/naver-clip', { projectWrites: writes })
     const user = userEvent.setup()
     await user.click(await screen.findByRole('link', { name: /제주 여행/ }))
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await screen.findByLabelText('클립 제목')
     await clipGuideTo('sources')
     await user.dblClick(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
@@ -289,7 +292,7 @@ describe('clip directory and setup', () => {
     })
     expect(download).toHaveAttribute('href', delivered.downloadUrl)
     await user.click(screen.getByRole('tab', { name: '생성' }))
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(await screen.findByLabelText('클립 제목')).toBeDisabled()
     expect(screen.queryByRole('button', { name: '네이버 클립으로 옮기기' })).not.toBeInTheDocument()
   })
@@ -312,11 +315,11 @@ describe('clip directory and setup', () => {
       readProject: (p) => (canonicalTitle ? { ...p, title: canonicalTitle } : p),
     })
     const user = userEvent.setup()
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     const title = await screen.findByLabelText('클립 제목')
     await clipGuideTo('sources')
     await user.click(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(title, ' 기록')
     release()
     await waitFor(() =>
@@ -355,7 +358,7 @@ describe('clip directory and setup', () => {
       'https://test.local/legacy.mp4',
     )
     await user.click(screen.getByRole('tab', { name: '생성' }))
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     await clipGuideTo('style')
     expect(screen.getByText('정방형 1:1')).toBeVisible()
@@ -370,12 +373,12 @@ describe('clip directory and setup', () => {
     const projectWrites: ClipProjectDraft[] = []
     mount('/clips/project', { projectWrites })
     const user = userEvent.setup()
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     const title = await screen.findByLabelText('클립 제목')
     // A project minted before this opens ① with the length it already had (CLIP-130).
     await clipGuideTo('style')
     expect(screen.getByLabelText('목표 길이 (초)')).toHaveValue(30)
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(title, ' 기록')
     // Nothing is pressed: the settings save themselves a beat after the typing stops, and the
     // picker does not wait for them (CLIP-39).
@@ -397,7 +400,7 @@ describe('clip directory and setup', () => {
     })
     mount('/clips/project', { projectSaveGate: () => held })
     const user = userEvent.setup()
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     const title = await screen.findByLabelText('클립 제목')
     await user.type(title, ' 기록')
     // The save is on the wire. Disabling the form here would disable the field the owner is
@@ -419,7 +422,7 @@ describe('clip directory and setup', () => {
   it('lets the owner leave an autosaved project, and still guards an unminted one', async () => {
     const user = userEvent.setup()
     const { router, unmount } = mount('/clips/project')
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     // No dialog: there is nothing to lose by leaving a project that saves itself (CLIP-39).
     await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
@@ -428,7 +431,7 @@ describe('clip directory and setup', () => {
     unmount()
 
     const created = mount('/clips/new')
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
     await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
     // `/clips/new` is the one screen whose input is not queued anywhere yet.
@@ -515,9 +518,9 @@ describe('clip page local upload lifecycle', () => {
     const calls: string[] = []
     const { revoke } = await uploadFixture({ confirmFails: true, calls })
     await screen.findByRole('alert')
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(screen.getByLabelText('클립 제목')).toHaveValue(project.title)
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(screen.getByLabelText('장소')).toHaveValue('제주도')
     expect(calls).toContain('DiscardClipSourceBatch')
     expect(revoke).toHaveBeenCalledWith('blob:local-clip')
@@ -548,7 +551,7 @@ it.each(['ko', 'en'] as const)(
       }),
     })
     const titleLabel = language === 'ko' ? '클립 제목' : 'Clip title'
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(await screen.findByRole('textbox', { name: titleLabel }), ' changed')
     await user.click(screen.getByRole('tab', { name: language === 'ko' ? '수정' : 'Refine' }))
     expect(screen.queryByRole('textbox', { name: titleLabel })).not.toBeInTheDocument()
@@ -567,7 +570,7 @@ it.each(['ko', 'en'] as const)(
     await user.click(screen.getByRole('tab', { name: language === 'ko' ? '완성' : 'Finish' }))
     expect(status).toHaveTextContent('menu')
     await user.click(screen.getByRole('tab', { name: language === 'ko' ? '생성' : 'Create' }))
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     expect(await screen.findByRole('textbox', { name: titleLabel })).toHaveValue(
       '제주 여행 changed',
     )
@@ -582,7 +585,7 @@ it.each(['ko', 'en'] as const)(
     mount('/clips/project', {
       projectSaveError: connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable),
     })
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(
       await screen.findByLabelText(language === 'ko' ? '클립 제목' : 'Clip title'),
       ' changed',

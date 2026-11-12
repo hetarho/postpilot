@@ -9,3 +9,5 @@ export type {
   ClipPreparationRow,
   ClipPreparationScreen,
 } from './model/preparation'
+export { CLIP_PREPARATION_SCREENS, clipPreparationScreens } from './model/preparation'
+export { clipKeywordCoverage } from './model/requirements'

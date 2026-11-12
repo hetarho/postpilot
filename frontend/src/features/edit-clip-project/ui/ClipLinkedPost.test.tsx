@@ -56,6 +56,7 @@ it('links a post from the picker with title matches first', async () => {
     clips: { projects: [{ ...project }], projectRequests: requests },
   })
   const user = userEvent.setup()
+  await clipGuideTo('sources')
   await user.click(await screen.findByRole('button', { name: '글 연결: 없음' }))
   const sheet = await screen.findByRole('dialog', { name: '글 연결' })
   expect(within(sheet).getByRole('searchbox', { name: '글 검색' })).toHaveValue('카페')
@@ -75,7 +76,7 @@ it('links a post from the picker with title matches first', async () => {
     { id: 'clip', linkedPostSlug: 'match-2', fields: ['id', 'linkedPostSlug'] },
   ])
   expect(calls.filter((name) => /^(Start|Generate|Analyze|Create|SavePost)/.test(name))).toEqual([])
-  await clipGuideTo('story')
+  await clipGuideTo('content')
   expect(screen.getByRole('textbox', { name: '클립 제목' })).toHaveValue('카페')
 })
 
@@ -95,6 +96,7 @@ it('unlinks', async () => {
     },
   })
   const user = userEvent.setup()
+  await clipGuideTo('sources')
   await user.click(await screen.findByRole('button', { name: '글 연결: 연결한 글' }))
   const sheet = await screen.findByRole('dialog', { name: '글 연결' })
   await user.click(within(sheet).getByRole('button', { name: '연결 해제' }))
@@ -108,6 +110,7 @@ it('hides posts without content', async () => {
     posts: { posts: [{ slug: 'empty', title: '카페 메모' }, post('ready', '완성한 카페 글')] },
     clips: { projects: [{ ...project }] },
   })
+  await clipGuideTo('sources')
   await userEvent.click(await screen.findByRole('button', { name: '글 연결: 없음' }))
   const sheet = await screen.findByRole('dialog', { name: '글 연결' })
   await within(sheet).findByRole('button', { name: '완성한 카페 글' })

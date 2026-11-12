@@ -44,10 +44,10 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [template], projectWrites: writes },
     })
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
     expect(picker).toHaveAccessibleName('영상 템플릿 없음')
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '고기')
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -213,9 +213,8 @@ describe('① chooses the design, the caption styles and an optional template', 
     const outro = await screen.findByRole('radiogroup', { name: '아웃트로 디자인' })
     await user.click(within(outro).getByRole('radio', { name: '원형 도장' }))
     await waitFor(() => expect(writes.at(-1)?.outroPreset).toBe('stamp'), { timeout: 4000 })
-    await clipGuideTo('story')
-    const picker = screen.getByRole('combobox', { name: /^영상 템플릿/ })
-    await chooseOption(user, picker, '여행')
+    await clipGuideTo('template')
+    await user.click(screen.getByRole('button', { name: /^여행/ }))
     await waitFor(
       () => {
         const last = writes.at(-1)
@@ -245,8 +244,8 @@ describe('① chooses the design, the caption styles and an optional template', 
     const settled = writes.length
     await new Promise((resolve) => setTimeout(resolve, 1500))
     expect(writes).toHaveLength(settled)
-    await clipGuideTo('story')
-    await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '없음')
+    await clipGuideTo('template')
+    await user.click(screen.getByRole('button', { name: /^없음/ }))
     await waitFor(
       () => {
         const last = writes.at(-1)
@@ -266,9 +265,9 @@ describe('① chooses the design, the caption styles and an optional template', 
       user: { id: 'alice' },
       clips: { templates: [designed], projectWrites: writes },
     })
-    await clipGuideTo('story')
+    await clipGuideTo('template')
     await chooseOption(user, await screen.findByRole('combobox', { name: /^영상 템플릿/ }), '여행')
-    await clipGuideTo('story')
+    await clipGuideTo('content')
     await user.type(screen.getByLabelText('클립 제목'), '고기')
     await user.click(screen.getByRole('button', { name: '클립 만들기' }))
     await waitFor(() => expect(writes).toHaveLength(1))
@@ -296,7 +295,7 @@ it('opens the phone gallery explicitly and retains the selected design and curre
   expect(
     screen.getByText(/인트로 위아래 가로선.*아웃트로 점수 강조.*자막 스타일 1종/),
   ).toBeInTheDocument()
-  await clipGuideTo('story')
+  await clipGuideTo('note')
   const request = screen.getByLabelText('클립에 담고 싶은 내용 (선택)')
   await user.type(request, '모바일에서 입력하던 요청')
   await clipGuideTo('style')
@@ -307,7 +306,7 @@ it('opens the phone gallery explicitly and retains the selected design and curre
     }),
   )
   await user.click(toggle)
-  await clipGuideTo('story')
+  await clipGuideTo('note')
   expect(request).toBeVisible()
   expect(request).toHaveValue('모바일에서 입력하던 요청')
   await clipGuideTo('style')

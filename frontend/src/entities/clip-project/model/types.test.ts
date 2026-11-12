@@ -3,6 +3,7 @@ import { parseClipComposition } from '@/entities/clip-template/@x/clip-project'
 import {
   emptyClipProject,
   normalizeClipProject,
+  savableClipProject,
   validClipProject,
   validNewClipProject,
   type ClipProjectDraft,
@@ -24,7 +25,6 @@ const draft = (): ClipProjectDraft => ({
 })
 describe('clip setup validation', () => {
   it.each([
-    { title: '' },
     { title: '😀'.repeat(101) },
     { targetDurationMs: 0 },
     { targetDurationMs: 14999 },
@@ -50,6 +50,9 @@ describe('clip setup validation', () => {
     expect(validNewClipProject({ ...minting, ratio: 'horizontal' })).toBe(false)
     expect(validNewClipProject({ ...minting, videoTemplateId: '' })).toBe(true)
     expect(validClipProject({ ...draft(), videoTemplateId: '' }, composition)).toBe(true)
+    // A saved project's title is optional: an empty one saves and generates (CLIP-130).
+    expect(validClipProject({ ...draft(), title: '' }, composition)).toBe(true)
+    expect(savableClipProject({ ...draft(), title: '' })).toBe(true)
     expect(validNewClipProject({ ...minting, ratio: 'wide' as ClipProjectDraft['ratio'] })).toBe(
       false,
     )

@@ -6,7 +6,8 @@ export const i18n = {
   ko: {
     preparation: {
       optionalEmpty: '입력한 내용 없음 (선택 사항)',
-      titleEmpty: '제목을 입력해 주세요.',
+      titleEmpty: '제목 없는 영상 (비워 두어도 괜찮아요)',
+      guide: '광고주 가이드',
       durationEmpty: '목표 길이를 정해 주세요.',
       campaignOn: '체험단 글 · 광고주 가이드 사용',
       campaignOff: '체험단 글 아님 · 보관한 가이드는 사용하지 않아요.',
@@ -33,6 +34,16 @@ export const i18n = {
     },
     channel: { naver_clip: '네이버 클립', instagram_clip: '인스타 클립' },
     project: {
+      kindSponsored: '체험단으로 다녀왔어요',
+      kindSponsoredHelp: '제공받은 경험이에요. 광고주가 부탁한 내용을 먼저 확인해요.',
+      kindSelfPaid: '내 돈으로 다녀왔어요',
+      kindSelfPaidHelp: '광고주 요청 없이 내 경험으로 만들어요.',
+      requirementsHelp: '받은 안내를 붙여넣고, 영상에 꼭 담을 내용을 확인해 주세요.',
+      templateNone: '없음',
+      templateNoneHelp: '템플릿 없이 영상과 덧붙임으로 만들게요.',
+      titlePlaceholder: '예: 성수동 감성 카페 브이로그',
+      titleHint: '비워 두어도 괜찮아요. 제목이 없으면 제목 없는 영상으로 불러요.',
+      noAnswers: '채울 빈칸이 없어요. 더 전하고 싶은 말은 다음에서 적어 주세요.',
       channel: '클립 채널',
       campaign: '체험단 글',
       campaignHelp:
@@ -143,7 +154,8 @@ export const i18n = {
   en: {
     preparation: {
       optionalEmpty: 'Not entered (optional)',
-      titleEmpty: 'Enter a title.',
+      titleEmpty: 'Untitled video (it may stay empty)',
+      guide: 'Advertiser guide',
       durationEmpty: 'Choose a target duration.',
       campaignOn: 'Campaign content · use advertiser guide',
       campaignOff: 'Not campaign content · retained guide is not used.',
@@ -170,6 +182,16 @@ export const i18n = {
     },
     channel: { naver_clip: 'Naver Clip', instagram_clip: 'Instagram Clip' },
     project: {
+      kindSponsored: 'It was a sponsored visit',
+      kindSponsoredHelp: 'A provided experience. Check what the sponsor asked for first.',
+      kindSelfPaid: 'I paid for it myself',
+      kindSelfPaidHelp: 'Made from your own experience, with no sponsor requests.',
+      requirementsHelp: 'Paste the guide, then confirm what your clip needs to include.',
+      templateNone: 'None',
+      templateNoneHelp: 'Make it from the footage and your note, without a template.',
+      titlePlaceholder: 'e.g. A cozy café vlog in Seongsu',
+      titleHint: 'You can leave this empty. An untitled clip is called Untitled video.',
+      noAnswers: 'Nothing to fill in. Add anything else on the next screen.',
       channel: 'Clip channel',
       campaign: 'Campaign content',
       campaignHelp:

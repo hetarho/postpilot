@@ -230,7 +230,7 @@ it('keeps ② interactive and reports one monotonic scale from encoding through 
   expect(await screen.findByRole('dialog', { name: '원본 소스' })).toBeInTheDocument()
   await userEvent.keyboard('{Escape}')
   await userEvent.click(screen.getByRole('tab', { name: '생성' }))
-  await clipGuideTo('story')
+  await clipGuideTo('content')
   expect(screen.getByLabelText('클립 제목')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('tab', { name: '수정' }))
   await act(async () => encoded.resolve(track))

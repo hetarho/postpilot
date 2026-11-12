@@ -48,7 +48,7 @@ import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } f
 
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
-import { clipStepLabel, clipSteps } from '../model/steps'
+import { clipStepLabel, clipSteps, preparationOpening } from '../model/steps'
 import { ClipPreparationGuide } from './ClipPreparationGuide'
 import { ClipPreparationSources } from './ClipPreparationSources'
 import { RetainedPreparationMedia } from './RetainedPreparationMedia'
@@ -62,10 +62,13 @@ export function ClipWorkspace({
   ownerId,
   project,
   sourceFeedback,
+  initialGuide,
 }: {
   ownerId: string
   project: ClipProject
   sourceFeedback?: ReactNode
+  /** The screen ① opens on instead of CLIP-225's opening rule: 템플릿, back from the wizard. */
+  initialGuide?: ClipPreparationScreen
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
@@ -94,7 +97,6 @@ export function ClipWorkspace({
   // A finalized project is READ in ① and ②: the same steps, the same places, values instead of
   // controls, and no original behind them (CLIP-160, CLIP-76).
   const reading = !!project.finalized
-  const [guide, setGuide] = useState<ClipPreparationScreen>('sources')
   const reasonId = useId()
   const now = usePreparationClock([
     upload.readyBatch?.expiresAt,
@@ -102,6 +104,16 @@ export function ClipWorkspace({
   ])
   const sourceReady = readyClipBatch(upload.readyBatch, project.id, now)
   const job = run.job
+  // A project holding an instruction, a source or a running job opens on 확인, any other on 영상
+  // 종류 (CLIP-225). Derived until the owner moves, so sources that load late still count.
+  const [chosenGuide, setGuide] = useState<ClipPreparationScreen | undefined>(initialGuide)
+  const guide: ClipPreparationScreen =
+    chosenGuide ??
+    preparationOpening({
+      instruction: project.instruction,
+      sources: upload.entries.length,
+      running: !!job && !isTerminal(job),
+    })
   const browserStatus = (
     <ClipBrowserRenderStatus
       state={render.browser.state}
@@ -254,6 +266,9 @@ export function ClipWorkspace({
                 screen={guide}
                 onSelect={setGuide}
                 reasonId={reasonId}
+                campaign={content.campaign}
+                requirements={content.requirements}
+                noteEmpty={content.noteEmpty}
                 screens={{
                   ...content.screens,
                   sources: (
@@ -268,17 +283,26 @@ export function ClipWorkspace({
                     </>
                   ),
                 }}
-                rows={[
-                  {
-                    id: 'sources',
-                    label: t('guide.sourceSummary'),
-                    screen: 'sources',
-                    value: (
-                      <ClipPreparationSources sources={sources} ready={sourceReady} now={now} />
-                    ),
-                  },
-                  ...content.rows,
-                ]}
+                rows={content.rows.flatMap((row) =>
+                  // The source row reads right after the linked post (CLIP-227).
+                  row.id !== 'post'
+                    ? [row]
+                    : [
+                        row,
+                        {
+                          id: 'sources',
+                          label: t('guide.sourceSummary'),
+                          screen: 'sources',
+                          value: (
+                            <ClipPreparationSources
+                              sources={sources}
+                              ready={sourceReady}
+                              now={now}
+                            />
+                          ),
+                        },
+                      ],
+                )}
                 models={modelsPanel}
                 actions={content.actions}
                 refusal={content.refusal}

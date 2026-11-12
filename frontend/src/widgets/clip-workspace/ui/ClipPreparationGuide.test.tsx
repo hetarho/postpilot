@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClipPreparationScreen } from '@/features/edit-clip-project'
 import { Button, TextField } from '@/shared/ui'
+import { preparationOpening } from '../model/steps'
 import { ClipPreparationGuide } from './ClipPreparationGuide'
 
 function Mounted({ mounted }: { mounted: () => void }) {
@@ -23,19 +24,31 @@ function Approval() {
     </>
   )
 }
+const EMPTY = {
+  kind: null,
+  requirements: null,
+  sources: null,
+  template: null,
+  content: null,
+  style: null,
+  note: null,
+}
 function Fixture({
   active = true,
+  campaign = false,
   refusal,
   onSubmit = () => {},
   mounted = () => {},
 }: {
   active?: boolean
-  refusal?: 'sources' | 'style' | 'save'
+  campaign?: boolean
+  refusal?: 'sources' | 'style' | 'content' | 'save'
   onSubmit?: () => void
   mounted?: () => void
 }) {
-  const [step, select] = useState<ClipPreparationScreen>('sources')
+  const [step, select] = useState<ClipPreparationScreen>('kind')
   const [value, change] = useState('')
+  const [note, write] = useState('')
   return (
     <form
       hidden={!active}
@@ -47,28 +60,54 @@ function Fixture({
       <ClipPreparationGuide
         screen={step}
         onSelect={select}
+        campaign={campaign}
+        requirements={
+          campaign
+            ? {
+                coverage: {
+                  keywords: [
+                    { keyword: '성수카페', held: !!value },
+                    { keyword: '라떼', held: false },
+                  ],
+                },
+                hashtags: ['성수'],
+              }
+            : undefined
+        }
+        noteEmpty={!note.trim()}
         screens={{
+          ...EMPTY,
+          kind: <p>종류 선택</p>,
+          requirements: <TextField aria-label="광고주 가이드" />,
           sources: (
             <>
               <Mounted mounted={mounted} />
               <TextField aria-label="원본 파일" type="file" />
             </>
           ),
-          story: (
+          content: (
             <TextField
               aria-label="제목"
               value={value}
+              aria-invalid={refusal === 'content'}
               onChange={(event) => change(event.target.value)}
             />
           ),
           style: <TextField aria-label="길이" type="number" defaultValue="30" />,
+          note: (
+            <TextField
+              aria-label="덧붙임"
+              value={note}
+              onChange={(event) => write(event.target.value)}
+            />
+          ),
         }}
-        rows={[{ id: 'title', label: '제목', value: value || '비었어요', screen: 'story' }]}
+        rows={[{ id: 'title', label: '제목', value: value || '비었어요', screen: 'content' }]}
         models={<TextField aria-label="선택 모델" defaultValue="저장된 모델" />}
         refusal={refusal === 'save' ? <p role="alert">저장 실패</p> : undefined}
         correction={
           refusal
-            ? { screen: refusal === 'save' ? 'story' : refusal, label: '입력을 확인해 주세요.' }
+            ? { screen: refusal === 'save' ? 'content' : refusal, label: '입력을 확인해 주세요.' }
             : undefined
         }
         actions={<Approval />}
@@ -76,45 +115,88 @@ function Fixture({
     </form>
   )
 }
+const progress = () => screen.getByRole('navigation', { name: '클립 만들기 단계' })
 async function go(name: string) {
-  await userEvent.click(
-    within(screen.getByRole('navigation', { name: '클립 만들기 단계' })).getByRole('button', {
-      name,
-    }),
-  )
+  await userEvent.click(within(progress()).getByRole('button', { name }))
 }
 
 describe('retained clip preparation questions', () => {
-  it('uses one visible question, truthful positions, native pointer/keyboard navigation and one dock without submitting', async () => {
+  it('asks the post guide order one screen at a time, with positions, and never submits', async () => {
     const submit = vi.fn(),
       mounted = vi.fn()
     render(<Fixture onSubmit={submit} mounted={mounted} />)
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('어떤 영상으로 만들까요?')
-    expect(screen.getByText('1 / 4')).toBeVisible()
+    expect(
+      within(progress())
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['영상 종류', '영상', '템플릿', '내용', '스타일', '덧붙임', '확인'])
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('어떤 영상을 만드시나요?')
+    expect(screen.getByText('1 / 7')).toBeVisible()
     expect(screen.queryByRole('button', { name: '바로 만들기' })).toBeNull()
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: '다음' }))
     expect(screen.getByRole('heading', { level: 2 })).toHaveFocus()
-    expect(screen.getByText('2 / 4')).toBeVisible()
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('어떤 영상으로 만들까요?')
+    expect(screen.getByText('2 / 7')).toBeVisible()
+    await go('내용')
+    expect(screen.getByText('4 / 7')).toBeVisible()
     await user.type(screen.getByRole('textbox', { name: '제목' }), '주인이 쓴 제목')
     expect(screen.getByRole('textbox', { name: '제목' })).toHaveFocus()
     await go('스타일')
-    await user.click(screen.getByRole('button', { name: '이야기로 이전' }))
+    await user.click(screen.getByRole('button', { name: '내용로 이전' }))
     expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue('주인이 쓴 제목')
-    const review = within(screen.getByRole('navigation')).getByRole('button', { name: '확인' })
+    const review = within(progress()).getByRole('button', { name: '확인' })
     review.focus()
     await user.keyboard('{Enter}')
-    expect(screen.getByText('4 / 4')).toBeVisible()
+    expect(screen.getByText('7 / 7')).toBeVisible()
     expect(review).toHaveAttribute('aria-current', 'step')
     expect(screen.getByText('주인이 쓴 제목')).toBeVisible()
+    expect(screen.getByRole('button', { name: '덧붙임로 이전' })).toBeVisible()
     expect(document.querySelectorAll('[data-action-bar=step]')).toHaveLength(1)
+    expect(screen.queryByRole('complementary', { name: '광고주 요청 챙기기' })).toBeNull()
     expect(submit).not.toHaveBeenCalled()
     expect(mounted).toHaveBeenCalledTimes(1)
   })
 
+  it('adds 요청 and the tracker on every screen after it while sponsored', async () => {
+    render(<Fixture campaign />)
+    expect(
+      within(progress())
+        .getAllByRole('button')
+        .map((button) => button.textContent),
+    ).toEqual(['영상 종류', '요청', '영상', '템플릿', '내용', '스타일', '덧붙임', '확인'])
+    expect(screen.getByText('1 / 8')).toBeVisible()
+    const tracker = () => screen.queryByRole('complementary', { name: '광고주 요청 챙기기' })
+    expect(tracker()).toBeNull()
+    await go('요청')
+    expect(screen.getByText('2 / 8')).toBeVisible()
+    expect(tracker()).toBeNull()
+    await go('영상')
+    expect(tracker()).toHaveTextContent('입력한 키워드 0 / 2')
+    expect(within(tracker()!).queryByRole('list')).toBeNull()
+    await go('내용')
+    await userEvent.type(screen.getByRole('textbox', { name: '제목' }), '성수 카페')
+    expect(tracker()).toHaveTextContent('입력한 키워드 1 / 2')
+    expect(within(tracker()!).getByRole('list', { name: '입력한 내용의 키워드' })).toBeVisible()
+    await go('확인')
+    expect(screen.getByText('아직 입력하지 않은 키워드: 라떼')).toBeVisible()
+    expect(screen.getByText(/업로드 문구에서 필수 해시태그를 확인해요: #성수/)).toBeVisible()
+    await userEvent.click(within(tracker()!).getByRole('button', { name: '광고주 요청 바꾸기' }))
+    expect(screen.getByText('2 / 8')).toBeVisible()
+  })
+
+  it('reads 건너뛰고 확인 on an empty note and 확인하기 once it holds text', async () => {
+    render(<Fixture />)
+    await go('덧붙임')
+    expect(screen.getByRole('button', { name: '건너뛰고 확인' })).toBeVisible()
+    await userEvent.type(screen.getByRole('textbox', { name: '덧붙임' }), '라떼 위주로')
+    await userEvent.click(screen.getByRole('button', { name: '확인하기' }))
+    expect(screen.getByText('7 / 7')).toBeVisible()
+  })
+
   it('reads pending IME input, has no duplicate editable summary, and returns to the original control', async () => {
     render(<Fixture />)
-    await go('이야기')
+    await go('내용')
     const input = screen.getByRole('textbox', { name: '제목' })
     fireEvent.compositionStart(input)
     fireEvent.input(input, { target: { value: '아직 저장 안 된 한글' }, isComposing: true })
@@ -126,7 +208,7 @@ describe('retained clip preparation questions', () => {
     expect(input).toHaveValue('아직 저장 안 된 한글')
   })
 
-  it.each(['sources', 'style', 'save'] as const)(
+  it.each(['sources', 'style', 'content', 'save'] as const)(
     'keeps a %s refusal actionable and navigation available',
     async (refusal) => {
       const submit = vi.fn()
@@ -136,6 +218,8 @@ describe('retained clip preparation questions', () => {
       if (refusal === 'save') expect(screen.getByRole('alert')).toHaveTextContent('저장 실패')
       await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
       expect(screen.getByRole('button', { name: '다음' })).toBeEnabled()
+      if (refusal === 'content')
+        await waitFor(() => expect(screen.getByRole('textbox', { name: '제목' })).toHaveFocus())
       expect(submit).not.toHaveBeenCalled()
     },
   )
@@ -148,20 +232,28 @@ describe('retained clip preparation questions', () => {
     view.rerender(<Fixture key="alice/one" active={false} mounted={mounted} />)
     expect(screen.queryByRole('heading')).toBeNull()
     view.rerender(<Fixture key="alice/one" active mounted={mounted} />)
-    expect(screen.getByText('4 / 4')).toBeVisible()
+    expect(screen.getByText('7 / 7')).toBeVisible()
     expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
-    await go('소스')
+    await go('영상')
     await go('확인')
     expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
     expect(mounted).toHaveBeenCalledTimes(1)
     view.rerender(<Fixture key="alice/two" mounted={mounted} />)
-    expect(screen.getByText('1 / 4')).toBeVisible()
-    await go('이야기')
+    expect(screen.getByText('1 / 7')).toBeVisible()
+    await go('내용')
     await userEvent.type(screen.getByRole('textbox', { name: '제목' }), 'alice only')
     view.rerender(<Fixture key="bob/two" mounted={mounted} />)
-    await go('이야기')
+    await go('내용')
     expect(screen.getByRole('textbox', { name: '제목' })).toHaveValue('')
   })
+})
+
+it('opens on 확인 for an instruction, a source or a running job, otherwise on 영상 종류', () => {
+  expect(preparationOpening({ sources: 0, running: false })).toBe('kind')
+  expect(preparationOpening({ instruction: '  ', sources: 0, running: false })).toBe('kind')
+  expect(preparationOpening({ instruction: '라떼', sources: 0, running: false })).toBe('review')
+  expect(preparationOpening({ sources: 1, running: false })).toBe('review')
+  expect(preparationOpening({ sources: 0, running: true })).toBe('review')
 })
 
 it('describes a held action and routes a region refusal to its original editor without submitting', async () => {
@@ -177,7 +269,9 @@ it('describes a held action and routes a region refusal to its original editor w
       <ClipPreparationGuide
         screen="review"
         onSelect={vi.fn()}
-        screens={{ sources: null, story: null, style: null }}
+        campaign={false}
+        noteEmpty
+        screens={EMPTY}
         rows={[]}
         models={null}
         reasonId="region-refusal"
@@ -203,7 +297,9 @@ it('names the wait for running work without offering a fix that does nothing', (
     <ClipPreparationGuide
       screen="review"
       onSelect={vi.fn()}
-      screens={{ sources: null, story: null, style: null }}
+      campaign={false}
+      noteEmpty
+      screens={EMPTY}
       rows={[]}
       models={null}
       reasonId="busy-refusal"

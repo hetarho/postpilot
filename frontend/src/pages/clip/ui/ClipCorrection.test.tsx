@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { localSamplesForControls } from '@/test/clip-local-samples'
 import { afterEach, expect, it, vi } from 'vitest'
 import { create } from '@bufbuild/protobuf'
@@ -753,6 +754,7 @@ it('shares retained sound across both steps, stales the old render and offers cr
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeVisible()
   expect(calls).not.toContain('SaveClipEditPlan')
   await goToStep('생성')
+  await clipGuideTo('sources')
   expect(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })).toBeChecked()
   await userEvent.click(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ }))
   await waitFor(() => expect(soundWrites).toHaveLength(2))

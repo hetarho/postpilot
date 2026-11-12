@@ -1,3 +1,4 @@
+import { clipGuideTo } from '@/test/clip-preparation'
 import { afterEach, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import { create } from '@bufbuild/protobuf'
@@ -58,6 +59,7 @@ it('moves a source without a pointer, announces where it went and saves the whol
       sourceOrders: orders,
     },
   })
+  await clipGuideTo('sources')
   const strip = await screen.findByRole('list', { name: '선택한 원본 영상' })
   expect(
     within(strip)

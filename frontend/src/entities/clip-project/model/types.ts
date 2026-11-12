@@ -336,13 +336,13 @@ export function validNewClipProject(value: ClipProjectDraft): boolean {
 /** What the server will accept for an EXISTING project: every bound it enforces on a patch, and
  *  nothing it only enforces at generation. ① is where the setup is completed now (CLIP-130), so a
  *  half-written project is an ordinary state that must keep saving and keep accepting sources —
- *  the missing answers and the missing length are refused at approval instead (CLIP-102, CLIP-7). */
+ *  the missing answers and the missing length are refused at approval instead (CLIP-102, CLIP-7).
+ *  The title is optional: an empty one saves, generates and renders (CLIP-130). */
 export function savableClipProject(value: ClipProjectDraft): boolean {
   const length = (s: string) => Array.from(s).length
   const title = value.title.trim()
   return (
     (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
-    !!title &&
     length(title) <= CLIP_PROJECT_LIMITS.title &&
     CLIP_RATIOS.includes(value.ratio) &&
     (value.targetDurationMs === 0 ||
@@ -357,7 +357,6 @@ export function validClipProject(value: ClipProjectDraft, composition?: ClipComp
   return (
     (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
     !!composition &&
-    !!value.title.trim() &&
     length(value.title.trim()) <= CLIP_PROJECT_LIMITS.title &&
     CLIP_RATIOS.includes(value.ratio) &&
     Number.isInteger(value.targetDurationMs) &&

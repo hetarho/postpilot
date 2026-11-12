@@ -23,7 +23,6 @@ import { clipObservationsFixture } from '@/test/clip-observations'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { projectFakeRegions, type FakeClipProject, type FakeClipsOptions } from '@/test/clips'
 import type { FakeJobsOptions } from '@/test/jobs'
-import { chooseOption } from '@/test/listbox'
 import type { FakeProvidersOptions } from '@/test/providers'
 
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
@@ -631,8 +630,8 @@ it('shows the server’s seed when ① chooses a template, the owner’s words k
     'aria-checked',
     'true',
   )
-  await clipGuideTo('story')
-  await chooseOption(user, screen.getByRole('combobox', { name: /^영상 템플릿/ }), '여행')
+  await clipGuideTo('template')
+  await user.click(screen.getByRole('button', { name: /^여행/ }))
   await clipGuideTo('style')
   await waitFor(
     () =>

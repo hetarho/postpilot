@@ -26,13 +26,18 @@ import {
   validNewClipProject,
 } from '@/entities/clip-project'
 import { useSpokenLibrary } from '@/entities/spoken-voice'
+import {
+  AdvertiserGuideFields,
+  AdvertiserGuideSuggestions,
+  EMPTY_GUIDE,
+} from '@/entities/advertiser-guide'
+import { clipKeywordCoverage } from '../model/requirements'
 import type { ClipPreparationContent } from '../model/preparation'
 import { clipPreparationRows } from './ClipPreparationSummary'
 import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
-import { ClipCampaignMaterial } from './ClipCampaignMaterial'
 import { MoveClipChannel } from './MoveClipChannel'
 import { ClipLinkedPost } from './ClipLinkedPost'
 import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
@@ -41,6 +46,7 @@ import {
   AppFailureMessage,
   Button,
   Checkbox,
+  ChoiceButton,
   Dialog,
   Disclosure,
   useMediaQuery,
@@ -298,8 +304,8 @@ export function ClipProjectForm({
     (!voiceLibrary.voicesQuery.isPending &&
       !voiceLibrary.voicesQuery.isError &&
       voiceLibrary.voices.some((voice) => voice.id === draft.dubbing?.voiceId && !voice.removedAt))
-  const storyFields = (
-    <fieldset disabled={locked} className="min-w-0 space-y-6">
+  const titleField = (
+    <>
       <div>
         <FieldLabel htmlFor="clip-title">{t('project.name')}</FieldLabel>
         <TextField
@@ -308,16 +314,28 @@ export function ClipProjectForm({
           inputMode="text"
           {...INPUT}
           value={draft.title}
+          placeholder={stored ? t('project.titlePlaceholder') : undefined}
+          aria-describedby={stored ? 'clip-title-hint' : undefined}
           onChange={(event) => change('title', event.target.value)}
           aria-invalid={
-            !draft.title.trim() || Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title
+            (!stored && !draft.title.trim()) ||
+            Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title
           }
         />
-        {(!draft.title.trim() ||
+        {stored && (
+          <Typography id="clip-title-hint" variant="body" className="text-content-secondary mt-2">
+            {t('project.titleHint')}
+          </Typography>
+        )}
+        {((!stored && !draft.title.trim()) ||
           Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title) && (
           <FieldMessage>{t('project.titleLimit')}</FieldMessage>
         )}
       </div>
+    </>
+  )
+  const templateListbox = (
+    <>
       <div>
         <FieldLabel id="clip-template-label" htmlFor="clip-template">
           {t('project.template')}
@@ -356,6 +374,10 @@ export function ClipProjectForm({
           <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
         )}
       </div>
+    </>
+  )
+  const answerFields = (
+    <>
       {templateChanged && (
         <section className="space-y-3">
           <Typography variant="body">{t('composition.templateChanged')}</Typography>
@@ -382,6 +404,10 @@ export function ClipProjectForm({
           onChange={(inputs) => change('compositionInputs', inputs)}
         />
       )}
+    </>
+  )
+  const instructionField = (
+    <>
       {/* The owner's own instruction sits with the answers it accompanies
               and is optional; an empty one is indistinguishable from never
               having written one (CLIP-121). */}
@@ -411,19 +437,134 @@ export function ClipProjectForm({
           />
         </div>
       )}
+    </>
+  )
+  const storyFields = (
+    <fieldset disabled={locked} className="min-w-0 space-y-6">
+      {titleField}
+      {templateListbox}
+      {answerFields}
+      {instructionField}
     </fieldset>
+  )
+  const guide = draft.advertiserGuide ?? EMPTY_GUIDE
+  const campaign = draft.campaign ?? false
+  // 영상 종류 is two explicit choices saved as an option save (CLIP-210, THEME-52).
+  const kindFields = (
+    <fieldset disabled={locked} aria-label={t('project.campaign')} className="min-w-0 space-y-3">
+      <ChoiceButton
+        title={t('project.kindSponsored')}
+        description={t('project.kindSponsoredHelp')}
+        selected={campaign}
+        onClick={() => change('campaign', true)}
+      />
+      <ChoiceButton
+        title={t('project.kindSelfPaid')}
+        description={t('project.kindSelfPaidHelp')}
+        selected={!campaign}
+        onClick={() => change('campaign', false)}
+      />
+    </fieldset>
+  )
+  // 요청 asks as the post asks: the guide expanded with its chips, a clip counting only keywords
+  // and hashtags under 영상에 꼭 담을 내용 (CLIP-210, POST-118).
+  const requirementFields = (
+    <fieldset disabled={locked} className="min-w-0">
+      <Typography variant="body" as="p">
+        {t('project.requirementsHelp')}
+      </Typography>
+      <AdvertiserGuideFields
+        value={guide}
+        items={['keywords', 'hashtags']}
+        expanded
+        requirementsTitle="clip"
+        disabled={disabled || readOnly}
+        onChange={(next) => change('advertiserGuide', next)}
+        afterText={
+          <AdvertiserGuideSuggestions
+            guide={guide}
+            items={['keywords', 'hashtags']}
+            readOnly={disabled || readOnly}
+            onChange={(next) => change('advertiserGuide', next)}
+          />
+        }
+      />
+    </fieldset>
+  )
+  // 템플릿 is a choice screen with 없음 beside every template (CLIP-146, THEME-52).
+  const templateFields = (
+    <fieldset disabled={locked} className="min-w-0 space-y-3">
+      <div role="group" aria-label={t('project.template')} className="space-y-3">
+        <ChoiceButton
+          title={t('project.templateNone')}
+          description={t('project.templateNoneHelp')}
+          selected={!draft.videoTemplateId}
+          onClick={() => change('videoTemplateId', '')}
+        />
+        {templates.templates.map((template) => (
+          <ChoiceButton
+            key={template.id}
+            title={template.name}
+            selected={draft.videoTemplateId === template.id}
+            onClick={() => change('videoTemplateId', template.id)}
+          />
+        ))}
+      </div>
+      {templates.isPending && <Typography variant="body">{t('project.loading')}</Typography>}
+      {templates.isError && (
+        <div role="alert">
+          <AppFailureMessage failure={appFailureFromConnect(templates.error)} />
+          <Button variant="ghost" onClick={() => void templates.refetch()}>
+            {t('project.retry')}
+          </Button>
+        </div>
+      )}
+      {!selected && !!draft.videoTemplateId && !templates.isPending && (
+        <FieldMessage>{t('project.detachedTemplate')}</FieldMessage>
+      )}
+      {/* The wizard's 저장 comes back to this screen (CLIP-225). */}
+      <Link
+        to="/video-templates/new"
+        search={{ channel: draft.channel ?? channel, clip: stored?.id }}
+        className={buttonStyles({ variant: 'ghost' })}
+      >
+        {t('directory.create')}
+      </Link>
+    </fieldset>
+  )
+  // 내용: the optional title, then the selected template's answers (CLIP-225).
+  const contentFields = (
+    <fieldset disabled={locked} className="min-w-0 space-y-6">
+      {titleField}
+      {answerFields}
+      {!document?.fields.length && (
+        <Typography variant="body" className="text-content-secondary">
+          {t('project.noAnswers')}
+        </Typography>
+      )}
+    </fieldset>
+  )
+  const noteFields = (
+    <fieldset disabled={locked} className="min-w-0 space-y-6">
+      {instructionField}
+    </fieldset>
+  )
+  const answerTexts = document
+    ? [
+        ...Object.values(inputs.values),
+        ...Object.values(inputs.items).flatMap((items) =>
+          items.flatMap((item) => Object.values(item.values)),
+        ),
+      ].filter((text): text is string => typeof text === 'string')
+    : []
+  const keywordsHeld = clipKeywordCoverage(
+    draft.title,
+    draft.instruction ?? '',
+    answerTexts,
+    guide.keywords,
   )
   const sourceFields = (
     <fieldset disabled={locked} className="min-w-0 space-y-6">
-      {!creating && (
-        <ClipCampaignMaterial
-          campaign={draft.campaign ?? false}
-          guide={draft.advertiserGuide}
-          disabled={disabled || readOnly}
-          onCampaign={(on) => change('campaign', on)}
-          onGuide={(guide) => change('advertiserGuide', guide)}
-        />
-      )}
       {stored && (
         <ClipLinkedPost
           key={`${ownerId}:${stored.id}`}
@@ -639,10 +780,23 @@ export function ClipProjectForm({
       >
         {guided && layout ? (
           layout({
-            screens: { sources: sourceFields, story: storyFields, style: styleFields },
+            screens: {
+              kind: kindFields,
+              requirements: requirementFields,
+              sources: sourceFields,
+              template: templateFields,
+              content: contentFields,
+              style: styleFields,
+              note: noteFields,
+            },
             rows: summary,
             actions: generationActions,
             refusal: notices,
+            campaign,
+            requirements: campaign
+              ? { coverage: { keywords: keywordsHeld }, hashtags: guide.hashtags }
+              : undefined,
+            noteEmpty: !(draft.instruction ?? '').trim(),
             inputRefusal: !voiceReady
               ? 'style'
               : !valid || templateChanged
@@ -650,7 +804,7 @@ export function ClipProjectForm({
                   draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
                   draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
                   ? 'style'
-                  : 'story'
+                  : 'content'
                 : undefined,
           })
         ) : (
@@ -658,6 +812,8 @@ export function ClipProjectForm({
           // source fields yet.
           <div className="min-w-0 space-y-6">
             {storyFields}
+            {!creating && kindFields}
+            {!creating && campaign && requirementFields}
             {!creating && sourceFields}
             {styleFields}
           </div>
