@@ -176,7 +176,7 @@
   "sourceOfSnapshot": "Corrected T758 a0c7b3a plus independently approved retained-style-media delta74e456ca and narrow test correction75f4eb8c cherry-picked as99b79a95; all are source checkpoints, not task completion.",
   "remaining": "Whole-task approval and full final-candidate checks remain open. Earlier candidate full FE4784 passed/5failed; one refusal test subsequently corrected and its full31-test file passes; four named cases remain unresolved in T758-regression-diagnosis.json.",
   "applicationOnMain": "unchanged through completed T757; this archive does not enable T758",
-  "bundleSha256": "1c5227da619b2676bd4866a80620541fa942c686501567377fbf08b2fe7ecbaa",
+  "bundleSha256": "adf054d0900a17b8c79ff2fd52a387e0ba6c3e2737757382a357b9e6f66e95ae",
   "narrowReviews": [
     {
       "commit": "74e456ca09671421d318765ba2a5bd4420a95143",
@@ -190,5 +190,10 @@
       "verdict": "approved",
       "artifact": "T758-regression-review.json"
     }
-  ]
+  ],
+  "bundleRefs": {
+    "refs/heads/handoff/ui12-T758-snapshot": "99b79a9592b1d6a77ffe0358f07da4f4e7711da8",
+    "refs/heads/handoff/ui12-T758-regression-review": "75f4eb8c23df7d4aa8a96aa36c7c333323816097"
+  },
+  "bundleCommitCount": 9
 }

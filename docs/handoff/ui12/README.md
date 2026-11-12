@@ -8,7 +8,7 @@ Read current `spec/STATE.md`, `spec/reports/261112-ui12.md`, `spec/tasks/T758.gu
 
 The patch's published source base is `ada6afc201602a5332264d06925ea9cf8737fc0b`; its latest combined snapshot is `99b79a9592b1d6a77ffe0358f07da4f4e7711da8`. Main's subsequent changes are handoff data only. `T758.patch` contains **41 changed/new files**, including the worker task result, with 199445 bytes and SHA-256 `a859b5b861b915eb403a407f7c305c819befd93e316f558e9350a27da4422243`. `T758-snapshot.json` records every file hash, and `T758-recovery-proof.json` proves exact isolated-index reconstruction. These establish recoverability, not task acceptance.
 
-`T758.bundle` also preserves the eight source/checkpoint commits and exact review identities above the published base. Verify it with `git bundle verify docs/handoff/ui12/T758.bundle`. This is an archive of unfinished work, not an approved branch to merge into the product. Use the patch below for normal task recovery; the bundle is available if source/review history is needed.
+`T758.bundle` also preserves the nine source/checkpoint commits, including both the original reviewed regression commit and its combined-snapshot cherry-pick above the published base. Verify it with `git bundle verify docs/handoff/ui12/T758.bundle`. This is an archive of unfinished work, not an approved branch to merge into the product. Use the patch below for normal task recovery; the bundle is available if source/review history is needed.
 
 From the newly assigned checkout's repository root:
 
