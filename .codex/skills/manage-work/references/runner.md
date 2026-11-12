@@ -1,6 +1,6 @@
 # 실행기 연결
 
-작업 목록·배정·리뷰 승인·완료의 기준은 haeram runtime이다. 실행기는 에이전트를 시작하고 결과를 전달한다. 같은 clone의 worktree 사이에서 사용하며, 원격 clone 간 조정은 제공하지 않는다.
+작업 목록·배정·리뷰 승인·완료 기록의 기준은 haeram runtime이다. 사용자 목표는 시작 대화가 조정하고, 실행기는 에이전트를 시작해 결과를 전달한다. 실행기 종료 뒤에도 남은 목표를 확인하고 회복 가능한 문제는 원래 마감·전체 예산·검증 범위 안에서 새 하위 단위/일반 스킬로 이어간다. 같은 clone의 worktree 사이에서 사용하며, 원격 clone 간 조정은 제공하지 않는다.
 
 ## 일반 터미널: work run
 
@@ -16,7 +16,7 @@ npx haeram-spec-creator work run --work feature --provider codex --reviewer-prov
 기존 그룹은 기록된 한도를 사용하고, 한도 기록이 없는 그룹은 4/1/8을 사용한다.
 
 ### 분리 실행
-터미널·채팅이 끝나도 이어 가야 하면 같은 옵션에 `--detach`를 붙인다. 분리된 호스트가 runner 기록을 잡은 뒤에만 `{runId,pid,log}`를 반환한다(호스트 출력 `logs/run-<runId>.log`). 묶음당 runner는 하나라 두 번째 시작은 거부한다.
+`--detach`는 시작 대화로 완료 결과와 후속 실행을 돌려주는 실제 연결이 있을 때만 쓴다. 연결이 없으면 foreground 실행을 도구/하네스 완료 대기로 기다리고 자동 채팅 통지를 약속하지 않는다. 분리된 호스트가 runner 기록을 잡은 뒤에만 `{runId,pid,log}`를 반환한다(호스트 출력 `logs/run-<runId>.log`). 묶음당 runner는 하나라 두 번째 시작은 거부한다.
 - `work run --work <w> --status`: 파일만 읽어 호스트 상태(`running`·`host-lost`·`heartbeat-stale`·`unknown-host`·`stopped`)·PID·로그 경로·진행 중 dispatch(ID·로그 경로)를, 끝난 뒤에는 결과 요약(전체는 `logs/run-<runId>.json`)을 준다. 로그 내용은 싣지 않는다.
 - `work run --work <w> --stop`: 호스트에 SIGTERM을 보내 Ctrl-C와 같은 종료 경로(자식 중단·기록 보존)를 탄다. 맡김은 `kill` 대신 이것만 쓴다. `host-lost`면 신호 없이 `work runner-recover`로, heartbeat가 60초 넘게 멈췄거나 다른 호스트면 거부한다(PID 재사용 방지).
 
@@ -58,7 +58,7 @@ providers 목록은 슬롯에 순환 배정한다. 6개 슬롯과 `codex,claude`
 
 모델을 생략하면 해당 CLI 설정을 사용한다. 혼합 실행에서는 리뷰어 모델을 워커에서 상속하지 않고, reviewerProvider를 생략하면 목록의 첫 도구를 사용한다. `--provider`와 `--providers`는 함께 지정하지 않는다. 혼합 실행의 `--model`은 거부하며 adapter의 각 workers 항목에 지정한다. `--adapter`와 provider/model CLI 옵션도 함께 지정하지 않는다.
 
-기본 어댑터는 새 세션에 배포된 implement-task/review-task 본문과 배정 정보를 전달하고, 이어 쓰는 세션에는 새 정보(다음 태스크, correction, 조정자 메모)만 보낸다. Codex는 worker에 workspace-write, reviewer에 read-only sandbox를 지정하고 JSON schema와 최종 결과 파일을 사용한다. Claude는 worker에 acceptEdits, reviewer에 plan 권한 모드와 역할별 도구 목록을 지정하고 `--output-format stream-json --verbose`의 마지막 result 이벤트에서 structured_output을 읽는다. 기존 인증·권한 정책을 사용하며 권한을 건너뛰는 옵션은 사용하지 않는다. 워커가 도는 새 worktree는 한 번도 신뢰한 적 없는 폴더라서 `claude -p`는 프로젝트 `.claude/settings.json`의 `permissions.allow`를 적용하지 않는다. 워커가 실행해야 할 명령은 `work start/configure --allow-tool 'Bash(pnpm run *)'`로 묶음에 저장하면 워커의 `--allowedTools`에 더해진다. `vibe preflight --probe '<명령>' --allow-tool ...`이 같은 조건의 새 worktree에서 실제 헤드리스 워커로 그 명령을 실행해 보고 권한 거부를 미리 알려 준다. 호스트의 `--verify` 명령은 별도로 실행된다. CLI 출력 형식이 맞지 않거나 종료 코드가 실패면 완료로 취급하지 않는다. 규약 근거: [Codex 비대화형 실행](https://developers.openai.com/codex/noninteractive/), [Claude headless 실행](https://code.claude.com/docs/en/headless).
+기본 어댑터는 새 세션에 배포된 implement-task/review-task 본문과 배정 정보를 전달하고, 이어 쓰는 세션에는 새 정보(다음 태스크, correction, 조정자 메모)만 보낸다. worker 권한은 SETTINGS `permission-mode`(기본 bypass: Claude bypassPermissions, Codex `--dangerously-bypass-approvals-and-sandbox`)를 따르고 `work run --permission-mode`가 그 실행만 덮는다. acceptEdits면 Claude acceptEdits+역할별 도구 목록, Codex workspace-write sandbox(네트워크 없음)다. reviewer는 항상 Codex read-only sandbox, Claude plan 권한 모드다. Codex는 JSON schema와 최종 결과 파일을, Claude는 `--output-format stream-json --verbose`의 마지막 result 이벤트의 structured_output을 읽는다. 기존 인증을 사용한다. acceptEdits에서 워커가 도는 새 worktree는 한 번도 신뢰한 적 없는 폴더라서 `claude -p`는 프로젝트 `.claude/settings.json`의 `permissions.allow`를 적용하지 않는다. 워커가 실행해야 할 명령은 `work start/configure --allow-tool 'Bash(pnpm run *)'`로 묶음에 저장하면 워커의 `--allowedTools`에 더해진다. `vibe preflight --probe '<명령>' --allow-tool ...`이 같은 조건의 새 worktree에서 실제 헤드리스 워커로 그 명령을 실행해 보고 권한 거부를 미리 알려 준다. 호스트의 `--verify` 명령은 별도로 실행된다. CLI 출력 형식이 맞지 않거나 종료 코드가 실패면 완료로 취급하지 않는다. 규약 근거: [Codex 비대화형 실행](https://developers.openai.com/codex/noninteractive/), [Claude headless 실행](https://code.claude.com/docs/en/headless).
 
 기본 어댑터의 워커는 코드와 자신의 태스크만 편집하고 커밋하지 않는다. 호스트가 시작 시 깨끗한 작업 공간과 HEAD를 기록하고, 종료 시 acceptance·계약·SSOT·spec 변경 범위를 검사한 뒤 커밋한다(`committing`). 이어 검증·제출한다. 예상 밖 HEAD 변경이나 계약 위반은 blocked로 남기며 변경을 되돌리지 않는다. sandbox의 공용 Git 디렉토리 쓰기 권한을 넓히지 않아도 된다.
 
