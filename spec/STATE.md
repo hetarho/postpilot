@@ -14,6 +14,7 @@
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
 
 ## inbox
+- 261112 decided CLIP-233 CLIP-213 T767: which wizard stages start checked when a clip seeds the video-template wizard? → the clip's storyline paragraphs as checked custom stages, unnamed until their own steps, with the leaf's catalog roles offered unchecked and lines past the 8-stage bound unchecked (alt: every leaf role checked too, as TMPL-71 starts a fresh wizard | replace the leaf's roles entirely) — a leaf holds about seven roles, so checking them beside the clip's paragraphs would exceed the 8-stage bound at once and refuse 다음 before the owner chose anything; the roles stay one tap away.
 - 261112 decided CLIP-232 T759: which hosts make a clip's posted URL valid? → https on naver.com/naver.me and subdomains for 네이버 클립, instagram.com and subdomains for 인스타 클립, at most 2048 chars, no fetch (alt: any https URL | exact clip path patterns) — exact share-path formats could not be confirmed offline; host families refuse obvious mistakes without refusing real share links.
 - 261112 decided CLIP-131 CLIP-132 T760: how does one request decide its target within two approved calls? → the first call routes: it returns the narration revision itself when the flow is unchanged, or a revised flow followed by the existing narration call; optional scope_cut names the selected block (alt: always two calls | a separate classifier call) — only routing keeps narration-only at one call and inside the two-call ceiling.
 - 261112 decided CLIP-229 CLIP-226 T759 T768: how is reversible 확정 stored and shown? → confirmed exactly while confirmed_plan_revision equals edit_plan_revision, no reset write; checklist ticks as a JSON column like posts; histories derive six states with 완료 holding 게시됨 in the filter (alt: a status column cleared on every save | separate ticks table).
@@ -206,14 +207,14 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T767 | Add ③'s checklist, upload text and 더 해 보기 card | ARCH CLIP POST TMPL EXPORT | T766 | todo |
 
 ## next
-- implement-task T767
+- no runnable task: resolve blocked, parked or deps
 - T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 T767 done
 - 261112 T766 done
 - 261112 T762 done
 - 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
@@ -233,4 +234,3 @@
 - 261112 ui12: preserve latest40-file T758 recovery after independent P2 and5 remaining frontend failures; task todo, source not integrated.
 - 261112 ui12: resume T758 only for the owner-authorized extra hour; fresh worker/review and final publication.
 - 261112 ui12 device handoff: all own processes stopped, T758 attempt released, original dirty worker kept. Preserve all16 partial files in docs/handoff/ui12/T758.patch with exact recovery hashes and portable scout/browser evidence; main implementation stays through reviewed T757. Latest planning ada6afc2 was already pushed. Owner requested all current work remotely, no continued local automation.
-- 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
