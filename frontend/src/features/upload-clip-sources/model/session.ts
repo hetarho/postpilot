@@ -278,7 +278,19 @@ export class ClipSourceSession {
       return Promise.resolve(entry.previewURL)
     const epoch = this.mediaEpoch
     const currentMedia = () => this.active && epoch === this.mediaEpoch
-    const request = (async () => {
+    let resolveRequest!: (url: string) => void, rejectRequest!: (error: unknown) => void
+    const request = new Promise<string>((resolve, reject) => {
+      resolveRequest = resolve
+      rejectRequest = reject
+    }).finally(() => {
+      if (this.playbackRequests.get(fingerprint) === request)
+        this.playbackRequests.delete(fingerprint)
+    })
+    // Own the pending slot before synchronous authority/quota refusals publish.
+    this.playbackRequests.set(fingerprint, request)
+    const currentRequest = () =>
+      currentMedia() && this.playbackRequests.get(fingerprint) === request
+    void (async () => {
       try {
         if (authorityError) throw authorityError
         if (refresh) {
@@ -296,6 +308,7 @@ export class ClipSourceSession {
         if (!current || current.sourceId !== entry.sourceId)
           throw new ClipSourceAccessError('unavailable')
         this.checkRetainedAccess(current)
+        if (!currentRequest()) throw new ClipSourceAccessError('unavailable')
         this.entries.set(fingerprint, {
           ...current,
           previewURL: capability.url,
@@ -319,7 +332,7 @@ export class ClipSourceSession {
                 ? 'missing'
                 : 'unavailable'
         const current = this.entries.get(fingerprint)
-        if (currentMedia() && current && current.sourceId === entry.sourceId) {
+        if (currentRequest() && current && current.sourceId === entry.sourceId) {
           this.entries.set(fingerprint, {
             ...current,
             previewURL: '',
@@ -333,11 +346,7 @@ export class ClipSourceSession {
         }
         throw new ClipSourceAccessError(reason)
       }
-    })().finally(() => {
-      if (this.playbackRequests.get(fingerprint) === request)
-        this.playbackRequests.delete(fingerprint)
-    })
-    this.playbackRequests.set(fingerprint, request)
+    })().then(resolveRequest, rejectRequest)
     return request
   }
 

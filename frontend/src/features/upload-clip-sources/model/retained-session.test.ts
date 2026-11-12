@@ -428,3 +428,74 @@ it('keeps local File precedence over retained expiry and preserves conservative 
   expect(await session.ensurePlayback(metadata.fingerprint)).toBe('blob:local-original')
   expect(pipeline.playback).toHaveBeenCalledTimes(2)
 })
+
+it.each([
+  ['resolve', 'pending'],
+  ['reject', 'pending'],
+  ['resolve', 'completed'],
+  ['reject', 'completed'],
+] as const)(
+  'fences an old %s while the same-source replacement is %s, including pending cleanup',
+  async (completion, phase) => {
+    const { session, pipeline, batch, metadata } = retainedFixture()
+    await session.refreshRetained()
+    let oldResolve!: (value: { url: string; expiresAt: string }) => void,
+      oldReject!: (error: unknown) => void,
+      newResolve!: (value: { url: string; expiresAt: string }) => void
+    pipeline.playback
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve, reject) => {
+            oldResolve = resolve
+            oldReject = reject
+          }),
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            newResolve = resolve
+          }),
+      )
+    const old = session.ensurePlayback(metadata.fingerprint)
+    const refusedOld = expect(old).rejects.toMatchObject({ reason: 'unavailable' })
+    batch.sources[0]!.availability = 'missing'
+    await session.refreshRetained()
+    await expect(session.ensurePlayback(metadata.fingerprint)).rejects.toMatchObject({
+      reason: 'missing',
+    })
+    expect(session.getSnapshot().entries[0]).toMatchObject({
+      previewURL: '',
+      playbackGeneration: 2,
+    })
+    batch.sources[0]!.availability = 'available'
+    await session.refreshRetained()
+    const current = session.ensurePlayback(metadata.fingerprint)
+    const capability = {
+      url: 'https://private.test/new-valid',
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+    }
+    if (phase === 'completed') {
+      newResolve(capability)
+      expect(await current).toBe(capability.url)
+    }
+    const beforeOldCompletion = session.getSnapshot()
+    if (completion === 'resolve') oldResolve({ ...capability, url: 'https://private.test/stale' })
+    else oldReject(new Error('old request failed'))
+    await refusedOld
+    expect(session.getSnapshot()).toBe(beforeOldCompletion)
+    if (phase === 'pending') {
+      expect(session.ensurePlayback(metadata.fingerprint)).toBe(current)
+      expect(pipeline.playback).toHaveBeenCalledTimes(2)
+      newResolve(capability)
+      expect(await current).toBe(capability.url)
+    }
+    expect(await session.ensurePlayback(metadata.fingerprint)).toBe(capability.url)
+    expect(session.getSnapshot().entries[0]).toMatchObject({
+      previewURL: capability.url,
+      playbackGeneration: 3,
+      playbackError: undefined,
+      availability: 'available',
+    })
+    expect(pipeline.playback).toHaveBeenCalledTimes(2)
+  },
+)
