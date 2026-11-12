@@ -206,13 +206,12 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T771 | Verify skills with gusta and drop the haeram-spec-creator dependency | ARCH | - | doing@261112.fx1 |
 
 ## next
-- gusta-implement-task T771
-- gusta-implement-task T771 (run with /gusta-start): its push triggers Deploy backend and Verify media
+- no runnable task: resolve blocked, parked or deps
 
 ## log
+- 261112 T771 done
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
 - 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
 - 261112 T772 done
@@ -232,4 +231,3 @@
 - 261112 T763 done
 - 261112 T761 done
 - 261112 T760 done
-- 261112 T759 done
