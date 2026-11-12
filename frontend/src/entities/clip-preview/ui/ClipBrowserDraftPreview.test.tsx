@@ -67,6 +67,7 @@ vi.mock('../lib/create-preview-worker', () => ({
       if (failure.code) throw new Error(failure.code)
     }
     prepare = (signal: AbortSignal, progress: (done: number, total: number) => void) => {
+      failure.events.push('prepare')
       progress(1, 3)
       if (failure.active) {
         if (!failure.holdPrepare) return Promise.resolve()
@@ -78,11 +79,19 @@ vi.mock('../lib/create-preview-worker', () => ({
     }
     render = (request: { frame: number; flow: boolean }) => {
       const fingerprint = this.snapshot!.snapshotFingerprint
+      failure.events.push(`request:${request.frame}`)
       const result = {
         frame: request.frame,
         flow: request.flow,
         fingerprint,
-        bitmap: { fingerprint, close: vi.fn(() => failure.events.push(`close:${fingerprint}`)) },
+        bitmap: {
+          fingerprint,
+          frame: request.frame,
+          close: vi.fn(() => {
+            failure.events.push(`close:${fingerprint}`)
+            failure.events.push(`close-frame:${request.frame}`)
+          }),
+        },
         displayed: [],
         resources: { liveFrames: 0 },
         backgroundMeasured: true,
@@ -225,8 +234,10 @@ function liveProps(runtime: ClipLocalCompositionRuntime) {
 function enableLive() {
   failure.active = true
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
-    drawImage: (bitmap: { fingerprint: string }) =>
-      failure.events.push(`draw:${bitmap.fingerprint}`),
+    drawImage: (bitmap: { fingerprint: string; frame: number }) => {
+      failure.events.push(`draw:${bitmap.fingerprint}`)
+      failure.events.push(`paint:${bitmap.frame}`)
+    },
     clearRect: vi.fn(),
   } as unknown as ReturnType<HTMLCanvasElement['getContext']>)
 }
@@ -536,4 +547,89 @@ it('does not continue if the native clock reaches EOF while the old owner pauses
   await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
   expect(transport.play).toHaveBeenCalledTimes(1)
   expect(transport.running).toBe(false)
+})
+
+async function playingControlledPreview() {
+  enableLive()
+  const runtime = liveRuntime(),
+    change = vi.fn(),
+    props = { ...liveProps(runtime), timeMs: 0, onTimeChange: change }
+  const view = render(<ClipBrowserDraftPreview {...props} />)
+  await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  const transport = failure.transports[0]!
+  await waitFor(() => expect(transport.running).toBe(true))
+  transport.position = 1733
+  await waitFor(() => expect(failure.events).toContain('paint:51'))
+  await waitFor(() => expect(change).toHaveBeenLastCalledWith(1733))
+  change.mockClear()
+  return { view, props, transport, change }
+}
+
+it('draws a running props-only external seek at the authoritative paused target without reprepare or replay', async () => {
+  const { view, props, transport, change } = await playingControlledPreview()
+  const preparation = failure.events.filter(
+    (event) => event === 'prepare' || event.startsWith('initialize:'),
+  )
+  view.rerender(<ClipBrowserDraftPreview {...props} timeMs={8000} />)
+  await waitFor(() =>
+    expect(view.container.querySelector('[data-clip-local-preview]')).toHaveAttribute(
+      'data-clip-local-frame',
+      '240',
+    ),
+  )
+  expect(transport.running).toBe(false)
+  expect(transport.play).toHaveBeenCalledTimes(1)
+  expect(change).not.toHaveBeenCalled()
+  expect(failure.transports).toHaveLength(1)
+  expect(
+    failure.events.filter((event) => event === 'prepare' || event.startsWith('initialize:')),
+  ).toEqual(preparation)
+  expect(props.preview.onRetry).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: '재생' })).toBeEnabled()
+})
+
+it('a later props-only paused target wins over held old playback and seek frames', async () => {
+  const { view, props, transport, change } = await playingControlledPreview()
+  failure.holdFrame = true
+  transport.position = 1767
+  await waitFor(() => expect(failure.frames).toHaveLength(1))
+  view.rerender(<ClipBrowserDraftPreview {...props} timeMs={8000} />)
+  await act(async () => failure.frames.shift()!())
+  await waitFor(() => expect(failure.events).toContain('request:240'))
+  expect(failure.frames).toHaveLength(1)
+  view.rerender(<ClipBrowserDraftPreview {...props} timeMs={4000} />)
+  await act(async () => failure.frames.shift()!())
+  await waitFor(() => expect(failure.events).toContain('request:120'))
+  expect(failure.frames).toHaveLength(1)
+  await act(async () => failure.frames.shift()!())
+  await waitFor(() =>
+    expect(view.container.querySelector('[data-clip-local-preview]')).toHaveAttribute(
+      'data-clip-local-frame',
+      '120',
+    ),
+  )
+  expect(failure.events).not.toContain('paint:53')
+  expect(failure.events).not.toContain('paint:240')
+  expect(failure.events).toContain('close-frame:53')
+  expect(failure.events).toContain('close-frame:240')
+  expect(failure.frames).toHaveLength(0)
+  expect(transport.running).toBe(false)
+  expect(transport.play).toHaveBeenCalledTimes(1)
+  expect(change.mock.calls).not.toContainEqual([1733])
+  expect(change.mock.calls).not.toContainEqual([8000])
+  expect(failure.events.filter((event) => event.startsWith('initialize:'))).toHaveLength(1)
+  expect(failure.events.filter((event) => event === 'prepare')).toHaveLength(1)
+  expect(failure.transports).toHaveLength(1)
+})
+
+it('recognizes the ordinary parent echo of its running clock without pausing or replaying', async () => {
+  const { view, props, transport } = await playingControlledPreview()
+  const pauses = failure.events.filter((event) => event === 'pause').length
+  view.rerender(<ClipBrowserDraftPreview {...props} timeMs={1733} />)
+  expect(transport.running).toBe(true)
+  expect(failure.events.filter((event) => event === 'pause')).toHaveLength(pauses)
+  expect(transport.play).toHaveBeenCalledTimes(1)
+  expect(failure.events.filter((event) => event.startsWith('initialize:'))).toHaveLength(1)
+  expect(failure.events.filter((event) => event === 'prepare')).toHaveLength(1)
 })
