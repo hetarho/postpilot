@@ -1,0 +1,371 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-11-12T16:21:20.569Z",
+  "sourceCommit": "2ce82281370912af86bb8bf124b44d2f365338cd",
+  "group": {
+    "id": "si8-261113",
+    "branch": "main",
+    "status": "active",
+    "createdAt": "2026-11-12T15:46:56.099Z",
+    "limits": {
+      "workers": 1,
+      "reviewers": 1,
+      "maxPending": 8
+    },
+    "push": null,
+    "review": "all",
+    "taskScope": [
+      "T773",
+      "T774",
+      "T775",
+      "T776",
+      "T777",
+      "T778",
+      "T779"
+    ]
+  },
+  "summary": {
+    "total": 7,
+    "completed": 1,
+    "remaining": 6,
+    "running": 0,
+    "review": 0,
+    "blocked": 0,
+    "unassigned": 6
+  },
+  "tasks": [
+    {
+      "id": "T774",
+      "title": "Replace duplicated field counters with FieldCount",
+      "dep": [
+        "T773"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T775",
+      "title": "Share the clip design radio tile control",
+      "dep": [
+        "T774"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T776",
+      "title": "Share dropdown directional focus movement",
+      "dep": [
+        "T775"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T777",
+      "title": "Reuse bounded read-ahead for boundary-spanning media packets",
+      "dep": [
+        "T773"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T778",
+      "title": "Batch retained-source audio reads with a bounded small window",
+      "dep": [
+        "T777"
+      ],
+      "status": "todo"
+    },
+    {
+      "id": "T779",
+      "title": "Share consistent editor workspace navigation chrome",
+      "dep": [
+        "T778"
+      ],
+      "status": "todo"
+    }
+  ],
+  "attempts": [
+    {
+      "id": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "group": "si8-261113",
+      "taskId": "T773",
+      "tasks": [
+        "T773"
+      ],
+      "lane": null,
+      "owner": "si8-worker",
+      "contributors": [
+        "si8-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T15:47:08.029Z",
+      "startCommit": "7a8b1a406a2ec22f8c40a406e6756ede6f670e87",
+      "verifiedCommit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+      "submittedBase": "f7ee729943310fd406c3d5a47faa7819adee2394",
+      "submissionId": "b0ea02ea-de8c-4862-a26f-862de33c82ea",
+      "submittedAt": "2026-11-12T15:54:49.331Z",
+      "risk": null,
+      "review": {
+        "id": "889793a0-85f6-49d4-80f7-3daf3ef429a9",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T773: Reviewed the entire f7ee729943310fd406c3d5a47faa7819adee2394...f266b652ce057a097f3a05b7896190c8bd24e2cd delta, current target interactions, ARCH-24/21 and the complete base brief. Draft memoization follows immutable reducer plan identity; dirty comparison remains live against baseline, and validation depends on every algorithm input, including editing absent/present. Existing save, autosave, conflict, adoption and undo/redo paths remain intact. Actual-hook red/green evidence pins 300 separate seeks plus selection/title rerender (key304->2; validation303->1), and new tests cover each semantic invalidation with direct-algorithm results. Verified source hashes match72806bb5 and final submission changes only task evidence after that source. Inspected46-file393-test and lint/format/FSD/style/probe/type/build/spec/package check logs. No additional tests were needed; full CI/integration and real-media symptom qualification remain coordinator gates.",
+        "findings": [],
+        "commit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+        "baseCommit": "f7ee729943310fd406c3d5a47faa7819adee2394",
+        "submissionId": "b0ea02ea-de8c-4862-a26f-862de33c82ea",
+        "createdAt": "2026-11-12T15:55:14.022Z",
+        "finishedAt": "2026-11-12T15:57:44.887Z"
+      },
+      "steps": [
+        {
+          "taskId": "T773",
+          "commit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+          "at": "2026-11-12T15:54:49.321Z",
+          "verification": []
+        }
+      ],
+      "verification": []
+    }
+  ],
+  "history": [
+    {
+      "sequence": 1,
+      "at": "2026-11-12T15:46:56.136Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "si8-261113",
+        "branch": "main",
+        "status": "preparing",
+        "createdAt": "2026-11-12T15:46:56.099Z",
+        "limits": {
+          "workers": 1,
+          "reviewers": 1,
+          "maxPending": 8
+        },
+        "push": null,
+        "review": "all",
+        "taskScope": [
+          "T773",
+          "T774",
+          "T775",
+          "T776"
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "at": "2026-11-12T15:46:56.148Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": "preparing",
+      "status": "active",
+      "changes": {
+        "status": "active"
+      }
+    },
+    {
+      "sequence": 3,
+      "at": "2026-11-12T15:47:08.029Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+        "group": "si8-261113",
+        "taskId": "T773",
+        "tasks": [
+          "T773"
+        ],
+        "lane": null,
+        "owner": "si8-worker",
+        "contributors": [
+          "si8-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T15:47:08.029Z",
+        "startCommit": "7a8b1a406a2ec22f8c40a406e6756ede6f670e87"
+      }
+    },
+    {
+      "sequence": 4,
+      "at": "2026-11-12T15:47:10.071Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 5,
+      "at": "2026-11-12T15:49:26.264Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "reason": null
+      }
+    },
+    {
+      "sequence": 6,
+      "at": "2026-11-12T15:54:49.165Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 7,
+      "at": "2026-11-12T15:54:49.331Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "verifiedCommit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+        "submittedBase": "f7ee729943310fd406c3d5a47faa7819adee2394",
+        "submissionId": "b0ea02ea-de8c-4862-a26f-862de33c82ea",
+        "submittedAt": "2026-11-12T15:54:49.331Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T773",
+            "commit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+            "at": "2026-11-12T15:54:49.321Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 8,
+      "at": "2026-11-12T15:55:14.022Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "889793a0-85f6-49d4-80f7-3daf3ef429a9",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+          "baseCommit": "f7ee729943310fd406c3d5a47faa7819adee2394",
+          "submissionId": "b0ea02ea-de8c-4862-a26f-862de33c82ea",
+          "createdAt": "2026-11-12T15:55:14.022Z"
+        }
+      }
+    },
+    {
+      "sequence": 9,
+      "at": "2026-11-12T15:57:44.887Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "889793a0-85f6-49d4-80f7-3daf3ef429a9",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T773: Reviewed the entire f7ee729943310fd406c3d5a47faa7819adee2394...f266b652ce057a097f3a05b7896190c8bd24e2cd delta, current target interactions, ARCH-24/21 and the complete base brief. Draft memoization follows immutable reducer plan identity; dirty comparison remains live against baseline, and validation depends on every algorithm input, including editing absent/present. Existing save, autosave, conflict, adoption and undo/redo paths remain intact. Actual-hook red/green evidence pins 300 separate seeks plus selection/title rerender (key304->2; validation303->1), and new tests cover each semantic invalidation with direct-algorithm results. Verified source hashes match72806bb5 and final submission changes only task evidence after that source. Inspected46-file393-test and lint/format/FSD/style/probe/type/build/spec/package check logs. No additional tests were needed; full CI/integration and real-media symptom qualification remain coordinator gates.",
+          "findings": [],
+          "commit": "f266b652ce057a097f3a05b7896190c8bd24e2cd",
+          "baseCommit": "f7ee729943310fd406c3d5a47faa7819adee2394",
+          "submissionId": "b0ea02ea-de8c-4862-a26f-862de33c82ea",
+          "createdAt": "2026-11-12T15:55:14.022Z",
+          "finishedAt": "2026-11-12T15:57:44.887Z"
+        }
+      }
+    },
+    {
+      "sequence": 10,
+      "at": "2026-11-12T15:58:56.097Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 11,
+      "at": "2026-11-12T15:58:57.808Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "통합 후보의 spec 검증에 실패했습니다."
+      }
+    },
+    {
+      "sequence": 12,
+      "at": "2026-11-12T16:05:16.971Z",
+      "type": "group",
+      "group": "si8-261113",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T773",
+          "T774",
+          "T775",
+          "T776",
+          "T777",
+          "T778",
+          "T779"
+        ]
+      }
+    },
+    {
+      "sequence": 13,
+      "at": "2026-11-12T16:21:18.913Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
+      "taskId": "T773",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    }
+  ]
+}

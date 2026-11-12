@@ -211,7 +211,6 @@
 | T777 | Reuse bounded read-ahead for boundary-spanning media packets | ARCH | T773 | todo |
 | T778 | Batch retained-source audio reads with a bounded small window | ARCH | T777 | todo |
 | T779 | Share consistent editor workspace navigation chrome | ARCH | T778 | todo |
-| T773 | Reuse unchanged clip draft validation during playback | ARCH | - | todo |
 | T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
 | T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
@@ -221,10 +220,16 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
+## work
+| id | workers | total | done | remaining | running | review | blocked | updated | history |
+|---|---|---|---|---|---|---|---|---|---|
+| si8-261113 | 1 | 7 | 1 | 6 | 0 | 0 | 0 | 2026-11-12T16:21:20.569Z | [history](work/si8-261113.json) |
+
 ## next
-- gusta-implement-task T773 through approved si8 work-group assignment
+- inspect work board for remaining tasks
 
 ## log
+- 261112 T773 integrated
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
 - 261113 si8: user confirmed Mac/Chrome, delegated all needed permissions and no questions through08:00KST; specifically prioritize blog/video back-button and page-layout consistency after performance.
 - 261113 si8 steering: prioritize measured real-media slow refine entry and jumping playback time; T773 bounded redundant-work fix continues separately, UI tasks wait for symptom diagnosis.
@@ -244,4 +249,3 @@
 - 261112 T767 done
 - 261112 T766 done
 - 261112 T762 done
-- 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
