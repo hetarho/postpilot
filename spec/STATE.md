@@ -13,6 +13,7 @@
 | si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
 
 ## inbox
+- 261113 decided review/performance-design-system-261113 T777 T778 T779: actual-media priorities and audio byte tradeoff? → fix duplicate boundary packet reads, then32KiB audio read-ahead, then shared blog/video header (alt:512KiB audio window at24.4xwire | speculative playhead rewrite | generic UI first). Real-source PCM/pixels/analysis and all caps remain exact; header aligns within existingTHEME-26/39/58 without outer-width policy change. User waives questions until08:00KST; reserve last90min.
 - 261113 decided review/performance-design-system-261113: align the reported blog/video back control and layout? → inspect and reuse the blog/reference shared page primitives after the confirmed performance fixes, preserving return destinations/history/drafts/accessibility (alt: prioritize generic counters first | redesign all flows). User requests no questions through08:00KST and delegates choices; conflicting product policy must be recorded before changing it.
 - 261113 decided review/performance-design-system-261113: actual reported video symptoms take priority? → reproduce slow 다듬기 entry and oscillating playback using supplied Photos 001 media before UI refactoring (alt: treat memoization as a complete fix | continue UI tasks first). User grants needed permissions; split independent read-only scouts between entry/readiness and playback time synchronization, preserve paid/provider and production state.
 - 261113 decided review/performance-design-system-261113 T773 T774 T775 T776: performance-first improvement order? → adopt redundant unchanged-plan validation first, then FieldCount/radio tiles/dropdown focus consolidation with net production source reduction (alt: unmeasured broad optimization | blanket native-control replacement). Direct self-improve delegation preserves all behavior; independent review and full gates required before push.
@@ -207,6 +208,9 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T777 | Reuse bounded read-ahead for boundary-spanning media packets | ARCH | T773 | todo |
+| T778 | Batch retained-source audio reads with a bounded small window | ARCH | T777 | todo |
+| T779 | Share consistent editor workspace navigation chrome | ARCH | T778 | todo |
 | T773 | Reuse unchanged clip draft validation during playback | ARCH | - | todo |
 | T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
@@ -221,6 +225,7 @@
 - gusta-implement-task T773 through approved si8 work-group assignment
 
 ## log
+- 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
 - 261113 si8: user confirmed Mac/Chrome, delegated all needed permissions and no questions through08:00KST; specifically prioritize blog/video back-button and page-layout consistency after performance.
 - 261113 si8 steering: prioritize measured real-media slow refine entry and jumping playback time; T773 bounded redundant-work fix continues separately, UI tasks wait for symptom diagnosis.
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
@@ -240,4 +245,3 @@
 - 261112 T766 done
 - 261112 T762 done
 - 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
-- 261112 T768 done
