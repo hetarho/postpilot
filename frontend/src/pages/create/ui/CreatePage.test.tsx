@@ -54,7 +54,12 @@ describe('canonical creation launch', () => {
     await user.tab()
     expect(insta).toHaveFocus()
     await user.keyboard('{Enter}')
-    expect(await screen.findByRole('textbox', { name: '클립 제목' })).toHaveValue('')
+    // An unminted clip opens on ①'s guide at 영상 종류 (CLIP-130).
+    const progress = await screen.findByRole('navigation', { name: '클립 만들기 단계' })
+    expect(within(progress).getByRole('button', { name: '영상 종류' })).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
     expect(router.state.location.href).toBe('/clips/new?channel=instagram_clip')
     expect(readClipReturnContext('home-alice')).toMatchObject({
       path: '/insta-clip',
