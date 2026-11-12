@@ -1,8 +1,8 @@
 # Task workflow
 
-The installed haeram-spec-creator skills govern the workflow. Start a session with `/start-vibe` and follow its mode, routing and per-unit commit and push to the STATE `cfg push` branch. Work in the existing `main` checkout; preserve unrelated local changes and keep them outside each unit's commit. Package-managed skill files remain unchanged.
+The installed gusta skills govern the workflow. Plan with `/gusta-sketch`; run the tasks it leaves with `/gusta-start`, which has no mode to choose and commits per unit. The branch finished work lands on and whether it is pushed follow `spec/SETTINGS.md`. Work in the existing `main` checkout; preserve unrelated local changes and keep them outside each unit's commit. Package-managed skill files remain unchanged.
 
-`vibe format` prints the package FORMAT, which `spec/FORMAT.md` modifies (chg keeps only unconsumed revs, a removed feature's decisions are deleted rather than marked [x]). Read notation from the needed sections of `spec/FORMAT.md`; it wins wherever the two differ.
+The package FORMAT is `.claude/skills/gusta-create-architecture/assets/FORMAT.md` (`npx @haeram/gusta vibe format --section <name>` prints an excerpt); `spec/FORMAT.md` modifies it (chg keeps only unconsumed revs, a removed feature's decisions are deleted rather than marked [x]). Read notation from the needed sections of `spec/FORMAT.md`; it wins wherever the two differ.
 
 # Verification
 
