@@ -129,3 +129,46 @@ export function toggleTick(
     return ticked.has(candidate) && lines.indexOf(candidate) === index
   })
 }
+
+/** What a clip's checklist reads (CLIP-231): the confirmed plan's words and the saved 업로드 문구
+ *  for the clip's channel. Each text is searched on its own, as a post's blocks are. */
+export interface ClipCoverageInput {
+  title: string
+  captions: readonly string[]
+  segments: readonly string[]
+  regionText: readonly string[]
+  /** The saved 업로드 문구: its description or caption, and its tags or hashtags. */
+  upload?: { body: string; tags: readonly string[] }
+  guide: AdvertiserGuide
+}
+
+export type ClipCoveredItem = Extract<CountedItem, { kind: 'keyword' | 'hashtag' }>
+
+/** The clip's counted items in the guide form's order: each 필수 키워드 present in the title, a
+ *  caption, a spoken segment, region slot text or the upload text's body, and each 필수 해시태그
+ *  present in the upload text's tags. A clip counts no characters and no photos (CLIP-210). */
+export function clipChecklistCoverage(input: ClipCoverageInput): ClipCoveredItem[] {
+  const texts = [
+    input.title,
+    ...input.captions,
+    ...input.segments,
+    ...input.regionText,
+    ...(input.upload ? [input.upload.body] : []),
+  ]
+  const tags = input.upload?.tags ?? []
+  return [
+    ...input.guide.keywords.map((keyword): ClipCoveredItem => {
+      const needle = folded(keyword)
+      return {
+        kind: 'keyword',
+        keyword,
+        met: needle !== '' && texts.some((text) => folded(text).includes(needle)),
+      }
+    }),
+    ...input.guide.hashtags.map((hashtag): ClipCoveredItem => ({
+      kind: 'hashtag',
+      hashtag,
+      met: hashtagPresent(tags, hashtag),
+    })),
+  ]
+}

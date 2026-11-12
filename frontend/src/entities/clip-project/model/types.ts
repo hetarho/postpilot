@@ -116,6 +116,8 @@ export interface ClipProject extends ClipProjectDraft {
   canConfirm?: boolean
   /** Why 확정하기 cannot confirm the current plan; absent when it can. */
   confirmationRefusal?: 'finalized' | 'busy' | 'invalid_plan' | 'narration' | 'unavailable'
+  /** The guide's free-text lines the owner ticked on ③'s checklist, by their text (CLIP-231). */
+  checklistTicks?: string[]
 
   composition?: ClipProjectComposition
   id: string

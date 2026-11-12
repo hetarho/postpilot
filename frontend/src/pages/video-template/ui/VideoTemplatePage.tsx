@@ -6,14 +6,19 @@ import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
 import { useSession } from '@/entities/session'
 import { ClipTemplateDirectEditor, ClipTemplateEditor } from '@/features/edit-clip-template'
-import { ClipTemplateWizard } from '@/features/create-clip-template-wizard'
+import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-template-wizard'
+import { useClipProject } from '@/entities/clip-project'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 export function VideoTemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
-  const { session, clip } = useSearch({ strict: false }) as { session?: string; clip?: 'new' }
+  const { session, clip, from } = useSearch({ strict: false }) as {
+    session?: string
+    clip?: 'new'
+    from?: string
+  }
   const { t } = useTranslation(['clips', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -56,20 +61,61 @@ export function VideoTemplatePage() {
       stored={stored}
       sessionId={session}
       returnToClip={stored ? undefined : clip}
+      fromClip={stored || session ? undefined : from}
       onPublished={refetch}
     />
   )
 }
+/** The wizard, started from a clip when one is named: it waits for that clip, then opens with its
+ *  storyline paragraphs as stages and its design selection chosen. A clip that cannot be read
+ *  leaves the ordinary wizard. Reading the clip starts no work and changes nothing on it. */
+function SeededClipTemplateWizard({
+  ownerId,
+  fromClip,
+  onSaved,
+}: {
+  ownerId: string
+  fromClip?: string
+  onSaved: (templateId: string) => void
+}) {
+  const { t } = useTranslation('common')
+  const query = useClipProject(ownerId, fromClip)
+  if (fromClip && query.isPending)
+    return (
+      <Typography variant="body" role="status">
+        {t('state.loading')}
+      </Typography>
+    )
+  const project = fromClip ? query.data : undefined
+  const seed = project
+    ? clipWizardSeed({
+        paragraphs: project.storyline?.paragraphs ?? [],
+        design: project,
+      })
+    : undefined
+  return (
+    <ClipTemplateWizard
+      key={project?.id ?? 'new'}
+      ownerId={ownerId}
+      seed={seed}
+      onSaved={onSaved}
+    />
+  )
+}
+
 function VideoTemplateHost({
   ownerId,
   stored,
   sessionId,
   returnToClip,
+  fromClip,
   onPublished,
 }: {
   ownerId: string
   stored?: ClipTemplate
   sessionId?: string
+  /** The clip whose storyline and design the wizard starts from (CLIP-233). */
+  fromClip?: string
   /** `new`: a new clip's offer opened this creation (CLIP-223); an id: a saved clip's 템플릿
    *  screen did, and 저장 goes back to that screen (CLIP-225). */
   returnToClip?: string
@@ -139,8 +185,9 @@ function VideoTemplateHost({
       )}
       {guided ? (
         <div className="mt-4 flex flex-1 flex-col sm:mt-8">
-          <ClipTemplateWizard
+          <SeededClipTemplateWizard
             ownerId={ownerId}
+            fromClip={fromClip}
             onSaved={(templateId) => {
               onPublished()
               void openCreated(templateId)

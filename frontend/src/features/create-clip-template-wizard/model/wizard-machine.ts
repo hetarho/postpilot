@@ -2,6 +2,7 @@ import { assign, getInitialSnapshot, getNextSnapshot, setup, type SnapshotFrom }
 import { templateTargetAt } from '@/entities/template'
 import { CLIP_COMPOSITION_LIMITS } from '@/entities/clip-design'
 import { emptyClipRecipe, CLIP_TEMPLATE_LIMITS, type ClipRecipe } from '@/entities/clip-template'
+import { seedStageName, type ClipWizardSeed } from '../lib/seed'
 
 export const STAGE_ROLES = [
   'hook',
@@ -37,6 +38,8 @@ export interface ClipWizardState {
   introPreset: ClipRecipe['introPreset']
   outroPreset: ClipRecipe['outroPreset']
   allowedCaptionStyles: string[]
+  /** The stage lines a clip handed the wizard (CLIP-233), joined to every leaf it reaches. */
+  seedLines: readonly string[]
 }
 type Context = Omit<ClipWizardState, 'step'>
 export type ClipWizardEvent =
@@ -87,8 +90,31 @@ function choice(context: Context, key: string) {
 }
 const current = (context: Context) => checkedStages(context)[context.cursor]
 
+/** A leaf's stages with a clip's lines after them as checked custom stages, unnamed until their
+ *  own steps name them. The clip's form is what the owner asked to keep, so the leaf's roles then
+ *  start unchecked, and lines past the stage bound start unchecked too. */
+function leafStages(seeds: readonly StageDraft[], lines: readonly string[]): StageDraft[] {
+  return [
+    ...seeds.map((stage) => ({ ...stage, checked: lines.length === 0 && stage.checked })),
+    ...lines.map((line, index) => ({
+      id: `custom-${index + 1}`,
+      role: 'custom' as const,
+      name: seedStageName(line),
+      heading: '',
+      intent: line,
+      checked: index < CLIP_COMPOSITION_LIMITS.stages,
+      asks: false,
+      fieldLabel: '',
+    })),
+  ]
+}
+
 export const clipWizardMachine = setup({
-  types: { context: {} as Context, events: {} as ClipWizardEvent },
+  types: {
+    context: {} as Context,
+    events: {} as ClipWizardEvent,
+    input: {} as { seed?: ClipWizardSeed },
+  },
   guards: {
     leaf: ({ context, event }) =>
       event.type === 'choose' &&
@@ -145,9 +171,9 @@ export const clipWizardMachine = setup({
             path,
             depth: path.length - 1,
             leaf,
-            stages: (event.seeds ?? []).map((stage) => ({ ...stage })),
+            stages: leafStages(event.seeds ?? [], context.seedLines),
             cursor: 0,
-            customCount: 0,
+            customCount: context.seedLines.length,
             attempted: false,
           }
     }),
@@ -233,7 +259,7 @@ export const clipWizardMachine = setup({
 }).createMachine({
   id: 'clipTemplateWizard',
   initial: 'target',
-  context: {
+  context: ({ input }) => ({
     path: [],
     depth: 0,
     leaf: '',
@@ -242,7 +268,16 @@ export const clipWizardMachine = setup({
     customCount: 0,
     attempted: false,
     ...emptyClipRecipe(),
-  },
+    // A clip's design selection stands preselected on the design step (CLIP-233).
+    ...(input?.seed
+      ? {
+          ...(input.seed.design.introPreset ? { introPreset: input.seed.design.introPreset } : {}),
+          ...(input.seed.design.outroPreset ? { outroPreset: input.seed.design.outroPreset } : {}),
+          allowedCaptionStyles: [...input.seed.design.allowedCaptionStyles],
+        }
+      : {}),
+    seedLines: input?.seed?.stages.map((stage) => stage.line) ?? [],
+  }),
   states: {
     target: {
       on: {
@@ -324,7 +359,8 @@ export function clipWizardStateOf(
   }
   return view
 }
-export const initialClipWizardState = () => clipWizardStateOf(getInitialSnapshot(clipWizardMachine))
+export const initialClipWizardState = () =>
+  clipWizardStateOf(getInitialSnapshot(clipWizardMachine, {}))
 export function clipWizardTransition(state: ClipWizardState, event: ClipWizardEvent) {
   const { step, ...context } = state
   return clipWizardStateOf(

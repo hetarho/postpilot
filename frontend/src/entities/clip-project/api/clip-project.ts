@@ -35,6 +35,7 @@ import {
 } from '../model/types'
 
 import { CLIP_CHANNELS, clipChannel, type ClipChannel } from '../config/channel'
+import { serialClipWrite } from '../lib/write-lane'
 
 export const clipProjectsKey = (transport: Transport, ownerId: string) =>
   ['clip-projects', transport, ownerId] as const
@@ -75,6 +76,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     ...(value.confirmationRefusal
       ? { confirmationRefusal: value.confirmationRefusal as ClipProject['confirmationRefusal'] }
       : {}),
+    checklistTicks: [...value.checklistTicks],
     notices: value.notices?.map(({ code, cutId, elementId, action }) => ({
       code,
       cutId,
@@ -483,6 +485,34 @@ export function useMoveClipChannel(ownerId: string) {
       // A move is explicit, so read the current detail before the next queued write.
       // Another client may have finished a revision since this page last read it.
       await cache.invalidateQueries({ queryKey: key })
+    },
+  })
+}
+
+/** A checklist tick is an option save (CLIP-231): it writes the ticked lines alone, in the
+ *  project's write lane, and keeps the detail readings the answer does not carry. */
+export function useSaveClipChecklistTicks(ownerId: string) {
+  const transport = useTransport()
+  const cache = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ticks }: { id: string; ticks: readonly string[] }) =>
+      serialClipWrite(id, async () => {
+        const response = await createClient(ClipGenerationService, transport).updateClipProject({
+          id,
+          checklistTicks: { lines: [...ticks] },
+        })
+        if (!response.project) throw new Error('Missing saved clip')
+        return toClipProject(response.project)
+      }),
+    onSuccess: (project) => {
+      const key = [...clipProjectsKey(transport, ownerId), 'detail', project.id]
+      const cached = cache.getQueryData<ClipProject>(key)
+      cache.setQueryData(
+        key,
+        cached && cached.editPlanRevision === project.editPlanRevision
+          ? withDetailReadings(project, cached)
+          : project,
+      )
     },
   })
 }

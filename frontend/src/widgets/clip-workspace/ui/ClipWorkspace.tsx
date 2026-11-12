@@ -1,14 +1,17 @@
 import { ClipBrowserPreparationStatus } from '@/features/prepare-clip-browser'
-import { useId, useState, type ReactNode } from 'react'
+import { useId, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
 import {
   ClipFailureNotice,
   ClipRequestRecord,
+  clipChannel,
+  clipConfirmed,
   clipDisplayTitle,
   clipReturnDestination,
   markClipHistoryReturn,
+  type ClipChannel,
   type ClipProject,
 } from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
@@ -56,6 +59,8 @@ import { ClipStepWaiting, ClipTopRow, STEP_PANEL_ID } from './ClipTopRow'
 import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipStatus'
 import { ClipRefineDock } from './ClipRefineDock'
 import { ClipFinishStep } from './ClipFinishStep'
+import { ClipFinishChecklist } from './ClipFinishChecklist'
+import { ClipMoreCard } from './ClipMoreCard'
 
 /** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
@@ -114,6 +119,11 @@ export function ClipWorkspace({
   ])
   const sourceReady = readyClipBatch(upload.readyBatch, project.id, now)
   const job = run.job
+  // The 업로드 문구 on screen in ③, which 더 해 보기 can turn to the other channel (CLIP-233).
+  const [uploadChannel, setUploadChannel] = useState<ClipChannel>(() =>
+    clipChannel(project.channel),
+  )
+  const uploadTextRef = useRef<HTMLDivElement>(null)
   // A project holding an instruction, a source or a running job opens on 확인, any other on 영상
   // 종류 (CLIP-225). Derived until the owner moves, so sources that load late still count.
   // The first save's address change keeps the screen the unminted guide was on (CLIP-225).
@@ -552,16 +562,25 @@ export function ClipWorkspace({
       />
     ) : null
 
+  // ③ alone offers the 업로드 문구, once the plan is confirmed and on a finalized clip (CLIP-211,
+  // CLIP-160); a write still running keeps its cancel there whatever the plan became since.
+  const finishing = clipConfirmed(project) || reading
+  const writingUploadText =
+    project.latestJob?.kind === 'clip_upload_text' && !isTerminal(project.latestJob)
   const uploadText =
-    project.editPlanRevision > 0 ? (
-      <ClipUploadText
-        ownerId={ownerId}
-        project={project}
-        writeModel={generation.writeRef}
-        modelSelect={<StageModelSelect stage="write" disabled={pending} />}
-        disabled={pending}
-        beforeWrite={() => flushAll(true)}
-      />
+    project.editPlanRevision > 0 && (finishing || writingUploadText) ? (
+      <div ref={uploadTextRef} tabIndex={-1} className="mt-10 outline-none">
+        <ClipUploadText
+          ownerId={ownerId}
+          project={project}
+          writeModel={generation.writeRef}
+          modelSelect={<StageModelSelect stage="write" disabled={pending} />}
+          disabled={pending}
+          beforeWrite={() => flushAll(true)}
+          channel={uploadChannel}
+          onChannelChange={setUploadChannel}
+        />
+      </div>
     ) : null
 
   const refinePanel = plan ? (
@@ -751,7 +770,6 @@ export function ClipWorkspace({
           }}
         />
       </Sheet>
-      {uploadText}
     </>
   ) : (
     <>
@@ -777,7 +795,6 @@ export function ClipWorkspace({
         </>
       )}
       {referenceAction}
-      {uploadText}
     </>
   )
 
@@ -795,7 +812,23 @@ export function ClipWorkspace({
         window.scrollTo(0, 0)
       }}
       slots={{
+        checklist:
+          finishing && project.campaign ? (
+            <ClipFinishChecklist key={project.id} ownerId={ownerId} project={project} />
+          ) : undefined,
         uploadText,
+        more: (
+          <ClipMoreCard
+            ownerId={ownerId}
+            project={project}
+            onOtherChannel={(other) => {
+              setUploadChannel(other)
+              const panel = uploadTextRef.current
+              panel?.scrollIntoView?.({ block: 'start' })
+              panel?.focus({ preventScroll: true })
+            }}
+          />
+        ),
         channel: reading ? (
           <MoveClipChannel ownerId={ownerId} project={project} disabled={pending} />
         ) : undefined,

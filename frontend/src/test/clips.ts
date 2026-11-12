@@ -93,6 +93,8 @@ export interface FakeClipProject extends ClipProjectDraft {
   finalized?: ClipProject['finalized']
   /** The posted URL a finalized clip saved, which makes it 게시됨 (CLIP-232). */
   publishedUrl?: string
+  /** The checklist lines the owner ticked (CLIP-231). */
+  checklistTicks?: string[]
   canFinalize?: boolean
   finalizationRefusal?: ClipProject['finalizationRefusal']
   /** The plan revision 확정하기 recorded (CLIP-229). */
@@ -818,7 +820,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       p.finalized &&
       (!req.channel ||
         Object.entries(req).some(
-          ([key, value]) => !['$typeName', 'id', 'channel'].includes(key) && value !== undefined,
+          ([key, value]) =>
+            !['$typeName', 'id', 'channel', 'checklistTicks'].includes(key) && value !== undefined,
         ))
     )
       throw connectAppError('CLIP_FINALIZED', Code.FailedPrecondition)
@@ -831,6 +834,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (req.linkedPostSlug !== undefined) assignLinkedPost(p, req.linkedPostSlug)
     else if (p.linkedPostSlug && !currentLinkedPost(p)) assignLinkedPost(p, '')
     if (req.campaign !== undefined) p.campaign = req.campaign
+    if (req.checklistTicks !== undefined) p.checklistTicks = [...req.checklistTicks.lines]
     if (req.advertiserGuide !== undefined) {
       p.advertiserGuide = advertiserGuideFromProto(req.advertiserGuide)
       p.advertiserGuide.text = p.advertiserGuide.text.trim()

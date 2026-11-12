@@ -95,6 +95,18 @@ export const i18n = {
       earlierRevision: '이전 수정본 {{revision}}의 영상이에요',
       barAria: '렌더 작업',
       back: '영상 다듬기로 돌아가기',
+      ticksFailed: '체크를 저장하지 못했어요. 다시 체크해 주세요.',
+    },
+    more: {
+      title: '더 해 보기',
+      waiting: '확정하기를 하면 쓸 수 있어요.',
+      template: '이 영상 형식으로 템플릿 만들기',
+      post: '이 체험으로 글 쓰기',
+      postFailed: '글을 만들지 못했어요. 다시 시도해 주세요.',
+      other: {
+        instagram_clip: '인스타 클립 업로드 문구 보기',
+        naver_clip: '네이버 클립 업로드 문구 보기',
+      },
     },
   },
   en: {
@@ -188,6 +200,18 @@ export const i18n = {
       earlierRevision: 'This video is of earlier revision {{revision}}',
       barAria: 'Render work',
       back: 'Back to Refine video',
+      ticksFailed: 'The tick was not saved. Tick it again.',
+    },
+    more: {
+      title: 'Try more',
+      waiting: 'Available once the video is confirmed.',
+      template: 'Make a template from this video',
+      post: 'Write a post from this visit',
+      postFailed: 'The post was not created. Try again.',
+      other: {
+        instagram_clip: 'Open the Instagram clip upload text',
+        naver_clip: 'Open the Naver clip upload text',
+      },
     },
   },
 } as const satisfies I18nFragment

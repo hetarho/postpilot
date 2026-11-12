@@ -26,6 +26,7 @@ export {
   useLinkClipPost,
   useSaveClipStoryline,
   useSaveClipRegions,
+  useSaveClipChecklistTicks,
 } from './api/clip-project'
 export {
   compositionInputsToProto,

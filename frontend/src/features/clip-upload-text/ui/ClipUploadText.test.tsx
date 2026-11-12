@@ -80,6 +80,28 @@ afterEach(() => {
 })
 
 describe('clip upload text', () => {
+  it('stands on the channel its host chooses and reports a switch, so ③ can open the other one', async () => {
+    const { rerender, props, user } = mount({ uploadTexts: [stored()] })
+    const onChannelChange = vi.fn()
+    rerender(
+      <ClipUploadText {...props} channel="instagram_clip" onChannelChange={onChannelChange} />,
+    )
+    expect(screen.getByRole('button', { name: '인스타 클립' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(
+      await screen.findByRole('button', { name: '인스타 클립 문구도 만들기' }),
+    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '네이버 클립' }))
+    expect(onChannelChange).toHaveBeenCalledWith('naver_clip')
+    // The host still decides: nothing switches until it does.
+    expect(screen.getByRole('button', { name: '인스타 클립' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
   it('only writes after explicit quote approval, with one write call and no video work', async () => {
     let release!: () => void
     const gate = new Promise<void>((resolve) => {

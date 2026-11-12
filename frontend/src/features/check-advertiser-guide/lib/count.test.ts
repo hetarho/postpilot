@@ -4,6 +4,7 @@ import { EMPTY_GUIDE } from '@/entities/advertiser-guide'
 import { BlockSchema, BlockType, GalleryLayout, PostContentSchema } from '@/shared/api'
 import {
   bodyTexts,
+  clipChecklistCoverage,
   countCharacters,
   countPhotos,
   countedItems,
@@ -144,5 +145,60 @@ describe('the free-text lines', () => {
     expect(tickedLines(edited, ['대표 메뉴 소개'])).toEqual([
       { line: '대표 메뉴 두 개 소개', ticked: false },
     ])
+  })
+})
+
+describe("a clip's coverage (CLIP-231)", () => {
+  const guide = {
+    ...EMPTY_GUIDE,
+    keywords: ['성수 카페', '크림라떼', '주차', '휘낭시에', '포장', '없는 말'],
+    hashtags: ['#성수맛집', '라떼'],
+  }
+  const coverage = (upload?: { body: string; tags: string[] }) =>
+    clipChecklistCoverage({
+      title: '성수카페 투어',
+      captions: ['크림 라떼가 맛있어요'],
+      segments: ['주차는 건물 뒤에'],
+      regionText: ['휘낭시에 맛집'],
+      upload,
+      guide,
+    })
+
+  it('finds a keyword in the title, a caption, a spoken segment, region text or the upload body, ignoring case and spaces', () => {
+    expect(coverage({ body: '포장도 돼요', tags: [] }).map((item) => item.met)).toEqual([
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+    ])
+  })
+
+  it('reads hashtags from the upload tags alone, ignoring a leading #', () => {
+    const items = coverage({ body: '라떼', tags: ['성수맛집'] })
+    expect(items.filter((item) => item.kind === 'hashtag')).toEqual([
+      { kind: 'hashtag', hashtag: '#성수맛집', met: true },
+      { kind: 'hashtag', hashtag: '라떼', met: false },
+    ])
+  })
+
+  it('counts nothing in the upload text before one is saved and no characters or photos at all', () => {
+    const items = coverage()
+    expect(items.map((item) => item.kind)).toEqual([
+      'keyword',
+      'keyword',
+      'keyword',
+      'keyword',
+      'keyword',
+      'keyword',
+      'hashtag',
+      'hashtag',
+    ])
+    expect(items.find((item) => item.kind === 'keyword' && item.keyword === '포장')?.met).toBe(
+      false,
+    )
   })
 })

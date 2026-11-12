@@ -1,1 +1,1 @@
-export { AdvertiserChecklist } from './ui/AdvertiserChecklist'
+export { AdvertiserChecklist, ClipAdvertiserChecklist } from './ui/AdvertiserChecklist'

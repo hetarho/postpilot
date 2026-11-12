@@ -18,7 +18,7 @@ const seeds: StageDraft[] = STAGE_ROLES.map((role) => ({
   fieldLabel: '가격',
 }))
 it('keeps edited stage order and information across Back and the same leaf, with bounded selection', () => {
-  const actor = createActor(clipWizardMachine).start()
+  const actor = createActor(clipWizardMachine, { input: {} }).start()
   actor.send({ type: 'choose', key: 'cafe' })
   actor.send({ type: 'choose', key: 'dessertBakery', seeds })
   actor.send({ type: 'add', name: '나만의 단계', intent: '내 내용' })
@@ -48,7 +48,7 @@ it('keeps edited stage order and information across Back and the same leaf, with
   actor.stop()
 })
 it('refuses an invalid stage without losing its answers or advancing to design', () => {
-  const actor = createActor(clipWizardMachine).start()
+  const actor = createActor(clipWizardMachine, { input: {} }).start()
   actor.send({ type: 'choose', key: 'cafe' })
   actor.send({ type: 'choose', key: 'dessertBakery', seeds: [seeds[0]!] })
   actor.send({ type: 'next' })

@@ -4,7 +4,21 @@ import { CircleCheck, CircleDashed } from 'lucide-react'
 import type { AdvertiserGuide } from '@/entities/advertiser-guide'
 import type { PostContent } from '@/shared/api'
 import { Checkbox, Typography, typographyStyles } from '@/shared/ui'
-import { countedItems, tickedLines, toggleTick, type CountedItem } from '../lib/count'
+import {
+  clipChecklistCoverage,
+  countedItems,
+  tickedLines,
+  toggleTick,
+  type ClipCoverageInput,
+  type CountedItem,
+} from '../lib/count'
+
+interface TickProps {
+  guide: AdvertiserGuide
+  ticks: readonly string[]
+  readOnly: boolean
+  onTicksChange: (ticks: string[]) => void
+}
 
 /** ③'s pre-submission checklist (POST-119): what the guide asks for, counted against the post as
  *  it stands, and every free-text line as a box the owner ticks. Advisory — it gates nothing —
@@ -12,33 +26,52 @@ import { countedItems, tickedLines, toggleTick, type CountedItem } from '../lib/
  *  words; the icon only repeats it. */
 export function AdvertiserChecklist({
   content,
+  ...props
+}: TickProps & { content: Pick<PostContent, 'title' | 'tags' | 'blocks'> }) {
+  return <Checklist {...props} items={countedItems(content, props.guide)} subject="post" />
+}
+
+/** A clip's ③ checklist (CLIP-231): the same marks and ticks, read against the confirmed plan
+ *  and the saved 업로드 문구 instead of a post's content. */
+export function ClipAdvertiserChecklist({
+  coverage,
+  ...props
+}: TickProps & { coverage: Omit<ClipCoverageInput, 'guide'> }) {
+  return (
+    <Checklist
+      {...props}
+      items={clipChecklistCoverage({ ...coverage, guide: props.guide })}
+      subject="clip"
+    />
+  )
+}
+
+type Subject = 'post' | 'clip'
+
+function Checklist({
+  items,
   guide,
   ticks,
   readOnly,
   onTicksChange,
-}: {
-  content: Pick<PostContent, 'title' | 'tags' | 'blocks'>
-  guide: AdvertiserGuide
-  ticks: readonly string[]
-  readOnly: boolean
-  onTicksChange: (ticks: string[]) => void
-}) {
+  subject,
+}: TickProps & { items: CountedItem[]; subject: Subject }) {
   const { t } = useTranslation('posts')
   const id = useId()
-  const items = countedItems(content, guide)
   const lines = tickedLines(guide, ticks)
+  const copy = subject === 'clip' ? 'checklist.clip' : 'checklist'
   return (
     <section aria-labelledby={`${id}-title`} className="mt-10">
       <Typography variant="fieldTitle" as="h3" id={`${id}-title`}>
         {t('checklist.title')}
       </Typography>
       <Typography variant="meta" as="p" className="mt-1">
-        {t('checklist.help')}
+        {t(`${copy}.help`)}
       </Typography>
       {items.length > 0 && (
-        <ul aria-label={t('checklist.counted')} className="mt-3 space-y-2">
+        <ul aria-label={t(`${copy}.counted`)} className="mt-3 space-y-2">
           {items.map((item) => (
-            <CountedRow key={itemKey(item)} item={item} />
+            <CountedRow key={itemKey(item)} item={item} subject={subject} />
           ))}
         </ul>
       )}
@@ -46,7 +79,7 @@ export function AdvertiserChecklist({
         <fieldset className="mt-4">
           <legend className={typographyStyles({ variant: 'label' })}>{t('checklist.lines')}</legend>
           <Typography variant="meta" as="p" className="mt-1">
-            {t('checklist.linesHelp')}
+            {t(`${copy}.linesHelp`)}
           </Typography>
           <ul className="mt-2">
             {lines.map(({ line, ticked }) => (
@@ -88,7 +121,7 @@ function itemKey(item: CountedItem): string {
   }
 }
 
-function CountedRow({ item }: { item: CountedItem }) {
+function CountedRow({ item, subject }: { item: CountedItem; subject: Subject }) {
   const { t } = useTranslation('posts')
   const Icon = item.met ? CircleCheck : CircleDashed
   return (
@@ -99,7 +132,7 @@ function CountedRow({ item }: { item: CountedItem }) {
       />
       <span className="min-w-0">
         <span className="break-words">{label(item, t)}</span>
-        <span className="text-content-secondary">{` · ${status(item, t)}`}</span>
+        <span className="text-content-secondary">{` · ${status(item, subject, t)}`}</span>
       </span>
     </Typography>
   )
@@ -124,11 +157,13 @@ function label(item: CountedItem, t: Translate): string {
   }
 }
 
-function status(item: CountedItem, t: Translate): string {
+function status(item: CountedItem, subject: Subject, t: Translate): string {
   switch (item.kind) {
     case 'keyword':
       return t(item.met ? 'checklist.keywordMet' : 'checklist.keywordMissing')
     case 'hashtag':
+      if (subject === 'clip')
+        return t(item.met ? 'checklist.clip.hashtagMet' : 'checklist.clip.hashtagMissing')
       return t(item.met ? 'checklist.hashtagMet' : 'checklist.hashtagMissing')
     case 'characters':
       return item.met

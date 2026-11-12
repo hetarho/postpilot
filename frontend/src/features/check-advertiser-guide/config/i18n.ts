@@ -22,6 +22,13 @@ export const i18n = {
       hashtagMissing: '태그에 없어요',
       lines: '광고주 요청 확인',
       linesHelp: '나머지 요청은 글을 읽고 직접 확인해 주세요.',
+      clip: {
+        help: '광고주 가이드를 확정한 영상과 업로드 문구에 비교했어요. 참고용이라 다운로드, 복사, 완료 표시는 그대로 할 수 있어요.',
+        counted: '영상에 꼭 담을 내용',
+        hashtagMet: '업로드 문구 태그에 있어요',
+        hashtagMissing: '업로드 문구 태그에 없어요',
+        linesHelp: '나머지 요청은 영상을 보고 직접 확인해 주세요.',
+      },
     },
   },
   en: {
@@ -44,6 +51,13 @@ export const i18n = {
       hashtagMissing: 'Not in the tags',
       lines: 'Advertiser requests to confirm',
       linesHelp: 'Read the post and check the remaining requests yourself.',
+      clip: {
+        help: 'The advertiser guide compared with the confirmed video and its upload text. It is advisory: downloading, copying and finishing stay available.',
+        counted: 'What your video needs',
+        hashtagMet: 'In the upload text tags',
+        hashtagMissing: 'Not in the upload text tags',
+        linesHelp: 'Watch the video and check the remaining requests yourself.',
+      },
     },
   },
 } as const satisfies I18nFragment

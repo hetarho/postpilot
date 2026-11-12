@@ -26,6 +26,10 @@ export interface ClipUploadTextProps {
   modelSelect?: ReactNode
   disabled?: boolean
   beforeWrite?: () => Promise<unknown>
+  /** The channel on screen when the host chooses it — ③'s 더 해 보기 opens the other channel's
+   *  text (CLIP-233); absent, the panel keeps its own choice, starting at the clip's channel. */
+  channel?: ClipChannel
+  onChannelChange?: (channel: ClipChannel) => void
 }
 export function ClipUploadText(props: ClipUploadTextProps) {
   return <UploadTextPanel key={`${props.ownerId}/${props.project.id}`} {...props} />
@@ -34,7 +38,9 @@ function UploadTextPanel(props: ClipUploadTextProps) {
   const { t } = useTranslation('clips')
   const { ownerId, project } = props
   const [editing, setEditing] = useState(false)
-  const [channel, setChannel] = useState<ClipChannel>(clipChannel(project.channel))
+  const [ownChannel, setOwnChannel] = useState<ClipChannel>(clipChannel(project.channel))
+  const channel = props.channel ?? ownChannel
+  const setChannel = props.onChannelChange ?? setOwnChannel
   const query = useClipUploadTexts(ownerId, project.id)
   const queue = useRef<Promise<void>>(Promise.resolve())
   const row = query.data?.texts.find((text) => text.channel === channel)

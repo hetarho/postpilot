@@ -226,7 +226,7 @@ it('offers 영상 지침으로 저장 after a completed revision started here, s
   expect(await panel().findByText('영상 지침으로 저장했어요.')).toBeInTheDocument()
 })
 
-it('keeps an upload-text job beside the plan with its own cancel action', async () => {
+it('keeps a running upload-text job in ③ with its own cancel action and none in ②', async () => {
   const latestJob = {
     id: 'upload',
     kind: 'clip_upload_text',
@@ -235,8 +235,11 @@ it('keeps an upload-text job beside the plan with its own cancel action', async 
     clipProjectId: 'clip',
   }
   await mount({ projects: [{ ...fixture(), latestJob }] }, { jobs: [latestJob] })
-  expect(await screen.findByRole('button', { name: '문구 작성 취소' })).toBeEnabled()
+  expect(await screen.findByRole('region', { name: '장면 블록' })).toBeVisible()
   expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('region', { name: '장면 블록' })).toBeVisible()
+  // ② no longer offers the 업로드 문구 (CLIP-211); the running write keeps its cancel in ③.
+  expect(screen.queryByRole('button', { name: '문구 작성 취소' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('tab', { name: '영상 완성' }))
+  expect(await screen.findByRole('button', { name: '문구 작성 취소' })).toBeEnabled()
 })

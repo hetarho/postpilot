@@ -28,6 +28,7 @@ import {
 } from '@/shared/ui'
 import { clipStageSeeds, subjectOf } from '../config/catalog'
 import { toClipWizardBody } from '../lib/to-composition'
+import type { ClipWizardSeed } from '../lib/seed'
 import { saveClipTemplateMachine } from '../model/save-clip-template-machine'
 import {
   checkedStages,
@@ -49,14 +50,23 @@ interface Props {
   /** A flow the wizard sits in (setup): its way back once the wizard is on its first question,
    *  and its own action under the step bar's row, so the screen keeps ONE bar. */
   host?: { back: () => void; backDisabled?: boolean; footer?: ReactNode }
+  /** A clip's storyline and design selection to start from (CLIP-233). */
+  seed?: ClipWizardSeed
 }
 export function ClipTemplateWizard(props: Props) {
   return <OwnedClipTemplateWizard key={props.ownerId} {...props} />
 }
-function OwnedClipTemplateWizard({ ownerId, onSaved, beforeSave, onSaveFailure, host }: Props) {
+function OwnedClipTemplateWizard({
+  ownerId,
+  onSaved,
+  beforeSave,
+  onSaveFailure,
+  host,
+  seed,
+}: Props) {
   const { t } = useTranslation(['clipWizard', 'templateTargets'])
   const id = useId()
-  const actor = useActorRef(clipWizardMachine)
+  const actor = useActorRef(clipWizardMachine, { input: { seed } })
   const state = useSelector(actor, clipWizardStateOf)
   const send = actor.send
   const selected = checkedStages(state)

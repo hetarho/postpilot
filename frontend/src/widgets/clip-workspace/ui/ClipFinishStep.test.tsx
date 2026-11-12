@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createRouterTransport } from '@connectrpc/connect'
 import { create } from '@bufbuild/protobuf'
@@ -7,6 +7,10 @@ import { ClipProjectSchema } from '@/shared/api'
 import { toClipProject } from '@/entities/clip-project'
 import type { BrowserRenderState } from '@/features/render-clip-browser'
 import { createTestQueryClient, withProviders } from '@/test/session'
+import { renderAppAt } from '@/test/app'
+import { clipTimelineFixture } from '@/test/clip-editing'
+import type { FakeClipProject } from '@/test/clips'
+import type { FakeDraftSave } from '@/test/posts'
 import { ClipFinishStep, type ClipFinishRender } from './ClipFinishStep'
 
 afterEach(cleanup)
@@ -263,4 +267,90 @@ it('keeps playback, download and a replaceable URL on a finalized clip', async (
   })
   fireEvent.click(screen.getByRole('button', { name: 'URL 바꾸기' }))
   expect(finalization.savePublishedUrl).toHaveBeenCalledWith('https://naver.me/x')
+})
+
+/** A confirmed sponsored clip with a storyline, for ③'s 더 해 보기 (CLIP-233). */
+const confirmedClip = (overrides: Partial<FakeClipProject> = {}): FakeClipProject => ({
+  id: 'clip',
+  title: '성수 카페 영상',
+  instruction: '라떼 위주로',
+  videoTemplateId: '',
+  ratio: 'vertical',
+  targetDurationMs: 19800,
+  disclosure: '',
+  campaign: true,
+  advertiserGuide: { text: '주차 안내', keywords: ['크림라떼'], hashtags: ['성수카페'] },
+  editPlanRevision: 1,
+  confirmed: { planRevision: 1, at: '2026-11-12T00:00:00Z' },
+  editing: clipTimelineFixture(),
+  storyline: {
+    paragraphs: [{ text: '입구를 보여 줘요. 간판이 커요.', observationIds: [] }],
+    editedByHand: false,
+    addedSourceIds: [],
+    takenOutObservationIds: [],
+  },
+  ...overrides,
+})
+
+it('holds every 더 해 보기 action until the plan is confirmed', async () => {
+  renderAppAt('/clips/clip', {
+    user: { id: 'alice' },
+    clips: { projects: [confirmedClip({ editPlanRevision: 2 })] },
+  })
+  await userEvent.click(await screen.findByRole('tab', { name: '영상 완성' }))
+  const card = await screen.findByRole('region', { name: '더 해 보기' })
+  expect(within(card).getByText('확정하기를 하면 쓸 수 있어요.')).toBeVisible()
+  expect(
+    within(card).getByRole('button', { name: '이 영상 형식으로 템플릿 만들기' }),
+  ).toBeDisabled()
+  expect(within(card).getByRole('button', { name: '이 체험으로 글 쓰기' })).toBeDisabled()
+  expect(within(card).getByRole('button', { name: '인스타 클립 업로드 문구 보기' })).toBeDisabled()
+  // Neither the checklist nor the 업로드 문구 stands before confirmation.
+  expect(screen.queryByRole('heading', { name: '제출 전 체크리스트' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: '업로드 문구' })).not.toBeInTheDocument()
+})
+
+it('links the wizard with the clip, saves a checklist tick alone and starts nothing', async () => {
+  const calls: string[] = [],
+    projectRequests: Array<{ id: string; linkedPostSlug?: string; fields: string[] }> = []
+  renderAppAt('/clips/clip', {
+    user: { id: 'alice' },
+    clips: { projects: [confirmedClip()], calls, projectRequests },
+  })
+  const card = await screen.findByRole('region', { name: '더 해 보기' })
+  const link = within(card).getByRole('link', { name: '이 영상 형식으로 템플릿 만들기' })
+  expect(link.getAttribute('href')).toMatch(/^\/video-templates\/new\?/)
+  const search = new URLSearchParams(link.getAttribute('href')!.split('?')[1])
+  expect(search.get('channel')).toBe('naver_clip')
+  expect(search.get('from')).toBe('clip')
+  // The checklist reads the confirmed plan, and a tick is saved as its own option save.
+  expect(screen.getByRole('heading', { name: '제출 전 체크리스트' })).toBeVisible()
+  await userEvent.click(screen.getByRole('checkbox', { name: '주차 안내' }))
+  await waitFor(() => expect(projectRequests.at(-1)?.fields).toEqual(['id', 'checklistTicks']))
+  expect(calls.some((call) => /^(Start|Quote|Confirm|Finalize)/u.test(call))).toBe(false)
+})
+
+it('writes a post from the same visit with no video and opens it', async () => {
+  const draftSaves: FakeDraftSave[] = [],
+    draftMaterials: Array<{ slug: string; title: string; memo: string }> = [],
+    calls: string[] = []
+  const { router } = renderAppAt('/clips/clip', {
+    user: { id: 'alice' },
+    clips: { projects: [confirmedClip()], calls },
+    posts: { draftSaves, draftMaterials },
+  })
+  const card = await screen.findByRole('region', { name: '더 해 보기' })
+  await userEvent.click(within(card).getByRole('button', { name: '이 체험으로 글 쓰기' }))
+  await waitFor(() => expect(router.state.location.pathname).toMatch(/^\/posts\/[^/]+$/))
+  expect(router.state.location.pathname).not.toBe('/posts/new')
+  expect(draftSaves).toHaveLength(1)
+  expect(draftMaterials[0]).toEqual({ slug: '', title: '성수 카페 영상', memo: '라떼 위주로' })
+  expect(draftSaves[0]).toMatchObject({
+    slug: '',
+    targetLanguage: 'ko',
+    campaign: true,
+    advertiserGuide: { text: '주차 안내', keywords: ['크림라떼'], hashtags: ['성수카페'] },
+  })
+  // The clip itself is not written and no video moves.
+  expect(calls.filter((call) => /^(Update|Create|Start|Confirm|Finalize)/u.test(call))).toEqual([])
 })
