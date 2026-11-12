@@ -7,6 +7,11 @@
 - lang: ko
 - docs: en
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
+
 ## inbox
 - 261112 decided CDS-25 CDS-55 T772: what happens to an accent keyword a grounded shorter sentence lacks? → dropped at every shorter-copy fallback and on decode of stored portable plans, persisted by the next save (alt: keep it and refuse saves | pick another accent word automatically) — CDS-25 lets one word of the caption take the accent, and a word the text lacks cannot.
 - 261112 decided ARCH-30 T771: the unpushed gusta migration fails CI's old skill check → finish the queued T771 in this session before pushing (alt: push and let CI fail | leave the migration unpushed). No other session held T771.
@@ -208,6 +213,7 @@
 - no runnable task: resolve blocked, parked or deps
 
 ## log
+- 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
 - 261112 T771 done
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
@@ -227,4 +233,3 @@
 - 261112 T765 done
 - 261112 T764 done
 - 261112 T763 done
-- 261112 T761 done
