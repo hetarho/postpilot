@@ -145,6 +145,7 @@
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
 - 261113 decided T780 review/performance-design-system-261113: valid distinct-URL explicit refresh fails because every rebuilt owner repeats force? → add a hook-owned once-per-explicit-attempt transaction with pending sharing/failure retention, keeping actual renewal invalidation and the existing session quota (alt: raise retry cap | suppress all HTTP renewal | simple Set with failure fallback). Unstarted claim72043a21 released before replan; no worker/source edits existed.
 - 261113 decided T781 review/performance-design-system-261113: real changed-save leases hydrate after ACK and can stop playback again? → preserve full access invalidation and add a private-intent exception only for producer-bound typed, same-generation, confirmed available strictly future lease extensions at identical composition/revisions (alt: omit expiry from access key | parse opaque hints | claim constant-lease fixture covers production). Two runtime DTO wiring paths added before claim; shortening/withdrawal/malformed/generation change and all explicit cancellation fail closed, fresh source/frame gates required. Independent design safety review passed; source approval remains separate.
+- 261113 decided T782 review/performance-design-system-261113: real block selection during playback leaves the paused image at the old output frame? → request the authoritative external seek target through the existing bounded draw path after pause/invalidate (alt: leave stale image until Play | publish old transport time through stop() | rewrite the clock). Same frozen whole-widget oracle fails on BASE/current; CLIP-53 already requires selection to seek the preview. Restrict player+test, no autoplay/owner/policy changes, independent review and final full gates remain; direct delegation covers the fix.
 
 ## ideation
 | id | st |
@@ -225,10 +226,12 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T780 | Stabilize retained preview capability publication and refresh | ARCH | T778 | todo |
 | T781 | Continue an active preview after an equal-content save acknowledgment | ARCH | T780 | todo |
+| T782 | Refresh paused frame after running external seek | ARCH | T781 | todo |
 
 ## next
 - gusta-implement-task T773 through approved si8 work-group assignment
 - si8 approved work: T778 → T780 → T781 → T779, then shared UI source reductions within the08:00KST cutoff; final90min reserved.
+- gusta-implement-task T782
 
 ## log
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
@@ -240,8 +243,8 @@
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
 - 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
-- 261112 T771 done
-- 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
+- 261113 gusta-create-task review/performance-design-system-261113 F10: T782 fixes the confirmed paused-frame redraw gap after running block selection; unchanged actual-control oracle and existing source/clock/cancellation contracts, no SSOT rev/pending change.
+- 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
 - 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
 - 261112 T772 done
 - 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
