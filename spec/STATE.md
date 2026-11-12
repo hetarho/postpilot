@@ -207,11 +207,14 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T771 | Verify skills with gusta and drop the haeram-spec-creator dependency | ARCH | - | todo |
+| T772 | Drop an accent keyword its shorter copy lost and name every caption problem in ② | CDS CLIP ARCH | - | todo |
 
 ## next
+- gusta-implement-task T772 (fx1): a production clip refused every save and 확정하기 behind an unnamed caption error
 - gusta-implement-task T771 (run with /gusta-start): its push triggers Deploy backend and Verify media
 
 ## log
+- 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
 - 261112 create-task ARCH r23: T771 moves the CI and pre-push skill check to gusta, drops the haeram-spec-creator devDependency and refreshes the ink identity; ARCH fully tasked
 - 261112 update-ssot ARCH r23: ARCH-30 verifies skills with gusta through npx at the .gusta-lock.json version; ARCH-31 cites it unchanged and no active task cites ARCH-30
 - 261112 updates haeram-spec-creator 0.13.0→gusta 0.15.0 (rename without a compatibility layer: 20 skills and the old lock removed, 120 files created through npx, no conflicts; no structural migration, no unset settings). FORMAT takes the gusta skill and GUSTA_* names, the 0.15.0 session-mode, inbox, needs-sketch, verification-owner and ideation lines and principle 5's policy-approval sentence; the 65a1f82b overrides stay. SETTINGS preamble renamed. Lint identical before/after (0 errors, 80 warnings).
@@ -231,4 +234,3 @@
 - 261112 create-task CLIP r76 THEME r41 (vd1): T759–T768 for the post-shaped clip journey; CLIP and THEME fully tasked
 - 261112 update-ssot CLIP r76 THEME r41 (vd1): clip journey mirrors the post guide from /clips/new to ③; no active task cites the changed decisions
 - 261112 update-ssot CLIP start (vd1)
-- 261112 updates haeram-spec-creator 0.12.2→0.13.0 (50 skill files updated, 2 created, no conflicts; no structural migration, no unset settings). FORMAT takes the 0.13.0 task start/done CLI, CI-unchecked and reports exception lines plus the permission-mode/headless-mcp settings keys; the four 65a1f82b overrides (decision n, [x], chg pruning, log history) stay. Lint identical before/after (0 errors, 82 warnings). 12c1f59a refreshes the browser ink identity for the new lockfile SHA; clip/clip-design Go, 46 FE files/294 tests, tsc, eslint, prettier, gofmt, vet pass. No code push.
