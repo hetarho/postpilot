@@ -5,6 +5,7 @@ import {
   timelineCuts,
   type ClipEditPlan,
   type ClipEditableText,
+  type ClipSelection,
   type ClipSpokenSegment,
   type TimelineEdit,
 } from '@/entities/clip-plan'
@@ -54,6 +55,27 @@ export function clipSceneBlocks(plan: ClipEditPlan): ClipSceneBlock[] {
     block.spoken.sort((a, b) => a.startMs - b.startMs)
   }
   return blocks
+}
+
+/** Whether a selection belongs to a block: the block's own cut, or a caption or spoken segment
+ *  standing under it (CLIP-17). */
+export function blockHoldsSelection(block: ClipSceneBlock, selection?: ClipSelection): boolean {
+  return (
+    (selection?.kind === 'cut' && selection.id === block.cut.cut.id) ||
+    (selection?.kind === 'text' && block.captions.some((c) => c.instanceId === selection.id)) ||
+    (selection?.kind === 'spoken' && block.spoken.some((s) => s.id === selection.id))
+  )
+}
+
+/** The selected scene block, 1-based in output order, or undefined when nothing in a block is
+ *  selected: the scope a revision request is about (CLIP-131). */
+export function selectedSceneBlock(
+  plan: ClipEditPlan,
+  selection?: ClipSelection,
+): number | undefined {
+  if (!selection) return
+  const index = clipSceneBlocks(plan).findIndex((block) => blockHoldsSelection(block, selection))
+  return index >= 0 ? index + 1 : undefined
 }
 
 /** Overlap has two source frames; splitting there has no unambiguous output frame. */

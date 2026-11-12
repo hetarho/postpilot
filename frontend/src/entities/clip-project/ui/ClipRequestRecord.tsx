@@ -23,11 +23,13 @@ export function ClipRequestRecord({ requests = [] }: { requests?: readonly ClipP
             <Typography variant="meta" as="p">
               {request.kind === 'instruction' || request.kind === 'storyline'
                 ? t(`record.kind.${request.kind}`)
-                : t('record.kind.revision', {
-                    target: t(
-                      `revision.targets.${request.kind.replace('revision:', '') as 'flow' | 'narration' | 'both'}`,
-                    ),
-                  })}
+                : request.kind === 'revision:auto'
+                  ? t('record.kind.revisionAuto')
+                  : t('record.kind.revision', {
+                      target: t(
+                        `revision.targets.${request.kind.replace('revision:', '') as 'flow' | 'narration' | 'both'}`,
+                      ),
+                    })}
               {' · '}
               {formatDateTime(request.createdAt)}
             </Typography>

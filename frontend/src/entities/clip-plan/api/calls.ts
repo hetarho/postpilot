@@ -11,7 +11,6 @@ import {
 } from '@/entities/clip-project/@x/clip-plan'
 import { clipPlanToProto } from './edit-plan'
 import type { ClipEditPlan } from '../model/edit-plan'
-import type { ClipRevisionTarget } from '../model/revision'
 
 /** The plan's own rpcs (ARCH-17): saving a correction, and asking for one to be rewritten. */
 export interface ClipPlanCalls {
@@ -22,11 +21,13 @@ export interface ClipPlanCalls {
     expectedRevision: number
     plan: ClipEditPlan
   }): Promise<ClipProject>
-  /** Starts a paid rewrite of the saved plan. */
+  /** Starts a paid rewrite of the saved plan. It names no target: the writing decides whether
+   *  the flow, the narration or both change (CLIP-131), within the selected scene block when
+   *  `scopeCut` names one (1-based). */
   revise(input: {
     projectId: string
     request: string
-    target: ClipRevisionTarget
+    scopeCut?: number
     observeModel: { providerId: string; modelId: string }
     writeModel: { providerId: string; modelId: string }
     quote: ClipQuote
@@ -49,6 +50,7 @@ export function clipPlanCalls(transport: Transport): ClipPlanCalls {
     async revise({ quote, ...input }) {
       const response = await client.startClipRevision({
         ...input,
+        target: '',
         quoteId: quote.quoteId,
         approvedMaxCredits: quote.maxCredits,
         cancellationPolicyVersion: quote.cancellationPolicy?.version,
@@ -64,14 +66,15 @@ export function useClipPlanCalls(): ClipPlanCalls {
   return useMemo(() => clipPlanCalls(transport), [transport])
 }
 
-/** The price of a rewrite. Like a generation quote it binds the exact words it was taken
- *  against (CLIP-131), so the binding is the identity and nothing is served from a cache. */
+/** The price of a rewrite: the two writing calls a request may need (CLIP-132). Like a
+ *  generation quote it binds the exact words and scope it was taken against (CLIP-131), so the
+ *  binding is the identity and nothing is served from a cache. */
 export function useClipRevisionQuote(
   ownerId: string,
   input: {
     projectId: string
     request: string
-    target: ClipRevisionTarget
+    scopeCut?: number
     observeModel?: { providerId: string; modelId: string } | null
     writeModel?: { providerId: string; modelId: string } | null
   },
@@ -94,7 +97,8 @@ export function useClipRevisionQuote(
           {
             projectId: input.projectId,
             request: input.request,
-            target: input.target,
+            target: '',
+            scopeCut: input.scopeCut,
             observeModel: input.observeModel ?? undefined,
             writeModel: input.writeModel ?? undefined,
           },

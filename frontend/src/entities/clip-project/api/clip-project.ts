@@ -67,6 +67,13 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     ...(value.finalizationRefusal
       ? { finalizationRefusal: value.finalizationRefusal as ClipProject['finalizationRefusal'] }
       : {}),
+    ...(value.confirmedPlanRevision > 0
+      ? { confirmed: { planRevision: value.confirmedPlanRevision, at: value.confirmedAt } }
+      : {}),
+    ...(value.canConfirm !== undefined ? { canConfirm: value.canConfirm } : {}),
+    ...(value.confirmationRefusal
+      ? { confirmationRefusal: value.confirmationRefusal as ClipProject['confirmationRefusal'] }
+      : {}),
     notices: value.notices?.map(({ code, cutId, elementId, action }) => ({
       code,
       cutId,
@@ -317,6 +324,8 @@ function withDetailReadings(saved: ClipProject, cached: ClipProject): ClipProjec
     attemptInspection: cached.attemptInspection,
     canFinalize: cached.canFinalize,
     finalizationRefusal: cached.finalizationRefusal,
+    canConfirm: cached.canConfirm,
+    confirmationRefusal: cached.confirmationRefusal,
   }
 }
 

@@ -1046,21 +1046,19 @@ it('holds the render while a slot holds words it cannot draw', async () => {
   expect(calls).not.toContain('StartClipRender')
 })
 
-// CLIP-152, CLIP-188: once a slot edit moves the plan past the render, that render is named by
-// its own revision and cannot be confirmed as the clip.
+// CLIP-152, CLIP-188, CLIP-75: once a slot edit moves the plan past the render, 확정하기 confirms
+// the moved plan's own revision, never the one the earlier render was made from.
 it('never confirms an earlier render for a plan a slot edit moved', async () => {
-  await mount(rendered(), {}, {}, 'tab')
+  const confirmations: Array<{ expectedPlanRevision: number }> = []
+  await mount(rendered(), { confirmations }, {}, 'tab')
   await screen.findByRole('region', { name: '컷·자막 수정' })
-  expect(screen.getByRole('button', { name: '확정하기' })).toBeEnabled()
   await userEvent.click(heading())
   fireEvent.change(line('인트로', 2).getByLabelText('2번째 줄 문구'), {
     target: { value: '저녁 영업' },
   })
-  await waitFor(
-    () => expect(screen.getByRole('button', { name: '확정하기' })).toBeDisabled(),
-    AUTOSAVE,
-  )
-  expect(screen.getByText('렌더하기로 현재 편집안을 출력한 뒤 확정해 주세요.')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '확정하기' }))
+  await waitFor(() => expect(confirmations).toHaveLength(1), AUTOSAVE)
+  expect(confirmations[0].expectedPlanRevision).toBeGreaterThan(rendered().renderedPlanRevision!)
 })
 
 vi.mock('@/entities/clip-preview/ui/useLocalSamples', () => localSamplesForControls)

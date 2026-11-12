@@ -63,10 +63,13 @@ export const i18n = {
       returnMine: '내 글로 돌아가기',
       untitled: '제목 없는 클립',
     },
+    refineDock: {
+      back: '이전: 영상 생성',
+      openScript: '대본 열기',
+    },
     editorEntries: {
       storyline: '스토리라인',
       script: '더빙 대본',
-      ai: 'AI로 수정',
       scriptHelp: '영상에서 읽을 대본과 화면에 표시할 자막은 따로 편집할 수 있어요.',
       noScript: '더빙할 목소리와 대본을 준비해 주세요.',
       voices: '내 목소리 보기',
@@ -148,10 +151,13 @@ export const i18n = {
       returnMine: 'Back to My work',
       untitled: 'Untitled clip',
     },
+    refineDock: {
+      back: 'Back: Create',
+      openScript: 'Open script',
+    },
     editorEntries: {
       storyline: 'Storyline',
       script: 'Spoken script',
-      ai: 'Edit with AI',
       scriptHelp: 'Edit the spoken script separately from displayed captions.',
       noScript: 'Prepare a confirmed voice and spoken script for this video.',
       voices: 'My spoken voices',

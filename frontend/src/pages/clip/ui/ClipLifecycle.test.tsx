@@ -47,7 +47,9 @@ const selectCut = async () => {
   )
 }
 
-it('downloads without confirming, guards the result tab and confirms only once on double click', async () => {
+// CLIP-75, CLIP-76: 확정하기 in ② confirms at once and opens ③, where 완료로 표시 is the one
+// irreversible step behind its dialog; a download confirms nothing.
+it('downloads without confirming, confirms in ② and finalizes once in ③ on double click', async () => {
   const calls: string[] = []
   mount({ calls })
   await confirm()
@@ -58,36 +60,41 @@ it('downloads without confirming, guards the result tab and confirms only once o
   expect(calls).not.toContain('FinalizeClipProject')
   await userEvent.click(screen.getByRole('tab', { name: '완성' }))
   expect(screen.getByText(/수정 단계에서 확정하기를/)).toBeVisible()
-  expect(screen.queryByLabelText('클립 미리보기')).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '수정으로 이동' }))
-  await userEvent.dblClick(await confirm())
-  const dialog = within(await screen.findByRole('dialog', { name: '클립을 확정할까요?' }))
-  expect(calls).not.toContain('FinalizeClipProject')
-  await userEvent.dblClick(dialog.getByRole('button', { name: '확정하기' }))
+  await userEvent.click(await confirm())
   await waitFor(() =>
     expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
   )
+  expect(calls.filter((c) => c === 'ConfirmClipProject')).toHaveLength(1)
+  expect(screen.queryByText(/수정 단계에서 확정하기를/)).not.toBeInTheDocument()
+  expect(calls).not.toContain('FinalizeClipProject')
+  await userEvent.dblClick(screen.getByRole('button', { name: '완료로 표시' }))
+  const dialog = within(await screen.findByRole('dialog', { name: '클립을 완료로 표시할까요?' }))
+  expect(calls).not.toContain('FinalizeClipProject')
+  await userEvent.dblClick(dialog.getByRole('button', { name: '완료로 표시' }))
+  await screen.findByRole('link', { name: '영상 다운로드' })
   expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', project().result!.viewUrl)
-  expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeVisible()
   expect(screen.queryByRole('region', { name: '장면 블록' })).not.toBeInTheDocument()
   expect(calls.filter((c) => c === 'FinalizeClipProject')).toHaveLength(1)
 })
 
-it('flushes the current plan before confirming and refuses the now-stale render', async () => {
+it('flushes the current plan before confirming it and refuses to finalize the now-stale render', async () => {
   const calls: string[] = [],
-    writes: NonNullable<FakeClipsOptions['planWrites']> = []
-  mount({ calls, planWrites: writes })
+    writes: NonNullable<FakeClipsOptions['planWrites']> = [],
+    confirmations: Array<{ expectedPlanRevision: number }> = []
+  mount({ calls, planWrites: writes, confirmations })
   await confirm()
   await selectCut()
   fireEvent.change(screen.getByLabelText('원본 시작 (초)'), { target: { value: '0.5' } })
   await userEvent.click(await confirm())
-  await waitFor(() => expect(writes).toHaveLength(1))
-  await waitFor(() => expect(screen.getByLabelText('원본 시작 (초)')).toHaveValue(0.5))
+  await waitFor(() => expect(confirmations).toHaveLength(1))
+  expect(writes).toHaveLength(1)
+  expect(confirmations[0].expectedPlanRevision).toBe(2)
   expect(calls).not.toContain('FinalizeClipProject')
-  expect(screen.queryByRole('dialog', { name: '클립을 확정할까요?' })).not.toBeInTheDocument()
-  expect(screen.getByText('렌더하기로 현재 편집안을 출력한 뒤 확정해 주세요.')).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
+  expect(
+    await screen.findByText('렌더하기로 현재 편집안을 출력한 뒤 완료로 표시해 주세요.'),
+  ).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '완료로 표시' })).toBeDisabled()
 })
 
 it('keeps the draft when its save conflicts and never sends confirmation', async () => {
@@ -115,10 +122,12 @@ it('resolves a lost confirmation reply by reading the owned project and reopens 
     },
   })
   await userEvent.click(await confirm())
+  await userEvent.click(await screen.findByRole('button', { name: '완료로 표시' }))
   await userEvent.click(
-    within(await screen.findByRole('dialog', { name: '클립을 확정할까요?' })).getByRole('button', {
-      name: '확정하기',
-    }),
+    within(await screen.findByRole('dialog', { name: '클립을 완료로 표시할까요?' })).getByRole(
+      'button',
+      { name: '완료로 표시' },
+    ),
   )
   await screen.findByRole('link', { name: '영상 다운로드' })
   expect(calls.filter((c) => c === 'FinalizeClipProject')).toHaveLength(1)
@@ -335,11 +344,11 @@ it('opens a plan with no render as a plan to review, not as a missing result', a
   // visible says this attempt failed.
   for (const text of screen.queryAllByText(/실패/)) expect(text).not.toBeVisible()
   expect(screen.queryByText(/아직 다듬을 편집안이 없어요/)).not.toBeInTheDocument()
-  // 확정하기 waits for a render to confirm (CLIP-40, CLIP-152): until then the dock's one action
-  // is the render, and it carries the step's own emphasis.
-  expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '렌더하기' })).toHaveClass('bg-button-cta-bg')
-  expect(screen.queryByText('렌더하기로 영상을 만든 뒤 확정해 주세요.')).not.toBeInTheDocument()
+  // 확정하기 needs no render (CLIP-75): it is the step bar's big action from the first plan,
+  // and the render stands in the flow under the preview as a secondary action until ③ takes it.
+  expect(screen.getByRole('button', { name: '확정하기' })).toHaveClass('bg-button-cta-bg')
+  expect(screen.getByRole('button', { name: '렌더하기' })).toHaveClass('bg-button-secondary-bg')
+  expect(screen.queryByText(/만든 뒤 완료로 표시해 주세요/)).not.toBeInTheDocument()
 })
 
 it('demotes 렌더하기 beside 확정하기 once the project has a render', async () => {
@@ -350,7 +359,7 @@ it('demotes 렌더하기 beside 확정하기 once the project has a render', asy
 })
 
 it.each(['server', 'browser'] as const)(
-  'allows a matching %s render and can dismiss confirmation above an item sheet',
+  'allows a matching %s render and can dismiss finalization in ③ without ending editing',
   async (renderKind) => {
     const calls: string[] = []
     const clip = project()
@@ -359,11 +368,16 @@ it.each(['server', 'browser'] as const)(
     await confirm()
     await selectCut()
     await userEvent.click(await confirm())
-    const dialog = within(await screen.findByRole('dialog', { name: '클립을 확정할까요?' }))
-    expect(dialog.getByText(/확정하면 원본을 삭제하고 수정이 끝나요/)).toBeVisible()
+    await userEvent.click(await screen.findByRole('button', { name: '완료로 표시' }))
+    const dialog = within(await screen.findByRole('dialog', { name: '클립을 완료로 표시할까요?' }))
+    expect(dialog.getByText(/완료로 표시하면 원본을 삭제하고 수정이 끝나요/)).toBeVisible()
     expect(calls).not.toContain('FinalizeClipProject')
     await userEvent.click(dialog.getByRole('button', { name: '취소' }))
-    expect(screen.queryByRole('dialog', { name: '클립을 확정할까요?' })).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('dialog', { name: '클립을 완료로 표시할까요?' }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+    await selectCut()
     expect(screen.getByRole('button', { name: '컷 삭제' })).toBeEnabled()
     expect(calls).not.toContain('FinalizeClipProject')
   },

@@ -100,7 +100,19 @@ export interface ClipProject extends ClipProjectDraft {
   canEdit?: boolean
   canFinalize?: boolean
   finalizationRefusal?:
-    'finalized' | 'busy' | 'missing_render' | 'stale_render' | 'invalid_plan' | 'unavailable'
+    | 'finalized'
+    | 'busy'
+    | 'unconfirmed'
+    | 'missing_render'
+    | 'stale_render'
+    | 'invalid_plan'
+    | 'unavailable'
+  /** The plan revision 확정하기 last recorded (CLIP-75); the project reads as confirmed exactly
+   *  while it equals `editPlanRevision` (CLIP-229). */
+  confirmed?: { planRevision: number; at: string }
+  canConfirm?: boolean
+  /** Why 확정하기 cannot confirm the current plan; absent when it can. */
+  confirmationRefusal?: 'finalized' | 'busy' | 'invalid_plan' | 'narration' | 'unavailable'
 
   composition?: ClipProjectComposition
   id: string

@@ -93,6 +93,10 @@ export interface FakeClipProject extends ClipProjectDraft {
   finalized?: ClipProject['finalized']
   canFinalize?: boolean
   finalizationRefusal?: ClipProject['finalizationRefusal']
+  /** The plan revision 확정하기 recorded (CLIP-229). */
+  confirmed?: ClipProject['confirmed']
+  /** The server's 확정하기 verdict on the saved plan; absent reads as ready. */
+  confirmationRefusal?: ClipProject['confirmationRefusal']
   result?: ClipProject['result']
   latestJob?: FakeGenerationJobRow
   latestAttempt?: ClipProject['latestAttempt']
@@ -161,6 +165,8 @@ export interface FakeClipsOptions {
   uploadTextQuoteGate?: Promise<void>
   uploadTextStartGate?: Promise<void>
 
+  /** Every ConfirmClipProject as it arrived (CLIP-75). */
+  confirmations?: unknown[]
   finalize?: (
     input: { projectId: string; expectedRevision: number; expectedResultId: string },
     project: FakeClipProject,
@@ -420,6 +426,10 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       canFinalize:
         p.canFinalize ??
         (!!p.result?.id && !p.finalized && p.editPlanRevision === p.renderedPlanRevision),
+      confirmedPlanRevision: p.confirmed?.planRevision ?? 0,
+      confirmedAt: p.confirmed?.at ?? '',
+      canConfirm: !p.finalized && !p.confirmationRefusal,
+      confirmationRefusal: p.finalized ? 'finalized' : (p.confirmationRefusal ?? ''),
       composition: p.composition
         ? {
             snapshot: p.composition.snapshot,
@@ -642,6 +652,20 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       // The plan and the evidence survive finalization and are served as
       // readings (CLIP-160); only the originals behind them are deleted.
     }
+    return { project: projectProto(p) }
+  })
+  // 확정하기 records the saved plan revision and renders nothing (CLIP-75); a plan saved since is
+  // the request's conflict, and the project's own verdict refuses it as the server does.
+  router.rpc(ClipGenerationService.method.confirmClipProject, async (req) => {
+    options.calls?.push('ConfirmClipProject')
+    options.confirmations?.push(req)
+    const p = projects.get(req.projectId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    if (req.expectedPlanRevision !== (p.editPlanRevision ?? 0))
+      throw connectAppError('CLIP_PLAN_CONFLICT', Code.Aborted)
+    if (p.finalized || p.confirmationRefusal)
+      throw connectAppError('CLIP_INVALID_INPUT', Code.FailedPrecondition)
+    p.confirmed = { planRevision: req.expectedPlanRevision, at: '2026-11-12T00:00:00Z' }
     return { project: projectProto(p) }
   })
   router.rpc(ClipGenerationService.method.cancelClipJob, async (req) => {
@@ -940,7 +964,14 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
   const quotes = new Map<string, { id: string; max: number }>()
   const revisionQuotes = new Map<
     string,
-    { id: string; max: number; request: string; target: string; revision: number }
+    {
+      id: string
+      max: number
+      request: string
+      target: string
+      scopeCut?: number
+      revision: number
+    }
   >()
   let quoteNumber = 0
   router.rpc(ClipGenerationService.method.listClipAnalysisEligibility, () => {
@@ -1014,13 +1045,20 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (!p?.editing) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     if (p.latestJob && !['done', 'failed', 'cancelled'].includes(p.latestJob.status ?? ''))
       throw connectAppError('CLIP_BUSY', Code.FailedPrecondition)
-    if (!req.request.trim() || !['flow', 'narration', 'both'].includes(req.target))
+    // An empty target is auto, quoted at the two writing calls a request may need (CLIP-132).
+    if (!req.request.trim() || !['', 'flow', 'narration', 'both'].includes(req.target))
+      throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    if (
+      req.scopeCut !== undefined &&
+      (req.scopeCut < 1 || req.scopeCut > p.editing.plan.cuts.length)
+    )
       throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const q = {
       id: `revision-quote-${++quoteNumber}`,
       max: options.revisionMaxCredits ?? (req.target === 'narration' ? 8 : 16),
       request: req.request,
       target: req.target,
+      scopeCut: req.scopeCut,
       revision: p.editPlanRevision ?? 0,
     }
     revisionQuotes.set(q.id, q)
@@ -1055,7 +1093,11 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     const quote = revisionQuotes.get(req.quoteId)
     if (!quote || quote.max !== req.approvedMaxCredits)
       throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
-    if (quote.request !== req.request || quote.target !== req.target)
+    if (
+      quote.request !== req.request ||
+      quote.target !== req.target ||
+      quote.scopeCut !== req.scopeCut
+    )
       throw connectAppError('CLIP_QUOTE_CHANGED', Code.FailedPrecondition)
     if (quote.revision !== (p.editPlanRevision ?? 0))
       throw connectAppError('CLIP_QUOTE_CHANGED', Code.FailedPrecondition)

@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import {
   ClipFailureNotice,
   ClipRequestRecord,
+  clipConfirmed,
   clipReturnDestination,
   markClipHistoryReturn,
   type ClipProject,
@@ -39,7 +40,6 @@ import {
   readyClipBatch,
 } from '@/features/generate-clip'
 import { ClipBrowserRenderStatus } from '@/features/render-clip-browser'
-import { ClipRevisionRequest } from '@/features/revise-clip'
 import { ClipUploadText } from '@/features/clip-upload-text'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
@@ -55,6 +55,7 @@ import { RetainedPreparationMedia } from './RetainedPreparationMedia'
 import { usePreparationClock } from '../model/usePreparationClock'
 import { ClipStepWaiting, ClipTopRow, STEP_PANEL_ID } from './ClipTopRow'
 import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipStatus'
+import { ClipRefineDock } from './ClipRefineDock'
 
 /** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
@@ -88,8 +89,17 @@ export function ClipWorkspace({
   // The run view takes the screen, so it takes the focus: the ref stays OUT of the handles,
   // because a ref reached through an object is a ref read during render.
   const runRoot = useRunFocus(workspace.run.focused)
-  const { correction, generation, finalization, render, sources, revision, observations, run } =
-    workspace
+  const {
+    correction,
+    generation,
+    finalization,
+    confirmation,
+    render,
+    sources,
+    revision,
+    observations,
+    run,
+  } = workspace
   const { pending, uploading, plan, save, regions, storyline, flushAll } = workspace
   const upload = sources.upload
   const step = workspace.step.value
@@ -131,9 +141,6 @@ export function ClipWorkspace({
   // Tools and lifecycle panels can unmount the composer; the keyed owner/project workspace
   // retains its unsent words while quote and approval state stay inside the feature.
   const [storylineRequest, setStorylineRequest] = useState('')
-  const [aiOpen, setAiOpen] = useState(false)
-  const aiRunning = job?.kind === 'revise_clip' && !isTerminal(job)
-  const showAI = aiOpen || aiRunning
   const [referenceOpen, setReferenceOpen] = useState(false)
   const [referenceTab, setReferenceTab] = useState<'observations' | 'sources' | 'requests'>(
     'observations',
@@ -634,69 +641,49 @@ export function ClipWorkspace({
               <ClipResult ownerId={ownerId} project={project} />
             </details>
           ),
-          revision: reading
-            ? undefined
-            : (actions) => (
-                <div className="min-w-0 space-y-2">
-                  <div className="flex flex-wrap items-center justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      disabled={aiRunning}
-                      aria-expanded={showAI}
-                      aria-controls="clip-ai-edit-entry"
-                      onClick={() => setAiOpen((open) => !open)}
-                    >
-                      {t('editorEntries.ai')}
-                    </Button>
-                    {actions}
-                  </div>
-                  <div id="clip-ai-edit-entry" hidden={!showAI}>
-                    <ClipRevisionRequest
-                      ownerId={ownerId}
-                      project={project}
-                      observe={generation.observeRef}
-                      write={generation.writeRef}
-                      job={job}
-                      disabled={revision.disabled}
-                      flush={revision.flush}
-                      cancelAction={
-                        <CancelClipAction
-                          action={revision.cancellation}
-                          job={job}
-                          accounting={generation.accounting}
-                        />
-                      }
-                    />
-                  </div>
-                </div>
-              ),
+          // ②'s step bar: the revision request, then 이전 and 확정하기 (CLIP-40 →POST-56).
+          dock: reading ? undefined : (
+            <ClipRefineDock
+              request={{
+                ownerId,
+                project,
+                observe: generation.observeRef,
+                write: generation.writeRef,
+                job,
+                disabled: revision.disabled,
+                flush: revision.flush,
+                cancelAction: (
+                  <CancelClipAction
+                    action={revision.cancellation}
+                    job={job}
+                    accounting={generation.accounting}
+                  />
+                ),
+                scope: correction.selectedBlock
+                  ? {
+                      cut: correction.selectedBlock,
+                      clear: () => correction.dispatch({ type: 'select', selection: undefined }),
+                    }
+                  : undefined,
+              }}
+              confirm={confirmation.action}
+              refusal={confirmation.refusal}
+              fix={
+                confirmation.refusal === 'narration' ? (
+                  <Button variant="ghost" onClick={() => setEditorPanel('script')}>
+                    {t('refineDock.openScript')}
+                  </Button>
+                ) : undefined
+              }
+              onBack={() => {
+                setStep('generate')
+                window.scrollTo(0, 0)
+              }}
+            />
+          ),
           downloadAction:
             !reading && project.result?.downloadUrl ? (
               <ClipDownloadAction icon project={project} />
-            ) : undefined,
-          // 확정하기 stands only once the project has a render to confirm (CLIP-40, CLIP-152):
-          // before that the dock's one action is the render, and a disabled 확정하기 beside it
-          // only said so in smaller type.
-          finalizeAction:
-            !reading && project.result ? (
-              <FinalizeClipAction
-                action={finalization}
-                project={project}
-                disabled={
-                  uploading ||
-                  generation.busy ||
-                  render.browser.busy ||
-                  !correction.validation?.valid ||
-                  regions.invalid
-                }
-                localRefusal={
-                  uploading || generation.busy || render.browser.busy
-                    ? 'busy'
-                    : !correction.validation?.valid || regions.invalid
-                      ? 'invalid_plan'
-                      : undefined
-                }
-              />
             ) : undefined,
           tools: (
             <>
@@ -800,21 +787,7 @@ export function ClipWorkspace({
             {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
           </Typography>
           <ClipResult ownerId={ownerId} project={project} />
-          {!reading && (
-            <>
-              <ClipDownloadAction project={project} />
-              <ActionBar ariaLabel={t('correction.actions')}>
-                <div className="flex flex-wrap items-center justify-end gap-2">
-                  <FinalizeClipAction
-                    action={finalization}
-                    project={project}
-                    disabled
-                    localRefusal="invalid_plan"
-                  />
-                </div>
-              </ActionBar>
-            </>
-          )}
+          {!reading && <ClipDownloadAction project={project} />}
         </>
       )}
       {referenceAction}
@@ -831,11 +804,30 @@ export function ClipWorkspace({
       </>
     ) : (
       <>
-        <ClipStepWaiting
-          message={t('finalization.waiting')}
-          refine
-          onGo={() => setStep('refine')}
-        />
+        {!clipConfirmed(project) && (
+          <ClipStepWaiting
+            message={t('finalization.waiting')}
+            refine
+            onGo={() => setStep('refine')}
+          />
+        )}
+        {/* Until ③ renders and finalizes the confirmed plan itself (T766), its render and 완료로
+            표시 stay reachable here so no clip is left unfinishable meanwhile. */}
+        {!reading && project.result && (
+          <>
+            <Typography variant="meta">
+              {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
+            </Typography>
+            <ClipResult ownerId={ownerId} project={project} />
+            <div className="mt-6 flex flex-wrap items-center gap-2">
+              <FinalizeClipAction
+                action={finalization}
+                project={project}
+                disabled={uploading || generation.busy || render.browser.busy}
+              />
+            </div>
+          </>
+        )}
       </>
     )
 

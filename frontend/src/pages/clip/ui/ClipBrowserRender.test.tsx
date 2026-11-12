@@ -225,7 +225,7 @@ it('keeps ② interactive and reports one monotonic scale from encoding through 
   )
   expect(screen.queryByRole('region', { name: '클립 작업 진행' })).not.toBeInTheDocument()
   expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByLabelText('요청 내용')).toBeInTheDocument()
+  expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   expect(await screen.findByRole('dialog', { name: '원본 소스' })).toBeInTheDocument()
   await userEvent.keyboard('{Escape}')

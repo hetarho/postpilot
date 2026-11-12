@@ -1,7 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { Send } from 'lucide-react'
+import { SendHorizontal, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { CLIP_REVISION_TARGETS, type ClipRevisionTarget } from '@/entities/clip-plan'
 import {
   CLIP_PROJECT_LIMITS,
   ClipFailureNotice,
@@ -13,14 +12,18 @@ import {
 import { progressLabel, progressRatio, type GenerationJob } from '@/entities/generation-job'
 import type { ModelRef } from '@/entities/model-catalog'
 import { useMyPlan } from '@/entities/plan'
-import { Popover, ProgressBar, SegmentedControl, Textarea, Typography } from '@/shared/ui'
+import { Button, Popover, ProgressBar, Textarea, Typography } from '@/shared/ui'
 import { useClipRevision } from '../api/useClipRevision'
 import { SaveAsVideoGuidelineButton } from './SaveAsVideoGuidelineButton'
 
-/** ②'s dock, in the post editor's shape (CLIP-40 →POST-45): the field's own heading row with the
- *  step's actions at its right, then one field and one send control. The target — footage flow,
- *  captions or both — is chosen where the request is approved, so the row the owner types in
- *  holds nothing but the request. */
+/** The composer of ②'s step bar, in the shape of the post's 글 다듬기 field (CLIP-40 →POST-56,
+ *  `features/edit-with-ai`'s `ReviseForm`): the field's visible heading IS its label, then the
+ *  request with an icon-only send, and the count once there is something to count.
+ *
+ *  The owner names no target: the request decides whether the footage flow, the narration or
+ *  both are rewritten (CLIP-131), so sending opens nothing but the approval of the two writing
+ *  calls it may need (CLIP-132). A selected scene block scopes it, shown as a removable chip above
+ *  the field; without one the request is about the whole clip. */
 export function ClipRevisionRequest({
   ownerId,
   project,
@@ -30,7 +33,7 @@ export function ClipRevisionRequest({
   disabled = false,
   flush,
   cancelAction,
-  action,
+  scope,
 }: {
   ownerId: string
   project: ClipProject
@@ -43,44 +46,43 @@ export function ClipRevisionRequest({
   /** Writes the owner's unsaved edits and answers with the plan revision. */
   flush: () => Promise<number>
   cancelAction?: ReactNode
-  /** Rendered at the top-right of the row's heading — 렌더하기 and, once a render exists,
-   *  확정하기. A slot, because a feature may not reach a sibling feature (ARCH-13). */
-  action?: ReactNode
+  /** The selected scene block (1-based) and the way to drop it from the request. */
+  scope?: { cut: number; clear: () => void }
 }) {
   const { t } = useTranslation('clips')
   const [request, setRequest] = useState('')
-  const [target, setTarget] = useState<ClipRevisionTarget>('narration')
   const { myPlan } = useMyPlan()
-  const revision = useClipRevision({ ownerId, project, request, target, observe, write, job })
+  const revision = useClipRevision({
+    ownerId,
+    project,
+    request,
+    scopeCut: scope?.cut,
+    observe,
+    write,
+    job,
+  })
   const used = freeTextLength(request)
   const running = revision.running
   const progress = revision.job ? progressRatio(revision.job) : undefined
   const title = revision.job ? progressLabel(revision.job) : t('revision.running')
   return (
-    <div className="min-w-0 space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* The field's VISIBLE name, and a plain heading while the run replaces the field: a label
-            pointing at a control that is not there names nothing. */}
-        {running ? (
-          <Typography variant="fieldTitle" as="p" className="min-w-0">
-            {t('revision.request')}
-          </Typography>
-        ) : (
-          <Typography
-            variant="fieldTitle"
-            as="label"
-            htmlFor="clip-revision-request"
-            className="min-w-0"
-          >
-            {t('revision.request')}
-          </Typography>
-        )}
-        {action && (
-          <div className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-2">
-            {action}
-          </div>
-        )}
-      </div>
+    <div className="grid min-w-0 gap-2">
+      {/* The field's VISIBLE name at the post's `fieldTitle` role, and a plain heading while the
+          run replaces the field: a label pointing at a control that is not there names nothing. */}
+      {running ? (
+        <Typography variant="fieldTitle" as="p" className="min-w-0">
+          {t('revision.request')}
+        </Typography>
+      ) : (
+        <Typography
+          variant="fieldTitle"
+          as="label"
+          htmlFor="clip-revision-request"
+          className="min-w-0"
+        >
+          {t('revision.request')}
+        </Typography>
+      )}
       {running ? (
         <div className="space-y-3">
           <Typography variant="body" role="status" aria-live="polite">
@@ -93,25 +95,44 @@ export function ClipRevisionRequest({
           {cancelAction}
         </div>
       ) : (
-        <fieldset disabled={disabled} className="min-w-0 space-y-1">
+        <fieldset disabled={disabled} className="grid min-w-0 gap-2">
+          {scope && (
+            <div className="flex min-w-0 flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                size="compact"
+                className="min-h-11"
+                aria-label={t('revision.scopeRemove', { number: scope.cut })}
+                onClick={scope.clear}
+              >
+                {t('revision.scope', { number: scope.cut })}
+                <X className="size-3.5" aria-hidden />
+              </Button>
+            </div>
+          )}
           <div className="flex min-w-0 items-end gap-2">
             <Textarea
               id="clip-revision-request"
               inputMode="text"
+              autoComplete="off"
+              autoCapitalize="sentences"
+              enterKeyHint="enter"
               aria-describedby={request ? 'clip-revision-count' : undefined}
               rows={1}
-              className="max-h-24 min-w-0 flex-1"
               autoGrow
               value={request}
               onChange={(event) =>
                 setRequest(boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction))
               }
+              className="max-h-field min-w-0 flex-1"
             />
+            {/* Sending approves what the request may cost before anything runs (QUOTA-45). */}
             <Popover
               label={t('revision.send')}
-              triggerLabel={<Send aria-hidden="true" className="size-5" />}
+              triggerLabel={<SendHorizontal aria-hidden="true" className="size-5" />}
               triggerSize="icon"
-              triggerVariant="cta"
+              triggerVariant="secondary"
               className="shrink-0"
               placement="above"
               align="end"
@@ -119,50 +140,29 @@ export function ClipRevisionRequest({
               disabled={disabled || !request.trim()}
             >
               {(close) => (
-                <div className="space-y-3">
-                  {/* Sending chooses what the request is about, then approves what it costs: the
-                      priced calls follow the target (CLIP-132), so the two are read together. */}
-                  <div className="space-y-1">
-                    <Typography variant="label" as="p" id="clip-revision-target-label">
-                      {t('revision.target')}
-                    </Typography>
-                    <SegmentedControl
-                      ariaLabel={t('revision.target')}
-                      value={target}
-                      options={CLIP_REVISION_TARGETS.map((value) => ({
-                        value,
-                        label:
-                          value === 'narration' && project.editing?.plan.narration
-                            ? t('dubbing.words')
-                            : t(`revision.targets.${value}`),
-                      }))}
-                      onChange={setTarget}
-                    />
-                  </div>
-                  <ClipQuoteApproval
-                    quote={revision.quote}
-                    quoting={revision.quoting}
-                    expired={revision.expired}
-                    balance={myPlan?.balance}
-                    error={revision.error}
-                    approveDisabled={disabled || !myPlan || !request.trim()}
-                    approveLabel={
-                      revision.quote
-                        ? t('revision.approve', { amount: revision.quote.maxCredits })
-                        : t('revision.send')
-                    }
-                    onRefresh={revision.refresh}
-                    onApprove={(quote) => {
-                      void revision.start(quote, flush)
-                      close()
-                    }}
-                  />
-                </div>
+                <ClipQuoteApproval
+                  quote={revision.quote}
+                  quoting={revision.quoting}
+                  expired={revision.expired}
+                  balance={myPlan?.balance}
+                  error={revision.error}
+                  approveDisabled={disabled || !myPlan || !request.trim()}
+                  approveLabel={
+                    revision.quote
+                      ? t('revision.approve', { amount: revision.quote.maxCredits })
+                      : t('revision.send')
+                  }
+                  onRefresh={revision.refresh}
+                  onApprove={(quote) => {
+                    void revision.start(quote, flush)
+                    close()
+                  }}
+                />
               )}
             </Popover>
           </div>
-          {/* The counter only once there is something to count: the dock stands over the
-              timeline the whole time, so an idle row is height taken from it (THEME-8). */}
+          {/* The counter only once there is something to count: the bar stands over the scene
+              blocks the whole time, so an idle row is height taken from them (THEME-8). */}
           {request && (
             <Typography variant="meta" as="p" id="clip-revision-count">
               {t('revision.count', { used, max: CLIP_PROJECT_LIMITS.instruction })}

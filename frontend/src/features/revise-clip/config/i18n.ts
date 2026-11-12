@@ -5,9 +5,10 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     revision: {
-      request: '요청 내용',
+      request: '수정 요청을 입력하세요',
       count: '{{used}} / {{max}}자',
-      target: '고칠 대상',
+      scope: '장면 {{number}}',
+      scopeRemove: '장면 {{number}} 선택 해제',
       targets: {
         flow: '영상 흐름',
         narration: '자막',
@@ -23,9 +24,10 @@ export const i18n = {
   },
   en: {
     revision: {
-      request: 'What to change',
+      request: 'What should change?',
       count: '{{used}} / {{max}} characters',
-      target: 'What to revise',
+      scope: 'Scene {{number}}',
+      scopeRemove: 'Scene {{number}}: clear selection',
       targets: {
         flow: 'Footage flow',
         narration: 'Captions',

@@ -25,7 +25,7 @@ import {
   useClipRegionsEditor,
   type ClipRegionPlan,
 } from '@/features/edit-clip-regions'
-import { useFinalizeClip } from '@/features/finalize-clip'
+import { confirmationRefusal, useConfirmClip, useFinalizeClip } from '@/features/finalize-clip'
 import { useGenerateClip } from '@/features/generate-clip'
 import { usePrepareClipBrowser } from '@/features/prepare-clip-browser'
 import { useBrowserRender } from '@/features/render-clip-browser'
@@ -190,6 +190,17 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     return correction.flush()
   }
   const finalization = useFinalizeClip(ownerId, project, () => flushAll(true))
+  // 확정하기 flushes every queue, confirms the saved revision and carries the owner to ③ at once
+  // (CLIP-75); T766 makes ③ start the browser render there.
+  const confirm = useConfirmClip({
+    ownerId,
+    project,
+    flush: () => flushAll(true),
+    onConfirmed: () => {
+      setStep('finish')
+      window.scrollTo(0, 0)
+    },
+  })
   const cancellation = useCancelClip(ownerId, project.id, job)
   // A revision runs WITHOUT the focused job view: it rewrites the plan the owner
   // is looking at, and ② is where that change shows up (CLIP-131). Every other
@@ -203,7 +214,13 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   const writingUploadText = job?.kind === 'clip_upload_text' && !isTerminal(job)
   const focused =
     !project.finalized && (generation.busy || analysis.busy) && !revising && !writingUploadText
-  const pending = generation.busy || analysis.busy || uploading || finalization.busy || browser.busy
+  const pending =
+    generation.busy ||
+    analysis.busy ||
+    uploading ||
+    finalization.busy ||
+    confirm.pending ||
+    browser.busy
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipStorylineQueue)
@@ -321,6 +338,17 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     flush: () => flushAll(),
     cancellation,
   }
+  /** 확정하기 and why it is held: what this page knows first — work in flight, a draft the
+   *  validation refuses — then the saved project's verdict (CLIP-75). */
+  const confirmation = {
+    action: confirm,
+    refusal:
+      uploading || generation.busy || browser.busy || finalization.busy
+        ? ('busy' as const)
+        : !correction.validation?.valid || regions.invalid
+          ? ('invalid_plan' as const)
+          : confirmationRefusal(project, { unsaved: correction.dirty }),
+  }
   const observations = {
     localSources,
     resolvePlayback: upload.ensurePlayback,
@@ -364,6 +392,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     revision,
     observations,
     finalization,
+    confirmation,
     run,
     pending,
     uploading,

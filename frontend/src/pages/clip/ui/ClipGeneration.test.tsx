@@ -1331,22 +1331,20 @@ it('lists a storyline request in the request record', async () => {
   expect(screen.getByText('가게 소개를 먼저')).toBeVisible()
 })
 
-// CLIP-131: ②'s revision composer keeps its three targets and never targets the storyline.
-it('keeps the revision composer on the flow and the narration', async () => {
-  const user = await storylineSpace({
-    editPlanRevision: 1,
-    renderedPlanRevision: 1,
-    editing: clipTimelineFixture(),
-  })
-  await user.click(screen.getByRole('button', { name: 'AI로 수정' }))
-  await user.type(screen.getByLabelText('요청 내용'), '자막을 짧게')
+// CLIP-131: ②'s revision composer names no target and never targets the storyline: one request
+// is quoted as auto.
+it('sends ②’s revision as one auto request, apart from the storyline', async () => {
+  const revisionQuotes: Array<{ target: string }> = []
+  const user = await storylineSpace(
+    { editPlanRevision: 1, renderedPlanRevision: 1, editing: clipTimelineFixture() },
+    { revisionQuotes },
+  )
+  await user.type(screen.getByLabelText('수정 요청을 입력하세요'), '자막을 짧게')
   await user.click(screen.getByRole('button', { name: 'AI에 수정 요청' }))
   const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))
-  expect(
-    within(sheet.getByRole('tablist', { name: '고칠 대상' }))
-      .getAllByRole('tab')
-      .map((tab) => tab.textContent),
-  ).toEqual(['영상 흐름', '자막', '둘 다'])
+  expect(sheet.queryByRole('tablist', { name: '고칠 대상' })).not.toBeInTheDocument()
+  await sheet.findByRole('button', { name: /승인하고 수정 요청/ }, { timeout: 3000 })
+  expect(revisionQuotes.at(-1)).toMatchObject({ target: '' })
 })
 
 it('names a refused browser codec and never starts a parent or native preparation', async () => {

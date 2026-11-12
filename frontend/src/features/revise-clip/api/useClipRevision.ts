@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import {
-  useClipPlanCalls,
-  useClipRevisionQuote,
-  type ClipRevisionTarget,
-} from '@/entities/clip-plan'
+import { useClipPlanCalls, useClipRevisionQuote } from '@/entities/clip-plan'
 import {
   projectDraft,
   useRefreshClipProjects,
@@ -17,13 +13,13 @@ import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { CLIP_REVISION } from '@/entities/clip-design'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 /** What a revision quote is bound to: the plan the owner is looking at, the
- *  settings the writer reads beside it, and the exact words they wrote. The
- *  server digests the same set (CLIP-131), so anything that moves here has to
- *  be priced again before it can be approved. */
+ *  settings the writer reads beside it, the exact words they wrote and the scene
+ *  block they are about. The server digests the same set (CLIP-131), so anything
+ *  that moves here has to be priced again before it can be approved. */
 function revisionBinding(
   project: ClipProject,
   request: string,
-  target: ClipRevisionTarget,
+  scopeCut: number | undefined,
   observe: ModelRef | null,
   write: ModelRef | null,
 ) {
@@ -32,14 +28,15 @@ function revisionBinding(
     project.editPlanRevision,
     projectDraft(project),
     request,
-    target,
+    scopeCut ?? 0,
     observe,
     write,
   ])
 }
 
-/** One owner-written revision of the saved plan: priced, approved and started
- *  from ②'s own panel (CLIP-131, CLIP-40).
+/** One owner-written revision of the saved plan: priced at the two writing
+ *  calls a request may need, approved and started from ②'s step bar (CLIP-131,
+ *  CLIP-132, CLIP-40). It names no target; the writing decides what changes.
  *
  *  It polls nothing. The job it starts is the page's — the same `useJob` ①'s
  *  generation already runs (CLIP-36) — and is passed back in so a step change
@@ -48,7 +45,7 @@ export function useClipRevision({
   ownerId,
   project,
   request,
-  target,
+  scopeCut,
   observe,
   write,
   job,
@@ -56,7 +53,8 @@ export function useClipRevision({
   ownerId: string
   project: ClipProject
   request: string
-  target: ClipRevisionTarget
+  /** The selected scene block, 1-based; absent for the whole clip. */
+  scopeCut?: number
   observe: ModelRef | null
   write: ModelRef | null
   job?: GenerationJob
@@ -77,13 +75,13 @@ export function useClipRevision({
   const [sent, setSent] = useState<{ jobId: string; request: string }>()
   const mine = job?.kind === 'revise_clip' ? job : undefined
   const text = settled.trim()
-  const binding = revisionBinding(project, text, target, observe, write)
+  const binding = revisionBinding(project, text, scopeCut, observe, write)
   const mutation = useMutation({
     mutationFn: async (quote: ClipQuote) => {
       return calls.revise({
         projectId: project.id,
         request: text,
-        target,
+        scopeCut,
         observeModel: observe!,
         writeModel: write!,
         quote,
@@ -101,7 +99,7 @@ export function useClipRevision({
     mutation.isPending || !!(mine && !isTerminal(mine)) || (mutation.isSuccess && !job)
   const query = useClipRevisionQuote(
     ownerId,
-    { projectId: project.id, request: text, target, observeModel: observe, writeModel: write },
+    { projectId: project.id, request: text, scopeCut, observeModel: observe, writeModel: write },
     binding,
     !!text &&
       !!observe &&

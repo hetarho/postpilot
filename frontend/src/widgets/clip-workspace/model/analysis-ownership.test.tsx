@@ -60,7 +60,11 @@ vi.mock('@/features/edit-clip-regions', () => ({
   useClipRegionsEditor: () => ({ status: {}, invalid: false }),
   discardClipRegionQueue: vi.fn(),
 }))
-vi.mock('@/features/finalize-clip', () => ({ useFinalizeClip: () => ({ busy: false }) }))
+vi.mock('@/features/finalize-clip', () => ({
+  useFinalizeClip: () => ({ busy: false }),
+  useConfirmClip: () => ({ pending: false }),
+  confirmationRefusal: () => undefined,
+}))
 vi.mock('@/features/cancel-clip', () => ({ useCancelClip: () => ({}) }))
 vi.mock('@/features/render-clip-browser', () => ({ useBrowserRender: () => ({ busy: false }) }))
 vi.mock('@/features/bind-clip-source-item', () => ({ useClipSourceBinding: () => ({}) }))

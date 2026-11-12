@@ -60,7 +60,9 @@ it.each(['ko', 'en'] as const)(
     )
     const confirmation = within(screen.getByTestId('confirmation'))
     expect(confirmation.queryByRole('listitem')).not.toBeInTheDocument()
-    expect(confirmation.queryByText(/확정하면|Confirmation deletes/)).not.toBeInTheDocument()
+    expect(
+      confirmation.queryByText(/완료로 표시하면|Marking it complete deletes/),
+    ).not.toBeInTheDocument()
     // The delivered result keeps its own list, which is ③'s and not ②'s.
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByRole('link')).toHaveAttribute('href', project.result!.downloadUrl)
@@ -70,10 +72,10 @@ it.each(['ko', 'en'] as const)(
     const dialog = within(await screen.findByRole('dialog'))
     expect(action.prepare).toHaveBeenCalledOnce()
     expect(action.confirm).not.toHaveBeenCalled()
-    expect(dialog.getByText(/확정하면/)).toBeVisible()
+    expect(dialog.getByText(/완료로 표시하면/)).toBeVisible()
     expect(dialog.getAllByRole('listitem')).toHaveLength(3)
     expect(dialog.getByText(language === 'ko' ? /^컷 1 ·/ : /^Cut 1 ·/)).toBeVisible()
-    fireEvent.click(dialog.getByRole('button', { name: '확정하기' }))
+    fireEvent.click(dialog.getByRole('button', { name: '완료로 표시' }))
     expect(action.confirm).toHaveBeenCalledOnce()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   },

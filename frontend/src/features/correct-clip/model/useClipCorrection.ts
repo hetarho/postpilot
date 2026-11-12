@@ -1,4 +1,4 @@
-import { splitAtOutput, type SourceBounds } from './scene-blocks'
+import { selectedSceneBlock, splitAtOutput, type SourceBounds } from './scene-blocks'
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {
@@ -499,6 +499,8 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
     /** The plan as the server last accepted it: what an unsaved edit is measured against. */
     saved,
     timeline,
+    /** The scene block holding the selection, 1-based: a revision request's scope (CLIP-131). */
+    selectedBlock: selectedSceneBlock(draft, timeline.selection),
     dispatch,
     revision,
     dirty,

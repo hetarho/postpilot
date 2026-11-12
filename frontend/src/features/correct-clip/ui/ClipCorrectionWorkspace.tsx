@@ -29,13 +29,13 @@ import { Info } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/entities/clip-design'
 import {
-  ActionBar,
   AppFailureMessage,
   Button,
   Dialog,
   FieldMessage,
   Popover,
   Slider,
+  StepBar,
   Typography,
   useVisualViewport,
 } from '@/shared/ui'
@@ -114,18 +114,15 @@ export function ClipCorrectionWorkspace({
   slots: {
     preview: (props: ClipEditorPreviewProps) => ReactNode
     comparison?: ReactNode
-    /** The dock's composer — the revision request, or its active run — handed the step's actions
-     *  (렌더하기 and, once a render exists, 확정하기) to carry at the right of its heading (CLIP-40). */
-    revision?: (actions: ReactNode) => ReactNode
+    /** The step bar's body (CLIP-40 →THEME-71): the revision request above the row holding the
+     *  way back and 확정하기. The owner composes it, since neither feature may import the other
+     *  (ARCH-13); this workspace puts its own failure above it. */
+    dock?: ReactNode
     /** Downloading the identified latest successful render, as an icon directly under the video
      *  it downloads (CLIP-149): the dock holds committing controls and a download commits
      *  nothing (CLIP-40, THEME-39). Absent while the plan has no render, and its absence is
      *  silence. */
     downloadAction?: ReactNode
-    /** ②'s primary committing control, the one thing of the confirmation the dock carries.
-     *  Absent until the project has a render: until then the render IS the step's next action,
-     *  and a disabled 확정하기 beside it only said so in smaller type (CLIP-40). */
-    finalizeAction?: ReactNode
     referenceAction?: ReactNode
     tools?: ReactNode
     addDubbing?: () => void
@@ -144,7 +141,7 @@ export function ClipCorrectionWorkspace({
   readOnly?: boolean
 }) {
   const { id: projectId, state, captionStyles, notices = [], language } = project
-  const { preview, comparison, revision, downloadAction, finalizeAction, referenceAction } = slots
+  const { preview, comparison, dock, downloadAction, referenceAction } = slots
   const {
     ready: renderReady,
     pending: renderPending,
@@ -449,10 +446,33 @@ export function ClipCorrectionWorkspace({
           {/* `mt-4` by hand: the preview above renders through `display: contents` wrappers so its
           frame can be pinned, and a box-less child takes no share of the section's `space-y`. */}
           <div className="mt-4 flex flex-wrap items-center gap-2">
+            {/* The render stays reachable in ②'s flow, outside the step bar whose one big action
+                is 확정하기, until ③ takes it with the download (CLIP-149, CLIP-153). */}
+            {!readOnly && (
+              <ClipRenderAction
+                lastKind={lastRenderKind}
+                currentRender={currentRender}
+                browserAvailable={browserCapability?.available ?? false}
+                serverWindow={render.serverWindow}
+                serverPlan={render.serverPlan}
+                serverEntitled={render.serverEntitled}
+                browserRefusal={
+                  browserCapability && !browserCapability.available
+                    ? browserCapability.reason
+                    : undefined
+                }
+                pending={renderPending}
+                disabled={
+                  disabled || correction.pending || !renderReady || !correction.validation?.valid
+                }
+                onRender={onRender}
+              />
+            )}
             {downloadAction}
             {referenceAction}
             {slots.tools}
           </div>
+          {renderProgress && <div className="mt-3 min-w-0">{renderProgress}</div>}
           {/* The scrubber states output time on one row under the frame (CLIP-53). */}
           {!readOnly && (
             <Slider
@@ -637,76 +657,32 @@ export function ClipCorrectionWorkspace({
       </div>
       <div ref={actions} className="contents">
         {!readOnly && (
-          <ActionBar width="content" ariaLabel={t('correction.actions')} className="space-y-3">
-            {/* Only while there is something to report: an empty first row would still push the
-              composer down by the bar's own row gap. */}
-            {(renderProgress || failure) && (
-              <div className="space-y-2">
-                {renderProgress}
-                {failure && (
-                  <div role="alert" className="mb-3 space-y-2">
-                    <AppFailureMessage failure={failure} />
-                    {failure.reason === 'CLIP_PLAN_CONFLICT' && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="ghost"
-                          disabled={correction.pending}
-                          onClick={() => setConfirm(true)}
-                        >
-                          {t('correction.reload')}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          disabled={correction.pending}
-                          onClick={correction.reapply}
-                        >
-                          {t('timeline.reapply')}
-                        </Button>
-                      </div>
-                    )}
+          <StepBar ariaLabel={t('correction.actions')}>
+            {failure && (
+              <div role="alert" className="min-w-0 space-y-2">
+                <AppFailureMessage failure={failure} />
+                {failure.reason === 'CLIP_PLAN_CONFLICT' && (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="ghost"
+                      disabled={correction.pending}
+                      onClick={() => setConfirm(true)}
+                    >
+                      {t('correction.reload')}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={correction.pending}
+                      onClick={correction.reapply}
+                    >
+                      {t('timeline.reapply')}
+                    </Button>
                   </div>
                 )}
               </div>
             )}
-            {/* The post editor's dock (CLIP-40 →POST-45): the composer's heading row carries the
-              step's actions at its right — 렌더하기, the step's own action until the project has
-              a render, then secondary beside the primary 확정하기 — and its field and send
-              control sit under them. Nothing else is a row of this bar. */}
-            {(() => {
-              const actions = (
-                <>
-                  <ClipRenderAction
-                    lastKind={lastRenderKind}
-                    currentRender={currentRender}
-                    browserAvailable={browserCapability?.available ?? false}
-                    serverWindow={render.serverWindow}
-                    serverPlan={render.serverPlan}
-                    serverEntitled={render.serverEntitled}
-                    browserRefusal={
-                      browserCapability && !browserCapability.available
-                        ? browserCapability.reason
-                        : undefined
-                    }
-                    pending={renderPending}
-                    disabled={
-                      disabled ||
-                      correction.pending ||
-                      !renderReady ||
-                      !correction.validation?.valid
-                    }
-                    variant={finalizeAction ? 'secondary' : 'cta'}
-                    onRender={onRender}
-                  />
-                  {finalizeAction}
-                </>
-              )
-              return revision ? (
-                revision(actions)
-              ) : (
-                <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
-              )
-            })()}
-          </ActionBar>
+            {dock}
+          </StepBar>
         )}
       </div>
       {/* Each item opens its OWN sheet over the preview and the list, which stay on screen behind

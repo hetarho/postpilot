@@ -1,2 +1,5 @@
 export { useFinalizeClip } from './model/useFinalizeClip'
+export { useConfirmClip } from './model/useConfirmClip'
+export { confirmationRefusal, type ClipConfirmationRefusal } from './model/confirmation-refusal'
 export { FinalizeClipAction, FinalizeClipNotices } from './ui/FinalizeClipAction'
+export { ConfirmClipAction } from './ui/ConfirmClipAction'

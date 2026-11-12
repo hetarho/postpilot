@@ -54,7 +54,7 @@ export type { ClipEligibilityStatus, ClipModelEligibility } from './model/eligib
 export { clipNoticeKey } from './model/notices'
 export type { ClipNotice } from './model/notices'
 export { preferredClipRenderKind } from './model/render-kind'
-export { clipState, clipStateLabel } from './model/state'
+export { clipConfirmed, clipState, clipStateLabel } from './model/state'
 export type { ClipState } from './model/state'
 export {
   CLIP_PROJECT_LIMITS,

@@ -1,7 +1,8 @@
-/** Which document one owner-written revision is about (CLIP-131). `narration`
- *  leaves the footage exactly where the owner put it and rewrites only what is
- *  said; the other two rewrite the flow and then the narration over it. */
-export const CLIP_REVISION_TARGETS = ['flow', 'narration', 'both'] as const
+/** Which document a stored revision request was about (CLIP-131). A request sent from ② names
+ *  none and is `auto`: its first writing call decides whether the footage flow changes. `flow`,
+ *  `narration` and `both` are the targets requests named before that and stay readable in the
+ *  record (CLIP-133). */
+export const CLIP_REVISION_TARGETS = ['auto', 'flow', 'narration', 'both'] as const
 export type ClipRevisionTarget = (typeof CLIP_REVISION_TARGETS)[number]
 
 /** One accepted request kept with the project, verbatim (CLIP-133): the

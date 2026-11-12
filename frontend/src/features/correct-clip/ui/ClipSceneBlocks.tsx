@@ -15,7 +15,7 @@ import {
 } from '@/entities/clip-plan'
 import { type ClipNotice } from '@/entities/clip-project'
 import { Badge, Button, FieldMessage, Textarea, Typography, cardStyles } from '@/shared/ui'
-import { clipSceneBlocks } from '../model/scene-blocks'
+import { blockHoldsSelection, clipSceneBlocks } from '../model/scene-blocks'
 import { ClipCutSourceFrame } from './ClipCutSourceFrame'
 
 type Validation = { elements: ReadonlyArray<{ id: string; interval: boolean; text: boolean }> }
@@ -219,12 +219,10 @@ export function ClipSceneBlocks({
             {intro}
           </li>
         )}
-        {blocks.map(({ cut: item, captions, spoken }) => {
+        {blocks.map((block) => {
+          const { cut: item, captions, spoken } = block
           const { cut, index, startMs, endMs } = item
-          const selected =
-            (selection?.kind === 'cut' && selection.id === cut.id) ||
-            (selection?.kind === 'text' && captions.some((c) => c.instanceId === selection.id)) ||
-            (selection?.kind === 'spoken' && spoken.some((s) => s.id === selection.id))
+          const selected = blockHoldsSelection(block, selection)
           const source = sources.find((s) => s.id === cut.sourceId)
           const rate = cutRate(cut) / 1000
           const sound = clipSourceSound(plan, cut)

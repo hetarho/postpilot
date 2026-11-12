@@ -310,18 +310,18 @@ it('selects speech by its stable identity without generating audio or changing t
   expect(calls.filter((call) => /Start|Quote|Synth/.test(call))).toEqual([])
 })
 
-it('keeps long AI and script forms behind named entries while a saved preview stays mounted', async () => {
+// CLIP-197, THEME-45: the AI request is the step bar's field, so no entry stands before it, and
+// the script still opens through its named entry without unmounting the preview or the words.
+it('keeps the AI request in the step bar and the script behind its named entry', async () => {
   await mount()
-  const field = screen.getByLabelText('요청 내용')
-  expect(field).not.toBeVisible()
-  const preview = screen.getByRole('region', { name: '편집 중인 영상' })
-  await userEvent.click(screen.getByRole('button', { name: 'AI로 수정' }))
+  const field = screen.getByLabelText('수정 요청을 입력하세요')
   expect(field).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'AI로 수정' })).not.toBeInTheDocument()
+  const preview = screen.getByRole('region', { name: '편집 중인 영상' })
   await userEvent.type(field, '내 요청을 유지해 주세요')
-  await userEvent.click(screen.getByRole('button', { name: 'AI로 수정' }))
-  expect(field).not.toBeVisible()
-  await userEvent.click(screen.getByRole('button', { name: 'AI로 수정' }))
-  expect(field).toHaveValue('내 요청을 유지해 주세요')
+  await userEvent.click(screen.getByRole('button', { name: '더빙 대본' }))
+  await userEvent.keyboard('{Escape}')
+  expect(screen.getByLabelText('수정 요청을 입력하세요')).toHaveValue('내 요청을 유지해 주세요')
   expect(screen.getByRole('region', { name: '편집 중인 영상' })).toBe(preview)
 })
 

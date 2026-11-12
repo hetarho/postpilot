@@ -18,6 +18,16 @@ export function clipState(
   return 'draft'
 }
 
+/** CLIP-229's reversible 확정: the project is confirmed exactly while its plan is the revision
+ *  확정하기 recorded, so the first changed plan save returns it to 다듬는 중 without a write. */
+export function clipConfirmed(
+  project: Pick<ClipProject, 'confirmed' | 'editPlanRevision'>,
+): boolean {
+  return (
+    project.editPlanRevision > 0 && project.confirmed?.planRevision === project.editPlanRevision
+  )
+}
+
 /** The one vocabulary for that state. `i18next.t` directly rather than a hook: this layer imports
  *  no react (ARCH-18), and `entities/model-catalog`'s `levelPrefix` reads the same way. */
 export function clipStateLabel(state: ClipState): string {
