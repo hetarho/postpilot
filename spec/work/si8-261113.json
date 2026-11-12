@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T19:14:06.533Z",
-  "sourceCommit": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
+  "snapshotAt": "2026-11-12T19:40:45.087Z",
+  "sourceCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -26,12 +26,12 @@
   },
   "summary": {
     "total": 7,
-    "completed": 5,
-    "remaining": 2,
+    "completed": 6,
+    "remaining": 1,
     "running": 0,
     "review": 0,
     "blocked": 0,
-    "unassigned": 2
+    "unassigned": 1
   },
   "tasks": [
     {
@@ -39,14 +39,6 @@
       "title": "Replace duplicated field counters with FieldCount",
       "dep": [
         "T773"
-      ],
-      "status": "todo"
-    },
-    {
-      "id": "T779",
-      "title": "Share consistent editor workspace navigation chrome",
-      "dep": [
-        "T778"
       ],
       "status": "todo"
     }
@@ -325,6 +317,8 @@
       "submittedBase": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
       "submissionId": "65aeb10c-8531-4385-86e6-06b01aafc75d",
       "submittedAt": "2026-11-12T19:11:46.868Z",
+      "integratedCommit": "bcd125550c56f50de3a0b19b9b9f454dd2464407",
+      "integratedAt": "2026-11-12T19:14:59.491Z",
       "risk": null,
       "review": {
         "id": "16fde1c7-81bc-4a80-bf0f-eb47dbfd905c",
@@ -344,6 +338,57 @@
           "taskId": "T781",
           "commit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
           "at": "2026-11-12T19:11:46.856Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T19:14:07.544Z",
+          "finishedAt": "2026-11-12T19:14:59.213Z"
+        }
+      ]
+    },
+    {
+      "id": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "group": "si8-261113",
+      "taskId": "T779",
+      "tasks": [
+        "T779"
+      ],
+      "lane": null,
+      "owner": "si8-ui-worker",
+      "contributors": [
+        "si8-ui-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T19:16:37.719Z",
+      "startCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+      "verifiedCommit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+      "submittedBase": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+      "submissionId": "77c39b1f-5a7c-4df7-8bcb-81a94cc70871",
+      "submittedAt": "2026-11-12T19:38:27.847Z",
+      "risk": null,
+      "review": {
+        "id": "5d7204a4-47c4-4060-80eb-09354d874321",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T779 exact submission c66d2bb493b9fbccb7e82a9f25f528e44d19e85b independently reviewed against original base 1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff. All five production and two test files match reviewed source 4210cb62; only own acceptance/result metadata follows, with normalized task contract unchanged. Shared presentation preserves real href, translated accessible name, native modifier/nonprimary/defaultPrevented behavior, owner save/refusal/history/scroll callbacks, existing correction cleanup save, lifecycle identity, hidden live regions and domain widths. Visible status wrapping is correctly scoped. Final 64-file/567-test receipt includes all 80 core cases; relevant fast checks cover the exact source tree. Independently replayed fresh paired browser evidence: all 360 strict checks passed, 84 lifecycle targets reachable, exact scroll restoration, no control overlap/document overflow, actual domain refusal semantics and edit-return-reopen retention preserved. Evaluator/fixtures are byte-identical to v2; only observer scroll restoration changed before a fresh full pair. Verified 1494 actual production/dependency hashes, all seven source/test identities and 214 durable artifact hashes. Net production reduction is 7 lines/1148 UTF8 bytes. No remaining P1/P2 findings. Existing bounded station scrolling and blocked mock media are explicit limits; coordinator full CI/integration remains required.",
+        "findings": [],
+        "commit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+        "baseCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+        "submissionId": "77c39b1f-5a7c-4df7-8bcb-81a94cc70871",
+        "createdAt": "2026-11-12T19:39:01.724Z",
+        "finishedAt": "2026-11-12T19:40:26.499Z"
+      },
+      "steps": [
+        {
+          "taskId": "T779",
+          "commit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+          "at": "2026-11-12T19:38:27.837Z",
           "verification": []
         }
       ],
@@ -1589,6 +1634,193 @@
       "group": "si8-261113",
       "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
       "taskId": "T781",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 66,
+      "at": "2026-11-12T19:14:59.411Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T19:14:07.544Z",
+            "finishedAt": "2026-11-12T19:14:59.213Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 67,
+      "at": "2026-11-12T19:14:59.491Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "bcd125550c56f50de3a0b19b9b9f454dd2464407",
+        "integratedAt": "2026-11-12T19:14:59.491Z"
+      }
+    },
+    {
+      "sequence": 68,
+      "at": "2026-11-12T19:16:37.719Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+        "group": "si8-261113",
+        "taskId": "T779",
+        "tasks": [
+          "T779"
+        ],
+        "lane": null,
+        "owner": "si8-ui-worker",
+        "contributors": [
+          "si8-ui-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T19:16:37.719Z",
+        "startCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff"
+      }
+    },
+    {
+      "sequence": 69,
+      "at": "2026-11-12T19:16:38.735Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 70,
+      "at": "2026-11-12T19:23:34.480Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "reason": null
+      }
+    },
+    {
+      "sequence": 71,
+      "at": "2026-11-12T19:38:27.686Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 72,
+      "at": "2026-11-12T19:38:27.847Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "verifiedCommit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+        "submittedBase": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+        "submissionId": "77c39b1f-5a7c-4df7-8bcb-81a94cc70871",
+        "submittedAt": "2026-11-12T19:38:27.847Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T779",
+            "commit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+            "at": "2026-11-12T19:38:27.837Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 73,
+      "at": "2026-11-12T19:39:01.724Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "5d7204a4-47c4-4060-80eb-09354d874321",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+          "baseCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+          "submissionId": "77c39b1f-5a7c-4df7-8bcb-81a94cc70871",
+          "createdAt": "2026-11-12T19:39:01.724Z"
+        }
+      }
+    },
+    {
+      "sequence": 74,
+      "at": "2026-11-12T19:40:26.499Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "5d7204a4-47c4-4060-80eb-09354d874321",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T779 exact submission c66d2bb493b9fbccb7e82a9f25f528e44d19e85b independently reviewed against original base 1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff. All five production and two test files match reviewed source 4210cb62; only own acceptance/result metadata follows, with normalized task contract unchanged. Shared presentation preserves real href, translated accessible name, native modifier/nonprimary/defaultPrevented behavior, owner save/refusal/history/scroll callbacks, existing correction cleanup save, lifecycle identity, hidden live regions and domain widths. Visible status wrapping is correctly scoped. Final 64-file/567-test receipt includes all 80 core cases; relevant fast checks cover the exact source tree. Independently replayed fresh paired browser evidence: all 360 strict checks passed, 84 lifecycle targets reachable, exact scroll restoration, no control overlap/document overflow, actual domain refusal semantics and edit-return-reopen retention preserved. Evaluator/fixtures are byte-identical to v2; only observer scroll restoration changed before a fresh full pair. Verified 1494 actual production/dependency hashes, all seven source/test identities and 214 durable artifact hashes. Net production reduction is 7 lines/1148 UTF8 bytes. No remaining P1/P2 findings. Existing bounded station scrolling and blocked mock media are explicit limits; coordinator full CI/integration remains required.",
+          "findings": [],
+          "commit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
+          "baseCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+          "submissionId": "77c39b1f-5a7c-4df7-8bcb-81a94cc70871",
+          "createdAt": "2026-11-12T19:39:01.724Z",
+          "finishedAt": "2026-11-12T19:40:26.499Z"
+        }
+      }
+    },
+    {
+      "sequence": 75,
+      "at": "2026-11-12T19:40:43.553Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {

@@ -78,6 +78,25 @@ it('flushes the newest memo before contextual return without starting AI', async
   expect(calls).not.toContain('StartGeneration')
 })
 
+it('keeps the latest memo and its status when the header return cannot flush', async () => {
+  const calls: string[] = []
+  const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    calls,
+    posts: { posts: [{ slug: 'saved' }], failSaves: 20 },
+  })
+  const memo = await screen.findByLabelText('메모')
+  fireEvent.change(memo, { target: { value: '아직 저장하지 못한 마지막 메모' } })
+  await userEvent.click(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' }))
+  await waitFor(() =>
+    expect(screen.getByRole('status', { name: '글 상태' })).toHaveTextContent('저장하지 못했어요'),
+  )
+  expect(router.state.location.pathname).toBe('/posts/saved')
+  expect(memo).toHaveValue('아직 저장하지 못한 마지막 메모')
+  expect(calls).toContain('SavePostDraft')
+  expect(calls.some((call) => /^(Start|Generate|Cancel|Publish)/.test(call))).toBe(false)
+})
+
 it('mints an unsaved draft once and opens tests with its newest material and retained creation origin', async () => {
   const user = userEvent.setup()
   const draftMaterials: Array<{ slug: string; title: string; memo: string }> = []
