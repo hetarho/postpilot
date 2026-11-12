@@ -213,6 +213,7 @@
 - gusta-implement-task T771 (run with /gusta-start): its push triggers Deploy backend and Verify media
 
 ## log
+- 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
 - 261112 T772 done
 - 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
 - 261112 create-task ARCH r23: T771 moves the CI and pre-push skill check to gusta, drops the haeram-spec-creator devDependency and refreshes the ink identity; ARCH fully tasked
@@ -232,4 +233,3 @@
 - 261112 T760 done
 - 261112 T759 done
 - 261112 create-task CLIP r76 THEME r41 (vd1): T759–T768 for the post-shaped clip journey; CLIP and THEME fully tasked
-- 261112 update-ssot CLIP r76 THEME r41 (vd1): clip journey mirrors the post guide from /clips/new to ③; no active task cites the changed decisions

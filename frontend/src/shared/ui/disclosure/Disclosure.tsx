@@ -49,8 +49,12 @@ export function Disclosure({
   }
   return (
     <section className={className}>
-      <div className="flex items-center gap-2">
-        <Heading className="min-w-0 flex-1">
+      {/* The heading keeps its words on one line beside the aside while both fit; when they do
+          not, the aside wraps under it rather than squeezing the title to a character per line
+          on a phone. The heading never grows past the row, so a long title still
+          wraps inside its own button. */}
+      <div className="flex flex-wrap items-center gap-x-2">
+        <Heading className="max-w-full flex-1 shrink-0 basis-auto">
           <button
             type="button"
             id={buttonId}
@@ -77,7 +81,7 @@ export function Disclosure({
             <span className="min-w-0 flex-1">{title}</span>
           </button>
         </Heading>
-        {aside}
+        {aside && <div className="ml-auto max-w-full">{aside}</div>}
       </div>
       {lead}
       {open && (

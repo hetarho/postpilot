@@ -41,6 +41,23 @@ describe('Disclosure', () => {
     expect(screen.getByRole('heading', { level: 3 })).toContainElement(button)
   })
 
+  // jsdom lays nothing out, so the narrow-width contract is pinned on the classes that carry it:
+  // the heading may not shrink below its words, and the aside wraps under it instead.
+  it('wraps its aside under the heading instead of squeezing the title', () => {
+    render(
+      <Disclosure title="스토리라인" aside={<button type="button">이 스토리로 다시 만들기</button>}>
+        본문
+      </Disclosure>,
+    )
+    const heading = screen.getByRole('heading', { name: '스토리라인' })
+    expect(heading).toHaveClass('shrink-0', 'max-w-full')
+    expect(heading).not.toHaveClass('min-w-0')
+    expect(heading.parentElement).toHaveClass('flex-wrap')
+    expect(
+      screen.getByRole('button', { name: '이 스토리로 다시 만들기' }).parentElement,
+    ).toHaveClass('ml-auto')
+  })
+
   it('starts open from defaultOpen and reports every toggle', async () => {
     const user = userEvent.setup()
     const onOpenChange = vi.fn()
