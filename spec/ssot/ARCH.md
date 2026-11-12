@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r22 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
+> r23 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -80,7 +80,9 @@
 - ARCH-27 [o] verify publishing automation stays absent (ARCH-34 I1): `pnpm lint:retirement`
 - ARCH-28 [o] verify generated code (buf and sqlc run through Docker): `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen` · `pnpm gen:sql && git diff --exit-code -- backend`
 - ARCH-29 [o] format: `pnpm --filter ./frontend format` (Prettier; `dist/` and `shared/api/gen` are ignored) · `cd backend && gofmt -w .`
-- ARCH-30 [o] verify skills: `pnpm exec haeram-spec-creator check` — the skills haeram-spec-creator installs into `.claude/skills` and `.codex/skills`, as `.haeram-spec-creator-lock.json` lists them, are package-managed and never hand-edited; `recomend-models`, in both directories, is the project's own skill and is edited in place
+- ARCH-30 [o] verify skills: `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check`
+  - the skills gusta installs into `.claude/skills` and `.codex/skills`, as `.gusta-lock.json` lists them, are package-managed and never hand-edited; `recomend-models`, in both directories, is the project's own skill and is edited in place
+  - gusta runs through npx at the version `.gusta-lock.json` records and is never a package dependency ← check compares the files with the running package's skills, so `@latest` fails CI whenever a release lands before the update
 - ARCH-31 [o] verification has separate task-completion and pre-push stages
   - task completion and commits on main use ARCH-24's impact-selected checks; reproducing every CI/CD step locally is a pre-push obligation, not a per-task obligation
   - before push, run the full local equivalent of `CI`: `pnpm test:dev`, ARCH-25 + ARCH-27 + ARCH-28 + ARCH-30 on the pinned Node, and ARCH-26 plus the deploy Python unittests with `deploy/requirements-test.txt` installed
@@ -192,6 +194,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r23 261112 ARCH-30✎ skill check `pnpm exec haeram-spec-creator check` (devDependency, `.haeram-spec-creator-lock.json`)→gusta through npx at the `.gusta-lock.json` version, never a dependency
 - r22 261111 ARCH-20✎ cards are rare and never nested→a card is the lifted plane content sits on, never nested (→THEME-13)
 - r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
 - r20 261007 ARCH-70+ ARCH-31✎ separate task submission/integration lifecycle→one dependency-ready task implemented, verified and committed directly on main
