@@ -363,6 +363,44 @@ it('preserves one original intent through split project/correction revision rend
   expect(failure.transports).toHaveLength(1)
 })
 
+it.each([
+  [3, 3],
+  [3, 1],
+  [1, 3],
+])(
+  'a committed (%i, %i) high-water cancels lower revisions without later revival',
+  async (project, plan) => {
+    const { controller, props, view, transport } = await playLive()
+    failure.holdPrepare = true
+    view.rerender(<ClipBrowserDraftPreview {...props} local={undefined} />)
+    const higher = liveRuntime(3, controller.signal)
+    higher.snapshot = {
+      ...higher.snapshot,
+      projectRevision: project,
+      planRevision: plan,
+      snapshotFingerprint: `higher-${project}-${plan}`,
+    }
+    view.rerender(<ClipBrowserDraftPreview {...props} local={higher} />)
+    await waitFor(() => expect(failure.preparations).toHaveLength(1))
+    view.rerender(<ClipBrowserDraftPreview {...props} local={undefined} />)
+    const lower = liveRuntime(2, controller.signal)
+    view.rerender(<ClipBrowserDraftPreview {...props} local={lower} />)
+    await waitFor(() => expect(failure.preparations).toHaveLength(2))
+    await act(async () => {
+      failure.holdPrepare = false
+      failure.preparations.splice(0).forEach((finish) => finish())
+    })
+    await waitFor(() => expect(failure.events).toContain('draw:revision-2'))
+    expect(transport.play).toHaveBeenCalledTimes(1)
+    view.rerender(<ClipBrowserDraftPreview {...props} local={higher} />)
+    await waitFor(() => expect(failure.events).toContain(`draw:higher-${project}-${plan}`))
+    expect(transport.play).toHaveBeenCalledTimes(1)
+    expect(transport.running).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: '재생' }))
+    await waitFor(() => expect(transport.running).toBe(true))
+  },
+)
+
 it.each(['access', 'frame', 'play'])(
   'Pause wins while the fresh %s is pending; manual later Play still works',
   async (stage) => {

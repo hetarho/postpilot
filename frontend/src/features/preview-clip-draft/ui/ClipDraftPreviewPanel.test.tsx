@@ -3,6 +3,7 @@ import { webcrypto } from 'node:crypto'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { ClipEditPlan } from '@/entities/clip-plan'
+import type { ClipLocalCompositionRuntime } from '@/entities/clip-preview'
 import { ClipDraftPreviewPanel } from './ClipDraftPreviewPanel'
 
 const integration = vi.hoisted(() => ({
@@ -63,12 +64,17 @@ vi.mock('@/entities/clip-preview/model/composition-playback', () => ({
   },
 }))
 
-const received: Array<{ timeMs: number; onTimeChange: (ms: number) => void }> = []
+type PreviewProps = {
+  timeMs: number
+  onTimeChange: (ms: number) => void
+  local?: ClipLocalCompositionRuntime
+}
+const received: PreviewProps[] = []
 vi.mock('@/entities/clip-preview', async (original) => {
   const actual = await original<typeof import('@/entities/clip-preview')>()
   return {
     ...actual,
-    ClipDraftPreview: (props: { timeMs: number; onTimeChange: (ms: number) => void }) => {
+    ClipDraftPreview: (props: PreviewProps) => {
       received.push(props)
       if (integration.active)
         return (
@@ -122,6 +128,62 @@ it('the actual hook/panel/player continues an exact-draft ACK after a pre-Play c
     drawImage: vi.fn(),
     clearRect: vi.fn(),
   } as unknown as ReturnType<HTMLCanvasElement['getContext']>)
+  const { draft, sources, resolvePlayback } = editingFixture()
+  function Editing() {
+    const [plan, setPlan] = useState(draft),
+      [revision, setRevision] = useState(1)
+    return (
+      <>
+        <button
+          onClick={() =>
+            setPlan({
+              ...plan,
+              elements: plan.elements!.map((element) => ({ ...element, text: '저장할 자막' })),
+            })
+          }
+        >
+          edit caption
+        </button>
+        <button onClick={() => setRevision(2)}>held ACK</button>
+        <ClipDraftPreviewPanel
+          ownerId="owner"
+          projectId="project"
+          projectRevision={revision}
+          revision={revision}
+          plan={plan}
+          sources={sources}
+          ratio="vertical"
+          design={{ hideDisclosure: true }}
+          resolvePlayback={resolvePlayback}
+        />
+      </>
+    )
+  }
+  const view = render(<Editing />)
+  await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: 'edit caption' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  await waitFor(() => expect(integration.running).toBe(true))
+  integration.position = 2533
+  integration.hold = true
+  fireEvent.click(screen.getByRole('button', { name: 'held ACK' }))
+  await waitFor(() => expect(integration.preparations).toHaveLength(1))
+  expect(integration.running).toBe(false)
+  expect(screen.getByRole('button', { name: '일시 정지' })).toBeEnabled()
+  await act(async () => {
+    integration.hold = false
+    integration.preparations.splice(0).forEach((finish) => finish())
+  })
+  await waitFor(() => expect(integration.plays).toEqual([0, 2533]))
+  expect(resolvePlayback).toHaveBeenCalledOnce()
+  expect(integration.running).toBe(true)
+  expect(received.at(-1)!.timeMs).toBe(2533)
+  view.unmount()
+  expect(integration.running).toBe(false)
+})
+
+function editingFixture() {
   const fingerprint = 'a'.repeat(64)
   const resolvePlayback = vi.fn(async () => 'https://owned.test/original')
   const draft: ClipEditPlan = {
@@ -177,7 +239,18 @@ it('the actual hook/panel/player continues an exact-draft ACK after a pre-Play c
       allowedRatePermille: [1000],
     },
   ]
-  function Editing() {
+  return { draft, sources, resolvePlayback }
+}
+
+it('the actual hook/panel/player never revives a committed 3 to 2 to 3 continuation', async () => {
+  integration.active = true
+  vi.stubGlobal('crypto', webcrypto)
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    drawImage: vi.fn(),
+    clearRect: vi.fn(),
+  } as unknown as ReturnType<HTMLCanvasElement['getContext']>)
+  const { draft, sources, resolvePlayback } = editingFixture()
+  function Revisions() {
     const [plan, setPlan] = useState(draft),
       [revision, setRevision] = useState(1)
     return (
@@ -192,7 +265,8 @@ it('the actual hook/panel/player continues an exact-draft ACK after a pre-Play c
         >
           edit caption
         </button>
-        <button onClick={() => setRevision(2)}>held ACK</button>
+        <button onClick={() => setRevision(3)}>higher ACK</button>
+        <button onClick={() => setRevision(2)}>lower ACK</button>
         <ClipDraftPreviewPanel
           ownerId="owner"
           projectId="project"
@@ -207,26 +281,42 @@ it('the actual hook/panel/player continues an exact-draft ACK after a pre-Play c
       </>
     )
   }
-  const view = render(<Editing />)
+  const view = render(<Revisions />)
   await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
   fireEvent.click(screen.getByRole('button', { name: 'edit caption' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
+  const marker = received.at(-1)!.local!.continuity!.signal
   fireEvent.click(screen.getByRole('button', { name: '재생' }))
   await waitFor(() => expect(integration.running).toBe(true))
   integration.position = 2533
   integration.hold = true
-  fireEvent.click(screen.getByRole('button', { name: 'held ACK' }))
+  fireEvent.click(screen.getByRole('button', { name: 'higher ACK' }))
   await waitFor(() => expect(integration.preparations).toHaveLength(1))
-  expect(integration.running).toBe(false)
-  expect(screen.getByRole('button', { name: '일시 정지' })).toBeEnabled()
+  expect(received.at(-1)!.local!.snapshot.planRevision).toBe(3)
+  expect(received.at(-1)!.local!.continuity!.signal).toBe(marker)
+  fireEvent.click(screen.getByRole('button', { name: 'lower ACK' }))
+  await waitFor(() => expect(integration.preparations).toHaveLength(2))
+  const lower = received.at(-1)!.local!
+  expect(lower.snapshot.planRevision).toBe(2)
+  expect(lower.continuity!.signal).toBe(marker)
+  expect(marker.aborted).toBe(false)
   await act(async () => {
     integration.hold = false
     integration.preparations.splice(0).forEach((finish) => finish())
   })
-  await waitFor(() => expect(integration.plays).toEqual([0, 2533]))
-  expect(resolvePlayback).toHaveBeenCalledOnce()
-  expect(integration.running).toBe(true)
-  expect(received.at(-1)!.timeMs).toBe(2533)
-  view.unmount()
+  await waitFor(() =>
+    expect(document.querySelector('[data-clip-local-preview]')).toHaveAttribute(
+      'data-clip-local-fingerprint',
+      lower.snapshot.snapshotFingerprint,
+    ),
+  )
+  expect(integration.plays).toEqual([0])
+  fireEvent.click(screen.getByRole('button', { name: 'higher ACK' }))
+  await waitFor(() => expect(received.at(-1)!.local!.snapshot.planRevision).toBe(3))
+  await waitFor(() => expect(screen.getByRole('button', { name: '재생' })).toBeEnabled())
+  expect(integration.plays).toEqual([0])
   expect(integration.running).toBe(false)
+  fireEvent.click(screen.getByRole('button', { name: '재생' }))
+  await waitFor(() => expect(integration.running).toBe(true))
+  view.unmount()
 })

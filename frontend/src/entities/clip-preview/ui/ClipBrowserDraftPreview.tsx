@@ -50,6 +50,7 @@ interface PreviewContinuation {
   runtime: ClipLocalCompositionRuntime
   content: string
   position: number
+  observedRevisions: readonly [number, number]
   phase: 'buffering' | 'starting'
   removeAbort: () => void
   target?: { runtime: ClipLocalCompositionRuntime; epoch: number; frame: number }
@@ -403,12 +404,13 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
         marker.signal.aborted ||
         intent.content !== content ||
         intent.transport !== transport.current ||
-        after.projectRevision < before.projectRevision ||
-        after.planRevision < before.planRevision ||
+        after.projectRevision < intent.observedRevisions[0] ||
+        after.planRevision < intent.observedRevisions[1] ||
         (!advanced && marker.leaseEpoch <= previous.leaseEpoch) ||
         (marker.retainedUntil !== undefined && marker.retainedUntil <= Date.now())
       )
         cancelContinuation()
+      else intent.observedRevisions = [after.projectRevision, after.planRevision]
     }
     const signature = JSON.stringify([
       runtime.snapshot.ownerId,
@@ -506,6 +508,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
             runtime,
             content,
             position,
+            observedRevisions: [runtime.snapshot.projectRevision, runtime.snapshot.planRevision],
             phase: 'buffering',
             removeAbort: () => runtime.continuity?.signal.removeEventListener('abort', aborted),
           }
