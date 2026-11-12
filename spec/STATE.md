@@ -10,13 +10,14 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | T759 |
+| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | - |
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
 
 ## inbox
 - 261112 decided CLIP-232 T759: which hosts make a clip's posted URL valid? → https on naver.com/naver.me and subdomains for 네이버 클립, instagram.com and subdomains for 인스타 클립, at most 2048 chars, no fetch (alt: any https URL | exact clip path patterns) — exact share-path formats could not be confirmed offline; host families refuse obvious mistakes without refusing real share links.
 - 261112 decided CLIP-131 CLIP-132 T760: how does one request decide its target within two approved calls? → the first call routes: it returns the narration revision itself when the flow is unchanged, or a revised flow followed by the existing narration call; optional scope_cut names the selected block (alt: always two calls | a separate classifier call) — only routing keeps narration-only at one call and inside the two-call ceiling.
 - 261112 decided CLIP-229 CLIP-226 T759 T768: how is reversible 확정 stored and shown? → confirmed exactly while confirmed_plan_revision equals edit_plan_revision, no reset write; checklist ticks as a JSON column like posts; histories derive six states with 완료 holding 게시됨 in the filter (alt: a status column cleared on every save | separate ticks table).
+- 261112 decided CLIP-229 CLIP-231 T759: how are a stale 확정 request and the clip ticks carried? → a stale expected revision is the request's CLIP_PLAN_CONFLICT while a read's confirmation_refusal stays empty|finalized|busy|invalid_plan|narration; ticks reuse post.proto's ChecklistTicks (alt: a stale value on reads, which is always at its own revision | a duplicate ClipChecklistTicks message).
 - 261112 decided CLIP-17 CLIP-40 CLIP-149 T761 T763 T764 T765 T766: how is the redesign cut into units that never leave main broken? → ten tasks in dep order: backend contract and routing first, ① guide before the unminted entry, blocks before their sheets with the old properties panel reachable meanwhile, render stays in ② until ③ takes it; the post's chip scanner and tracker move to entities/advertiser-guide for both editors (alt: one rewrite task per step | duplicate the post's scanner in the clip).
 - 261112 decided T758: use the remaining additional-hour budget? → preserve the last independently reviewed style-sample P2 fix and one visible-editor refusal assertion correction in the latest41-file unintegrated recovery snapshot99b79a95 plus a Git bundle (alt: omit post-cutoff work | mark the unfinished guide complete). Voice checks86+6 pass and type/lint/format pass; the refusal file31 tests passes, while four named cases and whole-task final gates remain open. Publish all source/review/diagnosis records as recovery data; keep T758todo and verified main product unchanged.
 - 261112 parked T758: the extra-hour source cutoff passed with final independent review changes_requested (P2 hidden/late voice sample playback, P3 narrow320px action label) and full frontend5 failed/4784 passed. Preserve all40 files as docs/handoff/ui12/T758.patch (190552 bytes, SHA-256fb6d12ee4a7e7c9804d0fc391fbc24b52c66b3a37e69e78f655c57e025febc6f), verified exact reconstruction. Sourcea0c7b3a3 remains unintegrated; resume the same task with its review/validation artifacts, never mark done or start T759.
@@ -205,7 +206,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T759 | Accept untitled clips, record reversible confirmation and finalize by posted URL or 완료 | ARCH CLIP | - | doing@261112.vd1 |
 | T760 | Let one revision request decide its own target within two approved writing calls | ARCH CLIP QUOTA DUB GUIDE | - | todo |
 | T761 | Ask ①'s clip preparation one question per screen in the post guide's order | ARCH CLIP POST THEME | - | todo |
 | T762 | Run /clips/new as the unminted guide and mint on its first save | ARCH CLIP POST THEME | T759 T761 T768 | todo |
@@ -217,11 +217,12 @@
 | T768 | Show the six clip states in histories and name an untitled clip | ARCH CLIP THEME POST | T759 | todo |
 
 ## next
+- implement-task T760 T761 T763
 - T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
-- implement-task T759 (vd1 autopilot): the clip journey redesign runs T759 T760 T768 T761 T762 T763 T764 T765 T766 T767 in dep order; T762 needs T759 T761 T768, T765 needs T759 T760 T763, T766 needs T765 T768.
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 T759 done
 - 261112 create-task CLIP r76 THEME r41 (vd1): T759–T768 for the post-shaped clip journey; CLIP and THEME fully tasked
 - 261112 update-ssot CLIP r76 THEME r41 (vd1): clip journey mirrors the post guide from /clips/new to ③; no active task cites the changed decisions
 - 261112 update-ssot CLIP start (vd1)
@@ -241,4 +242,3 @@
 - 261112 self-improve-local video cycle2 starts (ui12): clean main c61f9949; independent read-only work scout dispatched; preserve inherited scope/history and all contracts. Exploration+implementation <=60m; review/full gates/remote CI reserve follows.
 - 261112 foreground accepted (ui12): T753–T756 plus repair05dc604c are on origin/main; all5 code revisions pass full ARCH-31 and every triggered workflow. Repair48/380, full FE595/4748/Python69/Go and CI43083205954 pass. Browser canonical24/warm96/delayed32/alias24 pass. Video has not started; keep active for the next coordinator stage.
 - 261112 fix clip-navigation done (ui12): canonical history states retain storyline_ready on both channel returns; red4→green33 and expanded48 files/380 tests/static/type/build pass. Separate repair unit; complete ARCH-31 and exact-revision workflows follow.
-- 261112 fix clip-navigation starts (ui12), baseline aef8ed75: final return-path audit finds the new storyline_ready filter dropped by the clip history return allowlist. Repair the existing CLIP-226/THEME-58 contract in the lightweight path; no new product policy or persisted format.
