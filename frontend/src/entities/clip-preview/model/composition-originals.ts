@@ -6,6 +6,8 @@ export interface BrowserLocalOriginal {
   fingerprint: string
   file?: File
   url?: string
+  /** Runtime invalidation hint only; the owner-bound resolver authorizes access. */
+  retainedAccess?: { generation: number; state: string }
 }
 /** One owner/project-bound runtime access cache. It serializes no URL or original bytes. */
 export class BrowserCompositionOriginals {

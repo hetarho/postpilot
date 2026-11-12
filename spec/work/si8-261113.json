@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T17:01:30.289Z",
-  "sourceCommit": "55f7d8f96969c31a53af1c8614d336f6d40a110d",
+  "snapshotAt": "2026-11-12T17:47:20.818Z",
+  "sourceCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -26,12 +26,12 @@
   },
   "summary": {
     "total": 7,
-    "completed": 3,
-    "remaining": 4,
+    "completed": 4,
+    "remaining": 3,
     "running": 0,
     "review": 0,
     "blocked": 0,
-    "unassigned": 4
+    "unassigned": 3
   },
   "tasks": [
     {
@@ -45,14 +45,6 @@
     {
       "id": "T779",
       "title": "Share consistent editor workspace navigation chrome",
-      "dep": [
-        "T778"
-      ],
-      "status": "todo"
-    },
-    {
-      "id": "T780",
-      "title": "Avoid preview restarts on first retained capability publication",
       "dep": [
         "T778"
       ],
@@ -194,6 +186,8 @@
       "submittedBase": "855e2b73df6c744ff7df898e193cec0b3699492c",
       "submissionId": "35debc55-b53b-4286-88c9-51f999f189a2",
       "submittedAt": "2026-11-12T16:57:17.390Z",
+      "integratedCommit": "b89c9d104c5641c29edf97946f63887a29582550",
+      "integratedAt": "2026-11-12T17:02:21.942Z",
       "risk": null,
       "review": {
         "id": "72a863b1-3b67-4561-8c09-155114b898b9",
@@ -213,6 +207,98 @@
           "taskId": "T778",
           "commit": "2ce7324908f6d327bfdc5c469bb472dae8751138",
           "at": "2026-11-12T16:57:17.379Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T17:01:31.762Z",
+          "finishedAt": "2026-11-12T17:02:21.588Z"
+        }
+      ]
+    },
+    {
+      "id": "72043a21-945c-443c-860a-ab6a63714230",
+      "group": "si8-261113",
+      "taskId": "T780",
+      "tasks": [
+        "T780"
+      ],
+      "lane": null,
+      "owner": "si8-capability-worker",
+      "contributors": [
+        "si8-capability-worker"
+      ],
+      "status": "released",
+      "reason": "No worker session/source edits were dispatched. Replan before implementation: actual distinct-URL manual refresh failure adds a bounded hook-owned force transaction while preserving existing source retry quota.",
+      "createdAt": "2026-11-12T17:04:16.981Z",
+      "startCommit": "b89c9d104c5641c29edf97946f63887a29582550",
+      "releasedAt": "2026-11-12T17:08:59.106Z"
+    },
+    {
+      "id": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "group": "si8-261113",
+      "taskId": "T780",
+      "tasks": [
+        "T780"
+      ],
+      "lane": null,
+      "owner": "si8-capability-worker",
+      "contributors": [
+        "si8-capability-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T17:13:29.199Z",
+      "startCommit": "161a8a810ba531c087c8a2212a716a2717ecbeb7",
+      "verifiedCommit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
+      "submittedBase": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+      "submissionId": "ef66815b-52ed-4ab6-a6ab-d0e3146ba11a",
+      "submittedAt": "2026-11-12T17:45:41.070Z",
+      "risk": null,
+      "review": {
+        "id": "a5c193fc-6d75-440e-bbfa-3f37eef7a28c",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T780 corrected re-review of exact 9f5b2904e884fe2a3f284d1ede82906d577438f9 against native base 4b3224d4 and original task start 161a8a81. Re-inspected the narrow 32db15c8 session correction and all four new races on top of the prior complete-delta review. The returned pending Promise is registered before synchronous authority/quota/broker execution; success and catch require current media/source plus captured Promise-slot ownership, and finally removes only its own slot. Current retained authority is still rechecked after broker await; dedup, forced quota, generation semantics and immediate withdrawal are retained. Independently replayed the original in-memory exact-source fixture with only snapshot path/commit substituted: both old success and old failure reject unavailable, with new-valid URL and generation3 unchanged. Four regression cases cover replacement pending/completed and preserve pending sharing/state identity. Verified 1,509 source/artifact hashes including all 1,493 candidate production files and unchanged frozen scripts/criteria; reran the seven-profile evaluator with all 602 dynamic checks passing. Reviewed corrected core58, full affected125-file/975-test and all fast-check logs. Final commit changes only task evidence after the verified source. Prior P2 is resolved; no findings remain. Actual authenticated app, final full CI and applicable media/remote gates remain coordinator-owned; no latency or backward-clock resolution claim is accepted.",
+        "findings": [],
+        "commit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
+        "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+        "submissionId": "ef66815b-52ed-4ab6-a6ab-d0e3146ba11a",
+        "createdAt": "2026-11-12T17:46:11.269Z",
+        "finishedAt": "2026-11-12T17:47:08.998Z"
+      },
+      "reviewHistory": [
+        {
+          "id": "38a75ebe-e39d-432e-9018-a0e7ae5f34fe",
+          "owner": "si8-reviewer",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "T780: Reviewed the complete original-start 161a8a81 and native-base 4b3224d4 deltas through e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0, task/F8 replan and authority-guard approval. Initial 0->1 equivalence, 2+ renewal fencing, raw fallback, File/blob/resolver identity, retry pending sharing/sticky failure/success-to-normal handling and unchanged quota were inspected. Verified 1,522 artifact/source/input hashes including all 1,493 production files; reran the unchanged seven-profile browser evaluator with all 598 checks passing. Final 125-file/971-test and fast-check evidence matches the pinned source; final submission adds only own task evidence. A new same-source request supersession race remains despite those passes: old broker completions can overwrite or withdraw a newer valid capability. Read-only in-memory reproduction and raw failure output are preserved under T780/review-race-repro-e0ba99e4.mjs and .json.",
+          "findings": [
+            {
+              "priority": "P2",
+              "where": "T780 frontend/src/features/upload-clip-sources/model/session.ts:295",
+              "message": "While broker request A is pending, hydrate this same lease as missing and call ensurePlayback: the new authority-refusal request replaces playbackRequests. Hydrate it as available and let request B complete successfully. A later rejection from A passes only mediaEpoch/sourceId checks at lines321-322 and clears B’s valid URL, publishing unavailable/gen4 after valid/gen3; a late success at lines295-305 instead replaces B with A’s older URL. Both were reproduced against the exact submitted source. Fence success and catch publication with captured per-request ownership in addition to current media/source/authority checks, registering ownership before synchronous authority/quota errors can publish; keep finally cleanup ownership and all existing quota/policy/generation behavior. Add meaningful same-source old-success and old-failure race regressions proving the newer request remains authoritative. Raw script/output: .git/gusta/v1/launchers/si8/T780/review-race-repro-e0ba99e4.mjs and .json."
+            }
+          ],
+          "commit": "e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0",
+          "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+          "submissionId": "5dceb77f-b4b1-47d2-990c-6e58f0d029c8",
+          "createdAt": "2026-11-12T17:32:16.661Z",
+          "finishedAt": "2026-11-12T17:36:22.029Z",
+          "invalidatedAt": "2026-11-12T17:36:51.955Z",
+          "invalidationReason": "correction assigned"
+        }
+      ],
+      "steps": [
+        {
+          "taskId": "T780",
+          "commit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
+          "at": "2026-11-12T17:45:41.053Z",
           "verification": []
         }
       ],
@@ -869,6 +955,367 @@
       "group": "si8-261113",
       "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
       "taskId": "T778",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 36,
+      "at": "2026-11-12T17:02:21.860Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T17:01:31.762Z",
+            "finishedAt": "2026-11-12T17:02:21.588Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 37,
+      "at": "2026-11-12T17:02:21.942Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "353199fd-be9e-4d50-bc22-ecff8003f886",
+      "taskId": "T778",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "b89c9d104c5641c29edf97946f63887a29582550",
+        "integratedAt": "2026-11-12T17:02:21.942Z"
+      }
+    },
+    {
+      "sequence": 38,
+      "at": "2026-11-12T17:04:16.981Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "72043a21-945c-443c-860a-ab6a63714230",
+      "taskId": "T780",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "72043a21-945c-443c-860a-ab6a63714230",
+        "group": "si8-261113",
+        "taskId": "T780",
+        "tasks": [
+          "T780"
+        ],
+        "lane": null,
+        "owner": "si8-capability-worker",
+        "contributors": [
+          "si8-capability-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T17:04:16.981Z",
+        "startCommit": "b89c9d104c5641c29edf97946f63887a29582550"
+      }
+    },
+    {
+      "sequence": 39,
+      "at": "2026-11-12T17:04:18.660Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "72043a21-945c-443c-860a-ab6a63714230",
+      "taskId": "T780",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 40,
+      "at": "2026-11-12T17:08:59.106Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "72043a21-945c-443c-860a-ab6a63714230",
+      "taskId": "T780",
+      "previousStatus": "doing",
+      "status": "released",
+      "changes": {
+        "status": "released",
+        "reason": "No worker session/source edits were dispatched. Replan before implementation: actual distinct-URL manual refresh failure adds a bounded hook-owned force transaction while preserving existing source retry quota.",
+        "releasedAt": "2026-11-12T17:08:59.106Z"
+      }
+    },
+    {
+      "sequence": 41,
+      "at": "2026-11-12T17:13:29.199Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+        "group": "si8-261113",
+        "taskId": "T780",
+        "tasks": [
+          "T780"
+        ],
+        "lane": null,
+        "owner": "si8-capability-worker",
+        "contributors": [
+          "si8-capability-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T17:13:29.199Z",
+        "startCommit": "161a8a810ba531c087c8a2212a716a2717ecbeb7"
+      }
+    },
+    {
+      "sequence": 42,
+      "at": "2026-11-12T17:13:31.474Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 43,
+      "at": "2026-11-12T17:31:44.332Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 44,
+      "at": "2026-11-12T17:31:44.497Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0",
+        "submittedBase": "5f98c47f727109cf0593353d24c703221e83e309",
+        "submissionId": "5dceb77f-b4b1-47d2-990c-6e58f0d029c8",
+        "submittedAt": "2026-11-12T17:31:44.497Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T780",
+            "commit": "e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0",
+            "at": "2026-11-12T17:31:44.487Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 45,
+      "at": "2026-11-12T17:32:16.661Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "38a75ebe-e39d-432e-9018-a0e7ae5f34fe",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0",
+          "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+          "submissionId": "5dceb77f-b4b1-47d2-990c-6e58f0d029c8",
+          "createdAt": "2026-11-12T17:32:16.661Z"
+        }
+      }
+    },
+    {
+      "sequence": 46,
+      "at": "2026-11-12T17:36:22.029Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "reviewing",
+      "status": "changes_requested",
+      "changes": {
+        "status": "changes_requested",
+        "reason": "T780: Reviewed the complete original-start 161a8a81 and native-base 4b3224d4 deltas through e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0, task/F8 replan and authority-guard approval. Initial 0->1 equivalence, 2+ renewal fencing, raw fallback, File/blob/resolver identity, retry pending sharing/sticky failure/success-to-normal handling and unchanged quota were inspected. Verified 1,522 artifact/source/input hashes including all 1,493 production files; reran the unchanged seven-profile browser evaluator with all 598 checks passing. Final 125-file/971-test and fast-check evidence matches the pinned source; final submission adds only own task evidence. A new same-source request supersession race remains despite those passes: old broker completions can overwrite or withdraw a newer valid capability. Read-only in-memory reproduction and raw failure output are preserved under T780/review-race-repro-e0ba99e4.mjs and .json.",
+        "review": {
+          "id": "38a75ebe-e39d-432e-9018-a0e7ae5f34fe",
+          "owner": "si8-reviewer",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "T780: Reviewed the complete original-start 161a8a81 and native-base 4b3224d4 deltas through e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0, task/F8 replan and authority-guard approval. Initial 0->1 equivalence, 2+ renewal fencing, raw fallback, File/blob/resolver identity, retry pending sharing/sticky failure/success-to-normal handling and unchanged quota were inspected. Verified 1,522 artifact/source/input hashes including all 1,493 production files; reran the unchanged seven-profile browser evaluator with all 598 checks passing. Final 125-file/971-test and fast-check evidence matches the pinned source; final submission adds only own task evidence. A new same-source request supersession race remains despite those passes: old broker completions can overwrite or withdraw a newer valid capability. Read-only in-memory reproduction and raw failure output are preserved under T780/review-race-repro-e0ba99e4.mjs and .json.",
+          "findings": [
+            {
+              "priority": "P2",
+              "where": "T780 frontend/src/features/upload-clip-sources/model/session.ts:295",
+              "message": "While broker request A is pending, hydrate this same lease as missing and call ensurePlayback: the new authority-refusal request replaces playbackRequests. Hydrate it as available and let request B complete successfully. A later rejection from A passes only mediaEpoch/sourceId checks at lines321-322 and clears B’s valid URL, publishing unavailable/gen4 after valid/gen3; a late success at lines295-305 instead replaces B with A’s older URL. Both were reproduced against the exact submitted source. Fence success and catch publication with captured per-request ownership in addition to current media/source/authority checks, registering ownership before synchronous authority/quota errors can publish; keep finally cleanup ownership and all existing quota/policy/generation behavior. Add meaningful same-source old-success and old-failure race regressions proving the newer request remains authoritative. Raw script/output: .git/gusta/v1/launchers/si8/T780/review-race-repro-e0ba99e4.mjs and .json."
+            }
+          ],
+          "commit": "e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0",
+          "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+          "submissionId": "5dceb77f-b4b1-47d2-990c-6e58f0d029c8",
+          "createdAt": "2026-11-12T17:32:16.661Z",
+          "finishedAt": "2026-11-12T17:36:22.029Z"
+        }
+      }
+    },
+    {
+      "sequence": 47,
+      "at": "2026-11-12T17:36:51.955Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "changes_requested",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "verifiedCommit": null,
+        "review": null,
+        "reviewHistory": [
+          {
+            "id": "38a75ebe-e39d-432e-9018-a0e7ae5f34fe",
+            "owner": "si8-reviewer",
+            "status": "changes_requested",
+            "verdict": "changes_requested",
+            "summary": "T780: Reviewed the complete original-start 161a8a81 and native-base 4b3224d4 deltas through e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0, task/F8 replan and authority-guard approval. Initial 0->1 equivalence, 2+ renewal fencing, raw fallback, File/blob/resolver identity, retry pending sharing/sticky failure/success-to-normal handling and unchanged quota were inspected. Verified 1,522 artifact/source/input hashes including all 1,493 production files; reran the unchanged seven-profile browser evaluator with all 598 checks passing. Final 125-file/971-test and fast-check evidence matches the pinned source; final submission adds only own task evidence. A new same-source request supersession race remains despite those passes: old broker completions can overwrite or withdraw a newer valid capability. Read-only in-memory reproduction and raw failure output are preserved under T780/review-race-repro-e0ba99e4.mjs and .json.",
+            "findings": [
+              {
+                "priority": "P2",
+                "where": "T780 frontend/src/features/upload-clip-sources/model/session.ts:295",
+                "message": "While broker request A is pending, hydrate this same lease as missing and call ensurePlayback: the new authority-refusal request replaces playbackRequests. Hydrate it as available and let request B complete successfully. A later rejection from A passes only mediaEpoch/sourceId checks at lines321-322 and clears B’s valid URL, publishing unavailable/gen4 after valid/gen3; a late success at lines295-305 instead replaces B with A’s older URL. Both were reproduced against the exact submitted source. Fence success and catch publication with captured per-request ownership in addition to current media/source/authority checks, registering ownership before synchronous authority/quota errors can publish; keep finally cleanup ownership and all existing quota/policy/generation behavior. Add meaningful same-source old-success and old-failure race regressions proving the newer request remains authoritative. Raw script/output: .git/gusta/v1/launchers/si8/T780/review-race-repro-e0ba99e4.mjs and .json."
+              }
+            ],
+            "commit": "e0ba99e4d1b7b81617f8cc17367f8be8db5beeb0",
+            "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+            "submissionId": "5dceb77f-b4b1-47d2-990c-6e58f0d029c8",
+            "createdAt": "2026-11-12T17:32:16.661Z",
+            "finishedAt": "2026-11-12T17:36:22.029Z",
+            "invalidatedAt": "2026-11-12T17:36:51.955Z",
+            "invalidationReason": "correction assigned"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 48,
+      "at": "2026-11-12T17:45:40.813Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 49,
+      "at": "2026-11-12T17:45:41.070Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "reason": null,
+        "submittedBase": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+        "submissionId": "ef66815b-52ed-4ab6-a6ab-d0e3146ba11a",
+        "submittedAt": "2026-11-12T17:45:41.070Z",
+        "steps": [
+          {
+            "taskId": "T780",
+            "commit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
+            "at": "2026-11-12T17:45:41.053Z",
+            "verification": []
+          }
+        ],
+        "verifiedCommit": "9f5b2904e884fe2a3f284d1ede82906d577438f9"
+      }
+    },
+    {
+      "sequence": 50,
+      "at": "2026-11-12T17:46:11.269Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "a5c193fc-6d75-440e-bbfa-3f37eef7a28c",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
+          "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+          "submissionId": "ef66815b-52ed-4ab6-a6ab-d0e3146ba11a",
+          "createdAt": "2026-11-12T17:46:11.269Z"
+        }
+      }
+    },
+    {
+      "sequence": 51,
+      "at": "2026-11-12T17:47:08.998Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "a5c193fc-6d75-440e-bbfa-3f37eef7a28c",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T780 corrected re-review of exact 9f5b2904e884fe2a3f284d1ede82906d577438f9 against native base 4b3224d4 and original task start 161a8a81. Re-inspected the narrow 32db15c8 session correction and all four new races on top of the prior complete-delta review. The returned pending Promise is registered before synchronous authority/quota/broker execution; success and catch require current media/source plus captured Promise-slot ownership, and finally removes only its own slot. Current retained authority is still rechecked after broker await; dedup, forced quota, generation semantics and immediate withdrawal are retained. Independently replayed the original in-memory exact-source fixture with only snapshot path/commit substituted: both old success and old failure reject unavailable, with new-valid URL and generation3 unchanged. Four regression cases cover replacement pending/completed and preserve pending sharing/state identity. Verified 1,509 source/artifact hashes including all 1,493 candidate production files and unchanged frozen scripts/criteria; reran the seven-profile evaluator with all 602 dynamic checks passing. Reviewed corrected core58, full affected125-file/975-test and all fast-check logs. Final commit changes only task evidence after the verified source. Prior P2 is resolved; no findings remain. Actual authenticated app, final full CI and applicable media/remote gates remain coordinator-owned; no latency or backward-clock resolution claim is accepted.",
+          "findings": [],
+          "commit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
+          "baseCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+          "submissionId": "ef66815b-52ed-4ab6-a6ab-d0e3146ba11a",
+          "createdAt": "2026-11-12T17:46:11.269Z",
+          "finishedAt": "2026-11-12T17:47:08.998Z"
+        }
+      }
+    },
+    {
+      "sequence": 52,
+      "at": "2026-11-12T17:47:17.823Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {
