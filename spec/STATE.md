@@ -10,8 +10,8 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
+| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | - |
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T02:18Z | 2026-11-12T02:53Z | - |
 
 ## inbox
 - 261112 decided CLIP-232 T759: which hosts make a clip's posted URL valid? → https on naver.com/naver.me and subdomains for 네이버 클립, instagram.com and subdomains for 인스타 클립, at most 2048 chars, no fetch (alt: any https URL | exact clip path patterns) — exact share-path formats could not be confirmed offline; host families refuse obvious mistakes without refusing real share links.
