@@ -18,7 +18,7 @@ import (
 const BrowserCompositionVersion = "clip-browser-composition-v1"
 const BrowserComponentVersion = "native-cds-r33-pop-exposure-v2-ground-v1-filters-v1-ember-v2-retained-layout-v1"
 const BrowserFontVersion = "bundled-clip-fonts-v1"
-const BrowserAssetVersion = "clip-design-assets-v1-ink-f7464618377842cdf94a47823dc7c68543d044d814f941cde05bcc986f0d3d1d"
+const BrowserAssetVersion = "clip-design-assets-v1-ink-4372b06dfae04ae7de50073bfd75d9a6845c5afde0733e0373f5a261445da9d7"
 const BrowserBackgroundVersion = "clip-browser-background-v1"
 
 // BrowserCompositionReleased activates browser final rendering (ARCH-68). It is
