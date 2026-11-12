@@ -207,6 +207,7 @@
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 updates haeram-spec-creator 0.12.2→0.13.0 (50 skill files updated, 2 created, no conflicts; no structural migration, no unset settings). FORMAT takes the 0.13.0 task start/done CLI, CI-unchecked and reports exception lines plus the permission-mode/headless-mcp settings keys; the four 65a1f82b overrides (decision n, [x], chg pruning, log history) stay. Lint identical before/after (0 errors, 82 warnings). 12c1f59a refreshes the browser ink identity for the new lockfile SHA; clip/clip-design Go, 46 FE files/294 tests, tsc, eslint, prettier, gofmt, vet pass. No code push.
 - 261112 T758 done
 - 261112 ui12 final bounded follow-up: source checkpoint99b79a95 combines approved voice fix74e456ca and refusal-test correction75f4eb8c,41 files recovered byte-for-byte; bundle verifies against publishedada6afc2. Main product source remains through T757; four diagnosed cases and T758 whole-task gates remain open. Publish all progress as recovery data, with no continuing local automation.
 - 261112 ui12: preserve latest40-file T758 recovery after independent P2 and5 remaining frontend failures; task todo, source not integrated.
@@ -226,4 +227,3 @@
 - 261112 T756 done (ui12): single counted 작성 중, shared peer-density accent latest card and compact recovery rows; 7 files/144 tests/static/type/build pass. Final warm96/delayed32 geometry and alias24 browser checks pass; latest360px card259.75→114.25px (56%). Full pre-push follows; video has not started.
 - 261112 T756 starts (ui12), baseline d02a58a0: one counted 작성 중 group, peer-density accent latest card, no duplicate hero. T755 full gate/push passes; T754 remote CI43072913166 passes both jobs. Hourly checkpoint ccf608f7 is local (wip remote rejected generically); main publication is unaffected.
 - 261112 T755 done (ui12): shared storyline-ready history labels/filter with job precedence and unchanged lifecycle/refining URL compatibility; 33 files/205 tests and static/type/build checks pass. Real browser both channels/aggregate/status selection passes without generation. Full pre-push follows.
-- 261112 T755 starts (ui12), baseline 42cdc156: browser reproduces storyline-only and built clips both labelled 다듬는 중 on both channels and aggregate. T754 full gate/push passes; exact-revision CI remains tracked before the next push. Keep lifecycle state and render/finalization unchanged.
