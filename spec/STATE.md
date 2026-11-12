@@ -13,6 +13,7 @@
 | si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
 
 ## inbox
+- 261113 decided T781 review/performance-design-system-261113: real changed-save leases hydrate after ACK and can stop playback again? → preserve full access invalidation and add a private-intent exception only for producer-bound typed, same-generation, confirmed available strictly future lease extensions at identical composition/revisions (alt: omit expiry from access key | parse opaque hints | claim constant-lease fixture covers production). Two runtime DTO wiring paths added before claim; shortening/withdrawal/malformed/generation change and all explicit cancellation fail closed, fresh source/frame gates required. Independent design safety review passed; source approval remains separate.
 - 261113 decided T780 review/performance-design-system-261113: valid distinct-URL explicit refresh fails because every rebuilt owner repeats force? → add a hook-owned once-per-explicit-attempt transaction with pending sharing/failure retention, keeping actual renewal invalidation and the existing session quota (alt: raise retry cap | suppress all HTTP renewal | simple Set with failure fallback). Unstarted claim72043a21 released before replan; no worker/source edits existed.
 - 261113 decided T775 T776 T780 T781: reserve deadline for measured/verified video disruptions? → keep unclaimed radio-tile/dropdown-focus tasks as approved future work outside the active run while completing performance, playback continuity, shared header andFieldCount; re-admit only if critical work finishes with budget before06:30KST (alt: spend closing reserve on optional cleanup | hide completed/active history). All claimed/integrated task IDs remain in scope; no source/task history removed.
 - 261113 decided review/performance-design-system-261113 T780 T781: fix verified lifecycle disruptions without weakening revision/access fences? → authoritative first-capability generation, then one guarded same-transport continuation after equal-content ACK (alt: ignore everyURL/revision | keep extra owners | rewrite clock). Full snapshots/access/cancellation/limits remain; bounded rebuffer accepted, no seamless/oscillation claim. Existing canonical helper reused and memoized; user waives questions until08:00KST.
@@ -232,6 +233,7 @@
 - inspect work board for remaining tasks
 
 ## log
+- 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
 - 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.
 - 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.
@@ -251,4 +253,3 @@
 - 261112 T772 done
 - 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
 - 261112 create-task ARCH r23: T771 moves the CI and pre-push skill check to gusta, drops the haeram-spec-creator devDependency and refreshes the ink identity; ARCH fully tasked
-- 261112 update-ssot ARCH r23: ARCH-30 verifies skills with gusta through npx at the .gusta-lock.json version; ARCH-31 cites it unchanged and no active task cites ARCH-30
