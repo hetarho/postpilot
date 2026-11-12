@@ -67,7 +67,7 @@ export function ClipRegionBlock({
   const active = region.slots.slice(0, capacity)
   const unused = region.slots.slice(capacity).filter((slot) => slot.text.trim() !== '')
   return (
-    <section aria-labelledby={heading} className="py-4">
+    <section aria-labelledby={heading} className="py-4" data-clip-regions>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <Typography variant="label" as="h3" id={heading}>
           {name}
@@ -119,11 +119,11 @@ export function ClipRegionBlock({
                     <Badge tone={STATE_TONES[state]}>{t(`regions.state.${state}`)}</Badge>
                   </div>
                   <div>
-                    <FieldLabel htmlFor={`${slot.id}-instruction`}>
+                    <FieldLabel htmlFor={`${heading}${slot.id}-instruction`}>
                       {t('regions.instruction', { n })}
                     </FieldLabel>
                     <Textarea
-                      id={`${slot.id}-instruction`}
+                      id={`${heading}${slot.id}-instruction`}
                       autoGrow
                       rows={1}
                       readOnly={readOnly}
@@ -134,16 +134,20 @@ export function ClipRegionBlock({
                     />
                   </div>
                   <div>
-                    <FieldLabel htmlFor={`${slot.id}-text`}>{t('regions.text', { n })}</FieldLabel>
+                    <FieldLabel htmlFor={`${heading}${slot.id}-text`}>
+                      {t('regions.text', { n })}
+                    </FieldLabel>
                     <TextField
-                      id={`${slot.id}-text`}
+                      id={`${heading}${slot.id}-text`}
                       readOnly={readOnly}
                       aria-invalid={error ? true : undefined}
-                      aria-describedby={error ? `${slot.id}-error` : undefined}
+                      aria-describedby={error ? `${heading}${slot.id}-error` : undefined}
                       value={slot.text}
                       onChange={(event) => onSlot(slot.id, { text: event.currentTarget.value })}
                     />
-                    {error && <FieldMessage id={`${slot.id}-error`}>{error}</FieldMessage>}
+                    {error && (
+                      <FieldMessage id={`${heading}${slot.id}-error`}>{error}</FieldMessage>
+                    )}
                   </div>
                   <ClipNoticeList notices={notices(slot.id)} />
                 </li>

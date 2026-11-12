@@ -38,13 +38,10 @@ import {
   Slider,
   Typography,
   useVisualViewport,
-  useMediaQuery,
-  MD_MEDIA_QUERY,
 } from '@/shared/ui'
-import { splitAtOutput } from '../model/timeline-gesture'
 import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipRenderAction } from './ClipRenderAction'
-import { ClipTimeline } from './ClipTimeline'
+import { ClipSceneBlocks } from './ClipSceneBlocks'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipItemProperties } from './ClipItemProperties'
 
@@ -130,6 +127,9 @@ export function ClipCorrectionWorkspace({
     referenceAction?: ReactNode
     tools?: ReactNode
     addDubbing?: () => void
+    /** The project's intro and outro slots, the scene list's first and last blocks (CLIP-17). */
+    intro?: ReactNode
+    outro?: ReactNode
     spokenProperties?: (segment: ClipSpokenSegment) => ReactNode
   }
   disabled: boolean
@@ -138,7 +138,6 @@ export function ClipCorrectionWorkspace({
   readOnly?: boolean
 }) {
   const { id: projectId, state, captionStyles, notices = [], language } = project
-  const { localSources } = footage
   const { preview, comparison, revision, downloadAction, finalizeAction, referenceAction } = slots
   const {
     ready: renderReady,
@@ -263,14 +262,13 @@ export function ClipCorrectionWorkspace({
     timeline.selection?.kind === 'text'
       ? draft.elements?.find((text) => text.instanceId === timeline.selection?.id)
       : undefined
-  const desktop = useMediaQuery(MD_MEDIA_QUERY)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const spoken =
     timeline.selection?.kind === 'spoken'
       ? draft.narration?.segments.find((s) => s.id === timeline.selection?.id)
       : undefined
   const selected = !!cut || !!text || !!spoken
-  const sheetOpen = !desktop && detailsOpen && selected
+  const sheetOpen = detailsOpen && selected
   const index = cut ? draft.cuts.indexOf(cut) : -1
   const source = state.sources.find((s) => s.id === cut?.sourceId)
   const errors = correction.validation?.cuts[index]
@@ -371,6 +369,7 @@ export function ClipCorrectionWorkspace({
     </div>
   )
   const refresh = captionRefresh(draft)
+  const captionSlot = draft.nativeComposition ? narrationSlot(draft, timeline.timeMs) : undefined
   return (
     <section
       ref={container}
@@ -400,8 +399,11 @@ export function ClipCorrectionWorkspace({
       />
       {/* No heading of its own: the step bar above already names this step, and the preview is
           what the screen is for (owner decision 2026-09-19). The section keeps the name. */}
-      <div className="grid min-w-0 gap-4 md:grid-cols-3">
-        <div className="min-w-0 space-y-4 md:col-span-2">
+      {/* The preview stands beside the scene blocks from `lg` and stays in view while they scroll;
+          below `lg` its compact frame pins under the top chrome above them (CLIP-53, THEME-44). The
+          list keeps the document's one scroller (THEME-25). */}
+      <div className="grid min-w-0 gap-4 lg:grid-cols-2 lg:items-start">
+        <div className="lg:top-chrome min-w-0 space-y-4 lg:sticky">
           <div ref={previewRoot} className="contents">
             {preview({
               captionPosition,
@@ -507,35 +509,39 @@ export function ClipCorrectionWorkspace({
             {referenceAction}
             {slots.tools}
           </div>
-          {/* The save state is NOT reported here: CLIP-38 gives it to the page's one
-          status region, and a second copy beside the timeline said it twice with
-          two different delays. Undo/redo moved to the timeline's own head. */}
-          <ClipTimeline
+          {/* The scrubber states output time on one row under the frame (CLIP-53). */}
+          {!readOnly && (
+            <Slider
+              ariaLabel={t('preview.outputTime')}
+              min={0}
+              max={Math.max(1, Number.isFinite(draft.durationMs) ? draft.durationMs : 1)}
+              step={CLIP_DRAFT_PREVIEW.frameToleranceMs}
+              value={timeline.timeMs}
+              valueText={`${clipSeconds(timeline.timeMs)} / ${clipSeconds(draft.durationMs)} s`}
+              onChange={(ms) => seek(snapClipTime(ms))}
+            />
+          )}
+        </div>
+        <div className="min-w-0 space-y-4">
+          {/* The save state is NOT reported here: CLIP-38 gives it to the page's one status
+          region. Undo/redo head the list they act on. */}
+          <ClipSceneBlocks
             plan={correction.transientPlan ?? draft}
-            onSeek={seek}
-            onCommit={change}
-            onPreview={correction.setTransientPlan}
-            bounds={correction.timelineBounds}
-            captionStyles={captionStyles}
-            canSplit={
-              timeline.selection?.kind === 'cut' &&
-              !!splitAtOutput(draft, timeline.selection.id, timeline.timeMs, 'probe')
-            }
-            onSplit={
-              timeline.selection?.kind === 'cut'
-                ? () => {
-                    const selected = timelineCuts(draft).find(
-                      (c) => c.cut.id === timeline.selection!.id,
-                    )
-                    if (selected)
-                      void correction
-                        .splitCut(selected.cut.id, outputToSourceMs(selected, timeline.timeMs))
-                        .catch(() => undefined)
-                  }
-                : undefined
-            }
+            sources={state.sources}
             selection={timeline.selection}
             timeMs={timeline.timeMs}
+            onSelect={(selection) => {
+              setDetailsOpen(false)
+              dispatch({ type: 'select', selection })
+            }}
+            change={change}
+            validation={correction.validation}
+            footage={footage}
+            intro={slots.intro}
+            outro={slots.outro}
+            notices={notices}
+            readOnly={readOnly}
+            disabled={disabled}
             history={{
               undo: () => dispatch({ type: 'undo' }),
               redo: () => dispatch({ type: 'redo' }),
@@ -543,27 +549,42 @@ export function ClipCorrectionWorkspace({
               canRedo: !readOnly && !!timeline.future.length,
               disabled: disabled || readOnly,
             }}
-            onSelect={(selection) => {
-              setDetailsOpen(false)
-              dispatch({ type: 'select', selection })
-            }}
-            onAddDubbing={slots.addDubbing}
-            readOnly={readOnly}
-            disabled={disabled}
-            onAddCaption={
-              readOnly
-                ? undefined
-                : (slot) => {
-                    // A local identity until the save returns the server-minted one.
-                    const id = `new-caption-${Date.now()}`
-                    setDetailsOpen(true)
-                    change({ type: 'addNarration', id, ...slot })
-                    dispatch({ type: 'select', selection: { kind: 'text', id } })
-                  }
+            // Until T764 splits it per item, the selected block opens the existing properties in a
+            // sheet; selection alone opens nothing and never suspends the preview (CLIP-53).
+            details={
+              <Button variant="secondary" onClick={() => setDetailsOpen(true)}>
+                {t('sceneBlocks.details')}
+              </Button>
             }
-            localSources={localSources}
-            notices={notices}
           />
+          {!readOnly && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="secondary"
+                disabled={disabled || !captionSlot}
+                onClick={() => {
+                  if (!captionSlot) return
+                  // A local identity until the save returns the server-minted one.
+                  const id = `new-caption-${Date.now()}`
+                  setDetailsOpen(true)
+                  change({ type: 'addNarration', id, ...captionSlot })
+                  dispatch({ type: 'select', selection: { kind: 'text', id } })
+                }}
+              >
+                {t('timeline.addCaption')}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={disabled || !slots.addDubbing}
+                onClick={slots.addDubbing}
+              >
+                {t('timeline.addDubbing')}
+              </Button>
+              {!captionSlot && (
+                <Typography variant="meta">{t('timeline.captionUnavailable')}</Typography>
+              )}
+            </div>
+          )}
           {!readOnly && draft.narration && (
             <div className="space-y-2">
               <Button
@@ -627,17 +648,6 @@ export function ClipCorrectionWorkspace({
             cuts={draft.cuts}
             withTargets
           />
-          {!readOnly && (
-            <Slider
-              ariaLabel={t('preview.outputTime')}
-              min={0}
-              max={Math.max(1, Number.isFinite(draft.durationMs) ? draft.durationMs : 1)}
-              step={CLIP_DRAFT_PREVIEW.frameToleranceMs}
-              value={timeline.timeMs}
-              valueText={`${clipSeconds(timeline.timeMs)} / ${clipSeconds(draft.durationMs)} s`}
-              onChange={(ms) => seek(snapClipTime(ms))}
-            />
-          )}
           {!correction.validation?.valid && (
             <FieldMessage>
               {t(
@@ -682,39 +692,7 @@ export function ClipCorrectionWorkspace({
             </FieldMessage>
           )}
           {comparison}
-          {!desktop && selected && (
-            <div
-              className="flex min-w-0 flex-wrap items-center gap-2"
-              aria-label={t('timeline.contextTools')}
-            >
-              <Typography variant="meta" className="min-w-0 flex-1 truncate">
-                {itemTitle}
-              </Typography>
-              <Button variant="secondary" onClick={() => setDetailsOpen(true)}>
-                {t('timeline.details')}
-              </Button>
-            </div>
-          )}
         </div>
-        {desktop && (
-          <aside
-            className="min-w-0 space-y-4"
-            aria-label={t('timeline.properties')}
-            data-clip-item-properties
-          >
-            <Typography variant="fieldTitle">
-              {selected ? itemTitle : t('timeline.properties')}
-            </Typography>
-            {selected ? (
-              itemProperties
-            ) : (
-              <Typography variant="body" className="text-content-secondary">
-                {t('timeline.selectItem')}
-              </Typography>
-            )}
-            {itemActions}
-          </aside>
-        )}
       </div>
       <div ref={actions} className="contents">
         {!readOnly && (

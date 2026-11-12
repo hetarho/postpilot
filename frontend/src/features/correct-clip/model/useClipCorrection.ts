@@ -1,4 +1,4 @@
-import { splitAtOutput, type SourceBounds } from './timeline-gesture'
+import { splitAtOutput, type SourceBounds } from './scene-blocks'
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import {

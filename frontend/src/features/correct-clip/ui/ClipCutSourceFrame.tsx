@@ -16,8 +16,12 @@ export function ClipCutSourceFrame({
   cut,
   localSources,
   resolvePlayback,
+  still = false,
 }: {
   cut: ClipEditCut
+  /** A scene block's frame (CLIP-17): the cut's first frame, held still with no controls, named
+   *  by the block it heads rather than by itself. */
+  still?: boolean
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
 }) {
@@ -46,11 +50,19 @@ export function ClipCutSourceFrame({
       // Keyed by the FOOTAGE, not by the range: re-mounting on every keystroke
       // of a trim would take the frame away while it is being typed.
       key={url}
-      controls
+      controls={!still}
+      muted={still}
+      playsInline
       preload="metadata"
       src={url}
-      aria-label={t('correction.sourcePreview')}
-      className="aspect-video w-full rounded-md"
+      aria-label={still ? undefined : t('correction.sourcePreview')}
+      aria-hidden={still || undefined}
+      tabIndex={still ? -1 : undefined}
+      className={
+        still
+          ? 'aspect-video w-24 shrink-0 rounded-sm object-cover'
+          : 'aspect-video w-full rounded-md'
+      }
       onLoadedMetadata={(event) => {
         event.currentTarget.currentTime = Number.isFinite(cut.startMs)
           ? Math.max(0, cut.startMs / 1000)

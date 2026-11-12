@@ -153,7 +153,13 @@ function regionSafeEditing() {
   first.endMs = first.resolvedEndMs = 6360
   return editing
 }
-const block = (name: '인트로' | '아웃트로') => within(screen.getByRole('region', { name }))
+// The storyline space and ②'s scene list both hold the region blocks (CLIP-17, CLIP-188); these
+// helpers read the storyline's copy while it is open and the scene list's otherwise.
+const storyline = () =>
+  within(screen.queryByRole('region', { name: '스토리라인' }) ?? document.body)
+const block = (name: '인트로' | '아웃트로') => within(storyline().getByRole('region', { name }))
+const sceneBlock = (name: '인트로' | '아웃트로') =>
+  within(within(screen.getByRole('region', { name: '장면 블록' })).getByRole('region', { name }))
 const line = (name: '인트로' | '아웃트로', n: number) =>
   within(block(name).getAllByRole('listitem')[n - 1])
 /** What the region writes asked for, folded per slot into its latest fields. */
@@ -543,7 +549,9 @@ it('writes the slots on ② before any template, storyline or plan', async () =>
   // The renderer's own numbered drawing of the chosen preset, as ① shows it (CLIP-165).
   await waitFor(() =>
     expect(
-      screen.getByRole('region', { name: '인트로' }).querySelector('svg [data-preset="intro-a"]'),
+      storyline()
+        .getByRole('region', { name: '인트로' })
+        .querySelector('svg [data-preset="intro-a"]'),
     ).toHaveTextContent('슬롯 1'),
   )
   expect(block('아웃트로').getByText('사용 안 함')).toBeVisible()
@@ -826,11 +834,10 @@ it('lands a delayed slot save before the correction and the render it precedes',
 
   await userEvent.click(heading())
   await userEvent.click(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' }))
-  await userEvent.click(
-    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: 'caption a' }),
+  fireEvent.change(
+    within(screen.getByRole('region', { name: '장면 블록' })).getByDisplayValue('caption a'),
+    { target: { value: '렌더 직전 수정' } },
   )
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
-  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: '렌더 직전 수정' } })
   await userEvent.click(screen.getByRole('button', { name: RENDER }))
   await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
 
@@ -873,9 +880,9 @@ it('shares one set of region words between the storyline block and the correctio
   await userEvent.click(heading())
   // The space reads 인트로 → body → 아웃트로 (CLIP-179).
   const [intro, body, outro] = [
-    screen.getByRole('region', { name: '인트로' }),
+    storyline().getByRole('region', { name: '인트로' }),
     screen.getByRole('listitem', { name: '1번째 문단' }),
-    screen.getByRole('region', { name: '아웃트로' }),
+    storyline().getByRole('region', { name: '아웃트로' }),
   ]
   expect(intro.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(body.compareDocumentPosition(outro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
@@ -894,12 +901,12 @@ it('shares one set of region words between the storyline block and the correctio
   // The words went as the plan's row, not as a second copy in a region edit.
   expect(sent(regionWrites, 'intro')).toEqual({})
 
-  await userEvent.click(
-    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: /성수 로컬/ }),
-  )
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
-  expect(screen.getByLabelText('문구 2행')).toHaveValue('저녁 영업')
-  fireEvent.change(screen.getByLabelText('문구 1행'), { target: { value: '성수 로컬 가이드' } })
+  // The scene list's intro block is the same region editor, not a second copy (CLIP-17).
+  const sceneLine = (n: number) => within(sceneBlock('인트로').getAllByRole('listitem')[n - 1])
+  expect(sceneLine(2).getByLabelText('2번째 줄 문구')).toHaveValue('저녁 영업')
+  fireEvent.change(sceneLine(1).getByLabelText('1번째 줄 문구'), {
+    target: { value: '성수 로컬 가이드' },
+  })
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('성수 로컬 가이드')
   await waitFor(
     () =>
@@ -945,11 +952,11 @@ function rendered(): FakeClipProject {
   return project
 }
 async function editCaption(text: string) {
-  await userEvent.click(
-    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: 'caption a' }),
+  // A caption's words are edited in place in the block it starts in (CLIP-17).
+  fireEvent.change(
+    within(screen.getByRole('region', { name: '장면 블록' })).getByDisplayValue('caption a'),
+    { target: { value: text } },
   )
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
-  fireEvent.change(screen.getByLabelText('자막 원문'), { target: { value: text } })
 }
 async function renderOnServer() {
   await userEvent.click(screen.getByRole('button', { name: RENDER }))
@@ -986,7 +993,9 @@ it('launches no render past a slot save that fails, keeping both edits', async (
   await new Promise((resolve) => setTimeout(resolve, 300))
   expect(calls).not.toContain('StartClipRender')
   expect(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' })).toBeChecked()
-  expect(screen.getByLabelText('자막 원문')).toHaveValue('렌더 직전 수정')
+  expect(
+    within(screen.getByRole('region', { name: '장면 블록' })).getByDisplayValue('렌더 직전 수정'),
+  ).toBeInTheDocument()
 })
 
 // A correction the server refuses as a conflict stops the render too, and says so.
@@ -1000,7 +1009,9 @@ it('launches no render past a correction save the server refuses as a conflict',
   await waitFor(() => expect(calls).toContain('SaveClipEditPlan'), AUTOSAVE)
   expect(await screen.findByText(/저장된 수정본이 변경되었어요/)).toBeInTheDocument()
   expect(calls).not.toContain('StartClipRender')
-  expect(screen.getByLabelText('자막 원문')).toHaveValue('충돌하는 수정')
+  expect(
+    within(screen.getByRole('region', { name: '장면 블록' })).getByDisplayValue('충돌하는 수정'),
+  ).toBeInTheDocument()
 })
 
 // CDS-64, CLIP-188: words a slot cannot draw stay in the field and hold every committing
@@ -1026,10 +1037,9 @@ it('holds the render while a slot holds words it cannot draw', async () => {
   expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
   await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
   expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
-  // The route lands keyboard focus in the storyline editor it opened, not on the page body.
-  await waitFor(() => expect(document.activeElement).not.toBe(document.body))
-  expect(screen.getByRole('dialog', { name: '스토리라인' }).contains(document.activeElement)).toBe(
-    true,
+  // The route lands keyboard focus on the slot holding the words, not on the page body.
+  await waitFor(() =>
+    expect(document.activeElement).toBe(line('인트로', 1).getByLabelText('1번째 줄 문구')),
   )
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('갂')
   expect(calls).not.toContain('StartClipGeneration')

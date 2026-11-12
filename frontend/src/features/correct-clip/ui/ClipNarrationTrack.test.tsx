@@ -1,32 +1,9 @@
-import userEvent from '@testing-library/user-event'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { clipNarrationFixture } from '@/test/clip-editing'
-import { ClipTimeline } from './ClipTimeline'
 import { ClipTextControls } from './ClipTextControls'
 
 afterEach(cleanup)
-
-it('shows the narration in its own lane and adds a caption at the playhead', async () => {
-  const plan = clipNarrationFixture().plan
-  const onAddCaption = vi.fn()
-  render(
-    <ClipTimeline
-      plan={plan}
-      timeMs={6000}
-      onSelect={vi.fn()}
-      onAddCaption={onAddCaption}
-      localSources={[]}
-    />,
-  )
-  const track = screen.getByRole('list', { name: '자막 트랙' })
-  const bars = within(track).getAllByRole('button')
-  expect(bars.map((bar) => bar.textContent)).toEqual(['첫 자막', '컷을 건너가는 자막'])
-  // The caption that crosses the cut boundary is one bar on the output timeline.
-  expect(bars[1].closest('li')).toHaveStyle({ left: '40.4040404040404%' })
-  await userEvent.click(screen.getByRole('button', { name: '이 지점에 자막 추가' }))
-  expect(onAddCaption).toHaveBeenCalledWith({ startMs: 6000, endMs: 8000 })
-})
 
 it('offers a narration caption its own text and absolute times, and no placement', async () => {
   const plan = clipNarrationFixture().plan

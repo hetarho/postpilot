@@ -185,11 +185,11 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
     },
   )
   await userEvent.click(
-    within(screen.getByLabelText('편집 타임라인')).getByRole('button', {
+    within(screen.getByRole('region', { name: '장면 블록' })).getByRole('button', {
       name: /컷 1/,
     }),
   )
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
+  await userEvent.click(screen.getByRole('button', { name: '세부' }))
   expect(screen.getByRole('button', { name: '컷 삭제' })).toBeEnabled()
   await userEvent.keyboard('{Escape}')
   {
@@ -212,8 +212,8 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   // ② is still the screen: its step bar, its timeline and its preview stay, and
   // no focused job view took over.
   expect(screen.getByRole('tab', { name: '수정' })).toBeInTheDocument()
-  expect(screen.getByLabelText('편집 타임라인')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
+  expect(screen.getByRole('region', { name: '장면 블록' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '세부' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
 })
 
@@ -293,6 +293,6 @@ it('keeps an upload-text job beside the plan with its own cancel action', async 
   await mount({ projects: [{ ...fixture(), latestJob }] }, { jobs: [latestJob] })
   expect(await screen.findByRole('button', { name: '문구 작성 취소' })).toBeEnabled()
   expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByLabelText('편집 타임라인')).toBeVisible()
+  expect(screen.getByRole('region', { name: '장면 블록' })).toBeVisible()
   expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
 })

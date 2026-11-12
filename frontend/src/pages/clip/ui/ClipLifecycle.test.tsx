@@ -41,9 +41,9 @@ const confirm = () => screen.findByRole('button', { name: '확정하기' })
 // Item selection retains the preview; the phone opens details explicitly.
 const selectCut = async () => {
   await userEvent.click(
-    within(screen.getByLabelText('편집 타임라인')).getByRole('button', { name: '컷 1' }),
+    within(screen.getByRole('region', { name: '장면 블록' })).getByRole('button', { name: '컷 1' }),
   )
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
+  await userEvent.click(screen.getByRole('button', { name: '세부' }))
 }
 
 it('downloads without confirming, guards the result tab and confirms only once on double click', async () => {
@@ -68,7 +68,7 @@ it('downloads without confirming, guards the result tab and confirms only once o
   )
   expect(screen.getByLabelText('클립 미리보기')).toHaveAttribute('src', project().result!.viewUrl)
   expect(screen.getByRole('link', { name: '영상 다운로드' })).toBeVisible()
-  expect(screen.queryByLabelText('편집 타임라인')).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: '장면 블록' })).not.toBeInTheDocument()
   expect(calls.filter((c) => c === 'FinalizeClipProject')).toHaveLength(1)
 })
 
@@ -162,7 +162,7 @@ it.each(['ko', 'en'] as const)(
     )
     const cancel = await screen.findByRole('button', { name: lang === 'ko' ? '취소' : 'Cancel' })
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('편집 타임라인')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: '장면 블록' })).not.toBeInTheDocument()
     expect(screen.getAllByRole('progressbar')).toHaveLength(1)
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
     expect(

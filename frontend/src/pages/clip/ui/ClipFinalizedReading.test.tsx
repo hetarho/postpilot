@@ -79,9 +79,9 @@ it('plays the confirmed result in ② and opens a caption as values', async () =
     expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
   expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
 
-  const timeline = within(screen.getByLabelText('편집 타임라인'))
-  await userEvent.click(timeline.getByRole('button', { name: 'caption a' }))
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
+  const timeline = within(screen.getByRole('region', { name: '장면 블록' }))
+  await userEvent.click(timeline.getByDisplayValue('caption a'))
+  await userEvent.click(screen.getByRole('button', { name: '세부' }))
   const sheet = within(await screen.findByRole('dialog', { name: '선택한 문구' }))
   expect(sheet.getByText('caption a')).toBeVisible()
   expect(sheet.getByText('자막 속도')).toBeVisible()
@@ -90,7 +90,7 @@ it('plays the confirmed result in ② and opens a caption as values', async () =
   await userEvent.keyboard('{Escape}')
 
   await userEvent.click(timeline.getByRole('button', { name: '컷 1' }))
-  await userEvent.click(screen.getByRole('button', { name: '상세 편집' }))
+  await userEvent.click(screen.getByRole('button', { name: '세부' }))
   const cutSheet = within(await screen.findByRole('dialog'))
   expect(cutSheet.getByText('원본 구간')).toBeVisible()
   expect(cutSheet.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()

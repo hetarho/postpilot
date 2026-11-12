@@ -127,7 +127,7 @@ export function ClipWorkspace({
       ? 'unrendered'
       : 'clean'
   // Shared reference content: ① keeps it in flow; ② mounts only the chosen tab.
-  const [editorPanel, setEditorPanel] = useState<'storyline' | 'script'>()
+  const [editorPanel, setEditorPanel] = useState<'script'>()
   // Tools and lifecycle panels can unmount the composer; the keyed owner/project workspace
   // retains its unsent words while quote and approval state stay inside the feature.
   const [storylineRequest, setStorylineRequest] = useState('')
@@ -316,9 +316,18 @@ export function ClipWorkspace({
                       }
                     : regions.invalid
                       ? {
+                          // ② shows the regions in its storyline space and as the scene list's
+                          // first and last blocks, each slot carrying its own error (CLIP-17).
                           retry: () => {
-                            setEditorPanel('storyline')
                             setStep('refine')
+                            // Land on the first slot holding words it cannot draw.
+                            requestAnimationFrame(() =>
+                              document
+                                .querySelector<HTMLElement>(
+                                  '[data-clip-regions] [aria-invalid="true"]',
+                                )
+                                ?.focus(),
+                            )
                           },
                           label: t('guide.regionRefusal'),
                         }
@@ -471,7 +480,7 @@ export function ClipWorkspace({
       <ClipStorylineSpace
         ownerId={ownerId}
         project={project}
-        hasPlan={!!plan && editorPanel !== 'storyline'}
+        hasPlan={!!plan}
         readOnly={reading || generation.busy}
         sourceFiles={upload.readyBatch?.sources.map((s) => ({
           id: s.id,
@@ -547,6 +556,8 @@ export function ClipWorkspace({
 
   const refinePanel = plan ? (
     <>
+      {/* ② stands its storyline space first, closed once there is a plan (CLIP-53, CLIP-179). */}
+      {storylineSpace}
       <ClipCorrectionWorkspace
         project={{
           id: project.id,
@@ -689,11 +700,6 @@ export function ClipWorkspace({
             ) : undefined,
           tools: (
             <>
-              {storylineSpace && (
-                <Button variant="ghost" onClick={() => setEditorPanel('storyline')}>
-                  {t('editorEntries.storyline')}
-                </Button>
-              )}
               <Button variant="ghost" onClick={() => setEditorPanel('script')}>
                 {t('editorEntries.script')}
               </Button>
@@ -713,6 +719,8 @@ export function ClipWorkspace({
               />
             ),
           referenceAction,
+          intro: regions.regions ? regionBlock('intro') : undefined,
+          outro: regions.regions ? regionBlock('outro') : undefined,
         }}
       />
       <Sheet
@@ -721,28 +729,24 @@ export function ClipWorkspace({
         onClose={() => setEditorPanel(undefined)}
         header={
           <Typography id="clip-workspace-tool-title" variant="fieldTitle">
-            {t(editorPanel === 'storyline' ? 'editorEntries.storyline' : 'editorEntries.script')}
+            {t('editorEntries.script')}
           </Typography>
         }
       >
-        {editorPanel === 'storyline' ? (
-          storylineSpace
-        ) : (
-          <ClipDubbingEditor
-            ownerId={ownerId}
-            project={project}
-            plan={correction.draft}
-            state={plan}
-            revision={correction.revision}
-            disabled={pending || reading}
-            change={correction.change}
-            flush={() => flushAll(true)}
-            onSelect={(segment) => {
-              correction.dispatch({ type: 'select', selection: { kind: 'spoken', id: segment.id } })
-              setEditorPanel(undefined)
-            }}
-          />
-        )}
+        <ClipDubbingEditor
+          ownerId={ownerId}
+          project={project}
+          plan={correction.draft}
+          state={plan}
+          revision={correction.revision}
+          disabled={pending || reading}
+          change={correction.change}
+          flush={() => flushAll(true)}
+          onSelect={(segment) => {
+            correction.dispatch({ type: 'select', selection: { kind: 'spoken', id: segment.id } })
+            setEditorPanel(undefined)
+          }}
+        />
       </Sheet>
       {uploadText}
     </>
