@@ -13,6 +13,7 @@ import {
 import {
   Button,
   Dialog,
+  FieldCount,
   FieldLabel,
   FieldMessage,
   SegmentedControl,
@@ -136,15 +137,7 @@ export function SaveAsGuidelineButton({
           aria-describedby={`${countId}${showCreateError ? ` ${errorId}` : ''}`}
           className="mt-1"
         />
-        {exceeded ? (
-          <FieldMessage id={countId} role="status" className="mt-2">
-            {t('count.exceeded', { ns: 'common', count: -left })}
-          </FieldMessage>
-        ) : (
-          <Typography variant="meta" as="p" id={countId} className="mt-2">
-            {t('count.remaining', { ns: 'common', count: left })}
-          </Typography>
-        )}
+        <FieldCount id={countId} left={left} />
         {/* Only two options and only when the post has a template — the whole directory belongs on
             /guidelines, not in a dialog opened mid-revision. */}
         {template && (

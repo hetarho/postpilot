@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T19:40:45.087Z",
-  "sourceCommit": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
+  "snapshotAt": "2026-11-12T19:55:17.423Z",
+  "sourceCommit": "a7b319da0f30567ffc1783179d1e984191250e06",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -26,23 +26,14 @@
   },
   "summary": {
     "total": 7,
-    "completed": 6,
-    "remaining": 1,
+    "completed": 7,
+    "remaining": 0,
     "running": 0,
     "review": 0,
     "blocked": 0,
-    "unassigned": 1
+    "unassigned": 0
   },
-  "tasks": [
-    {
-      "id": "T774",
-      "title": "Replace duplicated field counters with FieldCount",
-      "dep": [
-        "T773"
-      ],
-      "status": "todo"
-    }
-  ],
+  "tasks": [],
   "attempts": [
     {
       "id": "4aaa23a8-a477-4646-9041-bf5eff1fcb04",
@@ -370,6 +361,8 @@
       "submittedBase": "1a0dee6374a033a4d1f1ffbcdbb1e364a09bdcff",
       "submissionId": "77c39b1f-5a7c-4df7-8bcb-81a94cc70871",
       "submittedAt": "2026-11-12T19:38:27.847Z",
+      "integratedCommit": "ceab4d4a3ecd0ba60b53e17014d93a9b3db0494e",
+      "integratedAt": "2026-11-12T19:41:15.980Z",
       "risk": null,
       "review": {
         "id": "5d7204a4-47c4-4060-80eb-09354d874321",
@@ -389,6 +382,57 @@
           "taskId": "T779",
           "commit": "c66d2bb493b9fbccb7e82a9f25f528e44d19e85b",
           "at": "2026-11-12T19:38:27.837Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T19:40:45.540Z",
+          "finishedAt": "2026-11-12T19:41:15.798Z"
+        }
+      ]
+    },
+    {
+      "id": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "group": "si8-261113",
+      "taskId": "T774",
+      "tasks": [
+        "T774"
+      ],
+      "lane": null,
+      "owner": "si8-fieldcount-worker",
+      "contributors": [
+        "si8-fieldcount-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T19:42:04.103Z",
+      "startCommit": "a7b319da0f30567ffc1783179d1e984191250e06",
+      "verifiedCommit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+      "submittedBase": "a7b319da0f30567ffc1783179d1e984191250e06",
+      "submissionId": "b1d1a451-a351-402a-a806-aff365e76937",
+      "submittedAt": "2026-11-12T19:48:50.477Z",
+      "risk": null,
+      "review": {
+        "id": "f1583c79-3b57-48f7-b580-03ff3535bad8",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T774 exact submission d0a58c6b76bc0071534d293b212b4ff11dcd67d1 reviewed against base a7b319da0f30567ffc1783179d1e984191250e06. Entire eight-production-file and new-test delta preserves all seven equivalent counters: domain-specific trimmed Unicode scalar calculations and limits remain in owners; shared rendering uses identical common translation keys/counts, negative-only status announcement, Typography/FieldMessage elements, optional IDs in both branches and exact nullish className fallback including empty overrides. Existing aria-describedby/invalid/disabled, draft/error/mutation behavior and exceeded-only counters remain unchanged. Direct-user scan and recorded 97-file/857-test selection cover all shared primitive users and required domain pages/revision consumers. Meaningful original-source RED4/GREEN10 plus exact checked-tree fast verification are confirmed from raw logs/runtime records. Independently verified eight base/current source hashes and complete production reduction of42 lines/2730 UTF8 bytes. Final source/tests match f7ffbca0; only own acceptance/result metadata follows and normalized task contract is unchanged. No remaining P1/P2 findings. Coordinator final full CI/integration gates remain required; no native screen-reader/device qualification claimed.",
+        "findings": [],
+        "commit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+        "baseCommit": "a7b319da0f30567ffc1783179d1e984191250e06",
+        "submissionId": "b1d1a451-a351-402a-a806-aff365e76937",
+        "createdAt": "2026-11-12T19:49:37.492Z",
+        "finishedAt": "2026-11-12T19:55:04.018Z"
+      },
+      "steps": [
+        {
+          "taskId": "T774",
+          "commit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+          "at": "2026-11-12T19:48:50.466Z",
           "verification": []
         }
       ],
@@ -1821,6 +1865,181 @@
       "group": "si8-261113",
       "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
       "taskId": "T779",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 76,
+      "at": "2026-11-12T19:41:15.929Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T19:40:45.540Z",
+            "finishedAt": "2026-11-12T19:41:15.798Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 77,
+      "at": "2026-11-12T19:41:15.980Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d31c4f22-d361-4048-b64c-9cf42edb241e",
+      "taskId": "T779",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "ceab4d4a3ecd0ba60b53e17014d93a9b3db0494e",
+        "integratedAt": "2026-11-12T19:41:15.980Z"
+      }
+    },
+    {
+      "sequence": 78,
+      "at": "2026-11-12T19:42:04.103Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+        "group": "si8-261113",
+        "taskId": "T774",
+        "tasks": [
+          "T774"
+        ],
+        "lane": null,
+        "owner": "si8-fieldcount-worker",
+        "contributors": [
+          "si8-fieldcount-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T19:42:04.103Z",
+        "startCommit": "a7b319da0f30567ffc1783179d1e984191250e06"
+      }
+    },
+    {
+      "sequence": 79,
+      "at": "2026-11-12T19:42:04.970Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 80,
+      "at": "2026-11-12T19:48:50.314Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 81,
+      "at": "2026-11-12T19:48:50.477Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+        "submittedBase": "a7b319da0f30567ffc1783179d1e984191250e06",
+        "submissionId": "b1d1a451-a351-402a-a806-aff365e76937",
+        "submittedAt": "2026-11-12T19:48:50.477Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T774",
+            "commit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+            "at": "2026-11-12T19:48:50.466Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 82,
+      "at": "2026-11-12T19:49:37.492Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "f1583c79-3b57-48f7-b580-03ff3535bad8",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+          "baseCommit": "a7b319da0f30567ffc1783179d1e984191250e06",
+          "submissionId": "b1d1a451-a351-402a-a806-aff365e76937",
+          "createdAt": "2026-11-12T19:49:37.492Z"
+        }
+      }
+    },
+    {
+      "sequence": 83,
+      "at": "2026-11-12T19:55:04.018Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "f1583c79-3b57-48f7-b580-03ff3535bad8",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T774 exact submission d0a58c6b76bc0071534d293b212b4ff11dcd67d1 reviewed against base a7b319da0f30567ffc1783179d1e984191250e06. Entire eight-production-file and new-test delta preserves all seven equivalent counters: domain-specific trimmed Unicode scalar calculations and limits remain in owners; shared rendering uses identical common translation keys/counts, negative-only status announcement, Typography/FieldMessage elements, optional IDs in both branches and exact nullish className fallback including empty overrides. Existing aria-describedby/invalid/disabled, draft/error/mutation behavior and exceeded-only counters remain unchanged. Direct-user scan and recorded 97-file/857-test selection cover all shared primitive users and required domain pages/revision consumers. Meaningful original-source RED4/GREEN10 plus exact checked-tree fast verification are confirmed from raw logs/runtime records. Independently verified eight base/current source hashes and complete production reduction of42 lines/2730 UTF8 bytes. Final source/tests match f7ffbca0; only own acceptance/result metadata follows and normalized task contract is unchanged. No remaining P1/P2 findings. Coordinator final full CI/integration gates remain required; no native screen-reader/device qualification claimed.",
+          "findings": [],
+          "commit": "d0a58c6b76bc0071534d293b212b4ff11dcd67d1",
+          "baseCommit": "a7b319da0f30567ffc1783179d1e984191250e06",
+          "submissionId": "b1d1a451-a351-402a-a806-aff365e76937",
+          "createdAt": "2026-11-12T19:49:37.492Z",
+          "finishedAt": "2026-11-12T19:55:04.018Z"
+        }
+      }
+    },
+    {
+      "sequence": 84,
+      "at": "2026-11-12T19:55:16.149Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "3ef92f54-d85b-4cbf-b448-3a23730682d1",
+      "taskId": "T774",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {

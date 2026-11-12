@@ -313,9 +313,11 @@ function Composition({
 
       {/* The text is what the server bounds, so the count is over the text and not over the rows:
           an incomplete row contributes none of it yet. */}
-      <BodyCount
-        value={value}
-        max={area === 'title_area' ? TEMPLATE_LIMITS.titleArea : TEMPLATE_LIMITS.body}
+      <FieldCount
+        left={remainingChars(
+          value,
+          area === 'title_area' ? TEMPLATE_LIMITS.titleArea : TEMPLATE_LIMITS.body,
+        )}
       />
     </div>
   )
@@ -807,19 +809,5 @@ function Field({
       )}
       {max !== undefined && <FieldCount left={remainingChars(value, max)} />}
     </div>
-  )
-}
-
-function BodyCount({ value, max }: { value: string; max: number }) {
-  const { t } = useTranslation('common')
-  const left = remainingChars(value, max)
-  return left < 0 ? (
-    <FieldMessage role="status" className="mt-2">
-      {t('count.exceeded', { count: -left })}
-    </FieldMessage>
-  ) : (
-    <Typography variant="meta" as="p" className="mt-2">
-      {t('count.remaining', { count: left })}
-    </Typography>
   )
 }

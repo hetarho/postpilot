@@ -212,7 +212,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
 | T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
@@ -224,12 +223,13 @@
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
-| si8-261113 | 1 | 7 | 6 | 1 | 0 | 0 | 0 | 2026-11-12T19:40:45.087Z | [history](work/si8-261113.json) |
+| si8-261113 | 1 | 7 | 7 | 0 | 0 | 0 | 0 | 2026-11-12T19:55:17.423Z | [history](work/si8-261113.json) |
 
 ## next
 - inspect work board for remaining tasks
 
 ## log
+- 261112 T774 integrated
 - 261112 T779 integrated
 - 261112 T781 integrated
 - 261112 T780 integrated
@@ -249,4 +249,3 @@
 - 261112 T773 integrated
 - 261112 T771 done
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
-- 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
