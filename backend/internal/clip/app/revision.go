@@ -20,7 +20,8 @@ import (
 // Version 3 freezes advertiser material; earlier accepted jobs retain none.
 // Version 4 freezes the linked post text; earlier accepted jobs retain none.
 // Version 5 freezes linked photo metadata and capture-neighbor hints.
-const revisionPayloadVersion = 5
+// Version 6 freezes the selected scene; an earlier accepted job asked about the whole clip.
+const revisionPayloadVersion = 6
 
 type revisionJobPayload struct {
 	LinkedPost               *clip.LinkedPostText  `json:",omitempty"`
@@ -29,6 +30,7 @@ type revisionJobPayload struct {
 	ProjectID, Write         string
 	Revision                 int
 	Request, Target          string
+	ScopeCut                 int `json:",omitempty"`
 	PlanJSON                 string
 	Language                 string
 	Composition              *clip.ProjectComposition
@@ -52,7 +54,8 @@ func (p revisionJobPayload) Design() clip.ProjectDesign {
 
 // revisionPricing prices exactly the writing calls the target needs: one for a
 // narration request, two where the footage is rewritten and the narration
-// follows it. No observation is repaid — the recorded ones are the evidence
+// follows it. Auto is approved at two, the most it may need, and settles only
+// the calls it ran (CLIP-132, QUOTA-46). No observation is repaid — the recorded ones are the evidence
 // this rewrite is bound to (CLIP-93, CLIP-131).
 func (s *GenerationService) revisionPricing(ctx context.Context, write, observe string, target string, guidelines clip.VideoGuidelines, linked *clip.LinkedPostText) (clip.GenerationPricing, error) {
 	if s.pricing == nil {
@@ -72,7 +75,7 @@ func (s *GenerationService) revisionPricing(ctx context.Context, write, observe 
 	return pricing, nil
 }
 
-func (s *GenerationService) revisionInputs(ctx context.Context, user, id, request, target string) (clip.Project, clip.SourceBatch, error) {
+func (s *GenerationService) revisionInputs(ctx context.Context, user, id, request, target string, scopeCut int) (clip.Project, clip.SourceBatch, error) {
 	if !clip.ValidRevisionTarget(target) || strings.TrimSpace(request) == "" || !clip.BoundedText(request, 1, s.projects.limits.InstructionChars) {
 		return clip.Project{}, clip.SourceBatch{}, clip.ErrInvalid
 	}
@@ -102,6 +105,9 @@ func (s *GenerationService) revisionInputs(ctx context.Context, user, id, reques
 	if plan.Portable == nil {
 		return clip.Project{}, clip.SourceBatch{}, clip.ErrCompositionUnavailable
 	}
+	if !clip.ValidRevisionScope(scopeCut, plan) {
+		return clip.Project{}, clip.SourceBatch{}, clip.ErrInvalid
+	}
 	// The batch is the project's own current one: a revision is about the plan,
 	// and the batch is here only to renew the originals' retention and to state
 	// the owner's sound choice (CLIP-73, CLIP-100).
@@ -123,7 +129,7 @@ func (s *GenerationService) revisionInputs(ctx context.Context, user, id, reques
 }
 
 // QuoteRevision prices one revision of the plan the owner is looking at.
-func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request, target, observe, write string) (clip.GenerationQuote, error) {
+func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request, target string, scopeCut int, observe, write string) (clip.GenerationQuote, error) {
 	// One clip job at a time, answered before anything else: a batch held by a
 	// running job would otherwise refuse as an unavailable source (CLIP-79).
 	active, err := s.jobs.Active(ctx, user, id)
@@ -133,7 +139,7 @@ func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request
 	if active != nil {
 		return clip.GenerationQuote{}, clip.ErrBusy
 	}
-	p, b, err := s.revisionInputs(ctx, user, id, request, target)
+	p, b, err := s.revisionInputs(ctx, user, id, request, target, scopeCut)
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -160,7 +166,7 @@ func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request
 	if b.ExpiresAt.Before(expires) {
 		expires = b.ExpiresAt
 	}
-	q := clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, BatchID: b.ID, InputDigest: clip.RevisionInputDigest(p, request, target, write, pricing), Pricing: pricing, ExpiresAt: expires}
+	q := clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, BatchID: b.ID, InputDigest: clip.RevisionInputDigest(p, request, target, scopeCut, write, pricing), Pricing: pricing, ExpiresAt: expires}
 	if err := store.SaveRevisionQuote(ctx, q, now); err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -168,7 +174,7 @@ func (s *GenerationService) QuoteRevision(ctx context.Context, user, id, request
 }
 
 // StartRevision accepts one approved revision and enqueues it.
-func (s *GenerationService) StartRevision(ctx context.Context, user, id, request, target, observe, write string, approval clip.QuoteApproval) (string, error) {
+func (s *GenerationService) StartRevision(ctx context.Context, user, id, request, target string, scopeCut int, observe, write string, approval clip.QuoteApproval) (string, error) {
 	if approval.QuoteID == "" || approval.MaxCredits == nil || *approval.MaxCredits < 0 {
 		return "", clip.ErrQuoteRequired
 	}
@@ -189,7 +195,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	if !s.now().Before(q.ExpiresAt) {
 		return "", clip.ErrQuoteExpired
 	}
-	p, b, err := s.revisionInputs(ctx, user, id, request, target)
+	p, b, err := s.revisionInputs(ctx, user, id, request, target, scopeCut)
 	if err != nil {
 		return "", err
 	}
@@ -203,7 +209,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 		return "", err
 	}
 	if q.ProjectID != id || q.BatchID != b.ID || q.Pricing.MaxCredits != *approval.MaxCredits ||
-		!reflect.DeepEqual(q.Pricing, pricing) || q.InputDigest != clip.RevisionInputDigest(p, request, target, write, pricing) {
+		!reflect.DeepEqual(q.Pricing, pricing) || q.InputDigest != clip.RevisionInputDigest(p, request, target, scopeCut, write, pricing) {
 		return "", clip.ErrQuoteChanged
 	}
 	// The template's recipe rides the payload the way a generation freezes it:
@@ -214,7 +220,7 @@ func (s *GenerationService) StartRevision(ctx context.Context, user, id, request
 	}
 	payload, err := json.Marshal(revisionJobPayload{LinkedPost: p.LinkedPostText, AdvertiserGuide: clip.EffectiveAdvertiserGuide(p),
 		Version: revisionPayloadVersion, ProjectID: id, Write: write, Revision: p.EditPlanRevision,
-		Request: request, Target: target, PlanJSON: p.EditPlan, Language: p.Language,
+		Request: request, Target: target, ScopeCut: scopeCut, PlanJSON: p.EditPlan, Language: p.Language,
 		Composition: p.Composition, Template: recipe,
 		Disclosure: p.Disclosure, Instruction: p.Instruction, Guidelines: guidelines,
 		CaptionPace: p.CaptionPace, Accent: p.Accent, IntroPreset: p.IntroPreset, OutroPreset: p.OutroPreset, CaptionStyles: p.CaptionStyles, HideDisclosure: p.HideDisclosure,
@@ -284,7 +290,11 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 		Policy: pricing.Plan, Disclosure: frozen.Disclosure, HideDisclosure: frozen.HideDisclosure,
 		Instruction: frozen.Instruction, Design: frozen.Design(), SourceAudio: frozen.SourceAudio,
 		Guidelines: frozen.Guidelines, Regions: &regions}
-	if err := s.validateRevisionAllowance(clip.RevisionInput{PlanningInput: in, Current: current, Request: frozen.Request, Target: frozen.Target}); err != nil {
+	if !clip.ValidRevisionScope(frozen.ScopeCut, current) {
+		return clip.ErrInvalid
+	}
+	revision := clip.RevisionInput{PlanningInput: in, Current: current, Request: frozen.Request, Target: frozen.Target, ScopeCut: frozen.ScopeCut}
+	if err := s.validateRevisionAllowance(revision); err != nil {
 		return err
 	}
 	// CLIP-19: nothing is asked of a model before the reservation succeeds.
@@ -299,7 +309,15 @@ func (s *GenerationService) RunRevision(ctx context.Context, user, job, project 
 	if progress != nil {
 		progress(stage, 0, 1)
 	}
-	next, _, err := s.planner.Revise(ctx, pricing.Plan.Ref, clip.RevisionInput{PlanningInput: in, Current: current, Request: frozen.Request, Target: frozen.Target})
+	// An auto request's first call opens on the flow stage and reports the one it
+	// chose, so a narration-only answer reads as narration (CLIP-131).
+	revision.Routed = func(chosen string) {
+		stage = chosen
+		if progress != nil {
+			progress(chosen, 0, 1)
+		}
+	}
+	next, _, err := s.planner.Revise(ctx, pricing.Plan.Ref, revision)
 	if err != nil {
 		return err
 	}

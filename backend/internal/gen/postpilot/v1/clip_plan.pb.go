@@ -571,17 +571,21 @@ func (x *ClipRegionPresetSample) GetBox() *ClipCanvasBox {
 // The owner's arrangement of this batch's footage (CLIP-136). The list is the
 // WHOLE batch: one that misses a source, repeats one or names a foreign one is
 // refused rather than applied in part.
-// One owner-written revision of the saved plan (CLIP-131). The target names
-// which document it is about; the quote binds the plan revision it was taken
-// against, so a plan saved after it is refused rather than rewritten.
+// One owner-written revision of the saved plan (CLIP-131). An empty target is
+// auto: the first writing call decides whether the footage flow changes. The
+// quote binds the plan revision it was taken against, so a plan saved after it
+// is refused rather than rewritten.
 type QuoteClipRevisionRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	Request   string                 `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
-	// flow | narration | both.
-	Target        string    `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
-	ObserveModel  *ModelRef `protobuf:"bytes,4,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
-	WriteModel    *ModelRef `protobuf:"bytes,5,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	// empty (auto) | flow | narration | both.
+	Target       string    `protobuf:"bytes,3,opt,name=target,proto3" json:"target,omitempty"`
+	ObserveModel *ModelRef `protobuf:"bytes,4,opt,name=observe_model,json=observeModel,proto3" json:"observe_model,omitempty"`
+	WriteModel   *ModelRef `protobuf:"bytes,5,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
+	// The selected scene block, 1-based in the quoted plan revision; absent for
+	// the whole clip.
+	ScopeCut      *int32 `protobuf:"varint,6,opt,name=scope_cut,json=scopeCut,proto3,oneof" json:"scope_cut,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -649,6 +653,13 @@ func (x *QuoteClipRevisionRequest) GetWriteModel() *ModelRef {
 		return x.WriteModel
 	}
 	return nil
+}
+
+func (x *QuoteClipRevisionRequest) GetScopeCut() int32 {
+	if x != nil && x.ScopeCut != nil {
+		return *x.ScopeCut
+	}
+	return 0
 }
 
 type QuoteClipRevisionResponse struct {
@@ -762,6 +773,7 @@ type StartClipRevisionRequest struct {
 	QuoteId                   string                 `protobuf:"bytes,6,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
 	ApprovedMaxCredits        *int32                 `protobuf:"varint,7,opt,name=approved_max_credits,json=approvedMaxCredits,proto3,oneof" json:"approved_max_credits,omitempty"`
 	CancellationPolicyVersion int32                  `protobuf:"varint,8,opt,name=cancellation_policy_version,json=cancellationPolicyVersion,proto3" json:"cancellation_policy_version,omitempty"`
+	ScopeCut                  *int32                 `protobuf:"varint,9,opt,name=scope_cut,json=scopeCut,proto3,oneof" json:"scope_cut,omitempty"`
 	unknownFields             protoimpl.UnknownFields
 	sizeCache                 protoimpl.SizeCache
 }
@@ -848,6 +860,13 @@ func (x *StartClipRevisionRequest) GetApprovedMaxCredits() int32 {
 func (x *StartClipRevisionRequest) GetCancellationPolicyVersion() int32 {
 	if x != nil {
 		return x.CancellationPolicyVersion
+	}
+	return 0
+}
+
+func (x *StartClipRevisionRequest) GetScopeCut() int32 {
+	if x != nil && x.ScopeCut != nil {
+		return *x.ScopeCut
 	}
 	return 0
 }
@@ -939,7 +958,7 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\x16ClipRegionPresetSample\x12\x16\n" +
 	"\x06preset\x18\x01 \x01(\tR\x06preset\x12\x10\n" +
 	"\x03svg\x18\x02 \x01(\tR\x03svg\x12-\n" +
-	"\x03box\x18\x03 \x01(\v2\x1b.postpilot.v1.ClipCanvasBoxR\x03box\"\xe1\x01\n" +
+	"\x03box\x18\x03 \x01(\v2\x1b.postpilot.v1.ClipCanvasBoxR\x03box\"\x91\x02\n" +
 	"\x18QuoteClipRevisionRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
@@ -947,7 +966,10 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\x06target\x18\x03 \x01(\tR\x06target\x12;\n" +
 	"\robserve_model\x18\x04 \x01(\v2\x16.postpilot.v1.ModelRefR\fobserveModel\x127\n" +
 	"\vwrite_model\x18\x05 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
-	"writeModel\"\xbe\x03\n" +
+	"writeModel\x12 \n" +
+	"\tscope_cut\x18\x06 \x01(\x05H\x00R\bscopeCut\x88\x01\x01B\f\n" +
+	"\n" +
+	"_scope_cut\"\xbe\x03\n" +
 	"\x19QuoteClipRevisionResponse\x12\x19\n" +
 	"\bquote_id\x18\x01 \x01(\tR\aquoteId\x12\x1f\n" +
 	"\vmax_credits\x18\x02 \x01(\x05R\n" +
@@ -959,7 +981,7 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"\x10response_retries\x18\x06 \x01(\x05R\x0fresponseRetries\x12#\n" +
 	"\rplan_revision\x18\a \x01(\x05R\fplanRevision\x12R\n" +
 	"\x11sequence_captions\x18\b \x01(\v2%.postpilot.v1.ClipSequenceCaptionCostR\x10sequenceCaptionsJ\x04\b\t\x10\n" +
-	"R\x04rate\"\x8c\x03\n" +
+	"R\x04rate\"\xbc\x03\n" +
 	"\x18StartClipRevisionRequest\x12\x1d\n" +
 	"\n" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
@@ -970,8 +992,11 @@ const file_postpilot_v1_clip_plan_proto_rawDesc = "" +
 	"writeModel\x12\x19\n" +
 	"\bquote_id\x18\x06 \x01(\tR\aquoteId\x125\n" +
 	"\x14approved_max_credits\x18\a \x01(\x05H\x00R\x12approvedMaxCredits\x88\x01\x01\x12>\n" +
-	"\x1bcancellation_policy_version\x18\b \x01(\x05R\x19cancellationPolicyVersionB\x17\n" +
-	"\x15_approved_max_credits\"2\n" +
+	"\x1bcancellation_policy_version\x18\b \x01(\x05R\x19cancellationPolicyVersion\x12 \n" +
+	"\tscope_cut\x18\t \x01(\x05H\x01R\bscopeCut\x88\x01\x01B\x17\n" +
+	"\x15_approved_max_creditsB\f\n" +
+	"\n" +
+	"_scope_cut\"2\n" +
 	"\x19StartClipRevisionResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId2\xc2\x05\n" +
 	"\x0fClipPlanService\x12c\n" +
@@ -1064,6 +1089,7 @@ func file_postpilot_v1_clip_plan_proto_init() {
 	}
 	file_postpilot_v1_clip_proto_init()
 	file_postpilot_v1_provider_proto_init()
+	file_postpilot_v1_clip_plan_proto_msgTypes[9].OneofWrappers = []any{}
 	file_postpilot_v1_clip_plan_proto_msgTypes[11].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

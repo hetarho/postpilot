@@ -281,7 +281,11 @@ func (p *plannerFake) Flow(ctx context.Context, r llm.ModelRef, in clip.Planning
 func (p *plannerFake) Revise(ctx context.Context, r llm.ModelRef, in clip.RevisionInput) (clip.EditPlan, llm.Usage, error) {
 	p.revisions = append(p.revisions, in)
 	written, usage, err := func() (clip.EditPlan, llm.Usage, error) {
-		if in.Target == clip.RevisionNarration {
+		// An auto request this fake answers as narration-only, reporting what it chose (CLIP-131).
+		if in.Target == clip.RevisionAuto && in.Routed != nil {
+			in.Routed("narrate")
+		}
+		if in.Target == clip.RevisionNarration || in.Target == clip.RevisionAuto {
 			return p.Narrate(ctx, r, clip.NarrationInput{PlanningInput: in.PlanningInput, Flow: in.Current})
 		}
 		flow, _, err := p.Flow(ctx, r, in.PlanningInput)

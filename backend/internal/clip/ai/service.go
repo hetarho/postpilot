@@ -190,6 +190,7 @@ func (s *Service) Flow(ctx context.Context, model llm.ModelRef, input clip.Plann
 // edits left it: a flow target rewrites the footage and then the narration over
 // it, because captions timed against cuts that moved are timed against nothing;
 // a narration target rewrites what is said and leaves every cut alone.
+// An auto target lets the first call decide which of the two it is.
 func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.RevisionInput) (clip.EditPlan, llm.Usage, error) {
 	if err := ctx.Err(); err != nil {
 		return clip.EditPlan{}, llm.Usage{}, err
@@ -199,12 +200,33 @@ func (s *Service) Revise(ctx context.Context, model llm.ModelRef, input clip.Rev
 		!within(input.Request, 1, s.cfg.Template.InstructionChars) {
 		return clip.EditPlan{}, llm.Usage{}, stageError("flow", clip.ErrInvalid)
 	}
+	if input.ScopeCut < 0 || input.ScopeCut > len(input.Current.Cuts) {
+		return clip.EditPlan{}, llm.Usage{}, stageError("flow", clip.ErrInvalid)
+	}
 	if input.Current.Narration != nil {
 		return s.reviseSpoken(ctx, model, input)
 	}
 	usage := llm.Usage{}
 	flow := input.Current
-	if input.Target != clip.RevisionNarration {
+	if input.Target == clip.RevisionAuto {
+		// Call 1 routes: a kept flow comes back as the finished narration revision,
+		// a changed one as the flow the narration below is written over (CLIP-132).
+		narration := clip.NarrationInput{PlanningInput: input.PlanningInput, Flow: input.Current}
+		routed, changed, spent, err := s.route(ctx, model, input, "revision-route", RevisionRouteSchema(), revisionRouteShape, func() (string, string) {
+			return buildRevisionRoutePrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input.PlanningInput))
+		}, func(raw string) (clip.EditPlan, error) { return parseNarration(s.cfg, narration, raw) })
+		usage = addUsage(usage, spent)
+		if err != nil {
+			return clip.EditPlan{}, usage, err
+		}
+		if !changed {
+			if err := validatePlan(s.cfg, input.PlanningInput, routed); err != nil {
+				return clip.EditPlan{}, usage, stageError("narrate", planFailure(err, input.PlanningInput, routed, "validation", 0))
+			}
+			return routed, usage, nil
+		}
+		flow = routed
+	} else if input.Target != clip.RevisionNarration {
 		written, spent, err := s.write(ctx, model, input.PlanningInput, "flow", "flow-revision", s.cfg.FlowCompletionTokens, RevisionFlowSchema(), func() (string, string) {
 			return buildFlowRevisionPrompt(input, s.cfg.Render.FadeMS, compositionLimits(s.cfg, input.PlanningInput))
 		}, func(raw string) (clip.EditPlan, error) { return parseFlowPlan(s.cfg, input.PlanningInput, raw, false) })

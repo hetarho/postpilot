@@ -117,13 +117,13 @@ func TestAClipRevisionBindsAndFreezesItsVideoGuidelines(t *testing.T) {
 	h.withGuidelines(source)
 	ctx := t.Context()
 
-	q, err := h.service.QuoteRevision(ctx, "alice", h.project.ID, "더 짧게", clip.RevisionNarration, "p/o", "p/w")
+	q, err := h.service.QuoteRevision(ctx, "alice", h.project.ID, "더 짧게", clip.RevisionNarration, 0, "p/o", "p/w")
 	if err != nil {
 		t.Fatal(err)
 	}
 	source.value = secondGuidelines
 	approval := clip.QuoteApproval{CancellationPolicyVersion: clip.CancellationPolicyVersion, QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits}
-	if _, err := h.service.StartRevision(ctx, "alice", h.project.ID, "더 짧게", clip.RevisionNarration, "p/o", "p/w", approval); !errors.Is(err, clip.ErrQuoteChanged) {
+	if _, err := h.service.StartRevision(ctx, "alice", h.project.ID, "더 짧게", clip.RevisionNarration, 0, "p/o", "p/w", approval); !errors.Is(err, clip.ErrQuoteChanged) {
 		t.Fatal("a 영상 지침 change between the revision quote and its start was approved", err)
 	}
 

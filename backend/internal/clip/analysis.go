@@ -201,21 +201,34 @@ type RevisionInput struct {
 	PlanningInput
 	Current EditPlan
 	Request string
-	// RevisionFlow, RevisionNarration or RevisionBoth.
+	// RevisionAuto, RevisionFlow, RevisionNarration or RevisionBoth.
 	Target string
+	// ScopeCut is the 1-based scene block the owner selected, 0 for the whole
+	// clip (CLIP-131).
+	ScopeCut int
+	// Routed, when set, hears the stage an auto revision's first call chose:
+	// "flow" when it rewrote the footage, "narrate" when it did not.
+	Routed func(stage string) `json:"-"`
 }
 
-// The three documents a request may name. A flow target is followed by a
-// narration over the rewritten flow, because captions timed against cuts that
-// moved are timed against nothing (CLIP-135).
+// The documents a request may name. A flow target is followed by a narration
+// over the rewritten flow, because captions timed against cuts that moved are
+// timed against nothing (CLIP-135). Auto names none: its first writing call
+// decides whether the flow changes (CLIP-131, CLIP-132).
 const (
+	RevisionAuto      = "auto"
 	RevisionFlow      = "flow"
 	RevisionNarration = "narration"
 	RevisionBoth      = "both"
 )
 
 func ValidRevisionTarget(target string) bool {
-	return target == RevisionFlow || target == RevisionNarration || target == RevisionBoth
+	return target == RevisionAuto || target == RevisionFlow || target == RevisionNarration || target == RevisionBoth
+}
+
+// ValidRevisionScope is CLIP-131's optional scene: none, or one of the plan's cuts.
+func ValidRevisionScope(cut int, plan EditPlan) bool {
+	return cut == 0 || cut >= 1 && cut <= len(plan.Cuts)
 }
 
 // NarrationInput is the second writing call's input: the same planning input,

@@ -406,11 +406,11 @@ func TestARevisionKeepsTheRegionWords(t *testing.T) {
 		t.Fatal(err)
 	}
 	before := project(t, h)
-	q, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "더 짧게", clip.RevisionNarration, "p/o", "p/w")
+	q, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "더 짧게", clip.RevisionNarration, 0, "p/o", "p/w")
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, err := h.service.StartRevision(t.Context(), "alice", h.project.ID, "더 짧게", clip.RevisionNarration, "p/o", "p/w", approve(q))
+	id, err := h.service.StartRevision(t.Context(), "alice", h.project.ID, "더 짧게", clip.RevisionNarration, 0, "p/o", "p/w", approve(q))
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -57,7 +57,8 @@ func generationQuoteProto(ctx context.Context, h *Handler, user, project string,
 
 // QuoteClipRevision prices ONE written revision of the plan the owner is
 // looking at: one writing call for a narration target, two where the footage is
-// rewritten and the narration follows it (CLIP-131).
+// rewritten and the narration follows it, and two for an empty target, which is
+// auto (CLIP-131, CLIP-132).
 func (h *Handler) QuoteClipRevision(ctx context.Context, req *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error) {
 	user, err := actingUser(ctx)
 	if err != nil {
@@ -68,7 +69,7 @@ func (h *Handler) QuoteClipRevision(ctx context.Context, req *connect.Request[v1
 	}
 	observe := llm.ModelRef{ProviderID: req.Msg.GetObserveModel().GetProviderId(), ModelID: req.Msg.GetObserveModel().GetModelId()}
 	write := llm.ModelRef{ProviderID: req.Msg.GetWriteModel().GetProviderId(), ModelID: req.Msg.GetWriteModel().GetModelId()}
-	q, err := h.generation.QuoteRevision(ctx, user, req.Msg.GetProjectId(), req.Msg.GetRequest(), req.Msg.GetTarget(), observe.String(), write.String())
+	q, err := h.generation.QuoteRevision(ctx, user, req.Msg.GetProjectId(), req.Msg.GetRequest(), revisionTarget(req.Msg.GetTarget()), revisionScope(req.Msg.ScopeCut), observe.String(), write.String())
 	if err != nil {
 		return nil, toConnectError(err)
 	}
@@ -125,11 +126,32 @@ func (h *Handler) StartClipRevision(ctx context.Context, req *connect.Request[v1
 		credits := int(req.Msg.GetApprovedMaxCredits())
 		approval.MaxCredits = &credits
 	}
-	id, err := h.generation.StartRevision(ctx, user, req.Msg.GetProjectId(), req.Msg.GetRequest(), req.Msg.GetTarget(), observe.String(), write.String(), approval)
+	id, err := h.generation.StartRevision(ctx, user, req.Msg.GetProjectId(), req.Msg.GetRequest(), revisionTarget(req.Msg.GetTarget()), revisionScope(req.Msg.ScopeCut), observe.String(), write.String(), approval)
 	if err != nil {
 		return nil, toConnectError(err)
 	}
 	return connect.NewResponse(&v1.StartClipRevisionResponse{JobId: id}), nil
+}
+
+// revisionTarget reads the wire's empty target as auto; a named one passes as sent and
+// the service refuses one it does not know.
+func revisionTarget(target string) string {
+	if target == "" {
+		return clip.RevisionAuto
+	}
+	return target
+}
+
+// revisionScope is 0 for the whole clip; a present value that names no block
+// stays out of range so the service refuses it rather than widening it.
+func revisionScope(cut *int32) int {
+	if cut == nil {
+		return 0
+	}
+	if *cut < 1 {
+		return -1
+	}
+	return int(*cut)
 }
 
 func pricedCallProto(p llm.CallPolicy, label string, count int) *v1.ClipPricedCall {

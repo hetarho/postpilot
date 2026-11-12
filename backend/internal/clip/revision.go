@@ -24,11 +24,15 @@ type RevisionQuoteStore interface {
 // and the exact words they wrote. A plan saved after the quote — their own edit,
 // or another revision — invalidates it rather than rewriting something they
 // never approved (CLIP-131).
-func RevisionInputDigest(p Project, request, target, write string, pricing GenerationPricing) string {
+//
+// The selected scene is part of what was asked, so another scene is another
+// quote (CLIP-131).
+func RevisionInputDigest(p Project, request, target string, scopeCut int, write string, pricing GenerationPricing) string {
 	input := struct {
 		User, Project, Write string
 		Revision             int
 		Request, Target      string
+		ScopeCut             int `json:",omitempty"`
 		PlanJSON             string
 		Pricing              GenerationPricing
 		Composition          *ProjectComposition
@@ -39,7 +43,7 @@ func RevisionInputDigest(p Project, request, target, write string, pricing Gener
 		Target_              int
 		AdvertiserGuide      *AdvertiserGuide    `json:",omitempty"`
 		LinkedPostRef        *LinkedPostIdentity `json:",omitempty"`
-	}{p.UserID, p.ID, write, p.EditPlanRevision, request, target, p.EditPlan, pricing, p.Composition,
+	}{p.UserID, p.ID, write, p.EditPlanRevision, request, target, scopeCut, p.EditPlan, pricing, p.Composition,
 		p.Instruction, p.CaptionPace, p.Accent, p.Disclosure, p.Ratio, p.HideDisclosure, p.TargetDurationMS, EffectiveAdvertiserGuide(p), p.LinkedPostRef}
 	raw, _ := json.Marshal(input)
 	sum := sha256.Sum256(raw)

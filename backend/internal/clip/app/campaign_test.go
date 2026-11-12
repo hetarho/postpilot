@@ -15,7 +15,7 @@ func TestAdvertiserGuideInvalidatesEveryWritingDigestWhileOn(t *testing.T) {
 			return clip.QuoteInputDigest(p, clip.VideoTemplate{}, clip.SourceBatch{}, clip.GenerationPricing{})
 		},
 		"revision": func(p clip.Project) string {
-			return clip.RevisionInputDigest(p, "줄여줘", clip.RevisionBoth, "writer", clip.GenerationPricing{})
+			return clip.RevisionInputDigest(p, "줄여줘", clip.RevisionBoth, 0, "writer", clip.GenerationPricing{})
 		},
 		"storyline-revision": func(p clip.Project) string {
 			return StorylineRevisionInputDigest(p, "줄여줘", "writer", clip.GenerationPricing{})

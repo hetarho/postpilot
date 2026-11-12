@@ -52,6 +52,15 @@ func clipDescriptor(mode string) llm.RequestComposition {
 		c.Parser = "clip/ai.parseNarration/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/narration_prompt.go", "internal/clip/ai/narration_parse.go")
 		schema = narrationSchema
+	case "revision-route", "spoken-revision-route":
+		c.Composer = "clip/ai.Service.route/buildRoutePrompt"
+		c.Parser = "clip/ai.Service.route/parseFlowPlan | parseNarration | parseSpokenRevision"
+		c.Activation += "; auto revision: flow_changed selects the branch, a kept flow ends after this call"
+		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/revision_route.go", "internal/clip/ai/revision_prompt.go", "internal/clip/ai/flow_parse.go", "internal/clip/ai/narration_parse.go")
+		schema = revisionRouteSchema
+		if mode == "spoken-revision-route" {
+			schema = spokenRouteSchema
+		}
 	case "narration-revision":
 		c.Composer = "clip/ai.Service.Revise/buildNarrationRevisionPrompt"
 		c.Parser = "clip/ai.parseNarration/clip.ResolveSelectedComposition/composition.Resolve/validatePlan"

@@ -29,7 +29,20 @@ func (s *Service) ValidateStorylineRequest(model llm.ModelRef, in clip.Storyline
 func (s *Service) ValidateRevision(model llm.ModelRef, in clip.RevisionInput) error {
 	limits := compositionLimits(s.cfg, in.PlanningInput)
 	flow := in.Current
-	if in.Target != clip.RevisionNarration {
+	if in.Target == clip.RevisionAuto {
+		// The routing call carries both contracts; its narration-only answer needs no second call.
+		system, user, schema := "", "", RevisionRouteSchema()
+		if in.Current.Narration != nil {
+			system, user = buildSpokenRoutePrompt(in, s.cfg.Render.FadeMS, limits)
+			schema = spokenRouteOutputSchema
+		} else {
+			system, user = buildRevisionRoutePrompt(in, s.cfg.Render.FadeMS, limits)
+		}
+		if err := s.validateWritingAllowance(model, in.PlanningInput, system, user, schema); err != nil {
+			return err
+		}
+		flow = WidestFlow(s.cfg, in.PlanningInput)
+	} else if in.Target != clip.RevisionNarration {
 		system, user := buildFlowRevisionPrompt(in, s.cfg.Render.FadeMS, limits)
 		if err := s.validateWritingAllowance(model, in.PlanningInput, system, user, RevisionFlowSchema()); err != nil {
 			return err

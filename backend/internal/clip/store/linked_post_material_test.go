@@ -157,10 +157,10 @@ func TestLinkedPostRevisionApprovalAndWorkerFreeze(t *testing.T) {
 			var startCall func(clip.GenerationQuote) (string, error)
 			if kind == "revision" {
 				quoteCall = func() (clip.GenerationQuote, error) {
-					return h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "후기대로", clip.RevisionNarration, "p/o", "p/w")
+					return h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "후기대로", clip.RevisionNarration, 0, "p/o", "p/w")
 				}
 				startCall = func(q clip.GenerationQuote) (string, error) {
-					return h.service.StartRevision(t.Context(), "alice", h.project.ID, "후기대로", clip.RevisionNarration, "p/o", "p/w", approve(q))
+					return h.service.StartRevision(t.Context(), "alice", h.project.ID, "후기대로", clip.RevisionNarration, 0, "p/o", "p/w", approve(q))
 				}
 			} else {
 				quoteCall = func() (clip.GenerationQuote, error) {

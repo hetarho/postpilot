@@ -97,6 +97,8 @@ func TestDeletingTheProjectTakesItsRequestsWithIt(t *testing.T) {
 	for _, r := range []clip.ProjectRequest{
 		{Kind: clip.RequestInstruction, Body: "처음", CreatedAt: time.Now()},
 		{Kind: clip.RevisionRequestKind(clip.RevisionBoth), Body: "다시", CreatedAt: time.Now()},
+		// An auto request is stored under its own kind beside the targeted ones (CLIP-133).
+		{Kind: clip.RevisionRequestKind(clip.RevisionAuto), Body: "알아서", CreatedAt: time.Now()},
 	} {
 		if err := st.RecordProjectRequest(t.Context(), r.Body, "alice", p.ID, r); err != nil {
 			t.Fatal(err)
@@ -106,7 +108,7 @@ func TestDeletingTheProjectTakesItsRequestsWithIt(t *testing.T) {
 	if err := st.RecordProjectRequest(t.Context(), "bad", "alice", p.ID, clip.ProjectRequest{Kind: "revision:everything", Body: "x", CreatedAt: time.Now()}); err == nil {
 		t.Fatal("an undeclared kind was recorded")
 	}
-	if got, err := st.ListProjectRequests(t.Context(), "alice", p.ID); err != nil || len(got) != 2 {
+	if got, err := st.ListProjectRequests(t.Context(), "alice", p.ID); err != nil || len(got) != 3 {
 		t.Fatal("the record did not read back", got, err)
 	}
 	if err := service.DeleteProject(t.Context(), "alice", p.ID); err != nil {

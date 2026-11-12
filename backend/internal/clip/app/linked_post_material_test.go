@@ -76,7 +76,7 @@ func TestPostEditBetweenQuoteAndStartChangesQuote(t *testing.T) {
 	before := clip.GenerationPricing{LinkedPostDigest: old.LinkedPostText.Digest()}
 	after := clip.GenerationPricing{LinkedPostDigest: current.LinkedPostText.Digest()}
 	if clip.QuoteInputDigest(old, clip.VideoTemplate{}, clip.SourceBatch{}, before) == clip.QuoteInputDigest(current, clip.VideoTemplate{}, clip.SourceBatch{}, after) ||
-		clip.RevisionInputDigest(old, "revise", clip.RevisionBoth, "p/w", before) == clip.RevisionInputDigest(current, "revise", clip.RevisionBoth, "p/w", after) ||
+		clip.RevisionInputDigest(old, "revise", clip.RevisionBoth, 0, "p/w", before) == clip.RevisionInputDigest(current, "revise", clip.RevisionBoth, 0, "p/w", after) ||
 		StorylineRevisionInputDigest(old, "revise", "p/w", before) == StorylineRevisionInputDigest(current, "revise", "p/w", after) ||
 		planRecoveryDigest(clip.GenerationPayload{LinkedPost: old.LinkedPostText}) == planRecoveryDigest(clip.GenerationPayload{LinkedPost: current.LinkedPostText}) {
 		t.Fatal("post edit reused writing approval or recovered plan")

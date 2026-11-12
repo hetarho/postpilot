@@ -93,16 +93,20 @@ message ClipRegionPresetSample {
 // The owner's arrangement of this batch's footage (CLIP-136). The list is the
 // WHOLE batch: one that misses a source, repeats one or names a foreign one is
 // refused rather than applied in part.
-// One owner-written revision of the saved plan (CLIP-131). The target names
-// which document it is about; the quote binds the plan revision it was taken
-// against, so a plan saved after it is refused rather than rewritten.
+// One owner-written revision of the saved plan (CLIP-131). An empty target is
+// auto: the first writing call decides whether the footage flow changes. The
+// quote binds the plan revision it was taken against, so a plan saved after it
+// is refused rather than rewritten.
 message QuoteClipRevisionRequest {
   string project_id = 1;
   string request = 2;
-  // flow | narration | both.
+  // empty (auto) | flow | narration | both.
   string target = 3;
   ModelRef observe_model = 4;
   ModelRef write_model = 5;
+  // The selected scene block, 1-based in the quoted plan revision; absent for
+  // the whole clip.
+  optional int32 scope_cut = 6;
 }
 
 message QuoteClipRevisionResponse {
@@ -129,6 +133,7 @@ message StartClipRevisionRequest {
   string quote_id = 6;
   optional int32 approved_max_credits = 7;
   int32 cancellation_policy_version = 8;
+  optional int32 scope_cut = 9;
 }
 
 message StartClipRevisionResponse { string job_id = 1; }

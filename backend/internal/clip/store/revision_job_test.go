@@ -24,11 +24,11 @@ func revisionReady(t *testing.T) *generationHarness {
 
 func startRevision(t *testing.T, h *generationHarness, request, target string) string {
 	t.Helper()
-	q, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, request, target, "p/o", "p/w")
+	q, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, request, target, 0, "p/o", "p/w")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// One writing call for a narration target, two where the footage moves.
+	// One writing call for a narration target, two where the footage moves or may move.
 	want := 2
 	if target == clip.RevisionNarration {
 		want = 1
@@ -36,7 +36,7 @@ func startRevision(t *testing.T, h *generationHarness, request, target string) s
 	if q.Pricing.ObservationCalls != 0 || q.Pricing.PlanCalls() != want {
 		t.Fatalf("a %s revision priced %d writing calls and %d observations", target, q.Pricing.PlanCalls(), q.Pricing.ObservationCalls)
 	}
-	id, err := h.service.StartRevision(t.Context(), "alice", h.project.ID, request, target, "p/o", "p/w",
+	id, err := h.service.StartRevision(t.Context(), "alice", h.project.ID, request, target, 0, "p/o", "p/w",
 		clip.QuoteApproval{CancellationPolicyVersion: clip.CancellationPolicyVersion, QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits})
 	if err != nil {
 		t.Fatal(err)
@@ -84,11 +84,11 @@ func TestARevisionRewritesTheSavedPlanAndLeavesTheResultStale(t *testing.T) {
 		t.Fatal("a flow revision did not make the two writing calls it charged for")
 	}
 	// A quote taken against the old plan is refused now that the plan moved.
-	q, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "다시", clip.RevisionNarration, "p/o", "p/w")
+	q, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "다시", clip.RevisionNarration, 0, "p/o", "p/w")
 	if err != nil {
 		t.Fatal(err)
 	}
-	stale := clip.RevisionInputDigest(before, "다시", clip.RevisionNarration, "p/w", q.Pricing)
+	stale := clip.RevisionInputDigest(before, "다시", clip.RevisionNarration, 0, "p/w", q.Pricing)
 	if q.InputDigest == stale {
 		t.Fatal("the quote did not bind the plan revision it was taken against")
 	}
@@ -119,15 +119,15 @@ func TestARefusedRevisionLeavesThePlanAndTheResultAlone(t *testing.T) {
 	// are refused before anything is charged.
 	for name, run := range map[string]func() error{
 		"no request": func() error {
-			_, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "  ", clip.RevisionFlow, "p/o", "p/w")
+			_, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "  ", clip.RevisionFlow, 0, "p/o", "p/w")
 			return err
 		},
 		"an unknown target": func() error {
-			_, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "고쳐줘", "everything", "p/o", "p/w")
+			_, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "고쳐줘", "everything", 0, "p/o", "p/w")
 			return err
 		},
 		"another owner": func() error {
-			_, err := h.service.QuoteRevision(t.Context(), "bob", h.project.ID, "고쳐줘", clip.RevisionFlow, "p/o", "p/w")
+			_, err := h.service.QuoteRevision(t.Context(), "bob", h.project.ID, "고쳐줘", clip.RevisionFlow, 0, "p/o", "p/w")
 			return err
 		},
 	} {
@@ -156,10 +156,36 @@ func TestARefusedRevisionLeavesThePlanAndTheResultAlone(t *testing.T) {
 func TestARevisionIsOneJobAtATimeLikeEveryOtherClipJob(t *testing.T) {
 	h := revisionReady(t)
 	startRevision(t, h, "고기 장면을 먼저 보여줘", clip.RevisionFlow)
-	if _, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "또", clip.RevisionFlow, "p/o", "p/w"); !errors.Is(err, clip.ErrBusy) {
+	if _, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "또", clip.RevisionFlow, 0, "p/o", "p/w"); !errors.Is(err, clip.ErrBusy) {
 		t.Fatal("a second revision was quoted while one was running", err)
 	}
 	if _, err := h.service.StartRender(t.Context(), "alice", h.project.ID, h.batch.ID, 1, clip.RenderServer); err == nil {
 		t.Fatal("a render started beside a running revision")
+	}
+}
+
+// An auto request is approved at two writing calls and, answered as narration-only,
+// runs and is charged for one; the record names it auto (CLIP-131, CLIP-132, CLIP-133).
+func TestAnAutoRevisionRunsOnlyTheCallItsRoutingChose(t *testing.T) {
+	h := revisionReady(t)
+	writes := h.planner.flows + h.planner.narrations
+	stages := len(h.planner.stages)
+	startRevision(t, h, "가격을 말해줘", clip.RevisionAuto)
+	if err := h.run(t); err != nil {
+		t.Fatal(err)
+	}
+	if h.planner.flows+h.planner.narrations != writes+1 || len(h.planner.revisions) != 1 || h.planner.revisions[0].Target != clip.RevisionAuto {
+		t.Fatal("a narration-only auto revision did not make exactly one writing call", h.planner.flows+h.planner.narrations-writes)
+	}
+	if got := h.planner.stages[stages:]; len(got) != 1 || got[0] != "narrate" {
+		t.Fatal("the auto revision ran other stages", got)
+	}
+	p, err := h.projects.GetProject(t.Context(), "alice", h.project.ID)
+	if err != nil || len(p.Requests) == 0 || p.Requests[0].Kind != "revision:auto" || p.Requests[0].Body != "가격을 말해줘" {
+		t.Fatal("the auto request was not recorded under its own kind", p.Requests, err)
+	}
+	// A scene the plan does not hold is refused before any quote is saved.
+	if _, err := h.service.QuoteRevision(t.Context(), "alice", h.project.ID, "이 장면만", clip.RevisionAuto, 99, "p/o", "p/w"); !errors.Is(err, clip.ErrInvalid) {
+		t.Fatal("a scene outside the plan was quoted", err)
 	}
 }
