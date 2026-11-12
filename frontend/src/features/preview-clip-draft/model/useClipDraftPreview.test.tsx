@@ -180,8 +180,8 @@ it.each([0, 1])(
     await expect(source(old)).rejects.toMatchObject({ name: 'AbortError' })
     await waitFor(() => expect(view.result.current.ready).toBe(true))
     const access = await source(view.result.current.local!)
-    const fetcher = vi.fn(
-      async (_url: unknown) =>
+    const fetcher = vi.fn<(url: unknown) => Promise<Response>>(
+      async () =>
         new Response(new Uint8Array([7]), {
           status: 206,
           headers: { 'Content-Range': 'bytes 0-0/1', 'Content-Length': '1' },
@@ -307,7 +307,9 @@ it('latches a failed explicit force across withdrawal/rebuild without a normal f
 
 it('keeps a same-URL successful retry stable and gives a later explicit retry its own attempt', async () => {
   const data = { ...input(), localSources: [retained(1, 'https://owned.test/old')] }
-  const resolve = vi.fn(async (_fp: string, _refresh?: boolean) => 'https://owned.test/old')
+  const resolve = vi.fn<ClipDraftPreviewInput['resolvePlayback']>(
+    async () => 'https://owned.test/old',
+  )
   data.resolvePlayback = resolve
   const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
   await waitFor(() => expect(view.result.current.ready).toBe(true))
