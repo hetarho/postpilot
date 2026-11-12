@@ -9,7 +9,6 @@ import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { ClipProjectDraft } from '@/entities/clip-project'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
-import { chooseOption } from '@/test/listbox'
 
 const template = {
   id: 'template',
@@ -45,12 +44,14 @@ describe('① chooses the design, the caption styles and an optional template', 
       clips: { templates: [template], projectWrites: writes },
     })
     await clipGuideTo('template')
-    const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
-    expect(picker).toHaveAccessibleName('영상 템플릿 없음')
+    expect(await screen.findByRole('button', { name: /^없음/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
     await clipGuideTo('content')
+    // The first saved change mints the project (CLIP-130).
     await user.type(await screen.findByLabelText('클립 제목'), '고기')
-    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await waitFor(() => expect(writes).toHaveLength(1))
+    await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
     expect(writes[0].videoTemplateId).toBe('')
     // Nothing was chosen, so the new project stores intro A and outro B
     // (CLIP-111, CLIP-139).
@@ -266,11 +267,10 @@ describe('① chooses the design, the caption styles and an optional template', 
       clips: { templates: [designed], projectWrites: writes },
     })
     await clipGuideTo('template')
-    await chooseOption(user, await screen.findByRole('combobox', { name: /^영상 템플릿/ }), '여행')
-    await clipGuideTo('content')
-    await user.type(screen.getByLabelText('클립 제목'), '고기')
-    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await waitFor(() => expect(writes).toHaveLength(1))
+    // Choosing the template is the first saved change, and it mints in its selection.
+    await user.click(await screen.findByRole('button', { name: /^여행/ }))
+    await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
+    expect(writes[0].videoTemplateId).toBe(template.id)
     expect(writes[0].introPreset).toBe('serif')
     expect(writes[0].outroPreset).toBe('chips')
   })

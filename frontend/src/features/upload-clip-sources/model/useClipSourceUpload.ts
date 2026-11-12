@@ -5,6 +5,7 @@ import type { RetainedClipSource } from '@/entities/clip-plan'
 import { useClipSourceCalls } from '@/entities/clip-project'
 import { POLL_INTERVAL_MS } from '@/shared/config'
 import { matchClipSources } from './reselection'
+import { claimClipSourcePick } from './pick-handoff'
 
 export function useClipSourceUpload(
   projectId: string,
@@ -25,16 +26,23 @@ export function useClipSourceUpload(
       return
     }
     session.activate()
+    // A pick made on the unminted `/clips/new` uploads here, to the id it minted (CLIP-130).
+    // Claimed a task later, so Strict Mode's discarded first activation does not take it.
+    const handed = window.setTimeout(() => {
+      const files = claimClipSourcePick(projectId)
+      if (files?.length) void session.select(files)
+    }, 0)
     const hide = () => session.dispose()
     const show = () => session.activate()
     window.addEventListener('pagehide', hide)
     window.addEventListener('pageshow', show)
     return () => {
+      window.clearTimeout(handed)
       window.removeEventListener('pagehide', hide)
       window.removeEventListener('pageshow', show)
       session.dispose()
     }
-  }, [session, enabled])
+  }, [session, enabled, projectId])
   const requiredKey = JSON.stringify(required ?? null)
   useEffect(() => {
     const sources = JSON.parse(requiredKey) as RetainedClipSource[] | null

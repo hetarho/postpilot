@@ -5,7 +5,7 @@
 // survives that on its own (features/save-draft keeps it queued per post), but the caret
 // does not: without this the user's next keystroke would go nowhere.
 import { useEffect, type RefObject } from 'react'
-import { EDITOR_HANDOFF_TTL_MS } from '../config'
+import { EDITOR_HANDOFF_TTL_MS } from '@/shared/config'
 export interface CaretHandoff {
   /** The minted slug. Only the editor mounting for this post may claim the handoff. */
   slug: string

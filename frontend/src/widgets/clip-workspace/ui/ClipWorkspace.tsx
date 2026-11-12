@@ -21,6 +21,7 @@ import { CancelClipAction } from '@/features/cancel-clip'
 import {
   ClipProjectForm,
   MoveClipChannel,
+  peekClipMintHandoff,
   type ClipPreparationScreen,
 } from '@/features/edit-clip-project'
 import {
@@ -117,7 +118,10 @@ export function ClipWorkspace({
   const job = run.job
   // A project holding an instruction, a source or a running job opens on 확인, any other on 영상
   // 종류 (CLIP-225). Derived until the owner moves, so sources that load late still count.
-  const [chosenGuide, setGuide] = useState<ClipPreparationScreen | undefined>(initialGuide)
+  // The first save's address change keeps the screen the unminted guide was on (CLIP-225).
+  const [chosenGuide, setGuide] = useState<ClipPreparationScreen | undefined>(
+    () => initialGuide ?? peekClipMintHandoff(project.id)?.screen,
+  )
   const guide: ClipPreparationScreen =
     chosenGuide ??
     preparationOpening({

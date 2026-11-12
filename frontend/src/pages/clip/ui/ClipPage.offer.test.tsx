@@ -26,6 +26,14 @@ async function expectNoOffer() {
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 }
 
+/** The guide screen marked current in its progress. */
+async function currentScreen(name: string) {
+  const progress = await screen.findByRole('navigation', { name: '클립 만들기 단계' })
+  const step = within(progress).getByRole('button', { name })
+  await waitFor(() => expect(step).toHaveAttribute('aria-current', 'step'))
+  return step
+}
+
 beforeEach(() => {
   localStorage.clear()
   resetOfferDismissalMemory()
@@ -81,15 +89,19 @@ describe('the new-clip offer', () => {
     expect(router.state.location.search).toMatchObject({ channel: 'instagram_clip' })
     const templateId = (router.state.location.search as { template?: string }).template
     expect(templateId).toBeTruthy()
-    await clipGuideTo('template')
-    const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
-    await waitFor(() => expect(picker).toHaveAccessibleName('영상 템플릿 내 카페 클립'))
+    // The unminted guide opens on 템플릿 with the new template selected (CLIP-223, CLIP-225).
+    expect(await currentScreen('템플릿')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^내 카페 클립/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     await clipGuideTo('content')
     await user.type(screen.getByLabelText('클립 제목'), '디저트 투어')
-    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await waitFor(() => expect(writes).toHaveLength(1))
+    await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
     expect(writes[0]).toMatchObject({ videoTemplateId: templateId, channel: 'instagram_clip' })
   })
 
@@ -101,13 +113,16 @@ describe('the new-clip offer', () => {
       creationOffers: true,
       clips: { templates: [TEMPLATE], projectWrites: writes },
     })
-    await clipGuideTo('template')
-    const picker = await screen.findByRole('combobox', { name: /^영상 템플릿/ })
-    await waitFor(() => expect(picker).toHaveAccessibleName('영상 템플릿 카페 구성'))
+    expect(await currentScreen('템플릿')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /^카페 구성/ })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      ),
+    )
     await clipGuideTo('content')
     await user.type(screen.getByLabelText('클립 제목'), '라떼')
-    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await waitFor(() => expect(writes).toHaveLength(1))
+    await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
     expect(writes[0]).toMatchObject({
       videoTemplateId: TEMPLATE.id,
       introPreset: 'serif',
@@ -120,16 +135,16 @@ describe('the new-clip offer', () => {
       creationOffers: true,
       clips: { templates: [TEMPLATE] },
     })
-    await clipGuideTo('template')
-    expect(await screen.findByRole('combobox', { name: /^영상 템플릿/ })).toHaveAccessibleName(
-      '영상 템플릿 없음',
-    )
+    expect(await currentScreen('템플릿')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^없음/ })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('closes for this creation on 이대로 만들기 and on Escape', async () => {
     const user = userEvent.setup()
     renderAppAt('/clips/new', { user: ALICE, creationOffers: true })
     await user.click(within(await offerDialog()).getByRole('button', { name: '이대로 만들기' }))
+    // 이대로 만들기 continues on 영상 종류 (CLIP-223, CLIP-225).
+    expect(await currentScreen('영상 종류')).toBeInTheDocument()
     await expectNoOffer()
 
     cleanup()

@@ -24,7 +24,7 @@ const project: FakeClipProject = {
   targetDurationMs: 15000,
   disclosure: 'ad',
 }
-it('keeps home creation through explicit minting and reload, then confirmed deletion returns home without AI or cancellation', async () => {
+it('keeps home creation through minting on the first save and reload, then confirmed deletion returns home without AI or cancellation', async () => {
   const calls: string[] = []
   const user = userEvent.setup()
   const view = renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { calls } })
@@ -33,9 +33,11 @@ it('keeps home creation through explicit minting and reload, then confirmed dele
     '/naver-clip',
   )
   await clipGuideTo('content')
+  // The first saved change mints it; nothing else creates the clip (CLIP-130).
   await user.type(await screen.findByLabelText('클립 제목'), '바다 여행')
-  await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'), {
+    timeout: 4000,
+  })
   expect(readClipReturnContext('alice', 'clip-1')?.path).toBe('/naver-clip')
   expect(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
     'href',
@@ -173,8 +175,7 @@ it('freezes the creation origin and ignores late mint navigation after the owner
   const user = userEvent.setup()
   await clipGuideTo('content')
   await user.type(await screen.findByLabelText('클립 제목'), '늦게 저장되는 영상')
-  await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-  await waitFor(() => expect(calls).toContain('CreateClipProject'))
+  await waitFor(() => expect(calls).toContain('CreateClipProject'), { timeout: 4000 })
   await waitFor(() => expect(held).toBe(true))
   view.unmount()
   rememberClipEntry('alice', { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 0 })
@@ -202,8 +203,9 @@ it('keeps Instagram creation through minting and direct reload without creating 
   })
   await clipGuideTo('content')
   await user.type(await screen.findByLabelText('클립 제목'), '카페 체험')
-  await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'), {
+    timeout: 4000,
+  })
   expect(readClipReturnContext('alice', 'clip-1')).toMatchObject({
     path: '/insta-clip',
     filters: { channel: 'instagram_clip' },

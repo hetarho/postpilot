@@ -26,16 +26,20 @@ const project = {
 afterEach(() => discardClipDraftQueues())
 
 describe("the project's own instruction", () => {
-  it('is not asked for before there is footage to describe', async () => {
+  it("is asked on a new clip's 덧붙임 too, and minting carries it", async () => {
     const user = userEvent.setup()
-    renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { templates: [template] } })
-    await clipGuideTo('template')
-    await user.type(await screen.findByLabelText('클립 제목'), '고기')
+    const writes: ClipProjectDraft[] = []
+    const { router } = renderAppAt('/clips/new', {
+      user: { id: 'alice' },
+      clips: { templates: [template], projectWrites: writes },
+    })
     await clipGuideTo('note')
-    await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
-    await user.click(await screen.findByRole('option', { name: '여러 메뉴' }))
-    expect(screen.queryByLabelText(/클립에 담고 싶은 내용/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: '클립 만들기' })).toBeEnabled()
+    // `/clips/new` runs the same guide as a saved project (CLIP-130, CLIP-225).
+    await user.type(await screen.findByLabelText(/클립에 담고 싶은 내용/), '가격을 먼저')
+    await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
+    expect(writes[0]).toMatchObject({ instruction: '가격을 먼저', title: '' })
+    await waitFor(() => expect(router.state.location.pathname).toBe('/clips/clip-1'))
+    expect(screen.queryByRole('button', { name: '클립 만들기' })).not.toBeInTheDocument()
   })
 
   it('is optional and saves a written instruction', async () => {

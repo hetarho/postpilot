@@ -40,4 +40,7 @@ export interface ClipPreparationContent {
   requirements?: { coverage: RequirementsCoverage; hashtags: readonly string[] }
   /** 덧붙임's 다음 reads 건너뛰고 확인 until the instruction holds text (CLIP-225). */
   noteEmpty: boolean
+  /** Mints an unminted `/clips/new` with what it holds and answers with the id; a minted project
+   *  answers with its own. A source picked before anything saved awaits it (CLIP-130). */
+  mint: () => Promise<string>
 }

@@ -8,18 +8,16 @@ import {
   useClipProject,
 } from '@/entities/clip-project'
 import { useSession } from '@/entities/session'
-import { ClipProjectForm } from '@/features/edit-clip-project'
 import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
-import { ClipTopRow, ClipStatusLine, ClipWorkspace } from '@/widgets/clip-workspace'
+import { ClipTopRow, ClipWorkspace, NewClipWorkspace } from '@/widgets/clip-workspace'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Typography, pageStyles } from '@/shared/ui'
 import { ClipImportFeedback } from './ClipImportFeedback'
 
-/** `/clips/new` — a project that does not exist yet. It has no lifecycle, so it shows no step
- *  bar and no delete: just the settings and the one committing action that mints it, which stays
- *  explicit because the ratio it carries can never be changed again (CLIP-9, CLIP-39).
+/** `/clips/new` — a project that does not exist yet, running ①'s guide; its first save mints it
+ *  (CLIP-130).
  *
- *  An account with no video template opens it on the offer to make one (CLIP-223), so the form
+ *  An account with no video template opens it on the offer to make one (CLIP-223), so the guide
  *  waits for that directory: the sheet has to stand before anything is typed. */
 function NewClip({
   ownerId,
@@ -45,27 +43,22 @@ function NewClip({
   })
   return (
     <>
-      {/* The status region is mounted before there is a project to have a status: a live region
-          inserted already holding its message announces nothing. */}
-      <ClipTopRow
-        returnTo={returnTo}
-        status={
-          <ClipStatusLine
-            project={undefined}
-            job={undefined}
-            upload={{ phase: 'idle' }}
-            correction="clean"
-            save={{ failing: false, label: '' }}
-            className="order-last w-full"
-          />
-        }
-      />
       {offer.settled ? (
-        <ClipProjectForm ownerId={ownerId} channel={channel} initialTemplateId={handedTemplate} />
+        <NewClipWorkspace
+          ownerId={ownerId}
+          channel={channel}
+          initialTemplateId={handedTemplate}
+          // Back from the wizard with its template: ① opens on 템플릿 (CLIP-223, CLIP-225).
+          initialGuide={handedTemplate ? 'template' : undefined}
+          returnTo={returnTo}
+        />
       ) : (
-        <Typography variant="body" role="status" className="mt-8">
-          {t('state.loading')}
-        </Typography>
+        <>
+          <ClipTopRow returnTo={returnTo} status={null} />
+          <Typography variant="body" role="status" className="mt-8">
+            {t('state.loading')}
+          </Typography>
+        </>
       )}
       <CreationOfferSheet
         kind="clip"

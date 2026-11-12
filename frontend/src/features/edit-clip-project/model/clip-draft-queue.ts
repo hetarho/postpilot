@@ -23,6 +23,47 @@ const queue = createAutosaveQueue<ClipProjectDraft, void>({
   retry: retriableTransportFailure,
 })
 
+/** An unminted `/clips/new` queues under its own key `new:<n>`, as a post with no slug does
+ *  (POST-7): the first send creates the project and every later send updates it, so edits made
+ *  while the create is in flight go out as the next update and never mint a second project. The
+ *  minted id is remembered per key, and the id remembers the key, so the form the address change
+ *  mounts reads and flushes what the unminted one still owes (CLIP-130). */
+let unminted = 0
+const mintedIds = new Map<string, string>()
+const mintedKeys = new Map<string, string>()
+
+export function newClipDraftKey(): string {
+  unminted += 1
+  return `new:${unminted}`
+}
+
+export function mintedClipId(key: string): string | undefined {
+  return mintedIds.get(key)
+}
+
+export function recordMintedClip(key: string, id: string): void {
+  mintedIds.set(key, id)
+  mintedKeys.set(id, key)
+}
+
+/** Sends what is queued for an unminted clip NOW — the given draft when nothing is, even an empty
+ *  one — and resolves with the minted id, so a picked source can attach before anything is typed
+ *  (POST-7). Rejects when the create is refused or fails; nothing navigates then. */
+export async function mintClipDraft(
+  key: string,
+  draft: ClipProjectDraft,
+  send: SendClipDraft,
+): Promise<string> {
+  const known = mintedIds.get(key)
+  if (known) return known
+  if (queue.peek(key) === undefined) queueClipDraft(key, draft, send)
+  else senders.set(key, send)
+  await queue.flush(key, true)
+  const id = mintedIds.get(key)
+  if (!id) throw new Error('The clip was not created')
+  return id
+}
+
 /** Queues the draft and saves it a beat after the owner stops typing. The caller decides what
  *  counts as a change — the form already compares the normalized draft against its baseline — so
  *  a re-render with untouched fields never reaches here. */
@@ -39,14 +80,19 @@ export function queueClipDraft(
  *  the server will not take the draft, so a caller that must not proceed on unsaved settings —
  *  the credit approval — can stop. */
 export function flushClipDraft(projectId: string, failFast = false): Promise<void> {
-  return queue.flush(projectId, failFast).then(() => undefined)
+  const unmintedKey = mintedKeys.get(projectId)
+  return Promise.all([
+    unmintedKey ? queue.flush(unmintedKey, failFast) : undefined,
+    queue.flush(projectId, failFast),
+  ]).then(() => undefined)
 }
 
 /** The draft this project still owes the server, for a settings form that is mounting again.
  *  It outranks what the server last reported: it is what the previous form was in the middle of
  *  saving when a step change unmounted it, so it is newer by exactly the keystrokes since. */
 export function peekPendingClipDraft(projectId: string): ClipProjectDraft | undefined {
-  return queue.peek(projectId)
+  const unmintedKey = mintedKeys.get(projectId)
+  return queue.peek(projectId) ?? (unmintedKey ? queue.peek(unmintedKey) : undefined)
 }
 
 export function clipDraftState(projectId: string): SaveState {
@@ -76,6 +122,13 @@ export function subscribeClipDraft(projectId: string, listener: () => void): () 
 /** Drops a project's queue and everything it was going to send. Called when the project is
  *  deleted: a retry left running would keep saving an id the server no longer has. */
 export function discardClipDraftQueue(projectId: string): void {
+  const unmintedKey = mintedKeys.get(projectId)
+  if (unmintedKey) {
+    queue.discard(unmintedKey)
+    senders.delete(unmintedKey)
+    mintedIds.delete(unmintedKey)
+    mintedKeys.delete(projectId)
+  }
   queue.discard(projectId)
   senders.delete(projectId)
 }
@@ -83,4 +136,6 @@ export function discardClipDraftQueue(projectId: string): void {
 export function discardClipDraftQueues(): void {
   queue.discardAll()
   senders.clear()
+  mintedIds.clear()
+  mintedKeys.clear()
 }

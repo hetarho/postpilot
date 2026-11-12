@@ -56,15 +56,6 @@ afterEach(() => {
   sessionStorage.clear()
   initializeI18n('ko')
 })
-async function fillSetup() {
-  const user = userEvent.setup()
-  await clipGuideTo('template')
-  await user.type(await screen.findByLabelText('클립 제목'), ' 새 경험 ')
-  await clipGuideTo('template')
-  await user.click(screen.getByRole('combobox', { name: /^영상 템플릿/ }))
-  await user.click(await screen.findByRole('option', { name: '여행' }))
-  return user
-}
 describe('clip directory and setup', () => {
   it('asks for another template only when the one it names is gone', async () => {
     // CLIP-146: 없음 is the normal selection, and the detached message belongs
@@ -146,40 +137,73 @@ describe('clip directory and setup', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
-  it('creates a vertical clip in the requested channel', async () => {
+  it('mints the clip on its first save in the requested channel, keeping the screen and caret', async () => {
     const calls: string[] = []
     const projectWrites: ClipProjectDraft[] = []
     const { router } = mount('/clips/new?channel=instagram_clip', { calls, projectWrites })
-    expect(await screen.findByRole('button', { name: '클립 만들기' })).toBeDisabled()
-    expect(screen.queryByLabelText('원본 영상 선택')).not.toBeInTheDocument()
-    const user = await fillSetup()
-    // The answers, the instruction and the length are not here: they are written in ① beside
-    // the sources they describe (CLIP-130). Only the ratio has to be settled now (CLIP-9).
-    expect(screen.queryByLabelText('목표 길이 (초)')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('장소')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/클립에 담고 싶은 내용/)).not.toBeInTheDocument()
-    expect(screen.queryByRole('combobox', { name: /^화면 비율/ })).not.toBeInTheDocument()
-    expect(screen.getByText('세로 9:16')).toBeInTheDocument()
-    await user.dblClick(screen.getByRole('button', { name: '클립 만들기' }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/clips/clip-1'))
+    // The same guide as a saved project, opening on 영상 종류, with nothing that creates it.
+    const progress = await screen.findByRole('navigation', { name: '클립 만들기 단계' })
+    expect(within(progress).getByRole('button', { name: '영상 종류' })).toHaveAttribute(
+      'aria-current',
+      'step',
+    )
+    expect(screen.queryByRole('button', { name: '클립 만들기' })).not.toBeInTheDocument()
+    expect(calls).not.toContain('CreateClipProject')
+    const user = userEvent.setup()
+    await clipGuideTo('content')
+    const title = await screen.findByLabelText('클립 제목')
+    await user.type(title, '새 경험')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/clips/clip-1'), {
+      timeout: 4000,
+    })
     expect(calls.filter((c) => c === 'CreateClipProject')).toHaveLength(1)
     expect(projectWrites[0]).toMatchObject({
       title: '새 경험',
       ratio: 'vertical',
       channel: 'instagram_clip',
       targetDurationMs: 0,
-      disclosure: '',
     })
-    // ① is where the rest is asked for, and the length it was minted without is empty there.
-    await clipGuideTo('style')
-    expect(await screen.findByLabelText('목표 길이 (초)')).toHaveValue(null)
+    // The address change keeps the guide screen in use and the caret where it was (CLIP-130).
+    const minted = await screen.findByLabelText('클립 제목')
+    expect(minted).toHaveValue('새 경험')
+    await waitFor(() => expect(minted).toHaveFocus())
+    expect(
+      within(screen.getByRole('navigation', { name: '클립 만들기 단계' })).getByRole('button', {
+        name: '내용',
+      }),
+    ).toHaveAttribute('aria-current', 'step')
+    await user.type(minted, '들')
+    expect(minted).toHaveValue('새 경험들')
+    // Back returns to where the creation started, never to an unminted page.
+    router.history.back()
+    await waitFor(() => expect(router.state.location.pathname).not.toBe('/clips/new'))
+  })
+  it('sends edits made while the mint is in flight as the next update, never a second create', async () => {
+    let release = () => {}
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const calls: string[] = []
+    const projectWrites: ClipProjectDraft[] = []
+    const { router } = mount('/clips/new', {
+      calls,
+      projectWrites,
+      projectCreateGate: () => held,
+    })
+    const user = userEvent.setup()
     await clipGuideTo('content')
-    expect(await screen.findByLabelText('장소')).toBeInTheDocument()
-    await clipGuideTo('sources')
-    expect(await screen.findByLabelText('원본 영상 선택')).toBeEnabled()
-    // The status line has nothing to say about a project at rest (CLIP-38); the picker's own
-    // button is what says to select sources.
-    expect(await screen.findByRole('status', { name: '클립 상태' })).toHaveTextContent('')
+    const title = await screen.findByLabelText('클립 제목')
+    await user.type(title, '첫')
+    await waitFor(() => expect(calls).toContain('CreateClipProject'), { timeout: 4000 })
+    await user.type(title, ' 기록')
+    // The edit made during the flight waits for the create rather than racing it.
+    await new Promise((resolve) => setTimeout(resolve, 1200))
+    expect(calls.filter((c) => c === 'CreateClipProject')).toHaveLength(1)
+    release()
+    await waitFor(() => expect(router.state.location.pathname).toBe('/clips/clip-1'))
+    await waitFor(() => expect(calls).toContain('UpdateClipProject'), { timeout: 4000 })
+    expect(calls.filter((c) => c === 'CreateClipProject')).toHaveLength(1)
+    expect(await screen.findByLabelText('클립 제목')).toHaveValue('첫 기록')
   })
   it('keeps directory and workspace free of group chrome and gives direct records a named history return', async () => {
     const directory = mount('/naver-clip')
@@ -208,26 +232,44 @@ describe('clip directory and setup', () => {
       'href',
       '/naver-clip',
     )
-    // The page's ONE status region is mounted before there is a project to have a status
-    // (CLIP-37), and a draft with no lifecycle shows no step bar and nothing to delete.
+    // The guide follows the template directory read (CLIP-223); a draft with no lifecycle shows
+    // no step bar and nothing to delete, and the page's ONE status region is already mounted.
+    expect(await screen.findByRole('navigation', { name: '클립 만들기 단계' })).toBeInTheDocument()
     expect(screen.getByRole('status', { name: '클립 상태' })).toBeInTheDocument()
-    // The form follows the template directory read (CLIP-223).
-    expect(await screen.findByRole('button', { name: '클립 만들기' })).toBeInTheDocument()
     expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '삭제' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '클립 만들기' })).not.toBeInTheDocument()
   })
-  it('keeps every unsaved setup value after a localized save failure', async () => {
-    const { router } = mount('/clips/new', { projectSaveFails: true })
-    const user = await fillSetup()
-    await user.click(screen.getByRole('button', { name: '클립 만들기' }))
-    await clipGuideTo('template')
+  it('keeps every local value after a refused mint and offers the save again', async () => {
+    const calls: string[] = []
+    const { router } = mount('/clips/new', { projectSaveFails: true, calls })
+    const user = userEvent.setup()
+    await clipGuideTo('kind')
+    await user.click(await screen.findByRole('button', { name: /내 돈으로 다녀왔어요/ }))
+    await clipGuideTo('content')
+    await user.type(await screen.findByLabelText('클립 제목'), '새 경험')
     expect(
-      await screen.findByText('클립 또는 영상 템플릿의 입력값과 제한을 확인해 주세요.'),
-    ).toBeInTheDocument()
-    await clipGuideTo('template')
-    expect(screen.getByLabelText('클립 제목')).toHaveValue(' 새 경험 ')
-    await clipGuideTo('template')
-    expect(screen.getByRole('combobox', { name: /^영상 템플릿/ })).toHaveTextContent('여행')
+      (
+        await screen.findAllByText(
+          '클립 또는 영상 템플릿의 입력값과 제한을 확인해 주세요.',
+          undefined,
+          {
+            timeout: 4000,
+          },
+        )
+      ).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByLabelText('클립 제목')).toHaveValue('새 경험')
+    await clipGuideTo('kind')
+    expect(screen.getByRole('button', { name: /내 돈으로 다녀왔어요/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    const creates = calls.filter((c) => c === 'CreateClipProject').length
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() =>
+      expect(calls.filter((c) => c === 'CreateClipProject').length).toBeGreaterThan(creates),
+    )
     expect(router.state.location.pathname).toBe('/clips/new')
   })
   it('moves a clip to the other channel', async () => {
@@ -419,7 +461,7 @@ describe('clip directory and setup', () => {
     expect(title).toHaveValue('제주 여행 기록들')
     expect(title).toHaveFocus()
   })
-  it('lets the owner leave an autosaved project, and still guards an unminted one', async () => {
+  it('lets the owner leave an autosaved project and an unminted one without a dialog', async () => {
     const user = userEvent.setup()
     const { router, unmount } = mount('/clips/project')
     await clipGuideTo('content')
@@ -430,13 +472,13 @@ describe('clip directory and setup', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     unmount()
 
+    // Nor on `/clips/new`: its first change is already queued to mint the clip (CLIP-130).
     const created = mount('/clips/new')
     await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
     await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
-    // `/clips/new` is the one screen whose input is not queued anywhere yet.
-    expect(await screen.findByRole('dialog')).toBeInTheDocument()
-    expect(created.router.state.location.pathname).toBe('/clips/new')
+    await waitFor(() => expect(created.router.state.location.pathname).toBe('/naver-clip'))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
   it.each(['unknown', 'foreign'])('does not expose %s project metadata', async (id) => {
     mount(`/clips/${id}`, { projects: [{ ...project, id: 'foreign', ownerId: 'bob' }] })

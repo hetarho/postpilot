@@ -335,19 +335,6 @@ export function normalizeClipProject(value: ClipProjectDraft): ClipProjectDraft 
     title: value.title.trim(),
   }
 }
-/** `/clips/new` settles the ratio and nothing else (CLIP-130). The template is optional there and
- *  everywhere else: a project with none is generated from its own settings (CLIP-5): the answers, the instruction and
- *  the length are written in ① beside the sources they describe, so minting asks only for what a
- *  project cannot exist without — and for the one value it can never change again (CLIP-9). */
-export function validNewClipProject(value: ClipProjectDraft): boolean {
-  const title = value.title.trim()
-  return (
-    (!value.dubbing?.enabled || !!value.dubbing.voiceId) &&
-    !!title &&
-    Array.from(title).length <= CLIP_PROJECT_LIMITS.title &&
-    value.ratio === 'vertical'
-  )
-}
 /** What the server will accept for an EXISTING project: every bound it enforces on a patch, and
  *  nothing it only enforces at generation. ① is where the setup is completed now (CLIP-130), so a
  *  half-written project is an ordinary state that must keep saving and keep accepting sources —

@@ -2,7 +2,7 @@ import { createRef } from 'react'
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 import { clearCaret, peekCaret, useCaretHandoff } from './caret-handoff'
-import { EDITOR_HANDOFF_TTL_MS } from '../config'
+import { EDITOR_HANDOFF_TTL_MS } from '@/shared/config'
 
 afterEach(() => {
   clearCaret()

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, useBlocker, useNavigate } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   CLIP_PROJECT_LIMITS,
@@ -23,7 +23,6 @@ import {
   clipChannelPath,
   readClipReturnContext,
   validClipProject,
-  validNewClipProject,
 } from '@/entities/clip-project'
 import { useSpokenLibrary } from '@/entities/spoken-voice'
 import {
@@ -37,7 +36,15 @@ import { clipPreparationRows } from './ClipPreparationSummary'
 import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
-import { peekPendingClipDraft, queueClipDraft } from '../model/clip-draft-queue'
+import {
+  mintClipDraft,
+  mintedClipId,
+  newClipDraftKey,
+  peekPendingClipDraft,
+  queueClipDraft,
+  recordMintedClip,
+} from '../model/clip-draft-queue'
+import { restoreClipCaret } from '../model/mint-handoff'
 import { MoveClipChannel } from './MoveClipChannel'
 import { ClipLinkedPost } from './ClipLinkedPost'
 import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
@@ -47,7 +54,6 @@ import {
   Button,
   Checkbox,
   ChoiceButton,
-  Dialog,
   Disclosure,
   useMediaQuery,
   MD_MEDIA_QUERY,
@@ -90,8 +96,14 @@ export function ClipProjectForm({
   dubbing,
   initialTemplateId,
   layout,
+  onMinted,
+  unmintedKey: givenKey,
 }: {
   ownerId: string
+  /** `/clips/new` only: the queue key the page reads its save status from (CLIP-130). */
+  unmintedKey?: string
+  /** `/clips/new` only: the first save minted this project (CLIP-130). */
+  onMinted?: (id: string) => void
   layout?: (content: ClipPreparationContent) => ReactNode
   /** `/clips/new` only: the video template the new-clip offer's wizard just saved (CLIP-223). */
   initialTemplateId?: string
@@ -116,8 +128,11 @@ export function ClipProjectForm({
   const { t } = useTranslation('clips')
   const wide = useMediaQuery(MD_MEDIA_QUERY)
   const [designExpanded, setDesignExpanded] = useState({ phone: false, desktop: true })
-  const navigate = useNavigate()
   const templates = useClipTemplates(ownerId)
+  // An unminted `/clips/new` queues under its own key until its first save mints the project,
+  // as a post with no slug does (CLIP-130, POST-7).
+  const [unmintedKey] = useState(() => (stored ? '' : (givenKey ?? newClipDraftKey())))
+  const queueKey = stored?.id ?? unmintedKey
   // A draft the queue still owes the server outranks what the server last reported: it is what
   // the previous mount of this form was in the middle of saving when a step change unmounted it
   // (CLIP-39). Read, not consumed — a component body may run more than once per mount.
@@ -130,15 +145,13 @@ export function ClipProjectForm({
   )
   const [baseline, setBaseline] = useState(draftIdentity(stored ? projectDraft(stored) : draft))
   const { save } = useClipProjectMutations(ownerId)
-  const submitting = useRef(false)
-  const leaving = useRef(false)
-  const authority = useRef(0)
+  // The workspace the mint's address change mounts puts the caret back where it was (POST-11).
+  const restoredFor = useRef('')
   useEffect(() => {
-    authority.current += 1
-    return () => {
-      authority.current += 1
-    }
-  }, [ownerId, stored?.id])
+    if (!stored || restoredFor.current === stored.id) return
+    restoredFor.current = stored.id
+    restoreClipCaret(stored.id)
+  }, [stored])
   const selected = templates.templates.find((v) => v.id === draft.videoTemplateId)
   const bodyFor = (next: ClipProjectDraft) => {
     const template = templates.templates.find((v) => v.id === next.videoTemplateId)
@@ -155,10 +168,7 @@ export function ClipProjectForm({
   const inputs = document
     ? matchingCompositionInputs(document, draft.compositionInputs ?? emptyCompositionInputs())
     : emptyCompositionInputs()
-  // `/clips/new` mints from the title, the template and the ratio; every other setting is
-  // written in ① beside the sources it describes (CLIP-130).
-  const creating = !stored
-  const valid = creating ? validNewClipProject(draft) : validClipProject(draft, document)
+  const valid = validClipProject(draft, document)
   const savable = savableClipProject(draft)
   const dirty = draftIdentity(draft) !== baseline
   const storedJSON = stored ? draftIdentity(stored) : baseline
@@ -175,28 +185,18 @@ export function ClipProjectForm({
   if (storedChanged) setSeen({ stored: storedJSON, superseded: false })
   const superseded = seen.superseded && !storedChanged
   const answered = seen.superseded && storedChanged
-  const pending = disabled || save.isPending
   // The FIELDS stay open while an autosave is in flight. Disabling a `fieldset` disables every
   // control inside it, and a browser blurs a control it disables — so locking the form on each
   // save threw the owner out of the field they were typing in, a beat after every pause. Nothing
   // is lost by leaving them open: the queue sends the LATEST draft, so a keystroke made during a
-  // flight goes out after it rather than racing it (CLIP-39). `/clips/new` still locks, because
-  // there `save.isPending` is the one committing action and it navigates away.
-  const locked = disabled || readOnly || (save.isPending && !stored)
+  // flight goes out after it rather than racing it (CLIP-39) — `/clips/new`'s minting save too.
+  const locked = disabled || readOnly
   if ((!synced || answered) && !dirty && !save.isPending && !superseded) {
     const refreshed = JSON.parse(storedJSON) as ClipProjectDraft
     setDraft(refreshed)
     setSeconds(refreshed.targetDurationMs ? String(refreshed.targetDurationMs / 1000) : '')
     setBaseline(storedJSON)
   }
-  // `/clips/new` only. A minted project autosaves, so there is nothing to lose by leaving it —
-  // and a dialog that asks anyway is a save button in disguise (CLIP-39).
-  const guard = () => !stored && dirty && !leaving.current
-  const blocker = useBlocker({
-    shouldBlockFn: guard,
-    enableBeforeUnload: guard,
-    withResolver: true,
-  })
   // Neither the source picker nor ①'s committing actions wait for the autosave: gating them on
   // unsaved state unmounted the open quote on every keystroke. Each committing action flushes the
   // queue before it starts instead, so nothing is committed against settings the server has not
@@ -208,7 +208,7 @@ export function ClipProjectForm({
    *  A form unmounted before the answer lands simply does not move it — the next mount derives it
    *  from the refreshed `stored` instead. */
   const send = async (next: ClipProjectDraft) => {
-    if (!stored) return
+    if (!stored) return sendUnminted(next)
     // In the project's write lane: a preset change projects into the plan and the regions, so
     // it must not cross a correction or slot save in flight (CLIP-188).
     const value = await serialClipWrite(stored.id, () =>
@@ -217,13 +217,40 @@ export function ClipProjectForm({
     setBaseline(draftIdentity(value))
     setSeen((current) => ({ ...current, superseded: true }))
   }
+  /** `/clips/new`'s sender: the first send creates the project in the channel the page was opened
+   *  from with the whole queued draft, an empty title included; every later one — an edit made
+   *  while the create was in flight among them — updates what it minted (CLIP-130, POST-4). */
+  const sendUnminted = async (next: ClipProjectDraft) => {
+    const minted = mintedClipId(unmintedKey)
+    if (minted) {
+      await serialClipWrite(minted, () => save.mutateAsync({ id: minted, draft: next }))
+      return
+    }
+    const origin = readClipReturnContext(ownerId) ?? {
+      version: 1 as const,
+      ownerKey: ownerId,
+      path: clipChannelPath(channel),
+      section: channel,
+      filters: { channel },
+      scrollY: 0,
+      targetId: 'new',
+    }
+    const value = await save.mutateAsync({ draft: { ...next, channel: next.channel ?? channel } })
+    recordMintedClip(unmintedKey, value.id)
+    retainMintedClipEntry(ownerId, value.id, undefined, origin)
+    onMinted?.(value.id)
+  }
   const patch = (fields: Partial<ClipProjectDraft>) => {
     const next = { ...draft, ...fields }
     setDraft(next)
     // An invalid draft is never sent: the server would refuse it, and the field says so itself.
     // It stays local until it is valid again, and then goes out with everything else.
-    if (stored && savableClipProject(next)) queueClipDraft(stored.id, next, send)
+    if (!readOnly && savableClipProject(next)) queueClipDraft(queueKey, next, send)
   }
+  /** Mints an unminted clip now with what it holds, for a source picked before anything else
+   *  saved; a minted one answers with its id (CLIP-130). */
+  const mint = (): Promise<string> =>
+    stored ? Promise.resolve(stored.id) : mintClipDraft(unmintedKey, draft, send)
   const change = <K extends keyof ClipProjectDraft>(key: K, value: ClipProjectDraft[K]) =>
     patch(
       key === 'videoTemplateId' && value !== draft.videoTemplateId
@@ -264,36 +291,7 @@ export function ClipProjectForm({
     setBaseline(draftIdentity(next))
   }
   const failure = save.error
-  /** `/clips/new`'s one committing action. An existing project has no submit — the queue saves it
-   *  a beat after each pause — and the ratio is why this one stayed explicit (CLIP-9). */
-  const submit = async () => {
-    if (pending || !valid || stored || submitting.current) return
-    submitting.current = true
-    const operation = authority.current
-    const origin = readClipReturnContext(ownerId) ?? {
-      version: 1 as const,
-      ownerKey: ownerId,
-      path: clipChannelPath(channel),
-      section: channel,
-      filters: { channel },
-      scrollY: 0,
-      targetId: 'new',
-    }
-    try {
-      const value = await save.mutateAsync({ draft })
-      retainMintedClipEntry(ownerId, value.id, undefined, origin ?? null)
-      if (operation !== authority.current) return
-      setDraft(projectDraft(value))
-      setBaseline(draftIdentity(value))
-      leaving.current = true
-      await navigate({ to: '/clips/$clipId', params: { clipId: value.id }, replace: true })
-    } catch {
-      /* Preserve all local fields after a refusal. */
-    } finally {
-      submitting.current = false
-    }
-  }
-  const guided = !!layout && !!stored && !readOnly
+  const guided = !!layout && !readOnly
   const voiceLibrary = useSpokenLibrary(
     draft.dubbing?.enabled || draft.dubbing?.voiceId ? ownerId : '',
     false,
@@ -314,21 +312,16 @@ export function ClipProjectForm({
           inputMode="text"
           {...INPUT}
           value={draft.title}
-          placeholder={stored ? t('project.titlePlaceholder') : undefined}
-          aria-describedby={stored ? 'clip-title-hint' : undefined}
+          placeholder={t('project.titlePlaceholder')}
+          aria-describedby="clip-title-hint"
           onChange={(event) => change('title', event.target.value)}
-          aria-invalid={
-            (!stored && !draft.title.trim()) ||
-            Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title
-          }
+          aria-invalid={Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title}
         />
-        {stored && (
-          <Typography id="clip-title-hint" variant="body" className="text-content-secondary mt-2">
-            {t('project.titleHint')}
-          </Typography>
-        )}
-        {((!stored && !draft.title.trim()) ||
-          Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title) && (
+        {/* The title is optional, on a new clip too (CLIP-130). */}
+        <Typography id="clip-title-hint" variant="body" className="text-content-secondary mt-2">
+          {t('project.titleHint')}
+        </Typography>
+        {Array.from(draft.title.trim()).length > CLIP_PROJECT_LIMITS.title && (
           <FieldMessage>{t('project.titleLimit')}</FieldMessage>
         )}
       </div>
@@ -392,7 +385,7 @@ export function ClipProjectForm({
           </Button>
         </section>
       )}
-      {!creating && document && (
+      {document && (
         <ClipCompositionInputFields
           document={document}
           presets={{
@@ -411,32 +404,30 @@ export function ClipProjectForm({
       {/* The owner's own instruction sits with the answers it accompanies
               and is optional; an empty one is indistinguishable from never
               having written one (CLIP-121). */}
-      {!creating && (
-        <div>
-          <FieldLabel htmlFor="clip-instruction">
-            {t('project.instruction')} {t('composition.optionalSuffix')}
-          </FieldLabel>
-          <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
-            {t('project.instructionPrompt')}
-          </Typography>
-          <Textarea
-            id="clip-instruction"
-            inputMode="text"
-            {...INPUT}
-            autoGrow
-            value={draft.instruction ?? ''}
-            onChange={(event) =>
-              change(
-                'instruction',
-                boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
-              )
-            }
-          />
-          <FieldCount
-            left={CLIP_PROJECT_LIMITS.instruction - freeTextLength(draft.instruction ?? '')}
-          />
-        </div>
-      )}
+      <div>
+        <FieldLabel htmlFor="clip-instruction">
+          {t('project.instruction')} {t('composition.optionalSuffix')}
+        </FieldLabel>
+        <Typography variant="body" className="text-content-secondary mt-2 mb-2 break-words">
+          {t('project.instructionPrompt')}
+        </Typography>
+        <Textarea
+          id="clip-instruction"
+          inputMode="text"
+          {...INPUT}
+          autoGrow
+          value={draft.instruction ?? ''}
+          onChange={(event) =>
+            change(
+              'instruction',
+              boundedFreeText(event.target.value, CLIP_PROJECT_LIMITS.instruction),
+            )
+          }
+        />
+        <FieldCount
+          left={CLIP_PROJECT_LIMITS.instruction - freeTextLength(draft.instruction ?? '')}
+        />
+      </div>
     </>
   )
   const storyFields = (
@@ -525,7 +516,7 @@ export function ClipProjectForm({
       {/* The wizard's 저장 comes back to this screen (CLIP-225). */}
       <Link
         to="/video-templates/new"
-        search={{ channel: draft.channel ?? channel, clip: stored?.id }}
+        search={{ channel: draft.channel ?? channel, clip: stored?.id ?? 'new' }}
         className={buttonStyles({ variant: 'ghost' })}
       >
         {t('directory.create')}
@@ -598,33 +589,31 @@ export function ClipProjectForm({
             {t(stored ? 'project.fixedRatio' : 'project.verticalOnly')}
           </Typography>
         </div>
-        {!creating && (
-          <div>
-            <FieldLabel htmlFor="clip-duration">{t('project.duration')}</FieldLabel>
-            <TextField
-              id="clip-duration"
-              type="number"
-              inputMode="decimal"
-              {...INPUT}
-              min={CLIP_PROJECT_LIMITS.minSeconds}
-              max={CLIP_PROJECT_LIMITS.maxSeconds}
-              step="any"
-              value={seconds}
-              onChange={(event) => {
-                setSeconds(event.target.value)
-                change('targetDurationMs', Math.round(Number(event.target.value) * 1000))
-              }}
-              aria-invalid={
-                !Number.isFinite(draft.targetDurationMs) ||
-                draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
-                draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
-              }
-            />
-            <Typography variant="body" className="text-content-secondary mt-2">
-              {t('project.durationHelp')}
-            </Typography>
-          </div>
-        )}
+        <div>
+          <FieldLabel htmlFor="clip-duration">{t('project.duration')}</FieldLabel>
+          <TextField
+            id="clip-duration"
+            type="number"
+            inputMode="decimal"
+            {...INPUT}
+            min={CLIP_PROJECT_LIMITS.minSeconds}
+            max={CLIP_PROJECT_LIMITS.maxSeconds}
+            step="any"
+            value={seconds}
+            onChange={(event) => {
+              setSeconds(event.target.value)
+              change('targetDurationMs', Math.round(Number(event.target.value) * 1000))
+            }}
+            aria-invalid={
+              !Number.isFinite(draft.targetDurationMs) ||
+              draft.targetDurationMs < CLIP_PROJECT_LIMITS.minSeconds * 1000 ||
+              draft.targetDurationMs > CLIP_PROJECT_LIMITS.maxSeconds * 1000
+            }
+          />
+          <Typography variant="body" className="text-content-secondary mt-2">
+            {t('project.durationHelp')}
+          </Typography>
+        </div>
       </fieldset>
 
       {stored && !stored.composition && stored.disclosure && (
@@ -647,7 +636,7 @@ export function ClipProjectForm({
 
       {/* Appearance choices stay after duration; phones open them explicitly.
               The project draft and other inputs remain mounted above this view. */}
-      {!creating && (
+      {stored && (
         <Disclosure
           title={t('project.designChoices')}
           size="row"
@@ -740,7 +729,7 @@ export function ClipProjectForm({
         </Disclosure>
       )}
 
-      {!creating &&
+      {stored &&
         dubbing?.(draft.dubbing ?? { enabled: false, voiceId: '' }, (value) =>
           change('dubbing', value),
         )}
@@ -773,10 +762,7 @@ export function ClipProjectForm({
       <form
         id="clip-project-form"
         className={guided ? 'mt-2 flex flex-1 flex-col' : 'mt-6'}
-        onSubmit={(event) => {
-          event.preventDefault()
-          void submit()
-        }}
+        onSubmit={(event) => event.preventDefault()}
       >
         {guided && layout ? (
           layout({
@@ -797,6 +783,7 @@ export function ClipProjectForm({
               ? { coverage: { keywords: keywordsHeld }, hashtags: guide.hashtags }
               : undefined,
             noteEmpty: !(draft.instruction ?? '').trim(),
+            mint,
             inputRefusal: !voiceReady
               ? 'style'
               : !valid || templateChanged
@@ -812,9 +799,9 @@ export function ClipProjectForm({
           // source fields yet.
           <div className="min-w-0 space-y-6">
             {storyFields}
-            {!creating && kindFields}
-            {!creating && campaign && requirementFields}
-            {!creating && sourceFields}
+            {kindFields}
+            {campaign && requirementFields}
+            {sourceFields}
             {styleFields}
           </div>
         )}
@@ -823,32 +810,9 @@ export function ClipProjectForm({
       {!readOnly && !guided && (
         <ActionBar className="mt-auto">
           {notices}
-          <div className="flex flex-wrap justify-end gap-3">
-            {!stored && (
-              <Button
-                form="clip-project-form"
-                type="submit"
-                variant="cta"
-                className="w-full sm:w-auto"
-                pending={save.isPending}
-                disabled={!valid || pending}
-              >
-                {t('project.create')}
-              </Button>
-            )}
-            {generationActions}
-          </div>
+          <div className="flex flex-wrap justify-end gap-3">{generationActions}</div>
         </ActionBar>
       )}
-      <Dialog
-        open={blocker.status === 'blocked'}
-        title={t('project.leaveTitle')}
-        confirmLabel={t('project.leave')}
-        onClose={() => blocker.reset?.()}
-        onConfirm={() => blocker.proceed?.()}
-      >
-        {t('project.leaveBody')}
-      </Dialog>
     </>
   )
 }

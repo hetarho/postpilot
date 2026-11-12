@@ -5,7 +5,6 @@ import {
   normalizeClipProject,
   savableClipProject,
   validClipProject,
-  validNewClipProject,
   type ClipProjectDraft,
 } from './types'
 const composition = parseClipComposition(
@@ -37,23 +36,17 @@ describe('clip setup validation', () => {
   ])('rejects invalid setup %j', (patch) => {
     expect(validClipProject({ ...draft(), ...patch }, composition)).toBe(false)
   })
-  // Minting settles the ratio and nothing else (CLIP-130): a draft with no answers,
-  // no campaign type and no length is what `/clips/new` sends. The template is
-  // optional there and afterwards — a project with none is generated from its own
-  // settings (CLIP-5).
-  it('mints from the title and the ratio alone, with or without a template', () => {
-    const minting = { ...emptyClipProject(), title: '새 경험', videoTemplateId: 'owned' }
-    expect(validNewClipProject(minting)).toBe(true)
-    expect(validClipProject(minting, composition)).toBe(false)
-    expect(validNewClipProject({ ...minting, title: ' ' })).toBe(false)
-    expect(validNewClipProject({ ...minting, ratio: 'square' })).toBe(false)
-    expect(validNewClipProject({ ...minting, ratio: 'horizontal' })).toBe(false)
-    expect(validNewClipProject({ ...minting, videoTemplateId: '' })).toBe(true)
+  // Minting needs nothing the owner chose (CLIP-130): an empty draft — no title, no answers,
+  // no length and no template — is what `/clips/new`'s first save may send, and it saves.
+  it('saves an empty new draft and an untitled project, with or without a template', () => {
+    const minting = emptyClipProject()
+    expect(savableClipProject(minting)).toBe(true)
+    expect(savableClipProject({ ...minting, videoTemplateId: 'owned' })).toBe(true)
     expect(validClipProject({ ...draft(), videoTemplateId: '' }, composition)).toBe(true)
     // A saved project's title is optional: an empty one saves and generates (CLIP-130).
     expect(validClipProject({ ...draft(), title: '' }, composition)).toBe(true)
     expect(savableClipProject({ ...draft(), title: '' })).toBe(true)
-    expect(validNewClipProject({ ...minting, ratio: 'wide' as ClipProjectDraft['ratio'] })).toBe(
+    expect(savableClipProject({ ...minting, ratio: 'wide' as ClipProjectDraft['ratio'] })).toBe(
       false,
     )
   })

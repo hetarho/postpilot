@@ -8,6 +8,7 @@ import { AppFailureMessage, Button, ProgressBar, Typography, buttonStyles } from
 import { ClipSelectionError } from '../model/manifest'
 import { ClipSourceMismatchError } from '../model/reselection'
 import type { useClipSourceUpload } from '../model/useClipSourceUpload'
+import { pickableClipSource, stashClipSourcePick } from '../model/pick-handoff'
 
 const ACCEPT = [
   ...Object.keys(CLIP_SOURCE_CONTAINERS).map((v) => `.${v}`),
@@ -22,8 +23,12 @@ export function ClipSourcePicker({
   binding,
   sound,
   order,
+  ensureProject,
 }: {
   upload: ReturnType<typeof useClipSourceUpload>
+  /** An unminted `/clips/new`: a pick mints the project first and its upload goes to the minted
+   *  id, handed to the workspace the address change mounts (CLIP-130). */
+  ensureProject?: () => Promise<string>
   disabled?: boolean
   processing?: boolean
   correction?: boolean
@@ -65,7 +70,8 @@ export function ClipSourcePicker({
 }) {
   const { t } = useTranslation('clips')
   const inputId = useId()
-  const busy = ['reading', 'uploading', 'cancelling'].includes(upload.phase)
+  const [minting, setMinting] = useState(false)
+  const busy = minting || ['reading', 'uploading', 'cancelling'].includes(upload.phase)
   const locked = disabled || !!upload.attempt
   const error = upload.error
   const [selected, setSelected] = useState('')
@@ -168,7 +174,15 @@ export function ClipSourcePicker({
             onChange={(event) => {
               const files = Array.from(event.target.files ?? [])
               event.target.value = ''
-              void upload.select(files)
+              if (!ensureProject) return void upload.select(files)
+              // A pick made only of files the picker would skip mints nothing (CLIP-130).
+              if (!files.some(pickableClipSource)) return
+              setMinting(true)
+              void ensureProject()
+                .then((id) => stashClipSourcePick(id, files))
+                // A refused mint keeps the page; the status region says the save failed.
+                .catch(() => undefined)
+                .finally(() => setMinting(false))
             }}
           />
           <label

@@ -65,7 +65,6 @@ export {
   projectDraft,
   savableClipProject,
   validClipProject,
-  validNewClipProject,
 } from './model/types'
 export type {
   ClipAccounting,

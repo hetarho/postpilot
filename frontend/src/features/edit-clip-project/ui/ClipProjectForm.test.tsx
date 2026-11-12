@@ -81,12 +81,25 @@ const NAMES: Record<Screen, string> = {
   note: '덧붙임으로',
   review: '검토',
 }
-function Form({ stored = project, start = 'content' }: { stored?: ClipProject; start?: Screen }) {
+function Form({
+  stored = project,
+  start = 'content',
+  unminted = false,
+  onMinted,
+}: {
+  stored?: ClipProject
+  start?: Screen
+  /** `/clips/new`: no project yet, minted by the first save (CLIP-130). */
+  unminted?: boolean
+  onMinted?: (id: string) => void
+}) {
   const [part, select] = useState<Screen>(start)
+  const [mintedId, setMintedId] = useState('')
   return (
     <ClipProjectForm
       ownerId="alice"
-      stored={stored}
+      stored={unminted ? undefined : stored}
+      onMinted={onMinted}
       dubbing={(value, change) => (
         <label>
           <input
@@ -122,6 +135,13 @@ function Form({ stored = project, start = 'content' }: { stored?: ClipProject; s
                 {NAMES[screen]}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => void content.mint().then(setMintedId, () => setMintedId('refused'))}
+            >
+              발급
+            </button>
+            <output aria-label="발급된 영상">{mintedId}</output>
           </>
         )
       }}
@@ -368,3 +388,47 @@ it.each(['missing', 'loading', 'failed', 'confirmed'] as const)(
     expect(narration).toHaveTextContent('더빙 사용 안 함 · 원본 소리는 소스별 선택을 따라요.')
   },
 )
+
+it('mints an unminted clip with the whole queued draft once and updates it afterwards (CLIP-130)', async () => {
+  const user = userEvent.setup()
+  const minted = vi.fn()
+  ports.save.mockImplementation(
+    async ({ id, draft }: { id?: string; draft: ClipProjectDraft }) => ({
+      ...project,
+      ...draft,
+      id: id ?? 'minted',
+    }),
+  )
+  render(<Form unminted start="kind" onMinted={minted} />)
+  // The guide stands on /clips/new too, with nothing that creates the clip.
+  expect(screen.queryByRole('button', { name: '클립 만들기' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /내 돈으로 다녀왔어요/ }))
+  await open('content')
+  // An empty title saves: nothing in the draft is required to mint it.
+  await user.click(byName('발급'))
+  expect(await screen.findByRole('status', { name: '발급된 영상' })).toHaveTextContent('minted')
+  expect(ports.save).toHaveBeenCalledTimes(1)
+  expect(ports.save).toHaveBeenCalledWith({
+    draft: expect.objectContaining({ title: '', campaign: false, channel: 'naver_clip' }),
+  })
+  expect(minted).toHaveBeenCalledWith('minted')
+  await user.type(screen.getByRole('textbox', { name: /클립 제목/ }), '라떼')
+  await act(() => flushClipDraft('minted'))
+  expect(ports.save).toHaveBeenLastCalledWith({
+    id: 'minted',
+    draft: expect.objectContaining({ title: '라떼' }),
+  })
+  expect(ports.save.mock.calls.filter(([request]) => !request.id)).toHaveLength(1)
+})
+
+it('keeps every local field when the mint is refused (CLIP-130)', async () => {
+  const user = userEvent.setup()
+  const minted = vi.fn()
+  ports.save.mockRejectedValue(new Error('refused'))
+  render(<Form unminted onMinted={minted} />)
+  await user.type(screen.getByRole('textbox', { name: /클립 제목/ }), '새 경험')
+  await user.click(byName('발급'))
+  expect(await screen.findByRole('status', { name: '발급된 영상' })).toHaveTextContent('refused')
+  expect(minted).not.toHaveBeenCalled()
+  expect(screen.getByRole('textbox', { name: /클립 제목/ })).toHaveValue('새 경험')
+})

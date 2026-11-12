@@ -1,7 +1,8 @@
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
-/** Navigate the actual retained guide. New/finalized and focused-job views keep their own UI. */
+/** Navigate the actual retained guide, `/clips/new`'s unminted one included. Finalized and
+ *  focused-job views keep their own UI. */
 export type ClipGuidePart =
   'kind' | 'requirements' | 'sources' | 'template' | 'content' | 'style' | 'note' | 'review'
 export async function clipGuideTo(part: ClipGuidePart) {
@@ -11,8 +12,7 @@ export async function clipGuideTo(part: ClipGuidePart) {
   await waitFor(() => {
     if (
       screen.queryByRole('navigation', { name: /클립 만들기 단계|Clip steps/ }) ||
-      screen.queryByRole('tablist', { name: /클립 단계|Clip steps/ }) ||
-      screen.queryByRole('button', { name: /^(클립 만들기|Create clip)$/ })
+      screen.queryByRole('tablist', { name: /클립 단계|Clip steps/ })
     )
       return
     throw new Error('Clip workspace is still loading')

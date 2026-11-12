@@ -7,8 +7,12 @@ import {
   clipDraftFailure,
   discardClipDraftQueues,
   flushClipDraft,
+  mintClipDraft,
+  mintedClipId,
+  newClipDraftKey,
   peekPendingClipDraft,
   queueClipDraft,
+  recordMintedClip,
   subscribeClipDraft,
 } from './clip-draft-queue'
 
@@ -248,4 +252,70 @@ it('discards a retained refusal when its project is deleted', async () => {
   discardClipDraftQueues()
   expect(clipDraftFailure('clip')).toBeUndefined()
   expect(clipDraftState('clip')).toBe('idle')
+})
+
+describe('an unminted clip (CLIP-130, POST-7)', () => {
+  /** The form's sender: a create while nothing is minted, an update afterwards. */
+  function minting(key: string) {
+    const calls: string[] = []
+    let release = () => {}
+    const created = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const send = async (value: ClipProjectDraft) => {
+      const id = mintedClipId(key)
+      if (id) {
+        calls.push(`update ${id} ${value.title}`)
+        return
+      }
+      calls.push(`create ${value.title}`)
+      await created
+      recordMintedClip(key, 'minted')
+    }
+    return { calls, release, send }
+  }
+
+  it('mints once and sends an edit made while the create is in flight as the next update', async () => {
+    const key = newClipDraftKey()
+    const { calls, release, send } = minting(key)
+    // A pick before anything was typed mints the empty draft: the title is optional.
+    const id = mintClipDraft(key, draft(''), send)
+    await vi.advanceTimersByTimeAsync(0)
+    queueClipDraft(key, draft('첫 기록'), send)
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(calls).toEqual(['create '])
+    release()
+    await expect(id).resolves.toBe('minted')
+    expect(calls).toEqual(['create ', 'update minted 첫 기록'])
+    // A second mint answers with the id it already has.
+    await expect(mintClipDraft(key, draft('또'), send)).resolves.toBe('minted')
+    expect(calls).toHaveLength(2)
+  })
+
+  it('lets the minted project read and flush what the unminted key still owes', async () => {
+    const key = newClipDraftKey()
+    const { calls, release, send } = minting(key)
+    queueClipDraft(key, draft('제목'), send)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(calls).toEqual(['create 제목'])
+    release()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(mintedClipId(key)).toBe('minted')
+    // What the unminted page was typing when the address changed is still owed under its key.
+    queueClipDraft(key, draft('제목 더'), send)
+    expect(peekPendingClipDraft('minted')?.title).toBe('제목 더')
+    await flushClipDraft('minted')
+    expect(calls).toEqual(['create 제목', 'update minted 제목 더'])
+    expect(peekPendingClipDraft('minted')).toBeUndefined()
+  })
+
+  it('rejects the mint when the create is refused, keeping the draft queued', async () => {
+    const key = newClipDraftKey()
+    const send = vi.fn(async () => {
+      throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+    })
+    await expect(mintClipDraft(key, draft('제목'), send)).rejects.toBeTruthy()
+    expect(mintedClipId(key)).toBeUndefined()
+    expect(clipDraftState(key)).toBe('refused')
+  })
 })

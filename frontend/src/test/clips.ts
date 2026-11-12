@@ -257,6 +257,8 @@ export interface FakeClipsOptions {
   /** Holds UpdateClipProject open until the test releases it, so an assertion can run WHILE the
    *  settings autosave is in flight. */
   projectSaveGate?: () => Promise<unknown>
+  /** Holds CreateClipProject until it resolves: an unminted clip's first save in flight. */
+  projectCreateGate?: () => Promise<unknown>
   projectSaveFails?: boolean
   projectSaveError?: ConnectError
   projectListFails?: boolean
@@ -748,8 +750,9 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       })),
     })
   })
-  router.rpc(ClipGenerationService.method.createClipProject, (req) => {
+  router.rpc(ClipGenerationService.method.createClipProject, async (req) => {
     options.calls?.push('CreateClipProject')
+    if (options.projectCreateGate) await options.projectCreateGate()
     if (options.projectSaveFails) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
     const template = templateFor(req.videoTemplateId)
     const styles = req.allowedCaptionStyles?.values ?? template?.allowedCaptionStyles

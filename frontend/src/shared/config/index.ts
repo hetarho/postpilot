@@ -72,6 +72,12 @@ export const AUTOSAVE_RETRY_MAX_MS = 30_000
  *  and the post's status can never reach the one line that reports it. Long enough to be read as
  *  the answer to the keystroke that caused it, short enough that a draft left alone says nothing. */
 export const SAVE_STATUS_SETTLED_MS = 2_000
+/** How long a cross-route editor handoff may sit unread: the caret (and, for a clip, the guide
+ *  screen and a source pick) the first save stashes when it replaces `/posts/new` or `/clips/new`
+ *  with the minted address. It is meant to be picked up a tick later by the editor that
+ *  navigation mounts; anything older belongs to a navigation that never happened, and applying it
+ *  would put the caret somewhere the reader has since left (POST-11, CLIP-130). */
+export const EDITOR_HANDOFF_TTL_MS = 5_000
 
 /** Generation jobs are durable on the server; polling only observes their state. Every
  *  domain that waits on a job reads this one interval. */

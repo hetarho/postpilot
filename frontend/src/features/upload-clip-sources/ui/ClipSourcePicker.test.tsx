@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { ClipSelectionError } from '../model/manifest'
 import { ClipSourcePicker } from './ClipSourcePicker'
+import { claimClipSourcePick } from '../model/pick-handoff'
 
 function fixture(): ComponentProps<typeof ClipSourcePicker>['upload'] {
   return {
@@ -232,3 +233,46 @@ it.each(['running', 'unavailable', 'not-current', 'expired'])(
     expect(sound.change).not.toHaveBeenCalled()
   },
 )
+
+describe('a pick on an unminted clip (CLIP-130)', () => {
+  const idle = () => ({ ...fixture(), phase: 'idle' as const, entries: [] })
+  const pick = (files: File[]) =>
+    fireEvent.change(document.querySelector('input[type="file"]')!, { target: { files } })
+
+  it('mints first and hands the files to the minted id instead of uploading here', async () => {
+    const upload = idle()
+    const ensureProject = vi.fn(async () => 'minted')
+    render(<ClipSourcePicker upload={upload} ensureProject={ensureProject} />)
+    const file = new File(['video'], 'visit.mp4', { type: 'video/mp4' })
+    pick([file])
+    await act(async () => {})
+    expect(ensureProject).toHaveBeenCalledTimes(1)
+    expect(upload.select).not.toHaveBeenCalled()
+    expect(claimClipSourcePick('minted')).toEqual([file])
+    // One-shot: the handoff is claimed once.
+    expect(claimClipSourcePick('minted')).toBeUndefined()
+  })
+
+  it('mints nothing for a pick made only of files it would skip', async () => {
+    const upload = idle()
+    const ensureProject = vi.fn(async () => 'minted')
+    render(<ClipSourcePicker upload={upload} ensureProject={ensureProject} />)
+    pick([new File(['text'], 'notes.txt', { type: 'text/plain' })])
+    await act(async () => {})
+    expect(ensureProject).not.toHaveBeenCalled()
+    expect(upload.select).not.toHaveBeenCalled()
+    expect(claimClipSourcePick('minted')).toBeUndefined()
+  })
+
+  it('keeps the page when the mint is refused, handing nothing over', async () => {
+    const upload = idle()
+    const ensureProject = vi.fn(async () => {
+      throw new Error('refused')
+    })
+    render(<ClipSourcePicker upload={upload} ensureProject={ensureProject} />)
+    pick([new File(['video'], 'visit.mov', { type: 'video/quicktime' })])
+    await act(async () => {})
+    expect(ensureProject).toHaveBeenCalledTimes(1)
+    expect(claimClipSourcePick('minted')).toBeUndefined()
+  })
+})
