@@ -10,7 +10,6 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | - |
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
 
 ## inbox
