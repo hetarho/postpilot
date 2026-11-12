@@ -26,7 +26,7 @@ pnpm lint
 pnpm lint:fsd
 pnpm lint:retirement
 pnpm lint:style:probe && pnpm lint:style
-pnpm exec haeram-spec-creator check
+npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check
 pnpm --filter ./frontend test
 pnpm build:web
 python3 -m venv /tmp/postpilot-deploy-checks

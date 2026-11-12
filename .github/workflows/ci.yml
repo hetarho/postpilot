@@ -33,7 +33,7 @@ jobs:
       - run: pnpm lint:retirement
       - run: pnpm lint:style:probe
       - run: pnpm lint:style
-      - run: pnpm exec haeram-spec-creator check
+      - run: npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check
       - run: pnpm --filter ./frontend test
       - run: pnpm --filter ./frontend build
 
