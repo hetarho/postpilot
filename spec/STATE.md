@@ -13,6 +13,7 @@
 | si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
 
 ## inbox
+- 261113 decided review/performance-design-system-261113 T780 T781: fix verified lifecycle disruptions without weakening revision/access fences? → authoritative first-capability generation, then one guarded same-transport continuation after equal-content ACK (alt: ignore everyURL/revision | keep extra owners | rewrite clock). Full snapshots/access/cancellation/limits remain; bounded rebuffer accepted, no seamless/oscillation claim. Existing canonical helper reused and memoized; user waives questions until08:00KST.
 - 261113 decided review/performance-design-system-261113 T777 T778 T779: actual-media priorities and audio byte tradeoff? → fix duplicate boundary packet reads, then32KiB audio read-ahead, then shared blog/video header (alt:512KiB audio window at24.4xwire | speculative playhead rewrite | generic UI first). Real-source PCM/pixels/analysis and all caps remain exact; header aligns within existingTHEME-26/39/58 without outer-width policy change. User waives questions until08:00KST; reserve last90min.
 - 261113 decided review/performance-design-system-261113: align the reported blog/video back control and layout? → inspect and reuse the blog/reference shared page primitives after the confirmed performance fixes, preserving return destinations/history/drafts/accessibility (alt: prioritize generic counters first | redesign all flows). User requests no questions through08:00KST and delegates choices; conflicting product policy must be recorded before changing it.
 - 261113 decided review/performance-design-system-261113: actual reported video symptoms take priority? → reproduce slow 다듬기 entry and oscillating playback using supplied Photos 001 media before UI refactoring (alt: treat memoization as a complete fix | continue UI tasks first). User grants needed permissions; split independent read-only scouts between entry/readiness and playback time synchronization, preserve paid/provider and production state.
@@ -220,9 +221,12 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T780 | Avoid preview restarts on first retained capability publication | ARCH | T778 | todo |
+| T781 | Continue an active preview after an equal-content save acknowledgment | ARCH | T780 | todo |
 
 ## next
 - gusta-implement-task T773 through approved si8 work-group assignment
+- si8 approved work: T778 → T780 → T781 → T779, then shared UI source reductions within the08:00KST cutoff; final90min reserved.
 
 ## log
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
@@ -231,6 +235,7 @@
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
+- 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
 - 261112 T771 done
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
 - 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
@@ -242,6 +247,5 @@
 - 261112 T770 done
 - 261112 T769 done
 - 261112 T767 done
-- 261112 T766 done
 - 261112 T762 done
 - 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
