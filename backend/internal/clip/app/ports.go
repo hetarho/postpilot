@@ -63,6 +63,8 @@ type ClipTx interface {
 	ApplyAttemptResult(context.Context, clip.AttemptResult) error
 	DeleteAttemptResult(context.Context, string) error
 	RecordFinalization(context.Context, clip.FinalizationRequest, time.Time) (clip.Project, error)
+	RecordConfirmation(context.Context, clip.ConfirmationRequest, time.Time) (clip.Project, error)
+	RecordPublishedURL(ctx context.Context, user, id, url string, now time.Time) (clip.Project, error)
 }
 
 // Admission is the credit hold, already bound to the transaction it must

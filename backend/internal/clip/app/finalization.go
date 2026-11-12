@@ -8,6 +8,16 @@ import (
 	"github.com/postpilot/backend/internal/clip"
 )
 
+// ConfirmProject is 확정하기 (CLIP-75): it records the current plan revision and nothing else.
+func (s *Service) ConfirmProject(ctx context.Context, req clip.ConfirmationRequest) (clip.Project, error) {
+	return s.finalizer.Confirm(ctx, req)
+}
+
+// SavePublishedURL saves or replaces a finalized clip's posted URL (CLIP-232).
+func (s *Service) SavePublishedURL(ctx context.Context, user, id, url string) (clip.Project, error) {
+	return s.finalizer.SavePublishedURL(ctx, user, id, url)
+}
+
 func (s *Service) FinalizeProject(ctx context.Context, req clip.FinalizationRequest) (clip.Project, error) {
 	if s.finalizer == nil {
 		return clip.Project{}, clip.ErrFinalizationInvalid
@@ -33,6 +43,9 @@ func (s *GenerationService) FinalizationRefusal(p clip.Project, busy bool) strin
 	if busy {
 		return "busy"
 	}
+	if !clip.Confirmed(p) {
+		return "unconfirmed"
+	}
 	if p.Result == nil || p.Result.ID == "" {
 		return "missing_render"
 	}
@@ -44,4 +57,9 @@ func (s *GenerationService) FinalizationRefusal(p clip.Project, busy bool) strin
 		return "invalid_plan"
 	}
 	return ""
+}
+
+// ConfirmationRefusal is the project's 확정하기 verdict for the detail read.
+func (s *GenerationService) ConfirmationRefusal(p clip.Project, busy bool) string {
+	return clip.ConfirmationRefusal(p, busy, s.cfg.Render)
 }

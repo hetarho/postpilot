@@ -191,10 +191,11 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	title := strings.TrimSpace(input.Title)
+	// The title is optional: an empty one saves, generates and renders (CLIP-130).
 	// An unset duration is allowed at creation — the owner chooses it in ①
 	// beside the sources it measures, and the generation gate is what refuses a
 	// clip without one (CLIP-130, CLIP-7).
-	if !clip.BoundedText(title, 1, s.limits.TitleChars) || !s.durationOrUnset(input.TargetDurationMS) {
+	if !clip.BoundedText(title, 0, s.limits.TitleChars) || !s.durationOrUnset(input.TargetDurationMS) {
 		return clip.Project{}, clip.ErrInvalid
 	}
 	// Empty disclosure is allowed at creation — the owner chooses it before
@@ -302,7 +303,15 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 
 func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.ProjectPatch) (clip.Project, error) {
 	p.LinkedPostIdentity, p.StaleLinkedPostIdentity = nil, nil
-	if s.generation != nil {
+	if p.ChecklistTicks != nil {
+		ticks, err := clip.NormalizeChecklistTicks(*p.ChecklistTicks)
+		if err != nil {
+			return clip.Project{}, err
+		}
+		p.ChecklistTicks = &ticks
+	}
+	// Ticks are advisory notes no running job reads or writes (CLIP-231).
+	if s.generation != nil && !p.TicksOnly() {
 		active, err := s.generation.jobs.Active(ctx, user, id)
 		if err != nil {
 			return clip.Project{}, err
@@ -322,7 +331,7 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		}
 		p.Dubbing = &chosen
 	}
-	if old.Finalized != nil && !p.MovesChannelOnly() {
+	if old.Finalized != nil && !p.MetadataOnly() {
 		return clip.Project{}, clip.ErrFinalized
 	}
 	if err := s.prepareLinkedPostPatch(ctx, user, old, &p); err != nil {
@@ -340,7 +349,7 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	}
 	if p.Title != nil {
 		title := strings.TrimSpace(*p.Title)
-		if !clip.BoundedText(title, 1, s.limits.TitleChars) {
+		if !clip.BoundedText(title, 0, s.limits.TitleChars) {
 			return clip.Project{}, clip.ErrInvalid
 		}
 		p.Title = &title

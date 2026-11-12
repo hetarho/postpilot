@@ -107,7 +107,9 @@ func TestTheDirectoryReadsNoPlanOrAnalysis(t *testing.T) {
 	if row.Observations != nil || row.Editing != nil || row.GetEditPlanRevision() != 2 || row.GetResult().GetId() != "result" {
 		t.Fatalf("the row: %v", row)
 	}
-	if row.GetCanFinalize() || row.GetFinalizationRefusal() != "unavailable" || !row.GetCanEdit() {
-		t.Fatalf("a row without its plan claimed a finalization verdict: %v %q", row.GetCanFinalize(), row.GetFinalizationRefusal())
+	// An unconfirmed row says so from its own columns (CLIP-229); only a confirmed one
+	// would need the plan, which the row does not read.
+	if row.GetCanFinalize() || row.GetFinalizationRefusal() != "unconfirmed" || !row.GetCanEdit() || row.GetCanConfirm() || row.GetConfirmationRefusal() != "unavailable" {
+		t.Fatalf("a row without its plan claimed a finalization verdict: %v %q %q", row.GetCanFinalize(), row.GetFinalizationRefusal(), row.GetConfirmationRefusal())
 	}
 }

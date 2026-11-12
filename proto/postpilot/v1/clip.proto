@@ -94,7 +94,7 @@ message ClipProject {
   string finalized_result_id = 23;
   optional bool can_edit = 24;
   optional bool can_finalize = 25;
-  // Empty when ready; finalized | busy | missing_render | stale_render | invalid_plan | unavailable.
+  // Empty when ready; finalized | busy | unconfirmed | missing_render | stale_render | invalid_plan | unavailable.
   string finalization_refusal = 26;
   // Detail only, separate from canonical successful state; no media URLs.
   ClipAttemptInspection attempt_inspection = 27;
@@ -131,6 +131,19 @@ message ClipProject {
   bool campaign = 43;
   AdvertiserGuide advertiser_guide = 44;
   ClipLinkedPost linked_post = 45;
+  // The plan revision 확정하기 last confirmed (CLIP-75, CLIP-229), 0 when never. The project
+  // reads as confirmed exactly while this equals edit_plan_revision.
+  int32 confirmed_plan_revision = 46;
+  string confirmed_at = 47;
+  optional bool can_confirm = 48;
+  // Empty when ready; finalized | busy | invalid_plan | narration | stale.
+  string confirmation_refusal = 49;
+  // The clip's posted URL (CLIP-232): set only on a finalized project, which then reads as
+  // 게시됨; a finalized project without one reads as 완료.
+  string published_url = 50;
+  string published_at = 51;
+  // The checklist lines the owner ticked, by their text (CLIP-231).
+  repeated string checklist_ticks = 52;
 }
 
 message ClipLinkedPost {

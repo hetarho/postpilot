@@ -66,9 +66,15 @@ const (
 	// ClipGenerationServiceStartClipStorylineRevisionProcedure is the fully-qualified name of the
 	// ClipGenerationService's StartClipStorylineRevision RPC.
 	ClipGenerationServiceStartClipStorylineRevisionProcedure = "/postpilot.v1.ClipGenerationService/StartClipStorylineRevision"
+	// ClipGenerationServiceConfirmClipProjectProcedure is the fully-qualified name of the
+	// ClipGenerationService's ConfirmClipProject RPC.
+	ClipGenerationServiceConfirmClipProjectProcedure = "/postpilot.v1.ClipGenerationService/ConfirmClipProject"
 	// ClipGenerationServiceFinalizeClipProjectProcedure is the fully-qualified name of the
 	// ClipGenerationService's FinalizeClipProject RPC.
 	ClipGenerationServiceFinalizeClipProjectProcedure = "/postpilot.v1.ClipGenerationService/FinalizeClipProject"
+	// ClipGenerationServiceSaveClipPublishedUrlProcedure is the fully-qualified name of the
+	// ClipGenerationService's SaveClipPublishedUrl RPC.
+	ClipGenerationServiceSaveClipPublishedUrlProcedure = "/postpilot.v1.ClipGenerationService/SaveClipPublishedUrl"
 	// ClipGenerationServiceCancelClipJobProcedure is the fully-qualified name of the
 	// ClipGenerationService's CancelClipJob RPC.
 	ClipGenerationServiceCancelClipJobProcedure = "/postpilot.v1.ClipGenerationService/CancelClipJob"
@@ -106,7 +112,11 @@ type ClipGenerationServiceClient interface {
 	// rewrites the storyline as the owner asks.
 	QuoteClipStorylineRevision(context.Context, *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	// 확정하기 (CLIP-75): records the current plan revision as confirmed, reversibly (CLIP-229).
+	ConfirmClipProject(context.Context, *connect.Request[v1.ConfirmClipProjectRequest]) (*connect.Response[v1.ConfirmClipProjectResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
+	// Saves or replaces a finalized clip's posted URL, changing nothing else (CLIP-232).
+	SaveClipPublishedUrl(context.Context, *connect.Request[v1.SaveClipPublishedUrlRequest]) (*connect.Response[v1.SaveClipPublishedUrlResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
 	GetClipUploadTexts(context.Context, *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error)
 	SaveClipUploadText(context.Context, *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error)
@@ -194,10 +204,22 @@ func NewClipGenerationServiceClient(httpClient connect.HTTPClient, baseURL strin
 			connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipStorylineRevision")),
 			connect.WithClientOptions(opts...),
 		),
+		confirmClipProject: connect.NewClient[v1.ConfirmClipProjectRequest, v1.ConfirmClipProjectResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceConfirmClipProjectProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("ConfirmClipProject")),
+			connect.WithClientOptions(opts...),
+		),
 		finalizeClipProject: connect.NewClient[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse](
 			httpClient,
 			baseURL+ClipGenerationServiceFinalizeClipProjectProcedure,
 			connect.WithSchema(clipGenerationServiceMethods.ByName("FinalizeClipProject")),
+			connect.WithClientOptions(opts...),
+		),
+		saveClipPublishedUrl: connect.NewClient[v1.SaveClipPublishedUrlRequest, v1.SaveClipPublishedUrlResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceSaveClipPublishedUrlProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("SaveClipPublishedUrl")),
 			connect.WithClientOptions(opts...),
 		),
 		cancelClipJob: connect.NewClient[v1.CancelClipJobRequest, v1.CancelClipJobResponse](
@@ -252,7 +274,9 @@ type clipGenerationServiceClient struct {
 	startClipStoryline          *connect.Client[v1.StartClipStorylineRequest, v1.StartClipGenerationResponse]
 	quoteClipStorylineRevision  *connect.Client[v1.QuoteClipStorylineRevisionRequest, v1.QuoteClipGenerationResponse]
 	startClipStorylineRevision  *connect.Client[v1.StartClipStorylineRevisionRequest, v1.StartClipGenerationResponse]
+	confirmClipProject          *connect.Client[v1.ConfirmClipProjectRequest, v1.ConfirmClipProjectResponse]
 	finalizeClipProject         *connect.Client[v1.FinalizeClipProjectRequest, v1.FinalizeClipProjectResponse]
+	saveClipPublishedUrl        *connect.Client[v1.SaveClipPublishedUrlRequest, v1.SaveClipPublishedUrlResponse]
 	cancelClipJob               *connect.Client[v1.CancelClipJobRequest, v1.CancelClipJobResponse]
 	getClipUploadTexts          *connect.Client[v1.GetClipUploadTextsRequest, v1.GetClipUploadTextsResponse]
 	saveClipUploadText          *connect.Client[v1.SaveClipUploadTextRequest, v1.SaveClipUploadTextResponse]
@@ -316,9 +340,19 @@ func (c *clipGenerationServiceClient) StartClipStorylineRevision(ctx context.Con
 	return c.startClipStorylineRevision.CallUnary(ctx, req)
 }
 
+// ConfirmClipProject calls postpilot.v1.ClipGenerationService.ConfirmClipProject.
+func (c *clipGenerationServiceClient) ConfirmClipProject(ctx context.Context, req *connect.Request[v1.ConfirmClipProjectRequest]) (*connect.Response[v1.ConfirmClipProjectResponse], error) {
+	return c.confirmClipProject.CallUnary(ctx, req)
+}
+
 // FinalizeClipProject calls postpilot.v1.ClipGenerationService.FinalizeClipProject.
 func (c *clipGenerationServiceClient) FinalizeClipProject(ctx context.Context, req *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
 	return c.finalizeClipProject.CallUnary(ctx, req)
+}
+
+// SaveClipPublishedUrl calls postpilot.v1.ClipGenerationService.SaveClipPublishedUrl.
+func (c *clipGenerationServiceClient) SaveClipPublishedUrl(ctx context.Context, req *connect.Request[v1.SaveClipPublishedUrlRequest]) (*connect.Response[v1.SaveClipPublishedUrlResponse], error) {
+	return c.saveClipPublishedUrl.CallUnary(ctx, req)
 }
 
 // CancelClipJob calls postpilot.v1.ClipGenerationService.CancelClipJob.
@@ -369,7 +403,11 @@ type ClipGenerationServiceHandler interface {
 	// rewrites the storyline as the owner asks.
 	QuoteClipStorylineRevision(context.Context, *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	StartClipStorylineRevision(context.Context, *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
+	// 확정하기 (CLIP-75): records the current plan revision as confirmed, reversibly (CLIP-229).
+	ConfirmClipProject(context.Context, *connect.Request[v1.ConfirmClipProjectRequest]) (*connect.Response[v1.ConfirmClipProjectResponse], error)
 	FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error)
+	// Saves or replaces a finalized clip's posted URL, changing nothing else (CLIP-232).
+	SaveClipPublishedUrl(context.Context, *connect.Request[v1.SaveClipPublishedUrlRequest]) (*connect.Response[v1.SaveClipPublishedUrlResponse], error)
 	CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error)
 	GetClipUploadTexts(context.Context, *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error)
 	SaveClipUploadText(context.Context, *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error)
@@ -453,10 +491,22 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 		connect.WithSchema(clipGenerationServiceMethods.ByName("StartClipStorylineRevision")),
 		connect.WithHandlerOptions(opts...),
 	)
+	clipGenerationServiceConfirmClipProjectHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceConfirmClipProjectProcedure,
+		svc.ConfirmClipProject,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("ConfirmClipProject")),
+		connect.WithHandlerOptions(opts...),
+	)
 	clipGenerationServiceFinalizeClipProjectHandler := connect.NewUnaryHandler(
 		ClipGenerationServiceFinalizeClipProjectProcedure,
 		svc.FinalizeClipProject,
 		connect.WithSchema(clipGenerationServiceMethods.ByName("FinalizeClipProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceSaveClipPublishedUrlHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceSaveClipPublishedUrlProcedure,
+		svc.SaveClipPublishedUrl,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("SaveClipPublishedUrl")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipGenerationServiceCancelClipJobHandler := connect.NewUnaryHandler(
@@ -519,8 +569,12 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 			clipGenerationServiceQuoteClipStorylineRevisionHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceStartClipStorylineRevisionProcedure:
 			clipGenerationServiceStartClipStorylineRevisionHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceConfirmClipProjectProcedure:
+			clipGenerationServiceConfirmClipProjectHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceFinalizeClipProjectProcedure:
 			clipGenerationServiceFinalizeClipProjectHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceSaveClipPublishedUrlProcedure:
+			clipGenerationServiceSaveClipPublishedUrlHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceCancelClipJobProcedure:
 			clipGenerationServiceCancelClipJobHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceGetClipUploadTextsProcedure:
@@ -586,8 +640,16 @@ func (UnimplementedClipGenerationServiceHandler) StartClipStorylineRevision(cont
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.StartClipStorylineRevision is not implemented"))
 }
 
+func (UnimplementedClipGenerationServiceHandler) ConfirmClipProject(context.Context, *connect.Request[v1.ConfirmClipProjectRequest]) (*connect.Response[v1.ConfirmClipProjectResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.ConfirmClipProject is not implemented"))
+}
+
 func (UnimplementedClipGenerationServiceHandler) FinalizeClipProject(context.Context, *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.FinalizeClipProject is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) SaveClipPublishedUrl(context.Context, *connect.Request[v1.SaveClipPublishedUrlRequest]) (*connect.Response[v1.SaveClipPublishedUrlResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.SaveClipPublishedUrl is not implemented"))
 }
 
 func (UnimplementedClipGenerationServiceHandler) CancelClipJob(context.Context, *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error) {

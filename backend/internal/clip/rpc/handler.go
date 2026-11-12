@@ -149,6 +149,10 @@ func toConnectError(err error) error {
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip cut", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"cut_id": cut.CutID, "check": cut.OutputValidationCode()})
 	case errors.Is(err, clip.ErrFinalized):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip is finalized", postpilotv1.FailureReason_CLIP_FINALIZED, nil)
+	case errors.Is(err, clip.ErrPublishedURLInvalid):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "clip published url is invalid", postpilotv1.FailureReason_CLIP_PUBLISHED_URL_INVALID, nil)
+	case errors.Is(err, clip.ErrConfirmationInvalid):
+		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip plan cannot be confirmed", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"check": "invalid_plan"})
 	case errors.Is(err, clip.ErrFinalizationConflict):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip result changed", postpilotv1.FailureReason_CLIP_FINALIZATION_CONFLICT, nil)
 	case errors.Is(err, clip.ErrFinalizationInvalid):
@@ -324,6 +328,7 @@ func projectFields(p clip.Project) *v1.ClipProject {
 		out.FinalizedResultId = f.ResultID
 		out.FinalizationRefusal = "finalized"
 	}
+	confirmationFields(out, p)
 	out.PlanEditedByHand = p.PlanEditedByHand()
 	// Verbatim, newest first, exactly as the store answered (CLIP-133).
 	for _, r := range p.Requests {
@@ -542,6 +547,10 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 	}
 	m := req.Msg
 	p := clip.ProjectPatch{LinkedPostSlug: m.LinkedPostSlug, Campaign: m.Campaign, AdvertiserGuide: guideInput(m.AdvertiserGuide), Dubbing: dubbingInput(m.Dubbing), IntroRegion: regionEdit(m.IntroRegion), OutroRegion: regionEdit(m.OutroRegion), CompositionInputs: compositionInputs(m.CompositionInputs), Title: m.Title, VideoTemplateID: m.VideoTemplateId, Channel: m.Channel, Disclosure: m.Disclosure, HideDisclosure: m.HideDisclosure, Instruction: m.Instruction, CaptionPace: m.CaptionPace, Accent: m.Accent, IntroPreset: m.IntroPreset, OutroPreset: m.OutroPreset, CaptionStyles: captionStyles(m.AllowedCaptionStyles), Storyline: storylineEdit(m.Storyline)}
+	if m.ChecklistTicks != nil {
+		ticks := append([]string{}, m.ChecklistTicks.GetLines()...)
+		p.ChecklistTicks = &ticks
+	}
 	if m.ExpectedRegionRevision != nil {
 		revision := int(*m.ExpectedRegionRevision)
 		p.ExpectedRegionRevision = &revision

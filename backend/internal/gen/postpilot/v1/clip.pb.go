@@ -528,7 +528,7 @@ type ClipProject struct {
 	FinalizedResultId     string                  `protobuf:"bytes,23,opt,name=finalized_result_id,json=finalizedResultId,proto3" json:"finalized_result_id,omitempty"`
 	CanEdit               *bool                   `protobuf:"varint,24,opt,name=can_edit,json=canEdit,proto3,oneof" json:"can_edit,omitempty"`
 	CanFinalize           *bool                   `protobuf:"varint,25,opt,name=can_finalize,json=canFinalize,proto3,oneof" json:"can_finalize,omitempty"`
-	// Empty when ready; finalized | busy | missing_render | stale_render | invalid_plan | unavailable.
+	// Empty when ready; finalized | busy | unconfirmed | missing_render | stale_render | invalid_plan | unavailable.
 	FinalizationRefusal string `protobuf:"bytes,26,opt,name=finalization_refusal,json=finalizationRefusal,proto3" json:"finalization_refusal,omitempty"`
 	// Detail only, separate from canonical successful state; no media URLs.
 	AttemptInspection *ClipAttemptInspection `protobuf:"bytes,27,opt,name=attempt_inspection,json=attemptInspection,proto3" json:"attempt_inspection,omitempty"`
@@ -565,8 +565,21 @@ type ClipProject struct {
 	Campaign        bool             `protobuf:"varint,43,opt,name=campaign,proto3" json:"campaign,omitempty"`
 	AdvertiserGuide *AdvertiserGuide `protobuf:"bytes,44,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
 	LinkedPost      *ClipLinkedPost  `protobuf:"bytes,45,opt,name=linked_post,json=linkedPost,proto3" json:"linked_post,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// The plan revision 확정하기 last confirmed (CLIP-75, CLIP-229), 0 when never. The project
+	// reads as confirmed exactly while this equals edit_plan_revision.
+	ConfirmedPlanRevision int32  `protobuf:"varint,46,opt,name=confirmed_plan_revision,json=confirmedPlanRevision,proto3" json:"confirmed_plan_revision,omitempty"`
+	ConfirmedAt           string `protobuf:"bytes,47,opt,name=confirmed_at,json=confirmedAt,proto3" json:"confirmed_at,omitempty"`
+	CanConfirm            *bool  `protobuf:"varint,48,opt,name=can_confirm,json=canConfirm,proto3,oneof" json:"can_confirm,omitempty"`
+	// Empty when ready; finalized | busy | invalid_plan | narration | stale.
+	ConfirmationRefusal string `protobuf:"bytes,49,opt,name=confirmation_refusal,json=confirmationRefusal,proto3" json:"confirmation_refusal,omitempty"`
+	// The clip's posted URL (CLIP-232): set only on a finalized project, which then reads as
+	// 게시됨; a finalized project without one reads as 완료.
+	PublishedUrl string `protobuf:"bytes,50,opt,name=published_url,json=publishedUrl,proto3" json:"published_url,omitempty"`
+	PublishedAt  string `protobuf:"bytes,51,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	// The checklist lines the owner ticked, by their text (CLIP-231).
+	ChecklistTicks []string `protobuf:"bytes,52,rep,name=checklist_ticks,json=checklistTicks,proto3" json:"checklist_ticks,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *ClipProject) Reset() {
@@ -896,6 +909,55 @@ func (x *ClipProject) GetAdvertiserGuide() *AdvertiserGuide {
 func (x *ClipProject) GetLinkedPost() *ClipLinkedPost {
 	if x != nil {
 		return x.LinkedPost
+	}
+	return nil
+}
+
+func (x *ClipProject) GetConfirmedPlanRevision() int32 {
+	if x != nil {
+		return x.ConfirmedPlanRevision
+	}
+	return 0
+}
+
+func (x *ClipProject) GetConfirmedAt() string {
+	if x != nil {
+		return x.ConfirmedAt
+	}
+	return ""
+}
+
+func (x *ClipProject) GetCanConfirm() bool {
+	if x != nil && x.CanConfirm != nil {
+		return *x.CanConfirm
+	}
+	return false
+}
+
+func (x *ClipProject) GetConfirmationRefusal() string {
+	if x != nil {
+		return x.ConfirmationRefusal
+	}
+	return ""
+}
+
+func (x *ClipProject) GetPublishedUrl() string {
+	if x != nil {
+		return x.PublishedUrl
+	}
+	return ""
+}
+
+func (x *ClipProject) GetPublishedAt() string {
+	if x != nil {
+		return x.PublishedAt
+	}
+	return ""
+}
+
+func (x *ClipProject) GetChecklistTicks() []string {
+	if x != nil {
+		return x.ChecklistTicks
 	}
 	return nil
 }
@@ -5815,7 +5877,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\xdd\x10\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x92\x13\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -5868,10 +5930,19 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\bcampaign\x18+ \x01(\bR\bcampaign\x12H\n" +
 	"\x10advertiser_guide\x18, \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuide\x12=\n" +
 	"\vlinked_post\x18- \x01(\v2\x1c.postpilot.v1.ClipLinkedPostR\n" +
-	"linkedPostB\v\n" +
+	"linkedPost\x126\n" +
+	"\x17confirmed_plan_revision\x18. \x01(\x05R\x15confirmedPlanRevision\x12!\n" +
+	"\fconfirmed_at\x18/ \x01(\tR\vconfirmedAt\x12$\n" +
+	"\vcan_confirm\x180 \x01(\bH\x03R\n" +
+	"canConfirm\x88\x01\x01\x121\n" +
+	"\x14confirmation_refusal\x181 \x01(\tR\x13confirmationRefusal\x12#\n" +
+	"\rpublished_url\x182 \x01(\tR\fpublishedUrl\x12!\n" +
+	"\fpublished_at\x183 \x01(\tR\vpublishedAt\x12'\n" +
+	"\x0fchecklist_ticks\x184 \x03(\tR\x0echecklistTicksB\v\n" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalizeB\x13\n" +
-	"\x11_last_render_kindJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12R\aanswersR\x03cta\"Y\n" +
+	"\x11_last_render_kindB\x0e\n" +
+	"\f_can_confirmJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12R\aanswersR\x03cta\"Y\n" +
 	"\x0eClipLinkedPost\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1d\n" +

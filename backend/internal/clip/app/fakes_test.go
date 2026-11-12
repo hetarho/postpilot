@@ -57,16 +57,17 @@ func (f *fakeJobs) ActiveFor(context.Context, job.Subject, job.Filter) (*job.Job
 }
 
 type fakeClips struct {
-	project    clip.Project
-	projectErr error
-	staged     map[string]clip.AttemptResult
-	applied    []clip.AttemptResult
-	discarded  []string
-	deleted    []string
-	finalized  []clip.FinalizationRequest
-	recordErr  error
-	stageErr   error
-	txReadErr  error
+	project       clip.Project
+	projectErr    error
+	staged        map[string]clip.AttemptResult
+	applied       []clip.AttemptResult
+	discarded     []string
+	deleted       []string
+	finalized     []clip.FinalizationRequest
+	confirmations int
+	recordErr     error
+	stageErr      error
+	txReadErr     error
 }
 
 func newFakeClips(p clip.Project) *fakeClips {
@@ -131,7 +132,26 @@ func (f *fakeClips) RecordFinalization(_ context.Context, req clip.FinalizationR
 	f.finalized = append(f.finalized, req)
 	p := f.project
 	p.Finalized = &clip.Finalization{PlanRevision: req.ExpectedRevision, ResultID: req.ExpectedResultID}
+	if req.PublishedURL != "" {
+		p.Published = &clip.Publication{URL: req.PublishedURL}
+	}
+	f.project = p
 	return p, nil
+}
+func (f *fakeClips) RecordConfirmation(_ context.Context, req clip.ConfirmationRequest, now time.Time) (clip.Project, error) {
+	if f.recordErr != nil {
+		return clip.Project{}, f.recordErr
+	}
+	f.project.Confirmed = &clip.Confirmation{At: now, PlanRevision: req.ExpectedPlanRevision}
+	f.confirmations++
+	return f.project, nil
+}
+func (f *fakeClips) RecordPublishedURL(_ context.Context, _, _, url string, now time.Time) (clip.Project, error) {
+	if f.recordErr != nil {
+		return clip.Project{}, f.recordErr
+	}
+	f.project.Published = &clip.Publication{At: now, URL: url}
+	return f.project, nil
 }
 
 type fakeAdmission struct {

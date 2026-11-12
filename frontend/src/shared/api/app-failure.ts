@@ -317,6 +317,7 @@ export const appFailureSpecs = {
   GENERATION_STORYLINE_REOBSERVE: {},
   CLIP_UPLOAD_TEXT_LIMIT: { required: ['max', 'tags'] },
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED: {},
+  CLIP_PUBLISHED_URL_INVALID: {},
   CLIP_STORYLINE_MISSING: {},
   CLIP_STORYLINE_INVALID: {},
   POST_PHOTO_MISSING: { required: ['count'] },

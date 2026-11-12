@@ -45,6 +45,12 @@ type nullFinalizer struct{}
 func (nullFinalizer) Finalize(context.Context, clip.FinalizationRequest) (clip.Project, error) {
 	return clip.Project{}, clip.ErrFinalizationInvalid
 }
+func (nullFinalizer) Confirm(context.Context, clip.ConfirmationRequest) (clip.Project, error) {
+	return clip.Project{}, clip.ErrConfirmationInvalid
+}
+func (nullFinalizer) SavePublishedURL(context.Context, string, string, string) (clip.Project, error) {
+	return clip.Project{}, clip.ErrFinalizationInvalid
+}
 
 type nullObjects struct{}
 

@@ -423,6 +423,8 @@ enum FailureReason {
   CLIP_RATIO_UNSUPPORTED = 339;
   CLIP_UPLOAD_TEXT_LIMIT = 340;
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED = 341;
+  // A clip's posted URL is not an https URL on its channel's platform host (CLIP-232).
+  CLIP_PUBLISHED_URL_INVALID = 342;
 
 }
 

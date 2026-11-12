@@ -356,7 +356,36 @@ func projectRow(r sqlc.ClipProject) (clip.Project, error) {
 	if p.Storyline, err = clip.DecodeStoryline(r.StorylineJson.String); err != nil {
 		return p, err
 	}
+	if err = decodeConfirmationAndPublication(&p, r); err != nil {
+		return p, err
+	}
 	return p, nil
+}
+
+// decodeConfirmationAndPublication reads CLIP-229's confirmation, CLIP-232's posted URL and
+// CLIP-231's ticks; a row finalized before them reads unconfirmed, 완료 and unticked.
+func decodeConfirmationAndPublication(p *clip.Project, r sqlc.ClipProject) error {
+	if r.ConfirmedPlanRevision.Valid {
+		at, err := time.Parse(time.RFC3339Nano, r.ConfirmedAt.String)
+		if err != nil {
+			return err
+		}
+		p.Confirmed = &clip.Confirmation{At: at, PlanRevision: int(r.ConfirmedPlanRevision.Int64)}
+	}
+	if r.PublishedUrl.Valid {
+		at, err := time.Parse(time.RFC3339Nano, r.PublishedAt.String)
+		if err != nil {
+			return err
+		}
+		p.Published = &clip.Publication{At: at, URL: r.PublishedUrl.String}
+	}
+	p.ChecklistTicks = []string{}
+	if r.ChecklistTicks != "" {
+		if err := json.Unmarshal([]byte(r.ChecklistTicks), &p.ChecklistTicks); err != nil {
+			return fmt.Errorf("stored checklist ticks: %w", err)
+		}
+	}
+	return nil
 }
 func getProject(ctx context.Context, q *sqlc.Queries, user, id string) (clip.Project, error) {
 	r, err := q.GetClipProject(ctx, sqlc.GetClipProjectParams{ID: id, UserID: user})
@@ -406,7 +435,8 @@ func (s *Store) ListProjectSummaries(ctx context.Context, user string) ([]clip.P
 			Disclosure: r.Disclosure, HideDisclosure: r.HideDisclosure, CompositionInputsJson: r.CompositionInputsJson, CompositionSnapshotJson: r.CompositionSnapshotJson,
 			ResultID: r.ResultID, FinalizedAt: r.FinalizedAt, FinalizedPlanRevision: r.FinalizedPlanRevision, Language: r.Language, Instruction: r.Instruction,
 			CaptionPace: r.CaptionPace, Accent: r.Accent, IntroPreset: r.IntroPreset, OutroPreset: r.OutroPreset, AllowedCaptionStyles: r.AllowedCaptionStyles,
-			DubbingEnabled: r.DubbingEnabled, DubbingVoiceID: r.DubbingVoiceID, DubbingBindingDigest: r.DubbingBindingDigest, RenderKind: r.RenderKind, StorylineJson: r.StorylineJson, RegionsJson: r.RegionsJson})
+			DubbingEnabled: r.DubbingEnabled, DubbingVoiceID: r.DubbingVoiceID, DubbingBindingDigest: r.DubbingBindingDigest, RenderKind: r.RenderKind, StorylineJson: r.StorylineJson, RegionsJson: r.RegionsJson,
+			ConfirmedPlanRevision: r.ConfirmedPlanRevision, ConfirmedAt: r.ConfirmedAt, PublishedUrl: r.PublishedUrl, PublishedAt: r.PublishedAt})
 		if err != nil {
 			return nil, err
 		}
@@ -437,7 +467,7 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 		if err != nil {
 			return clip.Project{}, err
 		}
-		if before.Finalized != nil && !p.MovesChannelOnly() {
+		if before.Finalized != nil && !p.MetadataOnly() {
 			return clip.Project{}, clip.ErrFinalized
 		}
 		if stale := p.StaleLinkedPostIdentity; stale != nil {
@@ -445,12 +475,20 @@ func (s *Store) UpdateProject(ctx context.Context, user, id string, p clip.Proje
 				return clip.Project{}, err
 			}
 		}
-		// Directory metadata never rewrites composition or renews original retention.
-		if p.MovesChannelOnly() {
-			if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+		// Directory metadata and advisory ticks never rewrite composition or renew original retention.
+		if p.MetadataOnly() {
+			if p.Channel != nil {
+				if err := affected(q.UpdateClipChannel(ctx, sqlc.UpdateClipChannelParams{Channel: *p.Channel, UpdatedAt: stamp(now), ID: id, UserID: user})); err != nil {
+					return clip.Project{}, err
+				}
+			}
+			if err := saveChecklistTicks(ctx, q, user, id, p.ChecklistTicks, now); err != nil {
 				return clip.Project{}, err
 			}
 			return getProject(ctx, q, user, id)
+		}
+		if err := saveChecklistTicks(ctx, q, user, id, p.ChecklistTicks, now); err != nil {
+			return clip.Project{}, err
 		}
 		if p.Composition != nil || p.Regions != nil || p.Dubbing != nil || p.LinkedPostIdentity != nil {
 			active, e := q.HasActiveClipJob(ctx, nullable(id))

@@ -10,15 +10,44 @@ import (
 	"database/sql"
 )
 
+const confirmClipProject = `-- name: ConfirmClipProject :execrows
+UPDATE clip_projects SET confirmed_plan_revision=?1,confirmed_at=?2,updated_at=?2
+WHERE id=?3 AND user_id=?4 AND deleting=0 AND finalized_at IS NULL
+AND edit_plan_revision=?1
+`
+
+type ConfirmClipProjectParams struct {
+	ExpectedRevision sql.NullInt64
+	Now              sql.NullString
+	ID               string
+	UserID           string
+}
+
+// CLIP-75, CLIP-229: confirmation records the plan revision; the caller excludes active jobs.
+func (q *Queries) ConfirmClipProject(ctx context.Context, arg ConfirmClipProjectParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, confirmClipProject,
+		arg.ExpectedRevision,
+		arg.Now,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const finalizeClipProject = `-- name: FinalizeClipProject :execrows
-UPDATE clip_projects SET finalized_at=?1,finalized_plan_revision=edit_plan_revision,finalized_result_key=result_key,source_access_revoked_at=COALESCE(source_access_revoked_at,?1),updated_at=?1
-WHERE id=?2 AND user_id=?3 AND deleting=0 AND finalized_at IS NULL
-AND edit_plan_revision=?4 AND rendered_plan_revision=edit_plan_revision
-AND result_id=?5 AND result_key IS NOT NULL
+UPDATE clip_projects SET finalized_at=?1,finalized_plan_revision=edit_plan_revision,finalized_result_key=result_key,source_access_revoked_at=COALESCE(source_access_revoked_at,?1),updated_at=?1,
+published_url=?2,published_at=CASE WHEN ?2 IS NULL THEN NULL ELSE ?1 END
+WHERE id=?3 AND user_id=?4 AND deleting=0 AND finalized_at IS NULL
+AND edit_plan_revision=?5 AND rendered_plan_revision=edit_plan_revision AND confirmed_plan_revision=edit_plan_revision
+AND result_id=?6 AND result_key IS NOT NULL
 `
 
 type FinalizeClipProjectParams struct {
 	Now              sql.NullString
+	PublishedUrl     sql.NullString
 	ID               string
 	UserID           string
 	ExpectedRevision int64
@@ -28,10 +57,63 @@ type FinalizeClipProjectParams struct {
 func (q *Queries) FinalizeClipProject(ctx context.Context, arg FinalizeClipProjectParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, finalizeClipProject,
 		arg.Now,
+		arg.PublishedUrl,
 		arg.ID,
 		arg.UserID,
 		arg.ExpectedRevision,
 		arg.ExpectedResultID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setClipChecklistTicks = `-- name: SetClipChecklistTicks :execrows
+UPDATE clip_projects SET checklist_ticks=?1,updated_at=?2
+WHERE id=?3 AND user_id=?4
+`
+
+type SetClipChecklistTicksParams struct {
+	Ticks  string
+	Now    string
+	ID     string
+	UserID string
+}
+
+// CLIP-231: advisory ticks, writable before and after finalization.
+func (q *Queries) SetClipChecklistTicks(ctx context.Context, arg SetClipChecklistTicksParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setClipChecklistTicks,
+		arg.Ticks,
+		arg.Now,
+		arg.ID,
+		arg.UserID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setClipPublishedURL = `-- name: SetClipPublishedURL :execrows
+UPDATE clip_projects SET published_url=?1,published_at=?2
+WHERE id=?3 AND user_id=?4 AND deleting=0 AND finalized_at IS NOT NULL
+`
+
+type SetClipPublishedURLParams struct {
+	Url    sql.NullString
+	Now    sql.NullString
+	ID     string
+	UserID string
+}
+
+// CLIP-232: the posted URL of a finalized project; nothing else changes.
+func (q *Queries) SetClipPublishedURL(ctx context.Context, arg SetClipPublishedURLParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setClipPublishedURL,
+		arg.Url,
+		arg.Now,
+		arg.ID,
+		arg.UserID,
 	)
 	if err != nil {
 		return 0, err

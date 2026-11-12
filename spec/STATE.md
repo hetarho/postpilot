@@ -10,7 +10,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | - |
+| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | T759 |
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
 
 ## inbox
@@ -205,7 +205,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T759 | Accept untitled clips, record reversible confirmation and finalize by posted URL or 완료 | ARCH CLIP | - | todo |
+| T759 | Accept untitled clips, record reversible confirmation and finalize by posted URL or 완료 | ARCH CLIP | - | doing@261112.vd1 |
 | T760 | Let one revision request decide its own target within two approved writing calls | ARCH CLIP QUOTA DUB GUIDE | - | todo |
 | T761 | Ask ①'s clip preparation one question per screen in the post guide's order | ARCH CLIP POST THEME | - | todo |
 | T762 | Run /clips/new as the unminted guide and mint on its first save | ARCH CLIP POST THEME | T759 T761 T768 | todo |

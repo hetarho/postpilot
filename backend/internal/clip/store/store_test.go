@@ -198,7 +198,8 @@ func TestValidationAndIncompleteAnswers(t *testing.T) {
 		}
 	}
 	v, _ := create(t, s)
-	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = " " }, func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 60001 }} {
+	// An empty title is a valid untitled clip (CLIP-130); only its length is refused.
+	for _, mutate := range []func(*clip.ProjectInput){func(p *clip.ProjectInput) { p.Title = strings.Repeat("한", 101) }, func(p *clip.ProjectInput) { p.TargetDurationMS = 14999 }, func(p *clip.ProjectInput) { p.TargetDurationMS = 60001 }} {
 		p := clip.ProjectInput{Language: "ko", Title: "valid", VideoTemplateID: v.ID, Ratio: "vertical", TargetDurationMS: 15000}
 		mutate(&p)
 		if _, err := s.CreateProject(ctx, "alice", p); !errors.Is(err, clip.ErrInvalid) {

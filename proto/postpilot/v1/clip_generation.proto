@@ -24,7 +24,11 @@ service ClipGenerationService {
   // rewrites the storyline as the owner asks.
   rpc QuoteClipStorylineRevision(QuoteClipStorylineRevisionRequest) returns (QuoteClipGenerationResponse) {}
   rpc StartClipStorylineRevision(StartClipStorylineRevisionRequest) returns (StartClipGenerationResponse) {}
+  // 확정하기 (CLIP-75): records the current plan revision as confirmed, reversibly (CLIP-229).
+  rpc ConfirmClipProject(ConfirmClipProjectRequest) returns (ConfirmClipProjectResponse) {}
   rpc FinalizeClipProject(FinalizeClipProjectRequest) returns (FinalizeClipProjectResponse) {}
+  // Saves or replaces a finalized clip's posted URL, changing nothing else (CLIP-232).
+  rpc SaveClipPublishedUrl(SaveClipPublishedUrlRequest) returns (SaveClipPublishedUrlResponse) {}
   rpc CancelClipJob(CancelClipJobRequest) returns (CancelClipJobResponse) {}
   rpc GetClipUploadTexts(GetClipUploadTextsRequest) returns (GetClipUploadTextsResponse) {}
   rpc SaveClipUploadText(SaveClipUploadTextRequest) returns (SaveClipUploadTextResponse) {}
@@ -111,6 +115,8 @@ message UpdateClipProjectRequest {
   AdvertiserGuide advertiser_guide = 23;
   // Absent preserves the link; present and empty unlinks.
   optional string linked_post_slug = 24;
+  // Absent preserves the ticks; present replaces them, also on a finalized project (CLIP-231).
+  ChecklistTicks checklist_ticks = 25;
 }
 
 // The owner's edit of the storyline: the same paragraphs, with their texts and scenes replaced.
@@ -199,7 +205,21 @@ message StartClipStorylineRevisionRequest {
   int32 cancellation_policy_version = 7;
 }
 
-message FinalizeClipProjectRequest { string project_id = 1; int32 expected_revision = 2; string expected_result_id = 3; }
+message FinalizeClipProjectRequest {
+  string project_id = 1;
+  int32 expected_revision = 2;
+  string expected_result_id = 3;
+  // Present finalizes as 게시됨 with this URL; empty finalizes as 완료 (CLIP-232).
+  string published_url = 4;
+}
+
+message ConfirmClipProjectRequest { string project_id = 1; int32 expected_plan_revision = 2; }
+
+message ConfirmClipProjectResponse { ClipProject project = 1; }
+
+message SaveClipPublishedUrlRequest { string project_id = 1; string url = 2; }
+
+message SaveClipPublishedUrlResponse { ClipProject project = 1; }
 
 message FinalizeClipProjectResponse { ClipProject project = 1; }
 

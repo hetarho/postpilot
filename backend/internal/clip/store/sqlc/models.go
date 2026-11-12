@@ -236,6 +236,11 @@ type ClipProject struct {
 	AdvertiserHashtags       string
 	LinkedPostSlug           sql.NullString
 	LinkedPostCreatedAt      sql.NullString
+	ConfirmedPlanRevision    sql.NullInt64
+	ConfirmedAt              sql.NullString
+	PublishedUrl             sql.NullString
+	PublishedAt              sql.NullString
+	ChecklistTicks           string
 }
 
 type ClipSourceAttempt struct {

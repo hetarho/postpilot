@@ -316,6 +316,8 @@ export const errors = {
     '업로드 문구는 {{max}}자, 태그는 {{tags}}개까지예요. 광고주 필수 태그도 이 안에 들어가야 해요.',
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED:
     '직접 수정한 문구예요. 다시 쓰려면 덮어쓰기를 확인해 주세요.',
+  CLIP_PUBLISHED_URL_INVALID:
+    '이 채널의 게시물 주소가 아니에요. https로 시작하는 클립 주소를 붙여 넣어 주세요.',
   CLIP_STORYLINE_MISSING: '이 영상에는 아직 스토리라인이 없어요. 스토리라인을 먼저 만들어 주세요.',
   CLIP_STORYLINE_INVALID:
     '스토리라인을 저장할 수 없어요. 문단 수를 그대로 두고, 장면은 한 문단에 한 번씩만 넣어 주세요.',

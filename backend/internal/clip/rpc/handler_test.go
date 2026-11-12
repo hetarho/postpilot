@@ -281,3 +281,20 @@ func TestFinalizedChannelMoveKeepsEveryCanonicalFieldLocked(t *testing.T) {
 		t.Fatal(s.project, response.Msg.Project)
 	}
 }
+
+func TestPublishedURLRefusalCarriesItsOwnReason(t *testing.T) {
+	reason := func(err error) string {
+		detail, e := err.(*connect.Error).Details()[0].Value()
+		if e != nil {
+			t.Fatal(e)
+		}
+		return detail.(*v1.AppErrorDetail).Reason
+	}
+	err := toConnectError(clip.ErrPublishedURLInvalid)
+	if connect.CodeOf(err) != connect.CodeInvalidArgument || reason(err) != v1.FailureReason_CLIP_PUBLISHED_URL_INVALID.String() {
+		t.Fatal(err)
+	}
+	if err := toConnectError(clip.ErrFinalizationUnconfirmed); reason(err) != v1.FailureReason_CLIP_FINALIZATION_INVALID.String() {
+		t.Fatal(err)
+	}
+}

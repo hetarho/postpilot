@@ -143,6 +143,12 @@ type Project struct {
 	// The plan revision a generation or a revision last wrote (CLIP-180). An owner edit moves
 	// EditPlanRevision past it, which is what "edited by hand" means.
 	GeneratedPlanRevision int
+	// The plan revision 확정하기 last recorded (CLIP-229); nil when never confirmed.
+	Confirmed *Confirmation
+	// The posted URL of a finalized project (CLIP-232); nil reads as 완료.
+	Published *Publication
+	// The checklist lines the owner ticked, by their text (CLIP-231).
+	ChecklistTicks []string
 }
 
 // PlanEditedByHand is whether the owner changed the plan since a writer last wrote it: the
@@ -228,4 +234,6 @@ type ProjectPatch struct {
 	// The owner's storyline edit (CLIP-178): the same paragraphs with their texts and scenes
 	// replaced. Nil leaves the storyline as it is.
 	Storyline *[]StorylineParagraph
+	// Presence-aware advisory ticks (CLIP-231), accepted on a finalized project too.
+	ChecklistTicks *[]string
 }

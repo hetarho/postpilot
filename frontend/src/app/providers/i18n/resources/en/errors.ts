@@ -326,6 +326,8 @@ export const errors = {
   CLIP_UPLOAD_TEXT_LIMIT:
     'Upload text allows {{max}} characters and {{tags}} tags, including required advertiser tags.',
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED: 'You edited this text. Confirm before writing over it.',
+  CLIP_PUBLISHED_URL_INVALID:
+    "This isn't a post address for this channel. Paste the clip's https address.",
   CLIP_STORYLINE_MISSING: 'This clip has no storyline yet. Make one first.',
   CLIP_STORYLINE_INVALID:
     'The storyline could not be saved. Keep the same paragraphs, and put each scene in one paragraph only.',

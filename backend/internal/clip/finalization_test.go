@@ -12,6 +12,7 @@ import (
 func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) {
 	p, plan := nativeHistoryFixture(t)
 	p.UserID, p.ID, p.EditPlanRevision, p.RenderedPlanRevision = "owner", "project", 2, 2
+	p.Confirmed = &clip.Confirmation{At: time.Now(), PlanRevision: 2}
 	p.Result = &clip.Result{ID: "result", Key: "clip-results/result.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: plan.DurationMS, CreatedAt: time.Now()}
 	req := clip.FinalizationRequest{UserID: p.UserID, ProjectID: p.ID, ExpectedRevision: 2, ExpectedResultID: "result"}
 	for _, kind := range []clip.RenderKind{"", clip.RenderServer, clip.RenderBrowser} {
@@ -34,6 +35,7 @@ func TestNativeFinalizationUsesSavedEvidenceWithoutPixelsOrLayout(t *testing.T) 
 func TestNarratedFinalizationRequiresExactCurrentOutputSpeech(t *testing.T) {
 	p, plan := nativeHistoryFixture(t)
 	p.UserID, p.ID, p.EditPlanRevision, p.RenderedPlanRevision = "owner", "project", 2, 2
+	p.Confirmed = &clip.Confirmation{At: time.Now(), PlanRevision: 2}
 	text := "spoken sentence"
 	ref := clip.SpeechRef{AssetID: "speech-one", VoiceID: "voice", BindingDigest: strings.Repeat("a", 64), InputHash: clip.SpokenInputHash(text), SettingsHash: strings.Repeat("b", 64), AudioHash: strings.Repeat("c", 64), ProfileID: "profile", ProfileRevision: 1, Samples: 44100, SampleRate: 44100, Channels: 2}
 	plan.Narration = &clip.NarrationPlan{Enabled: true, VoiceID: ref.VoiceID, BindingDigest: ref.BindingDigest, VolumePermille: 1000, Segments: []clip.SpokenSegment{{ID: "spoken-1", Text: text, TextRevision: 1, InputHash: ref.InputHash, StartMS: 1000, EndMS: 2000, Speech: &ref}}}
