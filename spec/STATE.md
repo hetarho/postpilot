@@ -231,6 +231,7 @@
 - si8 approved work: T778 → T780 → T781 → T779, then shared UI source reductions within the08:00KST cutoff; final90min reserved.
 
 ## log
+- 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
 - 261113 si8: user confirmed Mac/Chrome, delegated all needed permissions and no questions through08:00KST; specifically prioritize blog/video back-button and page-layout consistency after performance.
@@ -250,4 +251,3 @@
 - 261112 updates haeram-spec-creator 0.13.0→gusta 0.15.0 (rename without a compatibility layer: 20 skills and the old lock removed, 120 files created through npx, no conflicts; no structural migration, no unset settings). FORMAT takes the gusta skill and GUSTA_* names, the 0.15.0 session-mode, inbox, needs-sketch, verification-owner and ideation lines and principle 5's policy-approval sentence; the 65a1f82b overrides stay. SETTINGS preamble renamed. Lint identical before/after (0 errors, 80 warnings).
 - 261112 T770 done
 - 261112 T769 done
-- 261112 T767 done
