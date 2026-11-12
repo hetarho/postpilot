@@ -11,7 +11,6 @@
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
-| t7w | DESKTOP-VKPLS8P | pair | 2026-11-12T00:57Z | 2026-11-12T01:38Z | - |
 
 ## inbox
 - 261112 decided T758: use the remaining additional-hour budget? → preserve the last independently reviewed style-sample P2 fix and one visible-editor refusal assertion correction in the latest41-file unintegrated recovery snapshot99b79a95 plus a Git bundle (alt: omit post-cutoff work | mark the unfinished guide complete). Voice checks86+6 pass and type/lint/format pass; the refusal file31 tests passes, while four named cases and whole-task final gates remain open. Publish all source/review/diagnosis records as recovery data; keep T758todo and verified main product unchanged.
