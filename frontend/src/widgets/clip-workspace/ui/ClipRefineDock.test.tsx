@@ -76,9 +76,9 @@ it('docks the revision field and 확정하기 the way the post’s 글 다듬기
   expect(bar().queryByRole('button', { name: /렌더/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('tablist', { name: '고칠 대상' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'AI로 수정' })).not.toBeInTheDocument()
-  // The render and the download stay in ②'s flow until ③ takes them (T766).
-  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+  // ② keeps no render and no download: both stand in ③ (CLIP-149, CLIP-153).
+  expect(screen.queryByRole('button', { name: /^(렌더하기|다시 렌더)$/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
 })
 
 // CLIP-131/132: one request quoted as auto at the two-call ceiling, scoped to the selected block
@@ -130,7 +130,7 @@ it('flushes, confirms the saved plan revision and moves to ③ with no dialog', 
   expect(confirmations[0]).toMatchObject({ expectedPlanRevision: 1 })
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   await waitFor(() =>
-    expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
+    expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true'),
   )
   expect(calls).not.toContain('FinalizeClipProject')
   expect(screen.queryByLabelText('클립 수정 작업')).not.toBeInTheDocument()

@@ -31,6 +31,8 @@ async function openRenderChoice() {
   const project = observedClipFixture()
   project.result = undefined
   project.renderedPlanRevision = 0
+  // A confirmed plan with no render: ③ offers the render choice (CLIP-153).
+  project.confirmed = { planRevision: project.editPlanRevision!, at: '2026-11-12T00:00:00Z' }
   project.editing!.plan.sourceAudio = project.editing!.plan.cuts.map((cut) => ({
     sourceId: cut.sourceId,
     fingerprint: cut.fingerprint,

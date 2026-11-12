@@ -1,9 +1,5 @@
 import { useRef, useState } from 'react'
-import {
-  type ClipProject,
-  useClipLifecycleApi,
-  useClipProjectMutations,
-} from '@/entities/clip-project'
+import { type ClipProject, useClipLifecycleApi } from '@/entities/clip-project'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 
 export function useFinalizeClip(
@@ -12,7 +8,6 @@ export function useFinalizeClip(
   flush: () => Promise<number>,
 ) {
   const api = useClipLifecycleApi(ownerId, project.id)
-  const { finalize } = useClipProjectMutations(ownerId)
   const locked = useRef(false)
   const [pending, setPending] = useState(false)
   const [uncertain, setUncertain] = useState(false)
@@ -44,7 +39,8 @@ export function useFinalizeClip(
       setPending(false)
     }
   }
-  async function confirm() {
+  /** Finalizes as 게시됨 with `publishedUrl`, or as 완료 without one (CLIP-232). */
+  async function confirm(publishedUrl?: string) {
     if (locked.current || uncertain || project.finalized) return
     locked.current = true
     setPending(true)
@@ -64,10 +60,10 @@ export function useFinalizeClip(
         return
       }
       sent = true
-      await finalize.mutateAsync({
-        projectId: saved.id,
+      await api.finalize({
         expectedRevision: revision,
         expectedResultId: saved.result.id,
+        publishedUrl,
       })
     } catch (error) {
       setFailure(appFailureFromConnect(error))
@@ -97,5 +93,32 @@ export function useFinalizeClip(
       setPending(false)
     }
   }
-  return { prepare, confirm, checkAgain, pending, uncertain, failure, busy: pending || uncertain }
+  /** A finalized clip saves or replaces its URL and nothing else (CLIP-232). */
+  async function savePublishedUrl(url: string): Promise<boolean> {
+    if (locked.current || !project.finalized) return false
+    locked.current = true
+    setPending(true)
+    setFailure(undefined)
+    try {
+      await api.savePublishedUrl(url)
+      return true
+    } catch (error) {
+      setFailure(appFailureFromConnect(error))
+      return false
+    } finally {
+      locked.current = false
+      setPending(false)
+    }
+  }
+
+  return {
+    prepare,
+    confirm,
+    checkAgain,
+    savePublishedUrl,
+    pending,
+    uncertain,
+    failure,
+    busy: pending || uncertain,
+  }
 }

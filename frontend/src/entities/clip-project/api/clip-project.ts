@@ -434,24 +434,7 @@ export function useClipProjectMutations(ownerId: string) {
     mutationFn: (id: string) => client.deleteClipProject({ id }),
     onSuccess: invalidate,
   })
-  const finalize = useMutation({
-    mutationFn: async (input: {
-      projectId: string
-      expectedRevision: number
-      expectedResultId: string
-    }) => {
-      const response = await client.finalizeClipProject(input)
-      if (!response.project) throw new Error('Missing finalized clip')
-      const project = toClipProject(response.project)
-      if (!project.finalized) throw new Error('Clip finalization was not confirmed')
-      return project
-    },
-    onSuccess: async (project) => {
-      cache.setQueryData([...clipProjectsKey(transport, ownerId), 'detail', project.id], project)
-      await invalidate()
-    },
-  })
-  return { save, remove, finalize }
+  return { save, remove }
 }
 
 /** Region updates preserve omitted, false and explicitly empty values. */

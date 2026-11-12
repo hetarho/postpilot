@@ -179,6 +179,10 @@ async function mount() {
   })
   project.targetDurationMs = 19800
   project.result!.renderKind = 'browser'
+  // ③ renders a confirmed plan its earlier render does not match (CLIP-153, CLIP-229).
+  project.editPlanRevision = 2
+  project.renderedPlanRevision = 1
+  project.confirmed = { planRevision: 2, at: '2026-11-12T00:00:00Z' }
   project.editing.plan.sourceAudio = project.editing.plan.cuts.map((c) => ({
     sourceId: c.sourceId,
     fingerprint: c.fingerprint,
@@ -203,11 +207,11 @@ async function mount() {
     user: { id: 'alice' },
     clips: { projects: [project], retainedBatches: [batch], calls },
   })
-  const button = await screen.findByRole('button', { name: '다시 렌더' })
+  const button = await screen.findByRole('button', { name: '렌더하기' })
   await waitFor(() => expect(button).toBeEnabled())
   await userEvent.click(button)
   // The last successful kind leads the choice (CLIP-153): this project's was a browser render.
-  const choice = within(await screen.findByRole('dialog', { name: '다시 렌더' }))
+  const choice = within(await screen.findByRole('dialog', { name: '렌더하기' }))
   expect(choice.getAllByRole('button', { name: /에서 렌더$/ }).map((b) => b.textContent)).toEqual([
     '브라우저에서 렌더',
     '서버에서 렌더',
@@ -218,21 +222,20 @@ async function mount() {
   return { ...view, calls }
 }
 
-it('keeps ② interactive and reports one monotonic scale from encoding through durable storage', async () => {
+it('keeps the steps reachable and reports one monotonic scale from encoding through durable storage', async () => {
   const { calls } = await mount()
   await waitFor(() =>
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '35'),
   )
   expect(screen.queryByRole('region', { name: '클립 작업 진행' })).not.toBeInTheDocument()
-  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByLabelText('수정 요청을 입력하세요')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
-  expect(await screen.findByRole('dialog', { name: '원본 소스' })).toBeInTheDocument()
-  await userEvent.keyboard('{Escape}')
-  await userEvent.click(screen.getByRole('tab', { name: '생성' }))
+  // The browser render runs inside ③, docked in its step bar, never as the focused job view
+  // (CLIP-156), and the other steps stay reachable meanwhile.
+  expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true')
+  expect(within(screen.getByLabelText('렌더 작업')).getByRole('progressbar')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
   await clipGuideTo('content')
   expect(screen.getByLabelText('클립 제목')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  await userEvent.click(screen.getByRole('tab', { name: '영상 완성' }))
   await act(async () => encoded.resolve(track))
   await screen.findByText('완성된 영상 저장 중')
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '80')
@@ -247,7 +250,7 @@ it('keeps ② interactive and reports one monotonic scale from encoding through 
   await act(async () => uploaded.resolve())
   await screen.findByText('브라우저 렌더를 저장했어요.')
   await waitFor(() =>
-    expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '렌더 2 다운로드' })).toHaveAttribute(
       'href',
       'https://private.test/browser-download.mp4',
     ),
@@ -276,7 +279,8 @@ it.each(['encoding', 'storing'])(
     if (stage === 'storing') expect(uploadSignal?.aborted).toBe(true)
     expect(calls).toContain('CancelClipBrowserRender')
     expect(calls).not.toContain('CompleteClipRenderUpload')
-    expect(screen.getByRole('region', { name: '컷·자막 수정' })).toBeInTheDocument()
+    // A cancelled render names the next one 다시 렌더 (CLIP-153).
+    expect(screen.getByRole('button', { name: '다시 렌더' })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
       'href',
       'https://example.test/download.mp4',

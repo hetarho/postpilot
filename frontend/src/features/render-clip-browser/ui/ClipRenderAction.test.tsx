@@ -196,3 +196,10 @@ it('keeps unknown rights closed without automatically starting either executor',
   expect(choice.getByText(/현재 플랜을 확인한 뒤/)).toBeInTheDocument()
   expect(onRender).not.toHaveBeenCalled()
 })
+
+it('names the action 다시 렌더 after a failure or a cancellation', () => {
+  render(
+    <ClipRenderAction again browserAvailable pending={false} disabled={false} onRender={vi.fn()} />,
+  )
+  expect(screen.getByRole('button', { name: '다시 렌더' })).toBeInTheDocument()
+})

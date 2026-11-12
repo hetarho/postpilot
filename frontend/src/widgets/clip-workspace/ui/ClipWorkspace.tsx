@@ -6,7 +6,6 @@ import { useTranslation } from 'react-i18next'
 import {
   ClipFailureNotice,
   ClipRequestRecord,
-  clipConfirmed,
   clipDisplayTitle,
   clipReturnDestination,
   markClipHistoryReturn,
@@ -16,7 +15,6 @@ import { ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { ClipStorylineSpace, discardClipStorylineQueue } from '@/features/edit-clip-storyline'
 import { ClipStorylineRequest } from '@/features/request-clip-storyline'
 import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
-import { FinalizeClipAction } from '@/features/finalize-clip'
 import { CancelClipAction } from '@/features/cancel-clip'
 import {
   ClipProjectForm,
@@ -37,7 +35,6 @@ import {
   ClipGenerationActions,
   ClipStorylineBuildActions,
   ClipCreditSettlement,
-  ClipDownloadAction,
   ClipResult,
   readyClipBatch,
 } from '@/features/generate-clip'
@@ -46,7 +43,7 @@ import { ClipUploadText } from '@/features/clip-upload-text'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import { ActionBar, Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
+import { Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
 
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
@@ -58,6 +55,7 @@ import { usePreparationClock } from '../model/usePreparationClock'
 import { ClipStepWaiting, ClipTopRow, STEP_PANEL_ID } from './ClipTopRow'
 import { ClipProgressBar, ClipStatusLine, type CorrectionStatus } from './ClipStatus'
 import { ClipRefineDock } from './ClipRefineDock'
+import { ClipFinishStep } from './ClipFinishStep'
 
 /** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
@@ -592,19 +590,7 @@ export function ClipWorkspace({
         }}
         correction={correction}
         readOnly={reading}
-        render={{
-          ready: render.ready,
-          pending: render.pending,
-          failure: render.failure,
-          progress: render.browser.state.phase !== 'idle' ? browserStatus : undefined,
-          lastKind: render.lastKind,
-          current: render.current,
-          serverWindow: render.serverWindow,
-          serverPlan: render.serverPlan,
-          serverEntitled: render.serverEntitled,
-          capability: render.capability,
-          start: render.start,
-        }}
+        render={{ failure: render.failure }}
         footage={{
           localSources: reading ? [] : sources.localSources,
           resolvePlayback: reading ? undefined : sources.resolvePlayback,
@@ -686,10 +672,6 @@ export function ClipWorkspace({
               }}
             />
           ),
-          downloadAction:
-            !reading && project.result?.downloadUrl ? (
-              <ClipDownloadAction icon project={project} />
-            ) : undefined,
           tools: (
             <>
               <Button variant="ghost" onClick={() => setEditorPanel('script')}>
@@ -792,7 +774,6 @@ export function ClipWorkspace({
             {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
           </Typography>
           <ClipResult ownerId={ownerId} project={project} />
-          {!reading && <ClipDownloadAction project={project} />}
         </>
       )}
       {referenceAction}
@@ -800,41 +781,27 @@ export function ClipWorkspace({
     </>
   )
 
-  const finishPanel =
-    project.finalized && project.result ? (
-      <>
-        <ClipResult key={project.result.createdAt} ownerId={ownerId} project={project} />
-        {uploadText}
-        <MoveClipChannel ownerId={ownerId} project={project} disabled={pending} />
-      </>
-    ) : (
-      <>
-        {!clipConfirmed(project) && (
-          <ClipStepWaiting
-            message={t('finalization.waiting')}
-            refine
-            onGo={() => setStep('refine')}
-          />
-        )}
-        {/* Until ③ renders and finalizes the confirmed plan itself (T766), its render and 완료로
-            표시 stay reachable here so no clip is left unfinishable meanwhile. */}
-        {!reading && project.result && (
-          <>
-            <Typography variant="meta">
-              {t('preview.renderedRevision', { revision: project.renderedPlanRevision })}
-            </Typography>
-            <ClipResult ownerId={ownerId} project={project} />
-            <div className="mt-6 flex flex-wrap items-center gap-2">
-              <FinalizeClipAction
-                action={finalization}
-                project={project}
-                disabled={uploading || generation.busy || render.browser.busy}
-              />
-            </div>
-          </>
-        )}
-      </>
-    )
+  const finishPanel = (
+    <ClipFinishStep
+      ownerId={ownerId}
+      project={project}
+      render={render}
+      finalization={finalization}
+      disabled={uploading || generation.busy || render.browser.busy || finalization.busy}
+      startRender={workspace.finish.startRender}
+      onStartRenderHandled={workspace.finish.handled}
+      onGoRefine={() => {
+        setStep('refine')
+        window.scrollTo(0, 0)
+      }}
+      slots={{
+        uploadText,
+        channel: reading ? (
+          <MoveClipChannel ownerId={ownerId} project={project} disabled={pending} />
+        ) : undefined,
+      }}
+    />
+  )
 
   return (
     <>
@@ -981,7 +948,8 @@ export function ClipWorkspace({
           }))}
         />
       )}
-      {!run.focused && step !== 'refine' && browserStatus}
+      {/* ③ shows its own render progress; ① keeps a render the owner left running in view. */}
+      {!run.focused && step === 'generate' && browserStatus}
       {/* A focused run owns the screen: the panel stays mounted for ①'s retained inputs, but
           leaves the accessibility tree and the column's free height to the run. */}
       <div
@@ -997,15 +965,6 @@ export function ClipWorkspace({
         {!run.focused && step === 'refine' && refinePanel}
         {!run.focused && step === 'finish' && finishPanel}
       </div>
-      {/* ONE dock per step: ① and ② carry their own (the settings form's and the correction
-          workspace's), so the page docks only ③'s 다운로드 (CLIP-40). */}
-      {project.finalized && step === 'finish' && project.result?.downloadUrl && (
-        <ActionBar className="mt-auto" ariaLabel={t('steps.finishDockAria')}>
-          <div className="flex flex-wrap justify-end gap-3">
-            <ClipDownloadAction project={project} />
-          </div>
-        </ActionBar>
-      )}
     </>
   )
 }

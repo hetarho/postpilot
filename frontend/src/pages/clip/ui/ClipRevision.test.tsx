@@ -90,7 +90,8 @@ it('keeps one composer in the step bar and opens only the approval from send', a
   expect(dock.queryByRole('button', { name: /렌더|브라우저|서버/ })).not.toBeInTheDocument()
   expect(dock.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
   expect(screen.queryByText(/완료로 표시하면 원본을 삭제/)).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+  // ② carries no download: it stands under the delivered video in ③ (CLIP-149).
+  expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
   // The counter appears with the first character, not before.
   expect(dock.queryByText(/1000자/)).not.toBeInTheDocument()
   await write('자막을 더 짧게')
@@ -158,7 +159,7 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
   // ② is still the screen: its step bar, its timeline and its preview stay, and
   // no focused job view took over.
-  expect(screen.getByRole('tab', { name: '수정' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toBeInTheDocument()
   expect(screen.getByRole('region', { name: '장면 블록' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '컷 1 편집' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
@@ -235,7 +236,7 @@ it('keeps an upload-text job beside the plan with its own cancel action', async 
   }
   await mount({ projects: [{ ...fixture(), latestJob }] }, { jobs: [latestJob] })
   expect(await screen.findByRole('button', { name: '문구 작성 취소' })).toBeEnabled()
-  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getByRole('region', { name: '장면 블록' })).toBeVisible()
   expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
 })

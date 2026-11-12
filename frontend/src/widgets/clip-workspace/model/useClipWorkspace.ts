@@ -191,12 +191,14 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   }
   const finalization = useFinalizeClip(ownerId, project, () => flushAll(true))
   // 확정하기 flushes every queue, confirms the saved revision and carries the owner to ③ at once
-  // (CLIP-75); T766 makes ③ start the browser render there.
+  // (CLIP-75), where the one-shot request starts the browser render (CLIP-153).
+  const [startRenderOnFinish, setStartRenderOnFinish] = useState(false)
   const confirm = useConfirmClip({
     ownerId,
     project,
     flush: () => flushAll(true),
     onConfirmed: () => {
+      setStartRenderOnFinish(true)
       setStep('finish')
       window.scrollTo(0, 0)
     },
@@ -290,8 +292,13 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     serverPlan: myPlan?.plan,
     serverEntitled: hasServerExportAccess(myPlan),
     // A revision states its own refusal beside its composer: the dock's alert is about the
-    // render it commits.
+    // work ② committed.
     failure: job?.kind === 'revise_clip' ? undefined : generation.failure,
+    /** A server render that stopped, for ③'s step bar and its 다시 렌더 (CLIP-153). */
+    server:
+      job?.kind === 'render_clip' && (job.status === 'failed' || job.status === 'cancelled')
+        ? { outcome: job.status as 'failed' | 'cancelled', failure: generation.failure }
+        : undefined,
     // The draft's queue is flushed BEFORE the render starts, so the render always runs against
     // the revision the server took rather than against one the owner has since typed past
     // (CLIP-39). A failed save stops the start; the status line already says so.
@@ -393,6 +400,10 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     observations,
     finalization,
     confirmation,
+    finish: {
+      startRender: startRenderOnFinish,
+      handled: () => setStartRenderOnFinish(false),
+    },
     run,
     pending,
     uploading,

@@ -4,9 +4,7 @@ import {
   type BrowserCompositionDesign,
 } from '@/entities/clip-preview'
 import type { ClipRatioId } from '@/entities/clip-design'
-import { type ClipBrowserRenderCapability } from '@/entities/clip-preview'
-import type { MyPlan } from '@/entities/plan'
-import { ClipNoticeList, type ClipNotice, type ClipRenderKind } from '@/entities/clip-project'
+import { ClipNoticeList, type ClipNotice } from '@/entities/clip-project'
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -40,7 +38,6 @@ import {
   useVisualViewport,
 } from '@/shared/ui'
 import type { useClipCorrection } from '../model/useClipCorrection'
-import { ClipRenderAction } from './ClipRenderAction'
 import { ClipSceneBlocks } from './ClipSceneBlocks'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipSceneBlockSheet, type ClipCutSound } from './ClipSceneBlockSheet'
@@ -88,20 +85,9 @@ export function ClipCorrectionWorkspace({
   }
   /** The DRAFT side: the correction in progress, its validation and its save state. */
   correction: Correction
-  /** The render this step commits, and what the controls may say about it. */
+  /** ② renders nothing (CLIP-149, CLIP-153): a generation's failure is all it reports here. */
   render: {
-    ready: boolean
-    pending: boolean
     failure?: AppFailure
-    /** Handed over only while there is a browser render to report on. */
-    progress?: ReactNode
-    lastKind?: ClipRenderKind
-    current?: boolean
-    capability?: ClipBrowserRenderCapability
-    serverWindow?: MyPlan['serverExportWindow']
-    serverPlan?: MyPlan['plan']
-    serverEntitled?: boolean
-    start: (kind: ClipRenderKind) => void
   }
   /** The originals ② draws frames from: the local copies, and the way to reach an unexpired
    *  retained one the session has no local copy of. */
@@ -118,11 +104,6 @@ export function ClipCorrectionWorkspace({
      *  way back and 확정하기. The owner composes it, since neither feature may import the other
      *  (ARCH-13); this workspace puts its own failure above it. */
     dock?: ReactNode
-    /** Downloading the identified latest successful render, as an icon directly under the video
-     *  it downloads (CLIP-149): the dock holds committing controls and a download commits
-     *  nothing (CLIP-40, THEME-39). Absent while the plan has no render, and its absence is
-     *  silence. */
-    downloadAction?: ReactNode
     referenceAction?: ReactNode
     tools?: ReactNode
     addDubbing?: () => void
@@ -141,17 +122,8 @@ export function ClipCorrectionWorkspace({
   readOnly?: boolean
 }) {
   const { id: projectId, state, captionStyles, notices = [], language } = project
-  const { preview, comparison, dock, downloadAction, referenceAction } = slots
-  const {
-    ready: renderReady,
-    pending: renderPending,
-    failure: renderFailure,
-    progress: renderProgress,
-    lastKind: lastRenderKind,
-    current: currentRender,
-    capability: browserCapability,
-    start: onRender,
-  } = render
+  const { preview, comparison, dock, referenceAction } = slots
+  const { failure: renderFailure } = render
   const { t } = useTranslation('clips')
   const [captionPosition, setCaptionPosition] = useState<{
     instanceId: string
@@ -438,41 +410,17 @@ export function ClipCorrectionWorkspace({
               ),
             })}
           </div>
-          {/* Directly under the preview, and nothing else about the clip stands in the
-          flow ② edits in (CLIP-148): the download of the render this plan already
-          has (CLIP-149) and the source sheet. With a plan and no render there is simply no
-          download — a plan awaiting one is ②'s FIRST state (CLIP-56), not a
-          missing result. */}
-          {/* `mt-4` by hand: the preview above renders through `display: contents` wrappers so its
-          frame can be pinned, and a box-less child takes no share of the section's `space-y`. */}
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            {/* The render stays reachable in ②'s flow, outside the step bar whose one big action
-                is 확정하기, until ③ takes it with the download (CLIP-149, CLIP-153). */}
-            {!readOnly && (
-              <ClipRenderAction
-                lastKind={lastRenderKind}
-                currentRender={currentRender}
-                browserAvailable={browserCapability?.available ?? false}
-                serverWindow={render.serverWindow}
-                serverPlan={render.serverPlan}
-                serverEntitled={render.serverEntitled}
-                browserRefusal={
-                  browserCapability && !browserCapability.available
-                    ? browserCapability.reason
-                    : undefined
-                }
-                pending={renderPending}
-                disabled={
-                  disabled || correction.pending || !renderReady || !correction.validation?.valid
-                }
-                onRender={onRender}
-              />
-            )}
-            {downloadAction}
-            {referenceAction}
-            {slots.tools}
-          </div>
-          {renderProgress && <div className="mt-3 min-w-0">{renderProgress}</div>}
+          {/* Directly under the preview, and nothing else about the clip stands in the flow ② edits
+          in (CLIP-148): the source sheet and the tools. ② renders and downloads nothing; both
+          stand in ③ (CLIP-149, CLIP-153). `mt-4` by hand: the preview above renders through
+          `display: contents` wrappers so its frame can be pinned, and a box-less child takes no
+          share of the section's `space-y`. */}
+          {(referenceAction || slots.tools) && (
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {referenceAction}
+              {slots.tools}
+            </div>
+          )}
           {/* The scrubber states output time on one row under the frame (CLIP-53). */}
           {!readOnly && (
             <Slider

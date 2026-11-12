@@ -180,12 +180,14 @@ it('explicitly refreshes derived wording while preserving owner words, timing an
   expect(planWrites[0].plan.narration).toEqual(plan.narration)
   expect(calls.some((call) => /Start|Quote|Synthesize/.test(call))).toBe(false)
 })
-async function goToStep(name: '생성' | '수정' | '완성') {
+async function goToStep(name: '영상 생성' | '영상 다듬기' | '영상 완성') {
   await userEvent.click(await screen.findByRole('tab', { name }))
 }
 const timeline = () => within(screen.getByRole('region', { name: '장면 블록' }))
 // ②'s one render trigger: 렌더하기, or 다시 렌더 once a render of the current plan exists (CLIP-40).
-const RENDER = /^(렌더하기|다시 렌더)$/
+// ② renders nothing (CLIP-149): 확정하기 is the committing action an invalid draft holds
+// and a dirty one flushes before it runs (CLIP-39, CLIP-75).
+const RENDER = '확정하기'
 // Each block opens its own sheet from its own control (CLIP-55). Selection alone stays on the
 // preview and the list; the dedicated test below pins that flow.
 const selectCut = async (name = '컷 1') => {
@@ -327,17 +329,15 @@ it('keeps the AI request in the step bar and the script behind its named entry',
 
 it('opens a matching result in refine with one action bar and an available download', async () => {
   await mount()
-  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
-    'href',
-    'https://private.test/download',
-  )
-  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
+  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  // ② carries no download: it stands under the delivered video in ③ (CLIP-149).
+  expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /^(렌더하기|다시 렌더)$/ })).not.toBeInTheDocument()
   // Nothing is selected, so no cut or caption control stands in the page.
   expect(screen.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()
   await selectCut()
   expect(screen.getAllByLabelText('원본 시작 (초)')).toHaveLength(1)
-  await goToStep('생성')
+  await goToStep('영상 생성')
   expect(screen.queryByRole('button', { name: RENDER })).not.toBeInTheDocument()
 })
 
@@ -354,7 +354,8 @@ it('saves exact milliseconds and selected text with a new optimistic revision', 
   await waitFor(() => expect(writes.at(-1)?.plan.elements?.[0].text).toBe('오늘 장면'), AUTOSAVE)
   expect(writes.at(-1)!.plan.cuts[0]).toMatchObject({ startMs: 123, endMs: 12345 })
   expect(writes.map((write) => write.revision)).toEqual(writes.map((_, index) => index + 1))
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+  // ② carries no download: it stands under the delivered video in ③ (CLIP-149).
+  expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
 })
 
 // F72, CLIP-39: ② has no leave-confirmation dialog; an edit still waiting for its autosave is
@@ -490,10 +491,8 @@ it('carries its scrubber, its info control and its download on the preview itsel
   expect(panel.getByText(parity)).toBeInTheDocument()
   expect(panel.getByText(untargeted)).toBeInTheDocument()
 
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
-    'href',
-    'https://private.test/download',
-  )
+  // ② carries no download: it stands under the delivered video in ③ (CLIP-149).
+  expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
 })
 
 // A plan awaiting its first render is ②'s NORMAL first state (CLIP-56): the
@@ -503,7 +502,7 @@ it('offers no download while the plan has no render, and says nothing is wrong',
   p.result = undefined
   p.renderedPlanRevision = 0
   await mount({ projects: [p] })
-  expect(screen.getByRole('tab', { name: '수정' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: '이 미리보기에 대해' })).toBeInTheDocument()
@@ -609,7 +608,8 @@ it('keeps the local draft on conflict and reloads only after an explicit discard
   setField('자막 원문', '내 수정')
   await screen.findByRole('button', { name: '내 편집을 최신 버전에 적용' }, AUTOSAVE)
   expect(screen.getByLabelText('자막 원문')).toHaveValue('내 수정')
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeInTheDocument()
+  // ② carries no download: it stands under the delivered video in ③ (CLIP-149).
+  expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
 })
 
 it('requires matching sources for rerender while text edits and previous video remain usable', async () => {
@@ -618,9 +618,15 @@ it('requires matching sources for rerender while text edits and previous video r
   await selectText()
   setField('자막 원문', '원본 없이 수정')
   await waitFor(() => expect(calls).toContain('SaveClipEditPlan'), AUTOSAVE)
-  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
+  // The edit saved without originals; confirming it needs none either (CLIP-57, CLIP-75), but
+  // ③'s render does until matching originals are back (CLIP-23).
+  await userEvent.click(await screen.findByRole('button', { name: RENDER }))
+  const render = await screen.findByRole('button', { name: '렌더하기' })
+  expect(render).toBeDisabled()
+  await goToStep('영상 다듬기')
   await select()
-  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+  await goToStep('영상 완성')
+  await waitFor(() => expect(screen.getByRole('button', { name: '렌더하기' })).toBeEnabled())
   expect(calls).not.toContain('StartClipGeneration')
 })
 
@@ -748,9 +754,8 @@ it('shares retained sound across both steps, stales the old render and offers cr
   await userEvent.click(toggle)
   await waitFor(() => expect(soundWrites).toHaveLength(1))
   await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
-  expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toBeVisible()
   expect(calls).not.toContain('SaveClipEditPlan')
-  await goToStep('생성')
+  await goToStep('영상 생성')
   await clipGuideTo('sources')
   expect(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })).toBeChecked()
   await userEvent.click(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ }))
@@ -758,7 +763,7 @@ it('shares retained sound across both steps, stales the old render and offers cr
   expect(soundWrites.map((w) => w.expectedRevision)).toEqual([1, 2])
   expect(calls).not.toContain('StartClipGeneration')
   expect(calls).not.toContain('QuoteClipGeneration')
-  await goToStep('수정')
+  await goToStep('영상 다듬기')
   await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
   await waitFor(() => expect(soundWrites).toHaveLength(3))
   expect(soundWrites[2]).toMatchObject({ expectedRevision: 3, retainOriginalAudio: true })
@@ -767,7 +772,7 @@ it('shares retained sound across both steps, stales the old render and offers cr
 // CLIP-39: ② autosaves as ① does, so 저장 is gone and a dirty draft is not a reason to
 // refuse 다시 렌더 — the render flushes the queue itself and runs against what the server
 // took, never against a revision the owner has since typed past.
-it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', async () => {
+it('confirms a dirty draft by flushing it first, and offers no 저장 anywhere', async () => {
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
   const calls: string[] = []
   await mount({ planWrites: writes, calls })
@@ -779,12 +784,10 @@ it('renders a dirty draft by flushing it first, and offers no 저장 anywhere', 
   expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: RENDER })).toBeEnabled()
   await userEvent.click(screen.getByRole('button', { name: RENDER }))
-  // 렌더하기 asks where: the kind is chosen per render (CLIP-153).
-  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
-  await waitFor(() => expect(calls).toContain('StartClipRender'), AUTOSAVE)
-  // The edit reached the server BEFORE the render started.
+  await waitFor(() => expect(calls).toContain('ConfirmClipProject'), AUTOSAVE)
+  // The edit reached the server BEFORE the plan was confirmed.
   expect(writes.at(-1)?.plan.elements?.[0].text).toBe('렌더 직전 수정')
-  expect(calls.indexOf('SaveClipEditPlan')).toBeLessThan(calls.indexOf('StartClipRender'))
+  expect(calls.indexOf('SaveClipEditPlan')).toBeLessThan(calls.indexOf('ConfirmClipProject'))
 })
 
 it('starts a server render when the retained batch includes an unused original', async () => {
@@ -814,37 +817,49 @@ it('starts a server render when the retained batch includes an unused original',
       metadata: { ...source, contentType: 'video/mp4', bytes: 5n },
     })),
   })
+  project.renderedPlanRevision = 0
+  project.result = undefined
   const calls: string[] = []
   const renderStarts: NonNullable<FakeClipsOptions['renderStarts']> = []
   await mount({ projects: [project], retainedBatches: [batch], calls, renderStarts })
-  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
-  await userEvent.click(screen.getByRole('button', { name: RENDER }))
-  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+  await renderInFinish()
   await waitFor(() => expect(calls).toContain('StartClipRender'))
   expect(renderStarts.at(-1)).toMatchObject({ batchId: 'retained', expectedRevision: 1 })
 })
 
 // A plan its own validation refuses never became a job, so the start is not left
 // "checking whether it was accepted" with the run view holding the screen.
-it('shows a refused server render at once and keeps ② usable', async () => {
+it('shows a refused server render at once and keeps ③ usable', async () => {
   const calls: string[] = []
+  const project = fixture()
+  project.renderedPlanRevision = 0
+  project.result = undefined
   await mount({
+    projects: [project],
     calls,
     renderRefusal: 'CLIP_COMPOSITION_INVALID',
     renderRefusalParams: { element_id: 'narration-2', line: '0', reason: 'rapid_readability' },
   })
   await select()
-  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
-  await userEvent.click(screen.getByRole('button', { name: RENDER }))
-  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+  await renderInFinish()
   await waitFor(() => expect(calls).toContain('StartClipRender'))
-  const editor = within(screen.getByRole('region', { name: '컷·자막 수정' }))
-  expect(
-    within(await editor.findByRole('alert')).getByText('영상의 2번째 자막을 확인해 주세요.'),
-  ).toBeVisible()
+  const finish = within(await screen.findByRole('region', { name: '완성됐어요' }))
+  expect(await finish.findByText('영상의 2번째 자막을 확인해 주세요.')).toBeVisible()
   expect(screen.queryByText(/요청의 접수 여부를 확인하는 중이에요/)).not.toBeInTheDocument()
-  await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
+  await waitFor(() => expect(screen.getByRole('button', { name: '렌더하기' })).toBeEnabled())
 })
+
+/** 확정하기 carries the owner to ③, which renders the confirmed plan there (CLIP-153): jsdom has
+ *  no encoder, so ③ offers 렌더하기 and the server is chosen explicitly. */
+async function renderInFinish() {
+  const confirmAction = await screen.findByRole('button', { name: '확정하기' })
+  await waitFor(() => expect(confirmAction).toBeEnabled())
+  await userEvent.click(confirmAction)
+  const render = await screen.findByRole('button', { name: '렌더하기' })
+  await waitFor(() => expect(render).toBeEnabled())
+  await userEvent.click(render)
+  await userEvent.click(await screen.findByRole('button', { name: '서버에서 렌더' }))
+}
 
 const styleRadio = (name: string) =>
   within(screen.getByRole('radiogroup', { name: '자막 스타일' })).getByRole('radio', {

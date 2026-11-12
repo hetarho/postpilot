@@ -14,13 +14,27 @@ export const i18n = {
         unavailable: '확정할 수 있는지 확인하지 못했어요. 화면을 새로고침해 주세요.',
       },
     },
+    publishedUrl: {
+      title: '게시 URL',
+      label: { naver_clip: '네이버 클립 주소', instagram_clip: '인스타그램 릴스 주소' },
+      placeholder: {
+        naver_clip: 'https://clip.naver.com/…',
+        instagram_clip: 'https://www.instagram.com/reel/…',
+      },
+      save: 'URL 저장',
+      replace: 'URL 바꾸기',
+      saved: '게시 URL을 저장했어요.',
+      dialogTitle: '게시 URL을 저장하고 클립을 완료할까요?',
+      dialogConfirm: '저장하고 완료',
+    },
     finalization: {
       confirm: '완료로 표시',
       dialogTitle: '클립을 완료로 표시할까요?',
       notice:
         '완료로 표시하면 원본을 삭제하고 수정이 끝나요. 완료된 영상은 계속 재생하고 다운로드할 수 있어요.',
-      waiting: '수정 단계에서 확정하기를 누르면 완성돼요. 다운로드만으로는 확정되지 않아요.',
-      goRefine: '수정으로 이동',
+      waiting:
+        '영상 다듬기에서 확정하기를 누르면 이 단계에서 렌더해요. 다운로드만으로는 확정되지 않아요.',
+      goRefine: '영상 다듬기로 가기',
       uncertain:
         '확정 결과를 확인하고 있어요. 서버 상태가 확인될 때까지 수정과 재시도를 잠시 멈춰요.',
       downloadRevision: '렌더 {{revision}} 다운로드',
@@ -46,14 +60,27 @@ export const i18n = {
         unavailable: 'Could not check whether this clip can be confirmed. Refresh this page.',
       },
     },
+    publishedUrl: {
+      title: 'Posted URL',
+      label: { naver_clip: 'Naver Clip address', instagram_clip: 'Instagram reel address' },
+      placeholder: {
+        naver_clip: 'https://clip.naver.com/…',
+        instagram_clip: 'https://www.instagram.com/reel/…',
+      },
+      save: 'Save URL',
+      replace: 'Replace URL',
+      saved: 'Saved the posted URL.',
+      dialogTitle: 'Save the posted URL and complete this clip?',
+      dialogConfirm: 'Save and complete',
+    },
     finalization: {
       confirm: 'Mark complete',
       dialogTitle: 'Mark this clip complete?',
       notice:
         'Marking it complete deletes the originals and ends editing. You can still play and download the completed video.',
       waiting:
-        'Confirm the clip in the editing step to finish. Downloading alone does not confirm it.',
-      goRefine: 'Go to Refine',
+        'Confirm the clip in Refine video and it renders here. Downloading alone does not confirm it.',
+      goRefine: 'Go to Refine video',
       uncertain:
         'Checking confirmation. Editing and retries stay paused until the server state is known.',
       downloadRevision: 'Download render {{revision}}',

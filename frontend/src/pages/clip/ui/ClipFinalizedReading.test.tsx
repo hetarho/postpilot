@@ -42,15 +42,16 @@ const mount = (options: FakeClipsOptions = {}) =>
 
 it('opens a finalized clip on ③ and keeps its earlier steps selectable', async () => {
   mount()
-  await screen.findByRole('link', { name: '영상 다운로드' })
-  expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
-  for (const name of ['생성', '수정']) expect(screen.getByRole('tab', { name })).toBeVisible()
+  await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
+  expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true')
+  for (const name of ['영상 생성', '영상 다듬기'])
+    expect(screen.getByRole('tab', { name })).toBeVisible()
 })
 
 it('states ①’s settings without a control that could change them', async () => {
   mount()
-  await screen.findByRole('link', { name: '영상 다운로드' })
-  await userEvent.click(screen.getByRole('tab', { name: '생성' }))
+  await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
+  await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
   const title = await screen.findByLabelText('클립 제목')
   expect(title).toHaveValue('확정된 클립')
   expect(title).toBeDisabled()
@@ -64,8 +65,8 @@ it('states ①’s settings without a control that could change them', async () 
 it('plays the confirmed result in ② and opens a caption as values', async () => {
   const calls: string[] = []
   mount({ calls })
-  await screen.findByRole('link', { name: '영상 다운로드' })
-  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
+  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
   // The delivered file stands where the draft preview did: the originals are gone, so no draft
   // is prepared and no fragment is drawn (CLIP-160, CLIP-76).
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute(
@@ -112,7 +113,7 @@ it('opens phone appearance details on a finalized clip while retaining disabled 
   const user = userEvent.setup()
   const calls: string[] = []
   mount({ calls })
-  await user.click(await screen.findByRole('tab', { name: '생성' }))
+  await user.click(await screen.findByRole('tab', { name: '영상 생성' }))
   const toggle = await screen.findByRole('button', { name: '디자인과 자막 스타일' })
   expect(toggle).toBeEnabled()
   expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -147,7 +148,7 @@ it('offers upload text in both finished and refining readings without reopening 
   const make = await screen.findByRole('button', { name: '업로드 문구 만들기' })
   expect(make).toBeEnabled()
   expect(starts).toEqual([])
-  await userEvent.click(screen.getByRole('tab', { name: '수정' }))
+  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
   expect(await screen.findByRole('button', { name: '업로드 문구 만들기' })).toBeEnabled()
   await userEvent.click(screen.getByRole('button', { name: '인스타 클립' }))
   await userEvent.click(screen.getByRole('button', { name: '인스타 클립 문구도 만들기' }))

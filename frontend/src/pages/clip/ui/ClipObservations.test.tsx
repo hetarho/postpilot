@@ -50,7 +50,7 @@ describe('observations in the clip workspace', () => {
     await userEvent.click(open)
     expect(screen.getByRole('tab', { name: '관찰 기록' })).toHaveAttribute('aria-selected', 'true')
     await userEvent.keyboard('{Escape}')
-    await userEvent.click(screen.getByRole('tab', { name: '생성' }))
+    await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
     expect(screen.queryByRole('button', { name: '원본 소스' })).not.toBeInTheDocument()
     await clipGuideTo('sources')
     expect(screen.getByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
@@ -98,7 +98,7 @@ describe('observations in the clip workspace', () => {
     ).toBeVisible()
     expect(screen.getByText('원본 분석 2 / 2 구간 완료')).toBeVisible()
     const tabs = within(screen.getByRole('tablist', { name: '클립 단계' }))
-    await userEvent.click(tabs.getByRole('tab', { name: /^생성$/ }))
+    await userEvent.click(tabs.getByRole('tab', { name: '영상 생성' }))
     expect(screen.getByRole('heading', { name: '이번 작업에서 확인할 수 있는 내용' })).toBeVisible()
     expect(calls).not.toContain('StartClipGeneration')
     expect(calls).not.toContain('StartClipRender')
@@ -113,17 +113,18 @@ describe('observations in the clip workspace', () => {
     expect(await screen.findByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
     await user.keyboard('{Escape}')
     const tabs = within(screen.getByRole('tablist', { name: '클립 단계' }))
-    for (const name of ['생성', '수정']) {
+    for (const name of ['영상 생성', '영상 다듬기']) {
       await user.click(tabs.getByRole('tab', { name: new RegExp(name) }))
-      if (name === '생성') await clipGuideTo('sources')
-      if (name === '수정') await user.click(screen.getByRole('button', { name: '원본 소스' }))
+      if (name === '영상 생성') await clipGuideTo('sources')
+      if (name === '영상 다듬기')
+        await user.click(screen.getByRole('button', { name: '원본 소스' }))
       expect(screen.getAllByRole('heading', { name: 'AI가 관찰한 내용' })).toHaveLength(1)
       await user.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
       expect(
         within(
-          name === '수정'
+          name === '영상 다듬기'
             ? screen.getByRole('dialog', { name: '원본 소스' })
-            : screen.getByRole('tabpanel', { name: '생성' }),
+            : screen.getByRole('tabpanel', { name: '영상 생성' }),
         ).getByText('1번 컷에 사용 · 1× · 원본 0:03.500–0:10'),
       ).toBeVisible()
     }

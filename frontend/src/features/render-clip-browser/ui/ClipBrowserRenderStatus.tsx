@@ -3,14 +3,14 @@ import { ClipNoticeList } from '@/entities/clip-project'
 import { AppFailureMessage, Button, ProgressBar, Typography } from '@/shared/ui'
 import type { BrowserRenderState } from '../api/useBrowserRender'
 
-export function ClipBrowserRenderStatus({
+/** A browser render's own progress, cancellation and failure (CLIP-156): ③ docks it while the
+ *  render runs or failed, and ① shows it in flow. */
+export function ClipBrowserRenderProgress({
   state,
   cancel,
-  retry,
 }: {
   state: BrowserRenderState
   cancel: () => void
-  retry?: () => void
 }) {
   const { t } = useTranslation('clips')
   if (state.phase === 'idle') return null
@@ -32,34 +32,6 @@ export function ClipBrowserRenderStatus({
           </Button>
         )}
       </div>
-      {state.local && (
-        <div className="space-y-2">
-          <Typography variant="meta">{t('render.localReady')}</Typography>
-          <video
-            className="w-full"
-            controls
-            preload="metadata"
-            src={state.local.url}
-            aria-label={t('render.localPreview')}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => {
-                const link = document.createElement('a')
-                link.href = state.local!.url
-                link.download = 'clip.mp4'
-                link.click()
-              }}
-            >
-              {t('render.localDownload')}
-            </Button>
-            {state.phase === 'upload_pending' && retry && (
-              <Button onClick={retry}>{t('render.retryUpload')}</Button>
-            )}
-          </div>
-        </div>
-      )}
       {state.failure && (
         <div role="alert" className="space-y-1">
           {state.refusal && (
@@ -69,6 +41,66 @@ export function ClipBrowserRenderStatus({
         </div>
       )}
       <ClipNoticeList notices={state.notices} />
+    </div>
+  )
+}
+
+/** A verified local MP4, playable and downloadable while its private upload is pending; local
+ *  readiness is never presented as saved completion (CLIP-158). */
+export function ClipBrowserLocalResult({
+  state,
+  retry,
+}: {
+  state: BrowserRenderState
+  retry?: () => void
+}) {
+  const { t } = useTranslation('clips')
+  if (!state.local) return null
+  const local = state.local
+  return (
+    <div className="space-y-2">
+      <Typography variant="meta">{t('render.localReady')}</Typography>
+      <video
+        className="w-full"
+        controls
+        preload="metadata"
+        src={local.url}
+        aria-label={t('render.localPreview')}
+      />
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="ghost"
+          onClick={() => {
+            const link = document.createElement('a')
+            link.href = local.url
+            link.download = 'clip.mp4'
+            link.click()
+          }}
+        >
+          {t('render.localDownload')}
+        </Button>
+        {state.phase === 'upload_pending' && retry && (
+          <Button onClick={retry}>{t('render.retryUpload')}</Button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function ClipBrowserRenderStatus({
+  state,
+  cancel,
+  retry,
+}: {
+  state: BrowserRenderState
+  cancel: () => void
+  retry?: () => void
+}) {
+  if (state.phase === 'idle') return null
+  return (
+    <div className="space-y-3">
+      <ClipBrowserRenderProgress state={state} cancel={cancel} />
+      <ClipBrowserLocalResult state={state} retry={retry} />
     </div>
   )
 }

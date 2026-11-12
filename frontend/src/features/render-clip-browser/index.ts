@@ -16,4 +16,10 @@ export {
   BrowserRenderVerdictError,
 } from './api/store-result'
 export { useBrowserRender } from './api/useBrowserRender'
-export { ClipBrowserRenderStatus } from './ui/ClipBrowserRenderStatus'
+export {
+  ClipBrowserRenderStatus,
+  ClipBrowserRenderProgress,
+  ClipBrowserLocalResult,
+} from './ui/ClipBrowserRenderStatus'
+export { ClipRenderAction } from './ui/ClipRenderAction'
+export type { BrowserRenderState } from './api/useBrowserRender'

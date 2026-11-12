@@ -38,13 +38,7 @@ function Editor({
           design: design(initial),
         }}
         correction={correction}
-        render={{
-          ready: false,
-          pending: false,
-          start: () => {
-            throw new Error('Unexpected render from editor fixture')
-          },
-        }}
+        render={{}}
         footage={{ localSources: [], resolvePlayback }}
         disabled={false}
         slots={{

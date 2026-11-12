@@ -3,7 +3,7 @@ import { preferredClipRenderKind, type ClipRenderKind } from '@/entities/clip-pr
 import type { MyPlan } from '@/entities/plan'
 import { Button, Popover, Typography } from '@/shared/ui'
 
-/** ②'s render control (CLIP-40, CLIP-153): ONE trigger that opens the choice of kind — a browser
+/** ③'s render control (CLIP-153): ONE trigger that opens the choice of kind — a browser
  *  render or a server one — rather than a button naming a kind beside a switch to the other. The
  *  supported browser leads independently of the last successful kind, and a browser the device
  *  cannot render on keeps its option, refused, with the reason beside it (CLIP-155). */
@@ -15,6 +15,7 @@ export function ClipRenderAction({
   serverPlan,
   serverEntitled = false,
   currentRender = false,
+  again = false,
   pending,
   disabled,
   variant = 'secondary',
@@ -27,10 +28,11 @@ export function ClipRenderAction({
   serverPlan?: MyPlan['plan']
   serverEntitled?: boolean
   currentRender?: boolean
+  /** A render after a failure or a cancellation names the action 다시 렌더 (CLIP-153). */
+  again?: boolean
   pending: boolean
   disabled: boolean
-  /** `cta` while a render is the step's next action — before the project has one — and
-   *  `secondary` once 확정하기 stands beside it. */
+  /** `cta` while a render is the step's next action, `secondary` beside a delivered one. */
   variant?: 'cta' | 'secondary'
   onRender: (kind: ClipRenderKind) => void
 }) {
@@ -38,7 +40,7 @@ export function ClipRenderAction({
   const preferred = preferredClipRenderKind(lastKind, browserAvailable)
   const kinds: ClipRenderKind[] =
     preferred === 'browser' ? ['browser', 'server'] : ['server', 'browser']
-  const label = t(currentRender ? 'timeline.rerender' : 'timeline.render')
+  const label = t(currentRender || again ? 'timeline.rerender' : 'timeline.render')
   const existingServerResult = currentRender && lastKind === 'server'
   const serverNeedsPlan = !serverEntitled && !existingServerResult
   const serverExhausted =

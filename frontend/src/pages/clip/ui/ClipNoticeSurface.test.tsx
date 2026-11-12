@@ -7,7 +7,7 @@ import { toClipProject } from '@/entities/clip-project'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { ClipResult, ClipDownloadAction } from '@/features/generate-clip'
-import { FinalizeClipAction } from '@/features/finalize-clip'
+import { ClipPublishedUrlField } from '@/features/finalize-clip'
 
 afterEach(cleanup)
 it.each(['ko', 'en'] as const)(
@@ -18,6 +18,9 @@ it.each(['ko', 'en'] as const)(
         id: 'clip',
         ratio: 'vertical',
         language: contentLanguageToProto(language),
+        editPlanRevision: 1,
+        renderedPlanRevision: 1,
+        confirmedPlanRevision: 1,
         canFinalize: true,
         result: {
           id: 'render',
@@ -38,6 +41,7 @@ it.each(['ko', 'en'] as const)(
       prepare: vi.fn(async () => project),
       confirm: vi.fn(async () => {}),
       checkAgain: vi.fn(async () => {}),
+      savePublishedUrl: vi.fn(async () => true),
       pending: false,
       uncertain: false,
       failure: undefined,
@@ -48,7 +52,7 @@ it.each(['ko', 'en'] as const)(
         <ClipResult project={project} ownerId="owner" />
         <ClipDownloadAction project={project} />
         <div data-testid="confirmation">
-          <FinalizeClipAction action={action} project={project} disabled={false} />
+          <ClipPublishedUrlField action={action} project={project} disabled={false} />
         </div>
       </>,
       {
@@ -65,8 +69,11 @@ it.each(['ko', 'en'] as const)(
     ).not.toBeInTheDocument()
     // The delivered result keeps its own list, which is ③'s and not ②'s.
     expect(screen.getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.getByRole('link')).toHaveAttribute('href', project.result!.downloadUrl)
-    const button = confirmation.getByRole('button')
+    expect(screen.getByRole('link', { name: /렌더|render/i })).toHaveAttribute(
+      'href',
+      project.result!.downloadUrl,
+    )
+    const button = confirmation.getByRole('button', { name: /완료로 표시|Mark complete/ })
     expect(button).toBeEnabled()
     fireEvent.click(button)
     const dialog = within(await screen.findByRole('dialog'))
