@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-12T17:47:20.818Z",
-  "sourceCommit": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
+  "snapshotAt": "2026-11-12T19:14:06.533Z",
+  "sourceCommit": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
   "group": {
     "id": "si8-261113",
     "branch": "main",
@@ -26,12 +26,12 @@
   },
   "summary": {
     "total": 7,
-    "completed": 4,
-    "remaining": 3,
+    "completed": 5,
+    "remaining": 2,
     "running": 0,
     "review": 0,
     "blocked": 0,
-    "unassigned": 3
+    "unassigned": 2
   },
   "tasks": [
     {
@@ -47,14 +47,6 @@
       "title": "Share consistent editor workspace navigation chrome",
       "dep": [
         "T778"
-      ],
-      "status": "todo"
-    },
-    {
-      "id": "T781",
-      "title": "Continue an active preview after an equal-content save acknowledgment",
-      "dep": [
-        "T780"
       ],
       "status": "todo"
     }
@@ -257,6 +249,8 @@
       "submittedBase": "4b3224d4f4a1f1d1feae17c73af598e0abec8db2",
       "submissionId": "ef66815b-52ed-4ab6-a6ab-d0e3146ba11a",
       "submittedAt": "2026-11-12T17:45:41.070Z",
+      "integratedCommit": "77609497b328fec8fbc95971da24f08d0b9beda6",
+      "integratedAt": "2026-11-12T17:48:17.353Z",
       "risk": null,
       "review": {
         "id": "a5c193fc-6d75-440e-bbfa-3f37eef7a28c",
@@ -299,6 +293,57 @@
           "taskId": "T780",
           "commit": "9f5b2904e884fe2a3f284d1ede82906d577438f9",
           "at": "2026-11-12T17:45:41.053Z",
+          "verification": []
+        }
+      ],
+      "verification": [],
+      "integrationVerification": [
+        {
+          "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+          "startedAt": "2026-11-12T17:47:21.902Z",
+          "finishedAt": "2026-11-12T17:48:17.005Z"
+        }
+      ]
+    },
+    {
+      "id": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "group": "si8-261113",
+      "taskId": "T781",
+      "tasks": [
+        "T781"
+      ],
+      "lane": null,
+      "owner": "si8-playback-worker",
+      "contributors": [
+        "si8-playback-worker"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-12T17:48:53.048Z",
+      "startCommit": "77609497b328fec8fbc95971da24f08d0b9beda6",
+      "verifiedCommit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+      "submittedBase": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
+      "submissionId": "65aeb10c-8531-4385-86e6-06b01aafc75d",
+      "submittedAt": "2026-11-12T19:11:46.868Z",
+      "risk": null,
+      "review": {
+        "id": "16fde1c7-81bc-4a80-bf0f-eb47dbfd905c",
+        "owner": "si8-reviewer",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T781 exact submission 7f42fc7fddb891ead6702ec8e14f08fcf007587b independently reviewed against base33ce98f7 and full original-start77609497 delta. All seven production and five test paths match reviewed source0558bd50; subsequent changes only complete its own acceptance/result. The previously identified committed-revision regression is corrected by per-intent layout-effect high-water checks; real held-prepare regressions and independent actual-gate replay cover both component decreases, irreversible cancellation and manual restart. Full snapshot/access/authority/File/resolver ownership, fresh-original source gates, current Worker request/epoch drawn-frame gating and same-transport/context cancellation fences remain intact. Final 16BASE+16CAND strict evaluation independently replayed:76639 checks passed,1493 actual source/dependency pins and167 durable artifact hashes verified. Identifier-only evaluator repair reverses exactly to parent bytes; all conditions/raw data unchanged and after-capture provenance is explicit. Core89, related222files/2041tests, shared22files/136tests and relevant fast checks provide appropriate entire-delta coverage. No remaining P1/P2 findings. Local Chrome native scheduling/gain proof uses headless --mute-audio; no physical-speaker, deployment, Safari, speed/FPS or backward-clock attribution claimed. Coordinator full-CI/integration gates remain authoritative.",
+        "findings": [],
+        "commit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+        "baseCommit": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
+        "submissionId": "65aeb10c-8531-4385-86e6-06b01aafc75d",
+        "createdAt": "2026-11-12T19:12:09.227Z",
+        "finishedAt": "2026-11-12T19:13:47.476Z"
+      },
+      "steps": [
+        {
+          "taskId": "T781",
+          "commit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+          "at": "2026-11-12T19:11:46.856Z",
           "verification": []
         }
       ],
@@ -1316,6 +1361,234 @@
       "group": "si8-261113",
       "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
       "taskId": "T780",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 53,
+      "at": "2026-11-12T17:48:17.263Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /Users/ihaelam/project/postpilot/.git/gusta/v1/launchers/si8/unit-fast.sh",
+            "startedAt": "2026-11-12T17:47:21.902Z",
+            "finishedAt": "2026-11-12T17:48:17.005Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 54,
+      "at": "2026-11-12T17:48:17.353Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "d3ccbf39-63d1-4899-b34b-f2e025083bfd",
+      "taskId": "T780",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "77609497b328fec8fbc95971da24f08d0b9beda6",
+        "integratedAt": "2026-11-12T17:48:17.353Z"
+      }
+    },
+    {
+      "sequence": 55,
+      "at": "2026-11-12T17:48:53.048Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+        "group": "si8-261113",
+        "taskId": "T781",
+        "tasks": [
+          "T781"
+        ],
+        "lane": null,
+        "owner": "si8-playback-worker",
+        "contributors": [
+          "si8-playback-worker"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-12T17:48:53.048Z",
+        "startCommit": "77609497b328fec8fbc95971da24f08d0b9beda6"
+      }
+    },
+    {
+      "sequence": 56,
+      "at": "2026-11-12T17:48:54.341Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 57,
+      "at": "2026-11-12T17:58:21.273Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "reason": null
+      }
+    },
+    {
+      "sequence": 58,
+      "at": "2026-11-12T19:09:58.718Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 59,
+      "at": "2026-11-12T19:09:58.906Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "T781: 태스크 계약이 상위 브랜치와 다릅니다. 기획 변경을 확인하고 작업을 동기화하세요."
+      }
+    },
+    {
+      "sequence": 60,
+      "at": "2026-11-12T19:11:16.560Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 61,
+      "at": "2026-11-12T19:11:46.482Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 62,
+      "at": "2026-11-12T19:11:46.868Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "verifiedCommit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+        "submittedBase": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
+        "submissionId": "65aeb10c-8531-4385-86e6-06b01aafc75d",
+        "submittedAt": "2026-11-12T19:11:46.868Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T781",
+            "commit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+            "at": "2026-11-12T19:11:46.856Z",
+            "verification": []
+          }
+        ],
+        "verification": []
+      }
+    },
+    {
+      "sequence": 63,
+      "at": "2026-11-12T19:12:09.227Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "16fde1c7-81bc-4a80-bf0f-eb47dbfd905c",
+          "owner": "si8-reviewer",
+          "status": "reviewing",
+          "commit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+          "baseCommit": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
+          "submissionId": "65aeb10c-8531-4385-86e6-06b01aafc75d",
+          "createdAt": "2026-11-12T19:12:09.227Z"
+        }
+      }
+    },
+    {
+      "sequence": 64,
+      "at": "2026-11-12T19:13:47.476Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "16fde1c7-81bc-4a80-bf0f-eb47dbfd905c",
+          "owner": "si8-reviewer",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T781 exact submission 7f42fc7fddb891ead6702ec8e14f08fcf007587b independently reviewed against base33ce98f7 and full original-start77609497 delta. All seven production and five test paths match reviewed source0558bd50; subsequent changes only complete its own acceptance/result. The previously identified committed-revision regression is corrected by per-intent layout-effect high-water checks; real held-prepare regressions and independent actual-gate replay cover both component decreases, irreversible cancellation and manual restart. Full snapshot/access/authority/File/resolver ownership, fresh-original source gates, current Worker request/epoch drawn-frame gating and same-transport/context cancellation fences remain intact. Final 16BASE+16CAND strict evaluation independently replayed:76639 checks passed,1493 actual source/dependency pins and167 durable artifact hashes verified. Identifier-only evaluator repair reverses exactly to parent bytes; all conditions/raw data unchanged and after-capture provenance is explicit. Core89, related222files/2041tests, shared22files/136tests and relevant fast checks provide appropriate entire-delta coverage. No remaining P1/P2 findings. Local Chrome native scheduling/gain proof uses headless --mute-audio; no physical-speaker, deployment, Safari, speed/FPS or backward-clock attribution claimed. Coordinator full-CI/integration gates remain authoritative.",
+          "findings": [],
+          "commit": "7f42fc7fddb891ead6702ec8e14f08fcf007587b",
+          "baseCommit": "33ce98f7fae92a6ce642ddd8951a5ba265725378",
+          "submissionId": "65aeb10c-8531-4385-86e6-06b01aafc75d",
+          "createdAt": "2026-11-12T19:12:09.227Z",
+          "finishedAt": "2026-11-12T19:13:47.476Z"
+        }
+      }
+    },
+    {
+      "sequence": 65,
+      "at": "2026-11-12T19:14:04.365Z",
+      "type": "attempt",
+      "group": "si8-261113",
+      "attemptId": "fea67a5c-f473-4cb7-b148-8cb1ed9065ce",
+      "taskId": "T781",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {

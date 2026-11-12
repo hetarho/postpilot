@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react'
 import { useTranslation } from 'react-i18next'
-import { Film, Images, Play, RefreshCw, RotateCcw, Volume2, VolumeX } from 'lucide-react'
+import { Film, Images, Pause, Play, RefreshCw, RotateCcw, Volume2, VolumeX } from 'lucide-react'
 import {
   CLIP_BROWSER_RENDER,
   CLIP_DRAFT_PREVIEW,
@@ -11,6 +19,7 @@ import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import { Button, Slider, Typography } from '@/shared/ui'
 import { BrowserPreviewWorker } from '../lib/create-preview-worker'
 import { BrowserCompositionPlayback } from '../model/composition-playback'
+import { canonicalBrowserCompositionData } from '../model/browser-composition'
 import { browserAudioPlan } from '../model/browser-audio-plan'
 import { flowCut, previewTimeline, type ClipPreviewOverlay } from '../model/draft-preview'
 import type { ClipLocalCompositionRuntime } from '../model/local-preview'
@@ -35,6 +44,16 @@ export interface ClipBrowserDraftPreviewProps {
   editingOverlay?: ReactNode
   captionPosition?: { instanceId: string; x: number; y: number }
   loadSpeech?: SpeechAudioLoader
+}
+interface PreviewContinuation {
+  transport: BrowserCompositionPlayback
+  runtime: ClipLocalCompositionRuntime
+  content: string
+  position: number
+  observedRevisions: readonly [number, number]
+  phase: 'buffering' | 'starting'
+  removeAbort: () => void
+  target?: { runtime: ClipLocalCompositionRuntime; epoch: number; frame: number }
 }
 /** React owns controls. Worker frames and one output clock run independently of React rendering. */
 export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
@@ -72,6 +91,38 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     [audioFailure, setAudioFailure] = useState<{ key: string; error: string }>(),
     [neutral, setNeutral] = useState(false),
     [refresh, setRefresh] = useState(0)
+  const snapshot = local?.snapshot
+  const content = useMemo(
+    () =>
+      snapshot
+        ? canonicalBrowserCompositionData(
+            Object.fromEntries(
+              Object.entries(snapshot).filter(
+                ([key]) =>
+                  !['projectRevision', 'planRevision', 'snapshotFingerprint'].includes(key),
+              ),
+            ),
+          )
+        : '',
+    [snapshot],
+  )
+  const [continuing, setContinuing] = useState(false)
+  const continuation = useRef<PreviewContinuation | undefined>(undefined)
+  const cancellation = useRef(0)
+  const alive = useRef(false)
+  const preparedRuntime = useRef<ClipLocalCompositionRuntime | undefined>(undefined)
+  const [readyRuntime, setReadyRuntime] = useState<ClipLocalCompositionRuntime>()
+  const cancelContinuation = useCallback(() => {
+    cancellation.current++
+    continuation.current?.removeAbort()
+    continuation.current = undefined
+    // Cancellation is immediate; the React control mirrors the settled owner
+    // after this boundary, without letting an older notification hide a new intent.
+    queueMicrotask(() => {
+      if (alive.current && !continuation.current) setContinuing(false)
+    })
+  }, [])
+  const startPlayback = useRef<(position: number, intent?: PreviewContinuation) => void>(() => {})
   const fingerprint = local?.snapshot.snapshotFingerprint
   const runtimeKey = `${fingerprint ?? ''}/${refresh}`
   const [scenePreparation, setScenePreparation] = useState<{
@@ -81,9 +132,11 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
   }>()
   const [playKey, setPlayKey] = useState(''),
     [prepareKey, setPrepareKey] = useState('')
-  const playing = playingState && playKey === runtimeKey && !flow && !suspended
-  const preparing = preparingState && prepareKey === runtimeKey && !flow && !suspended
-  const ready = !!fingerprint && readyKey === runtimeKey
+  const playing =
+    playingState && playKey === runtimeKey && readyRuntime === local && !flow && !suspended
+  const preparing =
+    preparingState && prepareKey === runtimeKey && readyRuntime === local && !flow && !suspended
+  const ready = !!fingerprint && readyKey === runtimeKey && readyRuntime === local
   const audioError = audioFailure?.key === runtimeKey ? audioFailure.error : undefined
   const mutedRef = useRef(muted)
   const flowRef = useRef(flow)
@@ -173,6 +226,21 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
             if (!result.flow) {
               const displayed = result.displayed.at(-1)
               if (displayed) latest.current.onDisplayedFrame?.({ ...displayed, precise: true })
+              const intent = continuation.current
+              const target = intent?.target
+              if (
+                intent?.phase === 'buffering' &&
+                target &&
+                target.runtime === latest.current.local &&
+                target.epoch === own &&
+                target.frame === result.frame &&
+                request.frame === target.frame &&
+                result.fingerprint === target.runtime.snapshot.snapshotFingerprint
+              ) {
+                // Consume this frame-gated attempt before scheduling any nodes.
+                intent.phase = 'starting'
+                startPlayback.current(intent.position, intent)
+              }
             }
           } finally {
             result.bitmap.close()
@@ -180,6 +248,10 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
         })
         .catch((failure: unknown) => {
           if (!signal.aborted && own === drawEpoch.current) {
+            cancelContinuation()
+            transport.current?.pause()
+            setPlaying(false)
+            setPreparing(false)
             lastRequested.current = ''
             setError(failure instanceof Error ? failure.message : 'CLIP_PREVIEW_FAILED')
             const context = surface.current?.getContext('2d')
@@ -197,13 +269,18 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     draw.current = (time) => {
       const runtime = latest.current.local
       if (!runtime || !readyRef.current || latest.current.suspended) return
+      // A delayed controlled-time echo must not overwrite the one fresh frame
+      // queued behind an aborted old request. Explicit seeks cancel the intent first.
+      const intent = continuation.current
+      const position =
+        intent?.phase === 'buffering' && intent.target?.runtime === runtime ? intent.position : time
       const frame = Math.min(
         runtime.snapshot.frameCount - 1,
-        Math.max(0, Math.floor((time * CLIP_BROWSER_RENDER.frameRate) / 1000)),
+        Math.max(0, Math.floor((position * CLIP_BROWSER_RENDER.frameRate) / 1000)),
       )
       const request = {
           frame,
-          ...(flowRef.current ? { timeMs: time } : {}),
+          ...(flowRef.current ? { timeMs: position } : {}),
           flow: flowRef.current,
           captionPosition: latest.current.captionPosition,
         },
@@ -214,13 +291,78 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     }
   })
   const stop = useCallback(() => {
+    cancelContinuation()
     if (transport.current?.running) changeTime(transport.current.timeMs)
     transport.current?.pause()
     setPlaying(false)
     setPreparing(false)
     invalidate()
-  }, [changeTime, invalidate])
+  }, [changeTime, invalidate, cancelContinuation])
   useLayoutEffect(() => {
+    startPlayback.current = (starts, intent) => {
+      const playback = transport.current
+      const runtime = latest.current.local
+      if (
+        !playback ||
+        !runtime ||
+        !readyRef.current ||
+        preparedRuntime.current !== runtime ||
+        document.hidden ||
+        latest.current.suspended ||
+        flowRef.current
+      )
+        return
+      if (
+        intent &&
+        (continuation.current !== intent ||
+          intent.transport !== playback ||
+          intent.target?.runtime !== runtime ||
+          runtime.continuity?.signal.aborted ||
+          (runtime.continuity?.retainedUntil !== undefined &&
+            runtime.continuity.retainedUntil <= Date.now()))
+      ) {
+        stop()
+        return
+      }
+      if (!intent) cancelContinuation()
+      invalidate()
+      const own = drawEpoch.current,
+        generation = cancellation.current
+      setPlayKey(runtimeKey)
+      setPrepareKey(runtimeKey)
+      setPreparing(true)
+      setAudioFailure(undefined)
+      void playback
+        .play(starts)
+        .then(
+          (started) => {
+            if (
+              own !== drawEpoch.current ||
+              generation !== cancellation.current ||
+              preparedRuntime.current !== runtime ||
+              latest.current.local !== runtime
+            )
+              return
+            if (intent) cancelContinuation()
+            setPlaying(started)
+          },
+          (failure: unknown) => {
+            if (own === drawEpoch.current && generation === cancellation.current) {
+              cancelContinuation()
+              setAudioFailure({
+                key: runtimeKey,
+                error: failure instanceof Error ? failure.message : 'CLIP_SPEECH_UNAVAILABLE',
+              })
+            }
+          },
+        )
+        .finally(() => {
+          if (own === drawEpoch.current) setPreparing(false)
+        })
+    }
+  })
+  useLayoutEffect(() => {
+    alive.current = true
     try {
       session.current = new BrowserPreviewWorker((id, fingerprint, signal) =>
         latest.current.local
@@ -231,19 +373,45 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
       queueMicrotask(() => setError('CLIP_PREVIEW_WORKER_UNAVAILABLE'))
     }
     return () => {
+      alive.current = false
+      cancelContinuation()
       invalidate()
       session.current?.dispose()
       session.current = undefined
     }
-  }, [invalidate])
+  }, [invalidate, cancelContinuation])
   useLayoutEffect(() => {
     const runtime = latest.current.local,
       worker = session.current,
       controller = new AbortController()
     readyRef.current = false
+    preparedRuntime.current = undefined
     invalidate()
     transport.current?.pause()
     if (!runtime || !worker) return
+    const intent = continuation.current
+    if (intent) {
+      const before = intent.runtime.snapshot,
+        after = runtime.snapshot
+      const marker = runtime.continuity,
+        previous = intent.runtime.continuity
+      const advanced =
+        after.projectRevision > before.projectRevision || after.planRevision > before.planRevision
+      if (
+        !marker ||
+        !previous ||
+        marker.signal !== previous.signal ||
+        marker.signal.aborted ||
+        intent.content !== content ||
+        intent.transport !== transport.current ||
+        after.projectRevision < intent.observedRevisions[0] ||
+        after.planRevision < intent.observedRevisions[1] ||
+        (!advanced && marker.leaseEpoch <= previous.leaseEpoch) ||
+        (marker.retainedUntil !== undefined && marker.retainedUntil <= Date.now())
+      )
+        cancelContinuation()
+      else intent.observedRevisions = [after.projectRevision, after.planRevision]
+    }
     const signature = JSON.stringify([
       runtime.snapshot.ownerId,
       runtime.snapshot.projectId,
@@ -252,6 +420,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
       browserAudioPlan(runtime.snapshot.plan as ClipEditPlan),
     ])
     if (!transport.current || signature !== audioIdentity.current) {
+      cancelContinuation()
       transport.current?.dispose()
       transport.current = new BrowserCompositionPlayback(
         runtime.snapshot.plan as ClipEditPlan,
@@ -274,24 +443,99 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
         await worker.prepare(controller.signal, (done, total) => {
           if (!controller.signal.aborted) setScenePreparation({ key: runtimeKey, done, total })
         })
-        if (!controller.signal.aborted) {
+        if (controller.signal.aborted) return
+        const intent = continuation.current
+        if (intent) {
+          const used = new Map(
+            runtime.snapshot.plan.cuts.map((cut) => [
+              JSON.stringify([cut.sourceId, cut.fingerprint]),
+              cut,
+            ]),
+          )
+          for (const cut of used.values()) {
+            await runtime.source(cut.sourceId, cut.fingerprint, controller.signal)
+            if (controller.signal.aborted) return
+            if (continuation.current !== intent) break
+          }
+        }
+        if (!controller.signal.aborted && latest.current.local === runtime) {
+          setPlaying(false)
+          setPreparing(false)
           readyRef.current = true
+          preparedRuntime.current = runtime
+          setReadyRuntime(runtime)
           setReadyKey(runtimeKey)
-          draw.current(latest.current.timeMs ?? localClock.current)
+          const current = continuation.current
+          if (intent && current === intent && !runtime.continuity?.signal.aborted) {
+            const frame = Math.min(
+              runtime.snapshot.frameCount - 1,
+              Math.max(0, Math.floor((intent.position * CLIP_BROWSER_RENDER.frameRate) / 1000)),
+            )
+            intent.target = { runtime, epoch: drawEpoch.current, frame }
+            changeTime(intent.position)
+            draw.current(intent.position)
+          } else draw.current(latest.current.timeMs ?? localClock.current)
         }
       })
       .catch((failure: unknown) => {
-        if (!controller.signal.aborted)
+        if (!controller.signal.aborted) {
+          cancelContinuation()
+          transport.current?.pause()
           setError(failure instanceof Error ? failure.message : 'CLIP_PREVIEW_FAILED')
+        }
       })
     return () => {
+      const playback = transport.current
+      if (
+        alive.current &&
+        playback?.running &&
+        runtime.continuity &&
+        !runtime.continuity.signal.aborted &&
+        !flowRef.current &&
+        !document.hidden &&
+        !latest.current.suspended &&
+        playback.timeMs < duration
+      ) {
+        cancelContinuation()
+        playback.pause()
+        const position = playback.timeMs
+        // The native clock may reach EOF between the running check and pause.
+        if (position < duration) {
+          const aborted = () => stop()
+          runtime.continuity.signal.addEventListener('abort', aborted, { once: true })
+          continuation.current = {
+            transport: playback,
+            runtime,
+            content,
+            position,
+            observedRevisions: [runtime.snapshot.projectRevision, runtime.snapshot.planRevision],
+            phase: 'buffering',
+            removeAbort: () => runtime.continuity?.signal.removeEventListener('abort', aborted),
+          }
+        }
+      } else if (continuation.current) {
+        continuation.current.phase = 'buffering'
+        continuation.current.target = undefined
+      }
+      if (alive.current) setContinuing(!!continuation.current)
       controller.abort()
       invalidate()
-      transport.current?.pause()
+      playback?.pause()
       readyRef.current = false
+      preparedRuntime.current = undefined
     }
-    // The snapshot binds the exact draft. Playhead changes never rebuild the renderer.
-  }, [runtimeKey, invalidate])
+    // Exact runtime ownership matters even when a lease rebuild keeps its fingerprint.
+  }, [
+    local,
+    refresh,
+    invalidate,
+    cancelContinuation,
+    content,
+    duration,
+    changeTime,
+    stop,
+    runtimeKey,
+  ])
   useEffect(
     () => () => {
       transport.current?.dispose()
@@ -301,10 +545,14 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     [],
   )
   useEffect(() => transport.current?.setMuted(muted), [muted])
+  useEffect(() => {
+    if (preview.failure) stop()
+  }, [preview.failure, stop])
   useLayoutEffect(() => {
     if (props.timeMs !== controlled.current) {
       controlled.current = props.timeMs
       if (props.timeMs !== undefined && Math.abs(props.timeMs - localClock.current) > 0.001) {
+        cancelContinuation()
         transport.current?.pause()
         setPlaying(false)
         setPreparing(false)
@@ -314,7 +562,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
       }
     }
     if (!playingRef.current) draw.current(props.timeMs ?? localClock.current)
-  }, [props.timeMs, invalidate, fingerprint, ready])
+  }, [props.timeMs, invalidate, fingerprint, ready, cancelContinuation])
   useEffect(() => {
     if (suspended) stop()
     else draw.current(latest.current.timeMs ?? localClock.current)
@@ -362,7 +610,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
       stop()
       return
     }
-    if (playing || preparing) {
+    if (playing || preparing || continuation.current) {
       stop()
       setPreparing(false)
       return
@@ -371,29 +619,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
     if (!playback || !ready) return
     const starts = atEnd ? 0 : timeMs
     if (atEnd) changeTime(0)
-    invalidate()
-    setPlayKey(runtimeKey)
-    setPrepareKey(runtimeKey)
-    setPreparing(true)
-    setAudioFailure(undefined)
-    const own = drawEpoch.current
-    void playback
-      .play(starts)
-      .then(
-        (started) => {
-          if (own === drawEpoch.current) setPlaying(started)
-        },
-        (failure: unknown) => {
-          if (own === drawEpoch.current)
-            setAudioFailure({
-              key: runtimeKey,
-              error: failure instanceof Error ? failure.message : 'CLIP_SPEECH_UNAVAILABLE',
-            })
-        },
-      )
-      .finally(() => {
-        if (own === drawEpoch.current) setPreparing(false)
-      })
+    startPlayback.current(starts)
   }
   const schedule = browserAudioPlan(plan),
     selectedFlow = flowCut(timeline, timeMs)
@@ -438,9 +664,13 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
               <button
                 type="button"
                 aria-label={t(
-                  playing ? 'preview.pause' : atEnd ? 'preview.replay' : 'preview.play',
+                  playing || continuing
+                    ? 'preview.pause'
+                    : atEnd
+                      ? 'preview.replay'
+                      : 'preview.play',
                 )}
-                disabled={!timeline.length || !ready}
+                disabled={!timeline.length || (!ready && !continuing)}
                 onClick={toggle}
                 className="absolute inset-0 z-20 flex items-center justify-center"
               >
@@ -449,7 +679,13 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
                     aria-hidden="true"
                     className="bg-media-scrim-bg/60 text-media-scrim-fg flex size-14 items-center justify-center rounded-full"
                   >
-                    {atEnd ? <RotateCcw className="size-7" /> : <Play className="size-7" />}
+                    {continuing ? (
+                      <Pause className="size-7" />
+                    ) : atEnd ? (
+                      <RotateCcw className="size-7" />
+                    ) : (
+                      <Play className="size-7" />
+                    )}
                   </span>
                 )}
               </button>

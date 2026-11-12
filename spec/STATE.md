@@ -212,7 +212,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T781 | Continue an active preview after an equal-content save acknowledgment | ARCH | T780 | todo |
 | T779 | Share consistent editor workspace navigation chrome | ARCH | T778 | todo |
 | T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
@@ -226,12 +225,13 @@
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
-| si8-261113 | 1 | 7 | 4 | 3 | 0 | 0 | 0 | 2026-11-12T17:47:20.818Z | [history](work/si8-261113.json) |
+| si8-261113 | 1 | 7 | 5 | 2 | 0 | 0 | 0 | 2026-11-12T19:14:06.533Z | [history](work/si8-261113.json) |
 
 ## next
 - inspect work board for remaining tasks
 
 ## log
+- 261112 T781 integrated
 - 261112 T780 integrated
 - 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
@@ -251,4 +251,3 @@
 - 261112 fix clip-preview controls: the compact preview pinned on a phone is narrower than its four overlay controls, which ran off the frame; they now wrap into another row inside it
 - 261112 fix shared/ui disclosure: on a phone a heading beside its actions (clip and post 스토리라인) squeezed to one character per line; the heading keeps its words and the aside wraps under it
 - 261112 T772 done
-- 261112 create-task (fx1): T772 from a production clip whose shorter-copy narration caption kept a keyword it lacked; no SSOT change (CDS-25, CDS-213 already require it)
