@@ -13,6 +13,7 @@
 | si8 | ihaelam-ui-MacBookPro | autopilot | 2026-11-12T15:35Z | 2026-11-12T15:35Z | - |
 
 ## inbox
+- 261113 decided review/performance-design-system-261113 T773 T774 T775 T776: performance-first improvement order? → adopt redundant unchanged-plan validation first, then FieldCount/radio tiles/dropdown focus consolidation with net production source reduction (alt: unmeasured broad optimization | blanket native-control replacement). Direct self-improve delegation preserves all behavior; independent review and full gates required before push.
 - 261112 decided CDS-25 CDS-55 T772: what happens to an accent keyword a grounded shorter sentence lacks? → dropped at every shorter-copy fallback and on decode of stored portable plans, persisted by the next save (alt: keep it and refuse saves | pick another accent word automatically) — CDS-25 lets one word of the caption take the accent, and a word the text lacks cannot.
 - 261112 decided ARCH-30 T771: the unpushed gusta migration fails CI's old skill check → finish the queued T771 in this session before pushing (alt: push and let CI fail | leave the migration unpushed). No other session held T771.
 - 261112 decided CLIP-233 CLIP-213 T767: which wizard stages start checked when a clip seeds the video-template wizard? → the clip's storyline paragraphs as checked custom stages, unnamed until their own steps, with the leaf's catalog roles offered unchecked and lines past the 8-stage bound unchecked (alt: every leaf role checked too, as TMPL-71 starts a fresh wizard | replace the leaf's roles entirely) — a leaf holds about seven roles, so checking them beside the clip's paragraphs would exceed the 8-stage bound at once and refuse 다음 before the owner chose anything; the roles stay one tap away.
@@ -181,6 +182,7 @@
 ## review
 | id | st |
 |---|---|
+| performance-design-system-261113 | converted@261113 |
 | video-preparation-guide-261112 | converted@261112 |
 | video-request-retention-261112 | converted@261112 |
 | diff-260908 | converted@260908 |
@@ -203,6 +205,10 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T773 | Reuse unchanged clip draft validation during playback | ARCH | - | todo |
+| T774 | Replace duplicated field counters with FieldCount | ARCH | T773 | todo |
+| T775 | Share the clip design radio tile control | ARCH | T774 | todo |
+| T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -210,9 +216,10 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 
 ## next
-- no runnable task: resolve blocked, parked or deps
+- gusta-implement-task T773 through approved si8 work-group assignment
 
 ## log
+- 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
 - 261112 T771 done
@@ -232,4 +239,3 @@
 - 261112 T768 done
 - 261112 T765 done
 - 261112 T764 done
-- 261112 T763 done
