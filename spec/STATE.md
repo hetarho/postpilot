@@ -233,10 +233,6 @@
 ## log
 - 261113 gusta-create-task review/performance-design-system-261113 F10: T782 fixes the confirmed paused-frame redraw gap after running block selection; unchanged actual-control oracle and existing source/clock/cancellation contracts, no SSOT rev/pending change.
 - 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
-- 261112 T774 integrated
-- 261112 T779 integrated
-- 261112 T781 integrated
-- 261112 T780 integrated
 - 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
 - 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.
@@ -248,6 +244,10 @@
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
+- 261112 T774 integrated
+- 261112 T779 integrated
+- 261112 T781 integrated
+- 261112 T780 integrated
 - 261112 T778 integrated
 - 261112 T777 integrated
 - 261112 T773 integrated
