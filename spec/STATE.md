@@ -206,15 +206,15 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T766 | Render, review and finalize the confirmed clip in ③ 영상 완성 | ARCH CLIP POST THEME | T765 T768 | todo |
 | T767 | Add ③'s checklist, upload text and 더 해 보기 card | ARCH CLIP POST TMPL EXPORT | T766 | todo |
 
 ## next
-- implement-task T766
+- implement-task T767
 - T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
 - Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
 
 ## log
+- 261112 T766 done
 - 261112 T762 done
 - 261112 fix finalize-clip i18n: en refusal keys follow ko's order (busy before unconfirmed), which T765 swapped and the resource key-parity test refused
 - 261112 T768 done
@@ -234,4 +234,3 @@
 - 261112 ui12: resume T758 only for the owner-authorized extra hour; fresh worker/review and final publication.
 - 261112 ui12 device handoff: all own processes stopped, T758 attempt released, original dirty worker kept. Preserve all16 partial files in docs/handoff/ui12/T758.patch with exact recovery hashes and portable scout/browser evidence; main implementation stays through reviewed T757. Latest planning ada6afc2 was already pushed. Owner requested all current work remotely, no continued local automation.
 - 261112 create-task T758 (ui12 video cycle3): consume CLIP r75; independent scout397743ms and browser4 establish preparation mismatch. Whole-flow plan retained; assign only T758 after plan-push, preserving old group IDs and independent review all.
-- 261112 update-ssot CLIP start (ui12 video cycle3): adopt independent scout preparation-flow proposal under explicit reversible UX delegation; preserve whole-journey plan and excluded contracts.
