@@ -207,11 +207,10 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T769 | Fix final gate failure | ARCH | - | todo |
 
 ## next
-- no runnable task: resolve blocked, parked or deps
-- T758 is integrated: the retained 소스→이야기→스타일→확인 preparation guide and review. docs/handoff/ui12 is now historical recovery data; never re-apply its T758.patch.
-- Remaining tasks are owner-gated: T539/T550/T603/T604/T697 hardware, listening, live-scope and distribution approvals; T709 budget reconciliation; INFRA and active ideation stay planning work.
+- implement-task T769
 
 ## log
 - 261112 T767 done
