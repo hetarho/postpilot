@@ -61,7 +61,6 @@ export const i18n = {
     navigation: {
       returnCreation: '{{channel}}으로 돌아가기',
       returnMine: '내 글로 돌아가기',
-      untitled: '제목 없는 클립',
     },
     refineDock: {
       back: '이전: 영상 생성',
@@ -149,7 +148,6 @@ export const i18n = {
     navigation: {
       returnCreation: 'Back to {{channel}}',
       returnMine: 'Back to My work',
-      untitled: 'Untitled clip',
     },
     refineDock: {
       back: 'Back: Create',

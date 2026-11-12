@@ -20,10 +20,13 @@ export function clipStepLabel(step: ClipStep): string {
 const BY_STATE: Record<ClipState, ClipStep> = {
   draft: 'generate',
   refining: 'refine',
-  finished: 'finish',
+  confirmed: 'finish',
+  completed: 'finish',
+  published: 'finish',
 }
 
-/** An unreached result tab never implies confirmation. */
+/** A confirmed or finalized project opens ③, an unconfirmed one holding a storyline or a plan ②,
+ *  any other ① (CLIP-36). An unreached result tab never implies confirmation. */
 export function stepForProject(project: ClipProject): ClipStep {
   return BY_STATE[clipState(project)]
 }

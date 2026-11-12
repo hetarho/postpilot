@@ -113,7 +113,56 @@ describe('clip directory', () => {
     expect(await row(/강릉 바다/)).toHaveTextContent('실패')
     expect(await row(/제주 여행/)).toHaveTextContent('초안')
     expect(await row(/서울 카페/)).toHaveTextContent('다듬는 중')
-    expect(await row(/JEJU 다시/)).toHaveTextContent('완성')
+    // Finalized without a posted URL, the way a clip finalized before confirmation reads (CLIP-76).
+    expect(await row(/JEJU 다시/)).toHaveTextContent('완료')
+  })
+
+  // CLIP-226: 확정, 완료 and 게시됨 are named apart, all three under 완성; 완료 also finds 게시됨.
+  it('names confirmed, completed and published clips and keeps them under 완성', async () => {
+    const user = userEvent.setup()
+    const finalized = { at: '2026-09-13T00:00:00Z', planRevision: 2, resultId: 'result' }
+    const confirmed = { planRevision: 2, at: '2026-09-12T00:00:00Z' }
+    const finishedRow = { ...base, editPlanRevision: 2, renderedPlanRevision: 2, result, confirmed }
+    const { router } = mount('/naver-clip', {
+      projects: [
+        { ...finishedRow, id: 'confirmed', title: '확정한 영상' },
+        { ...finishedRow, id: 'completed', title: '완료한 영상', finalized },
+        {
+          ...finishedRow,
+          id: 'published',
+          title: '올린 영상',
+          finalized,
+          publishedUrl: 'https://clip.naver.com/x',
+        },
+        { ...base, id: 'draft', title: '시작한 초안' },
+      ],
+    })
+    expect(await row(/확정한 영상/)).toHaveTextContent('확정')
+    expect(await row(/완료한 영상/)).toHaveTextContent('완료')
+    expect(await row(/올린 영상/)).toHaveTextContent('게시됨')
+    const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
+    for (const name of [/확정한 영상/, /완료한 영상/, /올린 영상/])
+      expect(within(done).getByRole('link', { name })).toBeInTheDocument()
+    expect(within(done).queryByRole('link', { name: /시작한 초안/ })).toBeNull()
+
+    await openFind(user)
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    expect(
+      (await screen.findAllByRole('option')).map((option) => option.textContent?.trim()),
+    ).toEqual(['전체', '초안', '스토리라인 작성 완료', '다듬는 중', '확정', '완료'])
+    await user.click(screen.getByRole('option', { name: '완료' }))
+    await waitFor(() => expect(router.state.location.search).toMatchObject({ status: 'completed' }))
+    await user.click(screen.getByRole('button', { name: '결과 보기' }))
+    expect(await row(/완료한 영상/)).toBeInTheDocument()
+    expect(await row(/올린 영상/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /확정한 영상/ })).toBeNull()
+  })
+
+  it('opens a link saved with the former finished filter on 완료', async () => {
+    const { router } = mount('/naver-clip?status=finished')
+    expect(await row(/JEJU 다시/)).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /제주 여행/ })).toBeNull()
+    expect(router.state.location.search).toMatchObject({ status: 'completed' })
   })
 
   it('carries the template, the ratio and a relative time on the row', async () => {
@@ -236,7 +285,7 @@ describe('clip directory', () => {
 
   it('uses a readable fallback for an untitled work item', async () => {
     mount('/naver-clip', { projects: [{ ...base, id: 'untitled', title: '   ' }] })
-    expect(await row(/제목 없는 클립/)).toHaveAttribute('href', '/clips/untitled')
+    expect(await row(/제목 없는 영상/)).toHaveAttribute('href', '/clips/untitled')
   })
 
   // The newest unfinished clip is emphasized inside 작성 중 and counted once.

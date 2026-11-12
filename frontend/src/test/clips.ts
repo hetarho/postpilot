@@ -91,6 +91,8 @@ export interface FakeClipProject extends ClipProjectDraft {
   composition?: ClipProject['composition']
   ownerId?: string
   finalized?: ClipProject['finalized']
+  /** The posted URL a finalized clip saved, which makes it 게시됨 (CLIP-232). */
+  publishedUrl?: string
   canFinalize?: boolean
   finalizationRefusal?: ClipProject['finalizationRefusal']
   /** The plan revision 확정하기 recorded (CLIP-229). */
@@ -422,6 +424,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       finalizedAt: p.finalized?.at,
       finalizedPlanRevision: p.finalized?.planRevision,
       finalizedResultId: p.finalized?.resultId,
+      publishedUrl: p.finalized ? (p.publishedUrl ?? '') : '',
       canEdit: !p.finalized,
       canFinalize:
         p.canFinalize ??
@@ -649,6 +652,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         planRevision: req.expectedRevision,
         resultId: req.expectedResultId,
       }
+      if (req.publishedUrl) p.publishedUrl = req.publishedUrl
       // The plan and the evidence survive finalization and are served as
       // readings (CLIP-160); only the originals behind them are deleted.
     }

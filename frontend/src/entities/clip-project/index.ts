@@ -54,7 +54,8 @@ export type { ClipEligibilityStatus, ClipModelEligibility } from './model/eligib
 export { clipNoticeKey } from './model/notices'
 export type { ClipNotice } from './model/notices'
 export { preferredClipRenderKind } from './model/render-kind'
-export { clipConfirmed, clipState, clipStateLabel } from './model/state'
+export { clipConfirmed, clipFinished, clipState, clipStateLabel } from './model/state'
+export { clipDisplayTitle } from './model/display-title'
 export type { ClipState } from './model/state'
 export {
   CLIP_PROJECT_LIMITS,
@@ -132,9 +133,12 @@ export {
 export { useClipUploadTexts, useClipUploadTextCalls } from './api/upload-text'
 export type { ClipUploadText, ClipUploadTextLimits } from './api/upload-text'
 export {
+  CLIP_HISTORY_FILTERS,
   CLIP_HISTORY_STATES,
+  clipHistoryFilter,
   clipHistoryState,
   clipHistoryStateLabel,
   clipHistoryStatus,
+  clipMatchesHistoryFilter,
 } from './model/history-state'
-export type { ClipHistoryState } from './model/history-state'
+export type { ClipHistoryFilter, ClipHistoryState } from './model/history-state'

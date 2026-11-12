@@ -65,11 +65,11 @@ describe('narrowClips', () => {
   it("matches the project's own state, not the badge's", () => {
     expect(ids(narrowClips(all, { status: 'draft' }))).toEqual(['a'])
     expect(ids(narrowClips(all, { status: 'refining' }))).toEqual(['b'])
-    expect(ids(narrowClips(all, { status: 'finished' }))).toEqual(['c'])
+    expect(ids(narrowClips(all, { status: 'completed' }))).toEqual(['c'])
   })
 
   it('applies both at once', () => {
-    expect(ids(narrowClips(all, { q: '다시', status: 'finished' }))).toEqual(['c'])
+    expect(ids(narrowClips(all, { q: '다시', status: 'completed' }))).toEqual(['c'])
     expect(ids(narrowClips(all, { q: '다시', status: 'draft' }))).toEqual([])
   })
 
@@ -93,5 +93,30 @@ it('finds prepared stories while preserving the existing refining URL meaning', 
   expect(ids(narrowClips(values, { status: 'storyline_ready' }))).toEqual(['story'])
   expect(ids(narrowClips(values, { status: 'refining' }))).toEqual(['b', 'story'])
   expect(ids(narrowClips(values, { status: 'draft' }))).toEqual(['a'])
-  expect(ids(narrowClips(values, { status: 'finished' }))).toEqual(['c'])
+  expect(ids(narrowClips(values, { status: 'completed' }))).toEqual(['c'])
+})
+
+// CLIP-226: 확정 is its own filter, and 완료 holds the 게시됨 rows.
+it('narrows confirmed clips apart and keeps published ones under 완료', () => {
+  const confirmed = project({
+    id: 'confirmed',
+    title: '확정한 영상',
+    editPlanRevision: 2,
+    renderedPlanRevision: 2,
+    result,
+    confirmed: { planRevision: 2, at: '2026-09-12T00:00:00Z' },
+  })
+  const published = project({
+    id: 'published',
+    title: '올린 영상',
+    finalized: { at: '2026-09-13T00:00:00Z', planRevision: 1, resultId: 'result' },
+    publishedUrl: 'https://clip.naver.com/x',
+    editPlanRevision: 1,
+    renderedPlanRevision: 1,
+    result,
+  })
+  const values = [...all, confirmed, published]
+  expect(ids(narrowClips(values, { status: 'confirmed' }))).toEqual(['confirmed'])
+  expect(ids(narrowClips(values, { status: 'completed' }))).toEqual(['c', 'published'])
+  expect(ids(narrowClips(values, { status: 'refining' }))).toEqual(['b'])
 })

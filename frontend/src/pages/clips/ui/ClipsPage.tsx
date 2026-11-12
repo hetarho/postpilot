@@ -2,6 +2,8 @@ import { useEffect } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
+  clipDisplayTitle,
+  clipFinished,
   clipState,
   clipChannel,
   clipChannelPath,
@@ -101,10 +103,10 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
     })
   const listed = (projects.data ?? []).filter((project) => clipChannel(project.channel) === channel)
   const narrowed = narrowClips(listed, narrowing)
-  // Guide: 완성 is a finalized clip with no run going; everything else is 작성 중. The latest
-  // unfinished clip is emphasized inside that group unless a narrowing is on.
+  // 완성 holds a confirmed or finalized clip with no run going; everything else is 작성 중
+  // (CLIP-41). The latest unfinished clip is emphasized inside that group unless a narrowing is on.
   const finished = (project: ClipProject) =>
-    clipState(project) === 'finished' && !(project.latestJob && !isTerminal(project.latestJob))
+    clipFinished(clipState(project)) && !(project.latestJob && !isTerminal(project.latestJob))
   const isNarrowed = (narrowing.q ?? '').trim() !== '' || narrowing.status !== undefined
   // The server lists the projects newest first, so the first unfinished one is the newest.
   const latest = isNarrowed ? undefined : narrowed.find((project) => !finished(project))
@@ -242,7 +244,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                       as="span"
                       className="text-content-primary line-clamp-2"
                     >
-                      {project.title.trim() || historyText('untitled')}
+                      {clipDisplayTitle(project)}
                     </Typography>
                     <span className="flex w-full min-w-0 flex-wrap items-center gap-2">
                       <Badge tone={status.tone}>{status.label}</Badge>

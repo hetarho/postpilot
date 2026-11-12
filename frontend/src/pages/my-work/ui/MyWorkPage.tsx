@@ -12,6 +12,8 @@ import {
 } from '@/entities/post'
 import {
   clipChannel,
+  clipDisplayTitle,
+  clipFinished,
   clipState,
   clipHistoryStatus,
   rememberClipEntry,
@@ -136,14 +138,14 @@ export function MyWorkPage() {
   const clipItem = (project: ClipProject): WorkItem => {
     const channel = clipChannel(project.channel)
     const running = project.latestJob && !isTerminal(project.latestJob)
-    const state = clipState(project)
     return {
       key: `clip:${project.id}`,
       kind: channel === 'instagram_clip' ? 'instaClip' : 'naverClip',
-      title: project.title.trim() || t('untitled', { ns: 'posts' }),
+      title: clipDisplayTitle(project),
       updatedAt: project.updatedAt,
       status: clipHistoryStatus(project),
-      finished: state === 'finished' && !running,
+      // 완성 holds a confirmed or finalized clip with no run going (CLIP-41).
+      finished: clipFinished(clipState(project)) && !running,
       icon: channel === 'instagram_clip' ? Film : Clapperboard,
       id: project.id,
       remember: () =>

@@ -74,4 +74,17 @@ describe('stepForProject', () => {
       'refine',
     )
   })
+
+  // CLIP-36: a confirmed or finalized project opens ③; a plan saved since 확정 opens ② again.
+  it('opens a confirmed or finalized project on 영상 완성', () => {
+    const confirmed = { ...base, editPlanRevision: 2, renderedPlanRevision: 2, result }
+    const record = { planRevision: 2, at: '2026-09-12' }
+    const finalized = { at: '2026-09-13', planRevision: 2, resultId: 'result' }
+    expect(stepForProject({ ...confirmed, confirmed: record })).toBe('finish')
+    expect(stepForProject({ ...confirmed, confirmed: record, editPlanRevision: 3 })).toBe('refine')
+    expect(stepForProject({ ...confirmed, finalized })).toBe('finish')
+    expect(
+      stepForProject({ ...confirmed, finalized, publishedUrl: 'https://clip.naver.com/x' }),
+    ).toBe('finish')
+  })
 })

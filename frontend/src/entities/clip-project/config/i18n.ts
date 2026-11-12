@@ -5,6 +5,7 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     title: '내 영상',
+    untitled: '제목 없는 영상',
     mediaStage: {
       prepare_wait: '원본 준비 대기 중',
       prepare_retry: '원본 준비 재시도 대기 중',
@@ -15,7 +16,9 @@ export const i18n = {
       draft: '초안',
       storyline_ready: '스토리라인 작성 완료',
       refining: '다듬는 중',
-      finished: '완성',
+      confirmed: '확정',
+      completed: '완료',
+      published: '게시됨',
       generating: '생성 중',
       failed: '실패',
     },
@@ -140,6 +143,7 @@ export const i18n = {
   },
   en: {
     title: 'My videos',
+    untitled: 'Untitled video',
     mediaStage: {
       prepare_wait: 'Waiting to prepare sources',
       prepare_retry: 'Waiting to retry source preparation',
@@ -150,7 +154,9 @@ export const i18n = {
       draft: 'Draft',
       storyline_ready: 'Storyline ready',
       refining: 'Refining',
-      finished: 'Finished',
+      confirmed: 'Confirmed',
+      completed: 'Completed',
+      published: 'Posted',
       generating: 'Generating',
       failed: 'Failed',
     },

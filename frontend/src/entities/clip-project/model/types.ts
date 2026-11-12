@@ -97,6 +97,9 @@ export interface ClipProject extends ClipProjectDraft {
   requests?: ClipProjectRequest[]
   language?: 'ko' | 'en'
   finalized?: { at: string; planRevision: number; resultId: string }
+  /** The clip's posted URL, saved only on a finalized project, which then reads as 게시됨
+   *  (CLIP-232); absent on a finalized project that is 완료. */
+  publishedUrl?: string
   canEdit?: boolean
   canFinalize?: boolean
   finalizationRefusal?:

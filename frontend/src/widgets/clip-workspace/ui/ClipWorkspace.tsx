@@ -7,6 +7,7 @@ import {
   ClipFailureNotice,
   ClipRequestRecord,
   clipConfirmed,
+  clipDisplayTitle,
   clipReturnDestination,
   markClipHistoryReturn,
   type ClipProject,
@@ -840,7 +841,7 @@ export function ClipWorkspace({
       )}
       <ClipTopRow
         returnTo={returnTo}
-        contextTitle={project.title.trim() || t('navigation.untitled')}
+        contextTitle={clipDisplayTitle(project)}
         status={
           !run.focused && (
             <ClipStatusLine

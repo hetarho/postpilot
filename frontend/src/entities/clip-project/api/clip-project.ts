@@ -60,6 +60,7 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
             planRevision: value.finalizedPlanRevision,
             resultId: value.finalizedResultId,
           },
+          ...(value.publishedUrl ? { publishedUrl: value.publishedUrl } : {}),
         }
       : {}),
     ...(value.canEdit !== undefined ? { canEdit: value.canEdit } : {}),

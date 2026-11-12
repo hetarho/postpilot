@@ -210,6 +210,60 @@ it('keeps completed-only work in 완성 without a continuation placeholder', asy
   expect(screen.queryByRole('heading', { name: /^작성 중|이어서 쓰기/ })).toBeNull()
   expect(screen.getByRole('main').querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(0)
 })
+// CLIP-226 · CLIP-41: 완성 holds confirmed and finalized clips with no job running, each named apart,
+// and an untitled clip is called 제목 없는 영상 (CLIP-130).
+it('groups confirmed, completed and published clips under 완성 and names an untitled one', async () => {
+  const result = {
+    id: 'result',
+    contentType: 'video/mp4',
+    bytes: 5,
+    durationMs: 15000,
+    createdAt: '2026-11-10T00:00:00Z',
+  }
+  const finalized = { at: '2026-11-11T00:00:00Z', planRevision: 2, resultId: 'result' }
+  const confirmed = { planRevision: 2, at: '2026-11-10T00:00:00Z' }
+  const built = { ...clip, editPlanRevision: 2, renderedPlanRevision: 2, result, confirmed }
+  renderAppAt('/my', {
+    user: { id: 'alice' },
+    posts: { posts: [] },
+    clips: {
+      projects: [
+        { ...built, id: 'confirmed', title: '확정한 영상' },
+        { ...built, id: 'completed', title: '', finalized },
+        {
+          ...built,
+          id: 'published',
+          title: '올린 영상',
+          finalized,
+          publishedUrl: 'https://www.instagram.com/reel/x',
+          channel: 'instagram_clip',
+        },
+        {
+          ...built,
+          id: 'busy',
+          title: '다시 만드는 영상',
+          latestJob: {
+            id: 'busy-job',
+            kind: 'generate_clip',
+            clipProjectId: 'busy',
+            status: 'running',
+            stage: 'analyze',
+          },
+        },
+      ],
+    },
+  })
+  const done = (await screen.findByRole('heading', { name: /^완성/ })).closest('section')!
+  expect(within(done).getByRole('link', { name: /확정한 영상/ })).toHaveTextContent('확정')
+  expect(within(done).getByRole('link', { name: /제목 없는 영상/ })).toHaveTextContent('완료')
+  expect(within(done).getByRole('link', { name: /올린 영상/ })).toHaveTextContent('게시됨')
+  // A run going keeps a confirmed clip in 작성 중 under its job's badge.
+  const inProgress = screen.getByRole('heading', { name: /^작성 중/ }).closest('section')!
+  expect(within(inProgress).getByRole('link', { name: /다시 만드는 영상/ })).toHaveTextContent(
+    '생성 중',
+  )
+  expect(screen.getByRole('heading', { name: /^완성/ })).toHaveTextContent(/^완성\s*3$/)
+})
 it('points an empty aggregate to its actual creation destination', async () => {
   renderAppAt('/my', { user: { id: 'alice' }, posts: { posts: [] }, clips: { projects: [] } })
   expect(

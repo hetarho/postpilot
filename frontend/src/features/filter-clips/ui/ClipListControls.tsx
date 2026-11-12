@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { CLIP_HISTORY_STATES, type ClipHistoryState } from '@/entities/clip-project'
+import { CLIP_HISTORY_FILTERS, type ClipHistoryFilter } from '@/entities/clip-project'
 import { ListControls } from '@/shared/ui'
 import type { ClipNarrowing } from '../model/narrow'
 
-const STATUSES = ['all', ...CLIP_HISTORY_STATES] as const
+const STATUSES = ['all', ...CLIP_HISTORY_FILTERS] as const
 
 /** The clip directory's search field and status filter (CLIP-41), over the shared `ListControls`.
  *  Both write straight to the URL through the caller, and both are on the screen at every project
@@ -17,7 +17,7 @@ export function ClipListControls({
 }) {
   const { t } = useTranslation('clips')
   return (
-    <ListControls<ClipHistoryState | 'all'>
+    <ListControls<ClipHistoryFilter | 'all'>
       searchLabel={t('project.search')}
       searchPlaceholder={t('project.searchPlaceholder')}
       query={narrowing.q ?? ''}
