@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { normalizeAppFailure } from '@/shared/api'
 import type { ClipEditPlan, RetainedClipSource } from '@/entities/clip-plan'
 import {
   BrowserCompositionOriginals,
+  canonicalBrowserCompositionData,
   freezeBrowserPreviewComposition,
   projectBrowserComposition,
   type BrowserCompositionDesign,
@@ -48,6 +49,122 @@ function localAccessIdentity(source: BrowserLocalOriginal) {
       return ['retained', Math.max(0, hint.generation - 1), hint.state]
   }
   return source.url
+}
+
+type RetainedHint = BrowserLocalOriginal['retainedAccess']
+interface ContinuityInput {
+  content: string
+  access: unknown[][]
+  authority: Array<{ hint?: RetainedHint; url?: string }>
+  authorityKeys: string[]
+}
+function futureLease(hint: RetainedHint, now: number) {
+  const lease = hint?.lease
+  if (
+    !hint ||
+    !Number.isSafeInteger(hint.generation) ||
+    hint.generation < 0 ||
+    !lease ||
+    lease.version !== 1 ||
+    lease.confirmed !== true ||
+    typeof lease.batchId !== 'string' ||
+    !lease.batchId ||
+    lease.availability !== 'available' ||
+    lease.playbackError !== undefined ||
+    hint.state !==
+      JSON.stringify([lease.availability, lease.retentionExpiresAt, lease.playbackError])
+  )
+    return undefined
+  const value = lease.retentionExpiresAt
+  // The server emits UTC RFC3339Nano. Reject normalized invalid dates and retain
+  // nanosecond-shaped timestamps; sub-millisecond-only increases fail closed.
+  if (
+    typeof value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/u.test(value)
+  )
+    return undefined
+  const at = Date.parse(value)
+  if (
+    !Number.isFinite(at) ||
+    at <= now ||
+    new Date(at).toISOString().slice(0, 19) !== value.slice(0, 19)
+  )
+    return undefined
+  return at
+}
+function leaseExtension(
+  before: ContinuityInput,
+  after: ContinuityInput,
+  index: number,
+  now: number,
+) {
+  const old = before.authority[index],
+    next = after.authority[index]
+  const a = old?.hint,
+    b = next?.hint
+  const oldAt = futureLease(a, now),
+    nextAt = futureLease(b, now)
+  if (
+    !oldAt ||
+    !nextAt ||
+    nextAt <= oldAt ||
+    !a ||
+    !b ||
+    a.generation !== b.generation ||
+    !old.url ||
+    old.url !== next.url ||
+    before.access[index]?.[3] ||
+    after.access[index]?.[3]
+  )
+    return false
+  const oldAccess = before.access[index]?.[2],
+    nextAccess = after.access[index]?.[2]
+  if (
+    !Array.isArray(oldAccess) ||
+    !Array.isArray(nextAccess) ||
+    oldAccess[0] !== 'retained' ||
+    nextAccess[0] !== 'retained'
+  )
+    return false
+  const withoutExpiry = (hint: NonNullable<RetainedHint>) => ({
+    ...hint,
+    state: undefined,
+    lease: { ...hint.lease, retentionExpiresAt: undefined },
+  })
+  return (
+    canonicalBrowserCompositionData(withoutExpiry(a)) ===
+      canonicalBrowserCompositionData(withoutExpiry(b)) &&
+    canonicalBrowserCompositionData(before.access[index]?.slice(0, 2)) ===
+      canonicalBrowserCompositionData(after.access[index]?.slice(0, 2))
+  )
+}
+function compatibleContinuity(before: ContinuityInput, after: ContinuityInput, now: number) {
+  if (before.content !== after.content || before.access.length !== after.access.length)
+    return undefined
+  let extended = false
+  for (let i = 0; i < after.access.length; i++) {
+    const sameAccess =
+      canonicalBrowserCompositionData(before.access[i]) ===
+      canonicalBrowserCompositionData(after.access[i])
+    if (sameAccess && before.authorityKeys[i] === after.authorityKeys[i]) continue
+    const a = before.authority[i],
+      b = after.authority[i]
+    // T780's first publication is already the same access identity. Do not turn
+    // it into a new cancellation cause; every later capability change still is.
+    if (
+      sameAccess &&
+      !a?.url &&
+      b?.url &&
+      a.hint?.generation === 0 &&
+      b.hint?.generation === 1 &&
+      canonicalBrowserCompositionData({ ...a.hint, generation: undefined }) ===
+        canonicalBrowserCompositionData({ ...b.hint, generation: undefined })
+    )
+      continue
+    if (!leaseExtension(before, after, i, now)) return undefined
+    extended = true
+  }
+  return { extended }
 }
 
 const retryScope = (data: ClipDraftPreviewInput) =>
@@ -120,21 +237,94 @@ export function useClipDraftPreview(
     ]),
     retry,
   ])
+  // The raw typed authority is observed even when T780's opaque full key is
+  // unchanged (batch/confirmation/version/binding). No deep sort on seeks.
+  const authorityKey = JSON.stringify(
+    (input.localSources ?? []).map((source) => ({
+      hint: source.retainedAccess,
+      url: source.url,
+    })),
+  )
+  const comparison = useMemo<ContinuityInput>(() => {
+    const values = JSON.parse(key) as unknown[]
+    const authority = JSON.parse(authorityKey) as ContinuityInput['authority']
+    return {
+      content: canonicalBrowserCompositionData([
+        values[0],
+        values[1],
+        ...values.slice(4, 9),
+        values[10],
+      ]),
+      access: values[9] as unknown[][],
+      authority,
+      authorityKeys: authority.map((value) => canonicalBrowserCompositionData(value)),
+    }
+  }, [key, authorityKey])
+  const continuity = useRef<
+    | {
+        controller: AbortController
+        input: ContinuityInput
+        files: typeof files
+        resolver: ClipDraftPreviewInput['resolvePlayback']
+        leaseEpoch: number
+      }
+    | undefined
+  >(undefined)
   const [state, setState] = useState<{
     key: string
     local?: ClipLocalCompositionRuntime
     error?: unknown
+    owner?: AbortSignal
     files?: typeof files
     resolver?: ClipDraftPreviewInput['resolvePlayback']
   }>({ key: '' })
   const latest = useRef(input)
   useLayoutEffect(() => {
     latest.current = input
+    const before = continuity.current
+    if (
+      !before ||
+      before.controller.signal.aborted ||
+      before.input !== comparison ||
+      before.files !== files ||
+      before.resolver !== input.resolvePlayback
+    ) {
+      const compatible =
+        before &&
+        !before.controller.signal.aborted &&
+        before.files === files &&
+        before.resolver === input.resolvePlayback
+          ? compatibleContinuity(before.input, comparison, Date.now())
+          : undefined
+      if (compatible && before) {
+        before.input = comparison
+        if (compatible.extended) before.leaseEpoch++
+      } else {
+        before?.controller.abort()
+        continuity.current = {
+          controller: new AbortController(),
+          input: comparison,
+          files,
+          resolver: input.resolvePlayback,
+          leaseEpoch: 0,
+        }
+      }
+    }
     if (explicitRetry.current && !matchesRetry(explicitRetry.current, input))
       explicitRetry.current = undefined
-  }, [input])
+  }, [input, comparison, files])
+  useLayoutEffect(() => () => continuity.current?.controller.abort(), [])
   useEffect(() => {
     const data = latest.current
+    const owner = continuity.current!
+    const expires = owner.input.authority
+      .map((value) => futureLease(value.hint, -Infinity))
+      .filter((value): value is number => value !== undefined)
+    const marker = {
+      signal: owner.controller.signal,
+      leaseEpoch: owner.leaseEpoch,
+      retainedUntil: expires.length ? Math.min(...expires) : undefined,
+    }
     const controller = new AbortController()
     let originals: BrowserCompositionOriginals | undefined
     void freezeBrowserPreviewComposition(
@@ -186,14 +376,22 @@ export function useClipDraftPreview(
         )
         setState({
           key,
+          owner: controller.signal,
           files,
           resolver: data.resolvePlayback,
-          local: { snapshot, source: originals.source, audioSource: originals.audioSource },
+          local: {
+            snapshot,
+            continuity: marker,
+            source: originals.source,
+            audioSource: originals.audioSource,
+          },
         })
       },
       (error: unknown) => {
-        if (!controller.signal.aborted)
-          setState({ key, files, resolver: data.resolvePlayback, error })
+        if (!controller.signal.aborted) {
+          owner.controller.abort()
+          setState({ key, owner: controller.signal, files, resolver: data.resolvePlayback, error })
+        }
       },
     )
     return () => {
@@ -203,7 +401,10 @@ export function useClipDraftPreview(
     // `key` is the detached content/runtime identity; output playhead changes preserve it.
   }, [key, retry, files, input.resolvePlayback])
   const current =
-      state.key === key && state.files === files && state.resolver === input.resolvePlayback
+      state.key === key &&
+      !state.owner?.aborted &&
+      state.files === files &&
+      state.resolver === input.resolvePlayback
         ? state
         : undefined,
     canvas = CLIP_DESIGN.ratios[input.ratio].canvas
@@ -225,6 +426,7 @@ export function useClipDraftPreview(
       : undefined,
     onRetry: useCallback(() => {
       const data = latest.current
+      continuity.current?.controller.abort()
       explicitRetry.current = {
         scope: retryScope(data),
         resolver: data.resolvePlayback,

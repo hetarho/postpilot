@@ -227,23 +227,34 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipStorylineQueue)
   const reorderSources = useReorderClipSources()
-  const localSources = upload.entries.map((entry) => ({
-    sourceId: entry.sourceId,
-    file: entry.file,
-    fingerprint: entry.metadata.fingerprint,
-    url: entry.previewURL,
-    retainedAccess:
-      entry.playbackGeneration === undefined
-        ? undefined
-        : {
-            generation: entry.playbackGeneration,
-            state: JSON.stringify([
-              entry.availability,
-              entry.retentionExpiresAt,
-              entry.playbackError,
-            ]),
-          },
-  }))
+  const localSources = upload.entries.map((entry) => {
+    const lease = {
+      version: 1 as const,
+      availability: entry.availability,
+      retentionExpiresAt: entry.retentionExpiresAt,
+      playbackError: entry.playbackError,
+      batchId: entry.batchId,
+      confirmed: entry.confirmed,
+    }
+    return {
+      sourceId: entry.sourceId,
+      file: entry.file,
+      fingerprint: entry.metadata.fingerprint,
+      url: entry.previewURL,
+      retainedAccess:
+        entry.playbackGeneration === undefined
+          ? undefined
+          : {
+              generation: entry.playbackGeneration,
+              state: JSON.stringify([
+                lease.availability,
+                lease.retentionExpiresAt,
+                lease.playbackError,
+              ]),
+              lease,
+            },
+    }
+  })
   /** Everything a run has to say while it owns the screen. */
   const run = {
     focused,

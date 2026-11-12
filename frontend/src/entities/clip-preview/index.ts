@@ -17,6 +17,7 @@ export {
   BrowserSnapshotEpoch,
   evaluateBrowserFrame,
   evaluateBrowserFlow,
+  canonicalBrowserCompositionData,
   freezeBrowserComposition,
   freezeBrowserPreviewComposition,
   readBrowserCompositionSnapshot,

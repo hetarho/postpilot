@@ -85,3 +85,23 @@ describe('one preview output clock', () => {
     transport.dispose()
   })
 })
+
+it('reuses the exact gesture-resumed context and prepared silent clock after a bounded pause', async () => {
+  const context = clock(),
+    create = vi.fn(() => context as unknown as AudioContext)
+  const transport = new BrowserCompositionPlayback(plan, vi.fn(), vi.fn(), create)
+  expect(await transport.play(1000)).toBe(true)
+  context.currentTime = 2.533
+  transport.pause()
+  const position = transport.timeMs
+  expect(position).toBe(3533)
+  expect(transport.measurements().liveNodes).toBe(0)
+  context.currentTime = 8
+  expect(transport.timeMs).toBe(position)
+  expect(await transport.play(position)).toBe(true)
+  expect(create).toHaveBeenCalledOnce()
+  context.currentTime = 9
+  expect(transport.timeMs).toBe(4533)
+  transport.dispose()
+  expect(context.close).toHaveBeenCalledOnce()
+})

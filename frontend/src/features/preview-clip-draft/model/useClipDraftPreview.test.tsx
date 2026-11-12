@@ -1,3 +1,4 @@
+import { StrictMode } from 'react'
 import { webcrypto } from 'node:crypto'
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -429,3 +430,240 @@ it.each(['file', 'blob'] as const)(
     expect(data.resolvePlayback).not.toHaveBeenCalled()
   },
 )
+
+const leaseSource = (expiry = '2099-01-01T00:00:00.123456789Z') => {
+  const lease = {
+    version: 1 as const,
+    availability: 'available',
+    retentionExpiresAt: expiry,
+    playbackError: undefined as string | undefined,
+    batchId: 'batch',
+    confirmed: true,
+  }
+  return {
+    ...retained(1, 'https://owned.test/current'),
+    retainedAccess: {
+      generation: 1,
+      state: JSON.stringify([lease.availability, lease.retentionExpiresAt, lease.playbackError]),
+      lease,
+    },
+  }
+}
+
+it('preserves only private intent evidence through a complete equal-content revision ACK', async () => {
+  const data = { ...input(), localSources: [leaseSource()] }
+  const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  const old = view.result.current.local!
+  const signal = old.continuity!.signal
+  view.rerender({ ...data, timeMs: 3000 })
+  expect(view.result.current.local).toBe(old)
+  view.rerender({ ...data, revision: 2 })
+  expect(view.result.current.local).toBeUndefined()
+  await expect(source(old)).rejects.toMatchObject({ name: 'AbortError' })
+  await waitFor(() => expect(view.result.current.local?.snapshot.planRevision).toBe(2))
+  expect(view.result.current.local!.snapshot.snapshotFingerprint).not.toBe(
+    old.snapshot.snapshotFingerprint,
+  )
+  expect(view.result.current.local!.continuity!.signal).toBe(signal)
+  expect(signal.aborted).toBe(false)
+  view.unmount()
+  expect(signal.aborted).toBe(true)
+})
+
+it('preserves intent for an actual RFC3339Nano future lease extension while rebuilding access', async () => {
+  const data = { ...input(), localSources: [leaseSource()] }
+  const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  const old = view.result.current.local!
+  view.rerender({ ...data, localSources: [leaseSource('2099-01-01T00:00:01.123456789Z')] })
+  expect(view.result.current.local).toBeUndefined()
+  await expect(source(old)).rejects.toMatchObject({ name: 'AbortError' })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  expect(view.result.current.local!.snapshot.snapshotFingerprint).toBe(
+    old.snapshot.snapshotFingerprint,
+  )
+  expect(view.result.current.local!.continuity).toMatchObject({
+    signal: old.continuity!.signal,
+    leaseEpoch: 1,
+  })
+  expect(old.continuity!.signal.aborted).toBe(false)
+})
+
+it.each([
+  [
+    'batch',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.batchId = 'other'
+    },
+  ],
+  [
+    'unconfirmed',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.confirmed = false
+    },
+  ],
+  [
+    'missing',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.availability = 'missing'
+    },
+  ],
+  [
+    'active',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.availability = 'active'
+    },
+  ],
+  [
+    'error',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.playbackError = 'unavailable'
+    },
+  ],
+  [
+    'malformed',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.retentionExpiresAt = '2099-02-31T00:00:00Z'
+    },
+  ],
+  [
+    'shorter',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.retentionExpiresAt = '2098-01-01T00:00:00Z'
+    },
+  ],
+  [
+    'expired',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.lease.retentionExpiresAt = '2000-01-01T00:00:00Z'
+    },
+  ],
+  [
+    'renewed capability',
+    (value: ReturnType<typeof leaseSource>) => {
+      value.retainedAccess.generation = 2
+    },
+  ],
+])(
+  'irreversibly cancels private intent on %s even if authority later returns',
+  async (_name, change) => {
+    const data = { ...input(), localSources: [leaseSource()] }
+    const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    const signal = view.result.current.local!.continuity!.signal
+    const changed = leaseSource('2099-01-01T00:00:01.123456789Z')
+    change(changed)
+    // Keep opaque state byte-identical: the typed authority itself must be observed.
+    changed.retainedAccess.state = data.localSources[0]!.retainedAccess.state
+    view.rerender({ ...data, localSources: [changed] })
+    expect(signal.aborted).toBe(true)
+    view.rerender(data)
+    expect(signal.aborted).toBe(true)
+    view.rerender({ ...data, revision: 2 })
+    await waitFor(() => expect(view.result.current.local?.snapshot.planRevision).toBe(2))
+    expect(view.result.current.local!.continuity!.signal).not.toBe(signal)
+  },
+)
+
+it('cancels a decrease before a later valid bound extension and never resurrects an expired view', async () => {
+  const data = { ...input(), localSources: [leaseSource()] }
+  const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  const signal = view.result.current.local!.continuity!.signal
+  view.rerender({ ...data, localSources: [leaseSource('2000-01-01T00:00:00Z')] })
+  view.rerender({ ...data, localSources: [leaseSource('2099-01-01T00:01:00.123456789Z')] })
+  expect(signal.aborted).toBe(true)
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  expect(view.result.current.local!.continuity!.signal).not.toBe(signal)
+})
+
+it('creates live intent evidence after StrictMode effect replay and aborts it on retry', async () => {
+  const data = input()
+  const view = renderHook(() => useClipDraftPreview(data), { wrapper: StrictMode })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  const signal = view.result.current.local!.continuity!.signal
+  expect(signal.aborted).toBe(false)
+  act(() => view.result.current.onRetry())
+  expect(signal.aborted).toBe(true)
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  expect(view.result.current.local!.continuity!.signal.aborted).toBe(false)
+})
+
+it.each([
+  '2098-01-01T00:00:00.123456789Z',
+  '2000-01-01T00:00:00Z',
+  '2099-02-31T00:00:00.123456789Z',
+  '2099-01-01T00:00:00.123456790Z',
+])(
+  'rejects a coherent producer binding whose expiry is shorter, expired, invalid or unprovably increased: %s',
+  async (expiry) => {
+    const data = { ...input(), localSources: [leaseSource()] }
+    const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    const signal = view.result.current.local!.continuity!.signal
+    view.rerender({ ...data, localSources: [leaseSource(expiry)] })
+    expect(signal.aborted).toBe(true)
+  },
+)
+
+it('does not recursively canonicalize the complete plan again on output-time-only rerenders', async () => {
+  const data = input()
+  const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  const stringify = vi.spyOn(JSON, 'stringify')
+  for (let timeMs = 1; timeMs <= 20; timeMs++) view.rerender({ ...data, timeMs })
+  expect(stringify.mock.calls.filter((call) => typeof call[1] === 'function')).toHaveLength(0)
+})
+
+it.each(['unknown', 'absent'])(
+  'rejects %s typed lease projection without interpreting its opaque state',
+  async (kind) => {
+    const data = { ...input(), localSources: [leaseSource()] }
+    const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+    await waitFor(() => expect(view.result.current.ready).toBe(true))
+    const signal = view.result.current.local!.continuity!.signal
+    const next = leaseSource()
+    if (kind === 'unknown') Object.assign(next.retainedAccess.lease, { version: 2 })
+    else Reflect.deleteProperty(next.retainedAccess, 'lease')
+    view.rerender({ ...data, localSources: [next] })
+    expect(signal.aborted).toBe(true)
+  },
+)
+
+it('never exposes a disposed renderer again when A→B→A commits before the replacement freeze settles', async () => {
+  const data = input()
+  const digest = crypto.subtle.digest.bind(crypto.subtle)
+  let hold = false
+  const releases: Array<() => void> = []
+  vi.spyOn(crypto.subtle, 'digest').mockImplementation((algorithm, value) => {
+    const operation = digest(algorithm, value)
+    return hold
+      ? new Promise<ArrayBuffer>((resolve, reject) => {
+          releases.push(() => {
+            void operation.then(resolve, reject)
+          })
+        })
+      : operation
+  })
+  const view = renderHook((props) => useClipDraftPreview(props), { initialProps: data })
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  const old = view.result.current.local!
+  hold = true
+  view.rerender({
+    ...data,
+    plan: {
+      ...data.plan,
+      elements: data.plan.elements!.map((element) => ({ ...element, text: '변경 중' })),
+    },
+  })
+  expect(view.result.current.local).toBeUndefined()
+  view.rerender(data)
+  expect(view.result.current.local).toBeUndefined()
+  expect(old.continuity!.signal.aborted).toBe(true)
+  await expect(source(old)).rejects.toMatchObject({ name: 'AbortError' })
+  await act(async () => releases.splice(0).forEach((release) => release()))
+  await waitFor(() => expect(view.result.current.ready).toBe(true))
+  expect(view.result.current.local).not.toBe(old)
+  expect(view.result.current.local!.continuity!.signal).not.toBe(old.continuity!.signal)
+})

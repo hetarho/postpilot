@@ -200,6 +200,8 @@ function freeze<T>(value: T): BrowserFrozen<T> {
   }
   return value as BrowserFrozen<T>
 }
+export { canonical as canonicalBrowserCompositionData }
+
 function canonical(data: unknown): string {
   return JSON.stringify(data, (_key, item: unknown) =>
     item && typeof item === 'object' && !Array.isArray(item)

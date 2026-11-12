@@ -159,3 +159,45 @@ describe('owned original runtime access', () => {
     await expect(pending).rejects.toMatchObject({ code: 'CLIP_SNAPSHOT_SUPERSEDED' })
   })
 })
+
+it('does not let a typed future lease hint replace current owner-bound authorization', async () => {
+  const frozen = await snapshot()
+  const lease = {
+    version: 1 as const,
+    availability: 'available',
+    retentionExpiresAt: '2099-01-01T00:00:00.123456789Z',
+    playbackError: undefined,
+    batchId: 'batch',
+    confirmed: true,
+  }
+  const resolve = vi.fn(async () => {
+    throw { reason: 'expired' }
+  })
+  const originals = new BrowserCompositionOriginals(
+    frozen,
+    [
+      {
+        sourceId: 'source',
+        fingerprint: 'a'.repeat(64),
+        url: 'https://stale.test/original',
+        retainedAccess: {
+          generation: 1,
+          state: JSON.stringify([
+            lease.availability,
+            lease.retentionExpiresAt,
+            lease.playbackError,
+          ]),
+          lease,
+        },
+      },
+    ],
+    resolve,
+    new AbortController().signal,
+  )
+  await expect(
+    originals.source('source', 'a'.repeat(64), new AbortController().signal),
+  ).rejects.toMatchObject({ code: 'CLIP_SOURCE_EXPIRED' })
+  expect(resolve).toHaveBeenCalledOnce()
+  expect(JSON.stringify(frozen)).not.toContain('retentionExpiresAt')
+  originals.dispose()
+})

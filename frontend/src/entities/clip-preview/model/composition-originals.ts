@@ -7,7 +7,19 @@ export interface BrowserLocalOriginal {
   file?: File
   url?: string
   /** Runtime invalidation hint only; the owner-bound resolver authorizes access. */
-  retainedAccess?: { generation: number; state: string }
+  retainedAccess?: {
+    generation: number
+    state: string
+    /** Versioned producer binding for private intent comparison, never access authority. */
+    lease?: {
+      version: 1
+      availability?: string
+      retentionExpiresAt?: string
+      playbackError?: string
+      batchId?: string
+      confirmed: boolean
+    }
+  }
 }
 /** One owner/project-bound runtime access cache. It serializes no URL or original bytes. */
 export class BrowserCompositionOriginals {
