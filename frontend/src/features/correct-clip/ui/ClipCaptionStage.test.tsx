@@ -5,6 +5,7 @@ import type { ClipCanvasBox, ClipCaptionFragment, ClipEditableText } from '@/ent
 import { CLIP_CAPTION_STYLES } from '@/entities/clip-design'
 import { normalizeAppFailure } from '@/shared/api'
 import { clipTimelineFixture } from '@/test/clip-editing'
+import { ClipCaptionSheet } from './ClipCaptionSheet'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipTextControls } from './ClipTextControls'
 
@@ -301,4 +302,35 @@ it('follows the size the draft holds after an undo', () => {
     />,
   )
   expect(screen.getByLabelText('글자 크기 (px)')).toHaveValue('')
+})
+
+it("opens a caption's own sheet over a frame from the cut it starts in, with its interval and style", () => {
+  const state = clipTimelineFixture()
+  const [first, second] = state.plan.cuts
+  // A caption opening past the transition into the second cut is placed over that cut's source.
+  const text = { ...state.plan.elements![1], startMs: 400, resolvedStartMs: 10200 }
+  render(
+    <ClipCaptionSheet
+      open
+      onClose={() => {}}
+      plan={state.plan}
+      text={text}
+      stage={{ canvas, safeArea, fragment: fragment({ instanceId: text.instanceId }) }}
+      styles={{ samples: [] }}
+      footage={{
+        localSources: [
+          { fingerprint: first.fingerprint, url: 'blob:first' },
+          { fingerprint: second.fingerprint, url: 'blob:second' },
+        ],
+      }}
+      change={vi.fn()}
+    />,
+  )
+  const sheet = within(screen.getByRole('dialog', { name: '선택한 문구' }))
+  const frame = document.body.querySelector('video')
+  expect(frame?.getAttribute('src')).toMatch(/^blob:second#t=/)
+  expect(
+    sheet.getByRole('button', { name: '자막을 끌어서 옮기기 (방향키로 미세 조정)' }),
+  ).toBeInTheDocument()
+  expect(sheet.getByRole('button', { name: '문구 삭제' })).toBeInTheDocument()
 })

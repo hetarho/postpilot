@@ -1,6 +1,6 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Redo2, Undo2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, GripVertical, Redo2, SlidersHorizontal, Undo2 } from 'lucide-react'
 import {
   clipSeconds,
   clipSourceSound,
@@ -23,19 +23,23 @@ type Validation = { elements: ReadonlyArray<{ id: string; interval: boolean; tex
 /** ②'s plan as one vertical list of scene blocks (CLIP-17, THEME-44): the intro first, one block
  *  per cut in output order with the captions and spoken segments that start inside it — their
  *  text edited in place — then the outro and the disclosure badge. Selecting a block seeks the
- *  preview and marks it; playback marks the block it plays and never moves focus (CLIP-53). */
+ *  preview and marks it; playback marks the block it plays and never moves focus (CLIP-53). Each
+ *  block, caption and spoken segment opens its own sheet from its own control (CLIP-55), and the
+ *  cut blocks reorder by a drag handle, move buttons and Alt+ArrowUp/Down, each move announced
+ *  and undoable (THEME-32/33). */
 export function ClipSceneBlocks({
   plan,
   sources,
   selection,
   timeMs,
   onSelect,
+  onOpen,
+  onMove,
   change,
   validation,
   footage,
   intro,
   outro,
-  details,
   history,
   notices = [],
   readOnly = false,
@@ -46,6 +50,10 @@ export function ClipSceneBlocks({
   selection?: ClipSelection
   timeMs: number
   onSelect: (selection: ClipSelection) => void
+  /** Selects the item and opens its own sheet. */
+  onOpen?: (selection: ClipSelection) => void
+  /** Moves a cut `delta` places; false when it cannot move. */
+  onMove?: (id: string, delta: number) => boolean
   change: (edit: TimelineEdit, group?: string) => void
   validation?: Validation
   footage: {
@@ -55,8 +63,6 @@ export function ClipSceneBlocks({
   /** The project's intro and outro slots, edited where the storyline edits them (CLIP-188). */
   intro?: ReactNode
   outro?: ReactNode
-  /** The selected block's `세부` control (until T764 splits the sheet per item). */
-  details?: ReactNode
   history?: {
     undo: () => void
     redo: () => void
@@ -73,6 +79,48 @@ export function ClipSceneBlocks({
   const list = useRef<HTMLOListElement>(null)
   const playing = blocks.findLastIndex((b) => b.cut.startMs <= timeMs)
   const order = plan.cuts.map((cut) => cut.id).join(',')
+  const [announcement, setAnnouncement] = useState('')
+  const [dragging, setDragging] = useState<string>()
+  // A moved block is re-rendered in its new place; the control that moved it keeps focus there.
+  const refocus = useRef<{ id: string; control: string }>(undefined)
+  useEffect(() => {
+    const target = refocus.current
+    if (!target) return
+    refocus.current = undefined
+    // A move button at the new end is disabled; its opposite, then the block itself, takes focus.
+    const fallback = { up: 'down', down: 'up' }[target.control] ?? 'select'
+    for (const control of [target.control, fallback, 'select']) {
+      const element = list.current?.querySelector<HTMLElement>(
+        `[data-cut-id="${target.id}"] [data-block-control="${control}"]:not(:disabled)`,
+      )
+      if (element) return element.focus()
+    }
+  }, [order])
+  const move = (id: string, delta: number, control: string) => {
+    const from = plan.cuts.findIndex((c) => c.id === id)
+    if (!onMove || from < 0 || !onMove(id, delta)) return
+    refocus.current = { id, control }
+    setAnnouncement(
+      t('sceneBlocks.moved', {
+        number: from + 1,
+        position: from + delta + 1,
+        count: blocks.length,
+      }),
+    )
+  }
+  const keyMove = (event: KeyboardEvent<HTMLElement>, id: string) => {
+    if (!event.altKey || (event.key !== 'ArrowUp' && event.key !== 'ArrowDown')) return
+    const target = event.target as HTMLElement
+    // A text field keeps its own Alt+Arrow caret movement.
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) return
+    event.preventDefault()
+    move(
+      id,
+      event.key === 'ArrowUp' ? -1 : 1,
+      target.closest('[data-block-control]')?.getAttribute('data-block-control') ?? 'select',
+    )
+  }
+  const reorderable = !!onMove && !readOnly && !disabled
   // An explicit selection brings its block into view; playback marks without scrolling.
   useEffect(() => {
     const block = list.current?.querySelector<HTMLElement>('[data-selected="true"]')
@@ -91,10 +139,22 @@ export function ClipSceneBlocks({
     const invalid = !!(error?.text || error?.interval)
     const id = `scene-text-${text.instanceId}`
     return (
-      <div key={text.instanceId} className="min-w-0 space-y-1">
-        <Typography variant="meta" as="label" htmlFor={id}>
-          {label}
-        </Typography>
+      <div key={text.instanceId} className="min-w-0 space-y-1" data-scene-text={text.instanceId}>
+        <div className="flex min-w-0 items-center justify-between gap-2">
+          <Typography variant="meta" as="label" htmlFor={id} className="min-w-0">
+            {label}
+          </Typography>
+          {onOpen && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('sceneBlocks.openText', { label })}
+              onClick={() => onOpen({ kind: 'text', id: text.instanceId })}
+            >
+              <SlidersHorizontal aria-hidden="true" className="size-5" />
+            </Button>
+          )}
+        </div>
         <Textarea
           id={id}
           autoGrow
@@ -124,6 +184,10 @@ export function ClipSceneBlocks({
   }
   return (
     <section className="min-w-0 space-y-3" aria-label={t('sceneBlocks.label')}>
+      {/* Mounted before any move so the first announcement is read (THEME-33). */}
+      <p role="status" className="sr-only">
+        {announcement}
+      </p>
       {history && (
         <div className="flex items-center gap-2">
           <Button
@@ -171,8 +235,21 @@ export function ClipSceneBlocks({
                 className: `min-w-0 space-y-3 ${selected ? 'ring-stroke-accent ring-2' : ''}`,
               })}
               data-scene-block="cut"
+              data-cut-id={cut.id}
               data-selected={selected}
+              data-dragging={dragging === cut.id || undefined}
               aria-current={index === playing ? 'time' : undefined}
+              onKeyDown={reorderable ? (event) => keyMove(event, cut.id) : undefined}
+              onDragOver={(event) => {
+                if (dragging && dragging !== cut.id) event.preventDefault()
+              }}
+              onDrop={(event) => {
+                if (!dragging) return
+                event.preventDefault()
+                const from = plan.cuts.findIndex((c) => c.id === dragging)
+                setDragging(undefined)
+                if (from >= 0 && from !== index) move(dragging, index - from, 'handle')
+              }}
             >
               <div className="flex min-w-0 items-start gap-3">
                 <span className="bg-surface-recessed flex aspect-video w-24 shrink-0 items-center justify-center overflow-hidden rounded-sm">
@@ -184,13 +261,28 @@ export function ClipSceneBlocks({
                   />
                 </span>
                 <div className="min-w-0 flex-1 space-y-1">
-                  <Button
-                    variant={selected ? 'secondary' : 'ghost'}
-                    aria-pressed={selection?.kind === 'cut' && selection.id === cut.id}
-                    onClick={() => onSelect({ kind: 'cut', id: cut.id })}
-                  >
-                    {t('correction.cut', { number: index + 1 })}
-                  </Button>
+                  <div className="flex min-w-0 flex-wrap items-center gap-1">
+                    <Button
+                      variant={selected ? 'secondary' : 'ghost'}
+                      data-block-control="select"
+                      aria-pressed={selection?.kind === 'cut' && selection.id === cut.id}
+                      aria-keyshortcuts={reorderable ? 'Alt+ArrowUp Alt+ArrowDown' : undefined}
+                      onClick={() => onSelect({ kind: 'cut', id: cut.id })}
+                    >
+                      {t('correction.cut', { number: index + 1 })}
+                    </Button>
+                    {onOpen && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        data-block-control="open"
+                        aria-label={t('sceneBlocks.openCut', { number: index + 1 })}
+                        onClick={() => onOpen({ kind: 'cut', id: cut.id })}
+                      >
+                        <SlidersHorizontal aria-hidden="true" className="size-5" />
+                      </Button>
+                    )}
+                  </div>
                   <Typography variant="meta" as="p">
                     {t('sceneBlocks.output', {
                       start: clipSeconds(startMs),
@@ -214,6 +306,48 @@ export function ClipSceneBlocks({
                     )}
                   </div>
                 </div>
+                {reorderable && (
+                  <div className="flex shrink-0 flex-col items-center gap-1">
+                    {/* Dragging is never the only way (THEME-32): the move buttons below do the
+                        same on touch, and Alt+ArrowUp/Down on the focused block from a keyboard. */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      draggable
+                      data-block-control="handle"
+                      className="cursor-grab active:cursor-grabbing"
+                      aria-label={t('sceneBlocks.drag', { number: index + 1 })}
+                      aria-keyshortcuts="Alt+ArrowUp Alt+ArrowDown"
+                      onDragStart={(event) => {
+                        event.dataTransfer?.setData('text/plain', cut.id)
+                        setDragging(cut.id)
+                      }}
+                      onDragEnd={() => setDragging(undefined)}
+                    >
+                      <GripVertical aria-hidden="true" className="size-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      data-block-control="up"
+                      disabled={index === 0}
+                      aria-label={t('sceneBlocks.up', { number: index + 1 })}
+                      onClick={() => move(cut.id, -1, 'up')}
+                    >
+                      <ChevronUp aria-hidden="true" className="size-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      data-block-control="down"
+                      disabled={index === blocks.length - 1}
+                      aria-label={t('sceneBlocks.down', { number: index + 1 })}
+                      onClick={() => move(cut.id, 1, 'down')}
+                    >
+                      <ChevronDown aria-hidden="true" className="size-5" />
+                    </Button>
+                  </div>
+                )}
               </div>
               {captions.map((text) => {
                 const interval = textInterval(plan, text)
@@ -231,9 +365,21 @@ export function ClipSceneBlocks({
                 const state = spokenState(plan.narration!, segment, plan.durationMs)
                 return (
                   <div key={segment.id} className="min-w-0 space-y-1">
-                    <Typography variant="meta" as="label" htmlFor={id}>
-                      {`${t('timeline.spokenSegment', { number })} · ${t(`timeline.speechState.${state}`)}`}
-                    </Typography>
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                      <Typography variant="meta" as="label" htmlFor={id} className="min-w-0">
+                        {`${t('timeline.spokenSegment', { number })} · ${t(`timeline.speechState.${state}`)}`}
+                      </Typography>
+                      {onOpen && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={t('sceneBlocks.openSpoken', { number })}
+                          onClick={() => onOpen({ kind: 'spoken', id: segment.id })}
+                        >
+                          <SlidersHorizontal aria-hidden="true" className="size-5" />
+                        </Button>
+                      )}
+                    </div>
                     <Textarea
                       id={id}
                       autoGrow
@@ -259,7 +405,6 @@ export function ClipSceneBlocks({
                   </div>
                 )
               })}
-              {selected && details}
             </li>
           )
         })}
@@ -289,7 +434,6 @@ export function ClipSceneBlocks({
                 end: clipSeconds(badgeInterval.endMs),
               }),
             )}
-            {textSelected(badge.instanceId) && details}
           </li>
         )}
       </ol>

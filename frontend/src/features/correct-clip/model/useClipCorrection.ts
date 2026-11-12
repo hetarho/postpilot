@@ -473,6 +473,16 @@ export function useClipCorrection(ownerId: string, project: ClipProject, createC
         retainedSound,
       })
     },
+    /** Moves a cut `delta` places along the output, one undoable edit (THEME-32/33). False when
+     *  the cut is gone or already at that end. */
+    moveCut: (id: string, delta: number) => {
+      const cuts = current.current.draft.cuts
+      const from = cuts.findIndex((c) => c.id === id)
+      const to = from + delta
+      if (from < 0 || delta === 0 || to < 0 || to >= cuts.length) return false
+      change({ type: 'move', from, to })
+      return true
+    },
     refreshCaptions: async () => {
       await flush()
       change({ type: 'refreshCaptions' })

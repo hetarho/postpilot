@@ -41,7 +41,14 @@ function Harness({
         footage={{ localSources: [] }}
         intro={intro && <p>{intro}</p>}
         outro={outro && <p>{outro}</p>}
-        details={<button type="button">세부</button>}
+        onOpen={(selection) => dispatch({ type: 'select', selection })}
+        onMove={(id, delta) => {
+          const from = timeline.plan.cuts.findIndex((c) => c.id === id)
+          const to = from + delta
+          if (from < 0 || to < 0 || to >= timeline.plan.cuts.length) return false
+          dispatch({ type: 'edit', edit: { type: 'move', from, to }, at: Date.now() })
+          return true
+        }}
         history={{
           undo: () => dispatch({ type: 'undo' }),
           redo: () => dispatch({ type: 'redo' }),
@@ -140,7 +147,7 @@ it('stands the intro first, the outro last and the disclosure badge after it wit
   expect(items[4]).toHaveTextContent('영상 0–19.8 s')
 })
 
-it('seeks to a selected block and marks it, offering its details without opening anything', async () => {
+it('seeks to a selected block and marks it, offering its own sheet without opening anything', async () => {
   render(<Harness state={clipTimelineFixture()} />)
   await userEvent.click(screen.getByRole('button', { name: '컷 2' }))
   expect(screen.getByLabelText('playhead')).toHaveTextContent('9800')
@@ -150,7 +157,7 @@ it('seeks to a selected block and marks it, offering its details without opening
     'aria-pressed',
     'true',
   )
-  expect(within(second).getByRole('button', { name: '세부' })).toBeInTheDocument()
+  expect(within(second).getByRole('button', { name: '컷 2 편집' })).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
 
@@ -171,4 +178,72 @@ it('renders no cut block for an empty plan', () => {
   state.plan = { durationMs: 0, cuts: [] } as ClipEditPlan
   render(<Harness state={state} />)
   expect(blocks()).toEqual([])
+})
+
+describe('reordering blocks', () => {
+  const order = () => blocks().map((block) => block.dataset.cutId)
+  const announced = (text: string) =>
+    expect(screen.getByText(text)).toHaveAttribute('role', 'status')
+
+  it('moves a block by its phone move control, announced and undone as one edit', async () => {
+    const state = clipTimelineFixture()
+    const [a, b] = state.plan.cuts.map((cut) => cut.id)
+    render(<Harness state={state} />)
+    expect(screen.getByRole('button', { name: '컷 1 위로' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: '컷 1 아래로' }))
+    expect(order()).toEqual([b, a])
+    announced('컷 1을 2개 중 2번째로 옮겼어요')
+    // The control that moved it keeps focus in the block's new place.
+    expect(document.activeElement).toBe(
+      within(blocks()[1]).getByRole('button', { name: '컷 2 위로' }),
+    )
+    await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+    expect(order()).toEqual([a, b])
+  })
+
+  it('moves the focused block with Alt+Arrow keys, leaving a text field its own keys', async () => {
+    const state = clipTimelineFixture()
+    const [a, b] = state.plan.cuts.map((cut) => cut.id)
+    render(<Harness state={state} />)
+    const select = screen.getByRole('button', { name: '컷 2' })
+    select.focus()
+    await userEvent.keyboard('{Alt>}{ArrowUp}{/Alt}')
+    expect(order()).toEqual([b, a])
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: '컷 1' }))
+    announced('컷 2을 2개 중 1번째로 옮겼어요')
+    screen.getByDisplayValue('caption a').focus()
+    await userEvent.keyboard('{Alt>}{ArrowDown}{/Alt}')
+    expect(order()).toEqual([b, a])
+    await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
+    expect(order()).toEqual([a, b])
+  })
+
+  it('moves a block dropped on another by its drag handle', () => {
+    const state = clipTimelineFixture()
+    const [a, b] = state.plan.cuts.map((cut) => cut.id)
+    render(<Harness state={state} />)
+    fireEvent.dragStart(screen.getByRole('button', { name: '컷 1 끌어서 옮기기' }))
+    fireEvent.dragOver(blocks()[1])
+    fireEvent.drop(blocks()[1])
+    expect(order()).toEqual([b, a])
+    announced('컷 1을 2개 중 2번째로 옮겼어요')
+  })
+
+  it('offers no reorder control on a plan that is only read', () => {
+    const state = clipTimelineFixture()
+    render(
+      <ClipSceneBlocks
+        plan={state.plan}
+        sources={state.sources}
+        timeMs={0}
+        onSelect={() => {}}
+        onMove={() => true}
+        change={() => {}}
+        footage={{ localSources: [] }}
+        readOnly
+      />,
+    )
+    expect(screen.queryByRole('button', { name: '컷 1 아래로' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '컷 1 끌어서 옮기기' })).not.toBeInTheDocument()
+  })
 })

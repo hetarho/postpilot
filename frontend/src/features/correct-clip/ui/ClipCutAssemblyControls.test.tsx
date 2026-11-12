@@ -41,3 +41,18 @@ it.each(['ko', 'en'] as const)(
     expect(onSplit).toHaveBeenLastCalledWith(7000)
   },
 )
+
+it('holds the playhead split while the playhead stands on no frame of this cut', () => {
+  const cut = clipTimelineFixture().plan.cuts[0]
+  render(
+    <ClipCutAssemblyControls
+      cut={cut}
+      allowedRates={[1000]}
+      playheadMs={NaN}
+      onChange={vi.fn()}
+      onSplit={vi.fn(async () => {})}
+      native
+    />,
+  )
+  expect(screen.getByRole('button', { name: '재생 위치에서 나누기' })).toBeDisabled()
+})

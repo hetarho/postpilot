@@ -16,15 +16,16 @@ import {
   sourceToOutputMs,
   timelineCuts,
   type ClipEditingState,
-  captionStartCut,
   captionRefresh,
   narrationSlot,
   minExposureMs,
   textInterval,
+  type ClipEditCut,
+  type ClipSelection,
   type ClipSpokenSegment,
 } from '@/entities/clip-plan'
 import { type ClipDisplayedFrame } from '@/entities/clip-preview'
-import { Info, X } from 'lucide-react'
+import { Info } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/entities/clip-design'
 import {
@@ -34,7 +35,6 @@ import {
   Dialog,
   FieldMessage,
   Popover,
-  Sheet,
   Slider,
   Typography,
   useVisualViewport,
@@ -43,7 +43,9 @@ import type { useClipCorrection } from '../model/useClipCorrection'
 import { ClipRenderAction } from './ClipRenderAction'
 import { ClipSceneBlocks } from './ClipSceneBlocks'
 import { ClipCaptionStage } from './ClipCaptionStage'
-import { ClipItemProperties } from './ClipItemProperties'
+import { ClipSceneBlockSheet, type ClipCutSound } from './ClipSceneBlockSheet'
+import { ClipCaptionSheet } from './ClipCaptionSheet'
+import { ClipSegmentSheet } from './ClipSegmentSheet'
 
 type Correction = ReturnType<typeof useClipCorrection>
 export interface ClipEditorPreviewProps {
@@ -131,6 +133,10 @@ export function ClipCorrectionWorkspace({
     intro?: ReactNode
     outro?: ReactNode
     spokenProperties?: (segment: ClipSpokenSegment) => ReactNode
+    /** Opens the observed-scene chooser; a cut chosen there lands after the selected block. */
+    addScene?: () => void
+    /** The original-sound setting of the source a cut plays from (CLIP-18). */
+    sourceSound?: (cut: ClipEditCut) => ClipCutSound | undefined
   }
   disabled: boolean
   /** A finalized project reads its plan here instead of editing it (CLIP-160): the sheets state
@@ -155,7 +161,6 @@ export function ClipCorrectionWorkspace({
     x: number
     y: number
   }>()
-  const { t: tCommon } = useTranslation('common')
   const viewport = useVisualViewport()
   const container = useRef<HTMLElement>(null)
   const previewRoot = useRef<HTMLDivElement>(null)
@@ -203,11 +208,8 @@ export function ClipCorrectionWorkspace({
       Math.max(
         (window.visualViewport?.offsetTop ?? 0) +
           (chromeProbe.current?.getBoundingClientRect().height ?? 0),
-        (field.closest('[data-clip-item-properties]')
-          ? 0
-          : previewRoot.current
-              ?.querySelector('[data-clip-preview-canvas]')
-              ?.getBoundingClientRect().bottom) ?? 0,
+        previewRoot.current?.querySelector('[data-clip-preview-canvas]')?.getBoundingClientRect()
+          .bottom ?? 0,
       ) + gap
     const bottom =
       Math.min(
@@ -254,21 +256,24 @@ export function ClipCorrectionWorkspace({
   const [confirm, setConfirm] = useState(false)
   const { timeline, draft, dispatch, change } = correction
   const seek = useCallback((timeMs: number) => dispatch({ type: 'seek', timeMs }), [dispatch])
-  const cut =
-    timeline.selection?.kind === 'cut'
-      ? draft.cuts.find((c) => c.id === timeline.selection?.id)
-      : undefined
+  // The item whose own sheet was last opened (CLIP-55). It outlives `shown` so the sheet can
+  // close with its animation and return focus; selection stays when it closes (CLIP-53), and an
+  // item deleted meanwhile has no sheet to show.
+  const [sheet, setSheet] = useState<ClipSelection>()
+  const [shown, setShown] = useState(false)
+  const open = (selection: ClipSelection) => {
+    dispatch({ type: 'select', selection })
+    setSheet(selection)
+    setShown(true)
+  }
+  const closeSheet = useCallback(() => setShown(false), [])
+  const cut = sheet?.kind === 'cut' ? draft.cuts.find((c) => c.id === sheet.id) : undefined
   const text =
-    timeline.selection?.kind === 'text'
-      ? draft.elements?.find((text) => text.instanceId === timeline.selection?.id)
+    sheet?.kind === 'text'
+      ? draft.elements?.find((text) => text.instanceId === sheet.id)
       : undefined
-  const [detailsOpen, setDetailsOpen] = useState(false)
   const spoken =
-    timeline.selection?.kind === 'spoken'
-      ? draft.narration?.segments.find((s) => s.id === timeline.selection?.id)
-      : undefined
-  const selected = !!cut || !!text || !!spoken
-  const sheetOpen = detailsOpen && selected
+    sheet?.kind === 'spoken' ? draft.narration?.segments.find((s) => s.id === sheet.id) : undefined
   const index = cut ? draft.cuts.indexOf(cut) : -1
   const source = state.sources.find((s) => s.id === cut?.sourceId)
   const errors = correction.validation?.cuts[index]
@@ -301,73 +306,12 @@ export function ClipCorrectionWorkspace({
     !!draft.nativeComposition && !readOnly,
     text?.instanceId,
   )
-  const fragment = captionPreview.data?.captions.find((c) => c.instanceId === text?.instanceId)
   const styleSamples = useClipLocalStyleSamples(
     project.ratio ?? 'vertical',
     text?.role === 'caption' && !readOnly,
     project.design?.captionPace,
   )
-  // The cut the caption's interval STARTS in: a caption may cross several, and
-  // it is placed once, against the frame it opens over (CLIP-143).
-  const captionCut = text ? captionStartCut(draft, text) : undefined
   const failure = correction.failure ?? renderFailure
-  const itemTitle = cut
-    ? `${t('correction.cut', { number: index + 1 })} · ${source?.filename ?? cut.sourceId}`
-    : spoken
-      ? t('timeline.spokenSegment', {
-          number: (draft.narration?.segments.indexOf(spoken) ?? 0) + 1,
-        })
-      : t('timeline.textControls')
-  const itemProperties = spoken ? (
-    (slots.spokenProperties?.(spoken) ?? (
-      <div className="min-w-0 space-y-2">
-        <Typography variant="body">{spoken.text}</Typography>
-        <Typography variant="meta">
-          {clipSeconds(spoken.startMs)}–{clipSeconds(spoken.endMs)} s
-        </Typography>
-      </div>
-    ))
-  ) : (
-    <ClipItemProperties
-      project={{ state, captionStyles, notices, language }}
-      correction={correction}
-      footage={footage}
-      selection={{ cut, text, index, source, errors, cutTime, currentFrame, captionCut }}
-      captions={{ captionPreview, fragment, styleSamples }}
-      status={{ readOnly, disabled }}
-    />
-  )
-  const itemActions = readOnly ? undefined : (
-    <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-      {/* Deleting the selected item is also closing its sheet: leaving the
-                selection behind would have reopened it on the neighbour the
-                reducer falls back to. */}
-      {cut && (
-        <Button
-          variant="danger"
-          disabled={disabled}
-          onClick={() => {
-            change({ type: 'remove', id: cut.id })
-            dispatch({ type: 'select' })
-          }}
-        >
-          {t('correction.deleteCut')}
-        </Button>
-      )}
-      {text && (
-        <Button
-          variant="danger"
-          disabled={disabled}
-          onClick={() => {
-            change({ type: 'removeText', id: text.instanceId })
-            dispatch({ type: 'select' })
-          }}
-        >
-          {t('timeline.deleteText')}
-        </Button>
-      )}
-    </div>
-  )
   const refresh = captionRefresh(draft)
   const captionSlot = draft.nativeComposition ? narrationSlot(draft, timeline.timeMs) : undefined
   return (
@@ -530,10 +474,9 @@ export function ClipCorrectionWorkspace({
             sources={state.sources}
             selection={timeline.selection}
             timeMs={timeline.timeMs}
-            onSelect={(selection) => {
-              setDetailsOpen(false)
-              dispatch({ type: 'select', selection })
-            }}
+            onSelect={(selection) => dispatch({ type: 'select', selection })}
+            onOpen={open}
+            onMove={correction.moveCut}
             change={change}
             validation={correction.validation}
             footage={footage}
@@ -549,16 +492,16 @@ export function ClipCorrectionWorkspace({
               canRedo: !readOnly && !!timeline.future.length,
               disabled: disabled || readOnly,
             }}
-            // Until T764 splits it per item, the selected block opens the existing properties in a
-            // sheet; selection alone opens nothing and never suspends the preview (CLIP-53).
-            details={
-              <Button variant="secondary" onClick={() => setDetailsOpen(true)}>
-                {t('sceneBlocks.details')}
-              </Button>
-            }
           />
           {!readOnly && (
             <div className="flex flex-wrap items-center gap-2">
+              {/* A new cut starts from an observed scene and lands after the selected block
+                  (CLIP-55, CLIP-67). */}
+              {slots.addScene && (
+                <Button variant="secondary" disabled={disabled} onClick={slots.addScene}>
+                  {t('sceneBlocks.addScene')}
+                </Button>
+              )}
               <Button
                 variant="secondary"
                 disabled={disabled || !captionSlot}
@@ -566,9 +509,8 @@ export function ClipCorrectionWorkspace({
                   if (!captionSlot) return
                   // A local identity until the save returns the server-minted one.
                   const id = `new-caption-${Date.now()}`
-                  setDetailsOpen(true)
                   change({ type: 'addNarration', id, ...captionSlot })
-                  dispatch({ type: 'select', selection: { kind: 'text', id } })
+                  open({ kind: 'text', id })
                 }}
               >
                 {t('timeline.addCaption')}
@@ -619,8 +561,7 @@ export function ClipCorrectionWorkspace({
                         if (!slot) return
                         const id = `new-script-caption-${Date.now()}`
                         change({ type: 'addScriptCaption', id, segmentId: segment.id, ...slot })
-                        dispatch({ type: 'select', selection: { kind: 'text', id } })
-                        setDetailsOpen(true)
+                        open({ kind: 'text', id })
                       }}
                     >
                       {t('placement.addFromScript', { number: index + 1 })}
@@ -768,37 +709,78 @@ export function ClipCorrectionWorkspace({
           </ActionBar>
         )}
       </div>
-      {/* ONE selection is ONE sheet (CLIP-53): the selected item's own controls
-          open over the preview and the timeline, which stay on screen behind
-          them, so what is being changed is visible whichever of the two is
-          showing. `open` is derived from the selection and never from state of
-          its own, which is what makes the timeline's pressed state and this
-          sheet the same fact — and closing it clears the selection.
-          The body is the sheet's one scroller, so the destructive control in
-          its pinned footer stays reachable at 360px with the keyboard open. */}
-      <Sheet
-        open={sheetOpen}
-        labelledBy="clip-item-sheet-title"
-        onClose={() => setDetailsOpen(false)}
-        header={
-          <div className="mb-3 flex items-start justify-between gap-3">
-            <Typography variant="fieldTitle" id="clip-item-sheet-title" className="min-w-0">
-              {itemTitle}
-            </Typography>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={tCommon('action.close')}
-              onClick={() => setDetailsOpen(false)}
-            >
-              <X aria-hidden="true" className="size-5" />
-            </Button>
-          </div>
-        }
-        footer={itemActions}
-      >
-        {itemProperties}
-      </Sheet>
+      {/* Each item opens its OWN sheet over the preview and the list, which stay on screen behind
+          it, so every change shows in the preview while the sheet stays open (CLIP-55). */}
+      {cut && (
+        <ClipSceneBlockSheet
+          open={shown}
+          onClose={closeSheet}
+          plan={draft}
+          cut={cut}
+          source={source}
+          playheadMs={timeline.timeMs}
+          currentFrame={currentFrame}
+          errors={errors}
+          sound={slots.sourceSound?.(cut)}
+          notices={notices}
+          language={language}
+          footage={footage}
+          readOnly={readOnly}
+          disabled={disabled}
+          change={change}
+          seek={seek}
+          endTransaction={() => dispatch({ type: 'endTransaction' })}
+          split={(sourceMs) => correction.splitCut(cut.id, sourceMs)}
+        />
+      )}
+      {text && (
+        <ClipCaptionSheet
+          open={shown}
+          onClose={closeSheet}
+          plan={draft}
+          text={text}
+          stage={
+            captionPreview.data && {
+              canvas: captionPreview.data.canvas,
+              safeArea: captionPreview.data.safeArea,
+              fragment: captionPreview.data.captions.find((c) => c.instanceId === text.instanceId),
+            }
+          }
+          styles={{
+            allowed: captionStyles,
+            samples: styleSamples.data?.captions,
+            unavailable: styleSamples.isError,
+          }}
+          footage={footage}
+          validation={{
+            regionOverlap: correction.validation?.elements.some(
+              (e) => e.id === text.instanceId && e.regionOverlap,
+            ),
+            invalid: !!correction.validation?.elements.some(
+              (e) =>
+                e.id === text.instanceId &&
+                Object.entries(e).some(([key, value]) => key !== 'id' && value),
+            ),
+          }}
+          failure={correction.failure}
+          notices={notices}
+          language={language}
+          readOnly={readOnly}
+          disabled={disabled}
+          change={change}
+        />
+      )}
+      {spoken && draft.narration && (
+        <ClipSegmentSheet
+          open={shown}
+          onClose={closeSheet}
+          narration={draft.narration}
+          segment={spoken}
+          durationMs={draft.durationMs}
+        >
+          {readOnly ? undefined : slots.spokenProperties?.(spoken)}
+        </ClipSegmentSheet>
+      )}
       <Dialog
         open={confirm}
         title={t('correction.leaveTitle')}

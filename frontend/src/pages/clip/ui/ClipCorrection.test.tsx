@@ -186,16 +186,15 @@ async function goToStep(name: '생성' | '수정' | '완성') {
 const timeline = () => within(screen.getByRole('region', { name: '장면 블록' }))
 // ②'s one render trigger: 렌더하기, or 다시 렌더 once a render of the current plan exists (CLIP-40).
 const RENDER = /^(렌더하기|다시 렌더)$/
-// Phone field tests explicitly select a bar and then open its details. Selection
-// alone stays on the preview/timeline; the dedicated test below pins that flow.
+// Each block opens its own sheet from its own control (CLIP-55). Selection alone stays on the
+// preview and the list; the dedicated test below pins that flow.
 const selectCut = async (name = '컷 1') => {
-  await userEvent.click(timeline().getByRole('button', { name }))
-  await userEvent.click(timeline().getByRole('button', { name: '세부' }))
+  await userEvent.click(timeline().getByRole('button', { name: `${name} 편집` }))
 }
-// A caption is selected by its in-place field in the block it starts in (CLIP-17).
+// A caption opens its sheet from its own control in the block it starts in (CLIP-17, CLIP-143).
 const selectText = async (name = 'caption a') => {
-  await userEvent.click(timeline().getByDisplayValue(name))
-  await userEvent.click(timeline().getByRole('button', { name: '세부' }))
+  const field = timeline().getByDisplayValue(name).closest<HTMLElement>('[data-scene-text]')!
+  await userEvent.click(within(field).getByRole('button', { name: /편집$/ }))
 }
 const setField = (label: string, value: string) =>
   fireEvent.change(screen.getByLabelText(label), { target: { value } })
@@ -235,9 +234,9 @@ it('selects on a phone without opening details or suspending the preview, and ke
   const preview = view.container.querySelector('[data-flow-simulation]')
   await userEvent.click(timeline().getByRole('button', { name: '컷 1' }))
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  expect(timeline().getByRole('button', { name: '세부' })).toBeInTheDocument()
+  expect(timeline().getByRole('button', { name: '컷 1 편집' })).toBeInTheDocument()
   expect(view.container.querySelector('[data-flow-simulation]')).toBe(preview)
-  await userEvent.click(timeline().getByRole('button', { name: '세부' }))
+  await userEvent.click(timeline().getByRole('button', { name: '컷 1 편집' }))
   const details = screen.getByRole('dialog', { name: /컷 1/ })
   expect(view.container.querySelector('[data-flow-simulation]')).toBe(preview)
   await userEvent.click(within(details).getByRole('button', { name: '닫기' }))
@@ -304,7 +303,7 @@ it('selects speech by its stable identity without generating audio or changing t
   expect(speech).toHaveAttribute('data-selected', 'true')
   expect(timeline().getByDisplayValue('caption a')).toHaveAttribute('data-selected', 'false')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-  await userEvent.click(timeline().getByRole('button', { name: '세부' }))
+  await userEvent.click(timeline().getByRole('button', { name: '더빙 1 편집' }))
   expect(
     within(screen.getByRole('dialog', { name: '더빙 1' })).getByText('읽을 별도 대본'),
   ).toBeVisible()
@@ -421,7 +420,9 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
   const cutSheet = screen.getByRole('dialog', { name: /컷 1/ })
   expect(within(cutSheet).getByLabelText('원본 시작 (초)')).toBeInTheDocument()
   expect(within(cutSheet).getByRole('slider', { name: '원본 소리 (%)' })).toBeInTheDocument()
-  expect(within(cutSheet).getByRole('button', { name: '아래로 이동' })).toBeInTheDocument()
+  // Reordering is the block's own control now, not the sheet's (THEME-32).
+  expect(within(cutSheet).queryByRole('button', { name: '아래로 이동' })).not.toBeInTheDocument()
+  expect(timeline().getByRole('button', { name: '컷 1 아래로' })).toBeInTheDocument()
   expect(within(cutSheet).getByRole('button', { name: '컷 삭제' })).toBeInTheDocument()
   expect(within(cutSheet).getByText(cutNotice)).toBeInTheDocument()
   expect(page().queryByText(cutNotice)).not.toBeInTheDocument()
@@ -437,8 +438,8 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
   await selectText()
   const textSheet = screen.getByRole('dialog', { name: '선택한 문구' })
   expect(within(textSheet).getByLabelText('자막 원문')).toBeInTheDocument()
-  // Placement happens on the composed preview; phone details never draw a second editor.
-  expect(within(textSheet).queryByText('자막 배치')).not.toBeInTheDocument()
+  // The caption's own sheet places it over a frame from the cut it starts in (CLIP-143).
+  expect(within(textSheet).getByText('자막 배치')).toBeInTheDocument()
   expect(
     within(textSheet).getByText('미리보기에서 자막을 끌거나 방향키로 위치를 조절하세요.'),
   ).toBeVisible()
@@ -512,11 +513,11 @@ it('offers no download while the plan has no render, and says nothing is wrong',
 it('keeps a selected text field mounted while its cut is reordered', async () => {
   const writes: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ planWrites: writes })
-  await selectText()
-  const field = screen.getByLabelText('자막 원문')
-  setField('자막 원문', '선택한 문구')
-  await userEvent.click(screen.getByRole('button', { name: '아래로 이동' }))
-  expect(screen.getByLabelText('자막 원문')).toBe(field)
+  const field = timeline().getByDisplayValue('caption a')
+  await userEvent.click(field)
+  fireEvent.change(field, { target: { value: '선택한 문구' } })
+  await userEvent.click(timeline().getByRole('button', { name: '컷 1 아래로' }))
+  expect(timeline().getByDisplayValue('선택한 문구')).toBe(field)
   expect(field).toHaveValue('선택한 문구')
   await waitFor(() => expect(writes).toHaveLength(1), AUTOSAVE)
   expect(writes[0].plan.cuts.map((c) => c.id)).toEqual(['cut-b', 'cut-a'])
@@ -672,7 +673,9 @@ it('adds observed footage through the page, then saves split/rate operations and
   }
   const planWrites: NonNullable<FakeClipsOptions['planWrites']> = []
   await mount({ projects: [project], planWrites })
-  await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
+  // 장면 추가 opens the observed-scene chooser; the cut lands after the selected block (CLIP-67).
+  await userEvent.click(timeline().getByRole('button', { name: '컷 1' }))
+  await userEvent.click(screen.getByRole('button', { name: '장면 추가' }))
   await userEvent.click(screen.getByRole('button', { name: /관찰 구간 1개 자세히 보기/ }))
   await userEvent.click(screen.getByRole('button', { name: '이 구간을 컷으로 추가' }))
   await waitFor(() => expect(planWrites).toHaveLength(1))
@@ -689,7 +692,7 @@ it('adds observed footage through the page, then saves split/rate operations and
   })
   expect(screen.queryByRole('dialog', { name: '원본 소스' })).not.toBeInTheDocument()
   expect(screen.queryByRole('dialog', { name: /컷 2/ })).not.toBeInTheDocument()
-  await userEvent.click(timeline().getByRole('button', { name: '세부' }))
+  await userEvent.click(timeline().getByRole('button', { name: '컷 2 편집' }))
   expect(screen.getByRole('dialog', { name: /컷 2/ })).toBeVisible()
   await userEvent.click(screen.getByRole('combobox', { name: /재생 속도/ }))
   await userEvent.click(screen.getByRole('option', { name: '2×' }))

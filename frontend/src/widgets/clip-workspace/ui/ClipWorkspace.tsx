@@ -719,6 +719,35 @@ export function ClipWorkspace({
               />
             ),
           referenceAction,
+          // 장면 추가 opens the observed-scene chooser the reference sheet holds; the cut it adds
+          // lands after the selected block (CLIP-55, CLIP-67).
+          addScene:
+            !reading && observations.addCut
+              ? () => {
+                  setReferenceTab('observations')
+                  setReferenceOpen(true)
+                }
+              : undefined,
+          sourceSound: (cut) => {
+            const entry = upload.entries.find(
+              (entry) =>
+                entry.sourceId === cut.sourceId && entry.metadata.fingerprint === cut.fingerprint,
+            )
+            if (!entry) return undefined
+            const source = {
+              batchId: entry.batchId ?? '',
+              sourceId: cut.sourceId,
+              fingerprint: cut.fingerprint,
+              retainOriginalAudio: entry.retainOriginalAudio ?? false,
+            }
+            return {
+              value: sources.sound.value(source),
+              change:
+                reading || sources.sound.disabled
+                  ? undefined
+                  : (enabled: boolean) => sources.sound.change(source, enabled),
+            }
+          },
           intro: regions.regions ? regionBlock('intro') : undefined,
           outro: regions.regions ? regionBlock('outro') : undefined,
         }}

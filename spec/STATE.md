@@ -10,7 +10,7 @@
 ## active
 | tag | host | mode | since | at | doing |
 |---|---|---|---|---|---|
-| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | - |
+| vd1 | DESKTOP-VKPLS8P | autopilot | 2026-11-12T03:04Z | 2026-11-12T03:04Z | T764 |
 | sv8 | DESKTOP-VKPLS8P | autopilot | 2026-11-11T08:53Z | 2026-11-11T08:53Z | - |
 
 ## inbox
@@ -207,7 +207,7 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T762 | Run /clips/new as the unminted guide and mint on its first save | ARCH CLIP POST THEME | T759 T761 T768 | todo |
-| T764 | Open each scene block, caption and segment in its own sheet and reorder blocks | ARCH CLIP DUB THEME | T763 | todo |
+| T764 | Open each scene block, caption and segment in its own sheet and reorder blocks | ARCH CLIP DUB THEME | T763 | doing@261112.vd1 |
 | T765 | Dock ②'s revision field and 확정하기 the way the post's 글 다듬기 does | ARCH CLIP POST THEME QUOTA | T759 T760 T763 | todo |
 | T766 | Render, review and finalize the confirmed clip in ③ 영상 완성 | ARCH CLIP POST THEME | T765 T768 | todo |
 | T767 | Add ③'s checklist, upload text and 더 해 보기 card | ARCH CLIP POST TMPL EXPORT | T766 | todo |

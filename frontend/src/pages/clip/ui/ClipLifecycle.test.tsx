@@ -41,9 +41,10 @@ const confirm = () => screen.findByRole('button', { name: '확정하기' })
 // Item selection retains the preview; the phone opens details explicitly.
 const selectCut = async () => {
   await userEvent.click(
-    within(screen.getByRole('region', { name: '장면 블록' })).getByRole('button', { name: '컷 1' }),
+    within(screen.getByRole('region', { name: '장면 블록' })).getByRole('button', {
+      name: '컷 1 편집',
+    }),
   )
-  await userEvent.click(screen.getByRole('button', { name: '세부' }))
 }
 
 it('downloads without confirming, guards the result tab and confirms only once on double click', async () => {

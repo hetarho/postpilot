@@ -289,3 +289,21 @@ it('acknowledges creation while another cut is edited during its save', async ()
   expect(view.result.current.revision).toBe(3)
   expect(view.result.current.dirty).toBe(false)
 })
+
+it('moves a cut by a place as one undoable edit and refuses a move past either end', () => {
+  const view = setup()
+  const order = () => view.result.current.draft.cuts.map((c) => c.id)
+  expect(order()).toEqual(['cut-a', 'cut-b'])
+  let moved = true
+  act(() => {
+    moved = view.result.current.moveCut('cut-a', -1)
+  })
+  expect(moved).toBe(false)
+  act(() => {
+    moved = view.result.current.moveCut('cut-a', 1)
+  })
+  expect(moved).toBe(true)
+  expect(order()).toEqual(['cut-b', 'cut-a'])
+  act(() => view.result.current.dispatch({ type: 'undo' }))
+  expect(order()).toEqual(['cut-a', 'cut-b'])
+})

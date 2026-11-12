@@ -186,10 +186,9 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   )
   await userEvent.click(
     within(screen.getByRole('region', { name: '장면 블록' })).getByRole('button', {
-      name: /컷 1/,
+      name: '컷 1 편집',
     }),
   )
-  await userEvent.click(screen.getByRole('button', { name: '세부' }))
   expect(screen.getByRole('button', { name: '컷 삭제' })).toBeEnabled()
   await userEvent.keyboard('{Escape}')
   {
@@ -213,7 +212,7 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   // no focused job view took over.
   expect(screen.getByRole('tab', { name: '수정' })).toBeInTheDocument()
   expect(screen.getByRole('region', { name: '장면 블록' })).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: '세부' }))
+  await userEvent.click(screen.getByRole('button', { name: '컷 1 편집' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
 })
 
