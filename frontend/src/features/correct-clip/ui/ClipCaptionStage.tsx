@@ -40,6 +40,8 @@ export function ClipCaptionStage({
   language,
   change,
   disabled,
+  maxFrameHeight,
+  compact = false,
   overlayOnly = false,
   selected = true,
   onSelect,
@@ -62,6 +64,8 @@ export function ClipCaptionStage({
   language?: 'ko' | 'en'
   change: (edit: TimelineEdit, group?: string) => void
   disabled?: boolean
+  maxFrameHeight?: number
+  compact?: boolean
   overlayOnly?: boolean
   selected?: boolean
   onSelect?: () => void
@@ -126,15 +130,26 @@ export function ClipCaptionStage({
   }
   return (
     <div className={overlayOnly ? 'contents' : 'space-y-2'}>
-      {!overlayOnly && <Typography variant="fieldTitle">{t('placement.title')}</Typography>}
+      {!overlayOnly && !compact && (
+        <Typography variant="fieldTitle">{t('placement.title')}</Typography>
+      )}
       <div
         ref={stage}
         className={
           overlayOnly
             ? 'pointer-events-none absolute inset-0 z-30'
-            : 'bg-surface-recessed relative w-full overflow-hidden rounded-md'
+            : 'bg-surface-recessed relative mx-auto w-full overflow-hidden rounded-md'
         }
-        style={overlayOnly ? undefined : { aspectRatio: `${canvas.width} / ${canvas.height}` }}
+        style={
+          overlayOnly
+            ? undefined
+            : {
+                aspectRatio: `${canvas.width} / ${canvas.height}`,
+                maxWidth: maxFrameHeight
+                  ? maxFrameHeight * (canvas.width / canvas.height)
+                  : undefined,
+              }
+        }
       >
         {!overlayOnly &&
           (ground ? (
@@ -259,13 +274,13 @@ export function ClipCaptionStage({
           />
         )}
       </div>
-      {!overlayOnly && fragment?.representativeFrame && (
+      {!overlayOnly && !compact && fragment?.representativeFrame && (
         <Typography variant="meta">{t('placement.representative')}</Typography>
       )}
-      {!overlayOnly && !fragment && ground && (
+      {!overlayOnly && !compact && !fragment && ground && (
         <Typography variant="meta">{t('placement.drawing')}</Typography>
       )}
-      {!overlayOnly && (
+      {!overlayOnly && !compact && (
         <ClipNoticeList
           notices={notices.filter(
             (n) =>

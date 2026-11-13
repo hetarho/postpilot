@@ -440,7 +440,9 @@ it('opens the selected cut or caption in its own sheet, with its notice, and clo
   const textSheet = screen.getByRole('dialog', { name: '선택한 문구' })
   expect(within(textSheet).getByLabelText('자막 원문')).toBeInTheDocument()
   // The caption's own sheet places it over a frame from the cut it starts in (CLIP-143).
-  expect(within(textSheet).getByText('자막 배치')).toBeInTheDocument()
+  expect(
+    await within(textSheet).findByRole('button', { name: /자막을 끌어서 옮기기/ }),
+  ).toBeVisible()
   expect(
     within(textSheet).getByText('미리보기에서 자막을 끌거나 방향키로 위치를 조절하세요.'),
   ).toBeVisible()
@@ -484,6 +486,7 @@ it('carries its scrubber, its info control and its download on the preview itsel
     '미리보기 소리 듣기',
     '미리보기 새로고침',
     '흐름 보기',
+    '미리보기 크게 보기',
     '이 미리보기에 대해',
   ])
   await userEvent.click(about)

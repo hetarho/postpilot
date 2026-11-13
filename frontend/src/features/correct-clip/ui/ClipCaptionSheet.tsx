@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
@@ -12,7 +13,8 @@ import {
   type ClipEditableText,
   type TimelineEdit,
 } from '@/entities/clip-plan'
-import { Button, Sheet, Typography } from '@/shared/ui'
+import { CLIP_TIMELINE } from '@/entities/clip-design'
+import { Button, Sheet, Typography, useVisualViewport } from '@/shared/ui'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipTextControls } from './ClipTextControls'
 import { ClipTextReading } from './ClipItemReading'
@@ -62,6 +64,88 @@ export function ClipCaptionSheet({
 }) {
   const { t } = useTranslation('clips')
   const { t: tCommon } = useTranslation('common')
+  const viewport = useVisualViewport()
+  const headerRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const panel = headerRef.current?.closest<HTMLElement>('[role=dialog]')
+    const overlay = panel?.parentElement
+    if (!open || !panel || !overlay) return
+    overlay.style.top = `${viewport.offsetTop}px`
+    overlay.style.bottom = `${Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height)}px`
+    panel.style.maxHeight = `${viewport.height}px`
+    const body = panel.querySelector<HTMLElement>('.overflow-y-auto')
+    let frame = 0
+    let bounded:
+      | {
+          field: HTMLTextAreaElement
+          maxHeight: string
+          overflowY: string
+          overscrollBehaviorY: string
+        }
+      | undefined
+    const restoreField = () => {
+      if (!bounded) return
+      const { field, maxHeight, overflowY, overscrollBehaviorY } = bounded
+      field.style.maxHeight = maxHeight
+      field.style.overflowY = overflowY
+      field.style.overscrollBehaviorY = overscrollBehaviorY
+      bounded = undefined
+    }
+    const revealFocusedField = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const field = document.activeElement
+        if (
+          !body ||
+          !(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) ||
+          !body.contains(field)
+        )
+          return
+        const bodyBox = body.getBoundingClientRect()
+        const top = Math.max(bodyBox.top, viewport.offsetTop) + CLIP_TIMELINE.fieldGapPx
+        const bottom =
+          Math.min(bodyBox.bottom, viewport.offsetTop + viewport.height) - CLIP_TIMELINE.fieldGapPx
+        const available = Math.max(0, bottom - top)
+        if (
+          field instanceof HTMLTextAreaElement &&
+          available > 0 &&
+          field.getBoundingClientRect().height > available
+        ) {
+          if (bounded?.field !== field) {
+            restoreField()
+            bounded = {
+              field,
+              maxHeight: field.style.maxHeight,
+              overflowY: field.style.overflowY,
+              overscrollBehaviorY: field.style.overscrollBehaviorY,
+            }
+          }
+          // Keep the entire active field inside the sheet scrollport. Native
+          // textarea scrolling keeps its caret visible without guessing line positions.
+          field.style.maxHeight = `${available}px`
+          field.style.overflowY = 'auto'
+          field.style.overscrollBehaviorY = 'contain'
+        }
+        const fieldBox = field.getBoundingClientRect()
+        if (fieldBox.bottom > bottom) body.scrollTop += fieldBox.bottom - bottom
+        else if (fieldBox.top < top) body.scrollTop += fieldBox.top - top
+      })
+    }
+    // The sheet owns its scrollport; scrolling the document would leave a focused
+    // field behind the pinned frame when the software keyboard changes its height.
+    panel.addEventListener('focusin', revealFocusedField)
+    panel.addEventListener('focusout', restoreField)
+    revealFocusedField()
+    return () => {
+      cancelAnimationFrame(frame)
+      panel.removeEventListener('focusin', revealFocusedField)
+      panel.removeEventListener('focusout', restoreField)
+      restoreField()
+      overlay.style.top = ''
+      overlay.style.bottom = ''
+      panel.style.maxHeight = ''
+    }
+  }, [open, viewport.height, viewport.offsetTop])
   const titleId = `clip-text-sheet-${text.instanceId}`
   // The cut the caption's interval STARTS in: a caption may cross several, and it is placed once,
   // against the frame it opens over (CLIP-143).
@@ -73,18 +157,43 @@ export function ClipCaptionSheet({
       labelledBy={titleId}
       onClose={onClose}
       header={
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <Typography variant="fieldTitle" id={titleId} className="min-w-0">
-            {t('timeline.textControls')}
-          </Typography>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={tCommon('action.close')}
-            onClick={onClose}
-          >
-            <X aria-hidden="true" className="size-5" />
-          </Button>
+        <div ref={headerRef}>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <Typography variant="fieldTitle" id={titleId} className="min-w-0">
+              {t('timeline.textControls')}
+            </Typography>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={tCommon('action.close')}
+              onClick={onClose}
+            >
+              <X aria-hidden="true" className="size-5" />
+            </Button>
+          </div>
+          {!readOnly && text.role === 'caption' && stage && startCut && (
+            <ClipCaptionStage
+              text={text}
+              fragment={stage.fragment}
+              canvas={stage.canvas}
+              safeArea={stage.safeArea}
+              frameUrl={footage.localSources.find((s) => s.fingerprint === frameFingerprint)?.url}
+              frameFingerprint={frameFingerprint}
+              frameStartMs={outputToSourceMs(startCut, textInterval(plan, text).startMs)}
+              resolvePlayback={footage.resolvePlayback}
+              notices={notices}
+              language={language}
+              change={change}
+              disabled={disabled}
+              compact
+              maxFrameHeight={
+                viewport.height *
+                (viewport.height < CLIP_TIMELINE.compactViewportHeight
+                  ? CLIP_TIMELINE.compactPreviewFraction
+                  : CLIP_TIMELINE.previewViewportFraction)
+              }
+            />
+          )}
         </div>
       }
       footer={
@@ -110,21 +219,11 @@ export function ClipCaptionSheet({
         <fieldset disabled={disabled} className="min-w-0 space-y-4">
           {text.role === 'caption' && stage && startCut && (
             <>
-              <ClipCaptionStage
-                text={text}
-                fragment={stage.fragment}
-                canvas={stage.canvas}
-                safeArea={stage.safeArea}
-                frameUrl={footage.localSources.find((s) => s.fingerprint === frameFingerprint)?.url}
-                frameFingerprint={frameFingerprint}
-                frameStartMs={outputToSourceMs(startCut, textInterval(plan, text).startMs)}
-                resolvePlayback={footage.resolvePlayback}
-                notices={notices}
-                language={language}
-                change={change}
-                disabled={disabled}
-              />
               <Typography variant="meta">{t('placement.mainHelp')}</Typography>
+              {stage.fragment?.representativeFrame && (
+                <Typography variant="meta">{t('placement.representative')}</Typography>
+              )}
+              {!stage.fragment && <Typography variant="meta">{t('placement.drawing')}</Typography>}
             </>
           )}
           <ClipTextControls
