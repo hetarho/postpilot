@@ -200,9 +200,8 @@ func TestPartialReobservationReplacesOnlyTheSelectedEntries(t *testing.T) {
 	}
 }
 
-// A5 (server side) — a photo with nothing to reuse is observed whatever the client asked for.
-// The picker states the rule; the run enforces it, because writing from a photo nothing has
-// ever looked at is the failure this whole change exists to avoid.
+// A5 (server side) — a writing run observes exactly the photos with nothing to reuse, whatever
+// a client asked for: the RPC drops a picker answer, and the domain request carries none (GEN-89).
 func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 	images, stored := storedSnapshot(3, "old/observer")
 	// IMG_2 was observed and came back empty; IMG_4 was attached after the last observation.
@@ -214,7 +213,6 @@ func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer(),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -225,94 +223,33 @@ func TestStartForcesPhotosWithNothingToReuse(t *testing.T) {
 	if !reflect.DeepEqual(*frozen.ObserveFiles, []string{"IMG_2.jpg", "IMG_4.jpg"}) {
 		t.Fatalf("frozen set = %v, want the two photos with nothing to reuse", *frozen.ObserveFiles)
 	}
+	if len(frozen.Observations) != 2 {
+		t.Fatalf("frozen snapshot = %+v, want the two reusable entries", frozen.Observations)
+	}
 	// T006: the credit hold prices the frozen set, not the attached count.
 	if calls := jobs.generations[0].ObserveCalls; calls != 1 {
 		t.Fatalf("ObserveCalls = %d, want 1 (2 photos at batch %d)", calls, reobserveBatchSize)
 	}
-	// The unknown name is dropped, exactly as an unattached observation would be.
-	if _, err := svc.Start(context.Background(), StartRequest{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer("NOT_ATTACHED.jpg", "IMG_1.jpg", "IMG_1.jpg"),
-	}); err != nil {
-		t.Fatal(err)
-	}
-	frozen = jobs.frozen(t, 1)
-	if !reflect.DeepEqual(*frozen.ObserveFiles, []string{"IMG_1.jpg", "IMG_2.jpg", "IMG_4.jpg"}) {
-		t.Fatalf("frozen set = %v, want the asked photo plus the two forced ones", *frozen.ObserveFiles)
-	}
 }
 
-// T006 — the hold and the work must agree: reusing everything costs no observation call, so
-// it must not be held for one either.
+// T006 — the hold and the work must agree: a writing run that reuses every observation costs no
+// observation call, so it must not be held for one either.
 func TestStartPricesTheHoldOverTheFrozenSet(t *testing.T) {
 	images, stored := storedSnapshot(15, "old/observer")
 	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
 	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 
-	for _, test := range []struct {
-		name      string
-		requested *[]string
-		wantCalls int
-	}{
-		{name: "reuse everything", requested: stringPointer(), wantCalls: 0},
-		{name: "reuse ten of fifteen", requested: &[]string{"IMG_1.jpg", "IMG_2.jpg", "IMG_3.jpg", "IMG_4.jpg", "IMG_5.jpg"}, wantCalls: 2},
-		{name: "no picker answer", requested: nil, wantCalls: 4},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			jobs.generations = nil
-			if _, err := svc.Start(context.Background(), StartRequest{
-				UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-				ObserveFiles: test.requested,
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if got := jobs.generations[0].ObserveCalls; got != test.wantCalls {
-				t.Fatalf("ObserveCalls = %d, want %d", got, test.wantCalls)
-			}
-		})
-	}
-}
-
-// A7 — the selection is frozen at enqueue. Attaching, deleting or switching the observation
-// model after Start returns cannot change what the dequeued run observes.
-func TestPostEditsAfterEnqueueCannotChangeWhatTheRunObserves(t *testing.T) {
-	images, stored := storedSnapshot(4, "old/observer")
-	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
-	jobs := &fakeJobs{id: "job"}
-	models := observingModels(t)
-	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
-
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer("IMG_2.jpg"),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	// The post moves on while the job waits: a photo is added, another is deleted, and the
-	// stored snapshot is replaced by a different model's work.
-	posts.input.Images = []Image{
-		{Filename: "IMG_1.jpg", Key: "key-1"}, {Filename: "IMG_2.jpg", Key: "key-2"},
-		{Filename: "IMG_3.jpg", Key: "key-3"}, {Filename: "IMG_5.jpg", Key: "key-5"},
+	if got := jobs.generations[0].ObserveCalls; got != 0 {
+		t.Fatalf("ObserveCalls = %d, want 0", got)
 	}
-	posts.input.Observations = []Observation{{File: "IMG_1.jpg", Scene: "rewritten", Model: "other/observer"}}
-
-	if err := svc.Generate(context.Background(), jobs.queued(0), func(string, int, int) {}); err != nil {
-		t.Fatal(err)
-	}
-	if got := filesOfObserveCalls(models); !reflect.DeepEqual(got, [][]string{{"IMG_2.jpg"}}) {
-		t.Fatalf("observed %v, want only the frozen IMG_2.jpg", got)
-	}
-	final := posts.observationWrites[len(posts.observationWrites)-1]
-	// IMG_4 was deleted so it drops out; IMG_5 arrived after the freeze, so this run neither
-	// observes it nor invents an entry for it. IMG_1 and IMG_3 keep the FROZEN text, not the
-	// text the post picked up afterwards.
-	var got []string
-	for _, observation := range final {
-		got = append(got, observation.File+"="+observation.Scene)
-	}
-	if !reflect.DeepEqual(got, []string{"IMG_1.jpg=stored-1", "IMG_2.jpg=fresh", "IMG_3.jpg=stored-3"}) {
-		t.Fatalf("persisted snapshot = %v", got)
+	if frozen := jobs.frozen(t, 0); frozen.ObserveFiles == nil || len(*frozen.ObserveFiles) != 0 {
+		t.Fatalf("frozen set = %v, want present and empty", frozen.ObserveFiles)
 	}
 }
 
@@ -352,10 +289,9 @@ func TestZeroPhotoPathStillClearsTheSnapshot(t *testing.T) {
 	jobs := &fakeJobs{id: "job"}
 	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
 
-	// Even a client that sends a picker answer for a photoless post freezes nothing.
+	// A photoless post freezes nothing: there is no reuse decision to make.
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer("IMG_1.jpg"),
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -489,7 +425,6 @@ func TestAPhotoAttachedAfterEnqueueNeverReachesTheWritePrompt(t *testing.T) {
 
 	if _, err := svc.Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: stringPointer(),
 	}); err != nil {
 		t.Fatal(err)
 	}

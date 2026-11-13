@@ -10,8 +10,10 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/postpilot/backend/internal/auth"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/generation"
+	"github.com/postpilot/backend/internal/llm"
 )
 
 func TestGenerationErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T) {
@@ -34,7 +36,6 @@ func TestGenerationErrorsHaveStableReasonsCodesAndAllowlistedParams(t *testing.T
 		"revision content":         {"start revision", generation.ErrRevisionContentRequired, connect.CodeFailedPrecondition, "REVISION_CONTENT_REQUIRED", nil},
 		"storyline missing":        {"start storyline revision", generation.ErrStorylineMissing, connect.CodeFailedPrecondition, "POST_STORYLINE_MISSING", nil},
 		"required template answer": {"start generation", errors.Join(errors.New("private answer detail"), &generation.RequiredTemplateAnswerError{Label: "직접 겪은 일"}), connect.CodeFailedPrecondition, "TEMPLATE_REQUIRED_ANSWER_MISSING", map[string]string{"label": "직접 겪은 일"}},
-		"storyline reobserve":      {"start generation", generation.ErrStorylineReobserve, connect.CodeInvalidArgument, "GENERATION_STORYLINE_REOBSERVE", nil},
 		"voice not made":           {"start generation", generation.ErrVoiceNotMade, connect.CodeFailedPrecondition, "VOICE_NOT_MADE", nil},
 		"voice deleted":            {"start generation", generation.ErrVoiceDeleted, connect.CodeFailedPrecondition, "VOICE_DELETED", nil},
 		"voice changed":            {"start generation", generation.ErrVoiceMismatch, connect.CodeFailedPrecondition, "GENERATION_VOICE_MISMATCH", nil},
@@ -161,4 +162,205 @@ func generationAppErrorDetail(t *testing.T, err error) *postpilotv1.AppErrorDeta
 		t.Fatalf("detail type = %T", value)
 	}
 	return detail
+}
+
+// startHarness is a generation service over in-memory ports, enough for the start RPCs to reach
+// the queue: one post with two photos and one stored observation.
+type startHarness struct {
+	post generation.PostInput
+	jobs startJobs
+}
+
+type startJobs struct {
+	err          error
+	observations []generation.StartObservationRequest
+	generations  []generation.StartRequest
+	payloads     [][]byte
+}
+
+func (j *startJobs) EnqueueGeneration(_ context.Context, request generation.StartRequest, payload []byte) (string, error) {
+	j.generations = append(j.generations, request)
+	j.payloads = append(j.payloads, payload)
+	return "generate-job", j.err
+}
+func (j *startJobs) EnqueueRevision(context.Context, generation.StartRevisionRequest, []byte) (string, error) {
+	return "", errors.New("unexpected revision")
+}
+func (j *startJobs) EnqueueStoryline(context.Context, generation.StartStorylineRequest, []byte) (string, error) {
+	return "", errors.New("unexpected storyline")
+}
+func (j *startJobs) EnqueueStorylineRevision(context.Context, generation.StartStorylineRevisionRequest, []byte) (string, error) {
+	return "", errors.New("unexpected storyline revision")
+}
+func (j *startJobs) EnqueueObservation(_ context.Context, request generation.StartObservationRequest, payload []byte) (string, error) {
+	j.observations = append(j.observations, request)
+	j.payloads = append(j.payloads, payload)
+	return "observe-job", j.err
+}
+func (j *startJobs) GetGeneration(context.Context, string, string) (*generation.JobSummary, error) {
+	return nil, generation.ErrNotFound
+}
+
+type startPosts struct{ harness *startHarness }
+
+func (p startPosts) AttachedImages(context.Context, string, string) (generation.PostInput, error) {
+	return p.harness.post, nil
+}
+func (startPosts) SetObservations(context.Context, string, string, []generation.Observation) error {
+	return errors.New("a start wrote observations")
+}
+func (startPosts) SetGeneratedContent(context.Context, string, string, generation.PostContent, generation.Language, *generation.WriteAnnotations) error {
+	return errors.New("a start wrote content")
+}
+func (startPosts) SetStoryline(context.Context, string, string, generation.Storyline) error {
+	return errors.New("a start wrote a storyline")
+}
+
+type startModels struct{}
+
+func (startModels) Resolve(ref llm.ModelRef) (llm.ModelInfo, bool) {
+	return llm.ModelInfo{Stages: []string{llm.StageNameObserve, llm.StageNameWrite}}, ref.String() != ""
+}
+func (startModels) Complete(context.Context, llm.ModelRef, llm.Request) (llm.Response, error) {
+	return llm.Response{}, errors.New("a start called a model")
+}
+
+type startProfiles struct{}
+
+func (startProfiles) ProfileForPrompt(context.Context, string, string, generation.Language) (generation.Profile, error) {
+	return generation.Profile{}, nil
+}
+
+type startBudget struct{}
+
+func (startBudget) Write(*int, bool) int       { return 1000 }
+func (startBudget) Revise(int, *int, bool) int { return 1000 }
+func (startBudget) Storyline(bool) int         { return 1000 }
+func (startBudget) Observation() int           { return 1000 }
+
+type startBriefs struct{}
+
+func (startBriefs) RenderedFor(context.Context, string, string, bool, []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
+	return generation.TemplateBrief{}, false, nil
+}
+func (startBriefs) RenderedForNewWrite(context.Context, string, string, bool, []generation.TemplateAnswer) (generation.TemplateBrief, bool, error) {
+	return generation.TemplateBrief{}, false, nil
+}
+
+type startGuidelines struct{}
+
+func (startGuidelines) ForPrompt(context.Context, string, *string, *string, generation.Language, bool) (generation.FrozenGuidelines, error) {
+	return generation.FrozenGuidelines{}, nil
+}
+
+type startMemories struct{}
+
+func (startMemories) ForPost(context.Context, string, []string) ([]string, error) { return nil, nil }
+
+type startCandidates struct{}
+
+func (startCandidates) Record(context.Context, string, string, string) error { return nil }
+
+type startLinker struct{}
+
+func (startLinker) PresignGet(context.Context, string, time.Duration) (string, error) {
+	return "", errors.New("no video in this test")
+}
+
+type startQuality struct{}
+
+func (startQuality) RulesFor(context.Context, string, string, []string, generation.Language) ([]string, error) {
+	return nil, nil
+}
+
+func newStartHarness() (*startHarness, *Handler) {
+	harness := &startHarness{post: generation.PostInput{
+		Slug: "post", UserID: "alice", TargetLanguage: generation.LanguageKorean,
+		Images:       []generation.Image{{Filename: "IMG_1.jpg", Key: "k1"}, {Filename: "IMG_2.jpg", Key: "k2"}},
+		Observations: []generation.Observation{{File: "IMG_1.jpg", Scene: "stored", Model: "p/old"}},
+	}}
+	service := generation.NewService(startPosts{harness}, startProfiles{}, startModels{}, nil, &harness.jobs, 4,
+		generation.DefaultReasoningPolicy(), startBudget{}, generation.Deps{
+			Templates: startBriefs{}, Guidelines: startGuidelines{}, Memories: startMemories{}, Candidates: startCandidates{},
+			Videos: startLinker{}, VideoURLTTL: time.Minute, QualityRules: startQuality{},
+		})
+	return harness, NewHandler(service)
+}
+
+// GEN-89, GEN-9: StartObservation maps the slug, the observe model and the selection with its
+// presence, and answers the job id.
+func TestStartObservationMapsTheRequest(t *testing.T) {
+	harness, handler := newStartHarness()
+	ctx := auth.WithUser(context.Background(), "alice")
+	for _, test := range []struct {
+		name      string
+		reobserve *postpilotv1.ReobserveSelection
+		wantCalls int
+	}{
+		{name: "absent observes both photos", reobserve: nil, wantCalls: 1},
+		{name: "empty observes only the missing one", reobserve: &postpilotv1.ReobserveSelection{}, wantCalls: 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			harness.jobs.observations = nil
+			response, err := handler.StartObservation(ctx, connect.NewRequest(&postpilotv1.StartObservationRequest{
+				PostSlug: "post", Reobserve: test.reobserve, ObserveModel: &postpilotv1.ModelRef{ProviderId: "p", ModelId: "eye"},
+			}))
+			if err != nil || response.Msg.GetJobId() != "observe-job" {
+				t.Fatalf("response = %v, %v", response, err)
+			}
+			request := harness.jobs.observations[0]
+			if request.UserID != "alice" || request.PostSlug != "post" || request.ObserveModel != "p/eye" || request.ObserveCalls != test.wantCalls {
+				t.Fatalf("request = %+v", request)
+			}
+		})
+	}
+	payload := string(harness.jobs.payloads[len(harness.jobs.payloads)-1])
+	if !strings.Contains(payload, `"observe_files":["IMG_2.jpg"]`) {
+		t.Fatalf("empty selection froze %s, want only the photo lacking an observation", payload)
+	}
+	if _, err := handler.StartObservation(context.Background(), connect.NewRequest(&postpilotv1.StartObservationRequest{PostSlug: "post"})); connect.CodeOf(err) != connect.CodeUnauthenticated {
+		t.Fatalf("unauthenticated = %v", err)
+	}
+}
+
+// POST-74, GEN-23: a published post and a post holding an active job refuse the observation job
+// with the shared reasons, the active job's id carried.
+func TestStartObservationRefusesPublishedAndBusyPosts(t *testing.T) {
+	harness, handler := newStartHarness()
+	ctx := auth.WithUser(context.Background(), "alice")
+	request := &postpilotv1.StartObservationRequest{PostSlug: "post", ObserveModel: &postpilotv1.ModelRef{ProviderId: "p", ModelId: "eye"}}
+
+	harness.post.Published = true
+	_, err := handler.StartObservation(ctx, connect.NewRequest(request))
+	if detail := generationAppErrorDetail(t, err); connect.CodeOf(err) != connect.CodeFailedPrecondition || detail.GetReason() != "POST_PUBLISHED_LOCKED" {
+		t.Fatalf("published = %v", err)
+	}
+	harness.post.Published = false
+	harness.jobs.err = &generation.JobAlreadyInProgressError{ActiveID: "job-active"}
+	_, err = handler.StartObservation(ctx, connect.NewRequest(request))
+	detail := generationAppErrorDetail(t, err)
+	if connect.CodeOf(err) != connect.CodeFailedPrecondition || detail.GetReason() != "GENERATION_ALREADY_RUNNING" || detail.GetParams()["active_job_id"] != "job-active" {
+		t.Fatalf("busy = %v (%#v)", err, detail)
+	}
+}
+
+// GEN-89: a writing start still accepts a selection from an older client and ignores it — the
+// run freezes only the photo lacking an observation.
+func TestStartGenerationAcceptsAndIgnoresASelection(t *testing.T) {
+	harness, handler := newStartHarness()
+	ctx := auth.WithUser(context.Background(), "alice")
+	response, err := handler.StartGeneration(ctx, connect.NewRequest(&postpilotv1.StartGenerationRequest{
+		PostSlug: "post", Reobserve: &postpilotv1.ReobserveSelection{Files: []string{"IMG_1.jpg"}},
+		ObserveModel: &postpilotv1.ModelRef{ProviderId: "p", ModelId: "eye"},
+		WriteModel:   &postpilotv1.ModelRef{ProviderId: "p", ModelId: "pen"},
+	}))
+	if err != nil || response.Msg.GetJobId() != "generate-job" {
+		t.Fatalf("response = %v, %v", response, err)
+	}
+	if calls := harness.jobs.generations[0].ObserveCalls; calls != 1 {
+		t.Fatalf("ObserveCalls = %d, want 1", calls)
+	}
+	if payload := string(harness.jobs.payloads[0]); !strings.Contains(payload, `"observe_files":["IMG_2.jpg"]`) {
+		t.Fatalf("payload froze %s, want only IMG_2.jpg", payload)
+	}
 }

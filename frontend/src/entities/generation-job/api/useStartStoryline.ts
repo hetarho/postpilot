@@ -9,16 +9,16 @@ import {
 import { formatAppFailure } from '@/shared/lib'
 import type { ModelRef } from '../model/types'
 
-/** 스토리라인 먼저 and 다시 만들기 (GEN-68): a storyline job, started like a generation — the
- *  same models and the same re-observation picker answer, with the same presence rules — and
- *  writing the post's storyline instead of its content. */
+/** 스토리라인 먼저 and 다시 만들기 (GEN-68): a storyline job, started like a generation with the
+ *  same models, observing only the attachments lacking an observation (GEN-89), and writing the
+ *  post's storyline instead of its content. */
 export function useStartStoryline() {
   const mutation = useMutation(GenerationService.method.startStoryline)
 
   return {
     ...mutation,
     errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
-    /** `reobserveFiles` carries PRESENCE, as `useStartGeneration`'s does. */
+    /** `reobserveFiles` is ignored by the server, as `useStartGeneration`'s is. */
     start: (
       postSlug: string,
       observeModel: ModelRef | undefined,

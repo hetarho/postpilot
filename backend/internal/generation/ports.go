@@ -56,6 +56,7 @@ type Jobs interface {
 	EnqueueRevision(ctx context.Context, request StartRevisionRequest, payload []byte) (string, error)
 	EnqueueStoryline(ctx context.Context, request StartStorylineRequest, payload []byte) (string, error)
 	EnqueueStorylineRevision(ctx context.Context, request StartStorylineRevisionRequest, payload []byte) (string, error)
+	EnqueueObservation(ctx context.Context, request StartObservationRequest, payload []byte) (string, error)
 	GetGeneration(ctx context.Context, id, userID string) (*JobSummary, error)
 }
 

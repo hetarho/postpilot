@@ -137,7 +137,7 @@ func postVoiceWork(kind, userID, postSlug, voiceID string) ([]job.Subject, []job
 }
 
 func ordinaryPostWriteKinds() []string {
-	return []string{job.KindGenerate, job.KindRevise, job.KindStoryline, job.KindReviseStoryline}
+	return []string{job.KindGenerate, job.KindRevise, job.KindStoryline, job.KindReviseStoryline, job.KindObserve}
 }
 func postContentKinds() []string {
 	return []string{job.KindGenerate, job.KindRevise, job.KindModelExperiment}

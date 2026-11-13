@@ -644,6 +644,9 @@ type fakeJobs struct {
 	storylinePayloads        [][]byte
 	storylineRequests        []StartStorylineRevisionRequest
 	storylineRequestPayloads [][]byte
+	// observations and observationPayloads are what StartObservation enqueued (GEN-89).
+	observations        []StartObservationRequest
+	observationPayloads [][]byte
 }
 
 func (f *fakeJobs) EnqueueGeneration(_ context.Context, request StartRequest, payload []byte) (string, error) {
@@ -702,6 +705,12 @@ func (f *fakeJobs) EnqueueStorylineRevision(_ context.Context, request StartStor
 	f.enqueues++
 	f.storylineRequests = append(f.storylineRequests, request)
 	f.storylineRequestPayloads = append(f.storylineRequestPayloads, append([]byte(nil), payload...))
+	return f.id, f.err
+}
+func (f *fakeJobs) EnqueueObservation(_ context.Context, request StartObservationRequest, payload []byte) (string, error) {
+	f.enqueues++
+	f.observations = append(f.observations, request)
+	f.observationPayloads = append(f.observationPayloads, append([]byte(nil), payload...))
 	return f.id, f.err
 }
 func (f fakeJobs) GetGeneration(context.Context, string, string) (*JobSummary, error) {

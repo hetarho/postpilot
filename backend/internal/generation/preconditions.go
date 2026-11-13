@@ -29,7 +29,10 @@ type startStage struct {
 	withVoice   func(post PostInput, voiceID string) error
 	// comparison resolves its own write candidates and skips the ordinary write-model check.
 	comparison bool
-	writeModel string
+	// observeOnly is the observation job (GEN-89): it writes nothing, so neither the language,
+	// the voice nor a write model is a precondition of it.
+	observeOnly bool
+	writeModel  string
 	// observe is how the start observes. observeModel is checked only when the post has something
 	// to look at, and observeFiles is the re-observation picker's answer (GEN-8, GEN-9).
 	observe      observeMode
@@ -42,7 +45,8 @@ type observeMode int
 const (
 	// observeNothing: a revision reads no observation and takes no observe model (GEN-38).
 	observeNothing observeMode = iota
-	// observePicked observes as a generation does, the re-observation picker included.
+	// observePicked observes the selection: the picker's answer for an observation job, and for a
+	// writing run an empty one, which is the attachments with nothing to reuse (GEN-8, GEN-9).
 	observePicked
 	// observeHeld observes, along the stored storyline, only what it holds that has no
 	// observation, with no picker (GEN-70).
@@ -105,7 +109,7 @@ func (s *Service) startPreconditions(ctx context.Context, userID, postSlug strin
 			return startInput{}, ErrContentLanguageRequired
 		}
 		in.language = *post.ContentLanguage
-	} else {
+	} else if !stage.observeOnly {
 		if !post.TargetLanguage.Valid() {
 			return startInput{}, ErrLanguageRequired
 		}
@@ -116,15 +120,17 @@ func (s *Service) startPreconditions(ctx context.Context, userID, postSlug strin
 			return startInput{}, err
 		}
 	}
-	if in.voiceID, err = activeVoice(post); err != nil {
-		return startInput{}, err
+	if !stage.observeOnly {
+		if in.voiceID, err = activeVoice(post); err != nil {
+			return startInput{}, err
+		}
 	}
 	if stage.withVoice != nil {
 		if err := stage.withVoice(post, in.voiceID); err != nil {
 			return startInput{}, err
 		}
 	}
-	if !stage.comparison {
+	if !stage.comparison && !stage.observeOnly {
 		if in.write, err = s.requireWriteModel(stage.writeModel); err != nil {
 			return startInput{}, err
 		}

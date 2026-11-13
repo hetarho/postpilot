@@ -24,11 +24,9 @@ type StartStorylineRequest struct {
 	PostSlug                string
 	ObserveModel            string
 	WriteModel              string
-	// ObserveFiles is the re-observation picker's answer, with StartRequest's presence rules.
-	ObserveFiles   *[]string
-	TargetLanguage Language
-	VoiceID        string
-	ObserveCalls   int
+	TargetLanguage          Language
+	VoiceID                 string
+	ObserveCalls            int
 	// WriteNativeEffort is frozen from the write model at enqueue, as Start freezes it, so the
 	// hold prices exactly the cap the call sends (GEN-22).
 	WriteNativeEffort bool
@@ -70,13 +68,13 @@ type StorylineRevisionJob struct {
 }
 
 // StartStoryline freezes a storyline job (GEN-68) under Start's preconditions, in Start's
-// order, and with its observe semantics: the same selection, the same reusable snapshot and
-// the same frozen material, without the length, the tags, the rules and the voice, which a
-// plan does not use.
+// order, and with its observe semantics: the attachments lacking an observation, the reusable
+// snapshot and the same frozen material, without the length, the tags, the rules and the voice,
+// which a plan does not use.
 func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequest) (string, error) {
 	in, err := s.startPreconditions(ctx, request.UserID, request.PostSlug, startStage{
 		writeModel: request.WriteModel,
-		observe:    observePicked, observeModel: request.ObserveModel, observeFiles: request.ObserveFiles,
+		observe:    observePicked, observeModel: request.ObserveModel, observeFiles: missingObservationsOnly(),
 	})
 	if err != nil {
 		return "", err

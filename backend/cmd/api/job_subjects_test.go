@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
+	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/job"
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/platform/db"
@@ -97,6 +98,8 @@ func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 		// A storyline job writes the storyline, never the content (GEN-68, GEN-69).
 		job.KindStoryline:       false,
 		job.KindReviseStoryline: false,
+		// An observation job writes observations, never the content (GEN-89).
+		job.KindObserve: false,
 	} {
 		if got := postContentWork(kind); got != want {
 			t.Errorf("postContentWork(%q) = %v, want %v", kind, got, want)
@@ -109,10 +112,10 @@ func TestOnlyGenerationRevisionAndComparisonsWritePostContent(t *testing.T) {
 	}
 }
 
-// GEN-68, GEN-69: a storyline job is post-targeted — one active job per post — and belongs to no
-// voice.
+// GEN-68, GEN-69, GEN-89: a storyline or observation job is post-targeted — one active job per
+// post — and belongs to no voice.
 func TestStorylineWorkIsPostTargetedAndOwnsNoVoice(t *testing.T) {
-	for _, kind := range []string{job.KindStoryline, job.KindReviseStoryline} {
+	for _, kind := range []string{job.KindStoryline, job.KindReviseStoryline, job.KindObserve} {
 		if voiceOwnedKind(kind) {
 			t.Errorf("%s is voice-owned", kind)
 		}
@@ -266,5 +269,47 @@ func TestDispatchStartsEveryKindInItsFirstStage(t *testing.T) {
 		if err := store.Finish(t.Context(), id, job.StatusDone, nil, at); err != nil {
 			t.Fatal(err)
 		}
+	}
+}
+
+// GEN-89: registerJobs binds the observation kind, so a started observation job drains through
+// the real queue and post: one hold listing only its observation call, the observation and its
+// rotation stored, and no content, storyline or status written.
+func TestTheObservationKindIsRegisteredAndWritesOnlyObservations(t *testing.T) {
+	models := &recordingModels{
+		observeAnswer: `{"observations":[{"file":"turn.jpg","scene":"컵","mood":"","visible_text":"","objects":[],"people_present":false,"rotation":90}]}`,
+	}
+	h := newDrainHarness(t, models)
+	draft := h.draft(t, "")
+	if _, err := h.handle.Writer.Exec(`INSERT INTO images(id,post_slug,filename,r2_key,width,height,bytes,created_at) VALUES('turn-photo',?,'turn.jpg','private/turn.jpg',120,180,4,?)`, draft.Slug, time.Now().UTC().Format(time.RFC3339Nano)); err != nil {
+		t.Fatal(err)
+	}
+	id, err := h.generation.StartObservation(h.ctx, generation.StartObservationRequest{UserID: "alice", PostSlug: draft.Slug, ObserveModel: "p/observer"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.waitDone(id)
+	stored, err := h.posts.Get(h.ctx, "alice", draft.Slug)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(stored.Observations) != 1 || stored.Observations[0].Scene != "컵" || stored.Images[0].Rotation != 90 {
+		t.Fatalf("observation not stored: %+v / %+v", stored.Observations, stored.Images)
+	}
+	if stored.Content != nil || stored.Storyline != nil || stored.Status != draft.Status || stored.ContentRevision != draft.ContentRevision {
+		t.Fatalf("an observation job wrote more than observations: %+v", stored)
+	}
+	if len(h.admitter.holds) != 1 || h.admitter.holds[0].Kind != job.KindObserve || len(h.admitter.holds[0].Calls) != 1 || h.admitter.holds[0].Calls[0].Stage != "observe" {
+		t.Fatalf("holds = %+v, want one observe-only hold", h.admitter.holds)
+	}
+	// 관찰하기 with nothing missing is still admitted, listing zero calls (GEN-29).
+	none := []string{}
+	id, err = h.generation.StartObservation(h.ctx, generation.StartObservationRequest{UserID: "alice", PostSlug: draft.Slug, ObserveModel: "p/observer", ObserveFiles: &none})
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.waitDone(id)
+	if len(h.admitter.holds) != 2 || len(h.admitter.holds[1].Calls) != 0 {
+		t.Fatalf("holds = %+v, want a second hold with no call", h.admitter.holds)
 	}
 }

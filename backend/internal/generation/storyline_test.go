@@ -113,10 +113,9 @@ func TestStartStorylineFreezesTheMaterialAndTheSelection(t *testing.T) {
 	deps.Memories = &recordingMemories{texts: []string{"매운 음식을 못 먹는다"}}
 	svc := storylineService(posts, jobs, storylineModels(storylineAnswer), deps)
 
-	reobserve := []string{"IMG_2.jpg"}
+	// GEN-89: the storyline run freezes exactly the attachment lacking an observation.
 	id, err := svc.StartStoryline(context.Background(), StartStorylineRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		ObserveFiles: &reobserve,
 	})
 	if err != nil || id != "job" || len(jobs.storylineStarts) != 1 {
 		t.Fatalf("start = %q, %v (%d enqueued)", id, err, len(jobs.storylineStarts))
@@ -525,19 +524,12 @@ func alongStorylinePost() PostInput {
 	return input
 }
 
-// GEN-70: a run along the storyline needs one, takes no picker, freezes the paragraphs, and
-// observes exactly the held attachments with no reusable observation.
+// GEN-70: a run along the storyline needs one, freezes the paragraphs, and observes exactly the
+// held attachments with no reusable observation.
 func TestAFromStorylineStartFreezesTheStorylineAndItsObserveSet(t *testing.T) {
 	jobs := &fakeJobs{id: "job"}
 	posts := &fakePosts{input: alongStorylinePost()}
 	svc := storylineService(posts, jobs, storylineModels(storylineAnswer), testDeps())
-	files := []string{"IMG_3.jpg"}
-	if _, err := svc.Start(context.Background(), StartRequest{
-		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
-		FromStoryline: true, ObserveFiles: &files,
-	}); !errors.Is(err, ErrStorylineReobserve) || posts.reads != 0 {
-		t.Fatalf("a picker beside the storyline: %v (%d reads)", err, posts.reads)
-	}
 	bare := storylinePost()
 	if _, err := storylineService(&fakePosts{input: bare}, jobs, storylineModels(storylineAnswer), testDeps()).Start(context.Background(), StartRequest{
 		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(), FromStoryline: true,

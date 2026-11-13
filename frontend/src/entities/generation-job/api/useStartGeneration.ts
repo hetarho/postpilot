@@ -17,10 +17,9 @@ export function useStartGeneration() {
   return {
     ...mutation,
     errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
-    /** `reobserveFiles` carries PRESENCE: `undefined` is a start with no re-observation
-     *  decision, which observes every attached photo, while an EMPTY array is the decision to
-     *  observe nothing and reuse every stored observation. Collapsing the two would turn a
-     *  reuse-everything confirmation back into a full re-observation. */
+    /** `reobserveFiles` is still sent for an older server, but the server ignores it: a writing
+     *  run observes only the attachments lacking an observation, and re-observing is
+     *  `useStartObservation`'s (GEN-89). */
     start: (
       postSlug: string,
       observeModel: ModelRef | undefined,

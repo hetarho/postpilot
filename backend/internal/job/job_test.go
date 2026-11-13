@@ -204,6 +204,28 @@ func TestEnqueueGuardsPostAndUserKind(t *testing.T) {
 	}
 }
 
+// GEN-89: the observation job is its own kind, writes nothing in a language so it needs none,
+// and shares the post's one-active-job guard with every other kind (GEN-31).
+func TestObservationJobIsPostGuardedAndNeedsNoLanguage(t *testing.T) {
+	h := newHarness(t)
+	ctx := context.Background()
+	if job.KindObserve != "observe" {
+		t.Fatalf("KindObserve = %q", job.KindObserve)
+	}
+	observing, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindObserve, UserID: "alice", ObserveModel: "p/eye"}, "post-a", ""))
+	if err != nil {
+		t.Fatalf("observation job: %v", err)
+	}
+	var active *job.ErrAlreadyInProgress
+	_, err = h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindGenerate, UserID: "alice", TargetLanguage: "ko"}, "post-a", ""))
+	if !errors.As(err, &active) || active.ActiveID != observing {
+		t.Fatalf("a write beside an observation = %v, want active %s", err, observing)
+	}
+	if _, err := h.queue.Enqueue(ctx, attach(job.NewJob{Kind: job.KindObserve, UserID: "alice", ObserveModel: "p/eye"}, "post-b", "")); err != nil {
+		t.Fatalf("another post's observation: %v", err)
+	}
+}
+
 // GEN-31: voice-owned work is guarded per (voice, kind), so two voices of one account
 // analyze concurrently while one voice still attaches to its active job; the frozen voice
 // is projected back, and any job frozen to a voice makes that voice busy for deletion.

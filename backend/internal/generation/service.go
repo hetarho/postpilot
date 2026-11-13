@@ -185,18 +185,15 @@ func (s *Service) StartRevision(ctx context.Context, request StartRevisionReques
 }
 
 func (s *Service) Start(ctx context.Context, request StartRequest) (string, error) {
-	// A run along the storyline observes exactly what the storyline holds (GEN-70); a picker
-	// answer beside it is refused before anything is read.
-	if request.FromStoryline && request.ObserveFiles != nil {
-		return "", ErrStorylineReobserve
-	}
+	// A writing run observes only what lacks a reusable observation, and along the storyline only
+	// what the storyline holds (GEN-8, GEN-70); re-observing is the observation job's.
 	observe := observePicked
 	if request.FromStoryline {
 		observe = observeHeld
 	}
 	in, err := s.startPreconditions(ctx, request.UserID, request.PostSlug, startStage{
 		storyline: request.FromStoryline, writeModel: request.WriteModel,
-		observe: observe, observeModel: request.ObserveModel, observeFiles: request.ObserveFiles,
+		observe: observe, observeModel: request.ObserveModel, observeFiles: missingObservationsOnly(),
 	})
 	if err != nil {
 		return "", err

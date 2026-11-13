@@ -270,9 +270,8 @@ func TestStartPlansOneObserveCallPerFrozenVideo(t *testing.T) {
 		// A video entry is carried by what only a clip has.
 		{File: "a.mp4", Events: []string{"파도"}}, {File: "b.mp4", Speech: "좋다"},
 	}
-	none := []string{}
 	if _, err := svc.Start(context.Background(), StartRequest{
-		UserID: "alice", PostSlug: "p", ObserveFiles: &none,
+		UserID: "alice", PostSlug: "p",
 		ObserveModel: videoObserveRef.String(), WriteModel: writeRef.String(),
 	}); err != nil {
 		t.Fatal(err)
@@ -281,15 +280,14 @@ func TestStartPlansOneObserveCallPerFrozenVideo(t *testing.T) {
 		t.Fatalf("reuse-everything planned %d calls, want 0", got)
 	}
 
-	// Picking only the video plans exactly its one call.
+	// Re-observing only the video plans exactly its one call (GEN-89).
 	one := []string{"a.mp4"}
-	if _, err := svc.Start(context.Background(), StartRequest{
-		UserID: "alice", PostSlug: "p", ObserveFiles: &one,
-		ObserveModel: videoObserveRef.String(), WriteModel: writeRef.String(),
+	if _, err := svc.StartObservation(context.Background(), StartObservationRequest{
+		UserID: "alice", PostSlug: "p", ObserveFiles: &one, ObserveModel: videoObserveRef.String(),
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if got := jobs.generations[2].ObserveCalls; got != 1 {
+	if got := jobs.observations[0].ObserveCalls; got != 1 {
 		t.Fatalf("one video planned %d calls, want 1", got)
 	}
 }

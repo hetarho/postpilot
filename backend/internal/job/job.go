@@ -22,6 +22,9 @@ const (
 	// GEN-69).
 	KindStoryline       = "storyline"
 	KindReviseStoryline = "revise_storyline"
+	// KindObserve is 관찰하기 and 다시 관찰하기: it observes a post's attachments and writes their
+	// observations and nothing else (GEN-89).
+	KindObserve = "observe"
 	// KindTemplateRequest is the template request (TMPL-58): one draft's name, description,
 	// title area and body written by the 글 작성 모델. It belongs to the account alone — the
 	// draft it writes into is the browser's, not a row.

@@ -20,9 +20,6 @@ var (
 	// ErrStorylineMissing: the storyline request rewrites the stored storyline, so a post that
 	// holds none has nothing to ask about (GEN-69).
 	ErrStorylineMissing = errors.New("the post holds no storyline to revise")
-	// ErrStorylineReobserve: a run along the storyline observes exactly what the storyline holds,
-	// so a picker answer beside it is a contradiction (GEN-70).
-	ErrStorylineReobserve = errors.New("a storyline run takes no re-observation selection")
 	// ErrVoiceNotMade refuses AI work for a post whose voice has no published analysis yet
 	// (POST-25); making the voice or reassigning the post lifts it.
 	ErrVoiceNotMade = errors.New("the post's voice is not made yet; make it or assign another voice first")

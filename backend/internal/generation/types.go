@@ -365,11 +365,7 @@ type StartRequest struct {
 	// ObserveCalls is how many observation calls the photos will take, resolved at Start
 	// where the post is already in hand. Observation batches photos, so this is not the
 	// photo count — and the credit hold has to price every call, not every photo.
-	ObserveCalls int
-	// ObserveFiles is the re-observation picker's answer on the way in. Nil is a client that
-	// sent no picker answer, which observes everything. The resolved set Start freezes lives in
-	// the payload, not here.
-	ObserveFiles      *[]string
+	ObserveCalls      int
 	WriteNativeEffort bool
 	// FromStoryline is 이 스토리로 글 쓰기 / 다시 쓰기: the run writes along the stored storyline
 	// and observes exactly what it holds (GEN-70).

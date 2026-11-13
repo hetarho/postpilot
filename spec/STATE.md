@@ -13,6 +13,7 @@
 | c261113 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T02:47Z | 2026-11-13T02:47Z | - |
 
 ## inbox
+- 261113 decided T783 GEN-89: the impl notes' StartObservation shape has no observe model and a GenerationJob response unlike StartGeneration's actual `job_id`? → request `{post_slug, reobserve, observe_model}` and response `{job_id}`, matching the sibling starts (alt: `{slug, reobserve}` reading the observe model from the account selection | return the full GenerationJob). Every other start names its models explicitly, and the FE polls by id through `useJob`.
 - 261113 decided T782 review/performance-design-system-261113: real block selection during playback leaves the paused image at the old output frame? → request the authoritative external seek target through the existing bounded draw path after pause/invalidate (alt: leave stale image until Play | publish old transport time through stop() | rewrite the clock). Same frozen whole-widget oracle fails on BASE/current; CLIP-53 already requires selection to seek the preview. Restrict player+test, no autoplay/owner/policy changes, independent review and final full gates remain; direct delegation covers the fix.
 - 261113 decided T781 review/performance-design-system-261113: real changed-save leases hydrate after ACK and can stop playback again? → preserve full access invalidation and add a private-intent exception only for producer-bound typed, same-generation, confirmed available strictly future lease extensions at identical composition/revisions (alt: omit expiry from access key | parse opaque hints | claim constant-lease fixture covers production). Two runtime DTO wiring paths added before claim; shortening/withdrawal/malformed/generation change and all explicit cancellation fail closed, fresh source/frame gates required. Independent design safety review passed; source approval remains separate.
 - 261113 decided T780 review/performance-design-system-261113: valid distinct-URL explicit refresh fails because every rebuilt owner repeats force? → add a hook-owned once-per-explicit-attempt transaction with pending sharing/failure retention, keeping actual renewal invalidation and the existing session quota (alt: raise retry cap | suppress all HTTP renewal | simple Set with failure fallback). Unstarted claim72043a21 released before replan; no worker/source edits existed.
@@ -215,7 +216,6 @@
 |---|---|---|---|---|
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
 | T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
-| T783 | Run post observation as its own job | GEN QUOTA POST ARCH | - | todo |
 | T784 | Save owner corrections to post observations | POST GEN VIDEO ARCH | T783 | todo |
 | T785 | Give the post editor five lifecycle steps with the storyline as its own step | POST THEME GEN ARCH | - | todo |
 | T786 | Observe and correct a post's attachments on ② 관찰 | POST GEN THEME ARCH | T783 T784 T785 | todo |
@@ -236,10 +236,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T783
+- gusta-implement-task T775 T784 T785
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T783 done
 - 261113 sketch storyline-separate-state done: option A (storyline as its own step, short station names, 스토리라인 작성 완료 post badge) plus a separate owner-editable observation step for posts and clips; B (end of the 생성 guide), C (two faces inside 다듬기) and D (side-by-side workbench) not taken; no ideation left open
 - 261113 gusta-create-task POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: T783–T791 (post observation job, owner observation edits, five-step post editor, post observation step, storyline-ready post badge, clip analysis job, clip observation edits, five-step clip workspace, clip observation step); no SSOT change
 - 261113 gusta-create-task POST GEN QUOTA THEME CLIP start
@@ -259,4 +260,3 @@
 - 261113 si8 steering: prioritize measured real-media slow refine entry and jumping playback time; T773 bounded redundant-work fix continues separately, UI tasks wait for symptom diagnosis.
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
-- 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed

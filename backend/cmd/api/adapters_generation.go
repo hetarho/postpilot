@@ -505,6 +505,20 @@ func (a generationJobs) EnqueueStoryline(ctx context.Context, request generation
 	return id, generationEnqueueError(err)
 }
 
+// EnqueueObservation routes an observation job (GEN-89): post-targeted like a storyline job, with
+// no voice and no write call, so admission lists only the observation calls its frozen set makes
+// — none when nothing is missing.
+func (a generationJobs) EnqueueObservation(ctx context.Context, request generation.StartObservationRequest, payload []byte) (string, error) {
+	counts, pricing := observeWriteCalls(request.ObserveModel, "", request.ObserveCalls, 0, a.budget)
+	subjects, guards := postVoiceWork(job.KindObserve, request.UserID, request.PostSlug, "")
+	id, err := a.queue.Enqueue(ctx, job.NewJob{
+		Kind: job.KindObserve, UserID: request.UserID, Subjects: subjects, Guards: guards,
+		ObserveModel: request.ObserveModel, Payload: payload,
+		CallCounts: counts, PricingCalls: originPricingAllowance(pricing, request.OriginProtocolVersion),
+	})
+	return id, generationEnqueueError(err)
+}
+
 // EnqueueStorylineRevision routes the storyline space's AI request (GEN-69): one call, no
 // observation.
 func (a generationJobs) EnqueueStorylineRevision(ctx context.Context, request generation.StartStorylineRevisionRequest, payload []byte) (string, error) {

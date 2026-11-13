@@ -31,10 +31,10 @@ func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[post
 	}
 	id, err := h.service.Start(ctx, generation.StartRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
-		ObserveModel:  modelRefValue(req.Msg.GetObserveModel()),
-		WriteModel:    modelRefValue(req.Msg.GetWriteModel()),
-		TargetLength:  optionalTargetLength(req.Msg.TargetLength),
-		ObserveFiles:  reobserveFiles(req.Msg.GetReobserve()),
+		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
+		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
+		TargetLength: optionalTargetLength(req.Msg.TargetLength),
+		// reobserve is accepted and ignored: a writing run observes only what is missing (GEN-89).
 		FromStoryline: req.Msg.GetFromStoryline(),
 	})
 	if err != nil {
@@ -91,12 +91,29 @@ func (h *Handler) StartStoryline(ctx context.Context, req *connect.Request[postp
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
 		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
 		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
-		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
 	})
 	if err != nil {
 		return nil, toConnectError("start storyline", err)
 	}
 	return connect.NewResponse(&postpilotv1.StartStorylineResponse{JobId: id}), nil
+}
+
+// StartObservation starts 관찰하기 or 다시 관찰하기 (GEN-89), answering the job id as
+// StartGeneration does; reobserve keeps its presence (GEN-9).
+func (h *Handler) StartObservation(ctx context.Context, req *connect.Request[postpilotv1.StartObservationRequest]) (*connect.Response[postpilotv1.StartObservationResponse], error) {
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	id, err := h.service.StartObservation(ctx, generation.StartObservationRequest{
+		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
+		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
+		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
+	})
+	if err != nil {
+		return nil, toConnectError("start observation", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartObservationResponse{JobId: id}), nil
 }
 
 // StartStorylineRevision starts the storyline space's AI request (GEN-69).
@@ -178,8 +195,6 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "post target language is required", postpilotv1.FailureReason_POST_TARGET_LANGUAGE_REQUIRED, nil)
 	case errors.Is(err, generation.ErrContentLanguageRequired):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "content language is required for revision", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
-	case errors.Is(err, generation.ErrStorylineReobserve):
-		return rpcserver.NewAppError(connect.CodeInvalidArgument, "a storyline run takes no re-observation selection", postpilotv1.FailureReason_GENERATION_STORYLINE_REOBSERVE, nil)
 	case errors.Is(err, generation.ErrStorylineMissing):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the post holds no storyline", postpilotv1.FailureReason_POST_STORYLINE_MISSING, nil)
 	case errors.As(err, &requiredAnswer):

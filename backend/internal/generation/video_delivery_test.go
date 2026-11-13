@@ -24,7 +24,7 @@ func TestSignedVideoGateRefusesInlineOnlyModelEvenWhenAllObservationsAreReused(t
 			none := []string{}
 			selected = &none
 		}
-		_, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "p", ObserveModel: videoObserveRef.String(), WriteModel: writeRef.String(), ObserveFiles: selected})
+		_, err := svc.Start(context.Background(), StartRequest{UserID: "alice", PostSlug: "p", ObserveModel: videoObserveRef.String(), WriteModel: writeRef.String()})
 		if !errors.Is(err, ErrVideoUnsupported) {
 			t.Fatalf("start reuse=%v err=%v", reuse, err)
 		}

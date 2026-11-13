@@ -95,6 +95,15 @@ func registerJobs(c *contexts) {
 			Payload: found.Payload,
 		}, generation.Progress(progress))
 	}))
+	q.Register(job.KindObserve, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
+		slug := found.Subject(post.JobSubject)
+		if slug == "" {
+			return job.ErrInvalidTarget
+		}
+		return generationSvc.Observe(ctx, generation.ObservationJob{
+			ID: found.ID, UserID: found.UserID, PostSlug: slug, ObserveModel: found.ObserveModel, Payload: found.Payload,
+		}, generation.Progress(progress))
+	}))
 	q.Register(job.KindReviseStoryline, metered(func(ctx context.Context, found job.Job, progress job.Progress) error {
 		slug := found.Subject(post.JobSubject)
 		if slug == "" {
