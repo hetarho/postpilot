@@ -187,6 +187,7 @@
 | T818 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:05Z |
 
 ## log
+- 261113 fix authoring: remove duplicate return glyph found by route audit; 43 authoring tests passed
 - 261113 T818 done
 - 261113 T817 done
 - 261113 T822 done
@@ -206,4 +207,3 @@
 - 261113 T809 done
 - 261113 T801 done
 - 261113 T800 done
-- 261113 T799 done
