@@ -101,7 +101,6 @@ function fixture() {
               }}
               rows={[]}
               models={null}
-              actions={null}
             />
           </div>
         </QueryClientProvider>

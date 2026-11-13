@@ -55,7 +55,7 @@ it('downloads without confirming, confirms in ② and finalizes once in ③ on d
   await confirm()
   // ② carries no download: the render and its download stand in ③ (CLIP-149).
   expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '영상 완성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '완성' }))
   expect(screen.getByText(/확정하기를 누르면 이 단계에서 렌더해요/)).toBeVisible()
   expect(screen.getByRole('link', { name: '렌더 1 다운로드' })).toHaveAttribute(
     'href',
@@ -65,7 +65,7 @@ it('downloads without confirming, confirms in ② and finalizes once in ③ on d
   await userEvent.click(screen.getByRole('button', { name: '영상 다듬기로 가기' }))
   await userEvent.click(await confirm())
   await waitFor(() =>
-    expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true'),
+    expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
   )
   expect(calls.filter((c) => c === 'ConfirmClipProject')).toHaveLength(1)
   expect(screen.queryByText(/확정하기를 누르면 이 단계에서 렌더해요/)).not.toBeInTheDocument()
@@ -137,7 +137,7 @@ it('resolves a lost confirmation reply by reading the owned project and reopens 
   const reads: string[] = []
   mount({ projects: [saved!], calls: reads })
   await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
-  expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
   expect(reads).not.toContain('GetClipSources')
 })
 
@@ -200,7 +200,7 @@ it.each(['ko', 'en'] as const)(
     )
     // The previous result stands in ③ again, where its download is (CLIP-149).
     await userEvent.click(
-      await screen.findByRole('tab', { name: lang === 'ko' ? '영상 완성' : 'Finish video' }),
+      await screen.findByRole('tab', { name: lang === 'ko' ? '완성' : 'Finish' }),
     )
     await screen.findByRole('link', {
       name: lang === 'ko' ? '렌더 1 다운로드' : 'Download render 1',
@@ -233,7 +233,8 @@ it('returning to the list never cancels work; opening it again restores focused 
   expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
 })
 
-it('opens the new storyline in 수정 after a request from 생성 on an existing plan', async () => {
+// CLIP-234: a finished storyline run lands on ③ even on a project holding a plan.
+it('opens the new storyline on ③ after a request from 생성 on an existing plan', async () => {
   const job: FakeGenerationJobRow = {
     id: 'storyline-again',
     kind: 'storyline_clip',
@@ -260,8 +261,8 @@ it('opens the new storyline in 수정 after a request from 생성 on an existing
     },
     [job],
   )
-  await userEvent.click(await screen.findByRole('tab', { name: '영상 생성' }))
-  expect(screen.getByRole('tab', { name: '영상 생성' })).toHaveAttribute('aria-selected', 'true')
+  await userEvent.click(await screen.findByRole('tab', { name: '생성' }))
+  expect(screen.getByRole('tab', { name: '생성' })).toHaveAttribute('aria-selected', 'true')
   started = true
   await act(() =>
     view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
@@ -272,12 +273,11 @@ it('opens the new storyline in 수정 after a request from 생성 on an existing
     view.queryClient.invalidateQueries({ queryKey: clipProjectsKey(view.transport, 'alice') }),
   )
   await waitFor(() =>
-    expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '스토리라인' })).toHaveAttribute(
       'aria-selected',
       'true',
     ),
   )
-  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
   expect(await screen.findByText('새로 작성한 스토리라인')).toBeVisible()
 })
 
@@ -345,7 +345,7 @@ it('opens a plan with no render as a plan to review, not as a missing result', a
   // normal FIRST state: the draft preview, the render action, and nothing
   // anywhere saying the attempt failed or that a result went missing.
   mount({ projects: [{ ...project(), renderedPlanRevision: 0, result: undefined }] })
-  expect(await screen.findByRole('tab', { name: '영상 다듬기' })).toHaveAttribute(
+  expect(await screen.findByRole('tab', { name: '다듬기' })).toHaveAttribute(
     'aria-selected',
     'true',
   )
@@ -365,18 +365,18 @@ it('opens a plan with no render as a plan to review, not as a missing result', a
 
 // CLIP-36: the steps read 영상 생성 · 영상 다듬기 · 영상 완성, and a confirmed or finalized
 // project opens ③ while an unconfirmed one holding a plan opens ②.
-it('names the steps and opens a confirmed clip on ③', async () => {
+// THEME-39: the clip runs the post's five stations under the same short names.
+it('names the five steps and opens a confirmed clip on ⑤', async () => {
   const clip = project()
   clip.confirmed = { planRevision: clip.editPlanRevision!, at: '2026-11-12T00:00:00Z' }
   mount({ projects: [clip] })
-  expect(await screen.findByRole('tab', { name: '영상 완성' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
+  expect(await screen.findByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-    '영상 생성',
-    '영상 다듬기',
-    '영상 완성',
+    '생성',
+    '관찰',
+    '스토리라인',
+    '다듬기',
+    '완성',
   ])
   expect(await screen.findByRole('heading', { name: '완성됐어요' })).toBeVisible()
 })
@@ -386,7 +386,7 @@ it('renders the confirmed plan in ③ at once after 확정하기 on a supported 
   mount({ projects: [{ ...project(), renderedPlanRevision: 0, result: undefined }], calls })
   await userEvent.click(await confirm())
   await waitFor(() =>
-    expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true'),
+    expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
   )
   // jsdom has no encoder, so the device is unsupported: ③ offers 렌더하기 instead of starting.
   expect(await screen.findByRole('button', { name: '렌더하기' })).toBeInTheDocument()
@@ -411,7 +411,7 @@ it.each(['server', 'browser'] as const)(
     expect(
       screen.queryByRole('dialog', { name: '클립을 완료로 표시할까요?' }),
     ).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+    await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
     await selectCut()
     expect(screen.getByRole('button', { name: '컷 삭제' })).toBeEnabled()
     expect(calls).not.toContain('FinalizeClipProject')

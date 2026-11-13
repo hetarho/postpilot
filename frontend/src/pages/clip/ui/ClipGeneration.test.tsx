@@ -1,5 +1,5 @@
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
-import { clipGuideTo } from '@/test/clip-preparation'
+import { clipGuideTo, clipGuideToActions } from '@/test/clip-preparation'
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -26,7 +26,7 @@ import type { FakePlansOptions } from '@/test/plans'
 
 /** ①'s 바로 만들기 opens its own quote and approval (CLIP-177): open it, then the approve button. */
 async function openApproval(amount: number) {
-  await clipGuideTo('review')
+  await clipGuideToActions()
   const trigger = await screen.findByRole('button', { name: '바로 만들기' })
   await waitFor(() => expect(trigger).toBeEnabled())
   if (trigger.getAttribute('aria-expanded') !== 'true') await userEvent.click(trigger)
@@ -159,7 +159,7 @@ function mount(
 }
 /** The workspace is three panels behind one tab row now (CLIP-36), so a test that asserts across
  *  steps has to say which one it is looking at. */
-async function goToStep(name: '영상 생성' | '영상 다듬기' | '영상 완성') {
+async function goToStep(name: '생성' | '관찰' | '스토리라인' | '다듬기' | '완성') {
   await userEvent.setup().click(await screen.findByRole('tab', { name }))
 }
 
@@ -233,17 +233,17 @@ it.each(['CLIP_MEDIA_UNAVAILABLE', 'CLIP_MEDIA_RETRY_EXHAUSTED', 'CLIP_MEDIA_TIM
       { projects: [{ ...project, result, latestJob: job }], generationStarts: starts },
       { jobs: [job] },
     )
-    await goToStep('영상 생성')
-    await clipGuideTo('review')
+    await goToStep('생성')
+    await clipGuideToActions()
     expect(
       await screen.findByText(/잠시 후 다시 시도하세요\. 완료된 분석과 이전 결과는 유지됩니다/),
     ).toBeVisible()
-    await clipGuideTo('review')
+    await clipGuideToActions()
     expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
     expect(starts).toHaveLength(0)
-    await goToStep('영상 다듬기')
+    await goToStep('다듬기')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
-    await goToStep('영상 생성')
+    await goToStep('생성')
     await selectSource()
     expect(await openApproval(20)).toBeEnabled()
     expect(starts).toHaveLength(0)
@@ -272,7 +272,7 @@ async function selectSource() {
   await user.upload(input, file)
   await clipGuideTo('sources')
   await screen.findByText('업로드 확인 완료')
-  await clipGuideTo('review')
+  await clipGuideToActions()
   return { user, revoke }
 }
 // CDS-81: the approval says what the frame-by-frame captions add to the render
@@ -379,7 +379,7 @@ it('approves once, retains local previews after terminal and refetches the resul
   expect(video).toHaveAttribute('preload', 'metadata')
   // ② carries no download; ③ downloads the render under the video it delivers (CLIP-149).
   expect(screen.queryByRole('link', { name: /렌더 \d+ 다운로드/ })).not.toBeInTheDocument()
-  await goToStep('영상 완성')
+  await goToStep('완성')
   expect(await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })).toHaveAttribute(
     'href',
     result.downloadUrl,
@@ -387,7 +387,7 @@ it('approves once, retains local previews after terminal and refetches the resul
   expect(calls.filter((c) => c === 'GetClipProject').length).toBeGreaterThan(1)
   expect(calls).not.toContain('DiscardClipSourceBatch')
   // The consumed selection's summary stays with the picker that made it, on ①.
-  await goToStep('영상 생성')
+  await goToStep('생성')
   expect(screen.getByText('clip.mp4 · 처리 완료')).toBeInTheDocument()
   // A new selection after completion must not be mistaken for the consumed batch.
   await selectSource()
@@ -433,7 +433,7 @@ it.each(['done', 'failed', 'cancelled'])(
     )
     // A successful generation carries the workspace to ② so its result shows there; the next run
     // starts from ① again. A failed or cancelled run never moves it.
-    if (status === 'done') await goToStep('영상 생성')
+    if (status === 'done') await goToStep('생성')
     const approve = await openApproval(20)
     await waitFor(() => expect(approve).toBeEnabled())
     expect(starts).toHaveLength(1)
@@ -459,18 +459,18 @@ it('keeps an older result visible on a durable credit refusal and requires a new
     failureParams: { required: '79', balance: '12', renews_at: '2026-09-30T15:00:00Z' },
   }
   mount({ projects: [{ ...project, result, latestJob: job }] }, { jobs: [job] })
-  await goToStep('영상 생성')
+  await goToStep('생성')
   // Explicit AI retry is on review; the previous render stays in correction.
-  await clipGuideTo('review')
+  await clipGuideToActions()
   expect(await screen.findByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeInTheDocument()
   expect(screen.getByText('원본 준비 중 단계에서 실패했어요')).toBeInTheDocument()
   expect(screen.getByRole('link', { name: '크레딧·요금제 확인' })).toHaveAttribute('href', '/plans')
-  await clipGuideTo('review')
+  await clipGuideToActions()
   expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   // The previous successful result is untouched, one tab away (CLIP-26).
-  await goToStep('영상 다듬기')
+  await goToStep('다듬기')
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
-  await goToStep('영상 생성')
+  await goToStep('생성')
   await selectSource()
   expect(await openApproval(20)).toBeEnabled()
 })
@@ -511,13 +511,13 @@ it.each([
       ],
     })
     mount({ projects: [{ ...project, result }], retainedBatches: [batch] })
-    await goToStep('영상 생성')
+    await goToStep('생성')
     await screen.findByText('clip.mp4')
     const line =
       '보관 기간이 지나 원본 영상이 없어요. 다시 만들려면 원본 영상을 새로 선택해 주세요.'
     if (asked) expect(await screen.findByText(line)).toBeInTheDocument()
     else {
-      await clipGuideTo('review')
+      await clipGuideToActions()
       await waitFor(() => expect(screen.getByRole('button', { name: '바로 만들기' })).toBeEnabled())
       expect(screen.queryByText(line)).not.toBeInTheDocument()
     }
@@ -555,7 +555,7 @@ it('blocks an observer the server refuses, says why, and never substitutes anoth
     eligibility: [{ providerId: 'p', modelId: 'o', status: 'video_input_absent' }],
   })
   await selectSource()
-  await clipGuideTo('review')
+  await clipGuideToActions()
   expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   expect(starts).toHaveLength(0)
   expect(calls).not.toContain('QuoteClipGeneration')
@@ -665,7 +665,7 @@ it('fails the clip action closed while eligibility loads or cannot be read, and 
   const calls: string[] = []
   mount({ eligibilityFails: () => down, calls })
   await selectSource()
-  await clipGuideTo('review')
+  await clipGuideToActions()
   expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
   await clipGuideTo('review')
   await screen.findAllByText(/관찰 모델이 클립 분석에 쓸 수 있는지 확인하지 못했어요/)
@@ -791,7 +791,7 @@ it('keeps the open quote while ① is typed in and saves the settings before sta
   await clipGuideTo('sources')
   expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeEnabled()
   // The approval stayed open behind the other questions, and typing never re-read its quote.
-  await clipGuideTo('review')
+  await clipGuideToActions()
   expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAttribute(
     'aria-expanded',
     'true',
@@ -839,11 +839,12 @@ it('refreshes the quote after a model change and never starts while that choice 
   )
   const { user } = await selectSource()
   await openApproval(20)
-  // The models sit on review beside the open approval; changing one re-reads its quote.
+  // The models sit on ①'s 확인 while ②'s approval stays mounted; changing one re-reads its quote.
+  await clipGuideTo('review')
   await user.click(screen.getByRole('combobox', { name: /작성/ }))
   await user.click(screen.getByRole('option', { name: 'Writer two' }))
   await waitFor(() => expect(quotes).toHaveLength(2))
-  expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAttribute(
+  expect(screen.getByRole('button', { name: '바로 만들기', hidden: true })).toHaveAttribute(
     'aria-expanded',
     'true',
   )
@@ -974,6 +975,7 @@ it.each([false, true])(
       expect(button).toBeDisabled()
       expect(screen.getByText(/크레딧이 79 필요한데 12만 남았어요/)).toBeVisible()
     }
+    await clipGuideTo('review')
     expect(screen.getByRole('combobox', { name: /관찰/ })).toHaveTextContent('Video observer')
     expect(starts).toHaveLength(0)
   },
@@ -1018,12 +1020,12 @@ it('displays a pricing refusal beside generation while leaving the previous resu
   // A saved result opens in correction; the refusal belongs beside the
   // generation that earned it, on ①.
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
-  await goToStep('영상 완성')
+  await goToStep('완성')
   expect(await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })).toBeEnabled()
-  await goToStep('영상 생성')
+  await goToStep('생성')
   await selectSource()
   // The quote is read from the action that asks for it (CLIP-177), and its refusal is said there.
-  await clipGuideTo('review')
+  await clipGuideToActions()
   const trigger = await screen.findByRole('button', { name: '바로 만들기' })
   await waitFor(() => expect(trigger).toBeEnabled())
   await userEvent.click(trigger)
@@ -1081,7 +1083,7 @@ it.each([0, 7])(
       credit.getByText(new RegExp(`사용하지 않은 예약 ${40 - charge} 크레딧`)),
     ).toBeInTheDocument()
     // The settlement and the preserved result remain in correction.
-    await goToStep('영상 다듬기')
+    await goToStep('다듬기')
     expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute('src', result.viewUrl)
   },
 )
@@ -1127,9 +1129,9 @@ it('opens a separate approval for 스토리라인 먼저 and starts the storylin
   const storylineStarts: unknown[] = []
   const generationStarts: unknown[] = []
   mount({ storylineStarts, generationStarts })
-  await goToStep('영상 생성')
+  await goToStep('생성')
   await selectSource()
-  await clipGuideTo('review')
+  await clipGuideToActions()
   const dock = (await screen.findByRole('button', { name: '바로 만들기' })).closest(
     '[data-action-bar]',
   )!
@@ -1137,8 +1139,8 @@ it('opens a separate approval for 스토리라인 먼저 and starts the storylin
     within(dock as HTMLElement)
       .getAllByRole('button')
       .map((button) => button.getAttribute('aria-label') || button.textContent),
-  ).toEqual(['덧붙임로 이전', '스토리라인 먼저', '바로 만들기'])
-  await clipGuideTo('review')
+  ).toEqual(['이전: 생성', '스토리라인 먼저', '바로 만들기'])
+  await clipGuideToActions()
   const trigger = screen.getByRole('button', { name: '스토리라인 먼저' })
   await waitFor(() => expect(trigger).toBeEnabled())
   await userEvent.click(trigger)
@@ -1169,10 +1171,10 @@ function withStoryline(extra: Partial<FakeClipProject> = {}): FakeClipProject {
 /** A clip holding a storyline opens ②; an upload in ① gives the build its batch. */
 async function storylineSpace(extra: Partial<FakeClipProject> = {}, clips: FakeClipsOptions = {}) {
   mount({ projects: [withStoryline(extra)], ...clips })
-  await screen.findByRole('button', { name: '스토리라인' })
-  await goToStep('영상 생성')
+  await screen.findByRole('tab', { name: '스토리라인' })
+  await goToStep('생성')
   const { user } = await selectSource()
-  await goToStep('영상 다듬기')
+  await goToStep('스토리라인')
   return user
 }
 
@@ -1293,8 +1295,7 @@ it('confirms before rebuilding over a plan edited by hand, and cancels cleanly',
     generationStarts,
   })
   const user = userEvent.setup()
-  await screen.findByRole('button', { name: '스토리라인' })
-  await user.click(screen.getByRole('button', { name: '스토리라인' }))
+  await user.click(await screen.findByRole('tab', { name: '스토리라인' }))
   await approveFrom(user, '이 스토리로 다시 만들기', /승인하고 생성/)
   const confirm = within(await screen.findByRole('dialog', { name: '이 스토리로 다시 만들까요?' }))
   expect(
@@ -1327,8 +1328,8 @@ it('lists a storyline request in the request record', async () => {
       }),
     ],
   })
-  await screen.findByRole('button', { name: '스토리라인' })
-  await goToStep('영상 생성')
+  await screen.findByRole('heading', { name: '스토리라인', level: 2 })
+  await goToStep('생성')
   await clipGuideTo('sources')
   await userEvent.click(await screen.findByText(/AI에 요청한 내용 1건/))
   expect(screen.getByText(/스토리라인 수정 요청/)).toBeVisible()
@@ -1337,12 +1338,13 @@ it('lists a storyline request in the request record', async () => {
 
 // CLIP-131: ②'s revision composer names no target and never targets the storyline: one request
 // is quoted as auto.
-it('sends ②’s revision as one auto request, apart from the storyline', async () => {
+it('sends ④’s revision as one auto request, apart from the storyline', async () => {
   const revisionQuotes: Array<{ target: string }> = []
   const user = await storylineSpace(
     { editPlanRevision: 1, renderedPlanRevision: 1, editing: clipTimelineFixture() },
     { revisionQuotes },
   )
+  await goToStep('다듬기')
   await user.type(screen.getByLabelText('수정 요청을 입력하세요'), '자막을 짧게')
   await user.click(screen.getByRole('button', { name: 'AI에 수정 요청' }))
   const sheet = within(await screen.findByRole('dialog', { name: 'AI에 수정 요청' }))
@@ -1404,7 +1406,7 @@ it('does not activate a qualified readiness record for a different analysis prof
   preparationFixture.profile = 'unrecognized-profile'
   mount()
   const { user } = await selectSource()
-  await clipGuideTo('review')
+  await clipGuideToActions()
   await user.click(await screen.findByRole('button', { name: '바로 만들기' }))
   expect(await screen.findByText('서버에서 원본 영상을 준비하고 분석해요.')).toBeVisible()
   expect(preparationFixture.runs).toBe(0)

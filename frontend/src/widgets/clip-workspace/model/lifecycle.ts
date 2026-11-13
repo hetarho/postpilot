@@ -1,5 +1,14 @@
 import { useEffect, useRef } from 'react'
 import type { GenerationJob } from '@/entities/generation-job'
+import type { ClipStep } from './steps'
+
+/** The step a finished run carries the owner to (CLIP-234): ③ after a storyline, ④ after a
+ *  plan; any other run leaves the step where it is. */
+export function stepAfterJob(kind: string): ClipStep | undefined {
+  if (kind === 'storyline_clip') return 'storyline'
+  if (kind === 'generate_clip') return 'refine'
+  return undefined
+}
 
 const TERMINAL = ['done', 'failed', 'cancelled'] as const
 type TerminalStatus = (typeof TERMINAL)[number]

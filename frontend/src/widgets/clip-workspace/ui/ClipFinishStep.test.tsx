@@ -297,7 +297,7 @@ it('holds every 더 해 보기 action until the plan is confirmed', async () => 
     user: { id: 'alice' },
     clips: { projects: [confirmedClip({ editPlanRevision: 2 })] },
   })
-  await userEvent.click(await screen.findByRole('tab', { name: '영상 완성' }))
+  await userEvent.click(await screen.findByRole('tab', { name: '완성' }))
   const card = await screen.findByRole('region', { name: '더 해 보기' })
   expect(within(card).getByText('확정하기를 하면 쓸 수 있어요.')).toBeVisible()
   expect(

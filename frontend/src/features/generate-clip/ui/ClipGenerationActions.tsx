@@ -32,7 +32,7 @@ export interface ClipGenerationContext {
   onApprove(mode: ClipQuoteMode, quote: ClipQuote): void
 }
 
-/** ①'s two actions (CLIP-177, CLIP-40): 스토리라인 먼저 and 바로 만들기, a wrapping row with the careful
+/** ②'s two actions (CLIP-177, CLIP-40): 스토리라인 먼저 and 바로 만들기, a wrapping row with the careful
  *  path left and the committing one right; enlarged text can give each a full row. Each opens its own
  *  quote and approval from itself (a popover, a sheet on a phone), so the ceiling the owner
  *  approves is the one for the work that button starts. The quote is read only while it is open. */
@@ -73,14 +73,16 @@ export function ClipGenerationActions({
   )
 }
 
-/** ②'s storyline space's heading actions (CLIP-180, CLIP-181): 다시 만들기 writes the storyline
- *  again, and the build writes the flow and the narration from it — 이 스토리로 만들기 before there
- *  is a plan, 이 스토리로 다시 만들기 once there is one. Each opens its own approval, and where the
- *  approved work would replace something the owner edited by hand, one confirmation says what
- *  goes; nothing asks otherwise. */
-export function ClipStorylineBuildActions(
-  context: ClipGenerationContext & { hasPlan: boolean; disabled: boolean },
-) {
+/** ③'s storyline actions (CLIP-180, CLIP-181): 다시 만들기 writes the storyline again, and the
+ *  build writes the flow and the narration from it — 이 스토리로 만들기 before there is a plan, 이
+ *  스토리로 다시 만들기 once there is one. In the step bar 다시 만들기 is the row's secondary action
+ *  and the build its big one (THEME-71). Each opens its own approval, and where the approved work
+ *  would replace something the owner edited by hand, one confirmation says what goes; nothing asks
+ *  otherwise. */
+export function ClipStorylineBuildActions({
+  stepBar = false,
+  ...context
+}: ClipGenerationContext & { hasPlan: boolean; disabled: boolean; stepBar?: boolean }) {
   const { t } = useTranslation('clips')
   const { project, hasPlan, disabled, onApprove } = context
   const [confirming, setConfirming] = useState<{ mode: ClipQuoteMode; quote: ClipQuote }>()
@@ -91,42 +93,58 @@ export function ClipStorylineBuildActions(
     else onApprove(mode, quote)
   }
   const shared = { ...context, ready: context.ready && !disabled, onApprove: guarded }
-  return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+  const actions = (
+    <>
       <ClipQuotedPopover
         {...shared}
         mode="storyline"
+        className={stepBar ? 'min-w-0' : undefined}
         label={t('storylineActions.remake')}
         variant="secondary"
       />
       <ClipQuotedPopover
         {...shared}
         mode="fromStoryline"
+        hero={stepBar}
+        className={stepBar ? 'min-w-fit flex-1' : undefined}
         label={t(hasPlan ? 'storylineActions.rebuild' : 'storylineActions.build')}
         variant="cta"
       />
-      <Dialog
-        open={!!confirming}
-        title={t(
-          confirming?.mode === 'storyline'
-            ? 'storylineActions.remakeTitle'
-            : 'storylineActions.rebuildTitle',
-        )}
-        confirmLabel={t(
-          confirming?.mode === 'storyline' ? 'storylineActions.remake' : 'storylineActions.rebuild',
-        )}
-        onClose={() => setConfirming(undefined)}
-        onConfirm={() => {
-          if (confirming) onApprove(confirming.mode, confirming.quote)
-          setConfirming(undefined)
-        }}
-      >
-        {t(
-          confirming?.mode === 'storyline'
-            ? 'storylineActions.remakeBody'
-            : 'storylineActions.rebuildBody',
-        )}
-      </Dialog>
+    </>
+  )
+  const confirmation = (
+    <Dialog
+      open={!!confirming}
+      title={t(
+        confirming?.mode === 'storyline'
+          ? 'storylineActions.remakeTitle'
+          : 'storylineActions.rebuildTitle',
+      )}
+      confirmLabel={t(
+        confirming?.mode === 'storyline' ? 'storylineActions.remake' : 'storylineActions.rebuild',
+      )}
+      onClose={() => setConfirming(undefined)}
+      onConfirm={() => {
+        if (confirming) onApprove(confirming.mode, confirming.quote)
+        setConfirming(undefined)
+      }}
+    >
+      {t(
+        confirming?.mode === 'storyline'
+          ? 'storylineActions.remakeBody'
+          : 'storylineActions.rebuildBody',
+      )}
+    </Dialog>
+  )
+  return stepBar ? (
+    <>
+      {actions}
+      {confirmation}
+    </>
+  ) : (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {actions}
+      {confirmation}
     </div>
   )
 }

@@ -2,13 +2,15 @@ import { expect, it, vi } from 'vitest'
 import { clipEditingFixture } from '@/test/clip-editing'
 import { requiredSourcesForStep, soundRetryAction } from './rules'
 
-it('asks for every source in ① and only the plan’s own sources in ②', () => {
+it('asks for every source in ① to ③ and ⑤, and only the plan’s own sources in ④', () => {
   const plan = clipEditingFixture()
   const draft = { ...plan.plan, cuts: plan.plan.cuts.slice(0, 1) }
-  // ① runs the AI over the whole batch, so nothing may be released yet.
+  // ①, ② and ③ start runs over the whole batch, so nothing may be released yet.
   expect(requiredSourcesForStep('generate', draft, plan)).toBeUndefined()
+  expect(requiredSourcesForStep('observe', draft, plan)).toBeUndefined()
+  expect(requiredSourcesForStep('storyline', draft, plan)).toBeUndefined()
   expect(requiredSourcesForStep('finish', draft, plan)).toBeUndefined()
-  // ② draws frames only for the cuts it holds: the second source is released.
+  // ④ draws frames only for the cuts it holds: the second source is released.
   expect(requiredSourcesForStep('refine', draft, plan)?.map((s) => s.id)).toEqual(['a'])
   expect(requiredSourcesForStep('refine', plan.plan, plan)?.map((s) => s.id)).toEqual(['a', 'b'])
   // No saved plan means no cuts to be required for.

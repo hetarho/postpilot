@@ -22,11 +22,8 @@ interface SegmentedControlProps<T extends string> {
   /** Refuses every switch while a change is in flight. The whole control greys, because a bounded
    *  switch has no single "pending" option to grey on its own. */
   disabled?: boolean
-  /** `segments` is the pill row on its recessed plane — a switch or a tab row standing in the
-   *  flow. `steps` is the same control drawn as a lifecycle's stations: the names as text with a
-   *  chevron between them, the current one told by colour alone and no plane under any of them —
-   *  for a step bar that rides a page's top row between two controls, where a row of pills read
-   *  as three more buttons (THEME-39, owner decision 2026-09-19). */
+  /** `segments` is the pill row on its recessed plane. `steps` is a lifecycle's stations,
+   *  with the current pill inverted and chevrons between stations when there is room (THEME-39). */
   variant?: 'segments' | 'steps'
   /** `default` is the standalone control, at the 40px fine-pointer row and the 44px touch floor.
    *  `compact` is the same control inside a surface that is itself a control — the preferences in
@@ -57,6 +54,7 @@ export function SegmentedControl<T extends string>({
   className,
 }: SegmentedControlProps<T>) {
   const steps = variant === 'steps'
+  const fiveStations = steps && options.length === 5
   const compact = size === 'compact'
   // The selected plane is ONE element that travels between the options instead of a background
   // that blinks from one to the next: the switch then shows which way the choice moved, which is
@@ -94,6 +92,8 @@ export function SegmentedControl<T extends string>({
           steps
             ? '@container flex min-h-10 items-center justify-center-safe gap-1 select-none pointer-coarse:min-h-11'
             : 'bg-surface-recessed flex gap-1 overflow-x-auto overscroll-x-contain rounded-full p-1 select-none',
+          // The bar is the query container; its own gap cannot query its own width.
+          fiveStations && 'gap-0.5',
           !steps &&
             (compact ? 'min-h-8 pointer-coarse:min-h-9' : 'min-h-10 pointer-coarse:min-h-11'),
           disabled && 'opacity-50',
@@ -107,13 +107,19 @@ export function SegmentedControl<T extends string>({
           {steps && index > 0 && (
             <ChevronRight
               aria-hidden="true"
-              className="text-content-tertiary size-4 shrink-0 @max-[17rem]:size-3.5 @max-[15.5rem]:-mx-1 @max-[15.5rem]:size-3 @max-[13.5rem]:hidden"
+              className={clsx(
+                'text-content-tertiary size-4 shrink-0',
+                fiveStations
+                  ? '@max-[22rem]:hidden'
+                  : '@max-[17rem]:size-3.5 @max-[15.5rem]:-mx-1 @max-[15.5rem]:size-3 @max-[13.5rem]:hidden',
+              )}
             />
           )}
           <button
             type="button"
             role="tab"
             aria-selected={option.value === value}
+            aria-current={steps && option.value === value ? 'step' : undefined}
             aria-label={option.preview ? option.label : undefined}
             aria-controls={controls}
             disabled={disabled}
@@ -130,7 +136,10 @@ export function SegmentedControl<T extends string>({
               steps
                 ? // Guide: a lifecycle station is a pill; the one the post is in is inverted ink.
                   clsx(
-                    'text-label inline-flex min-h-10 shrink-0 items-center rounded-full px-3 font-semibold whitespace-nowrap transition-colors @max-[17rem]:px-2.5 @max-[15.5rem]:px-2 pointer-coarse:min-h-11',
+                    'text-label inline-flex min-h-10 shrink-0 items-center rounded-full px-3 font-semibold whitespace-nowrap transition-colors pointer-coarse:min-h-11',
+                    fiveStations
+                      ? '@max-[22rem]:min-w-11 @max-[22rem]:justify-center @max-[22rem]:px-0.5'
+                      : '@max-[17rem]:px-2.5 @max-[15.5rem]:px-2',
                     option.value === value
                       ? 'bg-chip-bg-current text-chip-fg-current'
                       : 'text-content-tertiary hover:text-content-secondary active:text-content-secondary',

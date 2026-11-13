@@ -43,15 +43,14 @@ const mount = (options: FakeClipsOptions = {}) =>
 it('opens a finalized clip on ③ and keeps its earlier steps selectable', async () => {
   mount()
   await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
-  expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true')
-  for (const name of ['영상 생성', '영상 다듬기'])
-    expect(screen.getByRole('tab', { name })).toBeVisible()
+  expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
+  for (const name of ['생성', '다듬기']) expect(screen.getByRole('tab', { name })).toBeVisible()
 })
 
 it('states ①’s settings without a control that could change them', async () => {
   mount()
   await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
-  await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '생성' }))
   const title = await screen.findByLabelText('클립 제목')
   expect(title).toHaveValue('확정된 클립')
   expect(title).toBeDisabled()
@@ -59,14 +58,18 @@ it('states ①’s settings without a control that could change them', async () 
   expect(screen.queryByRole('button', { name: /생성하기|영상 만들기/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '영상 추가' })).not.toBeInTheDocument()
   expect(screen.queryByText('생성 모델')).not.toBeInTheDocument()
+  // The observations are ②'s, read with no step bar (CLIP-160, CLIP-48).
+  expect(screen.queryByRole('heading', { name: 'AI가 관찰한 내용' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('tab', { name: '관찰' }))
   expect(screen.getByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: '바로 만들기' })).not.toBeInTheDocument()
 })
 
-it('plays the confirmed result in ② and opens a caption as values', async () => {
+it('plays the confirmed result in ④ and opens a caption as values', async () => {
   const calls: string[] = []
   mount({ calls })
   await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   // The delivered file stands where the draft preview did: the originals are gone, so no draft
   // is prepared and no fragment is drawn (CLIP-160, CLIP-76).
   expect(await screen.findByLabelText('클립 미리보기')).toHaveAttribute(
@@ -100,20 +103,20 @@ it('plays the confirmed result in ② and opens a caption as values', async () =
   expect(cutSheet.queryByRole('button', { name: '컷 삭제' })).not.toBeInTheDocument()
   await userEvent.keyboard('{Escape}')
 
-  // What the clip was observed from is still reachable from ② (CLIP-150, CLIP-160).
+  // ④'s reference keeps only 원본 영상 and 요청 기록; the observations stand in ② (CLIP-150).
   await userEvent.click(screen.getByRole('button', { name: '원본 소스' }))
   expect(
-    within(screen.getByRole('dialog', { name: '원본 소스' })).getByRole('heading', {
+    within(screen.getByRole('dialog', { name: '원본 소스' })).queryByRole('heading', {
       name: 'AI가 관찰한 내용',
     }),
-  ).toBeVisible()
+  ).not.toBeInTheDocument()
 })
 
 it('opens phone appearance details on a finalized clip while retaining disabled editing controls and no writes', async () => {
   const user = userEvent.setup()
   const calls: string[] = []
   mount({ calls })
-  await user.click(await screen.findByRole('tab', { name: '영상 생성' }))
+  await user.click(await screen.findByRole('tab', { name: '생성' }))
   const toggle = await screen.findByRole('button', { name: '디자인과 자막 스타일' })
   expect(toggle).toBeEnabled()
   expect(toggle).toHaveAttribute('aria-expanded', 'false')
@@ -149,9 +152,9 @@ it('offers upload text in the finished reading alone, the other channel from 더
   expect(make).toBeEnabled()
   expect(starts).toEqual([])
   // ② no longer offers it (CLIP-211): ③ is where the finished video's text stands.
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '영상 완성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '완성' }))
   await userEvent.click(await screen.findByRole('button', { name: '인스타 클립 업로드 문구 보기' }))
   expect(screen.getByRole('button', { name: '인스타 클립' })).toHaveAttribute(
     'aria-pressed',

@@ -1,4 +1,4 @@
-import { clipGuideTo } from '@/test/clip-preparation'
+import { clipGuideTo, clipGuideToActions } from '@/test/clip-preparation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Code } from '@connectrpc/connect'
 import { initializeI18n } from '@/app/providers/i18n'
@@ -333,7 +333,7 @@ describe('clip directory and setup', () => {
       renderedPlanRevision: 1,
     })
     expect(download).toHaveAttribute('href', delivered.downloadUrl)
-    await user.click(screen.getByRole('tab', { name: '영상 생성' }))
+    await user.click(screen.getByRole('tab', { name: '생성' }))
     await clipGuideTo('content')
     expect(await screen.findByLabelText('클립 제목')).toBeDisabled()
     expect(screen.queryByRole('button', { name: '네이버 클립으로 옮기기' })).not.toBeInTheDocument()
@@ -396,12 +396,12 @@ describe('clip directory and setup', () => {
     })
     const user = userEvent.setup()
     // ② carries no download; ③ keeps the earlier render's (CLIP-149, CLIP-229).
-    await user.click(await screen.findByRole('tab', { name: '영상 완성' }))
+    await user.click(await screen.findByRole('tab', { name: '완성' }))
     expect(await screen.findByRole('link', { name: /다운로드/ })).toHaveAttribute(
       'href',
       'https://test.local/legacy.mp4',
     )
-    await user.click(screen.getByRole('tab', { name: '영상 생성' }))
+    await user.click(screen.getByRole('tab', { name: '생성' }))
     await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     await clipGuideTo('style')
@@ -544,8 +544,9 @@ describe('clip page local upload lifecycle', () => {
     expect(json).not.toMatch(/blob:|clip.mp4|storage.test/)
     expect(calls.filter((c) => c === 'CreateClipSourceBatch')).toHaveLength(1)
     expect(calls.filter((c) => c === 'ConfirmClipSource')).toHaveLength(1)
-    await clipGuideTo('review')
+    await clipGuideToActions()
     expect(screen.getByRole('button', { name: '바로 만들기' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('tab', { name: '생성' }))
     await clipGuideTo('sources')
     await user.click(screen.getByRole('button', { name: '선택 취소' }))
     // Back to idle: the status line falls silent and the picker asks for a fresh selection
@@ -597,9 +598,7 @@ it.each(['ko', 'en'] as const)(
     const titleLabel = language === 'ko' ? '클립 제목' : 'Clip title'
     await clipGuideTo('content')
     await user.type(await screen.findByRole('textbox', { name: titleLabel }), ' changed')
-    await user.click(
-      screen.getByRole('tab', { name: language === 'ko' ? '영상 다듬기' : 'Refine video' }),
-    )
+    await user.click(screen.getByRole('tab', { name: language === 'ko' ? '다듬기' : 'Refine' }))
     expect(screen.queryByRole('textbox', { name: titleLabel })).not.toBeInTheDocument()
     const status = screen.getByRole('status', {
       name: language === 'ko' ? '클립 상태' : 'Clip status',
@@ -613,13 +612,9 @@ it.each(['ko', 'en'] as const)(
     expect(status).not.toHaveClass('truncate')
     expect(status).toHaveClass('text-notice-danger-fg')
     expect(status).not.toHaveTextContent('private backend prose')
-    await user.click(
-      screen.getByRole('tab', { name: language === 'ko' ? '영상 완성' : 'Finish video' }),
-    )
+    await user.click(screen.getByRole('tab', { name: language === 'ko' ? '완성' : 'Finish' }))
     expect(status).toHaveTextContent('menu')
-    await user.click(
-      screen.getByRole('tab', { name: language === 'ko' ? '영상 생성' : 'Create video' }),
-    )
+    await user.click(screen.getByRole('tab', { name: language === 'ko' ? '생성' : 'Create' }))
     await clipGuideTo('content')
     expect(await screen.findByRole('textbox', { name: titleLabel })).toHaveValue(
       '제주 여행 changed',

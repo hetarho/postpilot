@@ -17,6 +17,10 @@ export async function clipGuideTo(part: ClipGuidePart) {
       return
     throw new Error('Clip workspace is still loading')
   })
+  // From ② 관찰, where `clipGuideToActions` leaves a test, the guide is one step back on ①.
+  const observe = screen.queryByRole('tab', { name: /^(관찰|Observe)$/ })
+  if (observe?.getAttribute('aria-selected') === 'true')
+    await userEvent.click(screen.getByRole('tab', { name: /^(생성|Create)$/ }))
   const progress = screen.queryByRole('navigation', { name: /클립 만들기 단계|Clip steps/ })
   if (!progress) return
   const names: Record<ClipGuidePart, RegExp> = {
@@ -31,4 +35,11 @@ export async function clipGuideTo(part: ClipGuidePart) {
   }
   const target = within(progress).getByRole('button', { name: names[part] })
   if (target.getAttribute('aria-current') !== 'step') await userEvent.click(target)
+}
+
+/** ②'s step bar holds the generation actions (CLIP-40): pass ①'s 확인 and open ② 관찰. */
+export async function clipGuideToActions() {
+  await clipGuideTo('review')
+  const tab = screen.queryByRole('tab', { name: /^(관찰|Observe)$/ })
+  if (tab && tab.getAttribute('aria-selected') !== 'true') await userEvent.click(tab)
 }

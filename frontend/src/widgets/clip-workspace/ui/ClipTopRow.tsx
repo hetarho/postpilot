@@ -22,11 +22,12 @@ export function ClipTopRow(props: {
 export function ClipStepWaiting({
   message,
   onGo,
-  refine = false,
+  goLabel,
 }: {
   message: string
   onGo: () => void
-  refine?: boolean
+  /** Names the step it leads to; ① 생성 when absent. */
+  goLabel?: string
 }) {
   const { t } = useTranslation('clips')
   return (
@@ -35,7 +36,7 @@ export function ClipStepWaiting({
         {message}
       </Typography>
       <Button variant="ghost" onClick={onGo} className="mt-2 -ml-3">
-        {t(refine ? 'finalization.goRefine' : 'steps.goGenerate')}
+        {goLabel ?? t('steps.goGenerate')}
       </Button>
     </div>
   )

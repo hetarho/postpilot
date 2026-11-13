@@ -47,13 +47,7 @@ export function WorkspaceHeader({
         <span className="sr-only">{returnTo.label}</span>
       </a>
       {steps && (
-        <div
-          className={
-            actions
-              ? 'order-last w-full min-w-0 overflow-x-auto overscroll-x-contain sm:order-none sm:w-auto sm:flex-1'
-              : 'min-w-0 flex-1 overflow-x-auto overscroll-x-contain'
-          }
-        >
+        <div className="order-last w-full min-w-0 overflow-x-auto overscroll-x-contain sm:order-none sm:w-auto sm:flex-1">
           {steps}
         </div>
       )}

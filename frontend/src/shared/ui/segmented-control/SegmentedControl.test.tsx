@@ -1,7 +1,39 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
+import { useState } from 'react'
 import { SegmentedControl } from './SegmentedControl'
+
+it('keeps all five stations selectable and identifies the current step to assistive technology', async () => {
+  const options = ['생성', '관찰', '스토리라인', '다듬기', '완성'].map((label) => ({
+    value: label,
+    label,
+  }))
+  function Lifecycle() {
+    const [value, setValue] = useState(options[0].value)
+    return (
+      <SegmentedControl
+        value={value}
+        options={options}
+        onChange={setValue}
+        ariaLabel="작업 단계"
+        variant="steps"
+      />
+    )
+  }
+  render(<Lifecycle />)
+  const user = userEvent.setup()
+  const tabs = screen.getAllByRole('tab')
+  for (const tab of tabs) {
+    await user.click(tab)
+    expect(tab).toHaveAttribute('aria-selected', 'true')
+    expect(tab).toHaveAttribute('aria-current', 'step')
+    expect(tabs.filter((item) => item.hasAttribute('aria-current'))).toEqual([tab])
+  }
+  await user.keyboard('{ArrowRight}')
+  expect(tabs[0]).toHaveFocus()
+  expect(tabs[0]).toHaveAttribute('aria-current', 'step')
+})
 
 it('supports click and wrapping arrow-key selection with 44px targets', async () => {
   const onChange = vi.fn()

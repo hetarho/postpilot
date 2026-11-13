@@ -1,5 +1,6 @@
 import { ClipBrowserPreparationStatus } from '@/features/prepare-clip-browser'
 import { useId, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
 import { useTranslation } from 'react-i18next'
@@ -46,12 +47,23 @@ import { ClipUploadText } from '@/features/clip-upload-text'
 import { StageModelSelect } from '@/features/select-model'
 import { ClipSourcePicker } from '@/features/upload-clip-sources'
 import { ClipObservationViewer, ClipAttemptInspection } from '@/features/inspect-clip-observations'
-import { Button, Sheet, SegmentedControl, ProgressBar, Typography } from '@/shared/ui'
+import {
+  Button,
+  Sheet,
+  SegmentedControl,
+  ProgressBar,
+  StepBar,
+  StepBarActions,
+  StepBarBack,
+  Typography,
+} from '@/shared/ui'
 
 import { useRunFocus } from '../model/lifecycle'
 import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps, preparationOpening } from '../model/steps'
+import { focusPreparationField } from '../lib/preparation-focus'
 import { ClipPreparationGuide } from './ClipPreparationGuide'
+import { ClipObserveBar } from './ClipObserveBar'
 import { ClipPreparationSources } from './ClipPreparationSources'
 import { RetainedPreparationMedia } from './RetainedPreparationMedia'
 import { usePreparationClock } from '../model/usePreparationClock'
@@ -62,7 +74,7 @@ import { ClipFinishStep } from './ClipFinishStep'
 import { ClipFinishChecklist } from './ClipFinishChecklist'
 import { ClipMoreCard } from './ClipMoreCard'
 
-/** The clip workspace: ONE mounted block holding the three steps of a project (CLIP-36). The
+/** The clip workspace: ONE mounted block holding the five steps of a project (CLIP-36). The
  *  page routes to it and composes it; every hook the steps run on lives in `useClipWorkspace`. */
 export function ClipWorkspace({
   ownerId,
@@ -109,8 +121,8 @@ export function ClipWorkspace({
   const upload = sources.upload
   const step = workspace.step.value
   const setStep = workspace.step.set
-  // A finalized project is READ in ① and ②: the same steps, the same places, values instead of
-  // controls, and no original behind them (CLIP-160, CLIP-76).
+  // A finalized project is READ in ① through ④: the same steps, the same places, values instead
+  // of controls, and no original behind them (CLIP-160, CLIP-76).
   const reading = !!project.finalized
   const reasonId = useId()
   const now = usePreparationClock([
@@ -149,16 +161,31 @@ export function ClipWorkspace({
     : project.editPlanRevision > project.renderedPlanRevision
       ? 'unrendered'
       : 'clean'
-  // Shared reference content: ① keeps it in flow; ② mounts only the chosen tab.
+  // Shared reference content: ① keeps it in flow; ④ mounts only the chosen tab, and 장면 추가
+  // opens the observed scenes on their own (CLIP-150, CLIP-55).
   const [editorPanel, setEditorPanel] = useState<'script'>()
   // Tools and lifecycle panels can unmount the composer; the keyed owner/project workspace
   // retains its unsent words while quote and approval state stay inside the feature.
   const [storylineRequest, setStorylineRequest] = useState('')
   const [referenceOpen, setReferenceOpen] = useState(false)
+  // 'observations' is 장면 추가's chooser, reached from a scene block rather than a tab.
   const [referenceTab, setReferenceTab] = useState<'observations' | 'sources' | 'requests'>(
-    'observations',
+    'sources',
   )
   const requestRecord = <ClipRequestRecord requests={project.requests} />
+  // ②'s step bar body is drawn by ①'s form, which owns the generation actions' readiness: a portal
+  // keeps their quotes and approvals mounted while ② is not on screen (CLIP-40).
+  const [observeBar, setObserveBar] = useState<HTMLDivElement | null>(null)
+  const routeToPreparation = (screen: ClipPreparationScreen) => {
+    setStep('generate')
+    setGuide(screen)
+    window.scrollTo(0, 0)
+    focusPreparationField(screen)
+  }
+  const goStep = (next: typeof step) => {
+    setStep(next)
+    window.scrollTo(0, 0)
+  }
 
   const observationPanel = (
     <ClipObservationViewer
@@ -207,8 +234,19 @@ export function ClipWorkspace({
           processing={generation.busy}
         />
       )}
-      {observationPanel}
       {requestRecord}
+    </>
+  )
+  // ② 관찰: the stored observations, read-only here, with the step bar under them (CLIP-48,
+  // CLIP-40). The bar's host stays mounted so the actions drawn into it keep their state.
+  const observePanel = (
+    <>
+      {step === 'observe' && !run.focused && observationPanel}
+      {!reading && (
+        <StepBar ariaLabel={t('observeStep.actions')}>
+          <div ref={setObserveBar} className="flex min-w-0 flex-col gap-3" />
+        </StepBar>
+      )}
     </>
   )
   const modelsPanel = (
@@ -282,91 +320,105 @@ export function ClipWorkspace({
         reading
           ? undefined
           : (content) => (
-              <ClipPreparationGuide
-                screen={guide}
-                onSelect={setGuide}
-                reasonId={reasonId}
-                campaign={content.campaign}
-                requirements={content.requirements}
-                noteEmpty={content.noteEmpty}
-                screens={{
-                  ...content.screens,
-                  sources: (
-                    <>
-                      {content.screens.sources}
-                      {sourceFeedback}
-                      <RetainedPreparationMedia
-                        active={!run.focused && step === 'generate' && guide === 'sources'}
-                      >
-                        {sourcePanel}
-                      </RetainedPreparationMedia>
-                    </>
-                  ),
-                }}
-                rows={content.rows.flatMap((row) =>
-                  // The source row reads right after the linked post (CLIP-227).
-                  row.id !== 'post'
-                    ? [row]
-                    : [
-                        row,
-                        {
-                          id: 'sources',
-                          label: t('guide.sourceSummary'),
-                          screen: 'sources',
-                          value: (
-                            <ClipPreparationSources
-                              sources={sources}
-                              ready={sourceReady}
-                              now={now}
-                            />
-                          ),
-                        },
-                      ],
-                )}
-                models={modelsPanel}
-                actions={content.actions}
-                refusal={content.refusal}
-                correction={
-                  content.inputRefusal
-                    ? {
-                        screen: content.inputRefusal,
-                        label: t('guide.inputRefusal', {
-                          screen: t(`guide.${content.inputRefusal}`),
-                        }),
-                      }
-                    : regions.invalid
-                      ? {
-                          // ② shows the regions in its storyline space and as the scene list's
-                          // first and last blocks, each slot carrying its own error (CLIP-17).
-                          retry: () => {
-                            setStep('refine')
-                            // Land on the first slot holding words it cannot draw.
-                            requestAnimationFrame(() =>
-                              document
-                                .querySelector<HTMLElement>(
-                                  '[data-clip-regions] [aria-invalid="true"]',
-                                )
-                                ?.focus(),
-                            )
+              <>
+                <ClipPreparationGuide
+                  screen={guide}
+                  onSelect={setGuide}
+                  onNext={() => goStep('observe')}
+                  campaign={content.campaign}
+                  requirements={content.requirements}
+                  noteEmpty={content.noteEmpty}
+                  screens={{
+                    ...content.screens,
+                    sources: (
+                      <>
+                        {content.screens.sources}
+                        {sourceFeedback}
+                        <RetainedPreparationMedia
+                          active={!run.focused && step === 'generate' && guide === 'sources'}
+                        >
+                          {sourcePanel}
+                        </RetainedPreparationMedia>
+                      </>
+                    ),
+                  }}
+                  rows={content.rows.flatMap((row) =>
+                    // The source row reads right after the linked post (CLIP-227).
+                    row.id !== 'post'
+                      ? [row]
+                      : [
+                          row,
+                          {
+                            id: 'sources',
+                            label: t('guide.sourceSummary'),
+                            screen: 'sources',
+                            value: (
+                              <ClipPreparationSources
+                                sources={sources}
+                                ready={sourceReady}
+                                now={now}
+                              />
+                            ),
                           },
-                          label: t('guide.regionRefusal'),
-                        }
-                      : save.failing || regions.status.failing
-                        ? {
-                            retry: () => {
-                              void flushAll(true).catch(() => undefined)
-                            },
-                            label: t('guide.saveRefusal'),
-                          }
-                        : !sourceReady
-                          ? { screen: 'sources', label: t('guide.sourceRefusal') }
-                          : !generation.canQuote
-                            ? { retry: generation.retryEligibility, label: t('guide.modelRefusal') }
-                            : pending || generation.busy || render.browser.busy
-                              ? { label: t('guide.busyRefusal') }
-                              : undefined
-                }
-              />
+                        ],
+                  )}
+                  models={modelsPanel}
+                />
+                {observeBar &&
+                  createPortal(
+                    <ClipObserveBar
+                      actions={content.actions}
+                      refusal={content.refusal}
+                      reasonId={reasonId}
+                      onBack={() => goStep('generate')}
+                      onRoute={routeToPreparation}
+                      correction={
+                        content.inputRefusal
+                          ? {
+                              screen: content.inputRefusal,
+                              label: t('guide.inputRefusal', {
+                                screen: t(`guide.${content.inputRefusal}`),
+                              }),
+                            }
+                          : regions.invalid
+                            ? {
+                                // ③ shows the regions in its storyline space, each slot
+                                // carrying its own error (CLIP-179, CLIP-188).
+                                retry: () => {
+                                  setStep('storyline')
+                                  // Land on the first slot holding words it cannot draw.
+                                  requestAnimationFrame(() =>
+                                    document
+                                      .querySelector<HTMLElement>(
+                                        '[data-clip-regions] [aria-invalid="true"]',
+                                      )
+                                      ?.focus(),
+                                  )
+                                },
+                                label: t('guide.regionRefusal'),
+                              }
+                            : save.failing || regions.status.failing
+                              ? {
+                                  retry: () => {
+                                    void flushAll(true).catch(() => undefined)
+                                  },
+                                  label: t('guide.saveRefusal'),
+                                }
+                              : !sourceReady
+                                ? { screen: 'sources', label: t('guide.sourceRefusal') }
+                                : !generation.canQuote
+                                  ? {
+                                      retry: generation.retryEligibility,
+                                      label: t('guide.modelRefusal'),
+                                    }
+                                  : pending || generation.busy || render.browser.busy
+                                    ? { label: t('guide.busyRefusal') }
+                                    : undefined
+                      }
+                    />,
+                    observeBar,
+                  )}
+              </>
             )
       }
       actions={
@@ -415,7 +467,7 @@ export function ClipWorkspace({
       <Button
         variant="secondary"
         onClick={() => {
-          setReferenceTab('observations')
+          setReferenceTab('sources')
           setReferenceOpen(true)
         }}
       >
@@ -426,30 +478,36 @@ export function ClipWorkspace({
         labelledBy="clip-reference-title"
         onClose={() => setReferenceOpen(false)}
         header={
-          <div className="space-y-3">
+          referenceTab === 'observations' ? (
             <Typography variant="title" as="h2" id="clip-reference-title">
-              {t('reference.label')}
+              {t('reference.addScene')}
             </Typography>
-            <SegmentedControl
-              ariaLabel={t('reference.label')}
-              value={referenceTab}
-              onChange={setReferenceTab}
-              controls="clip-reference-panel"
-              options={(['observations', 'sources', 'requests'] as const).map((value) => ({
-                value,
-                label: t(`reference.tabs.${value}`),
-              }))}
-            />
-          </div>
+          ) : (
+            <div className="space-y-3">
+              <Typography variant="title" as="h2" id="clip-reference-title">
+                {t('reference.label')}
+              </Typography>
+              <SegmentedControl
+                ariaLabel={t('reference.label')}
+                value={referenceTab}
+                onChange={setReferenceTab}
+                controls="clip-reference-panel"
+                options={(['sources', 'requests'] as const).map((value) => ({
+                  value,
+                  label: t(`reference.tabs.${value}`),
+                }))}
+              />
+            </div>
+          )
         }
       >
-        {referenceOpen && (
+        {referenceOpen && referenceTab === 'observations' && observationPanel}
+        {referenceOpen && referenceTab !== 'observations' && (
           <div
             role="tabpanel"
             id="clip-reference-panel"
             aria-label={t(`reference.tabs.${referenceTab}`)}
           >
-            {referenceTab === 'observations' && observationPanel}
             {referenceTab === 'requests' && requestRecord}
             {referenceTab === 'sources' && (
               <>
@@ -489,9 +547,8 @@ export function ClipWorkspace({
     </>
   )
 
-  // The storyline space leads ② whenever the clip has a storyline or intro/outro slots to write
-  // (CLIP-178, CLIP-179): the whole step while there is no plan yet, and above the plan once there
-  // is one. The region blocks stand in it before any storyline or plan exists.
+  // ③ 스토리라인 stands the storyline space as the whole step (CLIP-178, CLIP-179). The region
+  // blocks stand in it before any storyline or plan exists.
   const regionBlock = (kind: 'intro' | 'outro') => (
     <ClipRegionEditor editor={regions} kind={kind} projectId={project.id} ratio={project.ratio} />
   )
@@ -500,7 +557,6 @@ export function ClipWorkspace({
       <ClipStorylineSpace
         ownerId={ownerId}
         project={project}
-        hasPlan={!!plan}
         readOnly={reading || generation.busy}
         sourceFiles={upload.readyBatch?.sources.map((s) => ({
           id: s.id,
@@ -510,57 +566,74 @@ export function ClipWorkspace({
         resolvePlayback={reading ? undefined : sources.resolvePlayback}
         intro={regionBlock('intro')}
         outro={regionBlock('outro')}
-        // Its actions and its request are absent on a finalized clip and held while a job runs
-        // (CLIP-160, CLIP-181); both build on a storyline, so neither stands without one.
-        aside={
-          reading || !project.storyline ? undefined : (
-            <ClipStorylineBuildActions
-              preparationRoute={generation.preparationRoute}
-              ownerId={ownerId}
-              project={project}
-              batch={upload.readyBatch}
-              observe={generation.observeRef}
-              write={generation.writeRef}
-              observeStatus={generation.observeStatus}
-              ready={generation.canQuote && !render.browser.busy && !regions.invalid}
-              pending={generation.starting}
-              hasPlan={!!plan}
-              disabled={generation.busy || uploading}
-              onApprove={(mode, quote) => {
-                void flushAll()
-                  .then(() =>
-                    generation.start(upload.readyBatch, true, quote, generation.ownership, mode),
-                  )
-                  .catch(() => undefined)
-              }}
-            />
-          )
-        }
-        lead={
-          reading || !project.storyline ? undefined : (
-            <ClipStorylineRequest
-              ownerId={ownerId}
-              project={project}
-              request={storylineRequest}
-              onRequestChange={setStorylineRequest}
-              observe={generation.observeRef}
-              write={generation.writeRef}
-              job={job}
-              disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
-              // A storyline request writes the slots too, from their instructions and exact words
-              // (CLIP-178), over the storyline the owner is looking at: all three land before it
-              // starts.
-              flush={() =>
-                save
-                  .flush()
-                  .then(() => regions.flush())
-                  .then(() => storyline.flush())
-              }
-            />
-          )
-        }
       />
     ) : null
+  // ③'s step bar (CLIP-180): the storyline request, then 이전, 다시 만들기 and the build. Both build
+  // on a storyline, so neither stands without one, and a finalized clip has none (CLIP-160).
+  const storylineBar =
+    reading || !project.storyline ? null : (
+      <StepBar ariaLabel={t('storylineStep.actions')}>
+        <ClipStorylineRequest
+          ownerId={ownerId}
+          project={project}
+          request={storylineRequest}
+          onRequestChange={setStorylineRequest}
+          observe={generation.observeRef}
+          write={generation.writeRef}
+          job={job}
+          disabled={generation.busy && job?.kind !== 'revise_storyline_clip'}
+          // A storyline request writes the slots too, from their instructions and exact words
+          // (CLIP-178), over the storyline the owner is looking at: all three land before it
+          // starts.
+          flush={() =>
+            save
+              .flush()
+              .then(() => regions.flush())
+              .then(() => storyline.flush())
+          }
+        />
+        <StepBarActions
+          back={<StepBarBack label={t('storylineStep.back')} onClick={() => goStep('observe')} />}
+        >
+          <ClipStorylineBuildActions
+            stepBar
+            preparationRoute={generation.preparationRoute}
+            ownerId={ownerId}
+            project={project}
+            batch={upload.readyBatch}
+            observe={generation.observeRef}
+            write={generation.writeRef}
+            observeStatus={generation.observeStatus}
+            ready={generation.canQuote && !render.browser.busy && !regions.invalid}
+            pending={generation.starting}
+            hasPlan={!!plan}
+            disabled={generation.busy || uploading}
+            onApprove={(mode, quote) => {
+              void flushAll()
+                .then(() =>
+                  generation.start(upload.readyBatch, true, quote, generation.ownership, mode),
+                )
+                .catch(() => undefined)
+            }}
+          />
+        </StepBarActions>
+      </StepBar>
+    )
+  // With no storyline ③ says what it waits for and offers the way to ② (CLIP-179); the region
+  // blocks still stand, since slot text is written before any storyline exists.
+  const storylinePanel = (
+    <>
+      {!project.storyline && (
+        <ClipStepWaiting
+          message={t('steps.storylineWaiting')}
+          goLabel={t('steps.goObserve')}
+          onGo={() => goStep('observe')}
+        />
+      )}
+      {storylineSpace}
+      {storylineBar}
+    </>
+  )
 
   // ③ alone offers the 업로드 문구, once the plan is confirmed and on a finalized clip (CLIP-211,
   // CLIP-160); a write still running keeps its cancel there whatever the plan became since.
@@ -583,10 +656,10 @@ export function ClipWorkspace({
       </div>
     ) : null
 
+  // ④ starts with the preview and the scene blocks, nothing standing above them (CLIP-53,
+  // CLIP-197): the storyline is ③'s.
   const refinePanel = plan ? (
     <>
-      {/* ② stands its storyline space first, closed once there is a plan (CLIP-53, CLIP-179). */}
-      {storylineSpace}
       <ClipCorrectionWorkspace
         project={{
           id: project.id,
@@ -685,10 +758,7 @@ export function ClipWorkspace({
                   </Button>
                 ) : undefined
               }
-              onBack={() => {
-                setStep('generate')
-                window.scrollTo(0, 0)
-              }}
+              onBack={() => goStep('storyline')}
             />
           ),
           tools: (
@@ -782,10 +852,11 @@ export function ClipWorkspace({
           disabled={pending}
         />
       )}
-      {storylineSpace}
-      {!project.storyline && (
-        <ClipStepWaiting message={t('steps.refineWaiting')} onGo={() => setStep('generate')} />
-      )}
+      <ClipStepWaiting
+        message={t('steps.refineWaiting')}
+        goLabel={t('steps.goStoryline')}
+        onGo={() => goStep('storyline')}
+      />
       {project.result && (
         <>
           <Typography variant="meta">
@@ -961,7 +1032,7 @@ export function ClipWorkspace({
           {(job?.status === 'cancelled' || job?.status === 'failed') &&
             step === 'refine' &&
             job.kind === 'generate_clip' && (
-              <Button variant="secondary" onClick={() => setStep('generate')}>
+              <Button variant="secondary" onClick={() => setStep('observe')}>
                 {t('generation.retry')}
               </Button>
             )}
@@ -995,6 +1066,10 @@ export function ClipWorkspace({
         <div hidden={step !== 'generate'} className="flex flex-1 flex-col">
           {generatePanel}
         </div>
+        <div hidden={step !== 'observe'} className="flex flex-1 flex-col">
+          {observePanel}
+        </div>
+        {!run.focused && step === 'storyline' && storylinePanel}
         {!run.focused && step === 'refine' && refinePanel}
         {!run.focused && step === 'finish' && finishPanel}
       </div>

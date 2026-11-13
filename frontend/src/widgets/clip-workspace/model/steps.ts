@@ -1,34 +1,44 @@
-import i18next from 'i18next'
 import { clipState, type ClipProject, type ClipState } from '@/entities/clip-project'
+import { LIFECYCLE_STATIONS, lifecycleStationLabel, type LifecycleStation } from '@/shared/config'
 
-export type ClipStep = 'generate' | 'refine' | 'finish'
+export type ClipStep = LifecycleStation
 
-/** The project's lifecycle as three steps (CLIP-36, THEME-39). One list, so the bar and the
- *  panels cannot drift. */
+/** The project's lifecycle as the five shared stations (CLIP-36, THEME-39). One list, so the bar
+ *  and the panels cannot drift, and the same short names the post editor runs (→POST-44). */
 export function clipSteps(): ReadonlyArray<{ value: ClipStep; label: string }> {
-  return [
-    { value: 'generate', label: i18next.t('steps.generate', { ns: 'clips' }) },
-    { value: 'refine', label: i18next.t('steps.refine', { ns: 'clips' }) },
-    { value: 'finish', label: i18next.t('steps.finish', { ns: 'clips' }) },
-  ]
+  return LIFECYCLE_STATIONS.map((value) => ({ value, label: lifecycleStationLabel(value) }))
 }
 
 export function clipStepLabel(step: ClipStep): string {
-  return clipSteps().find((item) => item.value === step)?.label ?? ''
+  return lifecycleStationLabel(step)
 }
 
-const BY_STATE: Record<ClipState, ClipStep> = {
-  draft: 'generate',
-  refining: 'refine',
+const BY_STATE: Record<Exclude<ClipState, 'draft' | 'refining'>, ClipStep> = {
   confirmed: 'finish',
   completed: 'finish',
   published: 'finish',
 }
 
-/** A confirmed or finalized project opens ③, an unconfirmed one holding a storyline or a plan ②,
- *  any other ① (CLIP-36). An unreached result tab never implies confirmation. */
+/** The step a project's persisted facts put it in (CLIP-36): nothing new is persisted, so a
+ *  reload, the list badge and this screen cannot disagree.
+ *
+ *  - a confirmed or finalized project opens ⑤ 완성;
+ *  - an unconfirmed one holding an edit plan (or a render of one) opens ④ 다듬기;
+ *  - one holding a storyline and no plan opens ③ 스토리라인;
+ *  - one holding observations only opens ② 관찰;
+ *  - any other opens ① 생성. */
 export function stepForProject(project: ClipProject): ClipStep {
-  return BY_STATE[clipState(project)]
+  const state = clipState(project)
+  if (state !== 'draft' && state !== 'refining') return BY_STATE[state]
+  if (project.editPlanRevision > 0 || project.result) return 'refine'
+  if (project.storyline) return 'storyline'
+  if (hasObservations(project)) return 'observe'
+  return 'generate'
+}
+
+/** Whether the project holds stored observations of at least one source (CLIP-234). */
+function hasObservations(project: ClipProject): boolean {
+  return project.observations?.status === 'available' && project.observations.sources.length > 0
 }
 
 /** ①'s first screen: a project holding an instruction, a source or a running job opens on 확인,

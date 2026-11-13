@@ -85,7 +85,7 @@ it('keeps one composer in the step bar and opens only the approval from send', a
   const dock = within(dockElement)
   expect(
     dock.getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent),
-  ).toEqual(['AI에 수정 요청', '이전: 영상 생성', '확정하기'])
+  ).toEqual(['AI에 수정 요청', '이전: 스토리라인', '확정하기'])
   expect(dock.queryByRole('tablist', { name: '고칠 대상' })).not.toBeInTheDocument()
   expect(dock.queryByRole('button', { name: /렌더|브라우저|서버/ })).not.toBeInTheDocument()
   expect(dock.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
@@ -159,7 +159,7 @@ it('keeps ② mounted and read-only while the request runs, with progress and �
   expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
   // ② is still the screen: its step bar, its timeline and its preview stay, and
   // no focused job view took over.
-  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toBeInTheDocument()
+  expect(screen.getByRole('tab', { name: '다듬기' })).toBeInTheDocument()
   expect(screen.getByRole('region', { name: '장면 블록' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '컷 1 편집' }))
   await waitFor(() => expect(screen.getByRole('button', { name: '컷 삭제' })).toBeDisabled())
@@ -236,10 +236,10 @@ it('keeps a running upload-text job in ③ with its own cancel action and none i
   }
   await mount({ projects: [{ ...fixture(), latestJob }] }, { jobs: [latestJob] })
   expect(await screen.findByRole('region', { name: '장면 블록' })).toBeVisible()
-  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '다듬기' })).toHaveAttribute('aria-selected', 'true')
   // ② no longer offers the 업로드 문구 (CLIP-211); the running write keeps its cancel in ③.
   expect(screen.queryByRole('button', { name: '문구 작성 취소' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '영상 완성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '완성' }))
   expect(await screen.findByRole('button', { name: '문구 작성 취소' })).toBeEnabled()
 })

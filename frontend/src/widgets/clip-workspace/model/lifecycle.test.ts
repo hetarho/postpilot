@@ -1,7 +1,8 @@
-import { expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import type { GenerationJob } from '@/entities/generation-job'
 import {
+  stepAfterJob,
   useDiscardQueueWhenFinalized,
   useSoundBatchHandoff,
   useUploadAttemptLifecycle,
@@ -48,4 +49,12 @@ it('drops the save queue when the project is finalized, and not before', () => {
   expect(discard).not.toHaveBeenCalled()
   view.rerender({ finalized: { at: '2026-09-20T00:00:00Z' } })
   expect(discard).toHaveBeenCalledWith('clip')
+})
+
+describe('stepAfterJob', () => {
+  it('lands a storyline on ③ and a generation on ④, and leaves other runs where they are', () => {
+    expect(stepAfterJob('storyline_clip')).toBe('storyline')
+    expect(stepAfterJob('generate_clip')).toBe('refine')
+    expect(stepAfterJob('revise_clip')).toBeUndefined()
+  })
 })

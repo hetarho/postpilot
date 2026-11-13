@@ -1,57 +1,44 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useSaveClipStoryline,
   type ClipProject,
   type ClipStorylineParagraph,
 } from '@/entities/clip-project'
-import { ActionMenu, AppFailureMessage, Disclosure, Notice, Typography } from '@/shared/ui'
+import { ActionMenu, AppFailureMessage, Notice, Typography } from '@/shared/ui'
 import { clipScenes, takenOutScenes, withSceneIn } from '../model/storyline-edits'
 import { queueClipStoryline } from '../model/storyline-queue'
 import { useClipStorylineQueue } from '../model/useClipStorylineQueue'
 import { ClipSceneFrame } from './ClipSceneFrame'
 import { ClipStorylineParagraphEditor } from './ClipStorylineParagraphEditor'
 
-/** ②'s storyline space (CLIP-178, CLIP-179): the intro, the clip's storyline as paragraphs with
- *  their scenes as frames, edited and rearranged by hand, and the outro. Open while the project has
- *  no plan, and closed when ② first shows one — the plan is then what the owner works on. Every
- *  edit saves itself through the project update with no dirty gate (CLIP-39); a running job or a
- *  finalized project leaves it read-only (CLIP-160). `aside` and `lead` are the heading row's
- *  actions and the field under it, which the storyline actions fill; `intro` and `outro` are the
+/** ③ 스토리라인 (CLIP-178, CLIP-179): the intro, the clip's storyline as paragraphs with their
+ *  scenes as frames, edited and rearranged by hand, and the outro, standing as the whole step with
+ *  nothing to collapse. Every edit saves itself through the project update with no dirty gate
+ *  (CLIP-39); a running job or a finalized project leaves it read-only (CLIP-160). The request and
+ *  the build actions are the step bar's, not the space's (CLIP-180); `intro` and `outro` are the
  *  region blocks, which stand here before any storyline exists (CLIP-179). */
 export function ClipStorylineSpace({
   ownerId,
   project,
-  hasPlan,
   readOnly,
   localSources,
   sourceFiles,
   resolvePlayback,
-  aside,
-  lead,
   intro,
   outro,
 }: {
   ownerId: string
   project: ClipProject
-  hasPlan: boolean
   readOnly: boolean
   sourceFiles?: ReadonlyArray<{ id: string; filename: string }>
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
-  aside?: ReactNode
-  lead?: ReactNode
   intro?: ReactNode
   outro?: ReactNode
 }) {
   const { t } = useTranslation('clips')
   const storyline = project.storyline
-  const [open, setOpen] = useState(!hasPlan)
-  const hadPlan = useRef(hasPlan)
-  useEffect(() => {
-    if (hasPlan && !hadPlan.current) setOpen(false)
-    hadPlan.current = hasPlan
-  }, [hasPlan])
 
   const save = useSaveClipStoryline(ownerId)
   const projectId = project.id
@@ -86,14 +73,10 @@ export function ClipStorylineSpace({
   const unused = storyline ? files.filter((file) => !used.has(file.id)) : []
   const takenOut = storyline ? takenOutScenes(storyline, draft) : []
   return (
-    <Disclosure
-      title={t('storylineSpace.title')}
-      open={open}
-      onOpenChange={setOpen}
-      aside={aside}
-      lead={lead}
-      className="mb-6"
-    >
+    <section aria-labelledby="clip-storyline-space-title" className="mt-6 mb-6 min-w-0">
+      <Typography variant="title" id="clip-storyline-space-title">
+        {t('storylineSpace.title')}
+      </Typography>
       {!!storyline?.addedSourceIds.length && (
         <Notice tone="info" role="status" className="mt-2">
           {t('storylineSpace.added')}
@@ -170,6 +153,6 @@ export function ClipStorylineSpace({
           <AppFailureMessage failure={failure} />
         </div>
       )}
-    </Disclosure>
+    </section>
   )
 }

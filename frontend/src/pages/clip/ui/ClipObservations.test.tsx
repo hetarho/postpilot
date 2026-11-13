@@ -6,7 +6,9 @@ import { renderAppAt } from '@/test/app'
 import { observedClipFixture } from '@/test/clip-observations'
 
 describe('observations in the clip workspace', () => {
-  it('mounts only the chosen reference tab and keeps the generation step references in flow', async () => {
+  // CLIP-150, CLIP-48: ④'s reference holds 원본 영상 and 요청 기록, ② shows the observations and
+  // ① keeps the source strip and the request record in flow.
+  it('mounts only the chosen reference tab, shows observations on ② and keeps ①’s references in flow', async () => {
     const project = observedClipFixture()
     project.requests = [
       { kind: 'instruction', body: '원문 요청을 그대로 보관', createdAt: '2026-09-18T00:00:00Z' },
@@ -26,14 +28,8 @@ describe('observations in the clip workspace', () => {
     ).not.toBeInTheDocument()
     await userEvent.click(open)
     const sheet = within(screen.getByRole('dialog', { name: '원본 소스' }))
-    expect(sheet.getByRole('tab', { name: '관찰 기록' })).toHaveAttribute('aria-selected', 'true')
-    expect(sheet.getByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
-    await userEvent.click(sheet.getByRole('button', { name: 'source-b.mp4 선택' }))
-    expect(sheet.getByRole('button', { name: 'source-b.mp4 선택' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    await userEvent.click(sheet.getByRole('tab', { name: '원본 영상' }))
+    expect(sheet.queryByRole('tab', { name: '관찰 기록' })).not.toBeInTheDocument()
+    expect(sheet.getByRole('tab', { name: '원본 영상' })).toHaveAttribute('aria-selected', 'true')
     expect(screen.queryByRole('heading', { name: 'AI가 관찰한 내용' })).not.toBeInTheDocument()
     expect(sheet.getByLabelText('원본 영상 선택')).toBeInTheDocument()
     expect(sheet.getByRole('heading', { name: '다시 출력에 필요한 원본' })).toBeVisible()
@@ -47,13 +43,17 @@ describe('observations in the clip workspace', () => {
         '원문 요청을 그대로 보관',
       ),
     ).not.toBeInTheDocument()
-    await userEvent.click(open)
-    expect(screen.getByRole('tab', { name: '관찰 기록' })).toHaveAttribute('aria-selected', 'true')
-    await userEvent.keyboard('{Escape}')
-    await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
+    await userEvent.click(screen.getByRole('tab', { name: '관찰' }))
+    expect(screen.getByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: 'source-b.mp4 선택' }))
+    expect(screen.getByRole('button', { name: 'source-b.mp4 선택' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await userEvent.click(screen.getByRole('tab', { name: '생성' }))
     expect(screen.queryByRole('button', { name: '원본 소스' })).not.toBeInTheDocument()
     await clipGuideTo('sources')
-    expect(screen.getByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'AI가 관찰한 내용' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('원본 영상 선택')).toBeInTheDocument()
     expect(
       within(screen.getByRole('region', { name: '어떤 영상으로 만들까요?' })).getByText(
@@ -98,36 +98,26 @@ describe('observations in the clip workspace', () => {
     ).toBeVisible()
     expect(screen.getByText('원본 분석 2 / 2 구간 완료')).toBeVisible()
     const tabs = within(screen.getByRole('tablist', { name: '클립 단계' }))
-    await userEvent.click(tabs.getByRole('tab', { name: '영상 생성' }))
+    await userEvent.click(tabs.getByRole('tab', { name: '생성' }))
     expect(screen.getByRole('heading', { name: '이번 작업에서 확인할 수 있는 내용' })).toBeVisible()
     expect(calls).not.toContain('StartClipGeneration')
     expect(calls).not.toContain('StartClipRender')
     expect(calls).not.toContain('QuoteClipGeneration')
   })
-  it('keeps observations available on both editable steps without invoking generation', async () => {
+  it('shows the observations with their usage on ② without invoking generation', async () => {
     const calls: string[] = []
     const project = observedClipFixture()
     renderAppAt('/clips/project', { user: { id: 'alice' }, clips: { projects: [project], calls } })
     const user = userEvent.setup()
-    await user.click(await screen.findByRole('button', { name: '원본 소스' }))
-    expect(await screen.findByRole('heading', { name: 'AI가 관찰한 내용' })).toBeVisible()
-    await user.keyboard('{Escape}')
-    const tabs = within(screen.getByRole('tablist', { name: '클립 단계' }))
-    for (const name of ['영상 생성', '영상 다듬기']) {
-      await user.click(tabs.getByRole('tab', { name: new RegExp(name) }))
-      if (name === '영상 생성') await clipGuideTo('sources')
-      if (name === '영상 다듬기')
-        await user.click(screen.getByRole('button', { name: '원본 소스' }))
-      expect(screen.getAllByRole('heading', { name: 'AI가 관찰한 내용' })).toHaveLength(1)
-      await user.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
-      expect(
-        within(
-          name === '영상 다듬기'
-            ? screen.getByRole('dialog', { name: '원본 소스' })
-            : screen.getByRole('tabpanel', { name: '영상 생성' }),
-        ).getByText('1번 컷에 사용 · 1× · 원본 0:03.500–0:10'),
-      ).toBeVisible()
-    }
+    const tabs = within(await screen.findByRole('tablist', { name: '클립 단계' }))
+    await user.click(tabs.getByRole('tab', { name: '관찰' }))
+    expect(screen.getAllByRole('heading', { name: 'AI가 관찰한 내용' })).toHaveLength(1)
+    await user.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
+    expect(
+      within(screen.getByRole('tabpanel', { name: '관찰' })).getByText(
+        '1번 컷에 사용 · 1× · 원본 0:03.500–0:10',
+      ),
+    ).toBeVisible()
     expect(calls).not.toContain('StartClipGeneration')
     expect(calls).not.toContain('QuoteClipGeneration')
     expect(calls).not.toContain('CreateClipSourceBatch')
@@ -148,8 +138,8 @@ describe('observations in the clip workspace', () => {
         },
         jobs: { jobs: [{ id: 'new-run', kind: 'generate_clip', status, stage: 'analyze' }] },
       })
-      await userEvent.click(await screen.findByRole('button', { name: '원본 소스' }))
-      const reference = within(screen.getByRole('dialog', { name: '원본 소스' }))
+      await userEvent.click(await screen.findByRole('tab', { name: '관찰' }))
+      const reference = within(screen.getByRole('tabpanel', { name: '관찰' }))
       expect(await reference.findByText(/이전 생성의 관찰 결과예요/)).toBeVisible()
       await userEvent.click(screen.getByRole('button', { name: /자세히 보기/ }))
       expect(reference.getByText('맛있어요')).toBeVisible()
