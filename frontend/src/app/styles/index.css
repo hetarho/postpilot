@@ -1234,7 +1234,36 @@ summary,
   color: var(--color-selection-fg);
 }
 
+/* Geometry is present immediately; only the decorative feedback waits briefly. */
+.loading-reveal {
+  animation: loading-reveal 1ms 150ms both;
+}
+
+.loading-skeleton {
+  animation: loading-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes loading-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes loading-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .loading-skeleton,
+  .loading-reveal .animate-spin {
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {
