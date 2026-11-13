@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:43Z | T796 | main | a6a6cefc9078 |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:42Z | - | task/video-ux | 4eb7c1b2e9d8 |
-| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:41Z | T809 | task/design-system-audit-serial | d8dad5d8c0dc |
+| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:43Z | - | task/design-system-audit-serial | d8dad5d8c0dc |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -169,8 +169,10 @@
 | T799 | ldui | main | cb2c17c585de | 2026-11-13T16:42Z |
 | T800 | ldui | main | d7a9526b3c1f | 2026-11-13T16:42Z |
 | T801 | ldui | main | a7ac949f760a | 2026-11-13T16:42Z |
+| T809 | dsui | task/design-system-audit-serial | d8dad5d8c0dc | 2026-11-13T16:43Z |
 
 ## log
+- 261113 T809 done
 - 261113 T801 done
 - 261113 T800 done
 - 261113 T799 done
@@ -190,4 +192,3 @@
 - 261113 gusta-update-ssot THEME start: replace flashing page loading copy with contextual skeletons and indicators
 - 261113 gusta-update complete: 0.17.1; auto version and managed instructions enabled; caller-provider preference, independent review and fallback; ARCH r24/DUB r4 policy-only deltas consumed; 23 Git-proven chg records restored
 - 261113 gusta-update-ssot DUB start: align DUB-27 per-task build obligation with approved ARCH task/batch ownership; live voice gates unchanged
-- 261113 gusta-create-task ARCH r24 no-op: framework policy, settings and documentation only; no application code delta; blocked qualification conditions retained
