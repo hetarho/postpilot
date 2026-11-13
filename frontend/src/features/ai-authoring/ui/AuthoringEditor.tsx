@@ -1,3 +1,4 @@
+import { ReturnIcon } from '@/shared/ui'
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
@@ -354,9 +355,16 @@ function ScopedEditor({
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
         {canGoBack && !onNavigationChange && (
-          <Button variant="ghost" className="mb-2 sm:mb-6" onClick={() => event('BACK')}>
+          <Button
+            variant="secondary"
+            size="icon"
+            aria-label={t('back')}
+            title={t('back')}
+            className="mb-2 sm:mb-6"
+            onClick={() => event('BACK')}
+          >
             <ArrowLeft aria-hidden="true" className="size-4" />
-            {t('back')}
+            <ReturnIcon />
           </Button>
         )}
         <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">

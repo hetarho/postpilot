@@ -1,3 +1,4 @@
+import { ReturnIcon } from '@/shared/ui'
 import { useEffect, useId, useState, type ReactNode } from 'react'
 import { clsx } from 'clsx'
 import { useTranslation } from 'react-i18next'
@@ -223,14 +224,17 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
               </Typography>
               {pickerOpen && selected && (
                 <Button
-                  variant="ghost"
+                  variant="secondary"
+                  size="icon"
+                  aria-label={t('originReview.back', { ns: 'posts' })}
+                  title={t('originReview.back', { ns: 'posts' })}
                   onClick={() => {
                     const returnId = selected.returnId
                     setSelection(null)
                     if (returnId) queueMicrotask(() => document.getElementById(returnId)?.focus())
                   }}
                 >
-                  {t('originReview.back', { ns: 'posts' })}
+                  <ReturnIcon />
                 </Button>
               )}
               <Button variant="ghost" onClick={close}>

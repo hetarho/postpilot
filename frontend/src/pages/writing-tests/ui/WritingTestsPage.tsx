@@ -93,7 +93,9 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
       </main>
     )
   return (
-    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col' })}>
+    <main
+      className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-0 sm:pb-0' })}
+    >
       <Typography variant="title" as="h1">
         {t('title')}
       </Typography>
@@ -118,7 +120,9 @@ export function WritingTestPage() {
     context: initialContext({ factor: 'model', stage: 'write', count: 2 }),
   }
   return (
-    <main className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col' })}>
+    <main
+      className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-0 sm:pb-0' })}
+    >
       <Typography variant="title" as="h1">
         {t('title')}
       </Typography>

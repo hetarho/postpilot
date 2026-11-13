@@ -1,3 +1,4 @@
+import { ReturnIcon } from '@/shared/ui'
 import { useId, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -183,8 +184,14 @@ export function SpokenVoiceCreation({
           ) : (
             <>
               <Typography variant="body">{t('waitingCandidates')}</Typography>
-              <Button variant="ghost" onClick={() => setView('details')}>
-                {t('backDetails')}
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('backDetails')}
+                title={t('backDetails')}
+                onClick={() => setView('details')}
+              >
+                <ReturnIcon />
               </Button>
             </>
           ))}
@@ -196,8 +203,14 @@ export function SpokenVoiceCreation({
           ) : (
             <>
               <Typography variant="body">{t('waitingSaved')}</Typography>
-              <Button variant="ghost" onClick={() => setView('audition')}>
-                {t('backAudition')}
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('backAudition')}
+                title={t('backAudition')}
+                onClick={() => setView('audition')}
+              >
+                <ReturnIcon />
               </Button>
             </>
           ))}

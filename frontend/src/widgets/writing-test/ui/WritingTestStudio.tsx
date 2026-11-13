@@ -1,3 +1,4 @@
+import { ReturnIcon, StepBarActions } from '@/shared/ui'
 import { useWritingTestTranslation } from '@/features/writing-test'
 import {
   useCallback,
@@ -44,7 +45,7 @@ import {
   WRITING_TEST_NEW_GUIDELINE_SLOT,
 } from '@/features/writing-test'
 import {
-  ActionBar,
+  StepBar,
   AppFailureMessage,
   Button,
   Checkbox,
@@ -632,7 +633,7 @@ function OwnedStudio({
     })
   }
   return (
-    <div className="min-w-0">
+    <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex flex-wrap items-center gap-2">
         <ContextualReturn />
         {!testId && flow.view === 'factor' && (
@@ -914,10 +915,13 @@ function OwnedStudio({
           {attempted && (plan.factor === 'model' ? candidateProblem : assignedProblem) && (
             <FieldMessage>{t('requiredChoices', { count: plan.count })}</FieldMessage>
           )}
-          <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap items-center justify-center gap-3">
+          <StepBar ariaLabel={title}>
+            <StepBarActions className="flex-wrap">
               <Button
-                variant="ghost"
+                variant="secondary"
+                size="icon"
+                aria-label={t('back')}
+                title={t('back')}
                 disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
                 onClick={() =>
                   preparation.phase === 'quoted'
@@ -925,16 +929,23 @@ function OwnedStudio({
                     : flow.sendPresentation({ type: 'BACK' })
                 }
               >
-                {t('back')}
+                <ReturnIcon />
               </Button>
               {['quoted', 'created'].includes(preparation.phase) && plan.factor !== 'model' ? (
-                <Button variant="cta" onClick={() => preparation.send({ type: 'CONFIRM' })}>
+                <Button
+                  variant="cta"
+                  size="hero"
+                  className="min-w-0 flex-1"
+                  onClick={() => preparation.send({ type: 'CONFIRM' })}
+                >
                   {t('prepare', { count: preparation.context.draft.count })}
                 </Button>
               ) : (
                 !prepLocked && (
                   <Button
                     variant="cta"
+                    size="hero"
+                    className="min-w-0 flex-1"
                     onClick={next}
                     disabled={
                       plan.factor !== 'model' && missingSlots.length > 0 && !writer.selected
@@ -944,12 +955,12 @@ function OwnedStudio({
                   </Button>
                 )
               )}
-            </div>
-          </ActionBar>
+            </StepBarActions>
+          </StepBar>
         </section>
       )}
       {flow.view === 'material' && (
-        <section className="mt-5 space-y-5">
+        <section className="mt-5 flex flex-1 flex-col gap-5">
           {preparation.phase === 'ready' &&
             preparation.context.session &&
             plan.entrants.some(
@@ -1175,13 +1186,21 @@ function OwnedStudio({
                       : t('requiredMaterial')}
               </FieldMessage>
             )}
-          <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button variant="ghost" onClick={() => flow.sendPresentation({ type: 'BACK' })}>
-                {t('back')}
+          <StepBar ariaLabel={title}>
+            <StepBarActions className="flex-wrap">
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('back')}
+                title={t('back')}
+                onClick={() => flow.sendPresentation({ type: 'BACK' })}
+              >
+                <ReturnIcon />
               </Button>
               <Button
                 variant="cta"
+                size="hero"
+                className="min-w-0 flex-1"
                 pending={flow.phase === 'quoting'}
                 disabled={sourcePending}
                 onClick={() => {
@@ -1197,32 +1216,43 @@ function OwnedStudio({
               >
                 {t('estimatePosts', { count: plan.count })}
               </Button>
-            </div>
-          </ActionBar>
+            </StepBarActions>
+          </StepBar>
         </section>
       )}
       {flow.view === 'estimate' && (
-        <section className="mt-5 space-y-5">
+        <section className="mt-5 flex flex-1 flex-col gap-5">
           <Typography variant="body">{t('onceOnly')}</Typography>
           <Typography variant="title">
             {flow.context.quote?.free
               ? t('free')
               : t('credits', { count: flow.context.quote?.credits ?? 0 })}
           </Typography>
-          <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button variant="ghost" onClick={() => flow.sendPresentation({ type: 'BACK' })}>
-                {t('back')}
+          <StepBar ariaLabel={title}>
+            <StepBarActions className="flex-wrap">
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('back')}
+                title={t('back')}
+                onClick={() => flow.sendPresentation({ type: 'BACK' })}
+              >
+                <ReturnIcon />
               </Button>
-              <Button variant="cta" onClick={() => flow.send({ type: 'CONFIRM' })}>
+              <Button
+                variant="cta"
+                size="hero"
+                className="min-w-0 flex-1"
+                onClick={() => flow.send({ type: 'CONFIRM' })}
+              >
                 {t(flow.context.retryEstimate ? 'retry' : 'start', { count: quoteCount })}
               </Button>
-            </div>
-          </ActionBar>
+            </StepBarActions>
+          </StepBar>
         </section>
       )}
       {flow.view === 'work' && (
-        <section className="mt-5 space-y-5">
+        <section className="mt-5 flex flex-1 flex-col gap-5">
           {['running', 'starting', 'retrying'].includes(flow.phase) && (
             <>
               <Typography variant="body" role="status">
@@ -1270,7 +1300,7 @@ function OwnedStudio({
         </section>
       )}
       {flow.view === 'champion' && test && winner && (
-        <section className="mt-5 space-y-5">
+        <section className="mt-5 flex flex-1 flex-col gap-5">
           <Typography variant="fieldTitle">{winner.identity?.label}</Typography>
           <Typography variant="body">{t('winnerHelp')}</Typography>
           {settingPublished ? (
@@ -1305,7 +1335,7 @@ function OwnedStudio({
         </section>
       )}
       {flow.view === 'publication' && test && winner && (
-        <section className="mt-5 space-y-5">
+        <section className="mt-5 flex flex-1 flex-col gap-5">
           {test.factor !== 'model' && flow.presentation.choices.action === 'save-setting' && (
             <WritingOptionField
               label={t('name')}
@@ -1408,12 +1438,24 @@ function OwnedStudio({
                     !flow.presentation.choices.scopeIds.length)))) && (
               <FieldMessage>{t('requiredInput')}</FieldMessage>
             )}
-          <ActionBar ariaLabel={title}>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <Button variant="ghost" onClick={() => flow.sendPresentation({ type: 'BACK' })}>
-                {t('back')}
+          <StepBar ariaLabel={title}>
+            <StepBarActions className="flex-wrap">
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('back')}
+                title={t('back')}
+                onClick={() => flow.sendPresentation({ type: 'BACK' })}
+              >
+                <ReturnIcon />
               </Button>
-              <Button variant="cta" pending={flow.phase === 'publishing'} onClick={publish}>
+              <Button
+                variant="cta"
+                size="hero"
+                className="min-w-0 flex-1"
+                pending={flow.phase === 'publishing'}
+                onClick={publish}
+              >
                 {test.factor === 'model'
                   ? t('adoptModel')
                   : flow.presentation.choices.action === 'use-setting'
@@ -1427,12 +1469,12 @@ function OwnedStudio({
                           name: publicationName || t('factor.guideline'),
                         })}
               </Button>
-            </div>
-          </ActionBar>
+            </StepBarActions>
+          </StepBar>
         </section>
       )}
       {flow.view === 'recovery' && (
-        <section className="mt-5 space-y-5">
+        <section className="mt-5 flex flex-1 flex-col gap-5">
           <Typography variant="body">
             {t(
               flow.phase === 'partial'
