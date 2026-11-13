@@ -1,3 +1,4 @@
+import { cardStyles } from '@/shared/ui'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -797,7 +798,7 @@ export function ClipProjectForm({
         ) : (
           // New and finalized read-only views keep the one spaced column; a new clip has no
           // source fields yet.
-          <div className="min-w-0 space-y-6">
+          <div className={cardStyles({ className: 'min-w-0 space-y-6' })}>
             {storyFields}
             {kindFields}
             {campaign && requirementFields}

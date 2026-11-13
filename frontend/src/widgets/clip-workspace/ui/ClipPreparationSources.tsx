@@ -1,3 +1,4 @@
+import { Typography } from '@/shared/ui'
 import { useTranslation } from 'react-i18next'
 import type { useClipWorkspace } from '../model/useClipWorkspace'
 
@@ -26,9 +27,15 @@ export function ClipPreparationSources({
   const readyCount = entries.filter((entry) => entry.confirmed && !unavailable(entry)).length
   return (
     <>
-      <p>{t('guide.sourceCount', { count: entries.length, ready: readyCount })}</p>
-      {!ready && <p>{t(entries.length ? 'guide.sourceRefusal' : 'guide.noSources')}</p>}
-      <ol className="space-y-3">
+      <Typography variant="body" as="p" className="break-words">
+        {t('guide.sourceCount', { count: entries.length, ready: readyCount })}
+      </Typography>
+      {!ready && (
+        <Typography variant="body" as="p" className="break-words">
+          {t(entries.length ? 'guide.sourceRefusal' : 'guide.noSources')}
+        </Typography>
+      )}
+      <ol className="mt-3 space-y-3">
         {entries.map((entry, index) => {
           const source = {
             batchId: entry.batchId ?? '',
@@ -41,8 +48,11 @@ export function ClipPreparationSources({
           )
           const missing = unavailable(entry)
           return (
-            <li key={entry.metadata.fingerprint}>
-              <p>
+            <li
+              key={entry.metadata.fingerprint}
+              className="bg-card-well min-w-0 space-y-1 rounded-lg p-4"
+            >
+              <Typography variant="body" as="p" className="break-words">
                 {t('guide.sourceItem', {
                   position: index + 1,
                   filename: entry.metadata.filename,
@@ -57,8 +67,10 @@ export function ClipPreparationSources({
                   ),
                   sound: t(sources.sound.value(source) ? 'guide.soundOn' : 'guide.soundOff'),
                 })}
-              </p>
-              <p>{item ? t('guide.binding', { item: item.label }) : t('guide.noBinding')}</p>
+              </Typography>
+              <Typography variant="body" as="p" className="break-words">
+                {item ? t('guide.binding', { item: item.label }) : t('guide.noBinding')}
+              </Typography>
             </li>
           )
         })}

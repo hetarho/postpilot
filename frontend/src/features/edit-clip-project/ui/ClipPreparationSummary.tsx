@@ -1,3 +1,4 @@
+import { Typography } from '@/shared/ui'
 import type { TFunction } from 'i18next'
 import type { ClipProject, ClipProjectDraft } from '@/entities/clip-project'
 import type { ClipComposition, useClipTemplates } from '@/entities/clip-template'
@@ -68,17 +69,19 @@ export function clipPreparationRows({
       screen: 'requirements',
       value: (
         <>
-          <p className="whitespace-pre-wrap">{draft.advertiserGuide?.text || none}</p>
-          <p>
+          <Typography variant="body" as="p" className="break-words whitespace-pre-wrap">
+            {draft.advertiserGuide?.text || none}
+          </Typography>
+          <Typography variant="body" as="p" className="break-words">
             {t('preparation.keywords', {
               value: draft.advertiserGuide?.keywords.join(', ') || none,
             })}
-          </p>
-          <p>
+          </Typography>
+          <Typography variant="body" as="p" className="break-words">
             {t('preparation.hashtags', {
               value: draft.advertiserGuide?.hashtags.join(', ') || none,
             })}
-          </p>
+          </Typography>
         </>
       ),
     })
@@ -120,8 +123,12 @@ export function clipPreparationRows({
         <dl className="space-y-2">
           {answers.map((answer) => (
             <div key={answer.key}>
-              <dt>{answer.label}</dt>
-              <dd className="whitespace-pre-wrap">{answer.text || none}</dd>
+              <Typography variant="label" as="dt">
+                {answer.label}
+              </Typography>
+              <Typography variant="body" as="dd" className="break-words whitespace-pre-wrap">
+                {answer.text || none}
+              </Typography>
             </div>
           ))}
         </dl>
@@ -145,16 +152,18 @@ export function clipPreparationRows({
       screen: 'style',
       value: (
         <>
-          <p>{appearance}</p>
-          <p>
+          <Typography variant="body" as="p" className="break-words">
+            {appearance}
+          </Typography>
+          <Typography variant="body" as="p" className="break-words">
             {(draft.allowedCaptionStyles?.length
               ? draft.allowedCaptionStyles
               : [CLIP_DEFAULT_CAPTION_STYLE]
             )
               .map((style) => t(`captionStyles.${style as 'bold'}`))
               .join(', ')}
-          </p>
-          <p>
+          </Typography>
+          <Typography variant="body" as="p" className="break-words">
             {draft.hideDisclosure
               ? t('preparation.disclosureOff')
               : stored?.disclosure
@@ -162,7 +171,7 @@ export function clipPreparationRows({
                     text: t(`disclosure.${stored.disclosure}`),
                   })
                 : none}
-          </p>
+          </Typography>
         </>
       ),
     },
@@ -172,11 +181,11 @@ export function clipPreparationRows({
       screen: 'style',
       value: (
         <>
-          <p>
+          <Typography variant="body" as="p" className="break-words">
             {t(draft.dubbing?.enabled ? 'preparation.narrationOn' : 'preparation.narrationOff')}
-          </p>
+          </Typography>
           {(draft.dubbing?.enabled || draft.dubbing?.voiceId) && (
-            <p>
+            <Typography variant="body" as="p" className="break-words">
               {voice
                 ? t('preparation.voice', { name: voice.name })
                 : t(
@@ -186,7 +195,7 @@ export function clipPreparationRows({
                         ? 'preparation.voiceFailed'
                         : 'preparation.voiceMissing',
                   )}
-            </p>
+            </Typography>
           )}
         </>
       ),

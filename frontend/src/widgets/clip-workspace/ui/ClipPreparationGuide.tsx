@@ -114,7 +114,10 @@ export function ClipPreparationGuide({
           className="mt-6 mb-8"
         >
           {value !== 'review' ? (
-            <div className="mt-6 min-w-0 space-y-6" data-clip-screen={value}>
+            <div
+              className={cardStyles({ className: 'mt-6 min-w-0 space-y-6' })}
+              data-clip-screen={value}
+            >
               {screens[value]}
             </div>
           ) : (
