@@ -1,5 +1,5 @@
 import { forwardRef, type ComponentPropsWithoutRef } from 'react'
-import { clsx } from 'clsx'
+import { twMerge } from '@/shared/lib'
 
 /** A full media hit area with a transparent resting plane and an inset focus outline. */
 export const MediaAction = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<'button'>>(
@@ -8,7 +8,7 @@ export const MediaAction = forwardRef<HTMLButtonElement, ComponentPropsWithoutRe
       <button
         ref={ref}
         type={type}
-        className={clsx(
+        className={twMerge(
           'active:bg-media-scrim-bg/20 min-h-11 min-w-11 bg-transparent focus-visible:-outline-offset-2 active:brightness-90 disabled:active:bg-transparent disabled:active:brightness-100 aria-disabled:active:bg-transparent aria-disabled:active:brightness-100',
           className,
         )}
