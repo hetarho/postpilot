@@ -4,6 +4,7 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'clips',
   ko: {
+    previewSize: { expand: '미리보기 크게 보기', compact: '미리보기 작게 보기' },
     reading: {
       source: '원본',
       outputRange: '영상 구간',
@@ -246,6 +247,7 @@ export const i18n = {
     },
   },
   en: {
+    previewSize: { expand: 'Expand preview', compact: 'Compact preview' },
     reading: {
       source: 'Source',
       outputRange: 'Clip range',

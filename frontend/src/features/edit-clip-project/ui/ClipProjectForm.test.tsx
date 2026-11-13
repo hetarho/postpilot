@@ -250,6 +250,7 @@ it('offers 없음 beside every template and reads the choice back', async () => 
   const none = byName(/^없음/)
   const chosen = byName(/선택한 구성/)
   expect(none).toHaveAttribute('aria-pressed', 'true')
+  expect(within(chosen).getByText('구성 예시')).toBeInTheDocument()
   await userEvent.click(chosen)
   expect(chosen).toHaveAttribute('aria-pressed', 'true')
   expect(none).toHaveAttribute('aria-pressed', 'false')

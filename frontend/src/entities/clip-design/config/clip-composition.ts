@@ -57,8 +57,13 @@ export const CLIP_TIMELINE = {
   autosaveMs: 750,
   framesPerSecond: 30,
   previewViewportFraction: 0.3,
+  expandedPreviewViewportFraction: 0.6,
   compactViewportHeight: 520,
   compactPreviewFraction: 0.2,
+  expandedCompactPreviewFraction: 0.35,
+  // Three touch targets fit per row on a 9:16 frame, leaving its center clear.
+  minPreviewControlsHeightPx: 320,
+  minExpandedPreviewControlsHeightPx: 384,
   fieldGapPx: 8,
   minimumEditingRoomPx: 96,
   pixelsPerSecond: 80,

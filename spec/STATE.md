@@ -79,10 +79,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
-| T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
-| T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
-| T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -90,4 +86,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T817 T819
+- No runnable tasks; blocked qualification work remains outside this design-system run.

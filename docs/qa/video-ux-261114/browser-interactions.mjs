@@ -1,0 +1,78 @@
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {mkdir,writeFile} from 'node:fs/promises';
+const base=process.env.VDUX_WEB_URL ?? 'http://127.0.0.1:2591';
+const out=process.env.VDUX_OUTPUT ?? '/tmp/postpilot-vdux-browser';await mkdir(out,{recursive:true});
+const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><script type="module">import {injectIntoGlobalHook} from "/@react-refresh";injectIntoGlobalHook(window);window.$RefreshReg$=()=>{};window.$RefreshSig$=()=>(t)=>t;</script></head><body><div id="root"></div><script type="module" src="/src/test/mobile-route-fixture.tsx"></script></body></html>';
+const browser=await chromium.launch({headless:true});
+const receipts=[];let active;
+async function settle(page){await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));}
+async function visibleBox(locator,height){const r=await locator.boundingBox();return !!r&&r.width>0&&r.height>0&&r.y>=-1&&r.y+r.height<=height+1;}
+try{
+ for(const width of [320,360,390])for(const theme of ['light','dark']){
+  const height=width===390?844:800;
+  const ctx=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,locale:'ko-KR'});
+  await ctx.addInitScript(theme=>{localStorage.clear();localStorage.setItem('postpilot.theme',theme);localStorage.setItem('postpilot.locale','ko');},theme);
+  await ctx.route('**/mobile-audit.html*',r=>r.fulfill({contentType:'text/html',body:html}));
+  await ctx.route(/^https:\/\/(private\.test|storage\.test|accounts\.google\.com|api\.toss)/,r=>r.abort());
+  const page=await ctx.newPage();active=page;const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(`${base}/mobile-audit.html?at=${encodeURIComponent('/clips/review')}&state=populated`);
+  await page.waitForFunction(()=>window.__mobileAudit?.router.state.status==='idle');
+  await page.locator('main').waitFor();await page.evaluate(()=>document.fonts.ready);
+  const expand=page.getByRole('button',{name:'미리보기 크게 보기',exact:true});await expand.waitFor();
+  const canvas=page.locator('[data-clip-preview-canvas]').first();
+  const before=await canvas.boundingBox();
+  await canvas.evaluate(n=>window.__vduxCanvas=n);
+  await expand.click();await settle(page);
+  const after=await canvas.boundingBox();assert(after.height>before.height,'expanded preview should be larger');
+  assert(await canvas.evaluate(n=>window.__vduxCanvas===n),'expansion should preserve the canvas node');
+  await page.getByRole('button',{name:'미리보기 작게 보기',exact:true}).click();await settle(page);
+  await page.locator('[data-scene-text="caption-a"]').getByRole('button').click();
+  const dialog=page.getByRole('dialog',{name:'선택한 문구'});await dialog.waitFor();
+  const stage=dialog.locator('svg[viewBox="0 0 1080 1920"]').first();await stage.waitFor({state:'attached'});
+  const film=dialog.locator('[data-style="film"]');await film.locator('svg').waitFor({state:'attached'});await settle(page);
+  assert(await visibleBox(stage,height),'caption preview must be visible');
+  const stageBefore=await stage.boundingBox();await film.scrollIntoViewIfNeeded();await settle(page);
+  const stageAfter=await stage.boundingBox();assert(Math.abs(stageBefore.y-stageAfter.y)<2,'caption stage should stay pinned while controls scroll');
+  assert(await visibleBox(film,height),'style tile must be visible with preview');
+  await film.click();await page.waitForFunction(()=>document.querySelector('[role=dialog] [data-style=film]')?.getAttribute('aria-checked')==='true',null,{timeout:5000});assert.equal(await film.getAttribute('aria-checked'),'true');
+  const close=dialog.getByRole('button',{name:'닫기',exact:true});assert(await visibleBox(close,height));
+  await page.screenshot({path:`${out}/interaction-caption-${width}-${theme}.png`});
+  const input=dialog.locator('#clip-selected-text');await input.fill('caption a 모바일 확인');await input.focus();
+  await input.evaluate(n=>{n.setSelectionRange(3,3);window.__vduxInput=n;});
+  await page.setViewportSize({width,height:480});
+  await page.waitForFunction(()=>window.visualViewport?.height===480);await settle(page);
+  assert(await visibleBox(stage,480),'keyboard-height caption preview must fit');
+  assert(await visibleBox(close,480),'close must remain reachable');
+  assert(await input.evaluate(n=>n===window.__vduxInput&&document.activeElement===n),'keyboard resize should retain focused input');
+  assert.equal(await input.inputValue(),'caption a 모바일 확인');
+  await page.waitForFunction(()=>{const n=document.querySelector('#clip-selected-text');if(!n)return false;const r=n.getBoundingClientRect();let top=0,bottom=innerHeight;for(let a=n.parentElement;a&&a!==document.body&&a!==document.documentElement;a=a.parentElement){if(/auto|scroll|hidden|clip/.test(getComputedStyle(a).overflowY)){const b=a.getBoundingClientRect();top=Math.max(top,b.top);bottom=Math.min(bottom,b.bottom);}}return r.top>=top-1&&r.bottom<=bottom+1;},null,{timeout:5000});
+  const fieldVisible=await visibleBox(input,480);
+  assert(fieldVisible,'focused caption field should remain visible after keyboard resize');
+  await page.screenshot({path:`${out}/interaction-keyboard-${width}-${theme}.png`});
+  await page.setViewportSize({width,height});await settle(page);await close.click();
+  await page.locator('[data-scene-text="caption-a"]').getByRole('button').click();await dialog.waitFor();
+  await page.waitForFunction(()=>document.querySelector('[role=dialog] [data-style=film]')?.getAttribute('aria-checked')==='true',null,{timeout:5000});assert.equal(await dialog.locator('[data-style="film"]').getAttribute('aria-checked'),'true');
+  await dialog.getByRole('button',{name:'닫기',exact:true}).click();
+  await page.getByRole('tab',{name:/생성/}).click();
+  await page.getByRole('button',{name:'템플릿',exact:true}).click();await settle(page);
+  const choice=page.getByRole('button',{name:/영상 구성/}).filter({has:page.getByText('구성 예시',{exact:true})});await choice.waitFor();
+  assert(await choice.locator('text=구성 예시').isVisible());
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.screenshot({path:`${out}/interaction-template-${width}-${theme}.png`,fullPage:true});
+  await page.evaluate(()=>window.__mobileAudit.router.navigate({href:'/video-templates'}));
+  await page.locator('main').getByText('구성 예시',{exact:true}).first().waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.screenshot({path:`${out}/directory-${width}-${theme}.png`,fullPage:true});
+  await page.evaluate(()=>window.__mobileAudit.router.navigate({href:'/video-templates/video-template'}));
+  await page.locator('main').getByText('구성 예시',{exact:true}).first().waitFor();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.screenshot({path:`${out}/detail-${width}-${theme}.png`,fullPage:true});
+  const procedures=await page.evaluate(()=>window.__mobileAudit.procedures);
+  assert.equal(procedures.some(n=>/^(Start|Quote)|Synthesi/.test(n)),false,'styling/navigation must not start paid work');
+  assert.deepEqual(errors,[]);
+  receipts.push({width,theme,previewBefore:before,previewAfter:after,pinned:true,keyboardHeight:480,fieldVisible,canvasPreserved:true,noOverflow:true,noPaidWork:true});
+  await ctx.close();
+ }
+ await writeFile(out+'/interactions.json',JSON.stringify(receipts,null,2));console.log(JSON.stringify({ok:true,receipts,output:out}));
+}catch(error){if(active){await active.screenshot({path:out+'/interaction-failure.png'}).catch(()=>{});console.log(JSON.stringify({error:String(error),body:(await active.locator('body').innerText().catch(()=>'' )).slice(0,2500)}));}throw error;}finally{await browser.close();}

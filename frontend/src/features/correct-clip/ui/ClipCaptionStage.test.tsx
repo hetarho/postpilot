@@ -1,7 +1,14 @@
+import { useReducer, useState } from 'react'
 import userEvent from '@testing-library/user-event'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import type { ClipCanvasBox, ClipCaptionFragment, ClipEditableText } from '@/entities/clip-plan'
+import {
+  clipTimelineReducer,
+  createClipTimeline,
+  type ClipCanvasBox,
+  type ClipCaptionFragment,
+  type ClipEditableText,
+} from '@/entities/clip-plan'
 import { CLIP_CAPTION_STYLES } from '@/entities/clip-design'
 import { normalizeAppFailure } from '@/shared/api'
 import { clipTimelineFixture } from '@/test/clip-editing'
@@ -231,6 +238,7 @@ it('draws each style from the renderer and marks the animated ones', () => {
   controls({ styleSamples: [sample('neon', true), sample('film', false)] })
   const neon = within(styles()).getByRole('radio', { name: /네온 사인/ })
   expect(neon.querySelector('[data-sample="neon"]')).toBeInTheDocument()
+  expect(neon.querySelector('svg')?.parentElement).toHaveClass('bg-media-canvas-bg')
   expect(within(neon).getByText('움직이는 스타일')).toBeInTheDocument()
   const film = within(styles()).getByRole('radio', { name: '필름 자막' })
   expect(within(film).queryByText('움직이는 스타일')).not.toBeInTheDocument()
@@ -333,4 +341,164 @@ it("opens a caption's own sheet over a frame from the cut it starts in, with its
     sheet.getByRole('button', { name: '자막을 끌어서 옮기기 (방향키로 미세 조정)' }),
   ).toBeInTheDocument()
   expect(sheet.getByRole('button', { name: '문구 삭제' })).toBeInTheDocument()
+  const dialog = screen.getByRole('dialog', { name: '선택한 문구' })
+  const body = sheet.getByRole('radiogroup', { name: '자막 스타일' }).closest('.overflow-y-auto')!
+  expect(body).not.toContainElement(frame)
+  expect(dialog).toContainElement(frame)
+  expect(
+    sheet
+      .getByRole('radiogroup', { name: '자막 스타일' })
+      .compareDocumentPosition(sheet.getByLabelText('글자 크기 (px)')) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+  expect(
+    sheet
+      .getByLabelText('글자 크기 (px)')
+      .compareDocumentPosition(sheet.getByLabelText('자막 원문')) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+})
+
+it('keeps an invalid typed size while choosing another style', async () => {
+  const { change } = controls()
+  const size = screen.getByLabelText('글자 크기 (px)')
+  await userEvent.type(size, '12')
+  await userEvent.click(within(styles()).getByRole('radio', { name: '네온 사인' }))
+  expect(size).toHaveValue('12')
+  expect(size).toHaveAttribute('aria-invalid', 'true')
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: { ownerStyle: 'neon' } }),
+    undefined,
+  )
+})
+
+it('reveals the focused caption field in the sheet body after keyboard reflow without replacing it', async () => {
+  const state = clipTimelineFixture()
+  const originalHeight = window.innerHeight
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+  try {
+    render(
+      <ClipCaptionSheet
+        open
+        onClose={() => {}}
+        plan={state.plan}
+        text={state.plan.elements![0]}
+        stage={{ canvas, safeArea, fragment: fragment() }}
+        styles={{ samples: [] }}
+        footage={{ localSources: [] }}
+        change={vi.fn()}
+      />,
+    )
+    const field = screen.getByLabelText<HTMLTextAreaElement>('자막 원문')
+    const body = field.closest<HTMLElement>('.overflow-y-auto')!
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 180, bottom: 420 } as DOMRect)
+    vi.spyOn(field, 'getBoundingClientRect').mockReturnValue({ top: 400, bottom: 500 } as DOMRect)
+    field.focus()
+    field.setSelectionRange(3, 3)
+    const value = field.value
+    act(() => {
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 480 })
+      fireEvent(window, new Event('resize'))
+    })
+    await waitFor(() => expect(body.scrollTop).toBeGreaterThan(0))
+    expect(screen.getByLabelText('자막 원문')).toBe(field)
+    expect(document.activeElement).toBe(field)
+    expect(field.value).toBe(value)
+    expect(field.selectionStart).toBe(3)
+    expect(field.selectionEnd).toBe(3)
+  } finally {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight })
+  }
+})
+
+it('retains the manually checked style after closing and reopening the caption sheet', async () => {
+  function Harness() {
+    const [timeline, dispatch] = useReducer(
+      clipTimelineReducer,
+      clipTimelineFixture().plan,
+      createClipTimeline,
+    )
+    const [open, setOpen] = useState(true)
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>Open caption</button>
+        <ClipCaptionSheet
+          open={open}
+          onClose={() => setOpen(false)}
+          plan={timeline.plan}
+          text={timeline.plan.elements![0]}
+          stage={{ canvas, safeArea, fragment: fragment() }}
+          styles={{ samples: [] }}
+          footage={{ localSources: [] }}
+          change={(edit) => dispatch({ type: 'edit', edit, at: 0 })}
+        />
+      </>
+    )
+  }
+  render(<Harness />)
+  const film = () =>
+    screen
+      .getByRole('dialog', { name: '선택한 문구' })
+      .querySelector<HTMLButtonElement>('[data-style="film"]')!
+  await userEvent.click(film())
+  expect(film()).toHaveAttribute('aria-checked', 'true')
+  await userEvent.click(screen.getByRole('button', { name: '닫기' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Open caption' }))
+  expect(film()).toHaveAttribute('aria-checked', 'true')
+})
+
+it('bounds a tall focused textarea on keyboard resize without hiding its selection near the start', async () => {
+  const state = clipTimelineFixture()
+  const originalHeight = window.innerHeight
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+  try {
+    const view = render(
+      <ClipCaptionSheet
+        open
+        onClose={() => {}}
+        plan={state.plan}
+        text={{ ...state.plan.elements![0], text: '긴 자막\n'.repeat(100) }}
+        stage={{ canvas, safeArea, fragment: fragment() }}
+        styles={{ samples: [] }}
+        footage={{ localSources: [] }}
+        change={vi.fn()}
+      />,
+    )
+    const field = screen.getByLabelText<HTMLTextAreaElement>('자막 원문')
+    const body = field.closest<HTMLElement>('.overflow-y-auto')!
+    const original = { maxHeight: '700px', overflowY: 'hidden', overscrollBehaviorY: '' }
+    Object.assign(field.style, original)
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 180, bottom: 420 } as DOMRect)
+    vi.spyOn(field, 'getBoundingClientRect').mockImplementation(
+      () =>
+        ({
+          top: 200 - body.scrollTop,
+          bottom: 200 - body.scrollTop + Math.min(600, parseFloat(field.style.maxHeight) || 600),
+          height: Math.min(600, parseFloat(field.style.maxHeight) || 600),
+        }) as DOMRect,
+    )
+    field.focus()
+    field.setSelectionRange(2, 4, 'backward')
+    const value = field.value
+    act(() => {
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 480 })
+      fireEvent(window, new Event('resize'))
+    })
+    await waitFor(() => expect(field.style.maxHeight).toBe('224px'))
+    expect(field.style.overflowY).toBe('auto')
+    expect(field.getBoundingClientRect().top).toBeGreaterThanOrEqual(188)
+    expect(field.getBoundingClientRect().bottom).toBeLessThanOrEqual(412)
+    expect(document.activeElement).toBe(field)
+    expect(field.value).toBe(value)
+    expect(field.selectionStart).toBe(2)
+    expect(field.selectionEnd).toBe(4)
+    expect(field.selectionDirection).toBe('backward')
+    expect(field.scrollTop).toBe(0)
+    view.unmount()
+    expect(field.style.maxHeight).toBe(original.maxHeight)
+    expect(field.style.overflowY).toBe(original.overflowY)
+    expect(field.style.overscrollBehaviorY).toBe(original.overscrollBehaviorY)
+  } finally {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight })
+  }
 })

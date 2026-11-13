@@ -53,3 +53,5 @@ export type {
   ResolvedCompositionElement,
   CompositionLimits,
 } from './model/composition'
+
+export { ClipTemplateSummary } from './ui/ClipTemplateSummary'
