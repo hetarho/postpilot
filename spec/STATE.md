@@ -79,7 +79,7 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T796 | Stabilize route, history and voice loading shells | ARCH THEME | T795 | todo |
-| T797 | Add skeletons to style and template directories | ARCH THEME | T795 | todo |
+| T797 | Add skeletons to style and template directories | ARCH THEME | T795 | doing@261113.ldui |
 | T798 | Add skeletons to authoring and template detail reads | ARCH THEME | T795 | todo |
 | T799 | Add contextual loading to model and writing comparisons | ARCH THEME | T795 | todo |
 | T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
@@ -103,7 +103,6 @@
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
-
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
