@@ -16,7 +16,7 @@ import {
   ClipRenderAction,
   type BrowserRenderState,
 } from '@/features/render-clip-browser'
-import { StepBar, StepBarActions, StepBarBack, Typography } from '@/shared/ui'
+import { StepBar, StepBarActions, StepBarBack, Typography, cardStyles } from '@/shared/ui'
 import type { AppFailure } from '@/shared/api'
 import { ClipStepWaiting } from './ClipTopRow'
 
@@ -140,7 +140,10 @@ export function ClipFinishStep({
       <Typography variant="stepTitle" as="h2" id={headingId} className="mt-6">
         {t(finalized || confirmed ? 'finish.heading' : 'finish.waitingHeading')}
       </Typography>
-      <section aria-labelledby={headingId} className="min-w-0 space-y-4">
+      <section
+        aria-labelledby={headingId}
+        className={cardStyles({ className: 'mt-6 min-w-0 space-y-4' })}
+      >
         {!finalized && !confirmed && (
           <ClipStepWaiting
             message={t('finalization.waiting')}

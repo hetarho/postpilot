@@ -40,7 +40,7 @@ export function ClipSceneFrame({
   const url = local ?? (retained && retained.fingerprint === fingerprint ? retained.url : undefined)
   const name = scene ? t('storylineSpace.scene', { n: scene.number }) : sceneId
   return (
-    <figure className="bg-surface-sunken flex w-28 flex-col overflow-hidden rounded-md">
+    <figure className="bg-card-well flex w-28 flex-col overflow-hidden rounded-md">
       {url && scene ? (
         <video
           key={url}

@@ -11,7 +11,16 @@ import {
 } from '@/entities/clip-observation'
 import { ClipSourceStrip, type ClipProject } from '@/entities/clip-project'
 import { formatDuration } from '@/shared/lib/media'
-import { Badge, Button, FieldLabel, FieldMessage, Sheet, Textarea, Typography } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  FieldLabel,
+  FieldMessage,
+  Sheet,
+  Textarea,
+  Typography,
+  cardStyles,
+} from '@/shared/ui'
 import { AddObservedCut } from './AddObservedCut'
 import {
   observationId,
@@ -291,12 +300,14 @@ export function ClipObservationViewer({
   draftPlan,
   editing,
   headingAction,
+  presentation = 'embedded',
 }: {
   attemptObservations?: ClipObservations
   project: ClipProject
   /** ②'s in-place corrections (CLIP-235); absent where observations are only read. */
   editing?: ClipObservationEditing
   /** The heading row's action: ②'s 다시 관찰하기 (CLIP-234). */
+  presentation?: 'step' | 'embedded'
   headingAction?: ReactNode
   localSources: ReadonlyArray<{ fingerprint: string; url: string }>
   resolvePlayback?: (fingerprint: string, refresh?: boolean) => Promise<string>
@@ -319,69 +330,82 @@ export function ClipObservationViewer({
     ['queued', 'running', 'failed', 'cancelled'].includes(job.status)
   const savedPlan = !project.result || project.editPlanRevision !== project.renderedPlanRevision
   return (
-    <section aria-labelledby={`${id}-heading`} className="mt-10 mb-8 min-w-0 space-y-4">
+    <section
+      aria-labelledby={`${id}-heading`}
+      className={
+        presentation === 'step' ? 'mt-6 mb-8 min-w-0 space-y-6' : 'mt-10 mb-8 min-w-0 space-y-4'
+      }
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Typography variant="title" id={`${id}-heading`}>
+        <Typography variant={presentation === 'step' ? 'stepTitle' : 'title'} id={`${id}-heading`}>
           {t(attemptObservations ? 'inspection.observationsTitle' : 'observation.title')}
         </Typography>
         {headingAction}
       </div>
-      <Typography variant="body" className="text-content-secondary">
-        {t(attemptObservations ? 'inspection.observationsHelp' : 'observation.description')}
-      </Typography>
-      {!active ? (
+      <div
+        className={
+          presentation === 'step'
+            ? cardStyles({ className: 'min-w-0 space-y-4' })
+            : 'min-w-0 space-y-4'
+        }
+      >
         <Typography variant="body" className="text-content-secondary">
-          {t(
-            observations?.status === 'unavailable'
-              ? 'observation.unavailable'
-              : 'observation.empty',
-          )}
+          {t(attemptObservations ? 'inspection.observationsHelp' : 'observation.description')}
         </Typography>
-      ) : (
-        <>
-          {previous && !attemptObservations && (
-            <Typography variant="body" className="text-content-secondary">
-              {t('observation.previous')}
-            </Typography>
-          )}
-          {!attemptObservations && (
-            <Typography variant="body">
-              {t(savedPlan ? 'observation.savedPlan' : 'observation.renderedPlan')}
-            </Typography>
-          )}
-          <ClipSourceStrip
-            label={t('observation.sources')}
-            sources={sources.map(({ source, segments }) => ({
-              ...source,
-              previewURL: localSources.find((local) => local.fingerprint === source.fingerprint)
-                ?.url,
-              status: t('observation.segmentCount', { count: segments.length }),
-            }))}
-            selected={active.source.fingerprint}
-            onSelect={setSelected}
-          />
-          <SourceObservations
-            key={active.source.fingerprint}
-            observation={active}
-            plan={attemptObservations ? undefined : project.editing?.plan}
-            onAddCut={
-              !attemptObservations &&
-              !project.finalized &&
-              !['queued', 'running'].includes(project.latestJob?.status ?? '')
-                ? onAddCut
-                : undefined
-            }
-            draftPlan={draftPlan}
-            editing={attemptObservations ? undefined : editing}
-            refreshPlayback={
-              resolvePlayback ? () => resolvePlayback(active.source.fingerprint, true) : undefined
-            }
-            localURL={
-              localSources.find((local) => local.fingerprint === active.source.fingerprint)?.url
-            }
-          />
-        </>
-      )}
+        {!active ? (
+          <Typography variant="body" className="text-content-secondary">
+            {t(
+              observations?.status === 'unavailable'
+                ? 'observation.unavailable'
+                : 'observation.empty',
+            )}
+          </Typography>
+        ) : (
+          <>
+            {previous && !attemptObservations && (
+              <Typography variant="body" className="text-content-secondary">
+                {t('observation.previous')}
+              </Typography>
+            )}
+            {!attemptObservations && (
+              <Typography variant="body">
+                {t(savedPlan ? 'observation.savedPlan' : 'observation.renderedPlan')}
+              </Typography>
+            )}
+            <ClipSourceStrip
+              label={t('observation.sources')}
+              sources={sources.map(({ source, segments }) => ({
+                ...source,
+                previewURL: localSources.find((local) => local.fingerprint === source.fingerprint)
+                  ?.url,
+                status: t('observation.segmentCount', { count: segments.length }),
+              }))}
+              selected={active.source.fingerprint}
+              onSelect={setSelected}
+            />
+            <SourceObservations
+              key={active.source.fingerprint}
+              observation={active}
+              plan={attemptObservations ? undefined : project.editing?.plan}
+              onAddCut={
+                !attemptObservations &&
+                !project.finalized &&
+                !['queued', 'running'].includes(project.latestJob?.status ?? '')
+                  ? onAddCut
+                  : undefined
+              }
+              draftPlan={draftPlan}
+              editing={attemptObservations ? undefined : editing}
+              refreshPlayback={
+                resolvePlayback ? () => resolvePlayback(active.source.fingerprint, true) : undefined
+              }
+              localURL={
+                localSources.find((local) => local.fingerprint === active.source.fingerprint)?.url
+              }
+            />
+          </>
+        )}
+      </div>
     </section>
   )
 }

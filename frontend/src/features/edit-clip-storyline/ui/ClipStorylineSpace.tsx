@@ -5,7 +5,7 @@ import {
   type ClipProject,
   type ClipStorylineParagraph,
 } from '@/entities/clip-project'
-import { ActionMenu, AppFailureMessage, Notice, Typography } from '@/shared/ui'
+import { ActionMenu, AppFailureMessage, Notice, Typography, cardStyles } from '@/shared/ui'
 import { clipScenes, takenOutScenes, withSceneIn } from '../model/storyline-edits'
 import { queueClipStoryline } from '../model/storyline-queue'
 import { useClipStorylineQueue } from '../model/useClipStorylineQueue'
@@ -73,86 +73,88 @@ export function ClipStorylineSpace({
   const unused = storyline ? files.filter((file) => !used.has(file.id)) : []
   const takenOut = storyline ? takenOutScenes(storyline, draft) : []
   return (
-    <section aria-labelledby="clip-storyline-space-title" className="mt-6 mb-6 min-w-0">
-      <Typography variant="title" id="clip-storyline-space-title">
+    <section aria-labelledby="clip-storyline-space-title" className="mt-6 mb-8 min-w-0">
+      <Typography variant="stepTitle" id="clip-storyline-space-title">
         {t('storylineSpace.title')}
       </Typography>
-      {!!storyline?.addedSourceIds.length && (
-        <Notice tone="info" role="status" className="mt-2">
-          {t('storylineSpace.added')}
-        </Notice>
-      )}
-      {intro}
-      {draft.length > 0 && (
-        <ol className="divide-divider divide-y">
-          {draft.map((_, index) => (
-            <ClipStorylineParagraphEditor
-              key={index}
-              paragraphs={draft}
-              index={index}
-              scenes={scenes}
-              readOnly={readOnly}
-              localSources={localSources}
-              resolvePlayback={resolvePlayback}
-              onChange={change}
-            />
-          ))}
-        </ol>
-      )}
-      {takenOut.length > 0 && (
-        <section aria-labelledby="clip-storyline-taken-out" className="mt-4">
-          <Typography variant="label" as="h3" id="clip-storyline-taken-out">
-            {t('storylineSpace.takenOut')}
-          </Typography>
-          <ul className="mt-2 flex flex-wrap gap-3">
-            {takenOut.map((id) => {
-              const scene = scenes.get(id)
-              const name = scene ? t('storylineSpace.scene', { n: scene.number }) : id
-              return (
-                <li key={id} className="flex flex-col items-start gap-1">
-                  <ClipSceneFrame
-                    scene={scene}
-                    sceneId={id}
-                    localSources={localSources}
-                    resolvePlayback={resolvePlayback}
-                  />
-                  {!readOnly && (
-                    <ActionMenu
-                      label={t('storylineSpace.putBack', { scene: name })}
-                      triggerLabel={t('storylineSpace.putBackLabel')}
-                      items={draft.map((_, at) => ({
-                        id: `p${at}`,
-                        label: t('storylineSpace.paragraph', { n: at + 1 }),
-                        onSelect: () => change(withSceneIn(draft, id, at)),
-                      }))}
-                    />
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      )}
-      {unused.length > 0 && (
-        <section aria-labelledby="clip-storyline-unused" className="mt-4">
-          <Typography variant="label" as="h3" id="clip-storyline-unused">
-            {t('storylineSpace.unusedSources')}
-          </Typography>
-          <ul className="mt-2 space-y-1">
-            {unused.map((file) => (
-              <li key={file.id} className="min-w-0 wrap-anywhere">
-                <Typography variant="meta">{file.filename}</Typography>
-              </li>
+      <div className={cardStyles({ className: 'mt-6 min-w-0' })}>
+        {!!storyline?.addedSourceIds.length && (
+          <Notice tone="info" role="status" className="mt-2">
+            {t('storylineSpace.added')}
+          </Notice>
+        )}
+        {intro}
+        {draft.length > 0 && (
+          <ol className="divide-divider divide-y">
+            {draft.map((_, index) => (
+              <ClipStorylineParagraphEditor
+                key={index}
+                paragraphs={draft}
+                index={index}
+                scenes={scenes}
+                readOnly={readOnly}
+                localSources={localSources}
+                resolvePlayback={resolvePlayback}
+                onChange={change}
+              />
             ))}
-          </ul>
-        </section>
-      )}
-      {outro}
-      {failure && (
-        <div role="alert" className="mt-3">
-          <AppFailureMessage failure={failure} />
-        </div>
-      )}
+          </ol>
+        )}
+        {takenOut.length > 0 && (
+          <section aria-labelledby="clip-storyline-taken-out" className="mt-4">
+            <Typography variant="label" as="h3" id="clip-storyline-taken-out">
+              {t('storylineSpace.takenOut')}
+            </Typography>
+            <ul className="mt-2 flex flex-wrap gap-3">
+              {takenOut.map((id) => {
+                const scene = scenes.get(id)
+                const name = scene ? t('storylineSpace.scene', { n: scene.number }) : id
+                return (
+                  <li key={id} className="flex flex-col items-start gap-1">
+                    <ClipSceneFrame
+                      scene={scene}
+                      sceneId={id}
+                      localSources={localSources}
+                      resolvePlayback={resolvePlayback}
+                    />
+                    {!readOnly && (
+                      <ActionMenu
+                        label={t('storylineSpace.putBack', { scene: name })}
+                        triggerLabel={t('storylineSpace.putBackLabel')}
+                        items={draft.map((_, at) => ({
+                          id: `p${at}`,
+                          label: t('storylineSpace.paragraph', { n: at + 1 }),
+                          onSelect: () => change(withSceneIn(draft, id, at)),
+                        }))}
+                      />
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )}
+        {unused.length > 0 && (
+          <section aria-labelledby="clip-storyline-unused" className="mt-4">
+            <Typography variant="label" as="h3" id="clip-storyline-unused">
+              {t('storylineSpace.unusedSources')}
+            </Typography>
+            <ul className="mt-2 space-y-1">
+              {unused.map((file) => (
+                <li key={file.id} className="min-w-0 wrap-anywhere">
+                  <Typography variant="meta">{file.filename}</Typography>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {outro}
+        {failure && (
+          <div role="alert" className="mt-3">
+            <AppFailureMessage failure={failure} />
+          </div>
+        )}
+      </div>
     </section>
   )
 }

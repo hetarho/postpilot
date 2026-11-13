@@ -238,6 +238,7 @@ export function ClipWorkspace({
   })
   const observationPanel = (
     <ClipObservationViewer
+      presentation={!referenceOpen && step === 'observe' ? 'step' : 'embedded'}
       project={project}
       editing={observations.editing}
       headingAction={
@@ -762,6 +763,9 @@ export function ClipWorkspace({
   // CLIP-197): the storyline is ③'s.
   const refinePanel = plan ? (
     <>
+      <Typography variant="stepTitle" as="h2" className="mt-6 mb-6">
+        {clipStepLabel('refine')}
+      </Typography>
       <ClipCorrectionWorkspace
         project={{
           id: project.id,
