@@ -735,7 +735,14 @@ describe('PostsPage paging (POST-90..92)', () => {
     await screen.findByRole('link', { name: /글 20번/ })
 
     reportNearEnd()
-    expect(await screen.findByText('불러오는 중…')).toBeInTheDocument()
+    const loading = await screen.findByText('불러오는 중…')
+    const status = loading.closest('[role="status"]')
+    expect(status).toBeInTheDocument()
+    expect(status?.closest('[aria-busy="true"]')).toBeNull()
+    const busy = status?.parentElement?.querySelector('[aria-busy="true"]')
+    expect(busy).toHaveClass('loading-reveal')
+    expect(busy?.querySelector('[aria-hidden="true"]')).toHaveClass('animate-spin')
+    expect(screen.getByRole('link', { name: /글 20번/ })).toBeInTheDocument()
 
     release()
     expect(await screen.findByRole('link', { name: /글 25번/ })).toBeInTheDocument()
@@ -750,7 +757,9 @@ describe('PostsPage paging (POST-90..92)', () => {
     await screen.findByRole('link', { name: /글 20번/ })
 
     reportNearEnd()
-    expect(await screen.findByText('더 불러오지 못했어요.')).toBeInTheDocument()
+    const failure = await screen.findByText('더 불러오지 못했어요.')
+    expect(failure.closest('[role="status"]')).toBeInTheDocument()
+    expect(failure.closest('[aria-busy="true"]')).toBeNull()
     expect(rowCount()).toBe(20)
     expect(screen.queryByText('목록을 불러오지 못했어요.')).toBeNull()
     // A failed page waits for the button instead of retrying on every scroll.

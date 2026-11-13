@@ -42,6 +42,7 @@ import {
   SurfaceButton,
   FieldMessage,
   Notice,
+  LoadingState,
   Sheet,
   Typography,
   cardStyles,
@@ -155,69 +156,68 @@ export function GuidelineDirectory({
           </Button>
         </Notice>
       )}
+      {!isError && !isPending && <CandidateSection ownerId={ownerId} kind={kind} />}
+      {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
+              writing one directly stay on the page, above the list (GUIDE-44). */}
+      <div
+        ref={(actions) => {
+          // The existing first action opens the default-guidelines sheet. Read its actual
+          // button without adding a wrapper, translated selector or another control.
+          defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
+        }}
+        className="mt-6 flex flex-wrap items-center gap-3"
+      >
+        <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setCreationSession(undefined)
+            setCreateMethod('direct')
+            setAuthoringOpen(true)
+          }}
+        >
+          {t(kind === 'clip' ? 'authoringState.createVideoDirect' : 'authoringState.createDirect', {
+            ns: 'guidelines',
+          })}
+        </Button>
+        <AuthoringSheet
+          open={authoringOpen}
+          onOpenChange={(open) => {
+            setAuthoringOpen(open)
+            if (!open) onCreateClosed?.()
+          }}
+          ownerId={ownerId}
+          kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
+          sessionId={creationSession}
+          startFromSaved={!creationSession}
+          initialMethod={createMethod}
+          renderDirectEditor={(props) => (
+            <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
+          )}
+          onSaved={(saved) => {
+            setSavedOutcome({ ownerId, ref: saved })
+            refetch()
+            setAuthoringOpen(false)
+            onCreateClosed?.()
+          }}
+        />
+      </div>
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="list"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
       )}
 
       {!isError && !isPending && (
         <>
-          {/* Guide: 후보 lead the page as a banner — the one thing here that waits on the owner —
-              and open a one-at-a-time review rather than unfolding a list under the rules. */}
-          <CandidateSection ownerId={ownerId} kind={kind} />
-          {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
-              writing one directly stay on the page, above the list (GUIDE-44). */}
-          <div
-            ref={(actions) => {
-              // The existing first action opens the default-guidelines sheet. Read its actual
-              // button without adding a wrapper, translated selector or another control.
-              defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
-            }}
-            className="mt-6 flex flex-wrap items-center gap-3"
-          >
-            <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setCreationSession(undefined)
-                setCreateMethod('direct')
-                setAuthoringOpen(true)
-              }}
-            >
-              {t(
-                kind === 'clip'
-                  ? 'authoringState.createVideoDirect'
-                  : 'authoringState.createDirect',
-                { ns: 'guidelines' },
-              )}
-            </Button>
-            <AuthoringSheet
-              open={authoringOpen}
-              onOpenChange={(open) => {
-                setAuthoringOpen(open)
-                if (!open) onCreateClosed?.()
-              }}
-              ownerId={ownerId}
-              kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
-              sessionId={creationSession}
-              startFromSaved={!creationSession}
-              initialMethod={createMethod}
-              renderDirectEditor={(props) => (
-                <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
-              )}
-              onSaved={(saved) => {
-                setSavedOutcome({ ownerId, ref: saved })
-                refetch()
-                setAuthoringOpen(false)
-                onCreateClosed?.()
-              }}
-            />
-          </div>
           {summaries.isPending && (
-            <Typography variant="body" role="status" className="mt-6">
-              {t('authoringState.checking', { ns: 'guidelines' })}
-            </Typography>
+            <LoadingState
+              variant="inline"
+              label={t('authoringState.checking', { ns: 'guidelines' })}
+              className="mt-6"
+            />
           )}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-6">
@@ -335,10 +335,9 @@ export function GuidelineDirectory({
               </ul>
             </section>
           )}
-
-          {dock}
         </>
       )}
+      {dock}
     </main>
   )
 }

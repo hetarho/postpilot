@@ -10,7 +10,7 @@ import { TemplateDirectEditor } from '@/features/edit-template'
 import { TemplateWizard } from '@/features/create-template-wizard'
 import { BlockType } from '@/shared/api'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
-import { Button, Notice, Typography, pageStyles } from '@/shared/ui'
+import { Button, LoadingState, Notice, Typography, pageStyles } from '@/shared/ui'
 
 export function TemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
@@ -38,9 +38,11 @@ export function TemplatePage() {
   if (templateId && (isPending || (!stored && isFetching)))
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <Typography variant="body" role="status" className="mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="detail"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
       </main>
     )
   if (templateId && !stored && !isFetching)
@@ -131,9 +133,7 @@ function TemplateAuthoringPage({
       {guided ? (
         <div className="mt-4 flex flex-1 flex-col sm:mt-8">
           {samplePost.isPending ? (
-            <Typography variant="body" role="status">
-              {t('state.loading', { ns: 'common' })}
-            </Typography>
+            <LoadingState variant="form" label={t('state.loading', { ns: 'common' })} />
           ) : sample !== '' && (samplePost.failure || !samplePost.post?.content) ? (
             <Notice tone="danger" role="alert">
               {t('screen.referenceMissing', { ns: 'templates' })}
@@ -198,9 +198,11 @@ function TemplateAuthoringPage({
             )}
           </Typography>
           {summaries.isPending && (
-            <Typography variant="body" role="status" className="mt-4">
-              {t('screen.checkingWork', { ns: 'templates' })}
-            </Typography>
+            <LoadingState
+              variant="inline"
+              label={t('screen.checkingWork', { ns: 'templates' })}
+              className="mt-4"
+            />
           )}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-4">

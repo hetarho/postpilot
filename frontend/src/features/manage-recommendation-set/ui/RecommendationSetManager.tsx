@@ -22,6 +22,7 @@ import {
   Badge,
   Button,
   Dialog,
+  LoadingState,
   Notice,
   Typography,
 } from '@/shared/ui'
@@ -99,9 +100,7 @@ export function RecommendationSetManager() {
       )}
 
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary">
-          {t('recommendationSets.loading')}
-        </Typography>
+        <LoadingState variant="list" label={t('recommendationSets.loading')} />
       )}
       {!isError && !isPending && sets.length === 0 && editing !== '' && (
         <Typography variant="body" className="text-content-tertiary">

@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Typography } from '@/shared/ui'
+import { LoadingState } from '@/shared/ui'
 
 /** Shown only when a route takes longer than TanStack's 1 s `defaultPendingMs`, so a fast
  *  connection never sees it. Route splitting made a silent wait possible where none existed:
@@ -7,9 +7,5 @@ import { Typography } from '@/shared/ui'
  *  tap would leave the previous screen sitting there with nothing to say it was heard. */
 export function RoutePending() {
   const { t } = useTranslation('common')
-  return (
-    <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-      {t('state.loading')}
-    </Typography>
-  )
+  return <LoadingState variant="detail" label={t('state.loading')} className="mt-8" />
 }

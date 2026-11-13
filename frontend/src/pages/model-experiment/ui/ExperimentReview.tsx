@@ -19,11 +19,14 @@ import {
   ActionBar,
   Badge,
   Button,
+  LoadingState,
+  LoadingStatus,
   Notice,
   SegmentedControl,
   Textarea,
   Typography,
   pageStyles,
+  typographyStyles,
 } from '@/shared/ui'
 
 export function ExperimentReview({
@@ -55,18 +58,15 @@ export function ExperimentReview({
     }
     previousCandidate.current = activeId
   }, [activeId])
-  if (isPending)
+  if (isPending || isError || !experiment)
     return (
-      <Placeholder backLink={backLink()}>{t('experiment.loading', { ns: 'models' })}</Placeholder>
-    )
-  if (isError || !experiment)
-    return (
-      <Placeholder backLink={backLink()}>
-        <p>{t('experiment.loadFailed', { ns: 'models' })}</p>
-        <Button variant="ghost" className="mt-4" onClick={() => void refetch()}>
-          {t('action.retry', { ns: 'common' })}
-        </Button>
-      </Placeholder>
+      <Placeholder
+        backLink={backLink()}
+        isPending={isPending}
+        message={t(isPending ? 'experiment.loading' : 'experiment.loadFailed', { ns: 'models' })}
+        onRetry={() => void refetch()}
+        retryLabel={t('action.retry', { ns: 'common' })}
+      />
     )
   return (
     <main className={pageStyles({ width: 'board' })}>
@@ -173,17 +173,39 @@ function activeSideId(sides: CandidateSide[], selected: string): string {
     : (sides[0]?.candidate.id ?? '')
 }
 
-function Placeholder({ children, backLink }: { children: ReactNode; backLink: ReactNode }) {
+function Placeholder({
+  backLink,
+  isPending,
+  message,
+  onRetry,
+  retryLabel,
+}: {
+  backLink: ReactNode
+  isPending: boolean
+  message: string
+  onRetry: () => void
+  retryLabel: string
+}) {
   return (
     <main className={pageStyles({ className: 'py-10' })}>
       {backLink}
-      {/* One live region for both the loading and the failed copy: the two branches swap the text
-          inside this same node, so the failure is announced as a change instead of silently
-          replacing the pending state, which was never announced at all (THEME-33). `py-10` keeps the
-          retry button and return link within reach on a tall phone (THEME-24). */}
-      <Typography variant="body" as="div" role="status" className="text-content-tertiary mt-4">
-        {children}
-      </Typography>
+      <LoadingStatus
+        label={message}
+        className={
+          isPending
+            ? 'sr-only'
+            : typographyStyles({ variant: 'body', className: 'text-content-tertiary mt-4 block' })
+        }
+      />
+      {isPending ? (
+        <div aria-hidden="true">
+          <LoadingState variant="detail" label={message} className="mt-4" />
+        </div>
+      ) : (
+        <Button variant="ghost" className="mt-4" onClick={onRetry}>
+          {retryLabel}
+        </Button>
+      )}
     </main>
   )
 }

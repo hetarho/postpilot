@@ -79,14 +79,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T795 | Build accessible contextual loading primitives | ARCH THEME | - | todo |
-| T796 | Stabilize route, history and voice loading shells | ARCH THEME | T795 | todo |
-| T797 | Add skeletons to style and template directories | ARCH THEME | T795 | todo |
-| T798 | Add skeletons to authoring and template detail reads | ARCH THEME | T795 | todo |
-| T799 | Add contextual loading to model and writing comparisons | ARCH THEME | T795 | todo |
-| T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
-| T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
-| T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
@@ -98,4 +90,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795
+- gusta-implement-task T817 T819

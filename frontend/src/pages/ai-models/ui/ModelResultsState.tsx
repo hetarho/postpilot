@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Button, Typography } from '@/shared/ui'
+import { Button, LoadingState, Typography } from '@/shared/ui'
 
 export function ModelResultsState({
   isPending,
@@ -16,9 +16,7 @@ export function ModelResultsState({
   const { t } = useTranslation(['models', 'common'])
   if (isPending)
     return (
-      <Typography variant="body" role="status" className="text-content-tertiary mt-4">
-        {t('state.loading', { ns: 'common' })}
-      </Typography>
+      <LoadingState variant="table" label={t('state.loading', { ns: 'common' })} className="mt-4" />
     )
   if (isError)
     return (

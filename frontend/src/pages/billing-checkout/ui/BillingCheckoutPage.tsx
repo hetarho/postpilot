@@ -14,6 +14,7 @@ import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { formatDateTime, formatNumber } from '@/shared/lib'
 import {
   Button,
+  LoadingState,
   Notice,
   ReturnIcon,
   SegmentedControl,
@@ -124,9 +125,11 @@ export function BillingCheckoutPage() {
         </Notice>
       )}
       {(planPending || billingPending) && !invalid && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="form"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
       )}
 
       {!invalid && offer && myBilling && (

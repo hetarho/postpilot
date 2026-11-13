@@ -181,7 +181,7 @@ it.each([
   })
   renderAppAt(path, { user: { id: 'alice' }, experiments: { readGate, detailFails: true } })
   const main = within(await screen.findByRole('main'))
-  expect(main.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중')
+  await waitFor(() => expect(main.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중'))
   expect(main.getByRole('link', { name })).toHaveAttribute('href', href)
   await act(async () => release())
   expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument()

@@ -12,7 +12,7 @@ import { POST_TARGET_LENGTH_DEFAULT, POST_TAG_COUNT_DEFAULT } from '@/entities/p
 import { WritingTestStudio, WritingTestHistory } from '@/widgets/writing-test'
 import { WRITING_TEST_NEW_GUIDELINE_SLOT } from '@/features/writing-test'
 import { activeLocale } from '@/shared/lib'
-import { Button, Typography, pageStyles } from '@/shared/ui'
+import { Button, LoadingState, Typography, pageStyles } from '@/shared/ui'
 import {
   writingTestSearchSchema,
   writingTestHistorySearchSchema,
@@ -69,9 +69,13 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
   if (seed.source && (source.isPending || source.isError))
     return (
       <main className={pageStyles({ width: 'workspace' })}>
-        <Typography variant="body" role={source.isError ? 'alert' : 'status'}>
-          {t(source.isError ? 'failed' : 'loading')}
-        </Typography>
+        {source.isError ? (
+          <Typography variant="body" role="alert">
+            {t('failed')}
+          </Typography>
+        ) : (
+          <LoadingState variant="form" label={t('loading')} />
+        )}
         {source.isError && (
           <Button variant="secondary" onClick={() => void source.refetch()}>
             {t('refresh')}
@@ -87,9 +91,7 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
   )
     return (
       <main className={pageStyles({ width: 'workspace' })}>
-        <Typography variant="body" role="status">
-          {t('loading')}
-        </Typography>
+        <LoadingState variant="form" label={t('loading')} />
       </main>
     )
   return (

@@ -206,7 +206,7 @@ it('reads a 말투 반영 비교 as the answer and each piece with its compariso
   )
 })
 
-it('forwards the current owner namespace and removes previous-owner results while the next read is pending', () => {
+it('forwards the current owner namespace and removes previous-owner results while the next read is pending', async () => {
   mocks.useExperiment.mockImplementation((_id: string, owner: string) =>
     owner === 'alice'
       ? { experiment, isPending: false, isError: false }
@@ -224,5 +224,38 @@ it('forwards the current owner namespace and removes previous-owner results whil
   expect(mocks.useExperiment).toHaveBeenLastCalledWith('experiment-1', 'bob')
   expect(screen.queryByText('A 결과')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /결과 . 복사/ })).not.toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중')
+  await waitFor(() =>
+    expect(screen.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중'),
+  )
+})
+
+it('announces a failed read in the same status region and keeps the exit and retry', async () => {
+  const refetch = vi.fn()
+  mocks.useExperiment.mockReturnValue({
+    experiment: undefined,
+    isPending: true,
+    isError: false,
+    refetch,
+  })
+  const view = render(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  const status = screen.getByRole('status')
+  await waitFor(() => expect(status).toHaveTextContent('비교 결과를 불러오는 중'))
+  expect(status.closest('[aria-busy="true"]')).toBeNull()
+  expect(status.nextElementSibling).toHaveAttribute('aria-hidden', 'true')
+  mocks.useExperiment.mockReturnValue({
+    experiment: undefined,
+    isPending: false,
+    isError: true,
+    refetch,
+  })
+  view.rerender(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  expect(screen.getAllByRole('status')).toEqual([status])
+  expect(status).toHaveTextContent('비교 결과를 불러오지 못했어요.')
+  expect(screen.getByRole('link', { name: '기록으로' })).toHaveAttribute('href', '/tests/history')
+  await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+  expect(refetch).toHaveBeenCalledOnce()
 })

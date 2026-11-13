@@ -392,11 +392,13 @@ it.each(['/ai-models/experiments', '/ai-models/leaderboard'])(
       { readGate, listFails: true },
     )
     expect(await screen.findAllByRole('status')).not.toHaveLength(0)
-    expect(
-      screen
-        .getAllByRole('status')
-        .some((node) => node.textContent?.includes('내용을 확인하고 있어요')),
-    ).toBe(true)
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole('status')
+          .some((node) => node.textContent?.includes('내용을 확인하고 있어요')),
+      ).toBe(true),
+    )
     expect(screen.queryByText('아직 테스트 기록이 없어요.')).toBeNull()
     await act(async () => release())
     await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))

@@ -9,6 +9,7 @@ import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-
 import {
   AppFailureMessage,
   Button,
+  LoadingState,
   WorkspaceHeader,
   typographyStyles,
   pageStyles,
@@ -47,7 +48,7 @@ export function NewDraftPage() {
   if (isError)
     return <LoadFailure message={t('editor.voiceListFailed', { ns: 'posts' })} onRetry={refetch} />
   if (isPending || !offer.settled)
-    return <EditorPlaceholder>{t('state.loading', { ns: 'common' })}</EditorPlaceholder>
+    return <EditorLoading label={t('state.loading', { ns: 'common' })} />
   return (
     <>
       <DraftEditor defaultVoice={defaultVoice} handedTemplate={template} />
@@ -103,8 +104,7 @@ export function PostEditorPage() {
       />
     )
   }
-  if (isPending)
-    return <EditorPlaceholder>{t('state.loading', { ns: 'common' })}</EditorPlaceholder>
+  if (isPending) return <EditorLoading label={t('state.loading', { ns: 'common' })} />
   // A 200 carrying no post is not an answer the editor can work with; treating it as an
   // empty draft would autosave over whatever the post actually holds.
   if (!post) return <LoadFailure message={t('editor.notFound', { ns: 'posts' })} />
@@ -130,6 +130,14 @@ function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () =>
           </Button>
         )}
       </span>
+    </EditorPlaceholder>
+  )
+}
+
+function EditorLoading({ label }: { label: string }) {
+  return (
+    <EditorPlaceholder>
+      <LoadingState variant="form" label={label} className="mt-6 w-full" />
     </EditorPlaceholder>
   )
 }

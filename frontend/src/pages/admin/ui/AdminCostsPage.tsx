@@ -11,6 +11,7 @@ import {
   cardStyles,
   Badge,
   Button,
+  LoadingState,
   Notice,
   SegmentedControl,
   Typography,
@@ -79,9 +80,7 @@ function ComparisonCostsSection() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary">
-          {t('admin.costs.comparisonLoading')}
-        </Typography>
+        <LoadingState variant="table" label={t('admin.costs.comparisonLoading')} />
       )}
       {!isError && !isPending && rows.length === 0 && (
         <Typography variant="body" className="text-content-tertiary">
@@ -163,9 +162,7 @@ function ExchangeRateSection() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary">
-          {t('admin.costs.loading')}
-        </Typography>
+        <LoadingState variant="form" label={t('admin.costs.loading')} rows={2} />
       )}
       {!isError && exchangeRate?.unavailable && (
         <Notice tone="info" role="status">

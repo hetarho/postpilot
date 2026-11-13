@@ -7,6 +7,7 @@ import { OptionalTestPair, StageModelRow } from '@/features/configure-model-pair
 import { PostCreditEstimate } from '@/features/select-model'
 import {
   ListRowIcon,
+  LoadingState,
   Notice,
   Typography,
   buttonStyles,
@@ -112,9 +113,11 @@ export function AIModelsPage() {
               {t('page.recommendationFailed')}
             </Notice>
           ) : recommendations.isPending ? (
-            <Typography variant="body" role="status" className="text-content-tertiary">
-              {t('page.recommendationLoading')}
-            </Typography>
+            <LoadingState
+              variant="cards"
+              label={t('page.recommendationLoading')}
+              className="sm:[&_.loading-reveal]:grid-cols-1 lg:[&_.loading-reveal]:grid-cols-1"
+            />
           ) : recommendations.sets.length === 0 ? (
             <Typography variant="body" className="text-content-tertiary">
               {t('page.recommendationEmpty')}

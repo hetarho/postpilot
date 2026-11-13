@@ -10,6 +10,7 @@ import {
   Button,
   Checkbox,
   FieldMessage,
+  LoadingState,
   Sheet,
   Typography,
   typographyStyles,
@@ -90,9 +91,11 @@ export function MemoryCandidateSheet({
       </Typography>
 
       {extraction.isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="inline"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-4"
+        />
       )}
       {extraction.isError && (
         <FieldMessage className="mt-4">{extraction.errorMessage}</FieldMessage>

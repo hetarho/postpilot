@@ -8,6 +8,7 @@ import {
   Checkbox,
   FieldLabel,
   Listbox,
+  LoadingState,
   Notice,
   SegmentedControl,
   TextField,
@@ -281,9 +282,7 @@ export function ModelCatalogManager({
           )}
 
           {!isError && isPending && (
-            <Typography variant="body" role="status" className="text-content-tertiary mt-6">
-              {t('catalog.loading')}
-            </Typography>
+            <LoadingState variant="list" label={t('catalog.loading')} className="mt-6" />
           )}
           {!isError && !isPending && visible.length === 0 && (
             <Typography variant="body" className="text-content-tertiary mt-6">

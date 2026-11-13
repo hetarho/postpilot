@@ -18,9 +18,11 @@ import {
   cardStyles,
   Badge,
   Button,
+  LoadingState,
   Notice,
   PromoText,
   SegmentedControl,
+  Skeleton,
   Typography,
   buttonStyles,
   pageStyles,
@@ -195,9 +197,17 @@ export function PlansPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <div>
+          <div aria-hidden="true" className="loading-reveal mx-auto mb-5 max-w-md">
+            <Skeleton className="h-10 w-full rounded-full" />
+          </div>
+          <LoadingState
+            variant="cards"
+            label={t('state.loading', { ns: 'common' })}
+            rows={5}
+            className="mt-2 md:mt-6 [&>.loading-reveal]:-mx-4 [&>.loading-reveal]:flex [&>.loading-reveal]:gap-3 [&>.loading-reveal]:overflow-hidden [&>.loading-reveal]:px-4 [&>.loading-reveal]:pt-3 [&>.loading-reveal]:pb-4 sm:[&>.loading-reveal]:-mx-6 sm:[&>.loading-reveal]:px-6 xl:[&>.loading-reveal]:mx-0 xl:[&>.loading-reveal]:grid xl:[&>.loading-reveal]:grid-cols-5 xl:[&>.loading-reveal]:gap-4 xl:[&>.loading-reveal]:px-0 [&>.loading-reveal>div]:min-h-96 [&>.loading-reveal>div]:w-[85%] [&>.loading-reveal>div]:shrink-0 sm:[&>.loading-reveal>div]:w-[55%] xl:[&>.loading-reveal>div]:w-auto xl:[&>.loading-reveal>div]:min-w-0"
+          />
+        </div>
       )}
 
       {!isError && !isPending && myPlan && (

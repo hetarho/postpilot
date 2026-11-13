@@ -12,6 +12,7 @@ import {
   DirectoryItem,
   Button,
   Notice,
+  LoadingState,
   Typography,
   pageStyles,
   typographyStyles,
@@ -64,17 +65,21 @@ export function TemplatesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="cards"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8 [&>.loading-reveal]:gap-3 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+        />
       )}
 
       {!isError && !isPending && (
         <>
           {summaries.isPending && (
-            <Typography variant="body" role="status" className="mt-6">
-              {t('screen.checkingWork', { ns: 'templates' })}
-            </Typography>
+            <LoadingState
+              variant="inline"
+              label={t('screen.checkingWork', { ns: 'templates' })}
+              className="mt-6"
+            />
           )}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-6">
@@ -153,11 +158,10 @@ export function TemplatesPage() {
               </ul>
             </section>
           )}
-
-          {/* The section's creation button is the page's one dock (THEME-67). */}
-          <ChannelActions section="templates" />
         </>
       )}
+      {/* The section's creation button is the page's one dock (THEME-67). */}
+      <ChannelActions section="templates" />
     </main>
   )
 }

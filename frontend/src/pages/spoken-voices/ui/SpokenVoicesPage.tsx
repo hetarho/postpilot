@@ -8,6 +8,7 @@ import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
 import {
   ActionBar,
   DirectoryItem,
+  LoadingState,
   Typography,
   pageStyles,
   buttonStyles,
@@ -29,14 +30,15 @@ export function SpokenVoicesPage() {
       <Typography role="status" as="p" variant="meta" className="mt-4 min-h-5">
         {library.voicesQuery.isError || library.draftsQuery.isError
           ? t('failed')
-          : library.voicesQuery.isPending
-            ? t('loading')
-            : status
-              ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-              : !library.voices.length
-                ? t('empty')
-                : '\u00a0'}
+          : status
+            ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
+            : !library.voicesQuery.isPending && !library.voices.length
+              ? t('empty')
+              : '\u00a0'}
       </Typography>
+      {!library.voicesQuery.isError && library.voicesQuery.isPending && (
+        <LoadingState variant="list" label={t('loading')} className="mt-4" />
+      )}
       <ul className="mt-6 grid gap-3 lg:grid-cols-2 lg:gap-4" aria-label={t('title')}>
         {library.voices.map((voice) => (
           <DirectoryItem

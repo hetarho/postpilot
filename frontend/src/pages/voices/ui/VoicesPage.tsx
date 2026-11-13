@@ -20,6 +20,8 @@ import {
   Badge,
   Button,
   Notice,
+  LoadingState,
+  LoadingStatus,
   Typography,
   cardStyles,
   typographyStyles,
@@ -111,16 +113,33 @@ export function VoicesPage() {
           </Button>
         </Notice>
       )}
-      {/* One live region for both states, so finishing the load is a text change inside it
-          rather than two nodes swapping (THEME-33). */}
-      {!isError && (isPending || active.length === 0) && (
-        <Typography
-          variant="body"
-          role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
-        >
-          {isPending ? t('state.loading', { ns: 'common' }) : t('page.empty', { ns: 'voices' })}
-        </Typography>
+      <LoadingStatus
+        label={
+          isError
+            ? ''
+            : isPending
+              ? t('state.loading', { ns: 'common' })
+              : active.length === 0
+                ? t('page.empty', { ns: 'voices' })
+                : ''
+        }
+        className={
+          !isError && !isPending && active.length === 0
+            ? typographyStyles({
+                variant: 'body',
+                className: 'text-content-tertiary mt-8 block px-4 sm:px-6 lg:px-8',
+              })
+            : 'sr-only'
+        }
+      />
+      {!isError && isPending && (
+        <div aria-hidden="true">
+          <LoadingState
+            variant="cards"
+            label={t('state.loading', { ns: 'common' })}
+            className="mt-6 px-4 sm:px-6 lg:px-8 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+          />
+        </div>
       )}
 
       {!isError && !isPending && (
@@ -164,15 +183,10 @@ export function VoicesPage() {
               </ul>
             </details>
           )}
-
-          {/* The section's creation button is the page's one dock (THEME-67). */}
-          <ChannelActions
-            channel={channel}
-            section="voices"
-            className="action-list-inset mt-auto"
-          />
         </>
       )}
+      {/* The section's creation button is the page's one dock (THEME-67). */}
+      <ChannelActions channel={channel} section="voices" className="action-list-inset mt-auto" />
     </main>
   )
 }

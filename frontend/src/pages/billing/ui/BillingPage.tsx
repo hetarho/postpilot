@@ -11,6 +11,7 @@ import { RefundRequestSection } from '@/features/request-refund'
 import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
 import { Zap } from 'lucide-react'
 import {
+  LoadingState,
   Notice,
   Typography,
   buttonStyles,
@@ -138,9 +139,11 @@ export function BillingPage() {
         </Notice>
       )}
       {isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="form"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
       )}
       {myBilling && (
         <div className="mt-6 grid gap-6 sm:mt-10 sm:gap-10">

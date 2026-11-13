@@ -7,6 +7,7 @@ import {
   FieldLabel,
   FieldMessage,
   Listbox,
+  LoadingState,
   Notice,
   Textarea,
   Typography,
@@ -105,7 +106,7 @@ export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
           {t('refund.request')}
         </Button>
       </form>
-      {isPending && <Typography variant="body">{t('refund.loading')}</Typography>}
+      {isPending && <LoadingState variant="inline" label={t('refund.loading')} />}
       {refunds.length > 0 && (
         <ul className="divide-divider divide-y">
           {refunds.map((refund) => (

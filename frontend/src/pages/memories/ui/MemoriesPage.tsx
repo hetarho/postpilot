@@ -11,6 +11,7 @@ import {
   Badge,
   Button,
   Notice,
+  LoadingState,
   Typography,
   cardStyles,
   pageStyles,
@@ -80,9 +81,11 @@ export function MemoriesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="cards"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8 [&>.loading-reveal]:gap-3 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+        />
       )}
 
       {!isError && !isPending && (
@@ -113,20 +116,19 @@ export function MemoriesPage() {
               </ul>
             </section>
           )}
-
-          {/* The page is the list; authoring happens behind this one trigger, the shape every
-              sibling directory uses (MEM-24, THEME-24). */}
-          {/* The full width on a phone and a right-aligned pill from `sm:`, like every section's
-              creation button (THEME-67). */}
-          <ActionBar
-            dock="list"
-            ariaLabel={t('create.dockAria', { ns: 'memories' })}
-            className="mt-auto w-full sm:w-fit"
-          >
-            <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
-          </ActionBar>
         </>
       )}
+      {/* The page is the list; authoring happens behind this one trigger, the shape every
+              sibling directory uses (MEM-24, THEME-24). */}
+      {/* The full width on a phone and a right-aligned pill from `sm:`, like every section's
+              creation button (THEME-67). */}
+      <ActionBar
+        dock="list"
+        ariaLabel={t('create.dockAria', { ns: 'memories' })}
+        className="mt-auto w-full sm:w-fit"
+      >
+        <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
+      </ActionBar>
     </main>
   )
 }
