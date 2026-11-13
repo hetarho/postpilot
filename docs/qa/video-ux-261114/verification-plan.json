@@ -2,6 +2,14 @@
   "schemaVersion": 1,
   "checks": [
     {
+      "id": "clip-correction-repair",
+      "tier": "batch",
+      "command": "pnpm --filter ./frontend exec vitest run src/pages/clip/ui/ClipCorrection.test.tsx",
+      "inputs": [
+        "."
+      ]
+    },
+    {
       "id": "dev-scripts",
       "tier": "batch",
       "command": "pnpm test:dev",
@@ -93,6 +101,14 @@
       "id": "backend-suite",
       "tier": "batch",
       "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "mobile-video-ux",
+      "tier": "batch",
+      "command": "node docs/qa/video-ux-261114/browser-interactions.mjs",
       "inputs": [
         "."
       ]
