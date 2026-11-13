@@ -308,9 +308,9 @@ describe('the post voice', () => {
     await user.keyboard('{Escape}')
     // The canonical content survived, and 글 다듬기's one way out still finalizes it: nothing about
     // a finalize depends on the voice the draft was written under (POST-13).
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     expect(await screen.findByRole('button', { name: '확정하기' })).toBeEnabled()
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
   })
 
@@ -337,6 +337,7 @@ describe('the post voice', () => {
       expect(draftSaves).toEqual([{ slug: '20260820-jeju', voiceId: '', templateAnswers: [] }]),
     )
     await waitFor(() => expect(picker).toHaveTextContent('말투 없음'))
+    await openStep(user, '관찰')
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
   })
 
@@ -365,9 +366,10 @@ describe('the post voice', () => {
       'href',
       '/voices/voice-cafe',
     )
+    await openStep(user, '관찰')
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled())
 
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     expect(await screen.findByRole('button', { name: '수정' })).toBeDisabled()
     expect(screen.getByText(reason)).toBeInTheDocument()
   })
@@ -394,7 +396,7 @@ describe('the post voice', () => {
     await pickVoice(user, 'voice-review')
     await user.click(within(await confirmDialog()).getByRole('button', { name: '말투 변경' }))
     await waitFor(async () => expect(await voiceField(user)).toHaveTextContent('리뷰'))
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
 
     expect(await screen.findByRole('button', { name: '글 완성으로 가기' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
@@ -435,14 +437,15 @@ describe('the post voice', () => {
     // The refusal is said ONCE, by the surface that carries the way out: 글 생성's tombstone
     // warning offers 복원, so the dock only disables the action rather than re-writing the reason
     // under it (POST-48).
+    await openStep(user, '관찰')
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled())
     expect(
       screen.queryByText('생성: 삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.'),
     ).not.toBeInTheDocument()
     // The manual side of the post is untouched: its content and export are still there.
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     expect(
       await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }),
     ).toBeInTheDocument()
@@ -455,7 +458,7 @@ describe('the post voice', () => {
     expect(screen.getByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
     // Restore is offered in place and asks the server, nothing else ([I5]).
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await user.click(screen.getByRole('button', { name: '복원' }))
     await waitFor(() => expect(calls).toContain('RestoreVoice'))
     expect(calls).not.toContain('StartGeneration')
@@ -495,6 +498,7 @@ describe('the post voice', () => {
       ]),
     )
     await waitFor(() => expect(screen.queryAllByText('삭제된 말투 · 옛 말투')).toHaveLength(0))
+    await openStep(user, '관찰')
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
   })
 })

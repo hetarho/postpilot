@@ -60,18 +60,18 @@ export function useEditorJob(post: PostDraft | undefined): EditorJobView {
     isError: jobState.isError,
     refetch: jobState.refetch,
     // A resumed job has no recorded step, so its kind says which one owns it.
-    jobStep:
-      started?.id === jobId ? started.step : resumedJobStep(job?.kind, Boolean(post?.storyline)),
+    jobStep: started?.id === jobId ? started.step : resumedJobStep(job?.kind),
     startedStep: started?.id === jobId ? started.step : undefined,
     onStarted: (id, step) => setStarted({ id, step }),
   }
 }
 
-/** The step a job this editor did not start belongs to. A revision and a storyline request are
- *  글 다듬기's; a storyline job is 글 생성's while the post has no storyline yet (스토리라인 먼저 is
- *  the only way to start one there) and 글 다듬기's once it has one (다시 만들기). */
-export function resumedJobStep(kind: string | undefined, hasStoryline: boolean): EditorStep {
-  if (kind === 'revise' || kind === 'revise_storyline') return 'refine'
-  if (kind === 'storyline') return hasStoryline ? 'refine' : 'generate'
+/** The step a job this editor did not start belongs to — the step its result lands on, where its
+ *  retry is mounted: an observation job is ② 관찰's, a storyline job and a storyline request are
+ *  ③ 스토리라인's, and a writing run or a revision is ④ 다듬기's. */
+export function resumedJobStep(kind: string | undefined): EditorStep {
+  if (kind === 'observe') return 'observe'
+  if (kind === 'storyline' || kind === 'revise_storyline') return 'storyline'
+  if (kind === 'generate' || kind === 'revise') return 'refine'
   return 'generate'
 }

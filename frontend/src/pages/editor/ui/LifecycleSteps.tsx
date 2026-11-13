@@ -11,6 +11,7 @@ import {
   type PostStorylineParagraph,
 } from '@/entities/post'
 import type { PostContent } from '@/shared/api'
+import type { GenerationJob } from '@/entities/generation-job'
 import {
   GenerationActions,
   type GenerationActionsHandle,
@@ -20,8 +21,9 @@ import {
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
-import { proseStyles } from '@/shared/ui'
+import { Notice, StepBarActions, StepBarCta, Typography, proseStyles } from '@/shared/ui'
 import type { SaveState } from '@/features/save-draft'
+import { ContactSheet } from '@/widgets/contact-sheet'
 import { StorylineSpace } from '@/widgets/storyline-space'
 import { editorStepLabel, type EditorStep } from '../model/steps'
 import type { EditorJobView } from '../model/useEditorJob'
@@ -29,10 +31,11 @@ import { EditorJobNotice } from './EditorJobNotice'
 import { EditorStepDock } from './EditorStepDock'
 import { EditorFinishPanel, type FinishCampaign } from './EditorFinishPanel'
 import { EditorRefinePanel } from './EditorRefinePanel'
+import { EmptyStep } from './EmptyStep'
 
 const STEP_PANEL_ID = 'editor-step-panel'
 
-/** The three lifecycle panels and the ONE dock under them. The page owns the post's identity —
+/** The five lifecycle panels and the ONE dock under them. The page owns the post's identity —
  *  its fields, its autosave and its mint — so nothing here may hold state that must survive a
  *  step change. */
 export function LifecycleSteps({
@@ -56,8 +59,8 @@ export function LifecycleSteps({
   ownerId: string
   step: EditorStep
   onStepChange: (step: EditorStep) => void
-  /** Guide: 글 생성 is the page's guided sequence (EditorGuide). The panel hands it the summary's
-   *  committing row — 생성, led by the guide's 이전 — and the last job's failure notice. */
+  /** Guide: ① 생성 is the page's guided sequence (EditorGuide). The panel hands it the summary's
+   *  row — the guide's 이전, then 다음 to ② 관찰 — and the last job's failure notice. */
   renderGuide: (slots: { actions: (back: ReactNode) => ReactNode; notice: ReactNode }) => ReactNode
   /** Opens the writing brief marking what a `mode` press was refused for. */
   onOpenBrief: (mode: GenerationMode) => void
@@ -68,14 +71,14 @@ export function LifecycleSteps({
   checkRequiredAnswers: () => boolean
   /** The durable job, resolved by the page so the status region and these panels read one poll. */
   jobView: EditorJobView
-  /** The storyline as the draft autosave holds it (POST-96): ② edits it through the same queue as
+  /** The storyline as the draft autosave holds it (POST-96): ③ edits it through the same queue as
    *  ①'s fields, so one save carries whichever changed. */
   storyline: {
     paragraphs: PostStorylineParagraph[] | undefined
     onChange: (paragraphs: PostStorylineParagraph[]) => void
     saveState: SaveState
   }
-  /** The 체험단 parts as the draft autosave holds them; ③'s checklist ticks save through it. */
+  /** The 체험단 parts as the draft autosave holds them; ⑤'s checklist ticks save through it. */
   campaign?: FinishCampaign
   clipMaterial?: Pick<PostDraft, 'title' | 'memo'>
   inspection?: { contextKey: string; sourcePending: boolean }
@@ -106,7 +109,9 @@ export function LifecycleSteps({
     [post.contentRevision],
   )
   const navigate = useNavigate()
-  const generateActions = (back: ReactNode) => (
+  // ②'s step bar row: 이전, 스토리라인 먼저 and 바로 글 쓰기, with the writing-test entry under it
+  // (POST-53). The dock mounts it; the picker still opens from these actions.
+  const observeActions = (back: ReactNode) => (
     <GenerationActions
       ref={generateRef}
       leading={back}
@@ -114,7 +119,7 @@ export function LifecycleSteps({
       targetLength={targetLength}
       activeJob={job}
       jobPending={jobView.isPending}
-      onStarted={(id) => jobView.onStarted(id, 'generate')}
+      onStarted={(id) => jobView.onStarted(id, 'observe')}
       beforeStart={beforeStart}
       onReviewResult={async () => {
         await beforeStart()
@@ -129,41 +134,57 @@ export function LifecycleSteps({
       onOpenBrief={onOpenBrief}
     />
   )
+  // ①'s 확인 row: the guide's 이전, then 다음 to ② without a call (POST-123). On a published post
+  // the bar says once why ① cannot change (POST-86); 다음 still only moves.
+  const confirmActions = (back: ReactNode) => (
+    <>
+      {isPublished(post) && (
+        <Typography variant="label" as="p" role="status">
+          {t('published.locked')}
+        </Typography>
+      )}
+      <StepBarActions back={back}>
+        <StepBarCta forward onClick={() => onStepChange('observe')}>
+          {t('guide.next')}
+        </StepBarCta>
+      </StepBarActions>
+    </>
+  )
   // Read-only while a job targets the post, on a published post and while the queue reports a
   // refusal (POST-86): an edit then could only be overwritten or refused again.
   const storylineReadOnly =
     Boolean(job && !isTerminal(job)) || isPublished(post) || storyline.saveState === 'error'
-  const storylineSpace =
-    post.storyline && storyline.paragraphs ? (
-      <StorylineSpace
-        ref={storylineRef}
-        post={post}
-        paragraphs={storyline.paragraphs}
-        onChange={storyline.onChange}
-        readOnly={storylineReadOnly}
-        hasContent={Boolean(result)}
-        actions={{
-          targetLength,
-          activeJob: job,
-          jobPending: jobView.isPending,
-          onStarted: (id) => jobView.onStarted(id, 'refine'),
-          beforeStart,
-          checkRequiredAnswers,
-          // Nothing to save when no block editor is mounted — a post with no content yet.
-          flushContent: () => contentEditorRef.current?.flush() ?? Promise.resolve(),
-          onOpenBrief,
-        }}
-      />
-    ) : undefined
+  const storylineActions = {
+    ref: storylineRef,
+    targetLength,
+    activeJob: job,
+    jobPending: jobView.isPending,
+    onStarted: (id: string) => jobView.onStarted(id, 'storyline'),
+    beforeStart,
+    checkRequiredAnswers,
+    // Nothing to save when no block editor is mounted — ④ is not on screen while ③'s bar is.
+    flushContent: () =>
+      contentEditorRef.current?.flush() ?? flushContentQueue(post.slug) ?? Promise.resolve(),
+    onOpenBrief,
+  }
+  const observePanel = <EditorObservePanel post={post} job={job} />
+  const storylinePanel = (
+    <EditorStorylinePanel
+      post={post}
+      paragraphs={storyline.paragraphs}
+      onChange={storyline.onChange}
+      readOnly={storylineReadOnly}
+      onGoObserve={() => onStepChange('observe')}
+    />
+  )
   const refinePanel = (
     <EditorRefinePanel
       post={post}
       ownerId={ownerId}
-      storylineSpace={storylineSpace}
       result={result}
       editorRef={contentEditorRef}
       onContentChange={reportEdited}
-      onGoGenerate={() => onStepChange('generate')}
+      onGoStoryline={() => onStepChange('storyline')}
     />
   )
   const finishPanel = (
@@ -226,12 +247,16 @@ export function LifecycleSteps({
       >
         {step === 'generate'
           ? renderGuide({
-              actions: generateActions,
+              actions: confirmActions,
               notice: hasJobNotice ? jobNotice : undefined,
             })
-          : step === 'refine'
-            ? refinePanel
-            : finishPanel}
+          : step === 'observe'
+            ? observePanel
+            : step === 'storyline'
+              ? storylinePanel
+              : step === 'refine'
+                ? refinePanel
+                : finishPanel}
       </div>
 
       {/* A finished job announces itself and takes no space. The visible success banner this
@@ -260,9 +285,72 @@ export function LifecycleSteps({
         hasJobNotice={hasJobNotice}
         editorRef={contentEditorRef}
         reviseRef={reviseRef}
+        observeActions={observeActions}
+        storylineActions={storylineActions}
         onTitleFinalized={onTitleFinalized}
         onStepChange={onStepChange}
       />
+    </>
+  )
+}
+
+/** ② 관찰: the attachments' observations on the contact sheet, read-only in this step, or the line
+ *  saying there is nothing to observe — its actions stay in the bar either way (POST-125). */
+function EditorObservePanel({ post, job }: { post: PostDraft; job: GenerationJob | undefined }) {
+  const { t } = useTranslation('posts')
+  return (
+    <>
+      {isPublished(post) && (
+        <Notice tone="info" role="status" className="mb-4">
+          {t('published.locked')}
+        </Notice>
+      )}
+      {post.images.length + post.videos.length > 0 ? (
+        <ContactSheet
+          images={post.images}
+          videos={post.videos}
+          observations={post.observations}
+          activeJob={job}
+        />
+      ) : (
+        <Typography variant="body" as="p" className="text-content-tertiary mt-10">
+          {t('editor.observeEmpty')}
+        </Typography>
+      )}
+    </>
+  )
+}
+
+/** ③ 스토리라인: the storyline as the whole step, or what it waits for with the way to ② that
+ *  makes one (POST-95). */
+function EditorStorylinePanel({
+  post,
+  paragraphs,
+  onChange,
+  readOnly,
+  onGoObserve,
+}: {
+  post: PostDraft
+  paragraphs: PostStorylineParagraph[] | undefined
+  onChange: (paragraphs: PostStorylineParagraph[]) => void
+  readOnly: boolean
+  onGoObserve: () => void
+}) {
+  const { t } = useTranslation('posts')
+  if (!post.storyline || !paragraphs)
+    return (
+      <EmptyStep goTo={onGoObserve} goToLabel={t('editor.goObserve')}>
+        {t('editor.storylineEmpty')}
+      </EmptyStep>
+    )
+  return (
+    <>
+      {isPublished(post) && (
+        <Notice tone="info" role="status" className="mb-4">
+          {t('published.locked')}
+        </Notice>
+      )}
+      <StorylineSpace post={post} paragraphs={paragraphs} onChange={onChange} readOnly={readOnly} />
     </>
   )
 }

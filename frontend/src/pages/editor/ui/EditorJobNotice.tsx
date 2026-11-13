@@ -28,7 +28,7 @@ export function EditorJobNotice({
   jobView: EditorJobView
   generateRef: RefObject<GenerationActionsHandle | null>
   reviseRef: RefObject<ReviseFormHandle | null>
-  /** The storyline space's actions, which retry the storyline jobs ② owns. */
+  /** ③'s storyline actions, which retry the storyline jobs ③ owns. */
   storylineRef: RefObject<StorylineActionsHandle | null>
 }) {
   const { t } = useTranslation('posts')
@@ -52,7 +52,7 @@ export function EditorJobNotice({
                 : job.kind === 'revise_storyline'
                   ? storylineRef.current?.retryRequest()
                   : job.kind === 'storyline'
-                    ? jobStep === 'refine'
+                    ? jobStep === 'storyline'
                       ? storylineRef.current?.remake()
                       : generateRef.current?.startStoryline()
                     : job.kind === 'model_experiment'

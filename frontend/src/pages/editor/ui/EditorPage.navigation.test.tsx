@@ -51,7 +51,7 @@ it('opens on its status step and retains the actual filtered history parent', as
     user: USER,
     posts: { posts: [{ slug: 'saved', status: 'review', content: POST_CONTENT_FIXTURE }] },
   })
-  expect(await screen.findByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+  expect(await screen.findByRole('tab', { name: '다듬기' })).toHaveAttribute(
     'aria-selected',
     'true',
   )
@@ -206,4 +206,26 @@ it('draws the title on 내용 as a named field like the answers under it', async
   const label = document.querySelector('label[for="post-title"]')
   expect(label).toHaveTextContent('제목')
   expect(label).not.toHaveClass('sr-only')
+})
+
+// THEME-39: the five stations are panels of the one mounted page — selecting one changes neither
+// the address nor the post, and starts nothing.
+it('moves between the five stations without changing the address or saving', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    calls,
+    posts: { posts: [{ slug: 'saved', status: 'review', content: POST_CONTENT_FIXTURE }] },
+  })
+  await screen.findByRole('tab', { name: '다듬기' })
+  calls.length = 0
+  for (const station of ['생성', '관찰', '스토리라인', '다듬기', '완성']) {
+    await user.click(screen.getByRole('tab', { name: station }))
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: station })).toHaveAttribute('aria-selected', 'true'),
+    )
+    expect(router.state.location.pathname).toBe('/posts/saved')
+  }
+  expect(calls.filter((call) => /^(Save|Start|Finalize)/.test(call))).toEqual([])
 })

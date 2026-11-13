@@ -1,4 +1,4 @@
-// The editor page's frame: opening a post, a new draft, the delete, the three steps and the one
+// The editor page's frame: opening a post, a new draft, the delete, the five steps and the one
 // status line.
 import { afterEach, describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
@@ -14,7 +14,11 @@ import {
   resetEditorTest,
   stubBrowserImagePipeline,
 } from '@/test/editor'
-import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import {
+  OBSERVATION_FIXTURE,
+  POST_CONTENT_FIXTURE,
+  POST_IMAGES_FIXTURE,
+} from '@/test/fixtures/postContent'
 import { FAKE_STORAGE_ORIGIN, finalizedPostRow } from '@/test/posts'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
@@ -65,15 +69,15 @@ describe('opening a post', () => {
       jobs: { jobs: [failed] },
     })
 
-    await screen.findByRole('tab', { name: '글 다듬기' })
+    await screen.findByRole('tab', { name: '다듬기' })
     // Independent tests are not an ordinary post job; their retained result stays reachable.
     expect(screen.queryByText('AI 결과 형식을 읽을 수 없어요.')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     fireEvent.change(screen.getByLabelText('메모'), { target: { value: '마지막 기록' } })
-    // The retained result rides with 생성, on the 확인 screen.
-    await guideTo(user, GUIDE.review)
+    // The retained result rides with ②'s writing actions (POST-53).
+    await openStep(user, '관찰')
     const retained = await screen.findByRole('link', { name: 'A/B 결과 확인' })
     expect(retained).toHaveAttribute(
       'href',
@@ -256,7 +260,7 @@ describe('the editor lifecycle steps', () => {
 
   // POST-44. The mapping is pages/editor/model/steps.test.ts and useDraftSteps.test.ts; one
   // row pins that the page follows it, and 'published' is "lands on 글 완성…".
-  it.each([['review', '글 다듬기']])('opens a %s post on %s', async (status, label) => {
+  it.each([['review', '다듬기']])('opens a %s post on %s', async (status, label) => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: { posts: [{ ...reviewPost, status, canFinalize: true }] },
@@ -264,6 +268,43 @@ describe('the editor lifecycle steps', () => {
 
     const tab = await screen.findByRole('tab', { name: label })
     await waitFor(() => expect(tab).toHaveAttribute('aria-selected', 'true'))
+  })
+
+  // POST-44: the step derives from persisted facts — observations, a storyline, the status.
+  it.each([
+    ['a bare draft', { status: 'draft', content: undefined }, '생성'],
+    [
+      'a draft holding observations only',
+      { status: 'draft', content: undefined, observations: [OBSERVATION_FIXTURE] },
+      '관찰',
+    ],
+    [
+      'a draft holding a storyline',
+      {
+        status: 'draft',
+        content: undefined,
+        observations: [OBSERVATION_FIXTURE],
+        storyline: { paragraphs: [{ text: '노포에 간 이유를 보여줍니다.' }] },
+      },
+      '스토리라인',
+    ],
+    ['a finalized post', { status: 'finalized' }, '완성'],
+  ])('opens %s on its step', async (_, fields, label) => {
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, ...fields }] },
+    })
+
+    const tab = await screen.findByRole('tab', { name: label })
+    await waitFor(() => expect(tab).toHaveAttribute('aria-selected', 'true'))
+    // The five stations under their short names, every one selectable (THEME-39).
+    expect(screen.getAllByRole('tab').map((step) => step.textContent)).toEqual([
+      '생성',
+      '관찰',
+      '스토리라인',
+      '다듬기',
+      '완성',
+    ])
   })
 
   // POST-54: each step renders its own panel and none of the others'.
@@ -287,7 +328,7 @@ describe('the editor lifecycle steps', () => {
     expect(finalize).not.toHaveAttribute('aria-haspopup')
     expect(screen.queryByRole('button', { name: '확정하고 말투 학습' })).not.toBeInTheDocument()
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     expect(await screen.findByLabelText('제목')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: '글 다듬기' })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('수정 요청을 입력하세요')).not.toBeInTheDocument()
@@ -298,7 +339,7 @@ describe('the editor lifecycle steps', () => {
 
     // ③ carries 기억으로 저장, the manual export and the 발행 URL field, and nothing that would
     // teach a voice (POST-54).
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '말투 학습' })).not.toBeInTheDocument()
@@ -321,12 +362,17 @@ describe('the editor lifecycle steps', () => {
     await screen.findByLabelText('제목')
     calls.length = 0
 
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: '글 다듬기' })).toBeEnabled()
+    expect(screen.queryByRole('tab', { name: '다듬기' })).toBeEnabled()
 
-    await user.click(screen.getByRole('button', { name: '글 생성으로 가기' }))
-    expect(await screen.findByLabelText('제목')).toBeInTheDocument()
+    // ④ waits for 이 스토리로 글 쓰기 and offers the way to ③, which waits for ②'s actions.
+    await user.click(screen.getByRole('button', { name: '스토리라인으로 가기' }))
+    expect(await screen.findByText(/아직 스토리라인이 없어요/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '관찰로 가기' }))
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true'),
+    )
 
     // Opening a step is not an action: no status change, no job, no provider call.
     expect(calls).not.toContain('SavePostDraft')
@@ -346,14 +392,14 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, title: '제주 3일' }] },
     })
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     const title = await screen.findByLabelText('제목')
     await user.type(title, ' 여행기')
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(screen.queryByLabelText('제목')).not.toBeInTheDocument()
 
     await waitFor(() => expect(calls).toContain('SavePostDraft'), { timeout: 4_000 })
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     expect(await screen.findByLabelText('제목')).toHaveValue('제주 3일 여행기')
   })
 
@@ -388,17 +434,33 @@ describe('the editor lifecycle steps', () => {
     expect(within(dock).getByRole('button', { name: '수정' })).toBeInTheDocument()
     expect(within(dock).getByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await guideTo(user, GUIDE.review)
     const generateDock = await screen.findByLabelText('글 작업')
     expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
-    expect(within(generateDock).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
+    // ①'s 확인 ends on 이전 and 다음 to ②; the writing actions are ②'s (POST-123, POST-53).
+    expect(
+      within(generateDock)
+        .getAllByRole('button')
+        .map((b) => b.textContent || b.getAttribute('aria-label')),
+    ).toEqual(['이전', '다음'])
     // Guide: the brief is a row of the 확인 summary the bar ends, not a glyph in the bar.
-    expect(within(generateDock).queryByRole('button', { name: /옵션/ })).toBeNull()
     expect(screen.getByRole('button', { name: '글쓰기 옵션' })).toBeInTheDocument()
-    expect(within(generateDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
 
-    await openStep(user, '글 완성')
+    await user.click(within(generateDock).getByRole('button', { name: '다음' }))
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true'),
+    )
+    const observeDock = await screen.findByLabelText('글 작업')
+    expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
+    expect(within(observeDock).getByRole('button', { name: '이전' })).toBeInTheDocument()
+    expect(within(observeDock).getByRole('button', { name: '스토리라인 먼저' })).toBeInTheDocument()
+    expect(within(observeDock).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
+    expect(within(observeDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
+    // The contact sheet moved off ①'s 사진 screen onto ② (POST-125).
+    expect(screen.getByRole('heading', { name: '사진 관찰' })).toBeInTheDocument()
+
+    await openStep(user, '완성')
     expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByLabelText('글 작업')).not.toBeInTheDocument()
   })
@@ -413,7 +475,7 @@ describe('the editor lifecycle steps', () => {
     })
 
     const WRITE = '활성 작성 모델을 선택하세요.'
-    await guideTo(user, GUIDE.review)
+    await openStep(user, '관찰')
     const dock = await screen.findByLabelText('글 작업')
     const generate = await within(dock).findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
@@ -456,13 +518,13 @@ describe('the editor lifecycle steps', () => {
     await screen.findByRole('heading', { name: '글 다듬기' })
     expect(screen.queryByLabelText('메모')).not.toBeInTheDocument()
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     const memo = await screen.findByLabelText('메모')
     expect(memo).toHaveValue('비 오는 제주')
     await user.type(memo, ' 산책')
 
-    await openStep(user, '글 다듬기')
-    await openStep(user, '글 생성')
+    await openStep(user, '다듬기')
+    await openStep(user, '생성')
     expect(await screen.findByLabelText('메모')).toHaveValue('비 오는 제주 산책')
   })
 
@@ -473,7 +535,7 @@ describe('the editor lifecycle steps', () => {
       posts: { posts: [{ ...reviewPost, status: 'draft' }] },
     })
 
-    const tab = await screen.findByRole('tab', { name: '글 생성' })
+    const tab = await screen.findByRole('tab', { name: '생성' })
     const title = await screen.findByLabelText('제목')
     expect(tab.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
@@ -618,6 +680,7 @@ describe('the editor status region', () => {
 
   // A5: one statement of what to do, and it is the control that resolves it.
   it('retains the paid comparison link without blocking ordinary writing', async () => {
+    const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       posts: {
@@ -636,6 +699,7 @@ describe('the editor status region', () => {
       },
     })
 
+    await openStep(user, '관찰')
     expect(await screen.findByRole('link', { name: 'A/B 결과 확인' })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
     expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeEnabled()

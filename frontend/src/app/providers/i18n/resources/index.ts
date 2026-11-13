@@ -20,6 +20,7 @@ import { spokenCreationResources } from '@/widgets/spoken-voice-creation/config/
 import { spokenVoicesResources } from '@/pages/spoken-voices/config/i18n'
 import { i18n as logInI18n } from '@/features/log-in/config/i18n'
 import type { I18nFragment } from '@/shared/lib'
+import { lifecycleStepsI18n } from '@/shared/config'
 import type { AppFailureReason } from '@/shared/api'
 import { common as enCommon } from './en/common'
 import { auth as enAuth } from './en/auth'
@@ -160,6 +161,7 @@ export { defaultNS, RESOURCE_NAMESPACES } from './namespaces'
 import { i18n as clipDubbingI18n } from '@/features/regenerate-clip-speech/config/i18n'
 
 export const FRAGMENTS: readonly I18nFragment[] = [
+  lifecycleStepsI18n,
   headingErrors,
   requestInspectionI18n,
   navigationI18n,
@@ -312,7 +314,7 @@ export const resources = {
     manageSpokenVoice: manageSpokenVoiceResources.ko,
     spokenCreation: spokenCreationResources.ko,
     spokenVoices: spokenVoicesResources.ko,
-    common: koCommon,
+    common: { ...koCommon, ...lifecycleStepsI18n.ko },
     auth: { ...koAuth, ...logInI18n.ko },
     nav: { ...koNav, ...navigationI18n.ko },
     writingTests: writingTestI18n.ko,
@@ -466,7 +468,7 @@ export const resources = {
     manageSpokenVoice: manageSpokenVoiceResources.en,
     spokenCreation: spokenCreationResources.en,
     spokenVoices: spokenVoicesResources.en,
-    common: enCommon,
+    common: { ...enCommon, ...lifecycleStepsI18n.en },
     auth: { ...enAuth, ...logInI18n.en },
     nav: { ...enNav, ...navigationI18n.en },
     writingTests: writingTestI18n.en,

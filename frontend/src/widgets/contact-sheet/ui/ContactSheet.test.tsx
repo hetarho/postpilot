@@ -184,3 +184,28 @@ it('says a clip is waiting until an entry exists', () => {
   render(<ContactSheet images={[]} videos={[clip]} observations={[]} />)
   expect(screen.getByText('관찰 결과 없음')).toBeInTheDocument()
 })
+
+// POST-100: on ② a photo's tile opens it large, and previous and next walk the sheet card by card.
+it('opens a photo large and walks the cards in order without changing anything', async () => {
+  const user = userEvent.setup()
+  render(<ContactSheet images={images} observations={[]} />)
+
+  await user.click(screen.getByRole('button', { name: 'IMG_1.jpg 크게 보기' }))
+  const viewer = await screen.findByRole('dialog')
+  expect(viewer).toHaveTextContent('1 / 2')
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  expect(viewer).toHaveTextContent('2 / 2')
+  expect(viewer).toHaveTextContent('IMG_2.jpg')
+  await user.click(screen.getByRole('button', { name: '이전' }))
+  expect(viewer).toHaveTextContent('1 / 2')
+})
+
+it('opens nothing for a photo still showing its local preview', () => {
+  render(
+    <ContactSheet
+      images={[{ ...images[0]!, viewUrl: 'blob:local-upload-preview' }]}
+      observations={[]}
+    />,
+  )
+  expect(screen.queryByRole('button', { name: /크게 보기/ })).toBeNull()
+})

@@ -1,50 +1,68 @@
 import { expect, it } from 'vitest'
 import { draftStep, draftStepStart } from './useDraftSteps'
 
-it('starts on the step the post’s status belongs to, unknown statuses included', () => {
-  expect(draftStepStart('draft').step).toBe('generate')
-  expect(draftStepStart('review').step).toBe('refine')
-  expect(draftStepStart('finalized').step).toBe('finish')
-  expect(draftStepStart('published').step).toBe('finish')
-  expect(draftStepStart('').step).toBe('generate')
-  expect(draftStepStart('archived-in-some-later-plan').step).toBe('generate')
+const facts = (status: string, hasObservations = false, hasStoryline = false) => ({
+  status,
+  hasObservations,
+  hasStoryline,
+})
+const event = (status: string, hasObservations = false, hasStoryline = false) => ({
+  type: 'facts' as const,
+  ...facts(status, hasObservations, hasStoryline),
 })
 
-it('keeps a picked step until the post’s status moves', () => {
-  let state = draftStepStart('draft')
+it('starts on the step the post’s facts belong to, unknown statuses included', () => {
+  expect(draftStepStart(facts('draft')).step).toBe('generate')
+  expect(draftStepStart(facts('draft', true)).step).toBe('observe')
+  expect(draftStepStart(facts('draft', true, true)).step).toBe('storyline')
+  expect(draftStepStart(facts('review')).step).toBe('refine')
+  expect(draftStepStart(facts('finalized')).step).toBe('finish')
+  expect(draftStepStart(facts('published')).step).toBe('finish')
+  expect(draftStepStart(facts('')).step).toBe('generate')
+  expect(draftStepStart(facts('archived-in-some-later-plan')).step).toBe('generate')
+})
+
+it('keeps a picked step until the post’s facts move', () => {
+  let state = draftStepStart(facts('draft'))
   state = draftStep(state, { type: 'select', step: 'finish' })
   expect(state.step).toBe('finish')
-  // The same status again is not a transition: a re-render must not yank the reader back.
-  expect(draftStep(state, { type: 'status', status: 'draft' })).toBe(state)
+  // The same facts again are not a transition: a re-render must not yank the reader back.
+  expect(draftStep(state, event('draft'))).toBe(state)
   // Picking the step already shown is not a transition either.
   expect(draftStep(state, { type: 'select', step: 'finish' })).toBe(state)
-  // A generation that finished moves the post to `review`, and the reader with it.
-  state = draftStep(state, { type: 'status', status: 'review' })
+  // A writing run that finished moves the post to `review`, and the reader with it.
+  state = draftStep(state, event('review'))
   expect(state.step).toBe('refine')
 })
 
 it('follows every later status change, including one back to an earlier step', () => {
-  let state = draftStepStart('review')
-  state = draftStep(state, { type: 'status', status: 'finalized' })
+  let state = draftStepStart(facts('review'))
+  state = draftStep(state, event('finalized'))
   expect(state.step).toBe('finish')
   state = draftStep(state, { type: 'select', step: 'refine' })
-  state = draftStep(state, { type: 'status', status: 'draft' })
+  state = draftStep(state, event('draft'))
   expect(state).toEqual({ step: 'generate', followed: 'draft' })
 })
 
-it('keeps the reader on 글 완성 when a finalized post is published', () => {
-  let state = draftStepStart('finalized')
-  state = draftStep(state, { type: 'status', status: 'published' })
+it('keeps the reader on 완성 when a finalized post is published', () => {
+  let state = draftStepStart(facts('finalized'))
+  state = draftStep(state, event('published'))
   expect(state).toEqual({ step: 'finish', followed: 'published' })
 })
 
-// A storyline job finishing moves a draft to 글 다듬기 without a status change (POST-44).
-it('moves a draft to 글 다듬기 when a storyline arrives', () => {
-  let state = draftStepStart('draft')
+// An observation run and a storyline run finish without a status change (POST-44, POST-125).
+it('hands a finished observation run to 관찰 and a finished storyline run to 스토리라인', () => {
+  let state = draftStepStart(facts('draft'))
   expect(state.step).toBe('generate')
-  state = draftStep(state, { type: 'status', status: 'draft', hasStoryline: true })
+  state = draftStep(state, event('draft', true))
+  expect(state.step).toBe('observe')
+  // The same observations again are not a transition.
+  expect(draftStep(state, event('draft', true))).toBe(state)
+  state = draftStep(state, { type: 'select', step: 'generate' })
+  state = draftStep(state, event('draft', true, true))
+  expect(state.step).toBe('storyline')
+  expect(draftStep(state, event('draft', true, true))).toBe(state)
+  // The writing run that follows lands on 다듬기.
+  state = draftStep(state, event('review', true, true))
   expect(state.step).toBe('refine')
-  // The same storyline again is not a transition.
-  expect(draftStep(state, { type: 'status', status: 'draft', hasStoryline: true })).toBe(state)
-  expect(draftStepStart('draft', true).step).toBe('refine')
 })

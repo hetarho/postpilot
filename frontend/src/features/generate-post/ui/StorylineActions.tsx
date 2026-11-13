@@ -24,6 +24,8 @@ import {
   Dialog,
   FieldMessage,
   Notice,
+  StepBarActions,
+  StepBarCta,
   Textarea,
   Typography,
 } from '@/shared/ui'
@@ -101,13 +103,13 @@ function useStorylineActions(): StorylineActionsValue {
   return value
 }
 
-/** The storyline space's actions (POST-97, POST-98): 다시 만들기, 이 스토리로 글 쓰기 / 다시 쓰기 and
- *  the AI request. They share ①'s 바로 글 쓰기 checks — the models, the voice, the published lock and
- *  a running job — and its re-observation picker, and each saves the draft queue first, so the
+/** ③'s storyline actions (POST-97, POST-98): 다시 만들기, 이 스토리로 글 쓰기 / 다시 쓰기 and the AI
+ *  request. They share ②'s 바로 글 쓰기 checks — the models, the voice, the published lock and a
+ *  running job — and its re-observation picker, and each saves the draft queue first, so the
  *  storyline edits on screen are what the run reads.
  *
- *  A provider, because the space places them in two spots: the buttons beside its heading and the
- *  request field under it. Both read one state. */
+ *  A provider, because ③'s step bar places them in two spots: the request field, then the row
+ *  under it. Both read one state. */
 export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, StorylineActionsProps>(
   function StorylineActionsProvider(
     {
@@ -305,7 +307,7 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
   },
 )
 
-/** Why the actions cannot run, above the space's heading row. */
+/** Why the actions cannot run, above the step bar's request field. */
 export function StorylineActionBlocker() {
   const { blocker } = useStorylineActions()
   if (!blocker) return null
@@ -316,12 +318,13 @@ export function StorylineActionBlocker() {
   )
 }
 
-/** 다시 만들기 and the write action, beside the space's heading. */
-export function StorylineActionButtons() {
+/** ③'s step bar row (THEME-71): the way back, 다시 만들기 as its one secondary action, then the write
+ *  action as the big action filling the rest. */
+export function StorylineActionRow({ back }: { back?: ReactNode }) {
   const { t } = useTranslation('posts')
   const actions = useStorylineActions()
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+    <StepBarActions back={back}>
       <Button
         variant="secondary"
         disabled={actions.disabled}
@@ -330,41 +333,42 @@ export function StorylineActionButtons() {
       >
         {t('storylineActions.remake')}
       </Button>
-      <Button
-        variant="cta"
+      <StepBarCta
         disabled={actions.disabled}
         pending={actions.writePending}
         onClick={actions.write}
       >
         {t(actions.hasContent ? 'storylineActions.rewrite' : 'storylineActions.write')}
-      </Button>
-    </div>
+      </StepBarCta>
+    </StepBarActions>
   )
 }
 
-/** The one AI request field under the heading row, with its send button (POST-97). A storyline
- *  request is about this storyline alone, so it is no guideline candidate and offers no
- *  지침으로 저장 (GUIDE-7). */
+/** The one AI request field heading ③'s step bar, with its send button (POST-97) under the visible
+ *  heading that IS its label, as ④'s revision field has. A storyline request is about this
+ *  storyline alone, so it is no guideline candidate and offers no 지침으로 저장 (GUIDE-7). */
 export function StorylineRequestComposer() {
   const { t } = useTranslation('posts')
   const actions = useStorylineActions()
   const trimmed = actions.request.trim()
   return (
     <form
-      className="mt-2 grid gap-2"
+      className="grid gap-2"
       onSubmit={(event) => {
         event.preventDefault()
         actions.send()
       }}
     >
+      <Typography variant="fieldTitle" as="label" htmlFor="storyline-request" className="min-w-0">
+        {t('storylineActions.request')}
+      </Typography>
       <div className="flex items-end gap-2">
         <Textarea
+          id="storyline-request"
           value={actions.request}
           rows={1}
           autoGrow
           maxLength={STORYLINE_REQUEST_MAX_CHARS}
-          aria-label={t('storylineActions.request')}
-          placeholder={t('storylineActions.request')}
           aria-describedby="storyline-request-count"
           disabled={actions.disabled || actions.sendPending}
           onChange={(event) => actions.setRequest(event.target.value)}

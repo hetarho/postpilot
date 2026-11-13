@@ -47,7 +47,6 @@ import {
   pageStyles,
   Typography,
 } from '@/shared/ui'
-import { ContactSheet } from '@/widgets/contact-sheet'
 import { editorNavigationCopy } from '../config/i18n'
 import { initialGuideStep, stashGuideStep, takeGuideStep, type GuideStep } from '../model/guide'
 import { editorSteps } from '../model/steps'
@@ -194,7 +193,11 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
-  const { step, select: setStep } = useDraftSteps(post?.status ?? '', Boolean(post?.storyline))
+  const { step, select: setStep } = useDraftSteps({
+    status: post?.status ?? '',
+    hasObservations: Boolean(post?.observations.length),
+    hasStoryline: Boolean(post?.storyline),
+  })
   const previousStep = useRef(step)
   useLayoutEffect(() => {
     if (previousStep.current !== 'finish' && step === 'finish') window.scrollTo(0, 0)
@@ -414,14 +417,6 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     photos: (
       <div className="mt-4">
         <EditorPhotos post={post} ensureSlug={autosave.ensureSlug} />
-        {post && post.images.length > 0 && (
-          <ContactSheet
-            images={post.images}
-            videos={post.videos}
-            observations={post.observations}
-            activeJob={jobView.job}
-          />
-        )}
       </div>
     ),
     details: (

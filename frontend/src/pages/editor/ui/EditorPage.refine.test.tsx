@@ -63,7 +63,7 @@ describe('opening a post', () => {
 
   // Owner decision 2026-11-11: 글 다듬기 ends on the same step bar as 글 생성's guide — its request
   // field above, then ← and the step's big action — not on a floating composer of its own.
-  it('docks 글 다듬기 on the guide’s step bar, whose ← returns to 글 생성', async () => {
+  it('docks 다듬기 on the guide’s step bar, whose ← returns to 스토리라인', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -82,11 +82,12 @@ describe('opening a post', () => {
     expect(back).toHaveClass('ui-button-icon')
     expect(back.parentElement).toBe(open.parentElement)
 
+    // ④'s 이전 returns to ③ 스토리라인, which waits here for a storyline (POST-56, POST-95).
     await user.click(back)
-    expect(await screen.findByRole('tab', { name: '글 생성', selected: true })).toBeInTheDocument()
-    const guideBar = screen.getByRole('button', { name: '다음' }).closest('[data-action-bar]')
-    expect(guideBar).toHaveAttribute('data-action-bar', 'step')
-    expect(document.querySelectorAll('[data-action-bar]')).toHaveLength(1)
+    expect(
+      await screen.findByRole('tab', { name: '스토리라인', selected: true }),
+    ).toBeInTheDocument()
+    expect(await screen.findByText(/아직 스토리라인이 없어요/)).toBeInTheDocument()
   })
 
   it('does not offer a no-op retry when a resumed revision fails', async () => {
@@ -163,7 +164,7 @@ describe('opening a post', () => {
     await finalize(user)
 
     await waitFor(() => expect(calls).toContain('FinalizePost'))
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await waitFor(() =>
       expect(screen.getByLabelText('제목')).toHaveValue(POST_CONTENT_FIXTURE.title),
     )
@@ -244,7 +245,7 @@ describe('opening a post', () => {
     await waitFor(() => expect(calls).toContain('FinalizePost'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     await waitFor(() =>
-      expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true'),
+      expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
     )
     expect(scrollTo).toHaveBeenCalledWith(0, 0)
     scrollTo.mockRestore()
@@ -276,7 +277,7 @@ describe('opening a post', () => {
       },
     })
 
-    const panel = await screen.findByRole('tabpanel', { name: '글 다듬기' })
+    const panel = await screen.findByRole('tabpanel', { name: '다듬기' })
     expect(
       await within(panel).findByRole('button', { name: '제목과 요약, 태그 수정' }),
     ).toBeInTheDocument()
@@ -298,21 +299,18 @@ describe('opening a post', () => {
     // A finalized post opens on 글 완성.
     expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
 
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     await user.click(await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }))
     await user.type(screen.getByLabelText('본문 제목'), ' 수정')
     await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
 
     // Back in review, so 확정하기 is offered again where it belongs, and nowhere else.
     await waitFor(() =>
-      expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
-        'aria-selected',
-        'true',
-      ),
+      expect(screen.getByRole('tab', { name: '다듬기' })).toHaveAttribute('aria-selected', 'true'),
     )
     expect(await screen.findByRole('button', { name: '확정하기' })).toBeInTheDocument()
 
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
   })
@@ -460,7 +458,7 @@ describe('the post measurement row', () => {
       quality: { measurements: MEASURED },
     })
 
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
     expect(measurementReads(calls)).toBe(0)
@@ -569,8 +567,8 @@ describe('the fingerprint row', () => {
   })
 })
 
-// POST-95, POST-96: a draft that holds a storyline opens ② on its space, open while there is no
-// post yet, and the owner's text edit saves through the draft save as the whole paragraph list.
+// POST-95, POST-96: a draft that holds a storyline opens ③, the storyline as the whole step, and
+// the owner's text edit saves through the draft save as the whole paragraph list.
 describe('the storyline space', () => {
   const slug = '20260828-storyline'
   const storyline = {
@@ -592,16 +590,24 @@ describe('the storyline space', () => {
     })
 
     await waitFor(() =>
-      expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+      expect(screen.getByRole('tab', { name: '스토리라인' })).toHaveAttribute(
         'aria-selected',
         'true',
       ),
     )
-    expect(screen.getByRole('button', { name: '스토리라인' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    )
-    expect(screen.getByText('이 스토리로 글을 쓰면 여기에 글이 나와요')).toBeInTheDocument()
+    // No collapse: the storyline is the step, and its bar holds the request field above the row.
+    expect(screen.getByRole('heading', { name: '스토리라인' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '스토리라인' })).toBeNull()
+    const dock = screen.getByLabelText('글 작업')
+    expect(within(dock).getByRole('textbox', { name: '스토리라인 수정 요청' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '이전' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '다시 만들기' })).toBeInTheDocument()
+    expect(within(dock).getByRole('button', { name: '이 스토리로 글 쓰기' })).toBeInTheDocument()
+
+    // ④ has no draft yet: it waits for 이 스토리로 글 쓰기 and offers the way back to ③.
+    await openStep(user, '다듬기')
+    expect(await screen.findByText(/아직 다듬을 글이 없어요/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '스토리라인으로 가기' }))
 
     const second = within(screen.getByRole('listitem', { name: '2번째 문단' }))
     await user.click(second.getByRole('button', { name: '2번째 문단 고치기' }))
@@ -633,8 +639,8 @@ describe('the storyline space', () => {
     expect(screen.queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
   })
 
-  // POST-98: over a post edited by hand, 이 스토리로 다시 쓰기 asks first, then saves and writes along
-  // the storyline; ②'s own dock keeps the revision composer and 확정하기.
+  // POST-98: over a post edited by hand, ③'s 이 스토리로 다시 쓰기 asks first, then saves and writes
+  // along the storyline; ④'s own dock keeps the revision composer and 확정하기 (POST-97).
   it('rewrites from the storyline after asking, over a post edited by hand', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -667,15 +673,15 @@ describe('the storyline space', () => {
         ],
       },
     })
+    // A review post opens ④, whose dock reaches neither storyline action.
+    const dock = await screen.findByLabelText('글 작업')
+    expect(within(dock).getByRole('button', { name: /확정/ })).toBeInTheDocument()
+    expect(within(dock).queryByRole('button', { name: '이 스토리로 다시 쓰기' })).toBeNull()
+
+    await openStep(user, '스토리라인')
     const rewrite = await screen.findByRole('button', { name: '이 스토리로 다시 쓰기' })
     await waitFor(() => expect(rewrite).toBeEnabled())
-    // Closed over a post that already has content, and the dock is still ②'s own.
-    expect(screen.getByRole('button', { name: '스토리라인' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
-    const dock = screen.getByLabelText('글 작업')
-    expect(within(dock).getByRole('button', { name: /확정/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /확정/ })).toBeNull()
 
     await user.click(rewrite)
     const dialog = await screen.findByRole('dialog', { name: '이 스토리로 다시 쓸까요?' })
@@ -692,10 +698,11 @@ describe('the storyline space', () => {
         posts: [{ slug: '20260820-jeju', status: 'review', content: POST_CONTENT_FIXTURE }],
       },
     })
-    expect(await screen.findByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: '다듬기' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
-    expect(screen.queryByRole('button', { name: '스토리라인' })).not.toBeInTheDocument()
+    // The storyline is ③'s alone: ④ carries no copy of it.
+    expect(screen.queryByRole('heading', { name: '스토리라인' })).not.toBeInTheDocument()
   })
 })

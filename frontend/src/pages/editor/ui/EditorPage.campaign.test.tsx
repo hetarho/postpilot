@@ -174,7 +174,7 @@ describe('campaign-led writing', () => {
         ],
       },
     })
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await guideTo(user, GUIDE.kind)
     expect(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' })).toBeDisabled()
     await guideTo(user, GUIDE.requirements)

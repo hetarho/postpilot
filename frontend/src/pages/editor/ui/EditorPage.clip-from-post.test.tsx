@@ -194,7 +194,7 @@ describe('making a clip from a finished post', () => {
     expect(published.draftSaves).toEqual([])
     published.unmount()
     mount({ status: 'draft', content: undefined, finalizedRevision: 0n, finalizedAt: '' })
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(screen.queryByRole('button', { name: ACTION })).not.toBeInTheDocument()
   })
 
@@ -253,12 +253,12 @@ describe('making a clip from a finished post', () => {
   it('flushes the post and carries its latest memo and campaign settings', async () => {
     const user = userEvent.setup()
     const view = mount()
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await user.clear(screen.getByLabelText('메모'))
     await user.type(screen.getByLabelText('메모'), '방금 쓴 메모')
     await guideTo(user, GUIDE.kind)
     await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     await confirm(user)
     await arrived(view)
     expect(view.writes[0]).toMatchObject({ instruction: '방금 쓴 메모', campaign: false })

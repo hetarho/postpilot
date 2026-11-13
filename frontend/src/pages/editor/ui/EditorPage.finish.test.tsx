@@ -32,13 +32,13 @@ describe('opening a post', () => {
       },
     })
 
-    expect(await screen.findByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: '다듬기' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
     // TanStack Router also scrolls during initial routing; this transition uses the numeric call.
     expect(scrollTo.mock.calls).not.toContainEqual([0, 0])
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(scrollTo).toHaveBeenCalledWith(0, 0)
     scrollTo.mockRestore()
   })
@@ -50,7 +50,7 @@ describe('opening a post', () => {
       posts: { posts: [finalizedPostRow({ slug: '20260820-jeju' })] },
     })
 
-    expect(await screen.findByRole('tab', { name: '글 완성' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: '완성' })).toHaveAttribute(
       'aria-selected',
       'true',
     )
@@ -76,7 +76,7 @@ describe('opening a post', () => {
       },
     })
 
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(await screen.findByRole('heading', { name: '내보내기' })).toBeInTheDocument()
     // The voice profile is NOT read: the empty-profile warning belongs to 글 생성, so a post already
     // past generating no longer pays for that read.
@@ -95,7 +95,7 @@ describe('opening a post', () => {
     {
       locale: 'ko' as const,
       account: { id: 'alice', plan: ProtoPlan.FREE },
-      finish: '글 완성',
+      finish: '완성',
       exportHeading: '내보내기',
       copyTitle: '제목 복사',
     },
@@ -167,7 +167,7 @@ describe('the post language', () => {
 
     const writeText = vi.fn(async () => undefined)
     Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } })
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     await user.click(await screen.findByRole('button', { name: '복사' }))
     // English content provenance names its photo markers in English, whatever the target now is.
     await waitFor(() => expect(writeText).toHaveBeenCalled())
@@ -192,7 +192,7 @@ describe('the post language', () => {
       },
     })
 
-    await openStep(user, '글 완성')
+    await openStep(user, '완성')
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '글의 내용 언어 정보가 없어 내보낼 수 없어요.',
     )
@@ -215,7 +215,7 @@ describe('the finish panel', () => {
     })
 
     // A finalized post opens on 글 완성.
-    const panel = await screen.findByRole('tabpanel', { name: '글 완성' })
+    const panel = await screen.findByRole('tabpanel', { name: '완성' })
     const memories = await within(panel).findByRole('button', { name: '기억으로 저장' })
     const templateLink = within(panel).getByRole('link', { name: '이 글 형식으로 템플릿 만들기' })
     const exportHeading = within(panel).getByRole('heading', { name: '내보내기' })
@@ -269,7 +269,7 @@ describe('the 발행 URL field', () => {
 
     await waitFor(() => expect(statusLine()).toHaveTextContent('발행됨'))
     expect(saves).toEqual(['https://blog.naver.com/alice/223000000001'])
-    expect(screen.getByRole('tab', { name: '글 완성' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
     expect(field()).toHaveValue('https://blog.naver.com/alice/223000000001')
   })
 
@@ -295,7 +295,7 @@ describe('the 발행 URL field', () => {
     await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
     expect(saves).toEqual([''])
     expect(field()).toHaveValue('')
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     expect(
       await screen.findByRole('button', { name: '제목과 요약, 태그 수정' }),
     ).toBeInTheDocument()

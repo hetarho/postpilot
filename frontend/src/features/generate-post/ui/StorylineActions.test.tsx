@@ -5,7 +5,12 @@ import type { GenerationJob } from '@/entities/generation-job'
 import { Stage } from '@/shared/api'
 import type { FakeGenerationStart } from '@/test/jobs'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
-import { StorylineActionButtons, StorylineActionsProvider } from './StorylineActions'
+import { StepBarBack } from '@/shared/ui'
+import {
+  StorylineActionRow,
+  StorylineActionsProvider,
+  StorylineRequestComposer,
+} from './StorylineActions'
 
 afterEach(cleanup)
 
@@ -53,7 +58,8 @@ function renderStorylineActions(post: Partial<ActionsPost> = {}, activeJob?: Gen
       flushContent={flushContent}
       onOpenBrief={vi.fn()}
     >
-      <StorylineActionButtons />
+      <StorylineRequestComposer />
+      <StorylineActionRow back={<StepBarBack label="이전" onClick={vi.fn()} />} />
     </StorylineActionsProvider>,
     { wrapper: withProviders(transport, createTestQueryClient()) },
   )
@@ -94,4 +100,29 @@ it('keeps ordinary storyline actions guarded by an active writing job', async ()
   expect(screen.getByRole('button', { name: '다시 만들기' })).toBeDisabled()
   expect(screen.getByRole('button', { name: '이 스토리로 글 쓰기' })).toBeDisabled()
   expect(beforeStart).not.toHaveBeenCalled()
+})
+
+// POST-97: ③'s step bar — the request field under its visible heading, then ONE row of 이전,
+// 다시 만들기 as the secondary action and the write action as the big action.
+it('lays ③’s step bar out as the request field, then 이전 · 다시 만들기 · the write action', async () => {
+  renderStorylineActions()
+  const field = screen.getByRole('textbox', { name: '스토리라인 수정 요청' })
+  // The heading IS the field's label, visible rather than a placeholder.
+  expect(screen.getByText('스토리라인 수정 요청', { selector: 'label' })).toBeVisible()
+  const row = screen.getByRole('button', { name: '이전' }).parentElement!
+  const buttons = Array.from(row.querySelectorAll('button')).map(
+    (button) => button.getAttribute('aria-label') ?? button.textContent,
+  )
+  expect(buttons).toEqual(['이전', '다시 만들기', '이 스토리로 글 쓰기'])
+  expect(field.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})
+
+it('names the write action 이 스토리로 다시 쓰기 once the post has a draft', () => {
+  renderStorylineActions({
+    content: { title: '', summary: '', tags: [], blocks: [] } as never,
+    contentRevision: 1n,
+    machineBaselineRevision: 1n,
+  })
+  expect(screen.getByRole('button', { name: '이 스토리로 다시 쓰기' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: '이 스토리로 글 쓰기' })).toBeNull()
 })

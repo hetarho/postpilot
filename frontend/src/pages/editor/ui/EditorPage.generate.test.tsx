@@ -13,6 +13,7 @@ import {
   briefField,
   guideTo,
   openBrief,
+  openStep,
   resetEditorTest,
 } from '@/test/editor'
 import {
@@ -168,7 +169,7 @@ describe('opening a post', () => {
 
   // GEN-68, POST-44: 스토리라인 먼저 starts a storyline job from ①, the job names its stage, and the
   // draft that comes back holding a storyline opens ②.
-  it('starts a storyline from ① and opens ② once the storyline lands', async () => {
+  it('starts a storyline from ② and opens ③ once the storyline lands', async () => {
     const slug = '20260820-memo'
     const calls: string[] = []
     const storylineStarts: FakeGenerationStart[] = []
@@ -211,6 +212,7 @@ describe('opening a post', () => {
       },
     })
 
+    await openStep(user, '관찰')
     const storyline = await screen.findByRole('button', { name: '스토리라인 먼저' })
     await waitFor(() => expect(storyline).toBeEnabled())
     await user.click(storyline)
@@ -223,7 +225,7 @@ describe('opening a post', () => {
     expect(calls).not.toContain('StartGeneration')
     await waitFor(
       () =>
-        expect(screen.getByRole('tab', { name: '글 다듬기' })).toHaveAttribute(
+        expect(screen.getByRole('tab', { name: '스토리라인' })).toHaveAttribute(
           'aria-selected',
           'true',
         ),
@@ -253,10 +255,11 @@ describe('opening a post', () => {
     })
 
     const user = userEvent.setup()
+    await openStep(user, '관찰')
     await waitFor(() => expect(screen.getByRole('button', { name: '바로 글 쓰기' })).toBeEnabled())
     // Neither voice refusal — deleted or not yet made — has anything to say.
     expect(screen.queryByText(/말투예요/)).not.toBeInTheDocument()
-    // Guide: 생성 is the summary's one big action, in the step bar along the screen's bottom.
+    // ②'s 바로 글 쓰기 is the step's one big action, in the step bar along the screen's bottom.
     const bar = screen.getByLabelText('글 작업')
     expect(bar).toHaveAttribute('data-action-bar', 'step')
     expect(within(bar).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
@@ -291,9 +294,10 @@ describe('opening a post', () => {
       },
     })
 
-    // The draft holds a story, so it opens on 확인, where both writing paths are.
+    // Both writing paths stand in ②'s step bar (POST-53).
+    await openStep(user, '관찰')
     const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
-    const storyline = screen.getByRole('button', { name: '스토리라인 먼저' })
+    expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: /방문 계기/ })).toBeNull()
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
@@ -302,14 +306,15 @@ describe('opening a post', () => {
     expect(screen.getByText('필수 입력란을 확인해 주세요: 방문 계기')).toBeInTheDocument()
     await waitFor(() => expect(answer).toHaveFocus())
     expect(calls).not.toContain('StartGeneration')
-    await guideTo(user, GUIDE.review)
-    await user.click(storyline)
+    await openStep(user, '관찰')
+    await user.click(await screen.findByRole('button', { name: '스토리라인 먼저' }))
     expect(calls).not.toContain('StartStoryline')
-    expect(screen.getByRole('textbox', { name: /방문 계기/ })).toBe(answer)
+    const again = await screen.findByRole('textbox', { name: /방문 계기/ })
+    await waitFor(() => expect(again).toHaveFocus())
 
-    await user.type(answer, '퇴근길에 간판을 보고 처음 들어갔다.')
-    await guideTo(user, GUIDE.review)
-    await user.click(storyline)
+    await user.type(again, '퇴근길에 간판을 보고 처음 들어갔다.')
+    await openStep(user, '관찰')
+    await user.click(await screen.findByRole('button', { name: '스토리라인 먼저' }))
     await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartStoryline'))
   })
@@ -349,6 +354,7 @@ describe('opening a post', () => {
       },
     })
 
+    await openStep(user, '관찰')
     const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
@@ -358,8 +364,8 @@ describe('opening a post', () => {
     await waitFor(() => expect(answer).toHaveFocus())
 
     await user.click(screen.getByRole('button', { name: '기존 답변 사용하기' }))
-    await guideTo(user, GUIDE.review)
-    await user.click(generate)
+    await openStep(user, '관찰')
+    await user.click(await screen.findByRole('button', { name: '바로 글 쓰기' }))
     await confirmNoPhotos(user)
     await waitFor(() => expect(calls).toContain('StartGeneration'))
     expect(draftSaves.at(-1)?.templateAnswers).toContainEqual({
@@ -393,9 +399,11 @@ describe('opening a post', () => {
       },
     })
 
+    await openStep(user, '생성')
+    await user.type(await screen.findByLabelText('메모'), ' + 최신 내용')
+    await openStep(user, '관찰')
     const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
-    await user.type(screen.getByLabelText('메모'), ' + 최신 내용')
     await user.click(generate)
     await confirmNoPhotos(user)
 
@@ -437,11 +445,13 @@ describe('opening a post', () => {
       },
     })
 
-    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
-    await waitFor(() => expect(generate).toBeEnabled())
     // An unsaved edit, so the draft flush on the start path is a real request whose ORDER
     // against the picker is observable.
-    await user.type(screen.getByLabelText('메모'), ' + 최신 내용')
+    await openStep(user, '생성')
+    await user.type(await screen.findByLabelText('메모'), ' + 최신 내용')
+    await openStep(user, '관찰')
+    const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
+    await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
 
     // The picker opens instead of enqueueing, and `beforeStart` has NOT run: a cancelled picker
@@ -598,12 +608,12 @@ describe('the brief run options', () => {
 
   // A draft nothing has been entered into is not saved yet, so 확인 has no run to start. The bar
   // used to hold only ←, and the owner could not tell where 바로 글 쓰기 had gone.
-  it('says why 바로 글 쓰기 is unavailable on an empty draft and leads to the photos', async () => {
+  it('says why 다음 is unavailable on an empty draft and leads to the photos', async () => {
     const user = userEvent.setup()
     renderAppAt('/posts/new', { user: USER })
 
     await guideTo(user, GUIDE.review)
-    const write = await screen.findByRole('button', { name: '바로 글 쓰기' })
+    const write = await screen.findByRole('button', { name: '다음' })
     expect(write).toBeDisabled()
     expect(write).toHaveAccessibleDescription('아직 쓸 내용이 없어요. 사진이나 내용을 더해 주세요.')
 
@@ -668,7 +678,7 @@ describe('the brief quality rows', () => {
     })
 
     // Read as soon as the dock renders, before anyone opens the brief.
-    await screen.findByRole('tab', { name: '글 생성' })
+    await screen.findByRole('tab', { name: '생성' })
     await waitFor(() => expect(reads(calls)).toBe(1))
     const brief = await openBrief(user)
     const box = await m1()

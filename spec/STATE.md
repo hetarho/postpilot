@@ -215,7 +215,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T785 | Give the post editor five lifecycle steps with the storyline as its own step | POST THEME GEN ARCH | - | todo |
 | T786 | Observe and correct a post's attachments on ② 관찰 | POST GEN THEME ARCH | T783 T784 T785 | todo |
 | T787 | Show 스토리라인 작성 완료 on storyline-only posts in the lists | POST CLIP THEME ARCH | - | todo |
 | T788 | Run clip source analysis as its own approved job | CLIP QUOTA ARCH | - | todo |
@@ -234,10 +233,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T785 T787 T788
+- gusta-implement-task T786 T787 T788
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T785 done
 - 261113 T784 done
 - 261113 T776 done
 - 261113 T775 done
@@ -257,4 +257,3 @@
 - 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
 - 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.
-- 261113 si8: user confirmed Mac/Chrome, delegated all needed permissions and no questions through08:00KST; specifically prioritize blog/video back-button and page-layout consistency after performance.

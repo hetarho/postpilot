@@ -21,7 +21,7 @@ export function resetEditorTest(): void {
   vi.unstubAllGlobals()
 }
 
-/** The editor is one mounted component showing three step panels, so a test reaches a panel the
+/** The editor is one mounted component showing five step panels, so a test reaches a panel the
  *  post's status did not open by pressing its step. */
 export async function openStep(user: ReturnType<typeof userEvent.setup>, label: string) {
   await user.click(await screen.findByRole('tab', { name: label }))
@@ -37,7 +37,7 @@ export async function finalize(user: ReturnType<typeof userEvent.setup>) {
  *  (POST-51), a row of 글 생성's 확인 screen, so a test that drives any of them opens it first.
  *  말투 is a row of the same screen; 템플릿 is chosen on 내용. See `dockField` below. */
 export const BRIEF_TRIGGER = /^(글쓰기 옵션|Writing options)$/
-const GENERATE_STEP = /^(글 생성|Generate)$/
+const GENERATE_STEP = /^(생성|Create)$/
 export const generateTab = () =>
   screen.queryAllByRole('tab').find((tab) => GENERATE_STEP.test(tab.textContent ?? ''))
 

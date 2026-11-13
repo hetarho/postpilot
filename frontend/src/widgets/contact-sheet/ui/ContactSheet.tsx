@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import type { PostVideo } from '@/entities/video'
-import { observationByFile } from '@/entities/post'
+import { AttachmentViewer, observationByFile, postAttachments } from '@/entities/post'
 import type { Observation } from '@/shared/api'
 import { formatDuration } from '@/shared/lib'
 import { RotatedImage, Typography, typographyStyles } from '@/shared/ui'
@@ -17,9 +17,24 @@ interface ContactSheetProps {
   activeJob?: GenerationJob
 }
 
-/** Persisted model eyesight, paired to attachments only by their exact filenames. */
+/** A server-read thumbnail address: a just-confirmed upload may still carry its browser blob
+ *  preview in the post cache, and only the presigned GetPost capability may fetch an R2 object. */
+function serverViewUrl(viewUrl: string): string {
+  return viewUrl.startsWith('blob:') ? '' : viewUrl
+}
+
+/** Persisted model eyesight, paired to attachments only by their exact filenames. Pressing a
+ *  photo opens it large, its previous and next walking the sheet card by card (POST-100). */
 export function ContactSheet({ images, videos = [], observations, activeJob }: ContactSheetProps) {
   const { t } = useTranslation('posts')
+  const attachments = useMemo(
+    () => postAttachments({ images: [...images], videos: [...videos] }),
+    [images, videos],
+  )
+  const viewOrder = [...images, ...videos]
+    .filter((attachment) => serverViewUrl(attachment.viewUrl))
+    .map((attachment) => attachment.filename)
+  const [viewing, setViewing] = useState<string | null>(null)
   const observationsByFile = observationByFile(observations)
   const observing =
     activeJob?.stage === 'observe' && activeJob.status !== 'done' && activeJob.status !== 'failed'
@@ -49,7 +64,7 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
   }, [images, videos])
 
   return (
-    <section aria-labelledby="contact-sheet-heading" className="mt-12">
+    <section aria-labelledby="contact-sheet-heading" className="mt-6">
       <Typography variant="title" id="contact-sheet-heading">
         {t('observation.title')}
       </Typography>
@@ -72,27 +87,32 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
       >
         {images.map((image) => {
           const observation = observationsByFile.get(image.filename)
-          // A just-confirmed upload may temporarily keep its browser blob preview in
-          // the post cache. The contact sheet is a server-read surface: only the
-          // presigned GetPost capability may fetch an R2 thumbnail.
-          const viewUrl = image.viewUrl.startsWith('blob:') ? '' : image.viewUrl
+          const viewUrl = serverViewUrl(image.viewUrl)
           return (
             <article
               key={image.filename}
               className="bg-surface-raised w-carousel-card shrink-0 snap-start rounded-lg p-3 sm:w-60"
             >
               {viewUrl ? (
-                <RotatedImage
-                  fit="fill"
-                  rotation={image.rotation}
-                  src={viewUrl}
-                  alt={t('observation.imageAlt', { filename: image.filename })}
-                  width={image.width}
-                  height={image.height}
-                  loading="lazy"
-                  decoding="async"
-                  className="aspect-square w-full rounded-md object-cover"
-                />
+                <div className="relative">
+                  <RotatedImage
+                    fit="fill"
+                    rotation={image.rotation}
+                    src={viewUrl}
+                    alt={t('observation.imageAlt', { filename: image.filename })}
+                    width={image.width}
+                    height={image.height}
+                    loading="lazy"
+                    decoding="async"
+                    className="aspect-square w-full rounded-md object-cover"
+                  />
+                  <button
+                    type="button"
+                    aria-label={t('attachmentViewer.view', { file: image.filename })}
+                    onClick={() => setViewing(image.filename)}
+                    className="absolute inset-0 cursor-zoom-in rounded-md focus-visible:-outline-offset-2"
+                  />
+                </div>
               ) : (
                 <Typography
                   variant="body"
@@ -130,9 +150,7 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
         })}
         {videos.map((video) => {
           const observation = observationsByFile.get(video.filename)
-          // The same rule as a photo's: a just-confirmed upload keeps its local blob in the
-          // cache, and this is a server-read surface.
-          const viewUrl = video.viewUrl.startsWith('blob:') ? '' : video.viewUrl
+          const viewUrl = serverViewUrl(video.viewUrl)
           return (
             <article
               key={video.filename}
@@ -215,6 +233,13 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
           })}
         </Typography>
       )}
+      <AttachmentViewer
+        files={viewOrder}
+        attachments={attachments}
+        viewing={viewing}
+        onView={setViewing}
+        onClose={() => setViewing(null)}
+      />
     </section>
   )
 }

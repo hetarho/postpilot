@@ -89,7 +89,7 @@ function setup() {
           result={post.content}
           editorRef={editorRef}
           onContentChange={() => undefined}
-          onGoGenerate={() => undefined}
+          onGoStoryline={() => undefined}
         />
       </>
     ) : null

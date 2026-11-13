@@ -108,3 +108,10 @@ export const COPY_FEEDBACK_MS = 1_500
  *  refusal into a multi-second wait. */
 export const QUERY_STALE_MS = 60_000
 export const QUERY_RETRY_COUNT = 1
+
+export {
+  LIFECYCLE_STATIONS,
+  lifecycleStationLabel,
+  lifecycleStepsI18n,
+  type LifecycleStation,
+} from './lifecycle-steps'

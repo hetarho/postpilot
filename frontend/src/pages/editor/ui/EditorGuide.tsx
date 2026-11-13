@@ -114,16 +114,15 @@ export function EditorGuide({
             </StepBarCta>
           </StepBarActions>
         )}
-        {/* The summary's row stays MOUNTED on the other screens, hidden: a 생성 that is flushing
-            the draft or asking about re-observation keeps its state while the owner steps back
-            to fix an answer. */}
+        {/* The summary's row stays MOUNTED on the other screens, hidden, so what it holds keeps
+            its state while the owner steps back to fix an answer. */}
         {actions ? (
           <div hidden={step !== summary}>
             {actions(backTo(previousGuideStep(summary, sponsored)))}
           </div>
         ) : (
-          // A draft nothing has been entered into has not been saved, so there is no post for
-          // 생성 to run on. The button still stands where the owner expects it, disabled, with
+          // A draft nothing has been entered into has not been saved, so there is no post to move
+          // on to ② with. The button still stands where the owner expects it, disabled, with
           // the reason above it and the shortest way to fix it — a bar holding only ← left them
           // wondering where the button went.
           !next && (
@@ -135,8 +134,8 @@ export function EditorGuide({
                 </Button>
               </div>
               <StepBarActions back={back}>
-                <StepBarCta disabled aria-describedby={emptyReasonId}>
-                  {t('generation.writeNow')}
+                <StepBarCta forward disabled aria-describedby={emptyReasonId}>
+                  {t('guide.next')}
                 </StepBarCta>
               </StepBarActions>
             </>

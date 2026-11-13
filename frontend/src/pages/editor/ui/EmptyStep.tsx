@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button, Typography } from '@/shared/ui'
 
-/** A step the post has not reached yet. Never a disabled tab: the point of showing all three from
+/** A step the post has not reached yet. Never a disabled tab: the point of showing all five from
  *  the first screen is that the shape of the flow is visible, so an empty step says what it is
  *  waiting for and offers the way to the step that produces it. */
 export function EmptyStep({

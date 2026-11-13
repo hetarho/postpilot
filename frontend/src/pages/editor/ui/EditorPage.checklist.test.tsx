@@ -49,7 +49,7 @@ describe('the pre-submission checklist', () => {
     })
 
     // A finalized post opens on 글 완성; the checklist stands above the export.
-    const panel = await screen.findByRole('tabpanel', { name: '글 완성' })
+    const panel = await screen.findByRole('tabpanel', { name: '완성' })
     const checklist = within(panel).getByRole('region', { name: '제출 전 체크리스트' })
     expect(following(checklist, within(panel).getByRole('heading', { name: '내보내기' }))).toBe(
       true,
@@ -98,7 +98,7 @@ describe('the pre-submission checklist', () => {
       posts: { posts: [finalizedPostRow({ slug: SLUG, campaign: false, advertiserGuide: GUIDE })] },
     })
 
-    const panel = await screen.findByRole('tabpanel', { name: '글 완성' })
+    const panel = await screen.findByRole('tabpanel', { name: '완성' })
     await within(panel).findByRole('heading', { name: '내보내기' })
     expect(within(panel).queryByRole('region', { name: '제출 전 체크리스트' })).toBeNull()
   })
@@ -109,7 +109,7 @@ describe('the pre-submission checklist', () => {
       posts: { posts: [finalizedPostRow({ slug: SLUG, campaign: true })] },
     })
 
-    const panel = await screen.findByRole('tabpanel', { name: '글 완성' })
+    const panel = await screen.findByRole('tabpanel', { name: '완성' })
     await within(panel).findByRole('heading', { name: '내보내기' })
     expect(within(panel).queryByRole('region', { name: '제출 전 체크리스트' })).toBeNull()
   })

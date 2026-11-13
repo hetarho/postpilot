@@ -59,6 +59,7 @@ describe('a published post', () => {
     templateAnswers: [{ label: '방문일', text: '9월 20일', enabled: true }],
     // The lock holds the brief's ticks too, so the post carries one.
     qualityRules: ['title_saturation'],
+    storyline: { paragraphs: [{ text: '성수의 카페를 걸어 봅니다.', files: ['IMG_1.jpg'] }] },
   })
   // A measurement the post would show on ② if it were not published.
   const MEASURED: FakeQualityReading[] = [
@@ -121,7 +122,7 @@ describe('a published post', () => {
     renderPublished()
 
     const memories = await screen.findByRole('button', { name: '기억으로 저장' })
-    selected('글 완성')
+    selected('완성')
     // The same as a finalized post: publishing keeps the canonical content it extracts from.
     await waitFor(() => expect(memories).toBeEnabled())
     expect(screen.getByRole('heading', { name: '내보내기' })).toBeInTheDocument()
@@ -134,7 +135,7 @@ describe('a published post', () => {
     renderPublished(calls)
     await screen.findByRole('button', { name: '기억으로 저장' })
 
-    await openStep(user, '글 다듬기')
+    await openStep(user, '다듬기')
     const notice = await screen.findByText(LOCKED)
     expect(notice.closest('[role="status"]')).not.toBeNull()
     const prose = screen.getByRole('article', { name: '생성된 글' })
@@ -165,7 +166,36 @@ describe('a published post', () => {
     expect(screen.queryByLabelText('수정 요청을 입력하세요')).toBeNull()
 
     await user.click(onward)
-    await waitFor(() => selected('글 완성'))
+    await waitFor(() => selected('완성'))
+    expect(calls.filter((call) => WRITES.includes(call))).toEqual([])
+  })
+
+  // POST-86: ② and ③ read as ④ does — the one sentence, nothing editable, and a bar holding only
+  // the way back and the road onward.
+  it.each([
+    ['관찰', '스토리라인 먼저'],
+    ['스토리라인', '다시 만들기'],
+  ])('reads %s read-only, with only the road onward in its dock', async (step, action) => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderPublished(calls)
+    await screen.findByRole('button', { name: '기억으로 저장' })
+
+    await openStep(user, step)
+    const notice = await screen.findByText(LOCKED)
+    expect(notice.closest('[role="status"]')).not.toBeNull()
+    const dock = screen.getByLabelText('글 작업')
+    const onward = within(dock).getByRole('button', { name: '글 완성으로 가기' })
+    expect(within(dock).getAllByRole('button')).toEqual([
+      within(dock).getByRole('button', { name: '이전' }),
+      onward,
+    ])
+    expect(screen.queryByRole('button', { name: action })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: '스토리라인 수정 요청' })).toBeNull()
+    expect(screen.queryByRole('textbox', { name: /번째 문단/ })).toBeNull()
+
+    await user.click(onward)
+    await waitFor(() => selected('완성'))
     expect(calls.filter((call) => WRITES.includes(call))).toEqual([])
   })
 
@@ -175,7 +205,7 @@ describe('a published post', () => {
     renderPublished(calls)
     await screen.findByRole('button', { name: '기억으로 저장' })
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     // Visit the material screens to check their published locks.
     await guideTo(user, GUIDE.details)
     const title = await screen.findByRole('textbox', { name: '제목' })
@@ -205,12 +235,12 @@ describe('a published post', () => {
       expect(card).toBeDisabled()
     expect(await voiceField(user)).toBeDisabled()
 
+    // ①'s 확인 bar holds 이전 and 다음 only; the writing actions are ②'s, and a published post's ②
+    // offers none of them.
     const dock = screen.getByLabelText('글 작업')
-    await waitFor(() =>
-      expect(within(dock).getByRole('button', { name: '바로 글 쓰기' })).toBeDisabled(),
-    )
-    expect(within(dock).getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
-    expect(within(dock).queryByRole('button', { name: '다른 방법으로 쓰기' })).toBeNull()
+    await waitFor(() => expect(within(dock).getByRole('button', { name: '다음' })).toBeEnabled())
+    expect(within(dock).queryByRole('button', { name: '바로 글 쓰기' })).toBeNull()
+    expect(within(dock).queryByRole('button', { name: '스토리라인 먼저' })).toBeNull()
     // ONE sentence on the whole screen, and no other reason beside any control of ①.
     expect(screen.getAllByText(LOCKED)).toHaveLength(1)
     expect(
@@ -259,13 +289,13 @@ describe('a published post', () => {
       },
     })
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await user.type(await screen.findByLabelText('제목'), ' 여행기')
     await waitFor(() => expect(calls).toContain('SavePostDraft'), { timeout: 4_000 })
 
     // The refusal refetches the post, which now reads published and carries the reader to ③.
     await waitFor(() => expect(statusLine()).toHaveTextContent('발행됨'), { timeout: 4_000 })
-    await waitFor(() => selected('글 완성'))
+    await waitFor(() => selected('완성'))
     expect(screen.queryByText('저장하지 못했어요 · 다시 시도 중')).toBeNull()
 
     // Past two retry windows: the save went out once and was never retried.
@@ -273,7 +303,7 @@ describe('a published post', () => {
     expect(calls.filter((call) => call === 'SavePostDraft')).toHaveLength(1)
     expect(screen.queryByText('저장하지 못했어요 · 다시 시도 중')).toBeNull()
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     const title = await screen.findByLabelText('제목')
     expect(title).toHaveAttribute('readonly')
     // The server's, not the text the lock refused.
@@ -303,7 +333,7 @@ describe('a published post', () => {
       },
     })
 
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     await user.type(await screen.findByLabelText('제목'), ' 여행기')
     await user.type(screen.getByLabelText('메모'), ' 또')
     await waitFor(() => expect(statusLine()).toHaveTextContent('발행됨'), { timeout: 4_000 })
@@ -311,7 +341,7 @@ describe('a published post', () => {
     // The URL was cleared elsewhere: the next read finds the post finalized again.
     await queryClient.invalidateQueries()
     await waitFor(() => expect(statusLine()).toHaveTextContent('확정'))
-    await openStep(user, '글 생성')
+    await openStep(user, '생성')
     const title = await screen.findByLabelText('제목')
     expect(title).not.toHaveAttribute('readonly')
     expect(title).toHaveValue('제주')

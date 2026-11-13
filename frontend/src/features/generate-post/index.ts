@@ -5,7 +5,7 @@ export { ReobservePicker } from './ui/ReobservePicker'
 export type { GenerationActionsHandle } from './ui/GenerationActions'
 export {
   StorylineActionBlocker,
-  StorylineActionButtons,
+  StorylineActionRow,
   StorylineActionsProvider,
   StorylineRequestComposer,
   type StorylineActionsHandle,

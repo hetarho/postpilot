@@ -3,7 +3,13 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import { createRef, useState } from 'react'
 import type { PostDraft, PostStorylineParagraph } from '@/entities/post'
-import type { StorylineActionsHandle } from '@/features/generate-post'
+import {
+  StorylineActionBlocker,
+  StorylineActionRow,
+  StorylineActionsProvider,
+  StorylineRequestComposer,
+  type StorylineActionsHandle,
+} from '@/features/generate-post'
 import { Stage } from '@/shared/api'
 import type { FakeGenerationStart, FakeJobsOptions } from '@/test/jobs'
 import { createFakeAuthTransport, createTestQueryClient, withProviders } from '@/test/session'
@@ -16,7 +22,7 @@ const PARAGRAPHS: PostStorylineParagraph[] = [
   { text: '커피를 이야기합니다.', files: ['b.jpg'] },
 ]
 
-type SpacePost = Parameters<typeof StorylineSpace>[0]['post']
+type SpacePost = PostDraft
 
 function post(
   overrides: Partial<NonNullable<PostDraft['storyline']>> = {},
@@ -66,7 +72,6 @@ const writer = { providerId: 'openrouter', modelId: 'writer' }
 const observer = { providerId: 'openrouter', modelId: 'observer' }
 
 interface HarnessProps {
-  hasContent?: boolean
   readOnly?: boolean
   onChange?: (paragraphs: PostStorylineParagraph[]) => void
   source?: SpacePost
@@ -76,9 +81,9 @@ interface HarnessProps {
   actionsRef?: React.Ref<StorylineActionsHandle>
 }
 
-/** The space over state it owns, the way the editor's autosave holds it. */
+/** ③ as the editor composes it: the space over state it owns, the way the editor's autosave holds
+ *  it, and the step bar's request field and row under it, reading one actions provider. */
 function Harness({
-  hasContent = false,
   readOnly = false,
   onChange,
   source = post(),
@@ -89,18 +94,27 @@ function Harness({
 }: HarnessProps) {
   const [paragraphs, setParagraphs] = useState(PARAGRAPHS)
   return (
-    <StorylineSpace
+    <StorylineActionsProvider
       ref={actionsRef}
       post={source}
-      paragraphs={paragraphs}
-      readOnly={readOnly}
-      hasContent={hasContent}
-      onChange={(next) => {
-        setParagraphs(next)
-        onChange?.(next)
-      }}
-      actions={{ onStarted, beforeStart, flushContent, onOpenBrief: () => {} }}
-    />
+      onStarted={onStarted}
+      beforeStart={beforeStart}
+      flushContent={flushContent}
+      onOpenBrief={() => {}}
+    >
+      <StorylineSpace
+        post={source}
+        paragraphs={paragraphs}
+        readOnly={readOnly}
+        onChange={(next) => {
+          setParagraphs(next)
+          onChange?.(next)
+        }}
+      />
+      <StorylineActionBlocker />
+      <StorylineRequestComposer />
+      <StorylineActionRow />
+    </StorylineActionsProvider>
   )
 }
 
@@ -144,28 +158,22 @@ async function actionsReady() {
 const paragraph = (n: number) => within(screen.getByRole('listitem', { name: `${n}번째 문단` }))
 
 describe('StorylineSpace', () => {
-  it('opens while the post has no content, and closes once content first shows', () => {
-    const { rerender } = renderSpace()
-    expect(screen.getByRole('button', { name: '스토리라인' })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    )
+  it('shows the storyline as the whole step, with no collapse (POST-95)', () => {
+    renderSpace()
+    expect(screen.getByRole('heading', { name: '스토리라인' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '스토리라인' })).toBeNull()
     expect(paragraph(1).getByText('가게 앞을 보여줍니다.')).toBeInTheDocument()
-
-    rerender({ hasContent: true })
-    expect(screen.getByRole('button', { name: '스토리라인' })).toHaveAttribute(
-      'aria-expanded',
-      'false',
-    )
+    expect(paragraph(2).getByText('커피를 이야기합니다.')).toBeInTheDocument()
   })
 
-  it('starts closed over a post that already has content, and opens on request', async () => {
-    const user = userEvent.setup()
-    renderSpace({ hasContent: true })
-    const heading = screen.getByRole('button', { name: '스토리라인' })
-    expect(heading).toHaveAttribute('aria-expanded', 'false')
-    await user.click(heading)
-    expect(paragraph(2).getByText('커피를 이야기합니다.')).toBeInTheDocument()
+  it('places the request field above the row: 다시 만들기, then the write action', async () => {
+    renderSpace()
+    await actionsReady()
+    const field = screen.getByRole('textbox', { name: '스토리라인 수정 요청' })
+    const remake = screen.getByRole('button', { name: '다시 만들기' })
+    const write = screen.getByRole('button', { name: '이 스토리로 글 쓰기' })
+    expect(field.compareDocumentPosition(remake) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(remake.compareDocumentPosition(write) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('edits a paragraph’s text in place, handing the whole list back', async () => {
@@ -368,7 +376,7 @@ describe('StorylineSpace', () => {
       },
     )
     const rewrites: FakeGenerationStart[] = []
-    renderSpace({ source: edited, hasContent: true }, { starts: rewrites })
+    renderSpace({ source: edited }, { starts: rewrites })
     await actionsReady()
     await user.click(screen.getByRole('button', { name: '이 스토리로 다시 쓰기' }))
     const dialog = await screen.findByRole('dialog', { name: '이 스토리로 다시 쓸까요?' })
@@ -425,31 +433,30 @@ describe('StorylineSpace', () => {
       providers: { models: [writer], selections: [{ stage: Stage.WRITE, ...writer }] },
     })
     render(
-      <StorylineSpace
+      <StorylineActionsProvider
         post={post()}
-        paragraphs={PARAGRAPHS}
-        onChange={() => {}}
-        readOnly
-        hasContent={false}
-        actions={{
-          activeJob: {
-            ...running,
-            progressDone: 0,
-            progressTotal: 1,
-            failure: undefined,
-            postSlug: 'post',
-            observeModel: undefined,
-            writeModel: undefined,
-            createdAt: '',
-            updatedAt: '',
-            targetLanguage: undefined,
-          },
-          onStarted: () => {},
-          beforeStart: async () => {},
-          flushContent: async () => {},
-          onOpenBrief: () => {},
+        activeJob={{
+          ...running,
+          progressDone: 0,
+          progressTotal: 1,
+          failure: undefined,
+          postSlug: 'post',
+          observeModel: undefined,
+          writeModel: undefined,
+          createdAt: '',
+          updatedAt: '',
+          targetLanguage: undefined,
         }}
-      />,
+        onStarted={() => {}}
+        beforeStart={async () => {}}
+        flushContent={async () => {}}
+        onOpenBrief={() => {}}
+      >
+        <StorylineSpace post={post()} paragraphs={PARAGRAPHS} onChange={() => {}} readOnly />
+        <StorylineActionBlocker />
+        <StorylineRequestComposer />
+        <StorylineActionRow />
+      </StorylineActionsProvider>,
       { wrapper: withProviders(transport, createTestQueryClient()) },
     )
     await waitFor(() => expect(calls).toContain('GetSelections'))

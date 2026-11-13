@@ -87,7 +87,6 @@ export const i18n = {
         restoreRequired: '기존 답변 사용하기',
         requiredSummary: '필수 입력란을 확인해 주세요: {{fields}}',
       },
-      steps: { generate: '글 생성', refine: '글 다듬기', finish: '글 완성' },
       backToList: '글 목록',
       backToListPlain: '글 목록으로',
       stepAria: '글 단계',
@@ -99,10 +98,16 @@ export const i18n = {
       noPhotoModel: '사진이 없어 관찰 모델은 필요하지 않아요.',
       reviewAiResult: 'AI 결과 확인 →',
       goGenerate: '글 생성으로 가기',
+      goObserve: '관찰로 가기',
+      goStoryline: '스토리라인으로 가기',
+      observeEmpty:
+        '관찰할 사진이나 영상이 없어요. 사진 없이도 스토리라인 먼저나 바로 글 쓰기로 이어 갈 수 있어요.',
+      storylineEmpty:
+        '아직 스토리라인이 없어요. 관찰에서 스토리라인 먼저나 바로 글 쓰기를 누르면 여기에 나와요.',
       refineEmpty:
-        '아직 다듬을 글이 없어요. 글 생성에서 초안을 만들면 여기에서 문단별로 고칠 수 있습니다.',
+        '아직 다듬을 글이 없어요. 스토리라인에서 이 스토리로 글 쓰기를 누르면 여기에서 글을 다듬을 수 있어요.',
       finishEmpty:
-        '아직 완성할 글이 없어요. 초안을 만들고 글 다듬기에서 확정하면 여기에서 내보낼 수 있습니다.',
+        '아직 완성할 글이 없어요. 초안을 만들고 다듬기에서 확정하면 여기에서 내보낼 수 있습니다.',
       // ③'s second take-away beside 기억으로 저장 (POST-103).
       templateFromPost: '이 글 형식으로 템플릿 만들기',
       jobLoadFailed: '작업 상태를 확인하지 못했어요.',
@@ -280,7 +285,6 @@ export const i18n = {
         restoreRequired: 'Use saved answer',
         requiredSummary: 'Check the required fields: {{fields}}',
       },
-      steps: { generate: 'Generate', refine: 'Refine', finish: 'Finish' },
       backToList: 'Posts',
       backToListPlain: 'Back to posts',
       stepAria: 'Post steps',
@@ -292,8 +296,14 @@ export const i18n = {
       noPhotoModel: 'A photo-observation model is not needed because this post has no photos.',
       reviewAiResult: 'Review AI result →',
       goGenerate: 'Go to Generate',
+      goObserve: 'Go to Observe',
+      goStoryline: 'Go to Storyline',
+      observeEmpty:
+        'There are no photos or videos to observe. You can still continue with Storyline first or Write now.',
+      storylineEmpty:
+        'There is no storyline yet. Press Storyline first or Write now in Observe and it appears here.',
       refineEmpty:
-        'There is no draft to refine yet. Generate a draft first, then edit each paragraph here.',
+        'There is no draft to refine yet. Press Write from this storyline in Storyline, then refine it here.',
       finishEmpty:
         'There is no post to finish yet. Generate a draft and finalize it in Refine before exporting here.',
       templateFromPost: 'Make a template in this post’s shape',
