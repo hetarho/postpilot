@@ -149,6 +149,7 @@
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
 - 261113 decided THEME-74: Which loading treatment and timing? → Content-shaped skeletons for initial lists/forms/details/tables, compact spinner for inline reads, one short CSS reveal delay without delaying ready data, retain cached content (alt: spinner everywhere or minimum loading duration). This preserves page geometry and avoids fast-response flashes.
 - 261113 decided review/video-editing-ux-261114 T817 T818 T819 T820: video editing UX proposals → adopt bounded pinned caption preview, readable renderer samples, explicit preview expansion and static visual template summaries (alt: retain prose-only surfaces); explicit invocation authorizes UI policy CLIP r78, APIs/storage/media semantics preserved. Isolated group vdux-261114; T820 follows T797/T798 to avoid active loading ownership.
+- 261113 decided T804: Parallel work-group integration rejects pre-existing spec warnings although ordinary lint succeeds; use the supported serial vibe host and retain the complete affected-unit, full CI-equivalent and browser gates. Preserve approved T803 source and review evidence. Alternative: edit historical spec records or modify package internals; neither belongs to this request.
 
 ## unlanded
 | id | tag | branch | commit | at |
