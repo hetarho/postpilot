@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
@@ -66,14 +66,41 @@ export function ClipCaptionSheet({
   const { t: tCommon } = useTranslation('common')
   const viewport = useVisualViewport()
   const headerRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const panel = headerRef.current?.closest<HTMLElement>('[role=dialog]')
     const overlay = panel?.parentElement
     if (!open || !panel || !overlay) return
     overlay.style.top = `${viewport.offsetTop}px`
     overlay.style.bottom = `${Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height)}px`
     panel.style.maxHeight = `${viewport.height}px`
+    const body = panel.querySelector<HTMLElement>('.overflow-y-auto')
+    let frame = 0
+    const revealFocusedField = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        const field = document.activeElement
+        if (
+          !body ||
+          !(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement) ||
+          !body.contains(field)
+        )
+          return
+        const fieldBox = field.getBoundingClientRect()
+        const bodyBox = body.getBoundingClientRect()
+        const top = Math.max(bodyBox.top, viewport.offsetTop) + CLIP_TIMELINE.fieldGapPx
+        const bottom =
+          Math.min(bodyBox.bottom, viewport.offsetTop + viewport.height) - CLIP_TIMELINE.fieldGapPx
+        if (fieldBox.bottom > bottom) body.scrollTop += fieldBox.bottom - bottom
+        else if (fieldBox.top < top) body.scrollTop += fieldBox.top - top
+      })
+    }
+    // The sheet owns its scrollport; scrolling the document would leave a focused
+    // field behind the pinned frame when the software keyboard changes its height.
+    panel.addEventListener('focusin', revealFocusedField)
+    revealFocusedField()
     return () => {
+      cancelAnimationFrame(frame)
+      panel.removeEventListener('focusin', revealFocusedField)
       overlay.style.top = ''
       overlay.style.bottom = ''
       panel.style.maxHeight = ''

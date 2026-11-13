@@ -84,7 +84,7 @@ it('expands and compacts the same preview while retaining its mode, selection an
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 400 })
     fireEvent(window, new Event('resize'))
   })
-  expect(frame).toHaveStyle({ maxHeight: '320px' })
+  expect(frame).toHaveStyle({ maxHeight: '384px' })
   await waitFor(() => expect(frame).toHaveAttribute('data-pinned', 'false'))
   await userEvent.click(screen.getByRole('button', { name: '미리보기 작게 보기' }))
   expect(frame).toHaveStyle({ maxHeight: '320px' })

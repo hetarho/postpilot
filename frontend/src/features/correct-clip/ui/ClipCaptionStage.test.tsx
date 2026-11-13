@@ -1,7 +1,14 @@
+import { useReducer, useState } from 'react'
 import userEvent from '@testing-library/user-event'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
-import type { ClipCanvasBox, ClipCaptionFragment, ClipEditableText } from '@/entities/clip-plan'
+import {
+  clipTimelineReducer,
+  createClipTimeline,
+  type ClipCanvasBox,
+  type ClipCaptionFragment,
+  type ClipEditableText,
+} from '@/entities/clip-plan'
 import { CLIP_CAPTION_STYLES } from '@/entities/clip-design'
 import { normalizeAppFailure } from '@/shared/api'
 import { clipTimelineFixture } from '@/test/clip-editing'
@@ -363,4 +370,79 @@ it('keeps an invalid typed size while choosing another style', async () => {
     expect.objectContaining({ patch: { ownerStyle: 'neon' } }),
     undefined,
   )
+})
+
+it('reveals the focused caption field in the sheet body after keyboard reflow without replacing it', async () => {
+  const state = clipTimelineFixture()
+  const originalHeight = window.innerHeight
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+  try {
+    render(
+      <ClipCaptionSheet
+        open
+        onClose={() => {}}
+        plan={state.plan}
+        text={state.plan.elements![0]}
+        stage={{ canvas, safeArea, fragment: fragment() }}
+        styles={{ samples: [] }}
+        footage={{ localSources: [] }}
+        change={vi.fn()}
+      />,
+    )
+    const field = screen.getByLabelText<HTMLTextAreaElement>('자막 원문')
+    const body = field.closest<HTMLElement>('.overflow-y-auto')!
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 180, bottom: 420 } as DOMRect)
+    vi.spyOn(field, 'getBoundingClientRect').mockReturnValue({ top: 400, bottom: 500 } as DOMRect)
+    field.focus()
+    field.setSelectionRange(3, 3)
+    const value = field.value
+    act(() => {
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 480 })
+      fireEvent(window, new Event('resize'))
+    })
+    await waitFor(() => expect(body.scrollTop).toBeGreaterThan(0))
+    expect(screen.getByLabelText('자막 원문')).toBe(field)
+    expect(document.activeElement).toBe(field)
+    expect(field.value).toBe(value)
+    expect(field.selectionStart).toBe(3)
+    expect(field.selectionEnd).toBe(3)
+  } finally {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight })
+  }
+})
+
+it('retains the manually checked style after closing and reopening the caption sheet', async () => {
+  function Harness() {
+    const [timeline, dispatch] = useReducer(
+      clipTimelineReducer,
+      clipTimelineFixture().plan,
+      createClipTimeline,
+    )
+    const [open, setOpen] = useState(true)
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>Open caption</button>
+        <ClipCaptionSheet
+          open={open}
+          onClose={() => setOpen(false)}
+          plan={timeline.plan}
+          text={timeline.plan.elements![0]}
+          stage={{ canvas, safeArea, fragment: fragment() }}
+          styles={{ samples: [] }}
+          footage={{ localSources: [] }}
+          change={(edit) => dispatch({ type: 'edit', edit, at: 0 })}
+        />
+      </>
+    )
+  }
+  render(<Harness />)
+  const film = () =>
+    screen
+      .getByRole('dialog', { name: '선택한 문구' })
+      .querySelector<HTMLButtonElement>('[data-style="film"]')!
+  await userEvent.click(film())
+  expect(film()).toHaveAttribute('aria-checked', 'true')
+  await userEvent.click(screen.getByRole('button', { name: '닫기', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: 'Open caption' }))
+  expect(film()).toHaveAttribute('aria-checked', 'true')
 })
