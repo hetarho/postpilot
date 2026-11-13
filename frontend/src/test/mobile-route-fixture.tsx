@@ -260,6 +260,8 @@ const transport: Transport = new Proxy(base, {
     return async (...args: unknown[]) => {
       const method = args[0] as { name: string; parent: { typeName: string } }
       procedures.push(method.name)
+      if (scenario === 'loading' && /^(List|Get).*Template/.test(method.name))
+        await new Promise(() => {})
       const delay = Number(
         params.get(
           method.name === 'ListClipProjects'

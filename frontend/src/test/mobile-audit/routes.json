@@ -30,6 +30,10 @@
       "status": "checked",
       "finding": "Expected rejected callback shows named error and login return; provider exchange is fixture only.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/login",
+      "name": "로그인으로"
     }
   },
   "/verify-email": {
@@ -140,6 +144,10 @@
       "status": "changed",
       "finding": "Factor peers use2x2 compact choices and one shared help paragraph; model candidates now use2 phone columns with min-w-0. The corrected2/4/8/16 write/observe view matrix covers320/360/390/430 in both themes,44px selectors/48px dock, and16-candidate keyboard-height DOM/focus continuity; prior16 candidate1906px document fell to1202px at390. Business and slot behavior remain the isolated prior-T649 baseline until final coordinated merge qualification.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/ai-models",
+      "name": "AI 고르기"
     }
   },
   "/tests/history": {
@@ -159,6 +167,10 @@
         "working",
         "terminal-result"
       ]
+    },
+    "return": {
+      "href": "/ai-models",
+      "name": "AI 고르기"
     }
   },
   "/tests/records/record": {
@@ -170,6 +182,10 @@
       "status": "checked",
       "finding": "Legacy result keeps contextual return and one comparison surface.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/tests/history",
+      "name": "테스트 기록"
     }
   },
   "/tests/test": {
@@ -181,6 +197,10 @@
       "status": "changed",
       "finding": "One complete candidate panel is required context for a comparison; current test operation and failure states checked.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/tests",
+      "name": "글쓰기 테스트"
     }
   },
   "/posts": {
@@ -212,6 +232,10 @@
       "status": "changed",
       "finding": "Draft title is available before optional generation fields; no duplicated create page title.",
       "inspectedStates": ["input", "loading", "failure"]
+    },
+    "return": {
+      "href": "/naver-blog",
+      "name": "네이버 블로그로 돌아가기"
     }
   },
   "/posts/experiments/record": {
@@ -224,6 +248,10 @@
       "finding": "Legacy result keeps contextual return and one comparison surface.",
       "inspectedStates": ["populated", "loading", "failure"],
       "redirect": "/tests/records/record"
+    },
+    "return": {
+      "href": "/tests/history",
+      "name": "테스트 기록"
     }
   },
   "/posts/review": {
@@ -235,6 +263,10 @@
       "status": "changed",
       "finding": "Measurement values use a phone two-column grid and editing gaps shrink; missing-photo error remains required.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/naver-blog",
+      "name": "네이버 블로그로 돌아가기"
     }
   },
   "/voices": {
@@ -295,6 +327,10 @@
         "conflict",
         "direct-editor"
       ]
+    },
+    "return": {
+      "href": "/templates",
+      "name": "글 템플릿"
     }
   },
   "/templates/template": {
@@ -317,6 +353,10 @@
         "conflict",
         "direct-editor"
       ]
+    },
+    "return": {
+      "href": "/templates",
+      "name": "글 템플릿"
     }
   },
   "/guidelines": {
@@ -366,6 +406,10 @@
       "status": "checked",
       "finding": "Saved analysis and current AI editing presentation belong to T651; baseline saved profile is populated.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/voices",
+      "name": "말투"
     }
   },
   "/voices/voice-default/materials": {
@@ -377,6 +421,10 @@
       "status": "checked",
       "finding": "Samples/count actions are row based; current voice heading shell belongs to T651.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/voices/voice-default",
+      "name": "말투 설정"
     }
   },
   "/clips": {
@@ -417,6 +465,10 @@
         "terminal-result"
       ],
       "redirect": "/tests/history"
+    },
+    "return": {
+      "href": "/voices/voice-default",
+      "name": "말투 설정"
     }
   },
   "/spoken-voices": {
@@ -447,6 +499,10 @@
       "status": "checked",
       "finding": "Voice creation names profile/description/current work; generated candidate/confirmation capabilities are fixture only.",
       "inspectedStates": ["input", "loading", "failure"]
+    },
+    "return": {
+      "href": "/spoken-voices",
+      "name": "내 목소리"
     }
   },
   "/clips/review": {
@@ -462,6 +518,10 @@
     "control": {
       "role": "tab",
       "name": "다듬기"
+    },
+    "return": {
+      "href": "/naver-clip",
+      "name": "네이버 클립으로 돌아가기"
     }
   },
   "/video-templates/new": {
@@ -484,6 +544,10 @@
         "conflict",
         "direct-editor"
       ]
+    },
+    "return": {
+      "href": "/video-templates?channel=naver_clip",
+      "name": "영상 템플릿"
     }
   },
   "/video-templates": {
@@ -525,6 +589,10 @@
         "conflict",
         "direct-editor"
       ]
+    },
+    "return": {
+      "href": "/video-templates?channel=naver_clip",
+      "name": "영상 템플릿"
     }
   },
   "/video-guidelines": {
@@ -575,6 +643,10 @@
       "status": "changed",
       "finding": "Shorter phone section gaps retain account rows, self-assignment constraint and refund review.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/settings",
+      "name": "나"
     }
   },
   "/admin/models": {
@@ -586,6 +658,10 @@
       "status": "changed",
       "finding": "Search/filter group precedes long catalog intro; disabling consequence remains before controls; catalog document gaps compact.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/admin",
+      "name": "관리자"
     }
   },
   "/admin/estimator": {
@@ -597,6 +673,10 @@
       "status": "changed",
       "finding": "Each tier pairs observer/writer selectors horizontally even at320px; labels/half-selection constraints retained.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/admin",
+      "name": "관리자"
     }
   },
   "/admin/vouchers": {
@@ -608,6 +688,10 @@
       "status": "changed",
       "finding": "Five named presets plus custom mode use one listbox, custom quantities pair into two columns, all issue validation retained.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/admin",
+      "name": "관리자"
     }
   },
   "/admin/costs": {
@@ -619,6 +703,10 @@
       "status": "changed",
       "finding": "Smaller phone section gaps retain exchange-rate and measured/unavailable cost quality.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/admin",
+      "name": "관리자"
     }
   },
   "/billing": {
@@ -630,6 +718,10 @@
       "status": "changed",
       "finding": "Smaller phone section gaps; subscription/payment/history still precede optional purchase/refund forms by financial context.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/settings",
+      "name": "나"
     }
   },
   "/plans": {
@@ -641,6 +733,10 @@
       "status": "checked",
       "finding": "Pricing ladder/comparison is required long content; responsive promo dimensions and compact phone heading already exist.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/settings",
+      "name": "나"
     }
   },
   "/billing/checkout": {
@@ -652,6 +748,10 @@
       "status": "changed",
       "finding": "Shorter phone gaps retain tier, term, server quote and committing action; absent/invalid tier is separate from valid quote.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/plans",
+      "name": "플랜으로 돌아가기"
     }
   },
   "/billing/method/success": {
@@ -663,6 +763,10 @@
       "status": "checked",
       "finding": "Absent provider keys intentionally render registration error/return; valid fixture mutation redirects to billing.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/billing",
+      "name": "결제 관리로 돌아가기"
     }
   },
   "/billing/method/fail": {
@@ -674,6 +778,10 @@
       "status": "checked",
       "finding": "Named provider failure/technical detail and valid internal return remain readable.",
       "inspectedStates": ["populated", "loading", "failure"]
+    },
+    "return": {
+      "href": "/billing",
+      "name": "결제 관리로 돌아가기"
     }
   },
   "/account": {
@@ -685,6 +793,10 @@
       "status": "changed",
       "finding": "Smaller phone section gaps keep account facts and current/new password form together.",
       "inspectedStates": ["input", "loading", "failure"]
+    },
+    "return": {
+      "href": "/settings",
+      "name": "나"
     }
   },
   "/voice": {
@@ -697,6 +809,10 @@
       "finding": "Saved analysis and current AI editing presentation belong to T651; baseline saved profile is populated.",
       "inspectedStates": ["populated", "loading", "failure"],
       "redirect": "/voices/voice-default"
+    },
+    "return": {
+      "href": "/voices",
+      "name": "말투"
     }
   },
   "/voice/materials": {
@@ -709,6 +825,10 @@
       "finding": "Samples/count actions are row based; current voice heading shell belongs to T651.",
       "inspectedStates": ["populated", "loading", "failure"],
       "redirect": "/voices/voice-default/materials"
+    },
+    "return": {
+      "href": "/voices/voice-default",
+      "name": "말투 설정"
     }
   },
   "/ai-models/compare": {
@@ -721,6 +841,10 @@
       "finding": "Factor peers use 2x2 compact choices with one shared help paragraph; actors and entrants retained.",
       "inspectedStates": ["populated", "loading", "failure"],
       "redirect": "/tests"
+    },
+    "return": {
+      "href": "/ai-models",
+      "name": "AI 고르기"
     }
   },
   "/ai-models": {
@@ -752,6 +876,10 @@
         "terminal-result"
       ],
       "redirect": "/tests/history"
+    },
+    "return": {
+      "href": "/ai-models",
+      "name": "AI 고르기"
     }
   },
   "/ai-models/experiments": {
@@ -772,6 +900,10 @@
         "terminal-result"
       ],
       "redirect": "/tests/history"
+    },
+    "return": {
+      "href": "/ai-models",
+      "name": "AI 고르기"
     }
   },
   "/ai-models/experiments/record": {
@@ -784,6 +916,10 @@
       "finding": "Legacy result keeps contextual return and one comparison surface.",
       "inspectedStates": ["populated", "loading", "failure"],
       "redirect": "/tests/records/record"
+    },
+    "return": {
+      "href": "/tests/history",
+      "name": "테스트 기록"
     }
   },
   "/clips/new": {
@@ -795,6 +931,10 @@
       "status": "checked",
       "finding": "Unminted project opens the retained preparation guide at video kind.",
       "inspectedStates": ["input", "loading", "failure"]
+    },
+    "return": {
+      "href": "/naver-clip",
+      "name": "네이버 클립으로 돌아가기"
     }
   },
   "/naver-blog": {

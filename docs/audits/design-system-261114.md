@@ -110,6 +110,8 @@ Matrix: light/dark; 320, 360, 390, 430, 1440 and 1920 CSS pixels. Desktop contex
 
 Task-stage probes found stale harness expectations (canonical hubs, current Korean headings, retained guide summary and named render-download revision); these were repaired rather than counted as product failures. No unavailable route was counted as checked. Visual inspection of the light template directory and storyline screenshot confirmed the new composition; final receipts and selected screenshots still require coordinator completion.
 
+Independent Codex fallback review at `018f7c690` found no substantiated product regression and three harness gaps: effective day/night theme mapping, shell-return presence/exact context, and desktop lifecycle device contexts. All three were repaired before the final gate. Strengthened context checks additionally found and repaired a missing-channel video-template return (`channel=undefined`); default Naver and explicit Instagram destinations now have behavioral regressions.
+
 Final full-suite/build/browser receipts: pending coordinator gate. This line is updated only from actual completed receipts.
 
 Limits: local deterministic RPC fixtures verify presentation and interaction, not live provider calls, payment authorization, physical software keyboards, native browser chrome zoom, remote storage/CORS, GPU qualification or media export fidelity. The zoom check uses 200% CSS zoom and the keyboard check resizes available height; they do not certify real-device browser behavior. Existing unqualified media tasks remain separate.

@@ -74,6 +74,7 @@ async function geometry(page) {
     ].filter(visible);
     const audit = window.__mobileAudit;
     return {
+      viewport: {width: innerWidth, height: innerHeight},
       route: audit.router.state.location.href,
       matchIds: audit.router.state.matches.map((m) => m.routeId),
       header: box(document.querySelector("header")),
@@ -128,7 +129,7 @@ async function geometry(page) {
           name: n.getAttribute("aria-label") || n.innerText.trim(),
         })),
       theme: document.documentElement.dataset.theme,
-      returns: [...document.querySelectorAll('main a:has(svg.lucide-arrow-left),main button:has(svg.lucide-arrow-left)')].filter(visible).map((n) => ({
+      returns: [...document.querySelectorAll('nav[aria-label="돌아가기"] a,main a[aria-label][title],main button[aria-label^="이전"],main button[aria-label="돌아가기"]')].filter(visible).map((n) => ({
         ...box(n), name: n.getAttribute('aria-label'), title: n.getAttribute('title'),
         href: n.getAttribute('href'), text: (() => { const clone = n.cloneNode(true); clone.querySelectorAll('svg,.sr-only').forEach((child) => child.remove()); return clone.textContent.trim() })(),
         arrows: n.querySelectorAll('svg.lucide-arrow-left').length,
@@ -140,7 +141,13 @@ async function geometry(page) {
     };
   });
 }
-function checkReturns(g, width) {
+function checkReturns(g, width, expected) {
+  if (expected) {
+    const links = g.returns.filter((control) => control.href)
+    assert.equal(links.length, 1, "A child has exactly one return link including its shell")
+    assert.equal(links[0].href, expected.href, "Return retains exact context")
+    assert.equal(links[0].name, expected.name, "Return names its actual destination")
+  }
   assert.ok(g.actionBars <= 1, "A screen has at most one action dock")
   for (const control of g.returns) {
     const floor = g.pointerCoarse ? 44 : 40
@@ -197,7 +204,7 @@ async function open(page, at, state = "populated") {
     () => window.__mobileAudit?.router.state.status === "idle",
     { timeout: 30000 },
   );
-  await page.locator("main").waitFor({ timeout: 10000 });
+  await page.locator("main").waitFor({ timeout: 30000 });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(150);
 }
@@ -265,6 +272,7 @@ try {
               (/문제가 발생|다시 시도해 주세요|불러오지 못/.test(g.body) &&
                 !expectedErrors);
             const receipt = {
+              requestedTheme: theme,
               scenario: r.concrete === "/setup" ? "setup" : "populated",
               id: r.id,
               path: r.fullPath,
@@ -276,8 +284,8 @@ try {
               errors,
             };
             assert.ok(g.main);
-            assert.equal(g.theme, theme, "Requested theme is applied");
-            checkReturns(g, width);
+            assert.equal(g.theme, theme === "dark" ? "night" : "day", "Requested preference resolves to the effective theme");
+            checkReturns(g, width, expectations[r.concrete]?.return);
             if (['/templates','/video-templates','/spoken-voices'].includes(r.concrete)) assert.ok(g.directoryCards > 0, 'Saved resources use shared directory cards');
             assert.equal(
               g.pointerCoarse,
@@ -585,21 +593,25 @@ try {
       state: "populated",
       kind: "direct-template",
     },
+    {at:'/templates/template',state:'loading',kind:'loading-return'},
+    {at:'/video-templates/video-template?channel=instagram_clip',state:'loading',kind:'loading-return',return:{href:'/video-templates?channel=instagram_clip',name:'영상 템플릿'}},
+    {at:'/video-templates/new?channel=instagram_clip',state:'populated',kind:'scoped-return',return:{href:'/video-templates?channel=instagram_clip',name:'영상 템플릿'}},
+    {at:'/video-templates/video-template?channel=instagram_clip',state:'error',kind:'scoped-return',return:{href:'/video-templates?channel=instagram_clip',name:'영상 템플릿'}},
     ...[
       ['draft', '생성'], ['clip-observe', '관찰'], ['clip-storyline', '스토리라인'], ['populated', '다듬기'], ['finalized', '완성'],
     ].flatMap(([state, stage]) => widths.map((width) => ({ at: '/clips/review', state, kind: 'clip-stage', stage, width }))),
   ];
   for (const theme of themes) {
-    const ctx = await contextFor(390, theme);
-    const page = await ctx.newPage();
     for (const c of stateCases) {
       if (selectedRoutes.length && !selectedRoutes.includes(c.at.split("?")[0]))
         continue;
+      const stateWidth = c.width ?? 390;
+      const ctx = await contextFor(stateWidth,theme);
+      const page = await ctx.newPage();
       page.removeAllListeners("pageerror");
       const errors = [];
       page.on("pageerror", (e) => errors.push(e.message));
       try {
-        await page.setViewportSize({ width: c.width ?? 390, height: 800 });
         await open(page, c.at, c.state);
         const basePath = c.at.split("?")[0];
         const expected = expectations[basePath];
@@ -793,7 +805,9 @@ try {
           );
         }
         const g = await geometry(page);
-        checkReturns(g, c.width ?? 390)
+        assert.equal(g.pointerCoarse, (c.width ?? 390) < 768, 'Scenario pointer matches device context')
+        assert.equal(g.theme, theme === 'dark' ? 'night' : 'day')
+        checkReturns(g, c.width ?? 390, c.return ?? expected.return)
         assert.equal(errors.length, 0, errors.join("; "));
         assert.equal(g.overflow, false);
         assert.equal(g.matchIds.at(-1), expected.expectedLeaf);
@@ -802,6 +816,10 @@ try {
             g.alerts.length || /불러오지 못|오류|연결/.test(g.body),
             `Expected mounted error on ${c.at}`,
           );
+        if (c.kind === 'loading-return') {
+          assert.ok(g.methods.some((name) => /^(Get|List).*Template/.test(name)), 'Actual template read is pending')
+          assert.ok(/불러오|Loading/.test(g.body), 'Pending template has a visible loading state')
+        }
         if (c.kind === "catalog")
           assert.ok(
             (await page.getByRole("listitem").count()) > 0 &&
@@ -867,6 +885,7 @@ try {
         }
         const receipt = {
           accessibility,
+          requestedTheme: theme,
           stage: c.stage,
           id: expected.expectedLeaf,
           path: basePath,
@@ -961,8 +980,8 @@ try {
         `${output}/receipts.json`,
         JSON.stringify({ inventory, receipts, findings }, null, 2),
       );
+      await ctx.close();
     }
-    await ctx.close();
   }
   console.log(
     JSON.stringify({
