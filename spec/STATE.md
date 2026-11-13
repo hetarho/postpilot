@@ -86,7 +86,6 @@
 | T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
-| T807 | Align post and video template workspace headers | ARCH THEME | T806 | todo |
 | T808 | Modernize both template directories and draft entries | ARCH THEME | T804 | todo |
 | T809 | Align the remaining style resource directories | ARCH THEME | T808 | todo |
 | T810 | Migrate actionable resource rows and cards | ARCH THEME | T809 | todo |
@@ -107,4 +106,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795 T807 T808
+- gusta-implement-task T795 T808 T811

@@ -1,6 +1,6 @@
 import { clsx } from 'clsx'
 import { useState } from 'react'
-import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
+import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
@@ -10,7 +10,7 @@ import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-templ
 import { useClipProject } from '@/entities/clip-project'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
-import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import { Button, Notice, Typography, pageStyles } from '@/shared/ui'
 
 export function VideoTemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
@@ -27,7 +27,6 @@ export function VideoTemplatePage() {
   if (isError)
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <BackLink />
         <Notice tone="danger" role="alert" className="mt-4">
           {t('directory.loadFailed', { ns: 'clips' })}
           <Button variant="ghost" onClick={() => void refetch()} pending={isFetching}>
@@ -39,7 +38,6 @@ export function VideoTemplatePage() {
   if (templateId && (isPending || (!stored && isFetching)))
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <BackLink />
         <Typography variant="body" role="status" className="mt-8">
           {t('state.loading', { ns: 'common' })}
         </Typography>
@@ -48,7 +46,6 @@ export function VideoTemplatePage() {
   if (templateId && !stored && !isFetching)
     return (
       <main className={pageStyles({ width: 'wide' })}>
-        <BackLink />
         <Notice tone="danger" role="alert" className="mt-4">
           {t('editor.notFound', { ns: 'clips' })}
         </Notice>
@@ -170,8 +167,7 @@ function VideoTemplateHost({
         className: clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0'),
       })}
     >
-      <BackLink />
-      <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
+      <Typography variant="title" as="h1" className="text-content-secondary">
         {named.name}
       </Typography>
       {publication?.outcome && (
@@ -370,21 +366,5 @@ function VideoTemplateHost({
         />
       )}
     </main>
-  )
-}
-function BackLink() {
-  const { t } = useTranslation('clips')
-  return (
-    <Link
-      to="/video-templates"
-      search={({ channel }) => ({ channel })}
-      className={typographyStyles({
-        variant: 'label',
-        className:
-          'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center underline',
-      })}
-    >
-      {t('editor.back')}
-    </Link>
   )
 }

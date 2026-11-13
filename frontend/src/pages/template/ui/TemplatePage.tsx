@@ -116,7 +116,7 @@ function TemplateAuthoringPage({
         className: clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0'),
       })}
     >
-      <Typography variant="title" as="h1" className="text-content-secondary mt-3 sm:mt-6">
+      <Typography variant="title" as="h1" className="text-content-secondary">
         {named.name}
       </Typography>
       {publication?.outcome && (
