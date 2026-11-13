@@ -467,8 +467,8 @@
       "redirect": "/tests/history"
     },
     "return": {
-      "href": "/voices/voice-default",
-      "name": "말투 설정"
+      "href": "/voices",
+      "name": "말투"
     }
   },
   "/spoken-voices": {

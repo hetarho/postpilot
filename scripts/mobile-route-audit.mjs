@@ -181,7 +181,7 @@ async function contextFor(width, theme) {
   );
   return ctx;
 }
-async function open(page, at, state = "populated") {
+async function open(page, at, state = "populated", forceFresh = false) {
   const publicRoute =
     /^\/(login|signup|forgot-password|reset-password|verify-email)(?:[/?]|$)/.test(
       at,
@@ -190,7 +190,7 @@ async function open(page, at, state = "populated") {
   const reuse = await page
     .evaluate((key) => window.__mobileAudit?.fixtureKey === key, fixtureKey)
     .catch(() => false);
-  if (reuse)
+  if (reuse && !forceFresh)
     await page.evaluate(
       (at) => window.__mobileAudit.router.navigate({ href: at }),
       at,
@@ -262,6 +262,7 @@ try {
                 ? "/reset-password?token=valid-audit-token"
                 : r.concrete,
               r.concrete === "/setup" ? "setup" : "populated",
+              true,
             );
             const g = await geometry(page);
             const expectedErrors =
