@@ -11,7 +11,7 @@ import { useSession } from '@/entities/session'
 import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
 import { ClipTopRow, ClipWorkspace, NewClipWorkspace } from '@/widgets/clip-workspace'
 import { appFailureFromConnect } from '@/shared/api'
-import { AppFailureMessage, Button, Typography, pageStyles } from '@/shared/ui'
+import { AppFailureMessage, Button, LoadingState, pageStyles } from '@/shared/ui'
 import { ClipImportFeedback } from './ClipImportFeedback'
 
 /** `/clips/new` — a project that does not exist yet, running ①'s guide; its first save mints it
@@ -55,9 +55,7 @@ function NewClip({
       ) : (
         <>
           <ClipTopRow returnTo={returnTo} status={null} />
-          <Typography variant="body" role="status" className="mt-8">
-            {t('state.loading')}
-          </Typography>
+          <LoadingState variant="form" label={t('state.loading')} className="mt-8" />
         </>
       )}
       <CreationOfferSheet
@@ -147,9 +145,7 @@ export function ClipPage() {
       ) : query.isPending ? (
         <>
           <ClipTopRow status={null} returnTo={returnTo} />
-          <Typography variant="body" role="status" className="mt-6">
-            {t('project.loading')}
-          </Typography>
+          <LoadingState variant="detail" label={t('project.loading')} className="mt-6" />
         </>
       ) : (
         <>

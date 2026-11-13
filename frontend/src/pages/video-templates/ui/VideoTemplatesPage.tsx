@@ -11,6 +11,7 @@ import {
   Badge,
   Button,
   Notice,
+  LoadingState,
   Typography,
   pageStyles,
   typographyStyles,
@@ -62,17 +63,21 @@ export function VideoTemplatesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="list"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
       )}
 
       {!isError && !isPending && (
         <>
           {summaries.isPending && (
-            <Typography variant="body" role="status" className="mt-6">
-              {t('directory.checkingWork', { ns: 'clips' })}
-            </Typography>
+            <LoadingState
+              variant="inline"
+              label={t('directory.checkingWork', { ns: 'clips' })}
+              className="mt-6"
+            />
           )}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-6">
@@ -142,11 +147,10 @@ export function VideoTemplatesPage() {
               </ul>
             </section>
           )}
-
-          {/* The section's creation button is the page's one dock (THEME-67). */}
-          <ChannelActions channel={channel} section="templates" />
         </>
       )}
+      {/* The section's creation button is the page's one dock (THEME-67). */}
+      <ChannelActions channel={channel} section="templates" />
     </main>
   )
 }

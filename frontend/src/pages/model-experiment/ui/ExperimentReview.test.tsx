@@ -226,3 +226,33 @@ it('forwards the current owner namespace and removes previous-owner results whil
   expect(screen.queryByRole('button', { name: /결과 . 복사/ })).not.toBeInTheDocument()
   expect(screen.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중')
 })
+
+it('announces a failed read in the same status region and keeps the exit and retry', async () => {
+  const refetch = vi.fn()
+  mocks.useExperiment.mockReturnValue({
+    experiment: undefined,
+    isPending: true,
+    isError: false,
+    refetch,
+  })
+  const view = render(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  const status = screen.getByRole('status')
+  expect(status).toHaveTextContent('비교 결과를 불러오는 중')
+  expect(status.nextElementSibling).toHaveAttribute('aria-hidden', 'true')
+  mocks.useExperiment.mockReturnValue({
+    experiment: undefined,
+    isPending: false,
+    isError: true,
+    refetch,
+  })
+  view.rerender(
+    <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
+  )
+  expect(screen.getAllByRole('status')).toEqual([status])
+  expect(status).toHaveTextContent('비교 결과를 불러오지 못했어요.')
+  expect(screen.getByRole('link', { name: '기록으로' })).toHaveAttribute('href', '/tests/history')
+  await userEvent.click(screen.getByRole('button', { name: '다시 시도' }))
+  expect(refetch).toHaveBeenCalledOnce()
+})
