@@ -779,6 +779,7 @@ func (s *Store) ListPosts(ctx context.Context, userID string, filter post.ListFi
 			ContentLanguage: nullableLanguage(row.ContentLanguage),
 			Tags:            tags,
 			ContentReady:    row.ContentReady != 0,
+			StorylineReady:  row.StorylineReady != 0,
 			ExportReady:     row.ContentReady != 0 && row.ContentLanguage.Valid,
 			PublishedURL:    row.PublishedUrl.String, InputRevision: row.InputRevision, ContentRevision: row.ContentRevision,
 			Cursor: post.ListCursor{UpdatedAt: row.UpdatedAt, Slug: row.Slug},

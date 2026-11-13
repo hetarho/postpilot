@@ -52,6 +52,108 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /부산/ })).toHaveTextContent('검토')
   })
 
+  // POST-127: a draft holding a storyline and no content reads 스토리라인 작성 완료 as a mid-way
+  // chip, as a clip at the same stage does; a job, a failure and a pending test keep outranking
+  // it, and a post past 초안 never wears it.
+  it('marks a storyline-only draft as storyline-ready below every job and test state', async () => {
+    const story = { paragraphs: [{ text: '도착해서 바다를 봤다', files: ['sea.jpg'] }] }
+    renderList({
+      posts: [
+        { slug: 'story', title: '스토리만', storyline: story },
+        { slug: 'plain', title: '빈 초안' },
+        {
+          slug: 'story-running',
+          title: '쓰는 중',
+          storyline: story,
+          activeJob: { id: 'job-1', status: 'running', stage: 'write' },
+        },
+        {
+          slug: 'story-failed',
+          title: '실패한 작업',
+          storyline: story,
+          latestOrdinaryFailure: {
+            id: 'failed-write',
+            kind: 'generate_post',
+            status: 'failed',
+            stage: 'write',
+          },
+        },
+        {
+          slug: 'story-pending',
+          title: '비교 대기',
+          storyline: story,
+          pendingExperimentId: 'experiment-1',
+        },
+        {
+          slug: 'story-review',
+          title: '검토할 글',
+          status: 'review',
+          storyline: story,
+          content: POST_CONTENT_FIXTURE,
+        },
+        {
+          slug: 'story-finalized',
+          title: '확정한 글',
+          status: 'finalized',
+          storyline: story,
+          content: POST_CONTENT_FIXTURE,
+        },
+        {
+          slug: 'story-published',
+          title: '성수 카페',
+          status: 'published',
+          storyline: story,
+          content: POST_CONTENT_FIXTURE,
+          publishedUrl: 'https://blog.naver.com/alice/1',
+          publishedAt: '2026-08-02T09:00:00Z',
+        },
+      ],
+    })
+
+    const storyRow = await screen.findByRole('link', { name: /스토리만/ })
+    expect(storyRow).toHaveTextContent('스토리라인 작성 완료')
+    expect(within(storyRow).getByText('스토리라인 작성 완료')).toHaveClass('bg-badge-accent-bg')
+    for (const [title, label] of [
+      ['빈 초안', '초안'],
+      ['쓰는 중', 'AI 생성 중'],
+      ['실패한 작업', 'AI 결과 오류'],
+      ['비교 대기', 'AI 결과 확인'],
+      ['검토할 글', '검토'],
+      ['확정한 글', '확정'],
+      ['성수 카페', '발행됨'],
+    ]) {
+      const link = screen.getByRole('link', { name: new RegExp(title) })
+      expect(link).toHaveTextContent(label)
+      expect(link).not.toHaveTextContent('스토리라인 작성 완료')
+    }
+  })
+
+  // POST-66: the badge is a derived row state, so the filter neither offers it nor moves the post
+  // out of 초안.
+  it('keeps a storyline-ready draft under 초안 and offers no storyline filter', async () => {
+    const user = userEvent.setup()
+    const { router } = renderList({
+      posts: [
+        { slug: 'story', title: '스토리만', storyline: { paragraphs: [{ text: '계획' }] } },
+        { slug: 'review', title: '검토할 글', status: 'review', content: POST_CONTENT_FIXTURE },
+      ],
+    })
+    await screen.findByRole('link', { name: /스토리만/ })
+
+    await openFind()
+    await user.click(screen.getByRole('combobox', { name: /^상태/ }))
+    expect(
+      (await screen.findAllByRole('option')).map((option) => option.textContent?.trim()),
+    ).toEqual(['전체', '초안', '검토', '확정', '발행됨'])
+    await user.click(screen.getByRole('option', { name: '초안' }))
+
+    await waitFor(() => expect(router.state.location.search).toEqual({ status: 'draft' }))
+    await waitFor(() =>
+      expect(screen.queryByRole('link', { name: /검토할 글/ })).not.toBeInTheDocument(),
+    )
+    expect(screen.getByRole('link', { name: /스토리만/ })).toHaveTextContent('스토리라인 작성 완료')
+  })
+
   // The card's main link covered only its top half, so a hover tinted that half and left the
   // 이어서 작성 row under it in the card's resting colour.
   it('answers a hover anywhere on a card with the whole card', async () => {

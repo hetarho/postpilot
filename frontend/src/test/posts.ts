@@ -662,6 +662,8 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           activeJob: ordinaryJob(row.activeJob),
           tags: row.content?.tags ?? [],
           contentReady: Boolean(row.content?.blocks.length),
+          // The server reads only whether the stored storyline holds a paragraph (POST-127).
+          storylineReady: Boolean(row.storyline?.paragraphs.length),
           exportReady: Boolean(row.content?.blocks.length),
         }),
       ),

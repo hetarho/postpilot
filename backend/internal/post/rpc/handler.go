@@ -204,7 +204,7 @@ func toProtoSummary(s post.Summary) *postpilotv1.PostSummary {
 		TargetLanguage:      languageToProto(s.TargetLanguage),
 		ContentLanguage:     optionalLanguageToProto(s.ContentLanguage),
 		Tags:                s.Tags,
-		ContentReady:        s.ContentReady, ExportReady: s.ExportReady, PublishedUrl: s.PublishedURL,
+		ContentReady:        s.ContentReady, StorylineReady: s.StorylineReady, ExportReady: s.ExportReady, PublishedUrl: s.PublishedURL,
 		LatestOrdinaryFailure: toProtoActiveJob(s.LatestOrdinaryFailure),
 		InputRevision:         s.InputRevision, ContentRevision: s.ContentRevision,
 	}

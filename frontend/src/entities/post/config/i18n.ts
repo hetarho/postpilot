@@ -7,6 +7,13 @@ export const i18n = {
     title: '글',
     untitled: '제목 없음',
     status: { draft: '초안', review: '검토', finalized: '확정', published: '발행됨' },
+    /** A row's derived state where it outranks the status (POST-127); never a filter value. */
+    rowState: {
+      generating: 'AI 생성 중',
+      failed: 'AI 결과 오류',
+      review: 'AI 결과 확인',
+      storylineReady: '스토리라인 작성 완료',
+    },
     published: {
       locked: '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
     },
@@ -205,6 +212,12 @@ export const i18n = {
     title: 'Posts',
     untitled: 'Untitled',
     status: { draft: 'Draft', review: 'Review', finalized: 'Finalized', published: 'Published' },
+    rowState: {
+      generating: 'AI generation',
+      failed: 'AI result error',
+      review: 'Review AI result',
+      storylineReady: 'Storyline ready',
+    },
     published: {
       locked: 'A published post cannot be changed. Clear its URL in Finish to reopen it.',
     },

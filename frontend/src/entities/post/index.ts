@@ -30,6 +30,7 @@ export {
   postStatusLabel,
   untitledTitle,
 } from './model/types'
+export { postRowState, type PostRowTone } from './model/row-state'
 export {
   blockKey,
   blockWith,

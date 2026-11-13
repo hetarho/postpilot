@@ -1,18 +1,15 @@
-import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { clsx } from 'clsx'
 import { CircleCheck, PenLine, Scale, Send, Sparkles, TriangleAlert } from 'lucide-react'
 import {
   displayTitle,
-  isPostStatus,
-  postStatusLabel,
+  postRowState,
   rememberPostEntry,
   usePostList,
   type PostListItem,
-  type PostStatus,
 } from '@/entities/post'
-import { useExperiments, type ModelExperiment } from '@/entities/model-experiment'
+import { useExperiments } from '@/entities/model-experiment'
 import { isTerminal, progressLabel } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { matchedTags, PostListControls, type PostNarrowing } from '@/features/filter-posts'
@@ -46,39 +43,6 @@ import {
 } from '@/shared/ui'
 import { useSettledValue } from '../model/useSettledValue'
 import { useHistoryScrollReturn } from '../model/useHistoryScrollReturn'
-
-/** The one status chip a row carries. Colour never travels alone (THEME-18): the tone
- *  only reinforces the label, so the label is chosen first and the tone follows it. */
-function rowStatus(
-  post: PostListItem,
-  pending: ModelExperiment | undefined,
-  t: TFunction<'posts'>,
-): { label: string; tone: BadgeTone } {
-  if (post.activeJob && !isTerminal(post.activeJob))
-    return { label: t('list.state.generating'), tone: 'info' }
-  if (post.latestOrdinaryFailure || post.activeJob?.status === 'failed')
-    return { label: t('list.state.failed'), tone: 'danger' }
-  if (pending?.status === 'failed' || pending?.status === 'partial')
-    return { label: t('list.state.failed'), tone: 'danger' }
-  if (post.pendingExperimentId) return { label: t('list.state.review'), tone: 'warning' }
-  return { label: postStatusLabel(post.status), tone: postStatusTone(post.status) }
-}
-
-/** 초안 · 검토 · 확정 sat in one grey and were indistinguishable at a glance. Draft stays neutral
- *  (nothing has happened yet), review takes the accent (the user is mid-way), finalized takes
- *  the tinted success (done writing). Published in the same tint read as 확정 at a glance, so the
- *  post that is finished for good takes the solid `done` plane; the label still carries the
- *  meaning on its own (THEME-18, THEME-29). */
-const STATUS_TONE: Record<PostStatus, BadgeTone> = {
-  draft: 'neutral',
-  review: 'accent',
-  finalized: 'success',
-  published: 'done',
-}
-
-function postStatusTone(status: string): BadgeTone {
-  return isPostStatus(status) ? STATUS_TONE[status] : 'neutral'
-}
 
 /** The post keeps its state-specific glyph; the tile's geometry and semantic tones are shared. */
 function postStatusIcon(tone: BadgeTone, status: string) {
@@ -257,10 +221,10 @@ export function PostsPage() {
             { post, matchedTags }: (typeof narrowed)[number],
             latestCard = false,
           ) => {
-            const status = rowStatus(
+            // The one chip a row carries, chosen the way aggregate 내 글 chooses it (POST-127).
+            const status = postRowState(
               post,
-              post.pendingExperimentId ? byId.get(post.pendingExperimentId) : undefined,
-              t,
+              post.pendingExperimentId ? byId.get(post.pendingExperimentId)?.status : undefined,
             )
             // The title gets a whole line in a heading's size, and the metadata wraps under it: the
             // voice sits between the status and the time, because which voice a post is in is the

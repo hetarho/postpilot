@@ -103,6 +103,7 @@ export function toPostListItem(summary: PostSummary): PostListItem {
     template: toTemplateRef(summary.template),
     activeJob: summary.activeJob ? toGenerationJob(summary.activeJob) : undefined,
     contentReady: summary.contentReady,
+    storylineReady: summary.storylineReady,
     exportReady: summary.exportReady,
     publishedUrl: summary.publishedUrl,
     latestOrdinaryFailure: summary.latestOrdinaryFailure

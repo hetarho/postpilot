@@ -342,6 +342,17 @@ func TestToProtoSummaryCarriesTags(t *testing.T) {
 	}
 }
 
+// The list's 스토리라인 작성 완료 badge reads a storyline flag the summary mapper carries across
+// the seam (POST-127); a post without one stays false.
+func TestToProtoSummaryCarriesStorylineReadiness(t *testing.T) {
+	if !toProtoSummary(post.Summary{Slug: "20260828-jeju", Status: "draft", StorylineReady: true}).GetStorylineReady() {
+		t.Error("a storyline-ready summary lost its flag")
+	}
+	if toProtoSummary(post.Summary{Slug: "20260820-busan", Status: "draft"}).GetStorylineReady() {
+		t.Error("a summary with no storyline reads as storyline-ready")
+	}
+}
+
 // The numbers and names the surface needs travel as params: the range a length missed, how many
 // image places still name a detached photo, a storyline paragraph's ceiling and the file a
 // storyline edit may not place (POST-13, POST-20, POST-96).

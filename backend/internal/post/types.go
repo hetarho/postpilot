@@ -559,15 +559,18 @@ type Summary struct {
 	ContentLanguage     *Language
 	// Tags of the current content revision (POST-65). The list narrows by them, and a post
 	// whose content has not been written yet simply carries none.
-	Tags []string
-	// Cursor is the row's position in the list order as the store holds it. It becomes the
-	// next page token and is never shown (POST-90).
-	ContentReady                   bool
+	Tags         []string
+	ContentReady bool
+	// StorylineReady is a stored storyline holding at least one paragraph, the fact a draft's
+	// 스토리라인 작성 완료 badge is derived from while it has no content (POST-127).
+	StorylineReady                 bool
 	ExportReady                    bool
 	PublishedURL                   string
 	LatestOrdinaryFailure          *ActiveJob
 	InputRevision, ContentRevision int64
-	Cursor                         ListCursor
+	// Cursor is the row's position in the list order as the store holds it. It becomes the
+	// next page token and is never shown (POST-90).
+	Cursor ListCursor
 }
 
 // ActiveJob is the snapshot the post context publishes on read models. It is owned by

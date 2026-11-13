@@ -161,6 +161,42 @@ func TestHistoryReadinessUsesActualCanonicalContentAndLanguage(t *testing.T) {
 	}
 }
 
+// The list derives 스토리라인 작성 완료 from the stored storyline alone (POST-127): a storyline
+// with a paragraph is ready, while none, a JSON null and an emptied paragraph list are not, and
+// the flag says nothing about content, which the badge's precedence reads separately.
+func TestHistoryStorylineReadinessReadsStoredParagraphs(t *testing.T) {
+	s, handle := newStoreWithHandle(t)
+	for _, slug := range []string{"none", "null", "emptied", "story", "story-and-content"} {
+		seedPost(t, s, slug, "alice", testNow)
+	}
+	for _, statement := range []string{
+		`UPDATE posts SET storyline='null' WHERE slug='null'`,
+		`UPDATE posts SET storyline='{"paragraphs":[],"edited_by_hand":true,"made_with":[]}' WHERE slug='emptied'`,
+		`UPDATE posts SET storyline='{"paragraphs":[{"text":"Opening","files":["a.jpg"]}],"edited_by_hand":false,"made_with":["a.jpg"]}' WHERE slug IN ('story','story-and-content')`,
+		`UPDATE posts SET status='review',content='{"blocks":[{"type":"TEXT","content":"Real"}]}',content_language='ko' WHERE slug='story-and-content'`,
+	} {
+		if _, err := handle.Writer.Exec(statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rows, err := s.ListPosts(context.Background(), "alice", post.ListFilter{Limit: -1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 5 {
+		t.Fatalf("rows = %d, want 5", len(rows))
+	}
+	for _, row := range rows {
+		want := row.Slug == "story" || row.Slug == "story-and-content"
+		if row.StorylineReady != want {
+			t.Errorf("storyline readiness for %s = %v, want %v", row.Slug, row.StorylineReady, want)
+		}
+		if wantContent := row.Slug == "story-and-content"; row.ContentReady != wantContent {
+			t.Errorf("content readiness for %s = %v, want %v", row.Slug, row.ContentReady, wantContent)
+		}
+	}
+}
+
 func TestTemplateSeedsAndObservedTurnsHaveRevisionNoops(t *testing.T) {
 	s, handle := newStoreWithHandle(t)
 	ctx := context.Background()
