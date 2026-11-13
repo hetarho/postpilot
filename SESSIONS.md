@@ -141,11 +141,6 @@
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
 
-## active
-| tag | host | mode | since | at | doing | branch | commit |
-|---|---|---|---|---|---|---|---|
-| u17b | ihaelam-ui-MacBookPro | pair | 2026-11-13T14:58Z | 2026-11-13T14:58Z | - | main | 442b4c4fb9f6 |
-
 ## unlanded
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
