@@ -156,21 +156,12 @@
 ## unlanded
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
-| T792 | r114 | main | d967666154c2 | 2026-11-13T07:29Z |
-| T793 | r114 | main | bf4b5076c4f4 | 2026-11-13T07:50Z |
-| T794 | r115 | main | 8c310798a25e | 2026-11-13T08:20Z |
-| T795 | ldui | main | b635d3d3cced | 2026-11-13T16:18Z |
 | T803 | dsui | task/design-system-audit-serial | b754ff465fde | 2026-11-13T16:25Z |
 | T804 | dsui | task/design-system-audit-serial | 490d07986547 | 2026-11-13T16:30Z |
 | T805 | dsui | task/design-system-audit-serial | 786db29ed0db | 2026-11-13T16:34Z |
 | T806 | dsui | task/design-system-audit-serial | 3d360aba95e5 | 2026-11-13T16:36Z |
 | T807 | dsui | task/design-system-audit-serial | a70f84f4b9e8 | 2026-11-13T16:39Z |
 | T808 | dsui | task/design-system-audit-serial | 87bd8b2354f5 | 2026-11-13T16:41Z |
-| T797 | ldui | main | 853d9e566fa1 | 2026-11-13T16:41Z |
-| T798 | ldui | main | dd2972cc4d2e | 2026-11-13T16:42Z |
-| T799 | ldui | main | cb2c17c585de | 2026-11-13T16:42Z |
-| T800 | ldui | main | d7a9526b3c1f | 2026-11-13T16:42Z |
-| T801 | ldui | main | a7ac949f760a | 2026-11-13T16:42Z |
 | T809 | dsui | task/design-system-audit-serial | d8dad5d8c0dc | 2026-11-13T16:43Z |
 | T810 | dsui | task/design-system-audit-serial | f9d60eefa35c | 2026-11-13T16:47Z |
 | T819 | vdux | task/video-ux-serial | 567a50f7b49d | 2026-11-13T16:48Z |
@@ -180,8 +171,6 @@
 | T820 | vdux | task/video-ux-serial | 1f9e87bbdb96 | 2026-11-13T16:54Z |
 | T814 | dsui | task/design-system-audit-serial | 63a293f63b22 | 2026-11-13T16:54Z |
 | T815 | dsui | task/design-system-audit-serial | d26c3d31655d | 2026-11-13T16:56Z |
-| T796 | ldui | main | 24e7dc6044e4 | 2026-11-13T16:59Z |
-| T802 | ldui | main | 24e7dc6044e4 | 2026-11-13T16:59Z |
 | T821 | dsui | task/design-system-audit-serial | 7b15f73a0a56 | 2026-11-13T17:01Z |
 | T822 | dsui | task/design-system-audit-serial | 6ab1b18c33fc | 2026-11-13T17:02Z |
 | T817 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:04Z |
