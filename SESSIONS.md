@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:46Z | T802 | main | 046f7686b444 |
-| vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:48Z | T819 | task/video-ux-serial | c474965124af |
+| vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:48Z | - | task/video-ux-serial | 567a50f7b49d |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:47Z | T811 | task/design-system-audit-serial | 68c3b3e7abba |
 
 ## inbox
@@ -171,8 +171,10 @@
 | T801 | ldui | main | a7ac949f760a | 2026-11-13T16:42Z |
 | T809 | dsui | task/design-system-audit-serial | d8dad5d8c0dc | 2026-11-13T16:43Z |
 | T810 | dsui | task/design-system-audit-serial | f9d60eefa35c | 2026-11-13T16:47Z |
+| T819 | vdux | task/video-ux-serial | 567a50f7b49d | 2026-11-13T16:48Z |
 
 ## log
+- 261113 T819 done
 - 261113 fix loading: consistent shared feedback in voice prompts, saved replies, memory candidate reads and refund history; three presentation-only files, existing complete regression scope retained
 - 261113 T810 done
 - 261113 fix shared-ui: merge caller classes and expose card padding for concrete card/row/media migrations;9 existing primitive tests and scoped ESLint passed
@@ -192,4 +194,3 @@
 - 261113 T795 done
 - 261113 gusta-create-task THEME r44: T803–T816; shared foundation then return/resource/clip/attachment lanes and complete-route audit
 - 261113 gusta-update-ssot THEME start; audit all product routes for shared navigation, catalogs, clip workflow and native-control escapes in isolated checkout
-- 261113 gusta-update-ssot THEME r43: contextual loading; gusta-create-task THEME start
