@@ -33,10 +33,10 @@
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 43 | 43 | - | 2 |
+| THEME | 44 | 44 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 77 | 77 | - | 2 |
+| CLIP | 78 | 78 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -49,6 +49,7 @@
 ## review
 | id | st |
 |---|---|
+| video-editing-ux-261114 | converted@261114 |
 | performance-design-system-261113 | converted@261113 |
 | video-preparation-guide-261112 | converted@261112 |
 | video-request-retention-261112 | converted@261112 |
@@ -84,6 +85,25 @@
 | T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
+| T803 | Unify route and step return controls | ARCH THEME | - | todo |
+| T804 | Provide shared controls for actionable content | ARCH THEME | T803 | todo |
+| T805 | Replace remaining text route returns | ARCH THEME | T804 | todo |
+| T806 | Unify previous actions in authoring and comparison flows | ARCH THEME | T805 | todo |
+| T807 | Align post and video template workspace headers | ARCH THEME | T806 | todo |
+| T808 | Modernize both template directories and draft entries | ARCH THEME | T804 | todo |
+| T809 | Align the remaining style resource directories | ARCH THEME | T808 | todo |
+| T810 | Migrate actionable resource rows and cards | ARCH THEME | T809 | todo |
+| T811 | Align video preparation with the writing guide | ARCH THEME | T804 | todo |
+| T812 | Align video observation through completion | ARCH THEME | T811 | todo |
+| T813 | Use shared media and radio controls in video editors | ARCH THEME | T812 | todo |
+| T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
+| T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
+| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
+| T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
+| T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
+| T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
+| T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
+
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -92,3 +112,27 @@
 
 ## next
 - gusta-implement-task T796 T797 T798
+- This request: T803–T816; T795–T802 remain with the independent contextual-loading run.
+
+## log
+- 261113 T792 regression repair planned from the unchanged CLIP-235 contract; main publication waits for the final CI/deployment/media gate.
+- 261113 T791 done
+- 261113 T790 done
+- 261113 T789 done
+- 261113 T788 done
+- 261113 T787 done
+- 261113 T786 done
+- 261113 T785 done
+- 261113 T784 done
+- 261113 T776 done
+- 261113 T775 done
+- 261113 T783 done
+- 261113 sketch storyline-separate-state done: option A (storyline as its own step, short station names, 스토리라인 작성 완료 post badge) plus a separate owner-editable observation step for posts and clips; B (end of the 생성 guide), C (two faces inside 다듬기) and D (side-by-side workbench) not taken; no ideation left open
+- 261113 gusta-create-task POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: T783–T791 (post observation job, owner observation edits, five-step post editor, post observation step, storyline-ready post badge, clip analysis job, clip observation edits, five-step clip workspace, clip observation step); no SSOT change
+- 261113 gusta-create-task POST GEN QUOTA THEME CLIP start
+- 261113 gusta-update-ssot POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: storyline and observations become lifecycle steps ② 관찰 and ③ 스토리라인 (생성·관찰·스토리라인·다듬기·완성), owner-editable observations, 관찰하기 as its own job, 스토리라인 작성 완료 post badge; CDS GUIDE MEM QUAL TMPL step numerals renumbered ②→④ ③→⑤ (wording, no rev); no doing task affected
+- 261113 gusta-update-ssot POST CLIP THEME start: storyline as its own lifecycle step (sketch storyline-separate-state, option A)
+- 261113 sketch storyline-separate-state start
+- 261112 T782 integrated
+- 261113 gusta-create-task review/performance-design-system-261113 F10: T782 fixes the confirmed paused-frame redraw gap after running block selection; unchanged actual-control oracle and existing source/clock/cancellation contracts, no SSOT rev/pending change.
+- 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
