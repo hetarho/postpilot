@@ -12,7 +12,15 @@ import {
   type ReasoningSpend,
 } from '@/entities/model-catalog'
 import type { ModelPurpose } from '@/entities/model-catalog'
-import { AppFailureMessage, Badge, Checkbox, FieldLabel, Listbox, Typography } from '@/shared/ui'
+import {
+  cardStyles,
+  AppFailureMessage,
+  Badge,
+  Checkbox,
+  FieldLabel,
+  Listbox,
+  Typography,
+} from '@/shared/ui'
 import { offersReasoningControl, reasoningOptionsFor } from '../model/catalog-view'
 
 /** One model of the operator's catalog, seen from ONE purpose tab: what it is, whether this
@@ -58,7 +66,7 @@ export function CatalogModelRow({
   return (
     // A div rather than the list item itself: the virtualized list owns the `li`, because that is
     // the element it has to position and measure.
-    <div className="bg-surface-raised rounded-lg p-4">
+    <div className={cardStyles({ padding: 'sm' })}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <Typography variant="label" className="text-content-primary block break-words">

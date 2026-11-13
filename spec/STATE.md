@@ -93,7 +93,6 @@
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
 
-| T823 | Align catalog and recommendation cards | ARCH THEME | - | todo |
 | T824 | Align editing and observation surfaces | ARCH THEME | - | todo |
 | T825 | Align comparison and plan disclosure surfaces | ARCH THEME | - | todo |
 
@@ -103,4 +102,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795 T816 T817
+- gusta-implement-task T795 T817 T819

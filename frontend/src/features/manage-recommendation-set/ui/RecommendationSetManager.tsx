@@ -16,7 +16,15 @@ import {
   type RecommendationSet,
   type StageName,
 } from '@/entities/model-catalog'
-import { AppFailureMessage, Badge, Button, Dialog, Notice, Typography } from '@/shared/ui'
+import {
+  cardStyles,
+  AppFailureMessage,
+  Badge,
+  Button,
+  Dialog,
+  Notice,
+  Typography,
+} from '@/shared/ui'
 import { RecommendationSetEditor } from './RecommendationSetEditor'
 
 const NEW_SET: RecommendationSet = { id: '', label: '', selections: [] }
@@ -170,7 +178,7 @@ function SetCard({
   return (
     // A labelled group rather than a nested list: the set's name titles the slots inside it,
     // and the page's one list is the ordered sets.
-    <div role="group" aria-labelledby={headingId} className="bg-surface-raised rounded-lg p-4">
+    <div role="group" aria-labelledby={headingId} className={cardStyles({ padding: 'sm' })}>
       <Typography variant="fieldTitle" as="h4" id={headingId} className="break-words">
         {set.label}
       </Typography>

@@ -17,6 +17,7 @@ import {
   type StageName,
 } from '@/entities/model-catalog'
 import {
+  cardStyles,
   AppFailureMessage,
   Button,
   FieldLabel,
@@ -103,7 +104,7 @@ export function RecommendationSetEditor({
     <form
       aria-labelledby={headingId}
       onSubmit={submit}
-      className="bg-surface-raised grid gap-4 rounded-lg p-4"
+      className={cardStyles({ padding: 'sm', className: 'grid gap-4' })}
     >
       <Typography variant="fieldTitle" as="h4" id={headingId}>
         {t(

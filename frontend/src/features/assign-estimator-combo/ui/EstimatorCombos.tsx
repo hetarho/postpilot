@@ -8,6 +8,7 @@ import {
   type LevelName,
 } from '@/entities/model-catalog'
 import {
+  cardStyles,
   AppFailureMessage,
   FieldLabel,
   Listbox,
@@ -134,7 +135,7 @@ function ComboRow({
   return (
     // A labelled pair of fields is a group, not a list item: the tier names the two controls
     // inside it, and the page's one list is the catalog above.
-    <div role="group" aria-labelledby={headingId} className="bg-surface-raised rounded-lg p-4">
+    <div role="group" aria-labelledby={headingId} className={cardStyles({ padding: 'sm' })}>
       <Typography variant="fieldTitle" as="h3" id={headingId}>
         {t(`level.${combo}`)}
       </Typography>

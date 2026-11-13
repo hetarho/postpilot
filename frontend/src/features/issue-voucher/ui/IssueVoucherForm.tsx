@@ -7,6 +7,7 @@ import {
   type VoucherPreset,
 } from '@/entities/voucher'
 import {
+  cardStyles,
   AppFailureMessage,
   Button,
   FieldLabel,
@@ -86,7 +87,7 @@ export function IssueVoucherForm({ presets }: { presets: readonly VoucherPreset[
 
   return (
     <section
-      className="bg-surface-raised mt-4 rounded-md p-4 sm:mt-8"
+      className={cardStyles({ padding: 'sm', className: 'mt-4 sm:mt-8' })}
       aria-labelledby={`${id}-heading`}
     >
       <Typography variant="title" as="h2" id={`${id}-heading`}>
