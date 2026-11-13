@@ -173,7 +173,7 @@
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 42 | 42 | - | 2 |
+| THEME | 43 | 43 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
 | CLIP | 77 | 77 | - | 2 |
@@ -217,6 +217,14 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T795 | Build accessible contextual loading primitives | ARCH THEME | - | todo |
+| T796 | Stabilize route, history and voice loading shells | ARCH THEME | T795 | todo |
+| T797 | Add skeletons to style and template directories | ARCH THEME | T795 | todo |
+| T798 | Add skeletons to authoring and template detail reads | ARCH THEME | T795 | todo |
+| T799 | Add contextual loading to model and writing comparisons | ARCH THEME | T795 | todo |
+| T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
+| T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
+| T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -224,7 +232,7 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- no runnable task: resolve blocked, parked or deps
+- gusta-implement-task T795; then T796–T802 for contextual page loading
 
 ## log
 - 261113 T792 regression repair planned from the unchanged CLIP-235 contract; main publication waits for the final CI/deployment/media gate.

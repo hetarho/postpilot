@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r42 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r43 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -160,7 +160,7 @@
   - `Sheet` takes arbitrary content and on a phone is a full-bleed bottom sheet, `rounded-t-xl`, safe-area padded, its body the one scroller, rising from and sinking back into the edge (`duration-slow`, emphasized in, standard out) while a `md:` dialog only fades; the panel outlives `open` by exactly one animation and `animationend` unmounts it while scroll lock, focus and the `Escape` claim are surrendered the moment `open` goes false, the leftover picture `inert`
   - `Dialog` is `Sheet` with the confirm shape — one title, one explanation, its pair ONE row split 3 : 7 on a phone with cancel left and the CTA right, collapsing to a right-aligned row from `md:`; a destructive action is confirmed through `Dialog`, never `window.confirm`
   - `Popover` anchors to a trigger with `align`, measures both bounds against where the trigger sits, corrects horizontal overflow into the gutters, caps vertical room and scrolls inside with a `POPOVER_MIN_PANEL_PX` floor, offers `phone="sheet"`, `triggerSize`, `triggerVariant` and a `PopoverHandle`, and treats a press inside a modal it opened as inside itself
-  - empty and loading states are text on the page (`text-content-tertiary`), never a card or illustration, and a section never renders nothing at all; a skeleton mirrors its content with `bg-surface-recessed animate-pulse`
+  - empty states are text on the page (`text-content-tertiary`), never a card or illustration, and a section never renders nothing at all; loading uses the shared contextual feedback in →!THEME-74
   - `ProgressBar` (`role="progressbar"`, determinate or indeterminate with no `aria-valuenow`, zero height)
   - `Logo` (inline SVG from `brand-wordmark` and `brand-mark`, self-named, sized by height — `h-6` in the header, `h-9` on login)
   - `Spinner` · `SortableList` (with `compact` density) · `Checkbox` (unticked an inset `checkbox-edge` ring on the field well, ticked the CTA fill)
@@ -329,7 +329,7 @@
   - it reads the first `POSTS_PAGE_SIZE` posts and every clip; while more posts exist, `블로그 모두 보기` opens 블로그
   - it has no search or filter of its own — a channel's list keeps those (→POST-68 →CLIP-41)
   - its creation button is 만들기 (→THEME-67), and work opened here returns here (→THEME-58)
-  - loading, a failure with 다시 시도 and an empty account are page text (→THEME-29)
+  - loading reserves representative work-group geometry (→!THEME-74); a failure with 다시 시도 and an empty account are page text (→THEME-29)
 - THEME-70 [o] 내 스타일's overview (`/style`) is one card per section, in the chip row's order (→=THEME-38), named by what it changes in the owner's writing (글이 내 말투로 써져요) with the section's name and what it holds now — the 기본 voice's name or the voice count, and the template, guideline and memory counts — each opening its section (→THEME-38)
   - a count still loading shows nothing rather than zero (→THEME-29)
 - THEME-71 [o] every stepped screen ends on ONE shared step bar — the post's 글 생성 guide (→POST-122), its 관찰, 스토리라인, 다듬기 and 완성 steps (→POST-53 →POST-97 →POST-56 →POST-57), the template wizards (→TMPL-71 →CLIP-213) and first-use setup ← moving through any stepped screen is the same gesture in the same place
@@ -346,6 +346,13 @@
   - without a search/status narrowing the latest unfinished item has a compact accent-tinted card using shared work-list styles, the same typography/density as its peers and a visible continuation affordance; group counts include it
   - a narrowed channel history keeps the same two groups without special latest-item emphasis; completed-only and empty histories create no continuation placeholder
   - running/cancelling and failure/cancellation feedback, recovery/export links, pending comparison routes and persisted list return context remain reachable; status colour always has a truthful text label (→!THEME-18)
+- THEME-74 [o] initial page and section reads use shared contextual loading feedback, reserving the approaching content's footprint so data arrival does not collapse or rebuild the page shell.
+  - list/card grids, forms, detail workspaces and result tables use representative skeleton shapes with semantic surface roles; small inline reads and loading another page use the shared spinner with their existing localized status label
+  - decorative skeletons are hidden from assistive technology, never focusable and never presented as real controls or measured progress; each loading region has one localized polite status and exposes busy state
+  - reserve layout immediately, but delay decorative feedback briefly through one shared presentation setting so fast responses do not flash a loading word or spinner; present ready data immediately without an artificial minimum wait
+  - preserve mounted headings, navigation, return actions, usable content and unsent edits during background reads; a cached refresh never replaces valid content with a full initial skeleton
+  - skeleton motion is a quiet opacity pulse only; reduced motion leaves static shapes and a still indicator; both themes, 320 px reflow and 200% zoom remain readable (→!THEME-28)
+  - initial loading, empty, failure and long-running generation remain distinct; failures retain their retry/exit actions, and generation keeps truthful job status, cancellation and progress
 
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
@@ -357,5 +364,6 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
+- r43 261114 THEME-29✎ loading page text→shared contextual feedback; THEME-69✎ loading page text→work-group geometry; THEME-74+ page-specific skeletons, inline spinner, delayed decoration, retained content and accessible reduced-motion feedback
 - r42 261113 THEME-39✎ instances named only→same five stations 생성·관찰·스토리라인·다듬기·완성 under short names; THEME-71✎ post steps 글 생성 guide, 글 다듬기, 글 완성→글 생성 guide, 관찰, 스토리라인, 다듬기, 완성; THEME-18✎ writing card ref POST-123→POST-125
 - r41 261112 THEME-44✎ preview + time ruler + named tracks + properties panel→scene-block list beside/under a preview kept in view; THEME-45✎ manual tools before AI request form→scene blocks first, AI request in the step bar
