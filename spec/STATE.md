@@ -7,6 +7,11 @@
 - lang: ko
 - docs: en
 
+## active
+| tag | host | mode | since | at | doing |
+|---|---|---|---|---|---|
+| c261113 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T02:47Z | 2026-11-13T02:47Z | - |
+
 ## inbox
 - 261113 decided T782 review/performance-design-system-261113: real block selection during playback leaves the paused image at the old output frame? → request the authoritative external seek target through the existing bounded draw path after pause/invalidate (alt: leave stale image until Play | publish old transport time through stop() | rewrite the clock). Same frozen whole-widget oracle fails on BASE/current; CLIP-53 already requires selection to seek the preview. Restrict player+test, no autoplay/owner/policy changes, independent review and final full gates remain; direct delegation covers the fix.
 - 261113 decided T781 review/performance-design-system-261113: real changed-save leases hydrate after ACK and can stop playback again? → preserve full access invalidation and add a private-intent exception only for producer-bound typed, same-generation, confirmed available strictly future lease extensions at identical composition/revisions (alt: omit expiry from access key | parse opaque hints | claim constant-lease fixture covers production). Two runtime DTO wiring paths added before claim; shortening/withdrawal/malformed/generation change and all explicit cancellation fail closed, fresh source/frame gates required. Independent design safety review passed; source approval remains separate.
