@@ -154,6 +154,7 @@
 | T794 | r115 | main | 8c310798a25e | 2026-11-13T08:20Z |
 
 ## log
+- 261113 gusta-update-ssot ARCH start: owner-approved framework verification tiers, chg retention and workflow delegation
 - 261113 T794 done
 - 261113 T793 done
 - 261113 T792 done
@@ -173,4 +174,3 @@
 - 261113 gusta-create-task POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: T783–T791 (post observation job, owner observation edits, five-step post editor, post observation step, storyline-ready post badge, clip analysis job, clip observation edits, five-step clip workspace, clip observation step); no SSOT change
 - 261113 gusta-create-task POST GEN QUOTA THEME CLIP start
 - 261113 gusta-update-ssot POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: storyline and observations become lifecycle steps ② 관찰 and ③ 스토리라인 (생성·관찰·스토리라인·다듬기·완성), owner-editable observations, 관찰하기 as its own job, 스토리라인 작성 완료 post badge; CDS GUIDE MEM QUAL TMPL step numerals renumbered ②→④ ③→⑤ (wording, no rev); no doing task affected
-- 261113 gusta-update-ssot POST CLIP THEME start: storyline as its own lifecycle step (sketch storyline-separate-state, option A)
