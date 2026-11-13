@@ -15,7 +15,7 @@ import {
   templateField,
   voiceField,
 } from '@/test/editor'
-import { POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
+import { OBSERVATION_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
 import { finalizedPostRow, publishedPostRow } from '@/test/posts'
 import type { FakeQualityReading } from '@/test/quality'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
@@ -196,6 +196,25 @@ describe('a published post', () => {
 
     await user.click(onward)
     await waitFor(() => selected('완성'))
+    expect(calls.filter((call) => WRITES.includes(call))).toEqual([])
+  })
+
+  // POST-126: a published post's observations read as values, with no 다시 관찰하기 and no field.
+  it('reads ②’s observations without a field or 다시 관찰하기', async () => {
+    const calls: string[] = []
+    const user = userEvent.setup()
+    renderAppAt(`/posts/${published.slug}`, {
+      user: USER,
+      calls,
+      posts: { calls, posts: [{ ...published, observations: [OBSERVATION_FIXTURE] }] },
+      providers: PROVIDERS,
+    })
+    await screen.findByRole('button', { name: '기억으로 저장' })
+
+    await openStep(user, '관찰')
+    expect(await screen.findByText('비가 그친 바닷가')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '장면' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '다시 관찰하기' })).toBeNull()
     expect(calls.filter((call) => WRITES.includes(call))).toEqual([])
   })
 

@@ -1,12 +1,24 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { PostImage } from '@/entities/image'
 import type { PostVideo } from '@/entities/video'
-import { AttachmentViewer, observationByFile, postAttachments } from '@/entities/post'
+import {
+  AttachmentViewer,
+  observationByFile,
+  postAttachments,
+  type ObservationEditFields as ObservationFields,
+} from '@/entities/post'
 import type { Observation } from '@/shared/api'
 import { formatDuration } from '@/shared/lib'
-import { RotatedImage, Typography, typographyStyles } from '@/shared/ui'
+import {
+  Badge,
+  FieldLabel,
+  RotatedImage,
+  Textarea,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 
 interface ContactSheetProps {
   images: readonly PostImage[]
@@ -15,6 +27,15 @@ interface ContactSheetProps {
   videos?: readonly PostVideo[]
   observations: readonly Observation[]
   activeJob?: GenerationJob
+  /** The owner's corrections not yet saved, laid over the stored entries (POST-126). */
+  edits?: Readonly<Record<string, ObservationFields>>
+  /** Whether each card's fields edit in place. False while a job runs, on a published post and
+   *  while saving is failing — the page decides. */
+  editable?: boolean
+  /** One card's corrected fields, the whole set; a clip's carries `events`. */
+  onEdit?: (file: string, fields: ObservationFields) => void
+  /** The heading row's action — ②'s 다시 관찰하기 (POST-125). */
+  action?: ReactNode
 }
 
 /** A server-read thumbnail address: a just-confirmed upload may still carry its browser blob
@@ -25,7 +46,16 @@ function serverViewUrl(viewUrl: string): string {
 
 /** Persisted model eyesight, paired to attachments only by their exact filenames. Pressing a
  *  photo opens it large, its previous and next walking the sheet card by card (POST-100). */
-export function ContactSheet({ images, videos = [], observations, activeJob }: ContactSheetProps) {
+export function ContactSheet({
+  images,
+  videos = [],
+  observations,
+  activeJob,
+  edits,
+  editable = false,
+  onEdit,
+  action,
+}: ContactSheetProps) {
   const { t } = useTranslation('posts')
   const attachments = useMemo(
     () => postAttachments({ images: [...images], videos: [...videos] }),
@@ -65,9 +95,12 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
 
   return (
     <section aria-labelledby="contact-sheet-heading" className="mt-6">
-      <Typography variant="title" id="contact-sheet-heading">
-        {t('observation.title')}
-      </Typography>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <Typography variant="title" id="contact-sheet-heading">
+          {t('observation.title')}
+        </Typography>
+        {action}
+      </div>
       <Typography variant="body" className="text-content-secondary mt-2">
         {t('observation.description')}
       </Typography>
@@ -125,26 +158,15 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
               <Typography variant="label" as="h3" className="text-content-primary mt-3 truncate">
                 {image.filename}
               </Typography>
-              {observation ? (
-                <dl className="mt-3 space-y-2">
-                  <ObservationField label={t('observation.scene')} value={observation.scene} />
-                  <ObservationField label={t('observation.mood')} value={observation.mood} />
-                  <ObservationField
-                    label={t('observation.visibleText')}
-                    value={observation.visibleText}
-                  />
-                  <ObservationField
-                    label={t('observation.objects')}
-                    value={observation.objects.join(', ')}
-                  />
-                </dl>
-              ) : (
-                // No per-card live region: ten waiting photos meant ten regions all announcing
-                // '관찰 대기' over the one message that carries the count (the ProgressLine).
-                <Typography variant="body" as="p" className="text-content-tertiary mt-3">
-                  {observing ? t('observation.waiting') : t('observation.empty')}
-                </Typography>
-              )}
+              <CardObservation
+                file={image.filename}
+                observation={observation}
+                edit={edits?.[image.filename]}
+                video={false}
+                observing={observing}
+                editable={editable}
+                onEdit={onEdit}
+              />
             </article>
           )
         })}
@@ -191,29 +213,15 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
                   {formatDuration(video.durationMs)}
                 </Typography>
               </div>
-              {observation ? (
-                <dl className="mt-3 space-y-2">
-                  <ObservationField label={t('observation.scene')} value={observation.scene} />
-                  <ObservationField label={t('observation.mood')} value={observation.mood} />
-                  <ObservationField
-                    label={t('observation.visibleText')}
-                    value={observation.visibleText}
-                  />
-                  <ObservationField
-                    label={t('observation.objects')}
-                    value={observation.objects.join(', ')}
-                  />
-                  {/* What only a clip has, and what it was observed FOR (VIDEO-9). */}
-                  <EventsField events={observation.events} />
-                  {observation.speech && (
-                    <ObservationField label={t('observation.speech')} value={observation.speech} />
-                  )}
-                </dl>
-              ) : (
-                <Typography variant="body" as="p" className="text-content-tertiary mt-3">
-                  {observing ? t('observation.waiting') : t('observation.empty')}
-                </Typography>
-              )}
+              <CardObservation
+                file={video.filename}
+                observation={observation}
+                edit={edits?.[video.filename]}
+                video
+                observing={observing}
+                editable={editable}
+                onEdit={onEdit}
+              />
             </article>
           )
         })}
@@ -242,6 +250,184 @@ export function ContactSheet({ images, videos = [], observations, activeJob }: C
       />
     </section>
   )
+}
+
+/** A card's observation: read-only, or each field edited in place (POST-126). A card not yet
+ *  observed says so, waiting while the job runs. */
+function CardObservation({
+  file,
+  observation,
+  edit,
+  video,
+  observing,
+  editable,
+  onEdit,
+}: {
+  file: string
+  observation: Observation | undefined
+  edit: ObservationFields | undefined
+  video: boolean
+  observing: boolean
+  editable: boolean
+  onEdit?: (file: string, fields: ObservationFields) => void
+}) {
+  const { t } = useTranslation('posts')
+  if (!observation)
+    // No per-card live region: ten waiting photos meant ten regions all announcing '관찰 대기'
+    // over the one message that carries the count (the ProgressLine).
+    return (
+      <Typography variant="body" as="p" className="text-content-tertiary mt-3">
+        {observing ? t('observation.waiting') : t('observation.empty')}
+      </Typography>
+    )
+  const fields: ObservationFields = edit ?? {
+    scene: observation.scene,
+    mood: observation.mood,
+    visibleText: observation.visibleText,
+    objects: [...observation.objects],
+    ...(video ? { events: [...observation.events] } : {}),
+  }
+  const corrected = observation.ownerEdited || edit !== undefined
+  const mark = corrected && (
+    <Badge tone="accent" className="mt-3">
+      {t('observation.ownerEdited')}
+    </Badge>
+  )
+  if (!editable)
+    return (
+      <>
+        {mark}
+        <dl className="mt-3 space-y-2">
+          <ObservationField label={t('observation.scene')} value={fields.scene} />
+          <ObservationField label={t('observation.mood')} value={fields.mood} />
+          <ObservationField label={t('observation.visibleText')} value={fields.visibleText} />
+          <ObservationField label={t('observation.objects')} value={fields.objects.join(', ')} />
+          {/* What only a clip has, and what it was observed FOR (VIDEO-9). */}
+          {video && <EventsField events={fields.events ?? []} />}
+          {video && observation.speech && (
+            <ObservationField label={t('observation.speech')} value={observation.speech} />
+          )}
+        </dl>
+      </>
+    )
+  const change = (patch: Partial<ObservationFields>) => onEdit?.(file, { ...fields, ...patch })
+  return (
+    <>
+      {mark}
+      <div className="mt-3 space-y-3">
+        <TextEdit
+          label={t('observation.scene')}
+          value={fields.scene}
+          onChange={(scene) => change({ scene })}
+        />
+        <TextEdit
+          label={t('observation.mood')}
+          value={fields.mood}
+          onChange={(mood) => change({ mood })}
+        />
+        <TextEdit
+          label={t('observation.visibleText')}
+          value={fields.visibleText}
+          onChange={(visibleText) => change({ visibleText })}
+        />
+        <ListEdit
+          label={t('observation.objects')}
+          items={fields.objects}
+          onChange={(objects) => change({ objects })}
+        />
+        {video && (
+          <ListEdit
+            label={t('observation.events')}
+            items={fields.events ?? []}
+            onChange={(events) => change({ events })}
+          />
+        )}
+        {video && observation.speech && (
+          <dl>
+            <ObservationField label={t('observation.speech')} value={observation.speech} />
+          </dl>
+        )}
+      </div>
+    </>
+  )
+}
+
+function TextEdit({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const id = useId()
+  return (
+    <div>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Textarea
+        id={id}
+        autoGrow
+        rows={1}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1"
+      />
+    </div>
+  )
+}
+
+/** A list field, one entry per line. The typed text is kept as typed — an Enter makes a blank
+ *  line the next entry is written on — while what is saved drops the blank lines. */
+function ListEdit({
+  label,
+  items,
+  onChange,
+}: {
+  label: string
+  items: readonly string[]
+  onChange: (items: string[]) => void
+}) {
+  const { t } = useTranslation('posts')
+  const id = useId()
+  const helpId = useId()
+  const [text, setText] = useState(() => items.join('\n'))
+  // A value that moved from outside (a save landing, an observation replacing it) re-seeds the
+  // text; one that only differs from it by the blank lines being typed does not.
+  const key = items.join('\n')
+  const [followed, setFollowed] = useState(key)
+  if (followed !== key) {
+    setFollowed(key)
+    if (splitLines(text).join('\n') !== key) setText(key)
+  }
+  return (
+    <div>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <Textarea
+        id={id}
+        autoGrow
+        rows={2}
+        value={text}
+        aria-describedby={helpId}
+        onChange={(event) => {
+          setText(event.target.value)
+          onChange(splitLines(event.target.value))
+        }}
+        className="mt-1"
+      />
+      <Typography variant="meta" as="p" id={helpId} className="mt-1">
+        {t('observation.listHelp')}
+      </Typography>
+    </div>
+  )
+}
+
+/** One entry per line, blank lines dropped. */
+function splitLines(text: string): string[] {
+  return text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line !== '')
 }
 
 /** What happened in the clip, in order. An ordered list rather than one joined line: the order

@@ -2,7 +2,14 @@ import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import type { PostImage } from '@/entities/image'
 import { ObservationSchema } from '@/shared/api'
-import { defaultSelection, needsPicker, reobserveRows, storedObservationModels } from './reobserve'
+import {
+  defaultSelection,
+  editedInSelection,
+  lacksObservation,
+  needsPicker,
+  reobserveRows,
+  storedObservationModels,
+} from './reobserve'
 
 const image = (filename: string): PostImage => ({
   id: filename,
@@ -96,5 +103,38 @@ describe('storedObservationModels', () => {
   it('reports an entry written before provenance existed as an empty ref', () => {
     const rows = reobserveRows([image('A.jpg')], [observation('A.jpg')])
     expect(storedObservationModels(rows)).toEqual([''])
+  })
+})
+
+// POST-123: ①'s big action reads 관찰하기 while an attachment lacks an observation, and an
+// owner-edited entry never counts as missing — even one whose fields were all cleared (GEN-90).
+describe('lacksObservation', () => {
+  it('is true while any photo has nothing to reuse, false once every one does', () => {
+    expect(lacksObservation([image('A.jpg'), image('B.jpg')], [observation('A.jpg')])).toBe(true)
+    expect(lacksObservation([image('A.jpg')], [observation('A.jpg', { scene: '' })])).toBe(true)
+    expect(lacksObservation([image('A.jpg')], [observation('A.jpg')])).toBe(false)
+    expect(lacksObservation([], [])).toBe(false)
+  })
+
+  it('never counts an owner-edited entry as missing', () => {
+    const cleared = create(ObservationSchema, { file: 'A.jpg', ownerEdited: true })
+    expect(lacksObservation([image('A.jpg')], [cleared])).toBe(false)
+    const [row] = reobserveRows([image('A.jpg')], [cleared])
+    expect(row).toMatchObject({ forced: false, ownerEdited: true })
+  })
+})
+
+// GEN-8: ticking an owner-edited observation is what the picker confirms over.
+describe('editedInSelection', () => {
+  it('names the ticked rows the owner corrected, and only those', () => {
+    const rows = reobserveRows(
+      [image('A.jpg'), image('B.jpg')],
+      [
+        create(ObservationSchema, { file: 'A.jpg', scene: '고침', ownerEdited: true }),
+        observation('B.jpg'),
+      ],
+    )
+    expect(editedInSelection(rows, ['A.jpg', 'B.jpg'])).toEqual(['A.jpg'])
+    expect(editedInSelection(rows, ['B.jpg'])).toEqual([])
   })
 })

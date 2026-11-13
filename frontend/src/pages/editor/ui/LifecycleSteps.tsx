@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
@@ -7,6 +7,7 @@ import {
   isPublished,
   useRefreshPostImages,
   originContentMatches,
+  type ObservationEditFields,
   type PostDraft,
   type PostStorylineParagraph,
 } from '@/entities/post'
@@ -14,6 +15,8 @@ import type { PostContent } from '@/shared/api'
 import type { GenerationJob } from '@/entities/generation-job'
 import {
   GenerationActions,
+  ObserveActions,
+  ReobserveButton,
   type GenerationActionsHandle,
   type GenerationMode,
   type StorylineActionsHandle,
@@ -21,17 +24,18 @@ import {
 import { flushContentQueue, type BlockEditorHandle } from '@/features/edit-post-content'
 import { type ReviseFormHandle } from '@/features/edit-with-ai'
 import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
-import { Notice, StepBarActions, StepBarCta, Typography, proseStyles } from '@/shared/ui'
+import { Notice, Typography, proseStyles } from '@/shared/ui'
 import type { SaveState } from '@/features/save-draft'
 import { ContactSheet } from '@/widgets/contact-sheet'
 import { StorylineSpace } from '@/widgets/storyline-space'
 import { editorStepLabel, type EditorStep } from '../model/steps'
-import type { EditorJobView } from '../model/useEditorJob'
+import { resumedJobStep, type EditorJobView } from '../model/useEditorJob'
 import { EditorJobNotice } from './EditorJobNotice'
 import { EditorStepDock } from './EditorStepDock'
 import { EditorFinishPanel, type FinishCampaign } from './EditorFinishPanel'
 import { EditorRefinePanel } from './EditorRefinePanel'
 import { EmptyStep } from './EmptyStep'
+import { RunCard } from './RunCard'
 
 const STEP_PANEL_ID = 'editor-step-panel'
 
@@ -52,6 +56,8 @@ export function LifecycleSteps({
   jobView,
   storyline,
   campaign,
+  observations,
+  onRunCardShown,
   clipMaterial,
   inspection,
 }: {
@@ -78,6 +84,13 @@ export function LifecycleSteps({
     onChange: (paragraphs: PostStorylineParagraph[]) => void
     saveState: SaveState
   }
+  /** The owner's observation corrections as the draft autosave holds them (POST-126). */
+  observations: {
+    edits: Readonly<Record<string, ObservationEditFields>>
+    onEdit: (file: string, fields: ObservationEditFields) => void
+  }
+  /** Whether ②'s run card is in view, so the page-top bar can step aside while it is (POST-45). */
+  onRunCardShown?: (shown: boolean) => void
   /** The 체험단 parts as the draft autosave holds them; ⑤'s checklist ticks save through it. */
   campaign?: FinishCampaign
   clipMaterial?: Pick<PostDraft, 'title' | 'memo'>
@@ -134,8 +147,17 @@ export function LifecycleSteps({
       onOpenBrief={onOpenBrief}
     />
   )
-  // ①'s 확인 row: the guide's 이전, then 다음 to ② without a call (POST-123). On a published post
-  // the bar says once why ① cannot change (POST-86); 다음 still only moves.
+  // ①'s 확인 row: the guide's 이전, then 관찰하기 while an attachment lacks an observation — which
+  // starts the observation job and carries the owner to ② — or 다음 to ② without a call
+  // (POST-123). On a published post the bar says once why ① cannot change (POST-86); 다음 only moves.
+  const observationStart = {
+    post,
+    activeJob: job,
+    jobPending: jobView.isPending,
+    beforeStart,
+    onStarted: (id: string) => jobView.onStarted(id, 'observe'),
+    onOpenBrief,
+  }
   const confirmActions = (back: ReactNode) => (
     <>
       {isPublished(post) && (
@@ -143,15 +165,26 @@ export function LifecycleSteps({
           {t('published.locked')}
         </Typography>
       )}
-      <StepBarActions back={back}>
-        <StepBarCta forward onClick={() => onStepChange('observe')}>
-          {t('guide.next')}
-        </StepBarCta>
-      </StepBarActions>
+      <ObserveActions
+        {...observationStart}
+        back={back}
+        onNext={() => onStepChange('observe')}
+        observeLabel={t('guide.observe')}
+        nextLabel={t('guide.next')}
+      />
     </>
   )
-  // Read-only while a job targets the post, on a published post and while the queue reports a
-  // refusal (POST-86): an edit then could only be overwritten or refused again.
+  // A run this editor started carries the owner to the step showing its result once it is done:
+  // ② after an observation, ③ after a storyline, ④ after writing (POST-125).
+  const landed = useRef('')
+  useEffect(() => {
+    if (!job || job.status !== 'done' || !jobView.startedStep || landed.current === job.id) return
+    landed.current = job.id
+    onStepChange(resumedJobStep(job.kind))
+  }, [job, jobView.startedStep, onStepChange])
+  // ②'s observations and ③'s storyline are read-only while a job targets the post, on a published
+  // post and while the queue reports a refusal (POST-86, POST-126): an edit then could only be
+  // overwritten or refused again.
   const storylineReadOnly =
     Boolean(job && !isTerminal(job)) || isPublished(post) || storyline.saveState === 'error'
   const storylineActions = {
@@ -167,7 +200,18 @@ export function LifecycleSteps({
       contentEditorRef.current?.flush() ?? flushContentQueue(post.slug) ?? Promise.resolve(),
     onOpenBrief,
   }
-  const observePanel = <EditorObservePanel post={post} job={job} />
+  const running = job && !isTerminal(job) && RUN_CARD_KINDS.has(job.kind) ? job : undefined
+  const observePanel = (
+    <EditorObservePanel
+      post={post}
+      job={job}
+      runCard={running && <RunCard job={running} onShown={onRunCardShown} />}
+      heading={<ReobserveButton {...observationStart} />}
+      edits={observations.edits}
+      editable={!storylineReadOnly}
+      onEdit={observations.onEdit}
+    />
+  )
   const storylinePanel = (
     <EditorStorylinePanel
       post={post}
@@ -294,14 +338,36 @@ export function LifecycleSteps({
   )
 }
 
-/** ② 관찰: the attachments' observations on the contact sheet, read-only in this step, or the line
- *  saying there is nothing to observe — its actions stay in the bar either way (POST-125). */
-function EditorObservePanel({ post, job }: { post: PostDraft; job: GenerationJob | undefined }) {
+/** The runs whose card heads ②: those started from ① or ② (POST-125). A revision belongs to ④. */
+const RUN_CARD_KINDS = new Set(['observe', 'storyline', 'generate'])
+
+/** ② 관찰: the run card while a run is going, then the attachments' observations on the contact
+ *  sheet, each card corrected in place, or the line saying there is nothing to observe — its
+ *  actions stay in the bar either way (POST-125, POST-126). */
+function EditorObservePanel({
+  post,
+  job,
+  runCard,
+  heading,
+  edits,
+  editable,
+  onEdit,
+}: {
+  post: PostDraft
+  job: GenerationJob | undefined
+  runCard: ReactNode
+  /** 다시 관찰하기, in the heading row. */
+  heading: ReactNode
+  edits: Readonly<Record<string, ObservationEditFields>>
+  editable: boolean
+  onEdit: (file: string, fields: ObservationEditFields) => void
+}) {
   const { t } = useTranslation('posts')
   return (
     <>
+      {runCard && <div className="mt-6">{runCard}</div>}
       {isPublished(post) && (
-        <Notice tone="info" role="status" className="mb-4">
+        <Notice tone="info" role="status" className="mt-4 mb-4">
           {t('published.locked')}
         </Notice>
       )}
@@ -311,6 +377,10 @@ function EditorObservePanel({ post, job }: { post: PostDraft; job: GenerationJob
           videos={post.videos}
           observations={post.observations}
           activeJob={job}
+          edits={edits}
+          editable={editable}
+          onEdit={onEdit}
+          action={heading}
         />
       ) : (
         <Typography variant="body" as="p" className="text-content-tertiary mt-10">

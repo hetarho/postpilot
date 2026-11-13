@@ -135,6 +135,14 @@ function observePreconditions(
   return { ok: true, reason: '' }
 }
 
+/** 관찰하기 and 다시 관찰하기 (GEN-89): the published lock, one active job and an observe model
+ *  that can watch the post's media. No voice: an observation job writes nothing in one. */
+export function observationPreconditions(
+  input: Omit<GenerationGateInput, 'voice'>,
+): GenerationPreconditions {
+  return sharedPreconditions({ ...input, voice: undefined })
+}
+
 export function ordinaryGenerationPreconditions(
   input: GenerationGateInput & { write: GenerationModelSelection | undefined },
 ): GenerationPreconditions {

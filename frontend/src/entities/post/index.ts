@@ -39,6 +39,7 @@ export {
   newBlock,
   observationByFile,
   postContentWith,
+  type ObservationEditFields,
 } from './model/content'
 export { BlockList, type OriginTextRenderer } from './ui/BlockList'
 export { AttachmentViewer } from './ui/AttachmentViewer'

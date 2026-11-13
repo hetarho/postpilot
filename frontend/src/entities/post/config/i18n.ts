@@ -183,6 +183,11 @@ export const i18n = {
         selectedCount: '{{count}}장 다시 관찰',
         selectedNone: '다시 관찰할 사진 없음',
         confirm: '이대로 시작',
+        open: '다시 관찰하기',
+        editedTitle: '직접 고친 관찰을 바꿀까요?',
+        editedBody:
+          '{{files}}의 관찰은 직접 고친 내용이에요. 다시 관찰하면 고친 내용이 사라집니다.',
+        editedConfirm: '다시 관찰하기',
       },
       options: {
         useTarget: '목표 글자 수 사용',
@@ -381,6 +386,11 @@ export const i18n = {
         selectedCount: '{{count}} photo(s) to observe again',
         selectedNone: 'No photo will be observed again',
         confirm: 'Start with this',
+        open: 'Observe again',
+        editedTitle: 'Replace observations you corrected?',
+        editedBody:
+          'You corrected the observation of {{files}} by hand. Observing again replaces those corrections.',
+        editedConfirm: 'Observe again',
       },
       options: {
         useTarget: 'Use a target length',

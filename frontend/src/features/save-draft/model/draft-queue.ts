@@ -23,6 +23,9 @@ import {
   AUTOSAVE_RETRY_MAX_MS,
 } from '@/shared/config'
 import type { ContentLanguage } from '@/shared/api'
+import type { ObservationEditFields } from '@/entities/post'
+
+export type { ObservationEditFields }
 
 /** What the editor tells the user about the last save.
  *
@@ -45,6 +48,10 @@ export interface Draft {
    *  the newest queued list wins, and it goes out only while it differs from what the server
    *  holds. */
   storyline?: StorylineParagraphDraft[]
+  /** The owner's observation corrections (POST-126), keyed by attachment filename, each the whole
+   *  editable field set of that card; absent is no edit. Rebased like the storyline: an entry goes
+   *  out only while it differs from what the server holds. */
+  observationEdits?: Record<string, ObservationEditFields>
   /** The campaign parts (POST-117–119): the 체험단 글 switch, the whole advertiser guide and the
    *  ticked checklist lines. They ride the same queue as the memo because they are the same kind
    *  of input — what the next run is given — and each part goes out only while it differs from
@@ -94,6 +101,9 @@ export interface DraftRequest extends Partial<Assignments> {
   targetLanguage?: ContentLanguage
   /** Present only while the storyline the editor holds differs from the server's. */
   storyline?: StorylineParagraphDraft[]
+  /** Only the cards whose fields differ from the server's, so a title save never re-marks an
+   *  observation the owner did not touch this round as edited by hand. */
+  observationEdits?: Array<ObservationEditFields & { file: string }>
   /** Each campaign part is present only while it differs from what the server holds, so a title
    *  save never carries a stale switch or guide over a newer one from another tab. */
   campaign?: boolean
@@ -128,6 +138,9 @@ export interface DraftQueueHandle {
   /** Takes the server's storyline as the baseline when it moved, so an edit compares against
    *  what the server now holds. Ignored — and false — while an edit of it is queued or out. */
   rebaseStoryline: (storyline: StorylineParagraphDraft[] | undefined) => boolean
+  /** The same for the observations: takes the server's as the baseline when they moved, ignored —
+   *  and false — while a correction of them is queued or out. */
+  rebaseObservations: (observations: Record<string, ObservationEditFields> | undefined) => boolean
   /** Records one assignment: the voice ('' for 말투 없음), the 템플릿 ('' for 없음) or the target
    *  language. For a draft with no post yet that is all it does — the create carries it. For an
    *  existing post it is sent at once, on its own request, so a delayed title save cannot revert
@@ -269,6 +282,7 @@ function sameDraft(held: Draft, saved: Draft): boolean {
     held.memo === saved.memo &&
     answersSettled(held.answers, saved.answers) &&
     storylineSettled(held.storyline, saved.storyline) &&
+    observationEdits(held.observationEdits, saved.observationEdits).length === 0 &&
     campaignSettled(held.campaign, saved.campaign)
   )
 }
@@ -338,6 +352,54 @@ function sameStoryline(
         paragraph.files.length === b[index]!.files.length &&
         paragraph.files.every((file, at) => file === b[index]!.files[at]),
     )
+  )
+}
+
+function sameList(a: readonly string[] | undefined, b: readonly string[] | undefined): boolean {
+  if (!a || !b) return a === b
+  return a.length === b.length && a.every((entry, index) => entry === b[index])
+}
+
+function sameObservation(a: ObservationEditFields, b: ObservationEditFields | undefined): boolean {
+  return (
+    b !== undefined &&
+    a.scene === b.scene &&
+    a.mood === b.mood &&
+    a.visibleText === b.visibleText &&
+    sameList(a.objects, b.objects) &&
+    // A photo's edit carries no events and its baseline none either; a clip's carries both.
+    sameList(a.events ?? [], b.events ?? [])
+  )
+}
+
+/** The held corrections that differ from what the server holds, in filename order. */
+function observationEdits(
+  held: Record<string, ObservationEditFields> | undefined,
+  saved: Record<string, ObservationEditFields> | undefined,
+): Array<ObservationEditFields & { file: string }> {
+  if (!held) return []
+  return Object.keys(held)
+    .sort()
+    .filter((file) => !sameObservation(held[file]!, saved?.[file]))
+    .map((file) => ({ file, ...copyObservation(held[file]!) }))
+}
+
+function copyObservation(fields: ObservationEditFields): ObservationEditFields {
+  return {
+    scene: fields.scene,
+    mood: fields.mood,
+    visibleText: fields.visibleText,
+    objects: [...fields.objects],
+    ...(fields.events ? { events: [...fields.events] } : {}),
+  }
+}
+
+export function copyObservations(
+  observations: Record<string, ObservationEditFields> | undefined,
+): Record<string, ObservationEditFields> | undefined {
+  if (!observations) return undefined
+  return Object.fromEntries(
+    Object.entries(observations).map(([file, fields]) => [file, copyObservation(fields)]),
   )
 }
 
@@ -521,6 +583,9 @@ async function run(queue: Queue): Promise<void> {
     queue.slug && sent.storyline && !sameStoryline(sent.storyline, queue.saved.storyline)
       ? copyStoryline(sent.storyline)
       : undefined
+  const sentObservations = queue.slug
+    ? observationEdits(sent.observationEdits, queue.saved.observationEdits)
+    : []
   const sentCampaign = campaignPatch(sent.campaign, queue.saved.campaign)
   queue.inFlight = true
   queue.sending = sent
@@ -532,6 +597,7 @@ async function run(queue: Queue): Promise<void> {
       draft: sent,
       ...sentAssignments,
       ...(sentStoryline ? { storyline: sentStoryline } : {}),
+      ...(sentObservations.length > 0 ? { observationEdits: sentObservations } : {}),
       ...sentCampaign,
     })
     if (queue.discarded) return
@@ -543,6 +609,10 @@ async function run(queue: Queue): Promise<void> {
       ...sent,
       answers: mergeAnswers(queue.saved.answers, sent.answers),
       storyline: copyStoryline(sent.storyline ?? queue.saved.storyline),
+      observationEdits: copyObservations({
+        ...queue.saved.observationEdits,
+        ...sent.observationEdits,
+      }),
       campaign: copyCampaign(sent.campaign ?? queue.saved.campaign),
     }
     each(queue, (channel, assignment) => {
@@ -757,6 +827,7 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
         ...draft,
         answers: draft.answers.map((answer) => ({ ...answer })),
         storyline: copyStoryline(draft.storyline),
+        observationEdits: copyObservations(draft.observationEdits),
         campaign: copyCampaign(draft.campaign),
       }
       publish(attached)
@@ -772,6 +843,14 @@ export function attachDraftQueue(options: DraftQueueOptions): DraftQueueHandle {
         draft?.storyline !== undefined && !sameStoryline(draft.storyline, attached.saved.storyline)
       if (edited(attached.pending) || edited(attached.sending)) return false
       attached.saved = { ...attached.saved, storyline: copyStoryline(storyline) }
+      return true
+    },
+
+    rebaseObservations: (observations) => {
+      const edited = (draft: Draft | undefined) =>
+        observationEdits(draft?.observationEdits, attached.saved.observationEdits).length > 0
+      if (edited(attached.pending) || edited(attached.sending)) return false
+      attached.saved = { ...attached.saved, observationEdits: copyObservations(observations) }
       return true
     },
 

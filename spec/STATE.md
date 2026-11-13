@@ -13,6 +13,7 @@
 | c261113 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T02:47Z | 2026-11-13T02:47Z | - |
 
 ## inbox
+- 261113 decided T786 GEN-8 GEN-9: the impl notes say runs send no `reobserve`, but GEN-9 reads an absent selection as "observe every attachment"? → 바로 글 쓰기, 스토리라인 먼저 and 다시 만들기 send the EMPTY selection, which GEN-9 reads as reuse-everything and the current server decides for a run on its own anyway (alt: send nothing as the notes say | keep the picker on runs). An absent selection on a server that still honours it would re-observe every photo and replace the owner's corrections, while the empty one means the same as GEN-8 on every server.
 - 261113 decided T784 POST-126 GEN-90 GEN-80: how does an owner observation correction map onto revisions, refusals and origin sources where the impl notes left gaps? → a changed save advances the input revision like other material edits (POST-111) but no content revision; an unknown/duplicate filename or `events` on a photo is InvalidArgument with the existing `UNKNOWN_FAILURE` reason; owner-changed fields enter the writing catalog (`WritingOriginSources`, not the observe-pass `observationSources`) as attachment-bound `owner_observation` sources, the rest as `visual_observation` (alt: leave input revision untouched | add a dedicated FailureReason and FE catalog entry | keep the observer's stale spans for unchanged fields). The editor only offers observed attachments, so a dedicated reason would explain a client bug; the observe pass never carries owner input.
 - 261113 decided T783 GEN-89: the impl notes' StartObservation shape has no observe model and a GenerationJob response unlike StartGeneration's actual `job_id`? → request `{post_slug, reobserve, observe_model}` and response `{job_id}`, matching the sibling starts (alt: `{slug, reobserve}` reading the observe model from the account selection | return the full GenerationJob). Every other start names its models explicitly, and the FE polls by id through `useJob`.
 - 261113 decided T782 review/performance-design-system-261113: real block selection during playback leaves the paused image at the old output frame? → request the authoritative external seek target through the existing bounded draw path after pause/invalidate (alt: leave stale image until Play | publish old transport time through stop() | rewrite the clock). Same frozen whole-widget oracle fails on BASE/current; CLIP-53 already requires selection to seek the preview. Restrict player+test, no autoplay/owner/policy changes, independent review and final full gates remain; direct delegation covers the fix.
@@ -215,7 +216,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T786 | Observe and correct a post's attachments on ② 관찰 | POST GEN THEME ARCH | T783 T784 T785 | todo |
 | T787 | Show 스토리라인 작성 완료 on storyline-only posts in the lists | POST CLIP THEME ARCH | - | todo |
 | T788 | Run clip source analysis as its own approved job | CLIP QUOTA ARCH | - | todo |
 | T789 | Save owner corrections to clip observations | CLIP ARCH | T788 | todo |
@@ -233,10 +233,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T786 T787 T788
+- gusta-implement-task T787 T788 T790
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T786 done
 - 261113 T785 done
 - 261113 T784 done
 - 261113 T776 done
@@ -256,4 +257,3 @@
 - 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.
 - 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.
 - 261113 gusta-create-task review/performance-design-system-261113 F8–F9: T780first-capability identity/T781equal-ACK continuation, preserving authoritative renewal and fullrevision boundaries; T773/T777 locally integrated/reviewed.
-- 261113 gusta-create-task review/performance-design-system-261113 F5–F7: T777range-window/T778small-audio-window/T779shared-header from measured MacChrome originals; no SSOT change, performance before UI.

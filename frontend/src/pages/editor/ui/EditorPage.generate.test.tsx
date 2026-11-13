@@ -106,7 +106,9 @@ describe('opening a post', () => {
       jobs: { jobs: [{ ...active, progressTotal: 4 }] },
     })
 
-    const writing = await screen.findByText('글을 쓰고 있어요')
+    // The run card heads ② now (POST-125): it says what the run is doing by stage.
+    await openStep(userEvent.setup(), '관찰')
+    const writing = await screen.findByText('사진을 살펴보고 있어요')
     // The card's one moving progress is its bar: a spinner beside it said "working" twice.
     expect(writing.closest('div')?.querySelector('.animate-spin')).toBeNull()
     // It moves on transform alone, never on a layout property (THEME-28): a quarter done is the
@@ -416,13 +418,131 @@ describe('opening a post', () => {
 
   // GEN-8: a post that has already been observed decides what to re-observe BEFORE the
   // enqueue, and confirming the picker untouched reuses everything.
-  it('routes generation through the re-observation picker and freezes the confirmed set', async () => {
+  // GEN-8: a run never opens the picker; 다시 관찰하기 in ②'s heading row does, and its answer
+  // starts the observation job with that selection after the draft save (GEN-89).
+  it('starts runs without the picker and re-observes through 다시 관찰하기', async () => {
     const starts: FakeGenerationStart[] = []
+    const observationStarts: FakeGenerationStart[] = []
     const calls: string[] = []
     const user = userEvent.setup()
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
       calls,
+      jobs: { starts, observationStarts },
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE.map((entry) =>
+              entry.file === 'IMG_2.jpg' ? { ...entry, ownerEdited: true } : entry,
+            ),
+          },
+        ],
+      },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'observer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'observer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+
+    // An unsaved edit, so the draft flush on the start path is a real request whose ORDER
+    // against the picker is observable.
+    await openStep(user, '생성')
+    await user.type(await screen.findByLabelText('메모'), ' + 최신 내용')
+    await openStep(user, '관찰')
+    const reobserve = await screen.findByRole('button', { name: '다시 관찰하기' })
+    await waitFor(() => expect(reobserve).toBeEnabled())
+    await user.click(reobserve)
+
+    // The picker opens and nothing has been saved: a cancelled picker must not force a save.
+    const picker = await screen.findByRole('dialog', { name: '다시 관찰할 사진 선택' })
+    expect(calls).not.toContain('SavePostDraft')
+    await user.click(within(picker).getByRole('button', { name: '취소' }))
+    expect(calls).not.toContain('StartObservation')
+
+    // Reopened, the hand-edited photo ticked: confirming asks once that its edits will be lost.
+    await user.click(screen.getByRole('button', { name: '다시 관찰하기' }))
+    await user.click(await screen.findByRole('checkbox', { name: 'IMG_2.jpg 다시 관찰' }))
+    await user.click(screen.getByRole('button', { name: '이대로 시작' }))
+    const confirm = await screen.findByRole('dialog', { name: '직접 고친 관찰을 바꿀까요?' })
+    expect(calls).not.toContain('StartObservation')
+    await user.click(within(confirm).getByRole('button', { name: '다시 관찰하기' }))
+    await waitFor(() => expect(observationStarts).toHaveLength(1))
+    expect(observationStarts[0].reobserveFiles).toEqual(['IMG_2.jpg'])
+    expect(calls.indexOf('SavePostDraft')).toBeGreaterThanOrEqual(0)
+    expect(calls.indexOf('SavePostDraft')).toBeLessThan(calls.indexOf('StartObservation'))
+    expect(starts).toHaveLength(0)
+  })
+
+  // POST-126: ② edits a card in place and the draft autosave carries the correction; while a job
+  // runs the same card reads as values.
+  it('autosaves an observation corrected on ② and reads it while a job runs', async () => {
+    const draftSaves: FakeDraftSave[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        draftSaves,
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE,
+          },
+        ],
+      },
+    })
+
+    await openStep(user, '관찰')
+    const scenes = await screen.findAllByRole('textbox', { name: '장면' })
+    await user.clear(scenes[0]!)
+    await user.type(scenes[0]!, '맑은 바닷가')
+    await waitFor(
+      () =>
+        expect(draftSaves.at(-1)?.observationEdits).toEqual([
+          { file: 'IMG_1.jpg', scene: '맑은 바닷가', objects: ['우산', '파도'], events: [] },
+        ]),
+      { timeout: 3000 },
+    )
+  })
+
+  it('keeps ②’s cards read-only while a job runs', async () => {
+    const user = userEvent.setup()
+    const active = { id: 'job-1', status: 'running', stage: 'write', kind: 'generate' }
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: '20260820-jeju',
+            images: POST_IMAGES_FIXTURE,
+            observations: OBSERVATIONS_FIXTURE,
+            activeJob: active,
+          },
+        ],
+      },
+      jobs: { jobs: [active] },
+    })
+
+    await openStep(user, '관찰')
+    // The run card heads ② for a writing run started here (POST-125).
+    expect(await screen.findByText('글을 쓰고 있어요')).toBeInTheDocument()
+    expect(screen.getByText('비가 그친 바닷가')).toBeInTheDocument()
+    expect(screen.queryByRole('textbox', { name: '장면' })).toBeNull()
+  })
+
+  it('starts 바로 글 쓰기 with the empty selection and no picker', async () => {
+    const starts: FakeGenerationStart[] = []
+    const user = userEvent.setup()
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
       jobs: { starts },
       posts: {
         posts: [
@@ -445,34 +565,13 @@ describe('opening a post', () => {
       },
     })
 
-    // An unsaved edit, so the draft flush on the start path is a real request whose ORDER
-    // against the picker is observable.
-    await openStep(user, '생성')
-    await user.type(await screen.findByLabelText('메모'), ' + 최신 내용')
     await openStep(user, '관찰')
     const generate = await screen.findByRole('button', { name: '바로 글 쓰기' })
     await waitFor(() => expect(generate).toBeEnabled())
     await user.click(generate)
-
-    // The picker opens instead of enqueueing, and `beforeStart` has NOT run: a cancelled picker
-    // must not have forced a draft save.
-    const picker = await screen.findByRole('dialog', { name: '다시 관찰할 사진 선택' })
-    expect(calls).not.toContain('StartGeneration')
-    expect(calls).not.toContain('SavePostDraft')
-    await user.click(within(picker).getByRole('button', { name: '취소' }))
+    await waitFor(() => expect(starts).toHaveLength(1))
     expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
-    expect(calls).not.toContain('StartGeneration')
-
-    // Reopened, one photo checked, confirmed: the frozen set is exactly that photo, and the
-    // draft save now sits on the confirm path, before the RPC that consumes it.
-    await user.click(screen.getByRole('button', { name: '바로 글 쓰기' }))
-    await user.click(await screen.findByRole('checkbox', { name: 'IMG_2.jpg 다시 관찰' }))
-    await user.click(screen.getByRole('button', { name: '이대로 시작' }))
-    await waitFor(() => expect(calls).toContain('StartGeneration'))
-    expect(starts).toHaveLength(1)
-    expect(starts[0].reobserveFiles).toEqual(['IMG_2.jpg'])
-    expect(calls.indexOf('SavePostDraft')).toBeGreaterThanOrEqual(0)
-    expect(calls.indexOf('SavePostDraft')).toBeLessThan(calls.indexOf('StartGeneration'))
+    expect(starts[0].reobserveFiles).toEqual([])
   })
 
   it('flushes the newest material before opening the common writing test without starting paid work', async () => {

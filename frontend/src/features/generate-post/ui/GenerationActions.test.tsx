@@ -245,40 +245,30 @@ it('starts a storyline job from 스토리라인 먼저', async () => {
     writeModel: writer,
     observeModel: observer,
   })
-  expect(storylineStarts[0].reobserveFiles).toBeUndefined()
+  expect(storylineStarts[0].reobserveFiles).toEqual([])
   expect(beforeStart).toHaveBeenCalledTimes(1)
   expect(starts).toHaveLength(0)
   await waitFor(() => expect(onStarted).toHaveBeenCalledWith('job-started'))
 })
 
-// GEN-8: a post that has been observed decides what to re-observe BEFORE the enqueue, and the
-// picker confirmed untouched reuses everything — EMPTY, not absent, which would mean "observe all".
-it('sends an EMPTY frozen set when the picker is confirmed untouched', async () => {
-  const user = userEvent.setup()
-  const { starts } = renderActions({
-    images: POST_IMAGES_FIXTURE,
-    observations: OBSERVATIONS_FIXTURE,
-  })
-  await press(user, '바로 글 쓰기')
-  await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
+// GEN-8: a run never opens the re-observation picker. It reuses every stored observation and
+// observes only what lacks one — the EMPTY selection, never an absent one.
+it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
+  'starts %s without the picker on an observed post',
+  async (name) => {
+    const user = userEvent.setup()
+    const { starts, storylineStarts } = renderActions({
+      images: POST_IMAGES_FIXTURE,
+      observations: OBSERVATIONS_FIXTURE,
+    })
+    await press(user, name)
 
-  await waitFor(() => expect(starts).toHaveLength(1))
-  expect(starts[0].reobserveFiles).toEqual([])
-})
-
-// 스토리라인 먼저 shares the picker and its reuse contract.
-it('routes 스토리라인 먼저 through the same picker', async () => {
-  const user = userEvent.setup()
-  const { storylineStarts } = renderActions({
-    images: POST_IMAGES_FIXTURE,
-    observations: OBSERVATIONS_FIXTURE,
-  })
-  await press(user, '스토리라인 먼저')
-  await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
-
-  await waitFor(() => expect(storylineStarts).toHaveLength(1))
-  expect(storylineStarts[0].reobserveFiles).toEqual([])
-})
+    const requests = name === '바로 글 쓰기' ? starts : storylineStarts
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
+    expect(requests[0].reobserveFiles).toEqual([])
+  },
+)
 
 it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
   'allows %s while a retained test result awaits review',
@@ -292,8 +282,6 @@ it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
     const result = screen.getByRole('link', { name: 'A/B 결과 확인' })
     expect(result).toHaveAttribute('href', '/tests/records/experiment-1?source=post')
     await press(user, name)
-    expect(beforeStart).not.toHaveBeenCalled()
-    await user.click(await screen.findByRole('button', { name: '이대로 시작' }))
     const requests = name === '바로 글 쓰기' ? starts : storylineStarts
     await waitFor(() => expect(requests).toHaveLength(1))
     expect(beforeStart).toHaveBeenCalledTimes(1)
@@ -301,7 +289,7 @@ it.each(['바로 글 쓰기', '스토리라인 먼저'] as const)(
   },
 )
 
-// GEN-8: nothing to reuse means no picker.
+// GEN-8: nothing to reuse starts directly too, with the same empty selection.
 it('starts directly when the post has photos but no stored observation', async () => {
   const user = userEvent.setup()
   const { starts } = renderActions({ images: POST_IMAGES_FIXTURE })
@@ -309,7 +297,7 @@ it('starts directly when the post has photos but no stored observation', async (
 
   await waitFor(() => expect(starts).toHaveLength(1))
   expect(screen.queryByRole('dialog', { name: '다시 관찰할 사진 선택' })).not.toBeInTheDocument()
-  expect(starts[0].reobserveFiles).toBeUndefined()
+  expect(starts[0].reobserveFiles).toEqual([])
 })
 
 // POST-108: a run with nothing attached asks once; cancelling saves and starts nothing, and

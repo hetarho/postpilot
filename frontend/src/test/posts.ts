@@ -115,6 +115,8 @@ export interface FakeDraftSave {
   templateAnswers: Array<{ label: string; text: string; enabled: boolean }>
   /** The storyline edit this save carried, undefined when absent (POST-96). */
   storyline?: Array<{ text: string; files: string[] }>
+  /** The observation corrections this save carried, undefined when none (POST-126). */
+  observationEdits?: Array<{ file: string; scene?: string; objects: string[]; events: string[] }>
   /** The campaign parts this save carried, each undefined when absent (POST-117–119). */
   campaign?: boolean
   advertiserGuide?: FakeAdvertiserGuide
@@ -712,6 +714,14 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
         text: paragraph.text,
         files: [...paragraph.files],
       })),
+      observationEdits: req.observationEdits.length
+        ? req.observationEdits.map((edit) => ({
+            file: edit.file,
+            scene: edit.scene,
+            objects: [...edit.objects],
+            events: [...edit.events],
+          }))
+        : undefined,
       campaign: req.campaign,
       advertiserGuide: req.advertiserGuide && {
         text: req.advertiserGuide.text,

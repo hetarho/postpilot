@@ -16,10 +16,12 @@ import {
 } from '@/test/editor'
 import {
   OBSERVATION_FIXTURE,
+  OBSERVATIONS_FIXTURE,
   POST_CONTENT_FIXTURE,
   POST_IMAGES_FIXTURE,
 } from '@/test/fixtures/postContent'
 import { FAKE_STORAGE_ORIGIN, finalizedPostRow } from '@/test/posts'
+import type { FakeGenerationStart } from '@/test/jobs'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
 
 afterEach(() => {
@@ -438,16 +440,17 @@ describe('the editor lifecycle steps', () => {
     await guideTo(user, GUIDE.review)
     const generateDock = await screen.findByLabelText('글 작업')
     expect(screen.getAllByLabelText('글 작업')).toHaveLength(1)
-    // ①'s 확인 ends on 이전 and 다음 to ②; the writing actions are ②'s (POST-123, POST-53).
+    // ①'s 확인 ends on 이전 and 관찰하기 while a photo lacks an observation; the writing actions
+    // are ②'s (POST-123, POST-53).
     expect(
       within(generateDock)
         .getAllByRole('button')
         .map((b) => b.textContent || b.getAttribute('aria-label')),
-    ).toEqual(['이전', '다음'])
+    ).toEqual(['이전', '관찰하기'])
     // Guide: the brief is a row of the 확인 summary the bar ends, not a glyph in the bar.
     expect(screen.getByRole('button', { name: '글쓰기 옵션' })).toBeInTheDocument()
 
-    await user.click(within(generateDock).getByRole('button', { name: '다음' }))
+    await openStep(user, '관찰')
     await waitFor(() =>
       expect(screen.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true'),
     )
@@ -457,12 +460,80 @@ describe('the editor lifecycle steps', () => {
     expect(within(observeDock).getByRole('button', { name: '스토리라인 먼저' })).toBeInTheDocument()
     expect(within(observeDock).getByRole('button', { name: '바로 글 쓰기' })).toBeInTheDocument()
     expect(within(observeDock).queryByRole('button', { name: '확정하기' })).not.toBeInTheDocument()
-    // The contact sheet moved off ①'s 사진 screen onto ② (POST-125).
+    // The contact sheet moved off ①'s 사진 screen onto ② (POST-125), its heading row carrying
+    // 다시 관찰하기.
     expect(screen.getByRole('heading', { name: '사진 관찰' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '다시 관찰하기' })).toBeInTheDocument()
 
     await openStep(user, '완성')
     expect(await screen.findByRole('button', { name: '기억으로 저장' })).toBeInTheDocument()
     expect(screen.queryByLabelText('글 작업')).not.toBeInTheDocument()
+  })
+
+  // POST-123: every attachment observed, ① 확인's big action is 다음 and moves without a call;
+  // with one lacking an observation it is 관찰하기, which starts the observation job with the
+  // EMPTY selection and carries the owner to ②.
+  it('reads 다음 on an observed post and 관찰하기 on one that lacks an observation', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const observationStarts: FakeGenerationStart[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: { posts: [{ ...reviewPost, status: 'draft', content: undefined }] },
+      jobs: { calls, observationStarts },
+      providers: {
+        models: [
+          { providerId: 'openrouter', modelId: 'seer', vision: true },
+          { providerId: 'openrouter', modelId: 'writer' },
+        ],
+        selections: [
+          { stage: Stage.OBSERVE, providerId: 'openrouter', modelId: 'seer' },
+          { stage: Stage.WRITE, providerId: 'openrouter', modelId: 'writer' },
+        ],
+      },
+    })
+
+    await guideTo(user, GUIDE.review)
+    const dock = await screen.findByLabelText('글 작업')
+    await user.click(await within(dock).findByRole('button', { name: '관찰하기' }))
+    await waitFor(() => expect(observationStarts).toHaveLength(1))
+    expect(observationStarts[0]).toMatchObject({
+      postSlug: '20260820-jeju',
+      observeModel: { providerId: 'openrouter', modelId: 'seer' },
+      reobserveFiles: [],
+    })
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true'),
+    )
+  })
+
+  it('moves with 다음 and no call once every photo is observed', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/posts/20260820-jeju', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            ...reviewPost,
+            status: 'draft',
+            content: undefined,
+            observations: OBSERVATIONS_FIXTURE,
+          },
+        ],
+      },
+      jobs: { calls },
+    })
+
+    await openStep(user, '생성')
+    await guideTo(user, GUIDE.review)
+    const dock = await screen.findByLabelText('글 작업')
+    expect(within(dock).queryByRole('button', { name: '관찰하기' })).not.toBeInTheDocument()
+    await user.click(within(dock).getByRole('button', { name: '다음' }))
+    await waitFor(() =>
+      expect(screen.getByRole('tab', { name: '관찰' })).toHaveAttribute('aria-selected', 'true'),
+    )
+    expect(calls).not.toContain('StartObservation')
   })
 
   // A step whose models were never chosen keeps its two actions: a press is what takes the user to

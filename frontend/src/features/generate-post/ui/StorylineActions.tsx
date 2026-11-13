@@ -29,19 +29,19 @@ import {
   Textarea,
   Typography,
 } from '@/shared/ui'
-import { needsPicker } from '../model/reobserve'
 import {
   isSetupBlocker,
   ordinaryGenerationPreconditions,
   type GenerationMode,
 } from '../model/preconditions'
 import { useGenerationSelections } from '../model/useBriefIssues'
-import { ReobservePicker } from './ReobservePicker'
 
 /** Mirrored from the backend like the revision instruction's: the field stops at the bound the
  *  server enforces (GEN-69). */
 const STORYLINE_REQUEST_MAX_CHARS = 500
 
+/** Reuse every stored observation; observe only what lacks one (GEN-8, GEN-89). */
+const NO_REOBSERVE: readonly string[] = []
 export interface StorylineActionsHandle {
   /** 다시 만들기 — also the retry of a failed storyline job ② owns. */
   remake: () => void
@@ -134,7 +134,6 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
     const revision = useStartStorylineRevision()
     const [preparing, setPreparing] = useState<'remake' | 'write' | 'send' | ''>('')
     const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
-    const [picking, setPicking] = useState(false)
     const [confirming, setConfirming] = useState<'remake' | 'write' | ''>('')
     const [request, setRequest] = useState('')
     // The request a started job carried, kept for its retry: the field is cleared once it starts.
@@ -200,13 +199,12 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
       }
     }
 
-    const enqueueRemake = (files?: readonly string[]) =>
-      void run('remake', () => storyline.start(post.slug, observeRef, writeSelection!.ref, files))
-
-    const proceedRemake = () => {
-      if (needsPicker(post.images, post.observations, post.videos)) setPicking(true)
-      else enqueueRemake()
-    }
+    // No picker on a run: every stored observation is reused and only an attachment still
+    // lacking one is observed — the EMPTY selection, never an absent one (GEN-8).
+    const proceedRemake = () =>
+      void run('remake', () =>
+        storyline.start(post.slug, observeRef, writeSelection!.ref, NO_REOBSERVE),
+      )
 
     const remake = () => {
       if (!ready()) return
@@ -217,7 +215,14 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
 
     const proceedWrite = () =>
       void run('write', () =>
-        generation.start(post.slug, observeRef, writeSelection!.ref, targetLength, undefined, true),
+        generation.start(
+          post.slug,
+          observeRef,
+          writeSelection!.ref,
+          targetLength,
+          NO_REOBSERVE,
+          true,
+        ),
       )
 
     const write = () => {
@@ -265,19 +270,6 @@ export const StorylineActionsProvider = forwardRef<StorylineActionsHandle, Story
     return (
       <StorylineActionsContext.Provider value={value}>
         {children}
-        <ReobservePicker
-          open={picking}
-          images={post.images}
-          videos={post.videos}
-          observations={post.observations}
-          observeModel={observeSelection?.ref}
-          pending={Boolean(preparing)}
-          onConfirm={(files) => {
-            setPicking(false)
-            enqueueRemake(files)
-          }}
-          onCancel={() => setPicking(false)}
-        />
         <Dialog
           open={confirming === 'remake'}
           title={t('storylineActions.remakeTitle')}

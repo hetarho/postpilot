@@ -5,6 +5,8 @@ import {
   AdvertiserGuideSchema,
   appFailureFromConnect,
   ChecklistTicksSchema,
+  ObservationEditSchema,
+  ObservationSchema,
   contentLanguageToProto,
   type ContentLanguage,
   type GetPostResponse,
@@ -37,7 +39,8 @@ export function applyingSavedDraft(
   {
     carriedStoryline = false,
     carriedCampaign = false,
-  }: { carriedStoryline?: boolean; carriedCampaign?: boolean } = {},
+    carriedObservations,
+  }: { carriedStoryline?: boolean; carriedCampaign?: boolean; carriedObservations?: boolean } = {},
 ): Post {
   if (!cached?.post) return saved
   const post = clone(PostSchema, cached.post)
@@ -71,6 +74,10 @@ export function applyingSavedDraft(
   // one a storyline job wrote while the save was out.
   if (carriedStoryline)
     post.storyline = saved.storyline ? clone(StorylineSchema, saved.storyline) : undefined
+  // The observations only from a save that carried a correction of them (POST-126), for the same
+  // reason: an observation job may have persisted a batch while an ordinary save was out.
+  if (carriedObservations)
+    post.observations = saved.observations.map((entry) => clone(ObservationSchema, entry))
   // The campaign parts only from a save that carried them (POST-117–119), for the same reason.
   if (carriedCampaign) {
     post.campaign = saved.campaign
@@ -103,6 +110,16 @@ export interface PostDraftSave {
   campaign?: boolean
   advertiserGuide?: AdvertiserGuide
   checklistTicks?: readonly string[]
+  /** The owner's observation corrections (POST-126), one per card that changed; each carries its
+   *  whole editable field set, and `events` only for a clip. */
+  observationEdits?: readonly {
+    file: string
+    scene: string
+    mood: string
+    visibleText: string
+    objects: readonly string[]
+    events?: readonly string[]
+  }[]
 }
 
 export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<string> } {
@@ -125,6 +142,7 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
         create(GetPostResponseSchema, {
           post: applyingSavedDraft(post, queryClient.getQueryData<GetPostResponse>(key), {
             carriedStoryline: Boolean(variables.storyline),
+            carriedObservations: (variables.observationEdits?.length ?? 0) > 0,
             carriedCampaign:
               variables.campaign !== undefined ||
               variables.advertiserGuide !== undefined ||
@@ -178,6 +196,18 @@ export function useSavePostDraft(): { save: (draft: PostDraftSave) => Promise<st
         checklistTicks: draft.checklistTicks
           ? create(ChecklistTicksSchema, { lines: [...draft.checklistTicks] })
           : undefined,
+        observationEdits: (draft.observationEdits ?? []).map((edit) =>
+          create(ObservationEditSchema, {
+            file: edit.file,
+            scene: edit.scene,
+            mood: edit.mood,
+            visibleText: edit.visibleText,
+            objects: [...edit.objects],
+            objectsSet: true,
+            events: [...(edit.events ?? [])],
+            eventsSet: edit.events !== undefined,
+          }),
+        ),
       })
       // A 200 carrying no post is not a confirmation. Taking it as one would mark the text
       // saved, and for a draft with no slug yet would leave the next edit creating a second post.

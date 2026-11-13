@@ -2,6 +2,7 @@ export { GenerationActions } from './ui/GenerationActions'
 export { GenerationOptions } from './ui/GenerationOptions'
 export type { RunOptionsForm } from './ui/GenerationOptions'
 export { ReobservePicker } from './ui/ReobservePicker'
+export { ObserveActions, ReobserveButton } from './ui/ObservationActions'
 export type { GenerationActionsHandle } from './ui/GenerationActions'
 export {
   StorylineActionBlocker,
@@ -10,7 +11,7 @@ export {
   StorylineRequestComposer,
   type StorylineActionsHandle,
 } from './ui/StorylineActions'
-export { needsPicker } from './model/reobserve'
+export { lacksObservation, needsPicker } from './model/reobserve'
 export {
   ordinaryGenerationPreconditions,
   comparisonGenerationPreconditions,
