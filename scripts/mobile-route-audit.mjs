@@ -134,14 +134,16 @@ async function geometry(page) {
         arrows: n.querySelectorAll('svg.lucide-arrow-left').length,
         radius: parseFloat(getComputedStyle(n).borderRadius),
       })),
+      actionBars: [...document.querySelectorAll("main [data-action-bar]")].filter(visible).length,
       directoryCards: [...document.querySelectorAll('main li.ui-card')].filter(visible).length,
       pointerCoarse: matchMedia("(pointer: coarse)").matches,
     };
   });
 }
 function checkReturns(g, width) {
+  assert.ok(g.actionBars <= 1, "A screen has at most one action dock")
   for (const control of g.returns) {
-    const floor = width < 768 ? 44 : 40
+    const floor = g.pointerCoarse ? 44 : 40
     assert.ok(control.width >= floor && control.height >= floor, `Return target ${control.name}`)
     assert.ok(control.name && control.title === control.name, 'Return names its destination and has a tooltip')
     assert.equal(control.text, '', 'Return uses its arrow glyph')
@@ -274,7 +276,9 @@ try {
               errors,
             };
             assert.ok(g.main);
+            assert.equal(g.theme, theme, "Requested theme is applied");
             checkReturns(g, width);
+            if (['/templates','/video-templates','/spoken-voices'].includes(r.concrete)) assert.ok(g.directoryCards > 0, 'Saved resources use shared directory cards');
             assert.equal(
               g.pointerCoarse,
               width < 768,
@@ -816,7 +820,7 @@ try {
           assert.ok(g.body.includes("결제 금액"));
         }
         if (c.kind === "draft")
-          assert.ok(basePath.startsWith('/clips') ? g.body.includes('어떤 영상을 만드시나요?') : g.firstInput, `Expected resumed draft on ${c.at}`);
+          assert.ok(basePath.startsWith('/clips') ? g.body.includes('어떤 영상을 만드시나요?') : g.body.includes('이대로 써 볼까요?'), `Expected resumed draft on ${c.at}`);
         if (c.kind === "working")
           assert.ok(
             g.body.includes(
@@ -835,7 +839,7 @@ try {
           );
         if (c.kind === "finalized") {
           const tab = page.getByRole("tab", {
-            name: basePath.startsWith("/clips") ? "완성" : "글 완성",
+            name: "완성",
             exact: true,
           });
           assert.equal(await tab.getAttribute("aria-selected"), "true");
@@ -923,7 +927,11 @@ try {
           receipt.continuity = { pass: true, before, measurements };
         }
         if (c.kind === 'clip-stage' && [390,1440].includes(c.width)) {
-          await page.screenshot({path: `${output}/clip-${c.state}-${c.width}-${theme}.png`, fullPage:true})
+          const shotContext = await contextFor(c.width,theme)
+          const shotPage = await shotContext.newPage()
+          await open(shotPage,c.at,c.state)
+          await shotPage.screenshot({path: `${output}/clip-${c.state}-${c.width}-${theme}.png`, fullPage:true})
+          await shotContext.close()
         }
         receipts.push(receipt);
         console.log(
