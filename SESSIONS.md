@@ -1,6 +1,11 @@
 # SESSIONS
 > Running sessions, their claims, the inbox and the log. Written by the gusta CLI on its own branch; never merged into a code branch.
 
+## active
+| tag | host | mode | since | at | doing | branch | commit |
+|---|---|---|---|---|---|---|---|
+| r114 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T07:41Z | 2026-11-13T07:41Z | T793 | main | 41fe245c8025 |
+
 ## unlanded
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
