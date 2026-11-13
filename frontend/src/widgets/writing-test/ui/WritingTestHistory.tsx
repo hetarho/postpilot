@@ -138,7 +138,7 @@ function OwnedHistory({
             {t('historyEmpty')}
           </Typography>
         )}
-        <ol className="mt-4 grid gap-0">
+        <ol className="divide-divider mt-4 grid gap-0 divide-y">
           {tests.map((test) => (
             <TestRecord
               key={test.id}
@@ -207,7 +207,7 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
     (!!test.contentExpiresAt && Date.parse(test.contentExpiresAt) <= observedAt) ||
     (test.status === 'completed' && test.candidates.every((candidate) => !candidate.output))
   return (
-    <li className="border-divider grid min-w-0 gap-4 border-b py-5 sm:grid-cols-[minmax(0,1fr)_auto]">
+    <li className="grid min-w-0 gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
         <Typography variant="fieldTitle" as="h3" className="break-words">
           {kind} · {t(`formatLabel.${test.count}`)}
@@ -312,11 +312,11 @@ function LegacyRecords({
           {t('historyEmpty')}
         </Typography>
       )}
-      <ol className="mt-4 grid gap-0">
+      <ol className="divide-divider mt-4 grid gap-0 divide-y">
         {experiments.map((experiment) => (
           <li
             key={experiment.id}
-            className="border-divider grid min-w-0 gap-3 border-b py-5 sm:grid-cols-[minmax(0,1fr)_auto]"
+            className="grid min-w-0 gap-3 py-5 sm:grid-cols-[minmax(0,1fr)_auto]"
           >
             <div className="min-w-0">
               <Typography variant="fieldTitle" as="h3">
@@ -402,11 +402,11 @@ function LegacyVoiceChecks({ ownerId, voiceId }: { ownerId: string; voiceId: str
           {t('historyEmpty')}
         </Typography>
       )}
-      <ol className="mt-4 grid gap-0">
+      <ol className="divide-divider mt-4 grid gap-0 divide-y">
         {query.checks
           .toSorted((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
           .map((check) => (
-            <li key={check.id} className="border-divider min-w-0 border-b py-5">
+            <li key={check.id} className="min-w-0 py-5">
               {check.prompt?.text && (
                 <Typography variant="fieldTitle" as="h3">
                   {check.prompt.text}

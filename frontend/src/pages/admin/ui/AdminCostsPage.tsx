@@ -7,7 +7,15 @@ import {
 } from '@/entities/model-experiment'
 import { useExchangeRate } from '@/entities/plan'
 import { formatNumber } from '@/shared/lib'
-import { Badge, Button, Notice, SegmentedControl, Typography, typographyStyles } from '@/shared/ui'
+import {
+  cardStyles,
+  Badge,
+  Button,
+  Notice,
+  SegmentedControl,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 
 /** The 비용·환율 tab of `/admin`: the operating figures customer screens never show, master
  *  included (QUOTA-65, QUOTA-68). Each figure is its own titled section, so the comparison cost
@@ -81,7 +89,7 @@ function ComparisonCostsSection() {
         </Typography>
       )}
       {!isError && !isPending && rows.length > 0 && (
-        <ol className="divide-divider border-divider divide-y rounded-md border px-4">
+        <ol className={cardStyles({ padding: 'none', className: 'divide-divider divide-y px-4' })}>
           {rows.map((row) => (
             <li
               key={`${row.model.providerId}/${row.model.modelId}`}
@@ -166,7 +174,12 @@ function ExchangeRateSection() {
       )}
       {!isError && rate && (
         <>
-          <dl className="bg-surface-raised grid gap-x-6 gap-y-3 rounded-md p-4 sm:grid-cols-2">
+          <dl
+            className={cardStyles({
+              padding: 'sm',
+              className: 'grid gap-x-6 gap-y-3 sm:grid-cols-2',
+            })}
+          >
             {(
               [
                 ['source', rate.source],

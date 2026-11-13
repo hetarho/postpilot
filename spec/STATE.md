@@ -92,7 +92,6 @@
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
-| T822 | Align remaining operational card and row surfaces | ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -100,4 +99,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795 T817 T819
+- gusta-implement-task T795 T816 T817

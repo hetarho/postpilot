@@ -235,7 +235,7 @@ export function ExportPanel({
               <Typography
                 variant="label"
                 as="p"
-                className="border-divider text-content-secondary mt-3 rounded-md border border-dashed p-4"
+                className="bg-card-well text-content-secondary mt-3 rounded-lg p-4"
               >
                 {t('export.disclosurePlaceholder')}
               </Typography>

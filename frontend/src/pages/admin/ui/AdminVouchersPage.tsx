@@ -3,7 +3,7 @@ import { CopyGiftLink, useVouchers, type Voucher, type VoucherState } from '@/en
 import { IssueVoucherForm } from '@/features/issue-voucher'
 import { RevokeVoucherButton } from '@/features/revoke-voucher'
 import { formatDate } from '@/shared/lib'
-import { Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
+import { cardStyles, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
 
 const STATE_TONE = {
   redeemable: 'accent',
@@ -65,7 +65,12 @@ function VoucherRow({ voucher }: { voucher: Voucher }) {
   const { t } = useTranslation('plans')
 
   return (
-    <li className="bg-surface-raised grid gap-3 rounded-md p-4 md:grid-cols-[1fr_auto] md:items-start">
+    <li
+      className={cardStyles({
+        padding: 'sm',
+        className: 'grid gap-3 md:grid-cols-[1fr_auto] md:items-start',
+      })}
+    >
       <div className="grid min-w-0 gap-1">
         <div className="flex flex-wrap items-center gap-2">
           <Typography variant="label" as="p" className="text-content-primary">

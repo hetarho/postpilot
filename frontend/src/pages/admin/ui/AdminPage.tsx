@@ -4,7 +4,7 @@ import { useSession } from '@/entities/session'
 import { UserPlanSelect } from '@/features/manage-users'
 import { RefundReviewSection } from '@/features/review-refunds'
 import { formatDate } from '@/shared/lib'
-import { Notice, Typography } from '@/shared/ui'
+import { cardStyles, Notice, Typography } from '@/shared/ui'
 
 /** The operator's account list (QUOTA-25), now the 계정 관리 tab of `/admin`. Composition only:
  *  the tier control is its own feature, and every refusal is the server's — this tab is reachable
@@ -46,7 +46,7 @@ export function AdminPage() {
           {accounts.map((account) => (
             // A row per account rather than a table: at 320px a three-column table would either
             // scroll sideways or crush the id, and each row is one unit anyway (THEME-13).
-            <li key={account.id} className="bg-surface-raised rounded-md p-4">
+            <li key={account.id} className={cardStyles({ padding: 'sm' })}>
               <div className="flex items-baseline justify-between gap-3">
                 <Typography variant="label" mono className="text-content-primary min-w-0 break-all">
                   {account.id}
