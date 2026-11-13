@@ -1,20 +1,28 @@
-# Task and pre-push verification
+# Task, batch and CI verification
 
-The policy is [ARCH-24 and ARCH-31](../spec/ssot/ARCH.md). Task completion and pushing have different verification scopes. Complete and commit one task on `main` before starting the next; installed implementation skills use these stages when selecting their verification commands.
+The project commands and qualification constraints are [ARCH-24 and ARCH-31](../spec/ssot/ARCH.md). Execution, workspace ownership, review, commits and publication follow the installed Gusta skills and `spec/SETTINGS.md`.
 
 ## Complete a task
 
-Run the tests added or modified by the task and existing tests for plausible side effects. Select against the task's complete delta from its recorded starting revision, including intermediate commits, deleted files and working-tree changes. Record the commands and selection rationale in the task result.
+Reuse existing behavioral coverage and add or change tests only for a real gap. Task acceptance names affected unit tests and applicable fast static checks. Run these once just before commit through `vibe check --tier task`, reusing still-valid evidence. Do not count an empty selection as behavioral verification.
 
-Include FE consumers, shared harnesses and relevant user flows; include BE packages, reverse dependencies, adapters and composition wiring. Shared contracts, migrations, authentication and media changes require their corresponding integration regressions. If the impact cannot be bounded, expand to the affected full suite. No selected tests is not a passing behavioral check.
+Assess the complete task delta against its recorded starting revision, including intermediate commits, deleted files and working-tree changes. Include FE consumers and shared harnesses, and BE reverse dependencies, adapters and composition wiring. Import-based selection is an aid; it does not prove complete impact coverage.
 
-Vitest can select affected tests with `--changed` against the recorded task-start SHA, or `related --run` against source paths relative to `frontend/`. Import-based selection needs an explicit check for effects outside the import graph. Do not switch the baseline to the latest intermediate commit. Go tests select packages and, where the full package is expensive, explicit test names covering the changed behavior and its consumers.
+Vitest can select related unit tests with `--changed` against the task-start SHA or `related --run` against source paths relative to `frontend/`. Select Go packages and test cases for the changed isolated behavior. Inspect actual dependencies before classifying tests: SQLite/process/transport/browser integration tests stay at the coordinator's batch gate, regardless of their filename.
 
-Acceptance and relevant lint, formatting and build/type checks must also pass before the task's `main` commit. The pre-push gate runs for the final push candidate. A final wiring/qualification task still runs every check required by its own acceptance.
+Use applicable static checks expected under a minute. Frontend commands are `pnpm --filter ./frontend lint`, `pnpm --filter ./frontend format:check` and `pnpm --filter ./frontend exec tsc --noEmit -p tsconfig.app.json`; select the affected fast formatter/type checks for other paths. The batch gate still runs the complete checks listed below.
 
-## Before push: full CI
+Maintain the matching integration/e2e tests in the implementation, and hand their exact commands, test paths, input revision and any extra consumer coverage to the coordinator in result limits. An unbounded impact expands the batch selection to the affected full suite. Record the unit/static commands, actual evidence, selection rationale and unrun coverage in the task result. Task completion covers implementation, affected-unit verification and the handoff; it does not certify the later batch gate.
 
-Run once for the final push candidate, from the repository root, with the Node version in `.node-version`, Go from `backend/go.mod`, installed lockfile dependencies and Docker available. These are the checks in `.github/workflows/ci.yml`; changes to that workflow require updating this list.
+## Coordinator-owned final gate
+
+The initiating Gusta coordinator runs builds, integration/e2e and full suites once on the synchronized committed implementation candidate before landing or whole-work completion, including when committing only. Implementation/review units hand off these checks; a unit or session ending does not start another full gate. Real supplier, human, hardware and live-deployment qualification remains an explicit activation or delivery condition.
+
+Apply Gusta's cache, process cleanup and cumulative gate limits. Reuse each still-valid successful check; after a targeted repair run failed, affected or unrun checks. Reuse depends on actual consumed inputs, command, environment and scope, including transitive scripts/configuration/dependencies. A docs-only merge is not sufficient proof by itself. Optional named verification plans may store separate check receipts; do not infer a narrower input set from a script name. Stop writes to the candidate while checking, and invalidate evidence when its inputs change.
+
+## Batch: full CI-equivalent coverage
+
+The coordinator runs this coverage for the final implementation candidate, from the repository root, with the Node version in `.node-version`, Go from `backend/go.mod`, installed lockfile dependencies and Docker available. These are the checks in `.github/workflows/ci.yml`; changes to that workflow require updating this list.
 
 ```sh
 (
@@ -44,7 +52,7 @@ python3 -m venv /tmp/postpilot-deploy-checks
 
 Each command must succeed before proceeding. Successful unchanged checks can be reused within this verification; changes to source, configuration, generated files or dependencies invalidate the affected checks. The evidence must describe the final candidate. This document is a runbook, not an installed Git hook or a command runner.
 
-## Before a backend/media push: deployment and media parity
+## Conditional batch: deployment and media parity
 
 Check the actual push diff against `Deploy backend`'s `paths` filter, not just the last task's files. A backend deployment triggers `Verify media` for the successfully deployed revision. Changes to media/workflow definitions also require validating their affected gates, even when their path alone does not trigger deployment.
 

@@ -2,7 +2,7 @@
 
 The research and thirteen-domain policy conversion were committed as `536f5fdb`. This plan consumes those deltas into T632–T646. Behavior remains defined by SSOT; transport and persistence formats are implemented in their owning domain/proto/schema code.
 
-The current execution policy is ARCH-70: one dependency-ready task in the existing main checkout, completed, verified and committed before the next task. The graph expresses prerequisites, not parallel worker assignments.
+Current execution follows the installed Gusta skills, SETTINGS and ARCH-70; the graph below preserves the planning dependencies.
 
 ## Tasks and results
 
@@ -71,7 +71,7 @@ flowchart TD
 
 T622–T631 already own navigation, durable authoring, accepted voice versions, frozen writing-test inputs, tournaments and target-domain publication. This conversion creates follow-up features instead of repeating those acceptance contracts. T632 consumes the completed T622/T624/T625 seams; T635 uses the existing dispatch path. Together they are the first safe foundation batch after the current T623 session releases main. T633 keeps the full runtime gate, T638 retains T626/T630 factories, T641 retains T628 private tournaments, and final T646 retains T631. Verify archived dependency tasks and actual main code rather than treating a CLI status as completion.
 
-Use ARCH@20 and complete one dependency-ready task at a time on main. Current STATE, task completion records and referenced SSOT govern execution. Existing UX requirements and the new semantic-origin tasks retain their declared dependencies.
+Use the current ARCH, installed Gusta workflow and SETTINGS. Current STATE, task completion records and referenced SSOT govern execution; the recorded UX and semantic-origin dependencies remain historical evidence.
 
 Only the thirteen prompt-engineering domain deltas are consumed here. ARCH's verification/workflow bookkeeping is handled by its separate policy update; the older INFRA/browser-media plan retains its own scope. No new implementation, deployment, provider call or private live input access is performed by this decomposition.
 

@@ -1,6 +1,6 @@
 # Creation and comparison UX implementation
 
-Implement one dependency-ready task at a time in the existing `main` checkout. [STATE](../../spec/STATE.md) records progress; each task's referenced SSOT decisions govern behavior. The planning source is [creation-and-comparison-ux](../../spec/ideation/creation-and-comparison-ux.md). Final navigation arrangement, history naming/placement and visual dimensions remain open under THEME-61.
+Execution follows the installed Gusta skills, `spec/SETTINGS.md` and ARCH-70. [STATE](../../spec/STATE.md) records progress; each task's referenced SSOT decisions govern behavior. The planning source is [creation-and-comparison-ux](../../spec/ideation/creation-and-comparison-ux.md). Final navigation arrangement, history naming/placement and visual dimensions remain open under THEME-61.
 
 T622's shared contracts and the T624/T625/T629 implementation are present on `main`. Complete the remaining tasks in this dependency-compatible order:
 
@@ -13,7 +13,7 @@ T622's shared contracts and the T624/T625/T629 implementation are present on `ma
 | T628 | Durable human tournaments, metering, cancellation, publication receipts and retention | T622 T624 T625 T626 T627 T630 |
 | T631 | Complete UX wiring and qualify creation settings and sixteen-entry tests | T622 T623 T624 T625 T626 T627 T628 T629 T630 |
 
-Read STATE and the selected task before implementation. Confirm its prerequisites are complete on `main`, record the start, implement its stated scope and preserve unrelated changes. Run its acceptance and ARCH-24 checks, record commands and selection rationale, complete its task/STATE records and commit on `main` before proceeding.
+Read STATE, current SSOT and the selected task; use Gusta for claims, workspace ownership, task closure and publication. Run affected-unit and fast static checks under ARCH-24 and hand off exact integration/e2e/full-suite coverage to the initiating coordinator under ARCH-31. Preserve unrelated changes and all actual milestone evidence conditions.
 
 Use the published T622 contracts and completed prerequisite behavior. T625 supplies shared authoring; T626 supplies accepted voice/material/candidate behavior; T630 supplies template/guideline/provider validation and publication; T627 supplies generation plans; T628 supplies tournament jobs, usage and receipts. T623 registers navigation/routes, and T631 completes the required adapters, RPC registration, global resources and root exports. Preserve existing media behavior where clip UI code is shared.
 

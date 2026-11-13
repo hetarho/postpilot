@@ -48,7 +48,7 @@ Wire shape, annotation representation, phrase alignment, storage/indexes, exact 
 
 ## Existing work and freshness
 
-Development continues on main, one dependency-ready task at a time, under ARCH-70. Read STATE, the selected task and current SSOT before implementation; complete its acceptance, verification, result and main commit before proceeding.
+Current execution follows the installed Gusta skills, SETTINGS and ARCH-70. Read STATE, the selected task and current SSOT; implementation units perform ARCH-24 checks and hand off ARCH-31 batch coverage to the initiating coordinator.
 
 T622/T624/T625/T629 provide the existing shared contracts, creation/history, authoring and test presentation. Their implementation and prior checks do not establish this newer semantic-origin contract. Baseline consistency, local-edit revision fencing and saved-target draft recovery are corrected during the main merge and remain pinned by regressions.
 

@@ -1,13 +1,16 @@
-# Task workflow
+# Provider preference
 
-The installed gusta skills govern the workflow. Plan with `/gusta-sketch`, or pass a change request to `/gusta-start`, which records it in the SSOT and tasks and then implements them unattended; without one, `/gusta-start` runs the tasks already planned. It has no mode to choose and commits per unit. The branch finished work lands on and whether it is pushed follow `spec/SETTINGS.md`. Work in the existing `main` checkout; preserve unrelated local changes and keep them outside each unit's commit. Package-managed skill files remain unchanged.
+For each user-invoked Gusta run, prefer the invoking conversation's provider for implementation and the other allowed provider for independent review. Keep both Codex and Claude allowed for usage-limit fallback.
 
-The package FORMAT is `.claude/skills/gusta-create-architecture/assets/FORMAT.md` (`npx @haeram/gusta vibe format --section <name>` prints an excerpt); `spec/FORMAT.md` modifies it (chg keeps only unconsumed revs, a removed feature's decisions are deleted rather than marked [x]). Read notation from the needed sections of `spec/FORMAT.md`; it wins wherever the two differ.
+Before dispatch, put the invoking provider first in SETTINGS `agents` through `vibe settings --set`; prefer it when planning task `run:` recommendations. Leave provider-pinning flags unset so cross-provider fallback remains available. Existing explicit task `run:` recommendations take precedence in the CLI; report actual routing when that prevents the calling-provider preference instead of claiming automatic caller detection.
 
-# Verification
+<!-- gusta:begin managed by gusta: do not edit inside this block (gusta-update rewrites it with "gusta agent-block"); write project rules outside it -->
+## GUSTA
 
-Verification commands come from `spec/ssot/ARCH.md`: ARCH-24 for task completion and ARCH-31 for what a push requires. Runnable commands are in `docs/verification.md`.
+This project is built spec-first with GUSTA. `spec/` is the source of truth and code follows it.
 
-- Task completion: run the tests added or modified by the task plus existing tests for plausible side effects, and the relevant lint, formatting and build/type checks. Assess the entire task delta and affected consumers; expand to the affected full suite when the impact cannot be bounded. Record the commands and selection rationale in the task result. An empty test selection does not verify a behavioral change.
-- Before each push: run the full CI checks and, when the push can trigger `Deploy backend` or `Verify media`, the deployment/media checks. Evidence from an unchanged source, configuration and dependency tree is reused (`vibe check`), so a push that adds only spec documents does not rerun them.
-- A local pass does not establish remote deployment success. After each push inspect every triggered workflow for the pushed revision and use its failing job, step and error to diagnose a failure.
+- Plan a change with the `gusta-sketch` skill; run planned work or a one-line change request with the `gusta-start` skill.
+- Do not change behavior covered by a `spec/ssot/` decision without updating the spec first.
+- Branch, push, deploy and version behavior comes from `spec/SETTINGS.md` (the `gusta-preference` skill); never assume branch names.
+
+<!-- gusta:end -->
