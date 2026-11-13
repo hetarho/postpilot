@@ -172,6 +172,7 @@
 | T809 | dsui | task/design-system-audit-serial | d8dad5d8c0dc | 2026-11-13T16:43Z |
 
 ## log
+- 261113 fix shared-ui: merge caller classes and expose card padding for concrete card/row/media migrations;9 existing primitive tests and scoped ESLint passed
 - 261113 T809 done
 - 261113 T801 done
 - 261113 T800 done
@@ -191,4 +192,3 @@
 - 261113 gusta-update-ssot THEME r43: contextual loading; gusta-create-task THEME start
 - 261113 gusta-update-ssot THEME start: replace flashing page loading copy with contextual skeletons and indicators
 - 261113 gusta-update complete: 0.17.1; auto version and managed instructions enabled; caller-provider preference, independent review and fallback; ARCH r24/DUB r4 policy-only deltas consumed; 23 Git-proven chg records restored
-- 261113 gusta-update-ssot DUB start: align DUB-27 per-task build obligation with approved ARCH task/batch ownership; live voice gates unchanged
