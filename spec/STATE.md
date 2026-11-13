@@ -173,7 +173,7 @@
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 43 | 43 | - | 2 |
+| THEME | 44 | 44 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
 | CLIP | 77 | 77 | - | 2 |
@@ -226,13 +226,28 @@
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
 
+| T803 | Unify route and step return controls | ARCH THEME | - | todo |
+| T804 | Provide shared controls for actionable content | ARCH THEME | T803 | todo |
+| T805 | Replace remaining text route returns | ARCH THEME | T804 | todo |
+| T806 | Unify previous actions in authoring and comparison flows | ARCH THEME | T805 | todo |
+| T807 | Align post and video template workspace headers | ARCH THEME | T806 | todo |
+| T808 | Modernize both template directories and draft entries | ARCH THEME | T804 | todo |
+| T809 | Align the remaining style resource directories | ARCH THEME | T808 | todo |
+| T810 | Migrate actionable resource rows and cards | ARCH THEME | T809 | todo |
+| T811 | Align video preparation with the writing guide | ARCH THEME | T804 | todo |
+| T812 | Align video observation through completion | ARCH THEME | T811 | todo |
+| T813 | Use shared media and radio controls in video editors | ARCH THEME | T812 | todo |
+| T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
+| T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
+| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
+
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795; then T796–T802 for contextual page loading
+- This request: T803–T816; T795–T802 remain with the independent contextual-loading run.
 
 ## log
 - 261113 T792 regression repair planned from the unchanged CLIP-235 contract; main publication waits for the final CI/deployment/media gate.
