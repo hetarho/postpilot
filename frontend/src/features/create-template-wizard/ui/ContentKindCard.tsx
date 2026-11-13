@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Image as ImageIcon, NotebookPen, Sparkles } from 'lucide-react'
 import { AnswerChip, PreviewLines, type SectionContent } from '@/entities/template'
-import { Typography } from '@/shared/ui'
+import { RadioTile, Typography, cardStyles, radioTiles } from '@/shared/ui'
 import type { SectionDraft } from '../model/wizard-machine'
 
 const KINDS = ['write', 'ask', 'literal'] as const satisfies readonly SectionContent[]
@@ -22,8 +22,8 @@ const KIND_HELP = {
  *  and the card below them changes with the choice. It draws this section at the two moments an
  *  owner who does not know the workflow cannot picture — 글 쓸 때, what the post's author meets on
  *  ①, and 완성된 글, what the post shows — from the section's own heading, question and text, and
- *  then holds what the chosen kind asks the owner for. Native radios sharing one name give the
- *  arrow keys for free; the chosen kind's plain sentence describes the group. */
+ *  then holds what the chosen kind asks the owner for. Shared radio tiles preserve one roving tab stop and
+ *  arrow-key choice; the chosen kind's plain sentence describes the group. */
 export function ContentKindCard({
   section,
   onChange,
@@ -37,6 +37,7 @@ export function ContentKindCard({
   const { t } = useTranslation('templates')
   const id = useId()
   const kind = section.content
+  const choices = radioTiles(KINDS.length, KINDS.indexOf(kind), (index) => onChange(KINDS[index]))
   return (
     <fieldset className="min-w-0" aria-describedby={`${id}-help`}>
       <legend>
@@ -44,29 +45,31 @@ export function ContentKindCard({
           {t('wizard.section.content')}
         </Typography>
       </legend>
-      <div className="bg-surface-raised border-divider mt-2 min-w-0 rounded-xl border p-3 sm:p-4">
-        <div className="grid grid-cols-3 gap-2">
-          {KINDS.map((option) => (
-            <label
+      <div className={cardStyles({ padding: 'sm', className: 'mt-2 min-w-0' })}>
+        <div
+          {...choices.group}
+          aria-label={t('wizard.section.content')}
+          className="grid grid-cols-3 gap-2"
+        >
+          {KINDS.map((option, index) => (
+            <RadioTile
+              value={option}
               key={option}
-              className="group border-divider has-[:checked]:border-stroke-accent has-[:checked]:bg-badge-accent-bg has-[:checked]:text-badge-accent-fg has-[:focus-visible]:outline-focus-ring duration-base ease-standard flex min-h-11 min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-2 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2"
+              {...choices.tile(index, 'items-center justify-center gap-2')}
+              aria-describedby={`${id}-help`}
             >
-              <input
-                type="radio"
-                name={`${id}-content`}
-                value={option}
-                checked={kind === option}
-                onChange={() => onChange(option)}
-                className="accent-button-cta-bg size-4 shrink-0 focus-visible:outline-none"
-              />
               <Typography
                 variant="label"
                 as="span"
-                className="group-has-[:checked]:text-badge-accent-fg min-w-0"
+                className={
+                  option === kind
+                    ? 'text-content-primary min-w-0 text-center'
+                    : 'min-w-0 text-center'
+                }
               >
                 {t(`wizard.section.${KIND_LABEL[option]}`)}
               </Typography>
-            </label>
+            </RadioTile>
           ))}
         </div>
         <span id={`${id}-help`} className="sr-only">
@@ -91,7 +94,7 @@ export function ContentKindCard({
 
 function Moment({ caption, children }: { caption: string; children: ReactNode }) {
   return (
-    <span className="bg-surface-base border-divider flex min-w-0 flex-col gap-2 rounded-lg border p-2.5">
+    <span className="bg-card-well flex min-w-0 flex-col gap-2 rounded-lg p-3">
       <Typography variant="eyebrow" as="span">
         {caption}
       </Typography>
@@ -109,7 +112,7 @@ function Writing({ kind, section }: { kind: SectionContent; section: SectionDraf
         <Typography variant="meta" as="span" className="text-content-secondary truncate">
           {section.question.trim() || section.name}
         </Typography>
-        <span className="border-stroke-accent bg-surface-raised flex items-center gap-1 rounded-md border px-2 py-1.5">
+        <span className="bg-field-bg flex min-w-0 items-center gap-1 rounded-md px-3 py-2">
           <span className="bg-button-cta-bg h-3 w-px shrink-0" />
           <Typography variant="meta" as="span" className="truncate">
             {t('wizard.section.kinds.askField')}

@@ -92,7 +92,6 @@
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
-| T821 | Align template example and choice surfaces | ARCH | - | todo |
 | T822 | Align remaining operational card and row surfaces | ARCH | - | todo |
 
 ## work

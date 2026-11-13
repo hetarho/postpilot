@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { twMerge } from '@/shared/lib'
 import { Image as ImageIcon, Repeat2, Sparkles } from 'lucide-react'
-import { Typography } from '@/shared/ui'
+import { Typography, cardStyles } from '@/shared/ui'
 
 /** The stand-ins a template preview draws a post from (TMPL-66): each keeps what is fixed and
  *  what the AI writes visibly apart, and none is larger than the text around it, so the card
@@ -24,7 +24,7 @@ export function PreviewPostCard({
   return (
     <div
       className={twMerge(
-        'bg-surface-raised border-divider mx-auto w-full max-w-sm min-w-0 rounded-2xl border px-4 py-5',
+        cardStyles({ padding: 'sm', className: 'mx-auto w-full max-w-sm min-w-0 py-5' }),
         className,
       )}
     >
@@ -141,7 +141,7 @@ export function RepeatStandIn({ children }: { children: ReactNode }) {
   return (
     <section
       aria-label={t('preview.repeat')}
-      className="border-stroke-accent space-y-4 border-l-2 pl-3"
+      className="bg-card-well min-w-0 space-y-4 rounded-lg p-3"
     >
       <Typography variant="meta" as="p" className="flex items-center gap-1.5">
         <Repeat2 aria-hidden className="size-3.5" />
