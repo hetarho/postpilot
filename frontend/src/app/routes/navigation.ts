@@ -180,7 +180,8 @@ function structuralLocation(
             current: path === root + '/new' ? add : item,
             ancestors: [
               {
-                href: root === '/video-templates' ? `${root}?channel=${channel}` : root,
+                href:
+                  root === '/video-templates' ? `${root}?channel=${channel ?? 'naver_clip'}` : root,
                 key: directory,
               },
             ],

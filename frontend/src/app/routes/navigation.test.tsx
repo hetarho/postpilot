@@ -299,3 +299,13 @@ it('keeps the My work hub nodes, chip scroll and selected section through every 
     expect(readNavigationEntry('alice', path)).toBeUndefined()
   }
 })
+
+it.each(['/video-templates/new', '/video-templates/saved'])(
+  'keeps a valid default or explicit channel in the return from %s',
+  (path) => {
+    expect(routeLocation(path).ancestors.at(-1)?.href).toBe('/video-templates?channel=naver_clip')
+    expect(routeLocation(path, 'instagram_clip').ancestors.at(-1)?.href).toBe(
+      '/video-templates?channel=instagram_clip',
+    )
+  },
+)
