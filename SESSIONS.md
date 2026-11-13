@@ -154,6 +154,7 @@
 | T794 | r115 | main | 8c310798a25e | 2026-11-13T08:20Z |
 
 ## log
+- 261113 gusta-update-ssot THEME start: replace flashing page loading copy with contextual skeletons and indicators
 - 261113 gusta-update complete: 0.17.1; auto version and managed instructions enabled; caller-provider preference, independent review and fallback; ARCH r24/DUB r4 policy-only deltas consumed; 23 Git-proven chg records restored
 - 261113 gusta-update-ssot DUB start: align DUB-27 per-task build obligation with approved ARCH task/batch ownership; live voice gates unchanged
 - 261113 gusta-create-task ARCH r24 no-op: framework policy, settings and documentation only; no application code delta; blocked qualification conditions retained
@@ -173,4 +174,3 @@
 - 261113 T776 done
 - 261113 T775 done
 - 261113 T783 done
-- 261113 sketch storyline-separate-state done: option A (storyline as its own step, short station names, 스토리라인 작성 완료 post badge) plus a separate owner-editable observation step for posts and clips; B (end of the 생성 guide), C (two faces inside 다듬기) and D (side-by-side workbench) not taken; no ideation left open
