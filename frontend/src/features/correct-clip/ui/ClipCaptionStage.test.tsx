@@ -442,7 +442,7 @@ it('retains the manually checked style after closing and reopening the caption s
       .querySelector<HTMLButtonElement>('[data-style="film"]')!
   await userEvent.click(film())
   expect(film()).toHaveAttribute('aria-checked', 'true')
-  await userEvent.click(screen.getByRole('button', { name: '닫기', exact: true }))
+  await userEvent.click(screen.getByRole('button', { name: '닫기' }))
   await userEvent.click(screen.getByRole('button', { name: 'Open caption' }))
   expect(film()).toHaveAttribute('aria-checked', 'true')
 })
