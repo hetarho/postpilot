@@ -212,6 +212,7 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
+| T792 | Preserve corrected legacy clip observations through recovery | CLIP ARCH | T789 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -224,10 +225,10 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- no runnable task: resolve blocked, parked or deps
-- inspect work board for remaining tasks
+- gusta-implement-task T792
 
 ## log
+- 261113 T792 regression repair planned from the unchanged CLIP-235 contract; main publication waits for the final CI/deployment/media gate.
 - 261113 T791 done
 - 261113 T790 done
 - 261113 T789 done
