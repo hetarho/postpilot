@@ -314,7 +314,6 @@ export const appFailureSpecs = {
   POST_STORYLINE_MISSING: {},
   POST_STORYLINE_FILE_UNKNOWN: { required: ['file'] },
   POST_STORYLINE_INVALID: { optional: ['max'] },
-  GENERATION_STORYLINE_REOBSERVE: {},
   CLIP_UPLOAD_TEXT_LIMIT: { required: ['max', 'tags'] },
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED: {},
   CLIP_PUBLISHED_URL_INVALID: {},

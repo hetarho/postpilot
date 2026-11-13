@@ -321,8 +321,6 @@ export const errors = {
   ADVERTISER_GUIDE_ITEM_INVALID: 'Check the advertiser guide items: one is empty or out of range.',
   POST_STORYLINE_FILE_UNKNOWN: '{{file}} cannot go in this storyline. Make the storyline again.',
   POST_STORYLINE_INVALID: 'Could not save the storyline. Refresh and edit it again.',
-  GENERATION_STORYLINE_REOBSERVE:
-    'Writing from the storyline takes no photo re-observation choice.',
   CLIP_UPLOAD_TEXT_LIMIT:
     'Upload text allows {{max}} characters and {{tags}} tags, including required advertiser tags.',
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED: 'You edited this text. Confirm before writing over it.',

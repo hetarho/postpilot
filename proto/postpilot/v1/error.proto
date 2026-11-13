@@ -52,6 +52,10 @@ enum FailureReason {
   // refunds are requested and operator-reviewed (BILL-11) and packs are fixed KRW (BILL-2).
   reserved 161, 162, 163, 166;
   reserved "PURCHASE_NOT_FOUND", "PURCHASE_SPENT", "PURCHASE_TOO_SMALL", "REFUND_WINDOW_CLOSED";
+  // Explicit observation jobs own reobservation since T783 (GEN-8, GEN-89).
+  // Storyline and writing runs reuse observations and no longer emit this refusal.
+  reserved 255;
+  reserved "GENERATION_STORYLINE_REOBSERVE";
   AUTH_REQUIRED = 1;
   BILLING_SELECTION_INVALID = 2;
   BILLING_UNAVAILABLE = 3;
@@ -295,9 +299,6 @@ enum FailureReason {
   // A storyline edit changes the paragraph count, puts a file in two paragraphs, or carries a
   // paragraph past the text ceiling (POST-96). params: max, when it is the ceiling.
   POST_STORYLINE_INVALID = 254;
-  // StartGeneration asked to write along the storyline and sent a reobserve selection beside
-  // it; a storyline run observes exactly what the storyline holds (GEN-70).
-  GENERATION_STORYLINE_REOBSERVE = 255;
   // CLIP-178: 이 스토리로 만들기, a storyline request or an edit on a clip with no storyline.
   CLIP_STORYLINE_MISSING = 256;
   // CLIP-178: an owner storyline edit that does not keep its shape.

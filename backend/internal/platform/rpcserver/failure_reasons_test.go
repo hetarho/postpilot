@@ -114,6 +114,14 @@ func TestRetiredPurchaseRefundFailureReasonsStayReserved(t *testing.T) {
 	})
 }
 
+// GEN-8/89: reobservation belongs to explicit observation jobs; writing from a storyline
+// no longer emits this refusal. Its old wire identity must remain unavailable.
+func TestRetiredStorylineReobserveFailureReasonStaysReserved(t *testing.T) {
+	assertRetiredReasons(t, map[protoreflect.Name]protoreflect.EnumNumber{
+		"GENERATION_STORYLINE_REOBSERVE": 255,
+	})
+}
+
 // assertRetiredReasons checks that each retired reason is gone from the enum and that both its
 // name and its number are reserved, so neither can come back meaning something else.
 func assertRetiredReasons(t *testing.T, retired map[protoreflect.Name]protoreflect.EnumNumber) {
