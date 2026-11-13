@@ -191,7 +191,7 @@ function MemoryRow({
 
   if (form.editing)
     return (
-      <li className={cardStyles({ padding: 'sm', className: 'shadow-sm' })}>
+      <li className={cardStyles({ padding: 'sm' })}>
         <MemoryEditForm
           memory={memory}
           save={update.save}
@@ -206,7 +206,7 @@ function MemoryRow({
     )
 
   return (
-    <li className={cardStyles({ padding: 'sm', className: 'shadow-sm' })}>
+    <li className={cardStyles({ padding: 'sm' })}>
       <div className="flex flex-wrap items-start gap-1">
         <Typography
           variant="fieldTitle"

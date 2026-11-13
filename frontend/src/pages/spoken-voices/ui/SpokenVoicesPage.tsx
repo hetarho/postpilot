@@ -1,11 +1,18 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Plus } from 'lucide-react'
+import { AudioLines, Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
-import { ActionBar, Typography, pageStyles, buttonStyles } from '@/shared/ui'
+import {
+  ActionBar,
+  DirectoryItem,
+  Typography,
+  pageStyles,
+  buttonStyles,
+  typographyStyles,
+} from '@/shared/ui'
 export function SpokenVoicesPage() {
   const { t } = useTranslation('spokenVoices'),
     { t: model } = useTranslation('models'),
@@ -30,52 +37,67 @@ export function SpokenVoicesPage() {
                 ? t('empty')
                 : '\u00a0'}
       </Typography>
-      <ul className="divide-divider mt-4 divide-y" aria-label={t('title')}>
+      <ul className="mt-6 grid gap-3 lg:grid-cols-2 lg:gap-4" aria-label={t('title')}>
         {library.voices.map((voice) => (
-          <li key={voice.id} className="min-w-0 space-y-3 py-5">
-            <Typography variant="title" className="break-words">
-              {voice.name}
-            </Typography>
-            <Typography variant="meta" className="break-words">
-              {voice.profile.designLabel} → {voice.profile.speechLabel} ·{' '}
-              {voice.profile.grade
-                ? model(`level.${voice.profile.grade}`)
-                : model('catalog.levelUnset')}
-            </Typography>
-            <SpokenSamplePlayer
-              ownerId={ownerId}
-              assetId={voice.sampleAssetId}
-              name={voice.name}
-              durationMs={voice.sampleDurationMs}
-              onFailure={() => setStatus('playFailed')}
-            />
-            <SpokenVoiceActions
-              ownerId={ownerId}
-              voice={voice}
-              onStatus={(key) => setStatus(key === 'failed' ? 'renameFailed' : key)}
-            />
-          </li>
+          <DirectoryItem
+            key={voice.id}
+            icon={<AudioLines className="size-6" />}
+            title={
+              <Typography variant="fieldTitle" as="h2" className="break-words">
+                {voice.name}
+              </Typography>
+            }
+            description={
+              <Typography variant="meta" as="p" className="break-words">
+                {voice.profile.designLabel} → {voice.profile.speechLabel} ·{' '}
+                {voice.profile.grade
+                  ? model(`level.${voice.profile.grade}`)
+                  : model('catalog.levelUnset')}
+              </Typography>
+            }
+            status={
+              <SpokenSamplePlayer
+                ownerId={ownerId}
+                assetId={voice.sampleAssetId}
+                name={voice.name}
+                durationMs={voice.sampleDurationMs}
+                onFailure={() => setStatus('playFailed')}
+              />
+            }
+            metadata={
+              <SpokenVoiceActions
+                ownerId={ownerId}
+                voice={voice}
+                onStatus={(key) => setStatus(key === 'failed' ? 'renameFailed' : key)}
+              />
+            }
+          />
         ))}
       </ul>
       {library.drafts.some((d) => !d.confirmedVoiceId) && (
         <section className="mt-8 min-w-0">
           <Typography variant="title">{t('drafts')}</Typography>
-          <ul className="mt-3">
+          <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
             {library.drafts
               .filter((d) => !d.confirmedVoiceId)
               .map((d) => (
-                <li key={d.id}>
-                  <Link
-                    to="/spoken-voices/new"
-                    search={{ draft: d.id }}
-                    className={buttonStyles({
-                      variant: 'ghost',
-                      className: 'max-w-full break-words',
-                    })}
-                  >
-                    {t('resume', { name: d.name })}
-                  </Link>
-                </li>
+                <DirectoryItem
+                  key={d.id}
+                  interactive
+                  icon={<AudioLines className="size-6" />}
+                  title={
+                    <Link
+                      to="/spoken-voices/new"
+                      search={{ draft: d.id }}
+                      className={typographyStyles({
+                        variant: 'fieldTitle',
+                        className: 'break-words after:absolute after:inset-0',
+                      })}
+                    >
+                      {t('resume', { name: d.name })}
+                    </Link>
+                  }
+                />
               ))}
           </ul>
         </section>

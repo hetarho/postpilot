@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
 import { clsx } from 'clsx'
-import { Check, Sparkles } from 'lucide-react'
+import { Check, FileText, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadge,
@@ -38,6 +38,8 @@ import {
   Badge,
   Button,
   Disclosure,
+  DirectoryItem,
+  SurfaceButton,
   FieldMessage,
   Notice,
   Sheet,
@@ -289,35 +291,46 @@ export function GuidelineDirectory({
               <Typography variant="title" as="h2" id="guideline-unsaved-heading">
                 {t('authoringState.unsavedHeading', { ns: 'guidelines' })}
               </Typography>
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 grid gap-3">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
-                    <li key={row.sessionId}>
-                      <Button
-                        variant="ghost"
-                        onClick={() => {
-                          setCreationSession(row.sessionId)
-                          setCreateMethod('ai')
-                          setAuthoringOpen(true)
-                        }}
-                      >
-                        {authoringText('continueNamed', {
-                          kind: authoringText(
-                            `kinds.${kind === 'clip' ? 'video-guideline' : 'post-guideline'}`,
-                          ),
-                          name:
-                            row.displayName ||
-                            t(kind === 'clip' ? 'create.openClip' : 'create.open', {
-                              ns: 'guidelines',
-                            }),
-                        })}
-                      </Button>
-                      <Typography variant="body" className="text-content-secondary">
-                        {t('authoringState.unsaved', { ns: 'guidelines' })}
-                      </Typography>
-                      <EditingStatus summary={row} />
-                    </li>
+                    <DirectoryItem
+                      key={row.sessionId}
+                      interactive
+                      icon={<FileText className="size-6" />}
+                      title={
+                        <SurfaceButton
+                          presentation="content"
+                          className={typographyStyles({
+                            variant: 'fieldTitle',
+                            className: 'w-full break-words after:absolute after:inset-0',
+                          })}
+                          onClick={() => {
+                            setCreationSession(row.sessionId)
+                            setCreateMethod('ai')
+                            setAuthoringOpen(true)
+                          }}
+                        >
+                          {authoringText('continueNamed', {
+                            kind: authoringText(
+                              `kinds.${kind === 'clip' ? 'video-guideline' : 'post-guideline'}`,
+                            ),
+                            name:
+                              row.displayName ||
+                              t(kind === 'clip' ? 'create.openClip' : 'create.open', {
+                                ns: 'guidelines',
+                              }),
+                          })}
+                        </SurfaceButton>
+                      }
+                      description={
+                        <Typography variant="meta" as="p">
+                          {t('authoringState.unsaved', { ns: 'guidelines' })}
+                        </Typography>
+                      }
+                      status={<EditingStatus summary={row} />}
+                    />
                   ))}
               </ul>
             </section>
@@ -382,7 +395,7 @@ function SentenceTitle({
 }
 
 /** The card a rule row sits on. */
-const ruleCard = cardStyles({ padding: 'none', className: 'px-4 shadow-sm sm:px-5' })
+const ruleCard = cardStyles({ padding: 'none', className: 'px-4 sm:px-5' })
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
@@ -861,7 +874,7 @@ function CandidateRow({
 }) {
   const { t } = useTranslation('guidelines')
   return (
-    <li className={cardStyles({ padding: 'lg', className: 'shadow-sm' })}>
+    <li className={cardStyles({ padding: 'lg' })}>
       <Typography
         variant="title"
         as="p"
