@@ -11,6 +11,7 @@ import { connectAppError } from '@/test/app-error'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
 import { spokenVoiceFixture } from '@/test/spoken-voices'
 import { clipTimelineFixture } from '@/test/clip-editing'
+import { clipObservationsFixture } from '@/test/clip-observations'
 import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 import {
   Stage,
@@ -137,6 +138,16 @@ const options: FakeAuthOptions = {
         editPlanRevision: 1,
         renderedPlanRevision: 1,
         editing: clipTimelineFixture(),
+        observations: clipObservationsFixture(),
+        storyline: {
+          paragraphs: [
+            { text: '음식을 가까이 보여줘요.', observationIds: ['a/0'] },
+            { text: '테이블로 마무리해요.', observationIds: [] },
+          ],
+          editedByHand: false,
+          addedSourceIds: [],
+          takenOutObservationIds: ['a/1'],
+        },
         result: {
           contentType: 'video/mp4',
           bytes: 5,
@@ -202,10 +213,19 @@ if (scenario === 'draft' || scenario === 'draft-instagram') {
     // The same saved, not yet generated clip resumed in the other clip channel.
     ...(scenario === 'draft-instagram' && { channel: 'instagram_clip' as const }),
     editing: undefined,
+    observations: undefined,
+    storyline: undefined,
     result: undefined,
     editPlanRevision: 0,
     renderedPlanRevision: 0,
   }
+}
+if (scenario === 'clip-observe' || scenario === 'clip-storyline') {
+  const project = options.clips!.projects![0]!
+  project.editPlanRevision = 0
+  project.renderedPlanRevision = 0
+  project.result = undefined
+  if (scenario === 'clip-observe') project.storyline = undefined
 }
 if (scenario === 'working' || scenario === 'failed') {
   const job = {

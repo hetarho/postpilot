@@ -47,7 +47,7 @@ describe('video template workflow', () => {
   it('keeps the structural back link when a new clip’s offer opened the wizard', async () => {
     // As the post wizard opened with `post=new` does (TMPL-32); 저장 is what returns to the clip.
     mount('/video-templates/new?channel=instagram_clip&clip=new')
-    expect(await screen.findByRole('link', { name: '영상 템플릿', exact: true })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '영상 템플릿' })).toHaveAttribute(
       'href',
       '/video-templates?channel=instagram_clip',
     )

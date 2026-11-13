@@ -77,7 +77,7 @@
     }
   },
   "/about": {
-    "heading": "사진과 메모를 내 말투의 블로그 초안으로",
+    "heading": "체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로",
     "expectedPath": "/about",
     "expectedLeaf": "/about",
     "sourceReview": {
@@ -110,7 +110,7 @@
     }
   },
   "/settings": {
-    "heading": "내 설정",
+    "heading": "나",
     "expectedPath": "/settings",
     "expectedLeaf": "/authenticated/settings",
     "sourceReview": {
@@ -184,13 +184,13 @@
     }
   },
   "/posts": {
-    "heading": "글 작업 내역",
-    "expectedPath": "/posts",
-    "expectedLeaf": "/authenticated/posts",
+    "heading": "네이버 블로그",
+    "expectedPath": "/naver-blog",
+    "expectedLeaf": "/authenticated/naver-blog",
     "sourceReview": {
       "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
       "status": "checked",
-      "finding": "Search precedes row list; pending/failed job chips remain named and full-width text wraps.",
+      "finding": "Legacy route redirects to its current channel destination; no separate product screen.",
       "inspectedStates": [
         "populated",
         "loading",
@@ -199,7 +199,8 @@
         "list",
         "working",
         "terminal-result"
-      ]
+      ],
+      "redirect": "/naver-blog"
     }
   },
   "/posts/new": {
@@ -379,13 +380,13 @@
     }
   },
   "/clips": {
-    "heading": "클립 작업 내역",
-    "expectedPath": "/clips",
-    "expectedLeaf": "/authenticated/clips",
+    "heading": "네이버 클립",
+    "expectedPath": "/naver-clip",
+    "expectedLeaf": "/authenticated/naver-clip",
     "sourceReview": {
       "source": "frontend/src/pages/clips/ui/ClipsPage.tsx",
       "status": "checked",
-      "finding": "Search precedes row list; running/failed project indicators are distinct from saved result.",
+      "finding": "Legacy route redirects to its current channel destination; no separate product screen.",
       "inspectedStates": [
         "populated",
         "loading",
@@ -394,7 +395,8 @@
         "list",
         "working",
         "terminal-result"
-      ]
+      ],
+      "redirect": "/naver-clip"
     }
   },
   "/voices/voice-default/checks": {
@@ -459,7 +461,7 @@
     "body": "공원과 카페를 방문한 산책 하루의 아주 긴 한국어 영상 제목",
     "control": {
       "role": "tab",
-      "name": "수정"
+      "name": "다듬기"
     }
   },
   "/video-templates/new": {
@@ -545,13 +547,13 @@
     }
   },
   "/publishing-agents": {
-    "heading": "글 작업 내역",
-    "expectedPath": "/posts",
-    "expectedLeaf": "/authenticated/posts",
+    "heading": "네이버 블로그",
+    "expectedPath": "/naver-blog",
+    "expectedLeaf": "/authenticated/naver-blog",
     "sourceReview": {
       "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
       "status": "checked",
-      "finding": "Search precedes row list; pending/failed job chips remain named and full-width text wraps.",
+      "finding": "Legacy route redirects to its current channel destination; no separate product screen.",
       "inspectedStates": [
         "populated",
         "loading",
@@ -561,7 +563,7 @@
         "working",
         "terminal-result"
       ],
-      "redirect": "/posts"
+      "redirect": "/naver-blog"
     }
   },
   "/admin": {
@@ -722,7 +724,7 @@
     }
   },
   "/ai-models": {
-    "heading": "모델 변경",
+    "heading": "AI 고르기",
     "expectedPath": "/ai-models",
     "expectedLeaf": "/authenticated/models/ai-models",
     "sourceReview": {
@@ -785,13 +787,13 @@
     }
   },
   "/clips/new": {
-    "body": "클립 제목",
+    "body": "어떤 영상을 만드시나요?",
     "expectedPath": "/clips/new",
     "expectedLeaf": "/authenticated/clips/new",
     "sourceReview": {
       "source": "frontend/src/pages/clip/ui/ClipPage.tsx",
       "status": "checked",
-      "finding": "Title is first named form field; ratio choice and creation dock remain explicit.",
+      "finding": "Unminted project opens the retained preparation guide at video kind.",
       "inspectedStates": ["input", "loading", "failure"]
     }
   },
@@ -825,6 +827,39 @@
       "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
       "status": "changed",
       "finding": "Creation comes first, followed by channel history, templates and guidelines.",
+      "inspectedStates": ["populated"]
+    }
+  },
+  "/create": {
+    "heading": "무엇을 만들까요?",
+    "expectedPath": "/create",
+    "expectedLeaf": "/authenticated/create",
+    "sourceReview": {
+      "source": "frontend/src/pages/create/ui/CreatePage.tsx",
+      "status": "checked",
+      "finding": "Canonical destination inspected for THEME-78 audit.",
+      "inspectedStates": ["populated"]
+    }
+  },
+  "/my": {
+    "heading": "내 글",
+    "expectedPath": "/my",
+    "expectedLeaf": "/authenticated/my",
+    "sourceReview": {
+      "source": "frontend/src/pages/my-work/ui/MyWorkPage.tsx",
+      "status": "checked",
+      "finding": "Canonical destination inspected for THEME-78 audit.",
+      "inspectedStates": ["populated"]
+    }
+  },
+  "/style": {
+    "heading": "내 스타일",
+    "expectedPath": "/style",
+    "expectedLeaf": "/authenticated/style",
+    "sourceReview": {
+      "source": "frontend/src/pages/style/ui/StylePage.tsx",
+      "status": "checked",
+      "finding": "Canonical destination inspected for THEME-78 audit.",
       "inspectedStates": ["populated"]
     }
   }

@@ -27,6 +27,8 @@
 
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, sep } from 'node:path'
+import { createRequire } from 'node:module'
+const ts = createRequire(new URL('../frontend/package.json', import.meta.url))('typescript')
 
 const ROOT = join(import.meta.dirname, '..', 'frontend', 'src')
 const TOKEN_FILE = join(ROOT, 'app', 'styles', 'index.css')
@@ -40,6 +42,8 @@ const STOCK_UTILITY = new RegExp(
 )
 const RETIRED_ROLES = [
   'surface-hover',
+  'surface-sunken',
+  'intent-accent',
   'surface',
   'text-muted',
   'text-subtle',
@@ -135,7 +139,58 @@ function scanLine(line, { isTokenFile = false, isTypeGated = false, isSelectGate
   return findings
 }
 
+// Parse JSX rather than searching text: comments, examples and string literals are not controls.
+// Only visually hidden file inputs are native outside shared/ui; the shared picker trigger owns
+// their visible interaction. No generic button/input/textarea path is grandfathered.
+function scanNativeControls(source, file = 'screen.tsx') {
+  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const findings = []
+  function visit(node) {
+    if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const tag = node.tagName.getText(ast)
+      if (['button', 'input', 'textarea'].includes(tag)) {
+        const attrs = new Map(node.attributes.properties.filter(ts.isJsxAttribute).map((a) => [a.name.getText(ast), a.initializer]))
+        const literal = (name) => {
+          const value = attrs.get(name)
+          if (value && ts.isStringLiteral(value)) return value.text
+          if (value && ts.isJsxExpression(value) && value.expression && ts.isStringLiteral(value.expression)) return value.expression.text
+          return undefined
+        }
+        const hiddenFile = tag === 'input' && literal('type') === 'file' &&
+          ((attrs.has('hidden') && !attrs.get('hidden')) || /(?:^|\s)(hidden|sr-only)(?:\s|$)/.test(literal('className') ?? ''))
+        if (!hiddenFile) findings.push({ kind: 'native generic control', match: `<${tag}>`, line: ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1 })
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(ast)
+  return findings
+}
+
 function runProbe() {
+  const controlCases = [
+    ['<button className="rounded-full">Back</button>', 1],
+    ['<button\n aria-label="Back" />', 1],
+    ['<textarea />', 1],
+    ['<input />', 1],
+    ['<input type="text" />', 1],
+    ['<input type="radio" />', 1],
+    ['<input type="checkbox" />', 1],
+    ['<input type="file" />', 1],
+    ['<input type="file" hidden />', 0],
+    ['<input type={"file"} className="sr-only" />', 0],
+    ['<input type="file" hidden={false} />', 1],
+    ['<input type="file" className="not-hidden" />', 1],
+    ['// <button />\nconst text = "<textarea />"', 0],
+    ['const node = <>{/* <input /> */}<Button /><TextField /></>', 0],
+  ]
+  for (const [source, count] of controlCases) {
+    if (scanNativeControls(source).length !== count) {
+      console.error(`lint:style:probe — native control parsing failed: ${source}`)
+      process.exit(1)
+    }
+  }
+
   const typeCases = [
     { source: 'text-sm', gated: true },
     { source: 'sm:text-lg', gated: true },
@@ -224,6 +279,8 @@ function runProbe() {
 
   const cases = [
     { source: 'bg-bg', retired: true },
+    { source: 'bg-surface-sunken', retired: true },
+    { source: 'accent-intent-accent', retired: true },
     { source: 'hover:bg-surface-hover/60', retired: true },
     { source: 'text-text-muted', retired: true },
     { source: 'focus:text-primary-foreground', retired: true },
@@ -252,7 +309,7 @@ function runProbe() {
     process.exit(1)
   }
   console.log(
-    `lint:style:probe — ok (${cases.length + typeCases.length + selectCases.length} scanner cases)`,
+    `lint:style:probe — ok (${cases.length + typeCases.length + selectCases.length + controlCases.length} scanner cases)`,
   )
 }
 
@@ -274,7 +331,14 @@ for (const file of walk(ROOT)) {
   // Everywhere, including shared/ui: there is no longer a primitive allowed to wrap a native
   // select. Generated code is already excluded by `walk`, which skips every `gen` directory.
   const isSelectGated = file.endsWith('.tsx') && !file.endsWith('.test.tsx')
-  const lines = readFileSync(file, 'utf8').split('\n')
+  const source = readFileSync(file, 'utf8')
+  const isControlGated = isTypeGated && !file.startsWith(join(ROOT, 'test') + sep)
+  if (isControlGated) {
+    for (const { kind, match, line } of scanNativeControls(source, file)) {
+      findings.push(`${relative(process.cwd(), file)}:${line}  ${kind}: ${match}`)
+    }
+  }
+  const lines = source.split('\n')
   lines.forEach((line, index) => {
     for (const { kind, match } of scanLine(line, {
       isTokenFile,
@@ -295,9 +359,11 @@ if (findings.length) {
     'frontend/src/app/styles/index.css; the rules are THEME-11 and THEME-15 in spec/ssot/THEME.md.',
     '\nFor an ad-hoc type utility, render the text through shared/ui Typography (or',
     'typographyStyles for a self-semantic element) — the type roles are THEME-19.',
+    '\nFor native buttons/text inputs/textarea, use shared/ui controls. Only hidden file inputs',
+    'stay native outside shared/ui (THEME-78).',
     '\nFor a native <select>, use shared/ui Listbox (or SegmentedControl for a bounded 2–5',
     'switch) — THEME-29 bans the OS-drawn option list.',
   )
   process.exit(1)
 }
-console.log('lint:style — ok (no colour or type escapes)')
+console.log('lint:style — ok (no colour, type or native control escapes)')

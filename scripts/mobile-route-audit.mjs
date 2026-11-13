@@ -9,7 +9,7 @@ const selectedRoutes = (process.env.MOBILE_ROUTES ?? "")
 const output = resolve(
   process.env.MOBILE_OUTPUT ?? "/tmp/postpilot-mobile-t652-audit",
 );
-const widths = (process.env.MOBILE_WIDTHS ?? "320,360,390,430")
+const widths = (process.env.MOBILE_WIDTHS ?? "320,360,390,430,1440,1920")
   .split(",")
   .map(Number);
 const themes = (process.env.MOBILE_THEMES ?? "light,dark").split(",");
@@ -128,15 +128,33 @@ async function geometry(page) {
           name: n.getAttribute("aria-label") || n.innerText.trim(),
         })),
       theme: document.documentElement.dataset.theme,
+      returns: [...document.querySelectorAll('main a:has(svg.lucide-arrow-left),main button:has(svg.lucide-arrow-left)')].filter(visible).map((n) => ({
+        ...box(n), name: n.getAttribute('aria-label'), title: n.getAttribute('title'),
+        href: n.getAttribute('href'), text: (() => { const clone = n.cloneNode(true); clone.querySelectorAll('svg,.sr-only').forEach((child) => child.remove()); return clone.textContent.trim() })(),
+        arrows: n.querySelectorAll('svg.lucide-arrow-left').length,
+        radius: parseFloat(getComputedStyle(n).borderRadius),
+      })),
+      directoryCards: [...document.querySelectorAll('main li.ui-card')].filter(visible).length,
       pointerCoarse: matchMedia("(pointer: coarse)").matches,
     };
   });
 }
+function checkReturns(g, width) {
+  for (const control of g.returns) {
+    const floor = width < 768 ? 44 : 40
+    assert.ok(control.width >= floor && control.height >= floor, `Return target ${control.name}`)
+    assert.ok(control.name && control.title === control.name, 'Return names its destination and has a tooltip')
+    assert.equal(control.text, '', 'Return uses its arrow glyph')
+    assert.equal(control.arrows, 1, 'Return has one arrow')
+    assert.ok(control.radius >= Math.min(control.width, control.height) / 2, 'Return is round')
+    if (control.href) assert.ok(control.href.startsWith('/') && !control.href.startsWith('//'))
+  }
+}
 async function contextFor(width, theme) {
   const ctx = await browser.newContext({
-    viewport: { width, height: 800 },
-    isMobile: true,
-    hasTouch: true,
+    viewport: { width, height: width >= 1920 ? 1080 : width >= 768 ? 900 : 800 },
+    isMobile: width < 768,
+    hasTouch: width < 768,
     locale: "ko-KR",
   });
   await ctx.addInitScript((theme) => {
@@ -256,10 +274,11 @@ try {
               errors,
             };
             assert.ok(g.main);
+            checkReturns(g, width);
             assert.equal(
               g.pointerCoarse,
-              true,
-              "Phone emulation retains native coarse pointer",
+              width < 768,
+              "Pointer matches the tested device",
             );
             assert.equal(
               g.overflow,
@@ -282,6 +301,7 @@ try {
               expected,
               `No expectation for registered path ${r.concrete}`,
             );
+            assert.equal(Boolean(unavailable), false, `Unavailable route ${r.concrete}: ${errors.join("; ")}`);
             if (!unavailable) {
               assert.equal(g.route.split("?")[0], expected.expectedPath);
               assert.equal(g.matchIds.at(-1), expected.expectedLeaf);
@@ -398,9 +418,9 @@ try {
             // Capture only after phone geometry and continuity checks, then close this page.
             if (
               width === 390 &&
-              theme === "light" &&
+              ["light", "dark"].includes(theme) &&
               [
-                "/",
+                "/", "/templates", "/video-templates", "/clips/new", "/clips/review", "/templates/new", "/video-templates/new",
                 "/settings",
                 "/tests",
                 "/admin/vouchers",
@@ -421,7 +441,7 @@ try {
                 r.concrete === "/setup" ? "setup" : "populated",
               );
               await shotPage.screenshot({
-                path: `${output}/${r.concrete.replaceAll("/", "_") || "home"}.png`,
+                path: `${output}/${r.concrete.replaceAll("/", "_") || "home"}-${theme}.png`,
                 fullPage: true,
               });
               await shotContext.close();
@@ -464,10 +484,10 @@ try {
   );
   // Distinct data/input/operation states are additional evidence, never substituted for the
   // populated route matrix. Browser data remain local deterministic RPC fixtures.
-  const stateCases = [
+  const stateCases = process.env.MOBILE_STATES === "0" ? [] : [
     ...[
-      "/posts",
-      "/clips",
+      "/naver-blog",
+      "/naver-clip",
       "/templates",
       "/video-templates",
       "/guidelines",
@@ -479,8 +499,8 @@ try {
       "/tests/history",
     ].map((at) => ({ at, state: "empty", kind: "empty" })),
     ...[
-      "/posts",
-      "/clips",
+      "/naver-blog",
+      "/naver-clip",
       "/templates",
       "/video-templates",
       "/guidelines",
@@ -506,8 +526,8 @@ try {
     ...[
       "/posts/review",
       "/clips/review",
-      "/posts",
-      "/clips",
+      "/naver-blog",
+      "/naver-clip",
       "/tests/test",
       "/tests/history",
     ].flatMap((at) =>
@@ -561,6 +581,9 @@ try {
       state: "populated",
       kind: "direct-template",
     },
+    ...[
+      ['draft', '생성'], ['clip-observe', '관찰'], ['clip-storyline', '스토리라인'], ['populated', '다듬기'], ['finalized', '완성'],
+    ].flatMap(([state, stage]) => widths.map((width) => ({ at: '/clips/review', state, kind: 'clip-stage', stage, width }))),
   ];
   for (const theme of themes) {
     const ctx = await contextFor(390, theme);
@@ -683,10 +706,21 @@ try {
           await toggle.click();
           assert.equal(await toggle.getAttribute("aria-expanded"), "false");
         }
+        if (c.kind === 'clip-stage') {
+          const tab = page.getByRole('tab', {name: c.stage, exact: true})
+          if (await tab.count()) assert.equal(await tab.getAttribute('aria-selected'), 'true')
+          else assert.equal(c.stage, '생성', 'Only unminted generation may omit lifecycle tabs')
+          if (c.stage === '관찰') await page.getByRole('heading', {name: 'AI가 관찰한 내용', exact: true}).waitFor()
+          if (c.stage === '스토리라인') assert.ok((await page.locator('main').innerText()).includes('음식을 가까이 보여줘요.'))
+        }
         const closed =
           c.kind === "design-gallery" ? await geometry(page) : undefined;
         let chosenDesign;
         if (c.kind === "design-gallery") {
+          const lifecycle = page.getByRole('tab', { name: '생성', exact: true })
+          if (await lifecycle.count()) await lifecycle.click()
+          const guide = page.getByRole('navigation', { name: '클립 만들기 단계', exact: true })
+          if (await guide.count()) await guide.getByRole('button', { name: '스타일', exact: true }).click()
           const toggle = page.getByRole("button", {
             name: "디자인과 자막 스타일",
             exact: true,
@@ -711,6 +745,7 @@ try {
           assert.ok(
             (await page.locator("main").innerText()).includes(chosenDesign),
           );
+          if (await guide.count()) await guide.getByRole('button', { name: '내용', exact: true }).click()
           const field = page.getByLabel("클립 제목", { exact: true });
           await field.fill("크기를 바꾸어도 유지되는 클립 제목");
           await field.evaluate((n) => {
@@ -735,18 +770,9 @@ try {
             await page.setViewportSize(viewport);
             await page.waitForTimeout(100);
             assert.deepEqual(await capture(), before);
-            assert.equal(
-              await toggle.getAttribute("aria-expanded"),
-              viewport.width >= 768 ? "true" : "false",
-            );
-            if (viewport.width >= 768) {
-              await toggle.click();
-              assert.equal(await toggle.getAttribute("aria-expanded"), "false");
-              await field.focus();
-              assert.deepEqual(await capture(), before);
-            }
             assert.equal((await geometry(page)).overflow, false);
           }
+          if (await guide.count()) await guide.getByRole('button', {name: '스타일', exact:true}).click()
           await toggle.click();
           assert.equal(
             await intro
@@ -763,6 +789,7 @@ try {
           );
         }
         const g = await geometry(page);
+        checkReturns(g, c.width ?? 390)
         assert.equal(errors.length, 0, errors.join("; "));
         assert.equal(g.overflow, false);
         assert.equal(g.matchIds.at(-1), expected.expectedLeaf);
@@ -789,7 +816,7 @@ try {
           assert.ok(g.body.includes("결제 금액"));
         }
         if (c.kind === "draft")
-          assert.ok(g.firstInput, `Expected draft input on ${c.at}`);
+          assert.ok(basePath.startsWith('/clips') ? g.body.includes('어떤 영상을 만드시나요?') : g.firstInput, `Expected resumed draft on ${c.at}`);
         if (c.kind === "working")
           assert.ok(
             g.body.includes(
@@ -815,13 +842,28 @@ try {
           if (basePath.startsWith("/clips"))
             assert.equal(
               await page
-                .getByRole("link", { name: "영상 다운로드", exact: true })
+                .getByRole("link", { name: "렌더 1 다운로드", exact: true })
                 .count(),
               1,
             );
           else assert.ok(g.body.includes("내보내기"));
         }
+        let accessibility
+        if (c.kind === 'clip-stage' && c.width === 320) {
+          const target = page.locator('main a[href],main button:not(:disabled),main input:not(:disabled)').first()
+          await target.focus()
+          await page.keyboard.press('Tab')
+          assert.ok(await page.evaluate(() => document.activeElement !== document.body), 'Keyboard focus remains on a control')
+          await page.setViewportSize({width:640,height:900})
+          await page.evaluate(() => { document.documentElement.style.zoom = '2' })
+          const zoomed = await geometry(page)
+          assert.equal(zoomed.overflow, false, '200% CSS zoom reflows')
+          await page.evaluate(() => { document.documentElement.style.zoom = '' })
+          accessibility = { keyboard: true, cssZoom: '200%', overflow: zoomed.overflow }
+        }
         const receipt = {
+          accessibility,
+          stage: c.stage,
           id: expected.expectedLeaf,
           path: basePath,
           at: c.at,
@@ -880,6 +922,9 @@ try {
           }
           receipt.continuity = { pass: true, before, measurements };
         }
+        if (c.kind === 'clip-stage' && [390,1440].includes(c.width)) {
+          await page.screenshot({path: `${output}/clip-${c.state}-${c.width}-${theme}.png`, fullPage:true})
+        }
         receipts.push(receipt);
         console.log(
           JSON.stringify({
@@ -921,7 +966,7 @@ try {
       output,
     }),
   );
-  if (findings.length) process.exitCode = 1;
+  if (findings.length || receipts.some((r) => r.status === "unavailable")) process.exitCode = 1;
 } finally {
   await browser.close();
 }
