@@ -86,7 +86,6 @@
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
 
-| T803 | Unify route and step return controls | ARCH THEME | - | todo |
 | T804 | Provide shared controls for actionable content | ARCH THEME | T803 | todo |
 | T805 | Replace remaining text route returns | ARCH THEME | T804 | todo |
 | T806 | Unify previous actions in authoring and comparison flows | ARCH THEME | T805 | todo |
@@ -107,4 +106,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- This request: T803–T816; T795–T802 remain with the independent contextual-loading run.
+- gusta-implement-task T795 T804
