@@ -109,4 +109,3 @@
 
 ## next
 - gusta-implement-task T803 T821 T822
-- Video UX: final14-check gate passed; publish reviewed T817–T820 on main.
