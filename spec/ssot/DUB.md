@@ -1,5 +1,5 @@
 # DUB spoken voices and narration
-> r3 | Create, audition and confirm reusable account-owned spoken voices, then generate narration independently of displayed captions.
+> r4 | Create, audition and confirm reusable account-owned spoken voices, then generate narration independently of displayed captions.
 
 ## decisions
 - DUB-1 [o] a spoken voice is an account-owned sound identity used for generated narration; it is separate from VOICE's writing-style profile and is named 목소리 in the product
@@ -41,7 +41,7 @@
   - the product never represents a file missing requested narration as the narrated result
 - DUB-26 [o] a changed script or selected voice cannot be delivered as current while required speech regeneration is unresolved; the earlier result stays identified and playable under the clip result's own revision
 - DUB-27 [o] voice creation, audition, confirmation and reuse are implemented before the narrated-video workflow; live supplier qualification may follow complete implementation
-  - automatic tests and build checks remain mandatory per task under ARCH-24/31
+  - implementation units run affected-unit and fast static checks under →=ARCH-24 and hand off build/integration/e2e/full-suite coverage to the initiating coordinator under →=ARCH-31
   - production voice and narration availability remain closed until MODEL-82 records the required real qualification evidence
 - DUB-28 [o] v1 includes no translated-source dubbing, recording-based voice cloning, lip synchronization or multiple speakers in one clip
 
@@ -69,4 +69,5 @@
 - the voice-creation milestone requires the related MODEL and QUOTA policy extensions before its implementation tasks are planned; those extensions do not imply that speech is already supported by the current catalog or text-completion path
 
 ## chg
+- r4 261114 DUB-27✎ per-task automatic tests/build checks→affected-unit/static task checks plus coordinator-owned build/integration/full-suite batch gate; real voice/narration qualification unchanged
 - r3 261005 DUB-27✎ voice creation live qualification before narration implementation→live qualification may follow complete implementation; per-task automated checks and production readiness gates remain mandatory

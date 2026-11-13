@@ -304,3 +304,4 @@
 
 ## chg
 - r37 261111 MODEL-44✎ place of tests "a destination beside model settings at /ai-models"→"under the AI 고르기 tab (/ai-models), whose one primary action is the two-writer comparison"; MODEL-96+ /ai-models stage rows and picker: radio cards, a tap saves, free-first order, owner-chosen 품질 먼저/균형/가격 먼저, locked cards disabled with reason, credits only
+- r35 261007 MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ capability-only schema boundary→syntax and semantic accuracy distinguished; unrestricted blind details→identity-safe inspection; content-only application→matching origin review; input/output expiry→origin/request expiry

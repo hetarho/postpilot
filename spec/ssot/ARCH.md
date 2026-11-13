@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r23 | Code placement and gates, including task-impact verification, pre-push CI/CD parity and a browser-owned media pipeline.
+> r24 | Code placement, Gusta task/batch/CI verification and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -65,30 +65,51 @@
   - formulas, prompt text, and the proto/DB schema are code, not config
 - ARCH-22 [o] naming: Go package = context name, lower case, no underscores, the product's own nouns; FE kebab-case singular slices, PascalCase component files, camelCase elsewhere, named exports only
 - ARCH-23 [o] auth mechanics: self-signup with the email as the login id and verification before the first session, Google sign-in, and the operator CLI beside it (`cmd/adduser`, or `api adduser` in the container); argon2id, HttpOnly cookie session; the session token never appears in a body, log, or URL; authenticated handlers read the actor from the interceptor-set context, never from the payload; every user-facing RPC except `/health` is 401 without a session (behavior in AUTH); internal media RPCs use separately authenticated worker identities under ARCH-47
-- ARCH-24 [o] tests are mandatory for every implementation task: FE vitest (jsdom + Testing Library) beside the code, BE `go test` beside the code; a task's acceptance names the tests that pin it
-  - task completion runs the tests added or modified by that task and existing tests for plausible side effects; unrelated full suites are reserved for the pre-push gate (→ARCH-31)
-  - assess the complete task delta from its starting revision, including intermediate commits, deletions and uncommitted changes; FE consumers/shared harnesses and BE reverse dependencies/wiring belong in the impact assessment
-  - import-based selection is an aid, not proof of complete coverage; shared contracts, migrations, authentication, media behavior or test configuration require the matching consumer/integration regressions, and an impact that cannot be bounded expands to the affected full suite
-  - acceptance plus relevant lint, formatter and build/type checks must pass; record the selected commands and the impact rationale in the task result, and never count an empty selection as successful behavioral verification
-- ARCH-25 [o] pre-push full FE verification:
+- ARCH-24 [o] implementation verification reuses existing regression coverage and adds or changes tests only for uncovered behavior; FE vitest (jsdom + Testing Library) and BE Go tests stay beside the code
+  - task acceptance names affected unit tests and fast static checks; run them once just before commit through `vibe check --tier task`, reusing valid evidence
+  - assess the complete task delta from its starting revision, including intermediate commits, deletions and uncommitted changes; include FE consumers/shared harnesses and BE reverse dependencies/wiring
+  - import-based selection is an aid, not proof of coverage; shared contracts, migrations, authentication, media behavior and test configuration require their matching consumer/integration regressions at the coordinator's batch gate (→!ARCH-31)
+  - an impact that cannot be bounded expands the batch selection to the affected full suite; unit sessions maintain integration/e2e tests and hand off exact commands and test paths in result limits
+  - task checks are affected unit tests plus applicable static checks expected under a minute; record commands, input revision, actual evidence and selection rationale; an empty selection is not behavioral verification
+  - build, browser/integration/e2e and full-suite success belong to batch completion; task completion records implementation, affected-unit verification and the handoff without claiming unrun coverage
+  - task: `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') lint`
+  - batch: →=ARCH-31
+  - CI: →=ARCH-31
+- ARCH-25 [o] batch full FE verification:
   - `pnpm --filter ./frontend test`
   - `pnpm lint`
   - `pnpm lint:fsd`
   - `pnpm lint:style:probe && pnpm lint:style`
   - `pnpm build:web`
-- ARCH-26 [o] pre-push full BE verification: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...` ← two packages run real SQLite and the whole boot sequence and pass Go's ten-minute per-package default on their own; the flag bounds a hang without failing work that is merely long
+- ARCH-26 [o] batch full BE verification: `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...` ← two packages run real SQLite and the whole boot sequence and pass Go's ten-minute per-package default on their own; the flag bounds a hang without failing work that is merely long
 - ARCH-27 [o] verify publishing automation stays absent (ARCH-34 I1): `pnpm lint:retirement`
 - ARCH-28 [o] verify generated code (buf and sqlc run through Docker): `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen` · `pnpm gen:sql && git diff --exit-code -- backend`
 - ARCH-29 [o] format: `pnpm --filter ./frontend format` (Prettier; `dist/` and `shared/api/gen` are ignored) · `cd backend && gofmt -w .`
 - ARCH-30 [o] verify skills: `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check`
   - the skills gusta installs into `.claude/skills` and `.codex/skills`, as `.gusta-lock.json` lists them, are package-managed and never hand-edited; `recomend-models`, in both directories, is the project's own skill and is edited in place
   - gusta runs through npx at the version `.gusta-lock.json` records and is never a package dependency ← check compares the files with the running package's skills, so `@latest` fails CI whenever a release lands before the update
-- ARCH-31 [o] verification has separate task-completion and pre-push stages
-  - task completion and commits on main use ARCH-24's impact-selected checks; reproducing every CI/CD step locally is a pre-push obligation, not a per-task obligation
-  - before push, run the full local equivalent of `CI`: `pnpm test:dev`, ARCH-25 + ARCH-27 + ARCH-28 + ARCH-30 on the pinned Node, and ARCH-26 plus the deploy Python unittests with `deploy/requirements-test.txt` installed
-  - when the push can trigger `Deploy backend` or `Verify media`, also validate the production Compose layouts, build both deployed CPU images and execute all three media gates: production image smokes, CPU worker execution and separate-process CPU release in colocated and remote layouts; commands and local environment handling live in `docs/verification.md`
-  - verify the final push candidate with the workflows' image targets, test flags and CPU/memory budgets; source/configuration/dependency changes invalidate affected evidence, while unchanged successful checks need not be repeated within that pre-push verification
-  - a local pass does not certify GitHub runners, GHCR, SSH, production health or external CORS; after push inspect `CI` and every triggered deployment/media workflow for that revision, record the failing workflow/job/step and first meaningful error, and resolve the release failure without hiding it or repeatedly rerunning all task tests
+- ARCH-31 [o] the initiating Gusta coordinator owns task/batch/CI completion, verification and publication under SETTINGS
+  - task: →=ARCH-24
+  - batch:
+    - `pnpm test:dev`
+    - `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen`
+    - `pnpm gen:sql && git diff --exit-code -- backend`
+    - `pnpm lint`
+    - `pnpm lint:fsd`
+    - `pnpm lint:retirement`
+    - `pnpm lint:style:probe && pnpm lint:style`
+    - `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check`
+    - `pnpm --filter ./frontend test`
+    - `pnpm build:web`
+    - `python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v`
+    - `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...`
+  - CI: after each actual code push inspect `CI` and every triggered deployment/media workflow for the pushed revision; an unavailable remote result remains unchecked, with that revision recorded for follow-up
+  - the batch gate runs once on the final synchronized committed implementation candidate before landing or whole-work completion, including when committing only; retain ARCH-25–30 coverage and deployment Python unittests with deploy/requirements-test.txt installed
+  - the coordinator adds the production Compose validation, both deployed CPU image builds and all three media gates when the final diff can trigger `Deploy backend` or `Verify media`, or changes their definitions; exact commands, targets, CPU/memory budgets and disposable environment handling live in `docs/verification.md`
+  - apply the installed Gusta verification cache, process cleanup, ownership and cumulative failure limits; reuse each still-valid successful check and rerun failed, affected or unrun checks after a targeted repair
+  - reuse requires unchanged consumed source, configuration, dependencies, command, environment and scope; docs/progress changes alone do not prove validity, and source/input mutation during a check invalidates its evidence
+  - implementation, review and delegated units hand off heavy checks; human/listening/hardware/live-deployment and qualification conditions remain explicit activation or delivery gates and are never closed by unit fixtures
+  - a local pass does not certify GitHub runners, GHCR, SSH, production health or external CORS; record a failing workflow/job/step and first meaningful error, repair the observed boundary, and never represent an unrun or failed gate as passed
 - ARCH-32 [o] deploy: FE → Cloudflare Workers static (dashboard build `pnpm --filter ./frontend build`, deploy `npx wrangler deploy`); API → `ghcr.io/hetarho/postpilot-api` from `backend/Dockerfile` (golang:1.26-alpine builder, `CGO_ENABLED=0`, `gcr.io/distroless/static-debian12:nonroot`) behind the shared edge Caddy in `deploy/edge`; a separately versioned media-worker image runs beside it or on another Linux Docker host with a CPU or NVIDIA runtime; `main` → prod, `develop` → staging; each service rollout health-gates and rolls back on failure, and only API startup migrates the API-local SQLite volume ← root DEPLOY.md is the ops runbook
 - ARCH-33 [o] dependencies: before adding, upgrading, or configuring any library or service, read the current official docs (context7 MCP first, otherwise the official site), install through the package manager's latest resolver (`pnpm add`, `go get`), confirm the resolved version in the lockfile, copy env-var and config names verbatim from those docs, and use official scaffolds only when they target this exact stack (Vite SPA + TanStack Router, connect-go) ← stale-memory setups fail only at runtime
 - ARCH-34 [o] invariants no task may break silently (stop and resolve with the owner first):
@@ -103,7 +124,7 @@
   | I7 | migrations are embedded and run at boot (ARCH-10) |
 - ARCH-35 [o] doc truth order: behavior → `ssot/<DOMAIN>.md`, placement and gates → this file, progress → STATE.md; root PRD.md and DEPLOY.md are reference docs and ssot/ wins on conflict
 - ARCH-36 [o] real-binary media and clip-input smokes run in the image that executes each supported media profile, including its fonts, filters and runtime libraries; CPU images keep the nonroot runtime and a GPU profile is additionally exercised on matching NVIDIA hardware; env gates keep these smokes outside ARCH-26
-- ARCH-37 [o] production media changes use impact-selected behavioral tests at task completion (→ARCH-24) and the matching real-image smoke before push (→ARCH-31); introducing or enabling a production GPU profile additionally requires a run on supported GPU hardware, with unavailable hardware recorded as an unmet activation gate; documentation, image packaging and isolated diagnostic tooling may complete with build/configuration/CPU checks while recording GPU execution as unverified, never as a passing GPU substitute; the smokes never join ARCH-26
+- ARCH-37 [o] production media work follows the affected-unit task checks and coordinator-owned real-image/integration batch checks in →!ARCH-24 and →!ARCH-31; introducing or enabling a production GPU profile additionally requires a run on supported GPU hardware, with unavailable hardware recorded as an unmet activation gate; documentation, image packaging and isolated diagnostic tooling may complete with their scoped evidence while recording GPU execution as unverified, never as a passing GPU substitute; the media smokes remain separate from ARCH-26
 - ARCH-38 [o] until closed beta opens, the smokes run beside the deploy instead of upstream of it: the pushed image does not depend on them, the rollout does not wait, and a failure is reported rather than withheld from production; the blocking gate returns when closed beta opens ← the smokes are ten of the deploy's twelve minutes while the owner is the only user, and ARCH-32's health gate and rollback still stand
 - ARCH-39 [o] each media image is checked at build time against every filter, decoder, encoder and muxer its declared execution profiles name; a hardware profile also passes the runtime capability check in ARCH-53 ← compiled-in encoder names alone do not prove that a device and driver can execute them
 - ARCH-40 [o] construction: a collaborator a service needs to do its job is a constructor argument; `Set*`/`With*` setters exist only for optional behaviour whose absence is a legal, tested mode; the API composition root is `loadPlatform → buildContexts → registerJobs → serve`; the media-worker root wires configuration, transport and execution adapters only, with no application rule bodies in either command and no database migrations in the worker ← a forgotten setter is a nil at runtime and only the slowest test package can catch it
@@ -180,12 +201,8 @@
   - actors survive viewport changes and do not turn stop/close into paid work or server cancellation
   - recovery reads durable records/jobs and never restores a snapshot that reissues provider calls or canonical writes
   - test actual actors through duplicate/stale events, owner changes, interruption, mode changes, binary decisions and publication recovery; pure projections remain framework-free
-- ARCH-70 [o] development uses the main checkout and completes one dependency-ready task at a time.
-  - read the current SSOT and task, record its start in STATE, implement its acceptance and run ARCH-24 checks
-  - record the result, archive the completed task, update STATE and commit on main before starting the next task
-  - keep correctness review within implementation and verification, with additional review only for concrete unresolved risks
-  - preserve unrelated work and reconcile pending SSOT changes before implementation; ARCH-31 remains the pre-push gate
-
+- ARCH-70 [o] development orchestration, task claims, execution/review ownership, workspaces, commits and publication follow the installed Gusta skills and `spec/SETTINGS.md`
+  - project verification commands and qualification constraints remain in →!ARCH-24 and →!ARCH-31; the coordinator preserves unrelated work and reconciles pending policy changes before implementation
 ## constraints
 - Node is pinned by `.node-version` (24.18.0); run FE verify on that version (fnm/nvm read the file) — newer local Node versions break the jsdom-based tests
 - Docker is required for `pnpm gen:*` (buf, sqlc), `pnpm dev:api`, and the media smokes (ARCH-37); Go 1.26 for BE
@@ -194,8 +211,10 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r24 261114 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ task build/full-suite completion→unit/static task checks plus coordinator batch handoff; pre-push-only full CI→final implementation batch and CI; ARCH-70✎ serial direct-main orchestration→Gusta/SETTINGS
 - r23 261112 ARCH-30✎ skill check `pnpm exec haeram-spec-creator check` (devDependency, `.haeram-spec-creator-lock.json`)→gusta through npx at the `.gusta-lock.json` version, never a dependency
 - r22 261111 ARCH-20✎ cards are rare and never nested→a card is the lifted plane content sits on, never nested (→THEME-13)
-- r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
-- r20 261007 ARCH-70+ ARCH-31✎ separate task submission/integration lifecycle→one dependency-ready task implemented, verified and committed directly on main
 - r21 261102 ARCH-68✎ final-render activation required complete component/output parity and real-device performance→browser final rendering active with those checks as follow-up evidence; activation code-owned and identical on frontend and API
+- r20 261007 ARCH-70+ ARCH-31✎ separate task submission/integration lifecycle→one dependency-ready task implemented, verified and committed directly on main
+- r19 261007 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ every-task full local CI/media verification→impact-selected task completion and full CI plus applicable deploy/media gates before push; exact workflow/revision failure evidence required
+- r16 261006 ARCH-11✎ ARCH-34✎ server-only jobs→page-owned browser work with durable fences; ARCH-45✎ native preparation/drawing→browser execution and bounded copy verification; ARCH-60+ ARCH-61+ ARCH-62+ ARCH-63+ ARCH-64+ ARCH-65+ ARCH-66+ ARCH-67+ ARCH-68+
