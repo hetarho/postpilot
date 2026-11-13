@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r39 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
+> r40 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -32,7 +32,7 @@
   - daily, monthly bonus, voucher and compensation credits participate by their actual expiry, so a sooner-expiring voucher may precede a daily grant
   - expired remainders stay in history and never roll over; unused daily allowance does not accumulate and requires no login claim
   - paid grants renew once per eligible window under QUOTA-37, atomically with balance/admission operations
-- QUOTA-13 [o] every cost-incurring model start passes shared queue admission, including writing/revision, personal analysis, bounded setting/style preparation, actual-writing tests, memories, storylines, template requests and DUB work.
+- QUOTA-13 [o] every cost-incurring model start passes shared queue admission, including observation, writing/revision, personal analysis, bounded setting/style preparation, actual-writing tests, memories, storylines, template requests and DUB work.
   - reserve exact planned bounded calls with model refs/counts/budgets before issuing them; test plans follow QUOTA-74 and clips retain QUOTA-43
   - reads, source/manual edits, match decisions and ordinary setting publication issue no model call or reservation
 - QUOTA-14 [o] hold every planned completion call at its worst case: 30 000 prompt tokens (`holdInputTokens`), except clips freeze QUOTA-53's input allowance and a voice analysis (→VOICE-23) holds the larger of 30 000 and one token per Unicode character of the prompt it will send, plus the actual completion budget at the applicable prices; speech uses QUOTA-69's separate unit budgets ← an analysis reads every 학습 글, so a fixed prompt allowance would leave a large corpus's overrun unpaid
@@ -240,4 +240,5 @@
 - frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu, the header and the credits cards on 나 and the billing screen (→QUOTA-75) share the published offer and balance semantics
 
 ## chg
+- r40 261113 QUOTA-13✎ admission list writing/revision, …→observation, writing/revision, …
 - r39 261111 QUOTA-28✎ phone layout "five cards stack, no horizontal scroll"→"one sideways snapping row opening on the recommended card, all five in a row on the widest desk"; QUOTA-75+ credits card on 나 and billing with one 충전 (paid tier: packs, free: /plans, master: the disabled packs)

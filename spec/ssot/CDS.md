@@ -115,7 +115,7 @@
   - cover same-source splits, every rate, transitions, captions crossing cuts, narration over unrelated footage, differently priced items and missing optional facts
   - cover template-free enabled intro/outro, disabled regions, blank/unused slots, preset capacity changes and owner-fixed text; no implicit badge or copy may appear
   - cover manual caption styles outside the AI set, styles of both rendering kinds, position/size edits, undo/redo and preview/export parity without unintended audio, gaps, stale captions or silent repair
-- CDS-56 [o] overlap never prevents automatic generation or manual rerendering, including caption, disclosure and region-block collisions and crossfade windows; preserve the selected text, placement and timing when overlap is the only issue, deliver the preview and download, and let the owner revise it in step ②; diagnostic overlap checks remain available, and all other delivery checks still run even when overlap is present ← a reviewable video is preferable to losing the whole result over text placement
+- CDS-56 [o] overlap never prevents automatic generation or manual rerendering, including caption, disclosure and region-block collisions and crossfade windows; preserve the selected text, placement and timing when overlap is the only issue, deliver the preview and download, and let the owner revise it in step ④; diagnostic overlap checks remain available, and all other delivery checks still run even when overlap is present ← a reviewable video is preferable to losing the whole result over text placement
 
 - CDS-57 [o] a header-placed disclosure keeps equal outer margins — 9:16 x 96/984, 16:9 x 96/1824 and 1:1 x 64/1016 — with glyphs measured by weight/tracking and optically centred, reserving its visible width plus one stack gap only while shown; authored text follows CDS-64, and other selected positions inherit no hidden header reservation
 
@@ -123,7 +123,7 @@
   - generation preserves a first short word as its own opening beat and groups following adjacent words into short phrases, prefers 300 ms for ≤3 characters, 500 ms for ≤9, 800 ms for longer phrases, and may compress within the 300 ms floor to fit that interval
   - at most 24 phrases per caption, one line of ≤14 characters per phrase, no sentence-class or 60% occupancy requirement
   - insufficient room uses the grounded short alternative or preserves sentence mode rather than losing the video (→CLIP-134)
-- CDS-60 [o] step ② exposes each phrase's text, absolute transformed-output start and end time, add/remove, and split-to-rapid or merge-to-sentence actions; manual windows persist exactly in output milliseconds and are revalidated after any edit that changes the output length, adjacent windows may touch but may not overlap, and invalid limits are reported before rendering without proportional retiming
+- CDS-60 [o] step ④ exposes each phrase's text, absolute transformed-output start and end time, add/remove, and split-to-rapid or merge-to-sentence actions; manual windows persist exactly in output milliseconds and are revalidated after any edit that changes the output length, adjacent windows may touch but may not overlap, and invalid limits are reported before rendering without proportional retiming
 
 - CDS-61 [o] the design system owns typography, contrast, safe areas, approved styles and output quality; a template owns its outline, declared disclosure and starting project values
   - the project owns region enablement, presets, slot instructions and final text; the storyline and owner instruction direct flow and narration under 영상 지침 (→CLIP-168 →CLIP-178 →CLIP-186 →GUIDE-42 →GUIDE-52)
@@ -134,7 +134,7 @@
   - a preview without parity for a field is not final-output proof; unsupported effects are refused before save/render
   - preview states its unsupported effects and loudness limits; per-frame motion retains CDS-83/CLIP-148/176's declared limits
   - absent narration decoding/playback identifies the limitation; a source-off preview cannot silently omit requested narration (→DUB-25)
-- CDS-66 [o] intro/outro slots use their region's selected preset with no per-slot style choice; AI-generated captions name a style from the project's AI set, while an owner may select any product-approved caption style in ②
+- CDS-66 [o] intro/outro slots use their region's selected preset with no per-slot style choice; AI-generated captions name a style from the project's AI set, while an owner may select any product-approved caption style in ④
   - an AI response outside its allowed set is checked during generation; an owner-selected approved style outside that set is valid during save, preview and either render (→CDS-80 →CLIP-142 →CLIP-143)
 - CDS-67 [o] grammar examples, copied format instructions, template controls and acceptance fixtures cover every role/style combination and every supported ratio; rejecting a deterministic combination only in final rendering is a release-blocking contract mismatch
 - CDS-68 [o] every cut uses exactly one CLIP-98 fixed playback rate; a slow rate is valid only when verified source cadence can produce the 30 fps output without synthesized or interpolated frames, and an unsuitable rate is identified before rendering rather than changed to 1x

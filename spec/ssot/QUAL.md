@@ -43,7 +43,7 @@
 - QUAL-33 [x] full-text collection of top-ranked posts
 - QUAL-34 [x] any search-demand or 키워드 단가 data, including the 검색광고 API
 - QUAL-35 [x] measuring whether a post was cited by a generative answer ← no screen, feed or API is known to report it
-- QUAL-36 [o] ② shows this post's own M2, M3 and M4 values against the same bands; M1 appears only in ①'s brief; an account under M2's minimum renders that minimum on ② exactly as the brief does
+- QUAL-36 [o] ④ shows this post's own M2, M3 and M4 values against the same bands; M1 appears only in ①'s brief; an account under M2's minimum renders that minimum on ④ exactly as the brief does
 - QUAL-37 [o] a post's own numbers are shown whether or not any band is crossed ← they are the author's reading of their own draft, not a warning the product raises
 - QUAL-47 [x] any 네이버 검색 API result, or anything derived from one, reaching a prompt, a stored list or a screen ← its terms forbid feeding results to AI, caching them and earning revenue from them
 - QUAL-39 [o] recency everywhere means `published_at` descending, so a post republished under a new URL enters the window at its new position
@@ -57,7 +57,7 @@
   - prompt quality and owner-run publication observations remain separate validation under GEN-86
 
 ## flow
-- measure (post): content revision changes → that post's own metrics computed and stored → ② renders them
+- measure (post): content revision changes → that post's own metrics computed and stored → ④ renders them
 - measure (account): URL pasted or cleared → the set of 발행됨 posts changes → aggregate recomputed from their stored rows
 - offer: ①'s dock reads the aggregate → a metric over its band renders its checkbox and tooltip, one below its minimum renders that minimum → ticked boxes freeze at enqueue → the write prompt carries their rule text
 
