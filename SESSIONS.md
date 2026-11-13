@@ -158,6 +158,7 @@
 | T795 | ldui | main | b635d3d3cced | 2026-11-13T16:18Z |
 
 ## log
+- 261113 video UX: adopting bounded caption-preview and visual-template proposals; planning isolated from active si8 and dsui groups
 - 261113 T795 done
 - 261113 gusta-create-task THEME r44: T803–T816; shared foundation then return/resource/clip/attachment lanes and complete-route audit
 - 261113 gusta-update-ssot THEME start; audit all product routes for shared navigation, catalogs, clip workflow and native-control escapes in isolated checkout
@@ -177,4 +178,3 @@
 - 261113 T788 done
 - 261113 T787 done
 - 261113 T786 done
-- 261113 T785 done
