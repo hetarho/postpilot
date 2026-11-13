@@ -243,6 +243,40 @@ export function useClipGenerationQuote(
   })
 }
 
+/** 관찰하기 and 다시 관찰하기's quote (CLIP-234): the observations still missing for the selected
+ *  sources, plus every chunk of the sources named in `reanalyzeSourceIds`, and no writing call. */
+export function useClipAnalysisQuote(
+  ownerId: string,
+  input: {
+    projectId: string
+    batchId: string
+    observeModel: { providerId: string; modelId: string }
+    writeModel: { providerId: string; modelId: string }
+    reanalyzeSourceIds?: readonly string[]
+  },
+  binding: string,
+  enabled = true,
+) {
+  const transport = useTransport()
+  return useQuery({
+    queryKey: ['clip-quote', transport, ownerId, 'analysis', binding],
+    enabled,
+    gcTime: 0,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    queryFn: async ({ signal }) => {
+      const client = createClient(ClipGenerationService, transport)
+      const response = await client.quoteClipAnalysis(
+        { ...input, reanalyzeSourceIds: [...(input.reanalyzeSourceIds ?? [])] },
+        { signal },
+      )
+      return toClipQuote(response, binding)
+    },
+  })
+}
+
 /** A storyline request's quote (CLIP-181): one writing call on the stored observations, bound to
  *  the storyline the owner is looking at and the words they wrote. */
 export function useClipStorylineRevisionQuote(

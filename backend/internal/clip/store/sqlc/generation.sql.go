@@ -248,6 +248,31 @@ func (q *Queries) ResultKeys(ctx context.Context) ([]sql.NullString, error) {
 	return items, nil
 }
 
+const saveClipAnalysis = `-- name: SaveClipAnalysis :execrows
+UPDATE clip_projects SET analysis_json=?,updated_at=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
+`
+
+type SaveClipAnalysisParams struct {
+	AnalysisJson sql.NullString
+	UpdatedAt    string
+	UserID       string
+	ID           string
+}
+
+// The analysis job's result (CLIP-234): the stored observations, and nothing else.
+func (q *Queries) SaveClipAnalysis(ctx context.Context, arg SaveClipAnalysisParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, saveClipAnalysis,
+		arg.AnalysisJson,
+		arg.UpdatedAt,
+		arg.UserID,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const saveClipStorylineAnalysis = `-- name: SaveClipStorylineAnalysis :execrows
 UPDATE clip_projects SET analysis_json=?,storyline_json=?,updated_at=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL
 `

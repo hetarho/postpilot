@@ -75,6 +75,42 @@ func (h *Handler) StartClipStoryline(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(&v1.StartClipGenerationResponse{JobId: id}), nil
 }
 
+// QuoteClipAnalysis prices 관찰하기 and 다시 관찰하기 (CLIP-234).
+func (h *Handler) QuoteClipAnalysis(ctx context.Context, req *connect.Request[v1.QuoteClipAnalysisRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(clip.ErrPricingUnavailable)
+	}
+	observe, write := modelRefs(req.Msg.GetObserveModel(), req.Msg.GetWriteModel())
+	q, err := h.generation.QuoteAnalysis(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe, write, req.Msg.GetReanalyzeSourceIds())
+	if err != nil {
+		return nil, generationError(err, observe)
+	}
+	return connect.NewResponse(generationQuoteProto(ctx, h, user, req.Msg.ProjectId, q)), nil
+}
+
+// StartClipAnalysis accepts an approved analysis.
+func (h *Handler) StartClipAnalysis(ctx context.Context, req *connect.Request[v1.StartClipAnalysisRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if h.generation == nil {
+		return nil, toConnectError(errors.New("clip generation unavailable"))
+	}
+	observe, write := modelRefs(req.Msg.GetObserveModel(), req.Msg.GetWriteModel())
+	approved := approval(req.Msg.CancellationPolicyVersion, req.Msg.QuoteId, req.Msg.ApprovedMaxCredits)
+	approved.AnalysisPreparationID = req.Msg.AnalysisPreparationId
+	id, err := h.generation.StartAnalysis(ctx, user, req.Msg.ProjectId, req.Msg.BatchId, observe, write, req.Msg.GetReanalyzeSourceIds(), approved)
+	if err != nil {
+		return nil, generationError(err, observe)
+	}
+	return connect.NewResponse(&v1.StartClipGenerationResponse{JobId: id}), nil
+}
+
 // QuoteClipStorylineRevision prices one storyline request (CLIP-181).
 func (h *Handler) QuoteClipStorylineRevision(ctx context.Context, req *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
 	user, err := actingUser(ctx)

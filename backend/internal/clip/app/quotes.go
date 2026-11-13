@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/llm"
@@ -46,25 +48,69 @@ func (s *GenerationService) checkQuoteAccess(ctx context.Context, user, observe,
 }
 
 // quoteMode is the work a clip quote prices: 바로 만들기's flow and narration, 이 스토리로
-// 만들기's (the same two calls along the stored storyline), or the storyline call alone.
+// 만들기's (the same two calls along the stored storyline), the storyline call alone, or
+// 관찰하기's observation alone (CLIP-234).
 type quoteMode int
 
 const (
 	quoteGenerate quoteMode = iota
 	quoteFromStoryline
 	quoteStoryline
+	quoteAnalyze
 )
 
 func (m quoteMode) kind() string {
-	if m == quoteStoryline {
+	switch m {
+	case quoteStoryline:
 		return clip.JobKindStoryline
+	case quoteAnalyze:
+		return clip.JobKindAnalyze
 	}
 	return ""
+}
+
+// withoutReanalyzed is the recovery with no chunk of the sources 다시 관찰하기 names, so they
+// are counted, prepared and observed again as missing (CLIP-234).
+func withoutReanalyzed(r clip.RecoveryState, reanalyze []string) clip.RecoveryState {
+	if len(reanalyze) == 0 {
+		return r
+	}
+	kept := make([]clip.ChunkAnalysis, 0, len(r.Chunks))
+	for _, c := range r.Chunks {
+		if !slices.Contains(reanalyze, c.SourceID) {
+			kept = append(kept, c)
+		}
+	}
+	r.Chunks = kept
+	return r
+}
+
+// reanalysisList is the sources named for 다시 관찰하기 in the batch's order, each once; a name
+// the batch does not hold is refused rather than silently ignored.
+func reanalysisList(b clip.SourceBatch, ids []string) ([]string, error) {
+	var out []string
+	for _, v := range b.Sources {
+		if slices.Contains(ids, v.ID) {
+			out = append(out, v.ID)
+		}
+	}
+	for _, id := range ids {
+		if !slices.Contains(out, id) {
+			return nil, clip.ErrInvalid
+		}
+	}
+	return out, nil
 }
 
 // refreeze prices the approved work again on the current documents, in the shape it was
 // approved in: the storyline call is ONE writing call with no narration after it (CLIP-177).
 func (s *GenerationService) refreeze(ctx context.Context, pricing clip.GenerationPricing, count int) (clip.GenerationPricing, error) {
+	// 관찰하기 is the observations alone (CLIP-234): priced with no writing call after them.
+	if pricing.Analysis {
+		current, err := s.freezeWork(withFrozenQuoteRate(ctx, pricing), pricing.Observe.Ref, pricing.Plan.Ref, count, true, true, pricing.Plan.ResponseRetries)
+		current.SkipFlow, current.SkipNarration, current.Analysis, current.Reanalyze = false, false, true, pricing.Reanalyze
+		return current, err
+	}
 	if pricing.Storyline {
 		current, err := s.freezeWork(ctx, pricing.Observe.Ref, pricing.Plan.Ref, count, false, true, pricing.Plan.ResponseRetries)
 		current.SkipNarration, current.Storyline = false, true
@@ -81,7 +127,7 @@ func (s *GenerationService) refreeze(ctx context.Context, pricing clip.Generatio
 	return current, e
 }
 
-func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string, mode quoteMode) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, clip.VideoGuidelines, error) {
+func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, observe, write string, mode quoteMode, reanalyze []string) (clip.Project, clip.VideoTemplate, clip.SourceBatch, clip.GenerationPricing, clip.VideoGuidelines, error) {
 	var p clip.Project
 	var t clip.VideoTemplate
 	var b clip.SourceBatch
@@ -161,6 +207,14 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, err
 	}
 	recovered := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
+	// 다시 관찰하기 observes the sources it names again: their kept chunks count as missing.
+	if len(reanalyze) > 0 && mode != quoteAnalyze {
+		return p, t, b, pricing, guidelines, clip.ErrInvalid
+	}
+	if reanalyze, err = reanalysisList(b, reanalyze); err != nil {
+		return p, t, b, pricing, guidelines, err
+	}
+	recovered = withoutReanalyzed(recovered, reanalyze)
 	// The 영상 지침 are writer input like the instruction (CLIP-69, GUIDE-15): read once here, so the
 	// value the approval binds is the value the start freezes.
 	if guidelines, err = s.videoGuidelines(ctx, p); err != nil {
@@ -177,7 +231,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	// still resumes at rendering.
 	// The storyline call writes no plan, so no kept plan answers it; the analysis it
 	// still needs is counted below either way (CLIP-93).
-	written := mode != quoteStoryline && (recovered.Plan != "" || p.Dubbing.Enabled && recovered.Spoken != nil) && recovered.PlanDigest == planRecoveryDigest(seed)
+	written := mode != quoteStoryline && mode != quoteAnalyze && (recovered.Plan != "" || p.Dubbing.Enabled && recovered.Spoken != nil) && recovered.PlanDigest == planRecoveryDigest(seed)
 	skipFlow := written && (recovered.FlowReady || recovered.PlanReady)
 	skipNarration := skipFlow && recovered.PlanReady
 	upperCount := count
@@ -206,7 +260,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		skipFlow, skipNarration = false, false
 	}
 	writeCalls := 1
-	if skipNarration {
+	if skipNarration || mode == quoteAnalyze {
 		writeCalls = 0
 	}
 	if err := s.checkQuoteAccess(ctx, user, observe, write, count, writeCalls); err != nil {
@@ -224,6 +278,11 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 			// with no narration after it, then marked as the storyline call it is.
 			pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, false, true, DefaultQuoteRetries)
 			pricing.SkipNarration, pricing.Storyline = false, true
+		} else if mode == quoteAnalyze {
+			// The observations still missing and nothing after them (CLIP-234): priced with
+			// both writing calls skipped, then marked as the analysis it is.
+			pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, true, true, DefaultQuoteRetries)
+			pricing.SkipFlow, pricing.SkipNarration, pricing.Analysis, pricing.Reanalyze = false, false, true, strings.Join(reanalyze, ",")
 		} else {
 			pricing, err = s.freezeWork(ctx, modelRef(observe), modelRef(write), count, skipFlow, skipNarration, 3)
 		}
@@ -234,7 +293,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, admissionRefusal(modelRef(observe), err)
 	}
 	pricing.CancellationPolicyVersion = clip.CancellationPolicyVersion
-	if p.Dubbing.Enabled && mode != quoteStoryline {
+	if p.Dubbing.Enabled && mode != quoteStoryline && mode != quoteAnalyze {
 		if s.speech == nil {
 			return p, t, b, pricing, guidelines, clip.ErrCompositionUnavailable
 		}
@@ -303,8 +362,19 @@ func (s *GenerationService) QuoteStoryline(ctx context.Context, user, id, batch,
 	return s.quote(ctx, user, id, batch, observe, write, quoteStoryline)
 }
 
+// QuoteAnalysis prices 관찰하기 and 다시 관찰하기 (CLIP-234): the observation chunks still
+// missing for the selected sources, plus every chunk of the sources reanalyze names, and no
+// writing call. A project with nothing left to observe quotes zero calls.
+func (s *GenerationService) QuoteAnalysis(ctx context.Context, user, id, batch, observe, write string, reanalyze []string) (clip.GenerationQuote, error) {
+	return s.quoteFor(ctx, user, id, batch, observe, write, quoteAnalyze, reanalyze)
+}
+
 func (s *GenerationService) quote(ctx context.Context, user, id, batch, observe, write string, mode quoteMode) (clip.GenerationQuote, error) {
-	p, t, b, pricing, _, err := s.quoteInputs(ctx, user, id, batch, observe, write, mode)
+	return s.quoteFor(ctx, user, id, batch, observe, write, mode, nil)
+}
+
+func (s *GenerationService) quoteFor(ctx context.Context, user, id, batch, observe, write string, mode quoteMode, reanalyze []string) (clip.GenerationQuote, error) {
+	p, t, b, pricing, _, err := s.quoteInputs(ctx, user, id, batch, observe, write, mode, reanalyze)
 	if err != nil {
 		return clip.GenerationQuote{}, err
 	}
@@ -344,11 +414,21 @@ func (s *GenerationService) StartStoryline(ctx context.Context, user, id, batch,
 	return s.startMode(ctx, user, id, batch, observe, write, approval, quoteStoryline)
 }
 
+// StartAnalysis accepts an approved 관찰하기 or 다시 관찰하기 (CLIP-234); the reanalysis list must
+// be the one the quote was taken with.
+func (s *GenerationService) StartAnalysis(ctx context.Context, user, id, batch, observe, write string, reanalyze []string, approval clip.QuoteApproval) (string, error) {
+	return s.startFor(ctx, user, id, batch, observe, write, approval, quoteAnalyze, reanalyze)
+}
+
 func (s *GenerationService) startApproved(ctx context.Context, user, id, batch, observe, write string, a clip.QuoteApproval) (string, error) {
 	return s.startMode(ctx, user, id, batch, observe, write, a, quoteGenerate)
 }
 
 func (s *GenerationService) startMode(ctx context.Context, user, id, batch, observe, write string, a clip.QuoteApproval, mode quoteMode) (string, error) {
+	return s.startFor(ctx, user, id, batch, observe, write, a, mode, nil)
+}
+
+func (s *GenerationService) startFor(ctx context.Context, user, id, batch, observe, write string, a clip.QuoteApproval, mode quoteMode, reanalyze []string) (string, error) {
 	if a.QuoteID == "" || a.MaxCredits == nil || *a.MaxCredits < 0 {
 		return "", clip.ErrQuoteRequired
 	}
@@ -387,7 +467,7 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	if !s.now().Before(q.ExpiresAt) {
 		return "", clip.ErrQuoteExpired
 	}
-	p, t, b, pricing, guidelines, err := s.quoteInputs(withFrozenQuoteRate(ctx, q.Pricing), user, id, batch, observe, write, mode)
+	p, t, b, pricing, guidelines, err := s.quoteInputs(withFrozenQuoteRate(ctx, q.Pricing), user, id, batch, observe, write, mode, reanalyze)
 	if err != nil {
 		return "", err
 	}
@@ -419,7 +499,7 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	if err != nil {
 		return "", err
 	}
-	recovery := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
+	recovery := withoutReanalyzed(s.selectRecovery(upgraded, b, modelRef(observe), p.Language), pricing.ReanalyzedSources())
 	regions := clip.EffectiveProjectRegions(p)
 	version := clip.GenerationPayloadVersion
 	if a.AnalysisPreparationID != "" {
@@ -432,8 +512,12 @@ func (s *GenerationService) startMode(ctx context.Context, user, id, batch, obse
 	// The instruction this generation froze, kept verbatim beside the project.
 	// An empty one is recorded as the empty instruction it was: a clip written
 	// without direction is a thing the record has to be able to explain.
-	frozen := clip.ProjectRequest{Kind: clip.RequestInstruction, Body: p.Instruction, CreatedAt: s.now()}
-	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Quote: &q, Request: &frozen, Kind: mode.kind()}, batch, 0)
+	// An analysis reads no instruction, so it records none (CLIP-234).
+	frozen := &clip.ProjectRequest{Kind: clip.RequestInstruction, Body: p.Instruction, CreatedAt: s.now()}
+	if mode == quoteAnalyze {
+		frozen = nil
+	}
+	job, err := s.enqueue(ctx, clip.GenerationStart{UserID: user, ProjectID: id, Observe: observe, Write: write, Payload: payload, Quote: &q, Request: frozen, Kind: mode.kind()}, batch, 0)
 	if err != nil {
 		// A racing request may have won the unique active-project/source linkage.
 		if existing, lookup := s.acceptedJob(ctx, user, id, batch, observe, write, a); lookup == nil && existing != "" {

@@ -264,6 +264,12 @@ type StorylineStore interface {
 	SaveStoryline(ctx context.Context, user, id, analysis, storyline string, drafts []RegionDraft, now time.Time) (Project, error)
 }
 
+// AnalysisStore saves what 관찰하기 observed (CLIP-234): the merged analysis as the project's
+// stored observations, and nothing else of the project.
+type AnalysisStore interface {
+	SaveAnalysis(ctx context.Context, user, id, analysis string, now time.Time) error
+}
+
 // ObservationSource is the source an observation id belongs to.
 func ObservationSource(id string) string {
 	if at := strings.LastIndex(id, "/"); at >= 0 {

@@ -216,7 +216,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T788 | Run clip source analysis as its own approved job | CLIP QUOTA ARCH | - | todo |
 | T789 | Save owner corrections to clip observations | CLIP ARCH | T788 | todo |
 | T790 | Give the clip workspace five lifecycle steps with the storyline as its own step | CLIP THEME ARCH | T785 | todo |
 | T791 | Analyze and correct clip sources on ② 관찰 | CLIP QUOTA THEME ARCH | T788 T789 T790 | todo |
@@ -232,10 +231,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T788 T790
+- gusta-implement-task T789 T790
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T788 done
 - 261113 T787 done
 - 261113 T786 done
 - 261113 T785 done
@@ -255,4 +255,3 @@
 - 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
 - 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.
-- 261113 verified local task archives after plan-sync: T773/T777 remain completed with native integration commits. Initial substring probe matched dependency cells, not task-id rows; no progress repair was needed. Remote planning publication included no source.

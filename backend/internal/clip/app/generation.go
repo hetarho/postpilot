@@ -224,7 +224,7 @@ type generationRun struct {
 // with the job. The attempt ends on the validated plan — no media is rendered and no
 // result file is produced; the owner starts the render they want (CLIP-151).
 func (s *GenerationService) Run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
-	return s.run(ctx, user, job, project, payload, progress, false)
+	return s.run(ctx, user, job, project, payload, progress, clip.JobKindGenerate)
 }
 
 // RunStoryline is the 스토리라인 먼저 and 다시 만들기 job (CLIP-177): Run's prepare, admission
@@ -234,10 +234,20 @@ func (s *GenerationService) Run(ctx context.Context, user, job, project string, 
 // of it changes; the result stays as it is (CLIP-188). Cancellation and failure settle as a
 // generation's do.
 func (s *GenerationService) RunStoryline(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
-	return s.run(ctx, user, job, project, payload, progress, true)
+	return s.run(ctx, user, job, project, payload, progress, clip.JobKindStoryline)
 }
 
-func (s *GenerationService) run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int), storyline bool) (err error) {
+// RunAnalysis is the 관찰하기 and 다시 관찰하기 job (CLIP-234): Run's prepare, admission and
+// analysis, each new chunk kept in the recovery as it is observed, and then the merged analysis
+// saved as the project's stored observations and nothing else — no storyline, plan, region or
+// upload text. The recovery stays, so the next quote reuses what was observed (CLIP-93), and a
+// failure or a cancellation keeps the chunks completed before it (CLIP-87).
+func (s *GenerationService) RunAnalysis(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int)) (err error) {
+	return s.run(ctx, user, job, project, payload, progress, clip.JobKindAnalyze)
+}
+
+func (s *GenerationService) run(ctx context.Context, user, job, project string, payload []byte, progress func(string, int, int), kind string) (err error) {
+	storyline, analysis := kind == clip.JobKindStoryline, kind == clip.JobKindAnalyze
 	if s.finisher == nil {
 		return clip.ErrCompositionUnavailable
 	}
@@ -261,9 +271,9 @@ func (s *GenerationService) run(ctx context.Context, user, job, project string, 
 	if err := r.accept(payload); err != nil {
 		return err
 	}
-	// The approval prices the work this job is: one storyline call, or the flow and the
-	// narration.
-	if r.pricing.Storyline != storyline {
+	// The approval prices the work this job is: one storyline call, the observations alone,
+	// or the flow and the narration.
+	if r.pricing.Storyline != storyline || r.pricing.Analysis != analysis {
 		return clip.ErrQuoteChanged
 	}
 	r.checkpoint.TotalSources = len(r.b.Sources)
@@ -272,6 +282,9 @@ func (s *GenerationService) run(ctx context.Context, user, job, project string, 
 	continueAI := func() error {
 		if err := r.analyze(); err != nil {
 			return err
+		}
+		if analysis {
+			return nil
 		}
 		if storyline {
 			return r.writeStoryline()
@@ -304,7 +317,29 @@ func (s *GenerationService) run(ctx context.Context, user, job, project string, 
 	if storyline {
 		return r.saveStoryline()
 	}
+	if analysis {
+		return r.saveAnalysis()
+	}
 	return r.finish(currentProject)
+}
+
+// saveAnalysis saves the merged analysis as the project's stored observations (CLIP-234) and
+// writes nothing else.
+func (r *generationRun) saveAnalysis() error {
+	r.set("save", 0, 1)
+	store, ok := r.s.store.(clip.AnalysisStore)
+	if !ok {
+		return clip.ErrCompositionUnavailable
+	}
+	analysis, err := json.Marshal(r.analyses)
+	if err != nil {
+		return err
+	}
+	if err := store.SaveAnalysis(r.ctx, r.user, r.project, string(analysis), r.s.now()); err != nil {
+		return err
+	}
+	r.set("cleanup", 0, 1)
+	return nil
 }
 
 // writeStoryline is the storyline call over every analysis (CLIP-177), written as made with

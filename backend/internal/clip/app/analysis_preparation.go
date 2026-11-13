@@ -182,6 +182,10 @@ func (a *AnalysisPreparations) Begin(ctx context.Context, user string, in clip.A
 					source = cached
 					coverage[i].Info = cached.Info
 					for _, c := range r.Chunks {
+						// 다시 관찰하기 copies a named source again although its chunks are kept.
+						if slices.Contains(q.Pricing.ReanalyzedSources(), c.SourceID) {
+							continue
+						}
 						if c.SourceID == cached.ID && c.Fingerprint == cached.Fingerprint && clip.ValidateChunkInput(clip.DefaultAnalysisLimits(), clip.ChunkInput{Source: cached, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS}) == nil && clip.ValidateSegments(clip.DefaultAnalysisLimits(), c.Segments, c.OffsetMS, c.OffsetMS+c.DurationMS) == nil {
 							found := slices.ContainsFunc(out.Reused, func(v clip.AnalysisChunk) bool { return v.SourceID == c.SourceID && v.Index == c.Index })
 							if !found {

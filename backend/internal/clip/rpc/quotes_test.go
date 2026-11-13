@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -100,5 +101,33 @@ func TestAdmissionRefusalsAndEligibilityWire(t *testing.T) {
 		if got := eligibilityProto(status); got != want {
 			t.Fatalf("%q → %v", status, got)
 		}
+	}
+}
+
+// CLIP-234: an analysis quote lists its observations alone, a storyline quote its one writing
+// call, and a generation both writing calls.
+func TestAnAnalysisQuoteListsItsObservationsAlone(t *testing.T) {
+	observe := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "o"}, Stage: "observe", ResponseRetries: 3}
+	write := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "w"}, Stage: "write", ResponseRetries: 3}
+	labels := func(p clip.GenerationPricing) []string {
+		out := []string{}
+		for _, c := range pricedCallsProto(p) {
+			out = append(out, c.Label)
+		}
+		return out
+	}
+	base := clip.GenerationPricing{Observe: observe, Plan: write, Narration: write, ObservationCalls: 2}
+	analysis, storyline := base, base
+	analysis.Analysis, storyline.Storyline = true, true
+	for name, want := range map[string]struct {
+		pricing clip.GenerationPricing
+		labels  string
+	}{"analysis": {analysis, "observe"}, "storyline": {storyline, "observe storyline"}, "generation": {base, "observe flow narration"}} {
+		if got := strings.Join(labels(want.pricing), " "); got != want.labels {
+			t.Errorf("%s quote lists %q, want %q", name, got, want.labels)
+		}
+	}
+	if calls := pricedCallsProto(analysis); calls[0].Calls != 8 {
+		t.Fatal("the analysis quote does not count each chunk with its corrections", calls[0].Calls)
 	}
 }

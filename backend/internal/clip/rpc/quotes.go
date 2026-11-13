@@ -39,20 +39,31 @@ func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[
 }
 
 // generationQuoteProto is a clip quote as ① reads it. A storyline call prices its one writing
-// call under its own label and no narration (CLIP-177).
+// call under its own label and no narration (CLIP-177), and an analysis no writing call.
 func generationQuoteProto(ctx context.Context, h *Handler, user, project string, q clip.GenerationQuote) *v1.QuoteClipGenerationResponse {
-	calls := []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "flow", q.Pricing.FlowCalls()), pricedCallProto(q.Pricing.Narration, "narration", q.Pricing.NarrationCalls())}
-	if q.Pricing.Dubbing != nil {
+	calls := pricedCallsProto(q.Pricing)
+	return &v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, project), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: cancellationPolicyProto(q.Pricing), QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: calls}
+}
+
+// pricedCallsProto is each call a clip quote prices, under the label ① shows it by.
+func pricedCallsProto(pricing clip.GenerationPricing) []*v1.ClipPricedCall {
+	observe := pricedCallProto(pricing.Observe, "observe", pricing.ObserveCalls(pricing.ObservationCalls))
+	// 관찰하기 prices the observations alone (CLIP-234).
+	if pricing.Analysis {
+		return []*v1.ClipPricedCall{observe}
+	}
+	if pricing.Storyline {
+		return []*v1.ClipPricedCall{observe, pricedCallProto(pricing.Plan, "storyline", pricing.FlowCalls())}
+	}
+	calls := []*v1.ClipPricedCall{observe, pricedCallProto(pricing.Plan, "flow", pricing.FlowCalls()), pricedCallProto(pricing.Narration, "narration", pricing.NarrationCalls())}
+	if pricing.Dubbing != nil {
 		calls[1].Label = "script"
 		calls[2].Label = "flow"
-		for _, b := range q.Pricing.Dubbing.Units {
+		for _, b := range pricing.Dubbing.Units {
 			calls = append(calls, &v1.ClipPricedCall{Label: "speech", Stage: "speech", Model: &v1.ModelRef{ProviderId: b.Ref.ProviderID, ModelId: b.Ref.ModelID}, Calls: int32(b.Count)})
 		}
 	}
-	if q.Pricing.Storyline {
-		calls = []*v1.ClipPricedCall{pricedCallProto(q.Pricing.Observe, "observe", q.Pricing.ObserveCalls(q.Pricing.ObservationCalls)), pricedCallProto(q.Pricing.Plan, "storyline", q.Pricing.FlowCalls())}
-	}
-	return &v1.QuoteClipGenerationResponse{SequenceCaptions: sequenceCostProto(ctx, h, user, project), ReusedChunks: int32(q.Pricing.ReusedChunks), RemainingChunks: int32(q.Pricing.ObservationCalls), RenderOnly: q.Pricing.RenderOnly(), ResponseRetries: int32(q.Pricing.Plan.ResponseRetries), CancellationPolicy: cancellationPolicyProto(q.Pricing), QuoteId: q.ID, MaxCredits: int32(q.Pricing.MaxCredits), ExpiresAt: q.ExpiresAt.UTC().Format(time.RFC3339Nano), PricedCalls: calls}
+	return calls
 }
 
 // QuoteClipRevision prices ONE written revision of the plan the owner is

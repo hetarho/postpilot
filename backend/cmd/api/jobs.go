@@ -163,10 +163,14 @@ func registerClipJobs(q *job.Queue, service *clipapp.GenerationService, sources 
 	q.Register(clip.JobKindStoryline, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunStoryline(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
+	// 관찰하기, which stops at the stored observations (CLIP-234).
+	q.Register(clip.JobKindAnalyze, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
+		return service.RunAnalysis(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
+	}))
 	q.Register(clip.JobKindReviseStoryline, metered(func(ctx context.Context, j job.Job, progress job.Progress) error {
 		return service.RunStorylineRevision(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, progress)
 	}))
-	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline} {
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindAnalyze} {
 		terminalKind := kind
 		q.OnTerminal(kind, func(ctx context.Context, j job.Job, at time.Time) error {
 			if terminalKind == clip.JobKindGenerate {

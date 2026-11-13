@@ -608,6 +608,8 @@ func (h *generationHarness) run(t *testing.T) error {
 		run = h.service.RunStoryline
 	case clip.JobKindReviseStoryline:
 		run = h.service.RunStorylineRevision
+	case clip.JobKindAnalyze:
+		run = h.service.RunAnalysis
 	}
 	err = run(ctx, j.UserID, j.ID, j.Subject(clip.JobSubject), j.Payload, func(stage string, done, total int) {
 		if e := h.jobs.UpdateProgress(ctx, j.ID, stage, done, total, time.Now()); e != nil {
