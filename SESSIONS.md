@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:59Z | - | main | 58e244d41e8d |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T17:05Z | - | task/video-ux-serial | 4860c0dc18ef |
-| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T17:11Z | T825 | task/design-system-audit-serial | 9b9c8b59f956 |
+| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T17:12Z | - | task/design-system-audit-serial | 9b9c8b59f956 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -187,8 +187,10 @@
 | T818 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:05Z |
 | T823 | dsui | task/design-system-audit-serial | c1fe104bdc95 | 2026-11-13T17:10Z |
 | T824 | dsui | task/design-system-audit-serial | 715e82af465f | 2026-11-13T17:11Z |
+| T825 | dsui | task/design-system-audit-serial | 9b9c8b59f956 | 2026-11-13T17:12Z |
 
 ## log
+- 261113 T825 done
 - 261113 T824 done
 - 261113 T823 done
 - 261113 fix authoring: remove duplicate return glyph found by route audit; 43 authoring tests passed
@@ -208,4 +210,3 @@
 - 261113 fix loading: consistent shared feedback in voice prompts, saved replies, memory candidate reads and refund history; three presentation-only files, existing complete regression scope retained
 - 261113 T810 done
 - 261113 fix shared-ui: merge caller classes and expose card padding for concrete card/row/media migrations;9 existing primitive tests and scoped ESLint passed
-- 261113 T809 done
