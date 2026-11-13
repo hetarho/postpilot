@@ -244,4 +244,3 @@
 
 ## chg
 - r32 261113 GEN-8✎ picker opened before a run with reusable observations→only from ②'s 다시 관찰하기, runs freeze attachments lacking an observation; GEN-24✎ contact sheet read-only→on ② 관찰 with editable fields; GEN-89+ separate observation job; GEN-90+ owner-edited observation reused as owner material; GEN-30✎ +observation job payload; GEN-43✎ GEN-67✎ GEN-69✎ GEN-71✎ ②→④/③ step references
-- r31 261015 GEN-87+ impression 원칙 contract (no invented verdict, drawbacks kept politely); GEN-88+ advertiser guide frozen and woven in as the advertiser's material; GEN-80✎ three→four origins (+ advertiser request); GEN-16✎ GEN-17✎ GEN-44✎ GEN-47✎ GEN-49✎ GEN-50✎ GEN-75✎ switchable 기본 지침→always-applied 원칙; GEN-83✎ inference always allowed→while 맛은 재료로 살리기 is on; GEN-15✎ no section without enabled 기본 지침→원칙 always give a section; GEN-5✎ GEN-14✎ GEN-30✎ GEN-40✎ advertiser guide frozen for generation/storyline, absent from revision, required hashtags join tags

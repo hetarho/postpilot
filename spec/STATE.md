@@ -160,19 +160,19 @@
 |---|---|---|---|---|
 | ARCH | 23 | 23 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
-| QUOTA | 40 | 39 | QUOTA-13✎ | 0 |
-| POST | 48 | 47 | POST-44✎ POST-45✎ POST-53✎ POST-54✎ POST-56✎ POST-66✎ POST-86✎ POST-95✎ POST-96✎ POST-97✎ POST-98✎ POST-99✎ POST-100✎ POST-122✎ POST-123✎ POST-125+ POST-126+ POST-127+ | 0 |
+| QUOTA | 40 | 40 | - | 0 |
+| POST | 48 | 48 | - | 0 |
 | VOICE | 20 | 20 | - | 0 |
-| GEN | 32 | 31 | GEN-8✎ GEN-24✎ GEN-30✎ GEN-43✎ GEN-67✎ GEN-69✎ GEN-71✎ GEN-89+ GEN-90+ | 0 |
+| GEN | 32 | 32 | - | 0 |
 | MODEL | 37 | 37 | - | 0 |
 | TMPL | 32 | 32 | - | 0 |
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 42 | 41 | THEME-18✎ THEME-39✎ THEME-71✎ | 2 |
+| THEME | 42 | 42 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 77 | 76 | CLIP-36✎ CLIP-39✎ CLIP-40✎ CLIP-48✎ CLIP-52✎ CLIP-53✎ CLIP-150✎ CLIP-160✎ CLIP-165✎ CLIP-177✎ CLIP-179✎ CLIP-180✎ CLIP-182✎ CLIP-197✎ CLIP-227✎ CLIP-234+ CLIP-235+ | 2 |
+| CLIP | 77 | 77 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -210,6 +210,15 @@
 |---|---|---|---|---|
 | T775 | Share the clip design radio tile control | ARCH | T774 | todo |
 | T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
+| T783 | Run post observation as its own job | GEN QUOTA POST ARCH | - | todo |
+| T784 | Save owner corrections to post observations | POST GEN VIDEO ARCH | T783 | todo |
+| T785 | Give the post editor five lifecycle steps with the storyline as its own step | POST THEME GEN ARCH | - | todo |
+| T786 | Observe and correct a post's attachments on ② 관찰 | POST GEN THEME ARCH | T783 T784 T785 | todo |
+| T787 | Show 스토리라인 작성 완료 on storyline-only posts in the lists | POST CLIP THEME ARCH | - | todo |
+| T788 | Run clip source analysis as its own approved job | CLIP QUOTA ARCH | - | todo |
+| T789 | Save owner corrections to clip observations | CLIP ARCH | T788 | todo |
+| T790 | Give the clip workspace five lifecycle steps with the storyline as its own step | CLIP THEME ARCH | T785 | todo |
+| T791 | Analyze and correct clip sources on ② 관찰 | CLIP QUOTA THEME ARCH | T788 T789 T790 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -222,10 +231,13 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-create-task POST GEN QUOTA THEME CLIP
+- gusta-implement-task T783
 - inspect work board for remaining tasks
 
 ## log
+- 261113 sketch storyline-separate-state done: option A (storyline as its own step, short station names, 스토리라인 작성 완료 post badge) plus a separate owner-editable observation step for posts and clips; B (end of the 생성 guide), C (two faces inside 다듬기) and D (side-by-side workbench) not taken; no ideation left open
+- 261113 gusta-create-task POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: T783–T791 (post observation job, owner observation edits, five-step post editor, post observation step, storyline-ready post badge, clip analysis job, clip observation edits, five-step clip workspace, clip observation step); no SSOT change
+- 261113 gusta-create-task POST GEN QUOTA THEME CLIP start
 - 261113 gusta-update-ssot POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: storyline and observations become lifecycle steps ② 관찰 and ③ 스토리라인 (생성·관찰·스토리라인·다듬기·완성), owner-editable observations, 관찰하기 as its own job, 스토리라인 작성 완료 post badge; CDS GUIDE MEM QUAL TMPL step numerals renumbered ②→④ ③→⑤ (wording, no rev); no doing task affected
 - 261113 gusta-update-ssot POST CLIP THEME start: storyline as its own lifecycle step (sketch storyline-separate-state, option A)
 - 261113 sketch storyline-separate-state start
@@ -243,6 +255,3 @@
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
 - 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.
 - 261113 session sv8 removed: stale since 2026-11-11T10:25Z on DESKTOP-VKPLS8P; active row and the empty wip/sv8 checkpoint deleted, report closed
-- 261112 T774 integrated
-- 261112 T779 integrated
-- 261112 T781 integrated
