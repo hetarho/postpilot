@@ -188,8 +188,10 @@
 | T823 | dsui | task/design-system-audit-serial | c1fe104bdc95 | 2026-11-13T17:10Z |
 | T824 | dsui | task/design-system-audit-serial | 715e82af465f | 2026-11-13T17:11Z |
 | T825 | dsui | task/design-system-audit-serial | 9b9c8b59f956 | 2026-11-13T17:12Z |
+| T816 | dsui | task/design-system-audit-serial | 5469ba604a90 | 2026-11-13T17:13Z |
 
 ## log
+- 261113 T816 done
 - 261113 T825 done
 - 261113 T824 done
 - 261113 T823 done
@@ -209,4 +211,3 @@
 - 261113 T819 done
 - 261113 fix loading: consistent shared feedback in voice prompts, saved replies, memory candidate reads and refund history; three presentation-only files, existing complete regression scope retained
 - 261113 T810 done
-- 261113 fix shared-ui: merge caller classes and expose card padding for concrete card/row/media migrations;9 existing primitive tests and scoped ESLint passed
