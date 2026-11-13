@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T17:58Z | - | task/loading-ui-final | 7cc538ae8479 |
-| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T18:02Z | T826 | task/design-system-audit-serial | 4f24088b69a8 |
+| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T18:03Z | - | task/design-system-audit-serial | 4f24088b69a8 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -189,8 +189,10 @@
 | T824 | dsui | task/design-system-audit-serial | 715e82af465f | 2026-11-13T17:11Z |
 | T825 | dsui | task/design-system-audit-serial | 9b9c8b59f956 | 2026-11-13T17:12Z |
 | T816 | dsui | task/design-system-audit-serial | 5469ba604a90 | 2026-11-13T17:13Z |
+| T826 | dsui | task/design-system-audit-serial | 4f24088b69a8 | 2026-11-13T18:03Z |
 
 ## log
+- 261113 T826 done
 - 261113 ldui: loading UI T795-T802 complete; reviewed candidate 7cc538ae8479 fixed on task/loading-ui-final; final ARCH batch retry is queued behind the shared design-system heavy check; no independent UI/video scope claimed.
 - 261113 fix navigation: default video-template returns to naver_clip instead of undefined; default and Instagram regressions included in 69 passing tests
 - 261113 T816 done
@@ -210,4 +212,3 @@
 - 261113 T813 done
 - 261113 T812 done
 - 261113 T811 done
-- 261113 T819 done
