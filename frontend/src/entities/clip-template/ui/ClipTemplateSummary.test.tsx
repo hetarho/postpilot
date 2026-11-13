@@ -2,6 +2,7 @@ import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ClipTemplateSummary } from './ClipTemplateSummary'
 import { emptyClipRecipe } from '../model/types'
+import { ChoiceButton } from '@/shared/ui'
 
 const template = {
   ...emptyClipRecipe(),
@@ -79,9 +80,41 @@ describe('ClipTemplateSummary', () => {
     )
     const example = screen.getByText('구성 예시').parentElement!
     expect(within(example).getByText(/인트로.*심플 제목/)).toBeVisible()
-    expect(within(example).getByText(`자막: ${caption}`)).toBeVisible()
+    expect(within(example).getByText(/^자막: 긴 문구.*…$/)).toBeVisible()
     expect(within(example).getByText(/아웃트로.*가로선 구분/)).toBeVisible()
-    expect(screen.getAllByText(`자막: ${caption}`)).toHaveLength(2)
+    expect(screen.queryByText(`자막: ${caption}`)).not.toBeInTheDocument()
+  })
+
+  it('keeps multiple long choices distinct and their spoken outlines short and ordered', () => {
+    const body = (topic: string) =>
+      `<clip version="1"><stage name="시작">도입</stage>${[1, 2, 3, 4, 5].map((n) => `<text id="text${n}" kind="fixed" role="caption" basis="whole">${topic}${n}${'긴 내용'.repeat(30)}</text>`).join('')}</clip>`
+    render(
+      <>
+        <ChoiceButton
+          title="카페"
+          selected={false}
+          description={
+            <ClipTemplateSummary template={{ ...template, compositionBody: body('카페') }} />
+          }
+        />
+        <ChoiceButton
+          title="여행"
+          selected={false}
+          description={
+            <ClipTemplateSummary template={{ ...template, compositionBody: body('여행') }} />
+          }
+        />
+      </>,
+    )
+    for (const name of ['카페', '여행']) {
+      const choice = screen.getByRole('button', { name })
+      const description = choice.getAttribute('aria-describedby')!
+      const spoken = document.getElementById(description)!.textContent!
+      expect(spoken).toContain(`시작 → 자막: ${name}1`)
+      expect(spoken).toContain(`자막: ${name}2`)
+      expect(spoken).not.toContain(`${name}5`)
+      expect(spoken.length).toBeLessThan(300)
+    }
   })
 
   it.each(['', '<clip><broken>'])(

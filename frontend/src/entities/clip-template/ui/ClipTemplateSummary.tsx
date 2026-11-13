@@ -4,6 +4,33 @@ import { Typography } from '@/shared/ui'
 import { readStoredClipComposition } from '../lib/composition-parse'
 import type { ClipRecipe } from '../model/types'
 
+// Presentation bounds keep each choice's visible and spoken description concise.
+const ITEM_CHARS = 40
+const OUTLINE_CHARS = 160
+const SEPARATOR = ' → '
+
+function shorten(value: string, limit: number): string {
+  const chars = Array.from(value)
+  return chars.length > limit
+    ? `${chars
+        .slice(0, limit - 1)
+        .join('')
+        .trimEnd()}…`
+    : value
+}
+
+function summarizeOutline(entries: string[]): string {
+  const shown: string[] = []
+  for (const entry of entries) {
+    const candidate = [...shown, shorten(entry, ITEM_CHARS)].join(SEPARATOR)
+    if (Array.from(candidate).length > OUTLINE_CHARS - SEPARATOR.length - 1) {
+      return `${shown.join(SEPARATOR)}${SEPARATOR}…`
+    }
+    shown.push(shorten(entry, ITEM_CHARS))
+  }
+  return shown.join(SEPARATOR)
+}
+
 /** A static, illustrative outline that can also live inside a choice or link. */
 export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
   const { t } = useTranslation('clips')
@@ -75,7 +102,7 @@ export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
           variant="label"
           className="bg-media-scrim-bg text-media-scrim-fg line-clamp-2 shrink-0 rounded-sm p-1 break-words"
         >
-          {example || outline[0] || t('composition.summary.body')}
+          {shorten(example || outline[0] || t('composition.summary.body'), ITEM_CHARS)}
         </Typography>
         <Typography
           as="span"
@@ -89,7 +116,9 @@ export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
       </span>
       <span className="min-w-0 flex-1 space-y-2">
         <Typography as="span" variant="body" className="block break-words">
-          {readable && outline.length ? outline.join(' → ') : t('composition.summary.noOutline')}
+          {readable && outline.length
+            ? summarizeOutline(outline)
+            : t('composition.summary.noOutline')}
         </Typography>
         <Typography as="span" variant="meta" className="block break-words">
           {t('composition.summary.design', {
