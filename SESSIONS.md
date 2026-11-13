@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
-| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | T800 | main | d3459399e6c4 |
+| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | - | main | d7a9526b3c1f |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:23Z | - | task/video-ux | fcbdaab664b2 |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:41Z | T809 | task/design-system-audit-serial | d8dad5d8c0dc |
 
@@ -167,8 +167,10 @@
 | T797 | ldui | main | 853d9e566fa1 | 2026-11-13T16:41Z |
 | T798 | ldui | main | dd2972cc4d2e | 2026-11-13T16:42Z |
 | T799 | ldui | main | cb2c17c585de | 2026-11-13T16:42Z |
+| T800 | ldui | main | d7a9526b3c1f | 2026-11-13T16:42Z |
 
 ## log
+- 261113 T800 done
 - 261113 T799 done
 - 261113 T798 done
 - 261113 T797 done
@@ -188,4 +190,3 @@
 - 261113 gusta-update-ssot DUB start: align DUB-27 per-task build obligation with approved ARCH task/batch ownership; live voice gates unchanged
 - 261113 gusta-create-task ARCH r24 no-op: framework policy, settings and documentation only; no application code delta; blocked qualification conditions retained
 - 261113 gusta-update-ssot ARCH start: owner-approved framework verification tiers, chg retention and workflow delegation
-- 261113 T794 done
