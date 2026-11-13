@@ -1,0 +1,19 @@
+# REVIEW video-editing-ux-261114
+> st:converted@261114 | scope:frontend/src/features/correct-clip frontend/src/entities/clip-template frontend/src/features/edit-clip-project frontend/src/pages/video-templates frontend/src/pages/video-template | at:619e998 | base:ARCH@24
+
+## summary
+- Mobile caption styling separates the visible result from its controls, and video templates expose too little visual information to distinguish their purpose from writing templates.
+
+## findings
+- F1 [o] P2 frontend/src/features/correct-clip/ui/ClipCaptionSheet.tsx:110: a full-width portrait stage scrolls away before the style picker at ClipTextControls.tsx:314; pale samples have no media ground in ClipCaptionStylePicker.tsx:44–54 ← changing a caption is difficult to judge on a phone →T817
+- F2 [o] P2 frontend/src/features/correct-clip/ui/ClipCorrectionWorkspace.tsx:366: an unconditional 0.3/0.2 viewport-height preview cap makes portrait footage small without an explicit inspection mode ← reading styled captions requires a larger view →T818
+- F3 [o] P2 frontend/src/features/edit-clip-project/ui/ClipProjectForm.tsx:485: template choices show names without the stored outline or starting design available in entities/clip-template/model/types.ts:24–39 ← a video template cannot be assessed before selection →T819
+- F4 [o] P2 frontend/src/pages/video-templates/ui/VideoTemplatesPage.tsx:190 and frontend/src/pages/video-template/ui/VideoTemplatePage.tsx:265: saved templates retain prose-only list/detail presentation ← video composition remains hidden until editing →T820
+
+## notes
+- Delegation: this explicit gusta-self-improve invocation authorizes this bounded video UI change, web research, worker implementation, independent review and integration. No standing schedule is enabled. Budget: one problem, 60 minutes for this cycle, commands bounded to 15 minutes, with review and final verification reserved.
+- Scouts: native sessions /root/video_ux_scout and /root/template_ux_scout, read-only proposals. Raw cited source ranges were verified by the coordinator at base 619e998349b0bfff21641a8a0542ba4010d58ba8; planning sync produced fcbdaab664b2b153c8efdc2a4432e51b48c789e8. Geometry numbers are source-derived estimates pending browser measurement.
+- Approval: F1–F4 adopted under the invocation; UI policy is explicitly revised in CLIP r78 before implementation. Existing API, persistence, template assignment, exact caption renderer, source/media lifecycle, timing, AI/credit semantics and writing templates are preserved. Independent code approval remains mandatory.
+- Ownership: main checkout is owned by active loading group si8-261113; design-system group dsui-261114 is also active. Planning/implementation uses an isolated video-ux checkout. F4 depends on T797/T798 to serialize overlapping list/detail writes. Future T807/T808/T811/T813 must retain these video-specific examples and appearance semantics.
+- Verification: task-tier affected Vitest and fast checks; coordinator owns ARCH-31 batch gate and mobile browser geometry at 320, 360 and 390px plus keyboard-height simulation. Each unit is reversible with its commit; no data migration or backend change.
+- Sources: [Creative Bloq editor review](https://www.creativebloq.com/buying-guides/best-software-for-editing-videos-for-youtube) identifies CapCut as a short-form editor; [CapCut caption guide](https://www.capcut.com/resource/caption-style) describes readable visual presets and caption position; [Edits](https://about.fb.com/news/2025/04/introducing-edits-streamlined-video-creation-app/) describes mobile editing and text-style tools; [Adobe mobile guides](https://helpx.adobe.com/express/mobile/publish-and-share/set-safe-zones.html) shows on-frame overlays. Design inference: keep a bounded preview visible with visual style choices. No popularity claim or platform-specific safe inset is added to the product.

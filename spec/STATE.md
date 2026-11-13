@@ -36,7 +36,7 @@
 | THEME | 44 | 44 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 77 | 77 | - | 2 |
+| CLIP | 78 | 78 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -49,6 +49,7 @@
 ## review
 | id | st |
 |---|---|
+| video-editing-ux-261114 | converted@261114 |
 | performance-design-system-261113 | converted@261113 |
 | video-preparation-guide-261112 | converted@261112 |
 | video-request-retention-261112 | converted@261112 |
@@ -85,7 +86,6 @@
 | T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
-
 | T804 | Provide shared controls for actionable content | ARCH THEME | T803 | todo |
 | T805 | Replace remaining text route returns | ARCH THEME | T804 | todo |
 | T806 | Unify previous actions in authoring and comparison flows | ARCH THEME | T805 | todo |
@@ -99,6 +99,10 @@
 | T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
 | T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
 | T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
+| T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
+| T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
+| T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
+| T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
