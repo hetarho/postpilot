@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { ChevronDown, X } from 'lucide-react'
 import { Button } from '../button/Button'
 import type { ButtonVariant } from '../button/buttonStyles'
+import { moveListFocus } from '../focus/listFocus'
 import { Sheet } from '../sheet/Sheet'
 import { SM_MEDIA_QUERY, useMediaQuery } from '../media-query/useMediaQuery'
 
@@ -83,18 +84,9 @@ export function ActionMenu({
       setTimeout(() => setOpen(false), 0)
       return
     }
+    // Unlike the value menus, no rows leave the keys their default.
     const elements = rows()
-    if (!elements.length) return
-    if (event.key === 'Home' || event.key === 'End') {
-      event.preventDefault()
-      elements.at(event.key === 'Home' ? 0 : -1)?.focus()
-      return
-    }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
-    event.preventDefault()
-    const step = event.key === 'ArrowDown' ? 1 : -1
-    const current = elements.indexOf(document.activeElement as HTMLButtonElement)
-    elements[(current + step + elements.length) % elements.length]?.focus()
+    if (elements.length) moveListFocus(event, elements)
   }
 
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {

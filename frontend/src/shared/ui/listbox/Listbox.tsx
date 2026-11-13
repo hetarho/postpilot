@@ -10,6 +10,7 @@ import {
   LISTBOX_VIEWPORT_GUTTER_PX,
 } from './config'
 import { useAnchoredPanel } from '../anchored-panel/useAnchoredPanel'
+import { moveListFocus } from '../focus/listFocus'
 
 const PLACEMENT = {
   gapPx: LISTBOX_TRIGGER_GAP_PX,
@@ -161,20 +162,7 @@ export function Listbox<T>({
       setOpen(false)
       return
     }
-    if (event.key === 'Home' || event.key === 'End') {
-      event.preventDefault()
-      items()
-        .at(event.key === 'Home' ? 0 : -1)
-        ?.focus()
-      return
-    }
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
-    event.preventDefault()
-    const elements = items()
-    if (!elements.length) return
-    const step = event.key === 'ArrowDown' ? 1 : -1
-    const current = elements.indexOf(document.activeElement as HTMLButtonElement)
-    elements[(current + step + elements.length) % elements.length]?.focus()
+    moveListFocus(event, items())
   }
 
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {

@@ -71,7 +71,7 @@ describe('Listbox', () => {
     expect(screen.getByRole('option', { name: '배', selected: true })).toHaveFocus()
   })
 
-  it('moves with the arrows and Home/End, and selects with Enter', async () => {
+  it('moves with the wrapping arrows and Home/End, and selects with Enter', async () => {
     const user = userEvent.setup()
     const onChanged = vi.fn()
     render(<Harness onChanged={onChanged} />)
@@ -84,6 +84,11 @@ describe('Listbox', () => {
     await user.keyboard('{End}')
     expect(screen.getByRole('option', { name: '자두' })).toHaveFocus()
     await user.keyboard('{Home}')
+    expect(screen.getByRole('option', { name: '사과' })).toHaveFocus()
+    // Three rows, so ↑ from the first can only reach the last by stepping backward and wrapping.
+    await user.keyboard('{ArrowUp}')
+    expect(screen.getByRole('option', { name: '자두' })).toHaveFocus()
+    await user.keyboard('{ArrowDown}')
     expect(screen.getByRole('option', { name: '사과' })).toHaveFocus()
 
     await user.keyboard('{Enter}')
