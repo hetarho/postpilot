@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:59Z | - | main | 58e244d41e8d |
-| vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T17:04Z | T818 | task/video-ux-serial | d428c67b8d61 |
+| vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T17:05Z | - | task/video-ux-serial | 4860c0dc18ef |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T17:02Z | T816 | task/design-system-audit-serial | 4f0111b94aad |
 
 ## inbox
@@ -184,8 +184,10 @@
 | T821 | dsui | task/design-system-audit-serial | 7b15f73a0a56 | 2026-11-13T17:01Z |
 | T822 | dsui | task/design-system-audit-serial | 6ab1b18c33fc | 2026-11-13T17:02Z |
 | T817 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:04Z |
+| T818 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:05Z |
 
 ## log
+- 261113 T818 done
 - 261113 T817 done
 - 261113 T822 done
 - 261113 T821 done
@@ -205,4 +207,3 @@
 - 261113 T801 done
 - 261113 T800 done
 - 261113 T799 done
-- 261113 T798 done
