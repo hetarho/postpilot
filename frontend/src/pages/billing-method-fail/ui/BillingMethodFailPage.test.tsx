@@ -19,4 +19,17 @@ describe('BillingMethodFailPage', () => {
       '/billing',
     )
   })
+
+  it('keeps the validated checkout return and exposes only one return link', async () => {
+    renderAppAt(
+      '/billing/method/fail?redirect=%2Fbilling%2Fcheckout%3Ftier%3Dpro%26term%3Dannual',
+      {
+        user: { id: 'alice', plan: ProtoPlan.FREE },
+      },
+    )
+
+    const link = await screen.findByRole('link', { name: '결제 화면으로 돌아가기' })
+    expect(link).toHaveAttribute('href', '/billing/checkout?tier=pro&term=annual')
+    expect(screen.queryByRole('link', { name: '결제 관리' })).not.toBeInTheDocument()
+  })
 })

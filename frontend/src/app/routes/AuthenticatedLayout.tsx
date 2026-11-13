@@ -198,6 +198,10 @@ export function AuthenticatedLayout() {
   // row; every other child route gets exactly one here (THEME-58).
   const ownReturn =
     /^\/(posts|clips)\/[^/]+$/.test(pathname) ||
+    pathname === '/spoken-voices/new' ||
+    pathname === '/billing/checkout' ||
+    pathname === '/billing/method/success' ||
+    pathname === '/billing/method/fail' ||
     pathname.startsWith('/tests/records/') ||
     pathname === '/tests' ||
     (pathname.startsWith('/tests/') && pathname !== '/tests/history')

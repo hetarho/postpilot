@@ -8,7 +8,15 @@ import {
 } from '@/features/sign-in-with-google'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { SIGNED_IN_HOME, isInAppPath } from '@/shared/lib'
-import { AppFailureMessage, Logo, Notice, Spinner, Typography, typographyStyles } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Logo,
+  Notice,
+  ReturnIcon,
+  Spinner,
+  Typography,
+  returnControlStyles,
+} from '@/shared/ui'
 
 const callbackFailure: AppFailure = { reason: 'GOOGLE_SIGNIN_FAILED', params: {} }
 
@@ -81,16 +89,6 @@ export function GoogleSignInCallbackPage() {
             <Notice tone="danger" role="alert" className="mt-4 text-left">
               <AppFailureMessage failure={failure} />
             </Notice>
-            <Link
-              to="/login"
-              className={typographyStyles({
-                variant: 'label',
-                className:
-                  'text-link-fg hover:text-link-fg-hover mt-5 inline-flex min-h-11 items-center px-2 underline',
-              })}
-            >
-              {t('google.back')}
-            </Link>
           </>
         ) : (
           <div role="status" className="mt-8 flex flex-col items-center gap-3">
@@ -98,6 +96,14 @@ export function GoogleSignInCallbackPage() {
             <Typography variant="body">{t('google.checking')}</Typography>
           </div>
         )}
+        <Link
+          to="/login"
+          aria-label={t('google.back')}
+          title={t('google.back')}
+          className={returnControlStyles('mt-5')}
+        >
+          <ReturnIcon />
+        </Link>
       </section>
     </main>
   )

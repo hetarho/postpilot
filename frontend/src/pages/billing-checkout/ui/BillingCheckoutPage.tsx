@@ -15,10 +15,11 @@ import { formatDateTime, formatNumber } from '@/shared/lib'
 import {
   Button,
   Notice,
+  ReturnIcon,
   SegmentedControl,
   Typography,
   pageStyles,
-  typographyStyles,
+  returnControlStyles,
 } from '@/shared/ui'
 
 const terms = ['monthly', 'annual'] as const
@@ -94,6 +95,14 @@ export function BillingCheckoutPage() {
 
   return (
     <main className={pageStyles()}>
+      <Link
+        to="/plans"
+        aria-label={t('checkout.back', { ns: 'billing' })}
+        title={t('checkout.back', { ns: 'billing' })}
+        className={returnControlStyles('mb-4')}
+      >
+        <ReturnIcon />
+      </Link>
       <Typography variant="display">{t('checkout.title', { ns: 'billing' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('checkout.description', { ns: 'billing' })}
@@ -241,15 +250,6 @@ export function BillingCheckoutPage() {
               {t(isUpgrade ? 'checkout.upgradeSubmit' : 'checkout.submit', { ns: 'billing' })}
             </Button>
           )}
-          <Link
-            to="/plans"
-            className={typographyStyles({
-              variant: 'label',
-              className: 'text-link-fg hover:text-link-fg-hover w-fit underline',
-            })}
-          >
-            {t('checkout.back', { ns: 'billing' })}
-          </Link>
         </div>
       )}
     </main>

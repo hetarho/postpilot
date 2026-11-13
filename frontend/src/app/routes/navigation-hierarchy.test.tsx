@@ -295,7 +295,7 @@ it('retains the Instagram scope through shared templates, child navigation, relo
   const reopened = renderAppAt(address, { transport: view.transport })
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
   expect(backHref()).toBe('/video-templates?channel=instagram_clip')
-  expect(backLink()).toHaveTextContent('영상 템플릿')
+  expect(backLink()).toHaveAccessibleName('영상 템플릿')
   await userEvent.click(backLink()!)
   // Back on a section list page: the section row marks it and there is no way back further.
   await waitFor(() =>

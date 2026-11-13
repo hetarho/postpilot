@@ -3,7 +3,14 @@ import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRegisterPaymentMethod } from '@/entities/subscription'
 import { isInAppPath } from '@/shared/lib'
-import { Notice, Spinner, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  Notice,
+  ReturnIcon,
+  Spinner,
+  Typography,
+  pageStyles,
+  returnControlStyles,
+} from '@/shared/ui'
 
 export function BillingMethodSuccessPage() {
   const { t } = useTranslation('billing')
@@ -42,6 +49,14 @@ export function BillingMethodSuccessPage() {
 
   return (
     <main className={pageStyles()}>
+      <Link
+        to="/billing"
+        aria-label={t('registration.back')}
+        title={t('registration.back')}
+        className={returnControlStyles('mb-4')}
+      >
+        <ReturnIcon />
+      </Link>
       <Typography variant="display">{t('registration.title')}</Typography>
       {valid && !registration.isError ? (
         <div role="status" className="mt-8 flex items-center gap-3">
@@ -53,19 +68,8 @@ export function BillingMethodSuccessPage() {
           <Notice tone="danger" role="alert" className="mt-8">
             {registration.errorMessage || t('registration.invalid')}
           </Notice>
-          <Link to="/billing" className={backLink()}>
-            {t('registration.back')}
-          </Link>
         </>
       )}
     </main>
   )
-}
-
-function backLink() {
-  return typographyStyles({
-    variant: 'label',
-    className:
-      'text-link-fg hover:text-link-fg-hover mt-5 inline-flex min-h-11 items-center underline',
-  })
 }

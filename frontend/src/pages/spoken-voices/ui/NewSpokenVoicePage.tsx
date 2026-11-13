@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useSpokenLibrary, type SpokenDraftInput } from '@/entities/spoken-voice'
 import { SpokenVoiceCreation } from '@/widgets/spoken-voice-creation'
-import { Typography, pageStyles, buttonStyles } from '@/shared/ui'
+import { ReturnIcon, Typography, pageStyles, returnControlStyles } from '@/shared/ui'
 export function NewSpokenVoicePage() {
   const { t } = useTranslation('spokenVoices'),
     { user } = useSession(),
@@ -28,9 +28,11 @@ export function NewSpokenVoicePage() {
     <main className={pageStyles({ width: 'prose', className: 'min-w-0' })}>
       <Link
         to="/spoken-voices"
-        className={buttonStyles({ variant: 'ghost', className: 'mb-4 -ml-3' })}
+        aria-label={t('back')}
+        title={t('back')}
+        className={returnControlStyles('mb-4')}
       >
-        {t('back')}
+        <ReturnIcon />
       </Link>
       {qualification && (
         <Typography variant="meta" className="mb-4">
