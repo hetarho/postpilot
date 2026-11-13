@@ -619,6 +619,10 @@ try {
         await open(page, c.at, c.state);
         const basePath = c.at.split("?")[0];
         const expected = expectations[basePath];
+        // Shared loading announcements intentionally wait through the quiet window.
+        if (c.kind === 'loading-return' || c.kind === 'post-loading-return') {
+          await page.waitForFunction(() => [...document.querySelectorAll('[role="status"]')].some((node) => /불러오|Loading/.test(node.textContent ?? '')), null, {timeout:30000})
+        }
         if (c.kind === "candidates") {
           await page
             .getByRole("button", { name: "AI 모델", exact: true })
