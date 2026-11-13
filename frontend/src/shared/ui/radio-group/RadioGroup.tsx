@@ -52,7 +52,7 @@ export function RadioGroup({
                     }
                   }
                 }}
-                className="accent-intent-accent size-4 shrink-0"
+                className="accent-button-cta-bg size-4 shrink-0"
               />
               <span className="min-w-0 break-words">{option.label}</span>
             </label>

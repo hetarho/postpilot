@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   type BillingRefundRequest,
@@ -7,7 +7,15 @@ import {
   useReviewRefund,
 } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
-import { AppFailureMessage, Button, Notice, Typography } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  FieldLabel,
+  Notice,
+  TextField,
+  Typography,
+  cardStyles,
+} from '@/shared/ui'
 
 export function RefundReviewSection() {
   const { t } = useTranslation('billing')
@@ -36,6 +44,7 @@ export function RefundReviewSection() {
 }
 
 function RefundReviewRow({ item }: { item: BillingRefundRequest }) {
+  const amountId = useId()
   const { t } = useTranslation('billing')
   const statusLabels: Record<string, string> = {
     requested: t('refund.status.requested'),
@@ -54,7 +63,7 @@ function RefundReviewRow({ item }: { item: BillingRefundRequest }) {
     BigInt(amount) <= (item.payment?.chargedKrw ?? 0n) - item.priorRefundedKrw
   const evidence = item.evidence
   return (
-    <li className="border-divider grid gap-2 rounded-xl border p-4">
+    <li className={cardStyles({ padding: 'sm', className: 'grid min-w-0 gap-2' })}>
       <Typography variant="label">
         {item.userId} · {formatDateTime(item.requestedAt)} ·{' '}
         {statusLabels[item.status] ?? item.status}
@@ -79,18 +88,24 @@ function RefundReviewRow({ item }: { item: BillingRefundRequest }) {
       <Typography variant="meta">{t('refundReview.disposition')}</Typography>
       {item.status === 'requested' && (
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1">
-            <Typography variant="label">{t('refundReview.amount')}</Typography>
-            <input
+          <div className="grid gap-1">
+            <FieldLabel htmlFor={amountId}>{t('refundReview.amount')}</FieldLabel>
+            <TextField
+              id={amountId}
+              inputMode="numeric"
+              autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              enterKeyHint="done"
               type="number"
               min="1"
               max={String(item.payment?.chargedKrw ?? 0n)}
               step="1"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
-              className="border-divider bg-surface-raised w-40 rounded-md border p-2"
+              className="w-40 max-w-full"
             />
-          </label>
+          </div>
           <Button
             variant="secondary"
             disabled={review.isPending || !validAmount}

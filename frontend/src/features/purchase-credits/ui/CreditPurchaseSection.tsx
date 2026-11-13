@@ -3,7 +3,7 @@ import { useMyPlan } from '@/entities/plan'
 import { useTranslation } from 'react-i18next'
 import { usePurchaseCredits, useQuotePack, type Purchase } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
-import { Button, Dialog, FieldMessage, Notice, Typography } from '@/shared/ui'
+import { Button, Dialog, FieldMessage, Notice, RadioGroup, Typography } from '@/shared/ui'
 
 export function CreditPurchaseSection({
   hasPaymentMethod,
@@ -54,25 +54,20 @@ export function CreditPurchaseSection({
           {t(`purchases.success.${success.kind}`, { credits: success.credits })}
         </Notice>
       )}
-      <div className="border-divider grid gap-3 rounded-xl border p-4">
-        <fieldset className="grid gap-2" disabled={!paid}>
-          <legend className="mb-2">{t('purchases.amountLabel')}</legend>
-          {packs.map((pack) => (
-            <label
-              key={pack.id}
-              className="border-divider flex min-h-11 items-center gap-2 rounded-md border p-2"
-            >
-              <input
-                type="radio"
-                name="credit-pack"
-                value={pack.id}
-                checked={selectedPack?.id === pack.id}
-                onChange={() => setPackId(pack.id)}
-              />
-              {t('purchases.pack', { credits: pack.credits, krw: formatNumber(pack.priceKrw) })}
-            </label>
-          ))}
-        </fieldset>
+      <div className="bg-card-well grid min-w-0 gap-3 rounded-lg p-4">
+        <Typography variant="fieldTitle" as="h3">
+          {t('purchases.amountLabel')}
+        </Typography>
+        <RadioGroup
+          label={t('purchases.amountLabel')}
+          value={selectedPack?.id ?? ''}
+          disabled={!paid}
+          onChange={setPackId}
+          options={packs.map((pack) => ({
+            value: pack.id,
+            label: t('purchases.pack', { credits: pack.credits, krw: formatNumber(pack.priceKrw) }),
+          }))}
+        />
         {quote && (
           <Typography variant="fieldTitle">
             {t('purchases.quote', { credits: quote.credits, krw: formatNumber(quote.krw) })}

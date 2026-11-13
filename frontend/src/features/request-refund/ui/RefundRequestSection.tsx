@@ -1,11 +1,21 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type BillingEvent, useMyRefunds, useRequestRefund } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
-import { Button, FieldMessage, Listbox, Notice, Typography } from '@/shared/ui'
+import {
+  Button,
+  FieldLabel,
+  FieldMessage,
+  Listbox,
+  Notice,
+  Textarea,
+  Typography,
+  cardStyles,
+} from '@/shared/ui'
 
 export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
   const { t } = useTranslation('billing')
+  const reasonId = useId()
   const { refunds, isPending, isError } = useMyRefunds()
   const mutation = useRequestRefund()
   const [orderId, setOrderId] = useState('')
@@ -55,7 +65,7 @@ export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
       )}
       <form
         onSubmit={(event) => void submit(event)}
-        className="border-divider grid gap-3 rounded-xl border p-4"
+        className={cardStyles({ className: 'grid gap-3' })}
       >
         <div className="grid gap-1">
           <Typography variant="label">{t('refund.payment')}</Typography>
@@ -70,16 +80,22 @@ export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
             }))}
           />
         </div>
-        <label className="grid gap-1">
-          <Typography variant="label">{t('refund.reason')}</Typography>
-          <textarea
-            className="border-divider bg-surface-raised min-h-24 rounded-md border p-2"
+        <div className="grid gap-1">
+          <FieldLabel htmlFor={reasonId}>{t('refund.reason')}</FieldLabel>
+          <Textarea
+            id={reasonId}
+            inputMode="text"
+            autoComplete="off"
+            autoCapitalize="sentences"
+            autoCorrect="on"
+            enterKeyHint="done"
+            className="min-h-24"
             maxLength={500}
             required
             value={reason}
             onChange={(event) => setReason(event.target.value)}
           />
-        </label>
+        </div>
         {mutation.isError && <FieldMessage>{t('refund.requestFailed')}</FieldMessage>}
         <Button
           type="submit"
@@ -91,9 +107,9 @@ export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
       </form>
       {isPending && <Typography variant="body">{t('refund.loading')}</Typography>}
       {refunds.length > 0 && (
-        <ul className="grid gap-2">
+        <ul className="divide-divider divide-y">
           {refunds.map((refund) => (
-            <li key={refund.id} className="border-divider rounded-md border p-3">
+            <li key={refund.id} className="py-4">
               <Typography variant="label">
                 {formatDateTime(refund.requestedAt)} · {refund.payment?.orderId}
               </Typography>
