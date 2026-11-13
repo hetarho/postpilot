@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, expect, it, vi } from 'vitest'
 import { NewSpokenVoicePage } from './NewSpokenVoicePage'
 
@@ -20,14 +20,16 @@ beforeEach(() => {
   state.voices = []
 })
 
-it('keeps the return and heading while the copied source loads, then reports a missing source', () => {
+it('keeps the return and heading while the copied source loads, then reports a missing source', async () => {
   const view = render(<NewSpokenVoicePage />)
   expect(screen.getByRole('link', { name: 'back' })).toBeInTheDocument()
   expect(screen.getByRole('heading', { name: 'title' })).toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('loading')
+  const status = screen.getByRole('status')
+  await waitFor(() => expect(status).toHaveTextContent('loading'))
   expect(screen.queryByText('copyFailed')).not.toBeInTheDocument()
   state.pending = false
   view.rerender(<NewSpokenVoicePage />)
-  expect(screen.getByRole('status')).toHaveTextContent('copyFailed')
+  expect(screen.getByRole('status')).toBe(status)
+  expect(status).toHaveTextContent('copyFailed')
   expect(screen.queryByText('loading')).not.toBeInTheDocument()
 })

@@ -119,6 +119,18 @@ describe('list-based speech administration', () => {
       combinations: [profile()],
     })
   })
+  it('announces a pending catalog without claiming it is empty', async () => {
+    mocks.speech.hasData = false
+    mocks.speech.isPending = true
+    mocks.speech.combinations = []
+    render(<ModelCatalogManager />)
+    await userEvent.click(screen.getByRole('tab', { name: '목소리' }))
+    const status = screen.getByRole('status')
+    await waitFor(() => expect(status).toHaveTextContent('모델 목록을 불러오는 중…'))
+    expect(status.closest('[aria-busy="true"]')).toBeNull()
+    expect(status.parentElement?.querySelector('[aria-busy="true"]')).toBeInTheDocument()
+    expect(screen.queryByText(/제공 가능한 목소리 모델 조합이 없습니다/)).not.toBeInTheDocument()
+  })
   it('registers by checking use without a form, pricing inputs or generation', async () => {
     const user = userEvent.setup()
     render(<ModelCatalogManager />)

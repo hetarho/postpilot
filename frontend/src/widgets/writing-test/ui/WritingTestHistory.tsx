@@ -8,6 +8,7 @@ import { formatDateTime } from '@/shared/lib'
 import {
   Badge,
   Button,
+  LoadingState,
   Notice,
   Typography,
   buttonStyles,
@@ -129,9 +130,11 @@ function OwnedHistory({
           </Notice>
         )}
         {query.isPending && ownerId && (
-          <Notice tone="info" role="status" className="mt-4">
-            {t('loading')}
-          </Notice>
+          <LoadingState
+            variant={loaded.tests.length ? 'inline' : 'table'}
+            label={t('loading')}
+            className="mt-4"
+          />
         )}
         {query.isSuccess && tests.length === 0 && (
           <Typography variant="body" className="mt-6">
@@ -297,11 +300,7 @@ function LegacyRecords({
           {t('refresh')}
         </Button>
       </div>
-      {query.isPending && (
-        <Notice tone="info" role="status" className="mt-4">
-          {t('loading')}
-        </Notice>
-      )}
+      {query.isPending && <LoadingState variant="table" label={t('loading')} className="mt-4" />}
       {query.isError && (
         <Notice tone="danger" role="alert" className="mt-4">
           {t('failed')}
@@ -387,11 +386,7 @@ function LegacyVoiceChecks({ ownerId, voiceId }: { ownerId: string; voiceId: str
           ) : null}
         </div>
       )}
-      {query.isPending && (
-        <Notice tone="info" role="status" className="mt-4">
-          {t('loading')}
-        </Notice>
-      )}
+      {query.isPending && <LoadingState variant="table" label={t('loading')} className="mt-4" />}
       {query.isError && (
         <Notice tone="danger" role="alert" className="mt-4">
           {t('failed')}

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type BillingEvent, useMyRefunds, useRequestRefund } from '@/entities/subscription'
 import { formatDateTime, formatNumber } from '@/shared/lib'
-import { Button, FieldMessage, Listbox, Notice, Typography } from '@/shared/ui'
+import { Button, FieldMessage, Listbox, LoadingState, Notice, Typography } from '@/shared/ui'
 
 export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
   const { t } = useTranslation('billing')
@@ -89,7 +89,7 @@ export function RefundRequestSection({ charges }: { charges: BillingEvent[] }) {
           {t('refund.request')}
         </Button>
       </form>
-      {isPending && <Typography variant="body">{t('refund.loading')}</Typography>}
+      {isPending && <LoadingState variant="inline" label={t('refund.loading')} />}
       {refunds.length > 0 && (
         <ul className="grid gap-2">
           {refunds.map((refund) => (

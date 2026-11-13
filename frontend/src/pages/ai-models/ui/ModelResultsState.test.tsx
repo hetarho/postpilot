@@ -11,7 +11,10 @@ it('shows one busy status, then offers retry on failure and renders results on s
     </ModelResultsState>,
   )
   expect(screen.getAllByRole('status')).toHaveLength(1)
-  expect(screen.getByRole('status').parentElement).toHaveAttribute('aria-busy', 'true')
+  expect(screen.getByRole('status').closest('[aria-busy="true"]')).toBeNull()
+  expect(
+    screen.getByRole('status').parentElement?.querySelector('[aria-busy="true"]'),
+  ).toBeInTheDocument()
   rerender(
     <ModelResultsState isPending={false} isError onRetry={retry}>
       Results

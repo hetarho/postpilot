@@ -7,7 +7,15 @@ import { useVoices } from '@/entities/voice'
 import { useTemplates } from '@/entities/template'
 import { useGuidelines } from '@/entities/guideline'
 import { useMemories } from '@/entities/memory'
-import { ListRowIcon, Typography, cardStyles, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  ListRowIcon,
+  LoadingStatus,
+  Skeleton,
+  Typography,
+  cardStyles,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 
 type Section = 'voices' | 'templates' | 'guidelines' | 'memories' | 'spoken'
 /** In the hub's chip-row order — 말투, 템플릿, 지침, 기억, 목소리 — so the overview and the chips
@@ -29,7 +37,7 @@ const SECTIONS: readonly {
  *  is in it right now — the default voice's name, how many rules — so the owner sees their style
  *  before opening anything. */
 export function StylePage() {
-  const { t } = useTranslation('creation')
+  const { t } = useTranslation(['creation', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const voices = useVoices(ownerId)
@@ -52,12 +60,21 @@ export function StylePage() {
       ? undefined
       : t('guideStyle.memories.count', { count: memories.memories.length }),
   }
+  const pending: Partial<Record<Section, boolean>> = {
+    voices: voices.isPending,
+    templates: templates.isPending,
+    guidelines: guidelines.isPending,
+    memories: memories.isPending,
+  }
   return (
     <main className={pageStyles({ width: 'wide', className: 'pt-4 sm:pt-10' })}>
       <Typography variant="largeTitle">{t('guideStyle.title')}</Typography>
       <Typography variant="body" className="text-content-secondary mt-1">
         {t('guideStyle.lead')}
       </Typography>
+      <LoadingStatus
+        label={Object.values(pending).some(Boolean) ? t('state.loading', { ns: 'common' }) : ''}
+      />
       <nav aria-label={t('guideStyle.sections')} className="mt-8">
         <ul className="grid gap-4 sm:grid-cols-2">
           {SECTIONS.map(({ key, to, icon }, index) => (
@@ -78,8 +95,14 @@ export function StylePage() {
                     <span className={typographyStyles({ variant: 'label' })}>
                       {t(`guideStyle.${key}.name`)}
                     </span>
-                    {detail[key] && (
-                      <span className={typographyStyles({ variant: 'meta' })}>{detail[key]}</span>
+                    {pending[key] ? (
+                      <span aria-busy="true" className="loading-reveal block">
+                        <Skeleton className="h-4 w-16" />
+                      </span>
+                    ) : (
+                      detail[key] && (
+                        <span className={typographyStyles({ variant: 'meta' })}>{detail[key]}</span>
+                      )
                     )}
                   </span>
                 </span>

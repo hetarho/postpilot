@@ -10,7 +10,7 @@ import {
   VoiceMaterialFreshness,
   voiceMaterialFreshness,
 } from '@/entities/voice'
-import { Typography, typographyStyles } from '@/shared/ui'
+import { LoadingState, Typography } from '@/shared/ui'
 
 export interface VoiceScreenContext {
   profile: VoiceProfile
@@ -51,10 +51,8 @@ export function VoiceScreen({
   }
   if (isPending || !profile) {
     return (
-      <main
-        className={typographyStyles({ variant: 'body', className: 'text-content-tertiary mt-6' })}
-      >
-        {t('state.loading', { ns: 'common' })}
+      <main className="mt-6">
+        <LoadingState variant="detail" label={t('state.loading', { ns: 'common' })} />
       </main>
     )
   }

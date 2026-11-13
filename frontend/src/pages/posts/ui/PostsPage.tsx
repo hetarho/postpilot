@@ -34,6 +34,7 @@ import {
   Badge,
   Button,
   Notice,
+  Spinner,
   Typography,
   buttonStyles,
   typographyStyles,
@@ -398,13 +399,22 @@ export function PostsPage() {
           a node swapped in (THEME-33). The retry asks for that page again and nothing else (POST-92). */}
       {posts.length > 0 && list.hasNextPage && (
         <div ref={listEnd} className="px-4 py-4 sm:px-6 lg:px-8">
-          <Typography variant="meta" role="status" className="text-content-tertiary">
-            {list.isFetchingNextPage
-              ? t('list.loadingMore', { ns: 'posts' })
-              : list.isFetchNextPageError
-                ? t('list.loadMoreFailed', { ns: 'posts' })
-                : ''}
-          </Typography>
+          <div className="text-content-tertiary flex items-center gap-2">
+            {list.isFetchingNextPage && (
+              <span aria-busy="true" className="loading-reveal flex">
+                <Spinner />
+              </span>
+            )}
+            <Typography variant="meta" role="status">
+              {list.isFetchingNextPage ? (
+                <span className="loading-reveal">{t('list.loadingMore', { ns: 'posts' })}</span>
+              ) : list.isFetchNextPageError ? (
+                t('list.loadMoreFailed', { ns: 'posts' })
+              ) : (
+                ''
+              )}
+            </Typography>
+          </div>
           {list.isFetchNextPageError && (
             <Button
               variant="ghost"

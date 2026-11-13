@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { twMerge } from '@/shared/lib'
 import { cardStyles } from '../card/cardStyles'
 import { Spinner } from '../spinner/Spinner'
@@ -7,12 +8,34 @@ type LoadingVariant = 'list' | 'cards' | 'form' | 'detail' | 'table' | 'inline'
 const DEFAULT_ROWS = 3
 const MAX_ROWS = 6
 
+/** Mount the live region empty before adding text. Later updates keep the same node. */
+export function LoadingStatus({
+  label,
+  className = 'sr-only',
+}: {
+  label: string
+  className?: string
+}) {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => setReady(true))
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [])
+  return (
+    <span role="status" aria-live="polite" aria-atomic="true" className={className}>
+      {ready ? label : ''}
+    </span>
+  )
+}
+
 /** A decorative shape; its dimensions are supplied by the composition using it. */
 export function Skeleton({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={twMerge('loading-skeleton bg-card-well block rounded-md', className)}
+      className={twMerge('loading-skeleton bg-surface-recessed block rounded-md', className)}
     />
   )
 }
@@ -80,21 +103,19 @@ export function LoadingState({
     : DEFAULT_ROWS
 
   return (
-    <div aria-busy="true" className={className}>
-      <span role="status" aria-live="polite" className="sr-only">
-        {label}
-      </span>
+    <div className={className}>
+      <LoadingStatus label={label} />
       {variant === 'inline' ? (
         <div
-          aria-hidden="true"
+          aria-busy="true"
           className="loading-reveal text-content-tertiary flex items-center gap-2"
         >
           <Spinner />
-          <span>{label}</span>
+          <span aria-hidden="true">{label}</span>
         </div>
       ) : (
         <div
-          aria-hidden="true"
+          aria-busy="true"
           className={twMerge(
             'loading-reveal grid gap-4',
             variant === 'cards' && 'sm:grid-cols-2 lg:grid-cols-3',

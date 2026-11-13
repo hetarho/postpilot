@@ -49,6 +49,7 @@
 ## review
 | id | st |
 |---|---|
+| design-system-panels-261114 | converted@261114 |
 | video-editing-ux-261114 | converted@261114 |
 | performance-design-system-261113 | converted@261113 |
 | video-preparation-guide-261112 | converted@261112 |
@@ -69,7 +70,6 @@
 | perf-quality-261109 | converted@261109 |
 | perf-quality-si4-261109 | converted@261109 |
 | perf-quality-sil5-261110 | converted@261110 |
-
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
@@ -79,7 +79,7 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T796 | Stabilize route, history and voice loading shells | ARCH THEME | T795 | doing@261113.ldui |
-| T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
+| T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | doing@261113.ldui |
 | T803 | Unify route and step return controls | ARCH THEME | - | todo |
 | T804 | Provide shared controls for actionable content | ARCH THEME | T803 | todo |
 | T805 | Replace remaining text route returns | ARCH THEME | T804 | todo |
@@ -93,9 +93,11 @@
 | T813 | Use shared media and radio controls in video editors | ARCH THEME | T812 | todo |
 | T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
 | T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
-| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
+| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 T821 T822 | todo |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
+| T821 | Align template example and choice surfaces | ARCH | - | todo |
+| T822 | Align remaining operational card and row surfaces | ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |

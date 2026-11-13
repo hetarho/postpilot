@@ -16,7 +16,15 @@ import {
   type RecommendationSet,
   type StageName,
 } from '@/entities/model-catalog'
-import { AppFailureMessage, Badge, Button, Dialog, Notice, Typography } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Badge,
+  Button,
+  Dialog,
+  LoadingState,
+  Notice,
+  Typography,
+} from '@/shared/ui'
 import { RecommendationSetEditor } from './RecommendationSetEditor'
 
 const NEW_SET: RecommendationSet = { id: '', label: '', selections: [] }
@@ -91,9 +99,7 @@ export function RecommendationSetManager() {
       )}
 
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary">
-          {t('recommendationSets.loading')}
-        </Typography>
+        <LoadingState variant="list" label={t('recommendationSets.loading')} />
       )}
       {!isError && !isPending && sets.length === 0 && editing !== '' && (
         <Typography variant="body" className="text-content-tertiary">

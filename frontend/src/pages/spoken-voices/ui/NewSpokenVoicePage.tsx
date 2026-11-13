@@ -3,7 +3,14 @@ import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { useSpokenLibrary, type SpokenDraftInput } from '@/entities/spoken-voice'
 import { SpokenVoiceCreation } from '@/widgets/spoken-voice-creation'
-import { LoadingState, Typography, pageStyles, buttonStyles } from '@/shared/ui'
+import {
+  LoadingState,
+  LoadingStatus,
+  Typography,
+  typographyStyles,
+  pageStyles,
+  buttonStyles,
+} from '@/shared/ui'
 export function NewSpokenVoicePage() {
   const { t } = useTranslation('spokenVoices'),
     { user } = useSession(),
@@ -40,12 +47,18 @@ export function NewSpokenVoicePage() {
       {search.copy && !copied ? (
         <>
           <Typography variant="display">{t('title')}</Typography>
-          {library.voicesQuery.isPending ? (
-            <LoadingState variant="form" label={t('loading')} className="mt-4" />
-          ) : (
-            <Typography variant="body" role="status" className="mt-4">
-              {t('copyFailed')}
-            </Typography>
+          <LoadingStatus
+            label={library.voicesQuery.isPending ? t('loading') : t('copyFailed')}
+            className={
+              library.voicesQuery.isPending
+                ? 'sr-only'
+                : typographyStyles({ variant: 'body', className: 'mt-4 block' })
+            }
+          />
+          {library.voicesQuery.isPending && (
+            <div aria-hidden="true">
+              <LoadingState variant="form" label={t('loading')} className="mt-4" />
+            </div>
           )}
         </>
       ) : (
