@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/postpilot/backend/internal/clip/design"
@@ -46,6 +47,11 @@ type Segment struct {
 	// (CLIP-10, CLIP-99). Both are empty in a record written under
 	// clip-observation-v1; nothing invents a status for it.
 	Certainty, Usability string
+	// The owner corrected this scene's descriptive text by hand (CLIP-235), and
+	// which of its fields the correction changed; both absent in what the
+	// observer recorded.
+	OwnerEdited bool     `json:",omitempty"`
+	OwnerFields []string `json:",omitempty"`
 }
 
 const (
@@ -79,6 +85,10 @@ func (s Segment) Unknowable() bool {
 type SourceAnalysis struct {
 	Source   AnalysisSource
 	Segments []Segment
+	// The owner corrected at least one of its scenes by hand (CLIP-235): the
+	// analysis is kept while the source's identity matches, whatever observe
+	// model is selected later, until 다시 관찰하기 replaces it.
+	OwnerEdited bool `json:",omitempty"`
 }
 type ChunkInput struct {
 	Language                    string
@@ -398,11 +408,40 @@ func MergeAnalyses(l AnalysisLimits, sources []AnalysisSource, chunks []ChunkAna
 				return nil, err
 			}
 			analysis.Segments = append(analysis.Segments, c.Segments...)
+			analysis.OwnerEdited = analysis.OwnerEdited || slices.ContainsFunc(c.Segments, func(s Segment) bool { return s.OwnerEdited })
 			cursor++
 		}
 		out = append(out, analysis)
 	}
 	if cursor != len(chunks) {
+		return nil, ErrInvalid
+	}
+	return out, nil
+}
+
+// SplitAnalysis is MergeAnalyses' inverse for one source: the chunk sequence whose merge is
+// the analysis, each chunk holding the scenes inside its own interval. An analysis that no
+// complete chunk sequence merges into is refused rather than reshaped.
+func SplitAnalysis(l AnalysisLimits, a SourceAnalysis) ([]ChunkAnalysis, error) {
+	if err := ValidateAnalysisSources(l, []AnalysisSource{a.Source}); err != nil {
+		return nil, err
+	}
+	var out []ChunkAnalysis
+	rest := a.Segments
+	for offset, index := 0, 0; offset < a.Source.Info.DurationMS; offset, index = offset+l.ChunkMS, index+1 {
+		duration := min(l.ChunkMS, a.Source.Info.DurationMS-offset)
+		n := 0
+		for n < len(rest) && rest[n].EndMS <= offset+duration {
+			n++
+		}
+		segments := slices.Clone(rest[:n])
+		if err := ValidateSegments(l, segments, offset, offset+duration); err != nil {
+			return nil, err
+		}
+		out = append(out, ChunkAnalysis{SourceID: a.Source.ID, Fingerprint: a.Source.Fingerprint, Index: index, OffsetMS: offset, DurationMS: duration, Segments: segments})
+		rest = rest[n:]
+	}
+	if len(rest) != 0 {
 		return nil, ErrInvalid
 	}
 	return out, nil

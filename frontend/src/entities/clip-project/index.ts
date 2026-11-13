@@ -98,7 +98,12 @@ export {
   useClipSourceCalls,
   useRefreshClipProjects,
 } from './api/calls'
-export type { ClipProjectCalls, ClipSourceCalls, ClipStartInput } from './api/calls'
+export type {
+  ClipObservationEdit,
+  ClipProjectCalls,
+  ClipSourceCalls,
+  ClipStartInput,
+} from './api/calls'
 export {
   useClipAnalysisQuote,
   useClipGenerationQuote,

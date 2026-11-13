@@ -13,6 +13,8 @@ service ClipGenerationService {
   rpc CreateClipProject(CreateClipProjectRequest) returns (CreateClipProjectResponse) {}
   rpc GetClipProject(GetClipProjectRequest) returns (GetClipProjectResponse) {}
   rpc UpdateClipProject(UpdateClipProjectRequest) returns (UpdateClipProjectResponse) {}
+  // Saves the owner's corrections to observed scenes' descriptive text (CLIP-235).
+  rpc SaveClipObservationEdits(SaveClipObservationEditsRequest) returns (SaveClipObservationEditsResponse) {}
   rpc DeleteClipProject(DeleteClipProjectRequest) returns (DeleteClipProjectResponse) {}
   rpc QuoteClipGeneration(QuoteClipGenerationRequest) returns (QuoteClipGenerationResponse) {}
   rpc StartClipGeneration(StartClipGenerationRequest) returns (StartClipGenerationResponse) {}
@@ -130,6 +132,30 @@ message ClipStorylineEdit {
 }
 
 message UpdateClipProjectResponse { ClipProject project = 1; }
+// The owner's corrections to observed scenes (CLIP-235), each keyed by its
+// observation id `<sourceId>/<index>`. Only descriptive text is carried: the time
+// range, scene, motion, quality, status pair, principal-subject box, readable text
+// and caption-safe regions are measurements composition reads and stay as observed.
+message SaveClipObservationEditsRequest {
+  string clip_id = 1;
+  repeated ClipObservationEdit edits = 2;
+}
+message ClipObservationEdit {
+  string observation_id = 1;
+  optional string event = 2;
+  optional string action = 3;
+  // Replaces the list only when subjects_set holds, so an emptied list is told
+  // apart from an untouched one.
+  repeated string subjects = 4;
+  bool subjects_set = 5;
+  // A clip scene records no singular subject text; its subject is the measured
+  // principal-subject box, which stays as observed.
+  reserved 6;
+  reserved "subject";
+  // Speech may be corrected but not emptied or added: audibility stays as observed.
+  optional string speech = 7;
+}
+message SaveClipObservationEditsResponse { ClipObservations observations = 1; }
 
 message DeleteClipProjectRequest { string id = 1; }
 

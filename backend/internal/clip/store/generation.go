@@ -251,6 +251,37 @@ func (s *Store) SaveAnalysis(ctx context.Context, user, id, analysis string, now
 	})
 	return err
 }
+
+// SaveObservationEdits applies the owner's corrections to the stored observations in one
+// transaction (CLIP-235): a finalized project is refused, and no plan, render, confirmation,
+// storyline or recovery chunk changes beside the analysis.
+func (s *Store) SaveObservationEdits(ctx context.Context, user, id string, apply func([]clip.SourceAnalysis) ([]clip.SourceAnalysis, error), now time.Time) ([]clip.SourceAnalysis, error) {
+	return transact(ctx, s, func(q *sqlc.Queries) ([]clip.SourceAnalysis, error) {
+		p, err := getProject(ctx, q, user, id)
+		if err != nil {
+			return nil, err
+		}
+		if p.Finalized != nil {
+			return nil, clip.ErrFinalized
+		}
+		analyses, err := clip.RetainedObservations(p)
+		if err != nil {
+			return nil, err
+		}
+		edited, err := apply(analyses)
+		if err != nil {
+			return nil, err
+		}
+		raw, err := json.Marshal(edited)
+		if err != nil {
+			return nil, err
+		}
+		if err := affected(q.SaveClipAnalysis(ctx, sqlc.SaveClipAnalysisParams{AnalysisJson: nullable(string(raw)), UpdatedAt: stamp(now), UserID: user, ID: id})); err != nil {
+			return nil, err
+		}
+		return edited, nil
+	})
+}
 func (s *Store) DeletionKeys(ctx context.Context) ([]string, error) { return s.read.DeletionKeys(ctx) }
 func (s *Store) RemoveDeletion(ctx context.Context, key string) error {
 	return s.write.RemoveDeletion(ctx, key)

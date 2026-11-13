@@ -301,6 +301,27 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	return p, nil
 }
 
+// SaveObservationEdits saves the owner's corrections to observed scenes (CLIP-235, CLIP-39):
+// refused while a job of the project runs and once it is finalized (CLIP-160), and changing
+// nothing but the stored observations, which every later writing call reads as corrected.
+func (s *Service) SaveObservationEdits(ctx context.Context, user, id string, edits []clip.ObservationEdit) ([]clip.SourceAnalysis, error) {
+	store, ok := s.store.(clip.ObservationEditStore)
+	if !ok || s.generation == nil {
+		return nil, clip.ErrCompositionUnavailable
+	}
+	active, err := s.generation.jobs.Active(ctx, user, id)
+	if err != nil {
+		return nil, err
+	}
+	if active != nil {
+		return nil, clip.ErrBusy
+	}
+	limits := s.generation.cfg.Analysis
+	return store.SaveObservationEdits(ctx, user, id, func(analyses []clip.SourceAnalysis) ([]clip.SourceAnalysis, error) {
+		return clip.ApplyObservationEdits(limits, analyses, edits)
+	}, s.now())
+}
+
 func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.ProjectPatch) (clip.Project, error) {
 	p.LinkedPostIdentity, p.StaleLinkedPostIdentity = nil, nil
 	if p.ChecklistTicks != nil {

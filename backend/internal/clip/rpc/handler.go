@@ -142,7 +142,10 @@ func toConnectError(err error) error {
 	var admission *clip.ModelAdmissionError
 	var cut *clip.CutError
 	var spoken *clip.SpokenError
+	var observation *clip.ObservationEditError
 	switch {
+	case errors.As(err, &observation):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "invalid clip observation edit", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"observation_id": observation.ObservationID, "field": observation.Field, "check": observation.Check})
 	case errors.As(err, &spoken):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "clip narration needs attention", postpilotv1.FailureReason_CLIP_INVALID_INPUT, map[string]string{"segment_id": spoken.SegmentID, "check": spoken.Reason})
 	case errors.As(err, &cut):

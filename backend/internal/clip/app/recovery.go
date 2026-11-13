@@ -128,6 +128,38 @@ func (s *GenerationService) selectRecovery(r *clip.RecoveryState, b clip.SourceB
 	return out
 }
 
+// withPinned puts the observations the owner corrected by hand in place of whatever the
+// recovery holds for their sources (CLIP-235): such a source counts as analyzed while its id
+// and fingerprint match the batch, whatever observe model, contract or language is selected
+// now, and every writing call reads it as corrected. Only 다시 관찰하기, which drops a source's
+// chunks after this, replaces it. A stored analysis no complete chunk sequence merges into is
+// left to be observed again rather than reshaped.
+func (s *GenerationService) withPinned(r clip.RecoveryState, p clip.Project, b clip.SourceBatch) clip.RecoveryState {
+	stored, err := clip.RetainedObservations(p)
+	if err != nil {
+		return r
+	}
+	for _, a := range stored {
+		at := slices.IndexFunc(b.Sources, func(v clip.SourceLease) bool { return v.ID == a.Source.ID })
+		if !a.OwnerEdited || at < 0 || !recoverySourceMatches(a.Source, b.Sources[at]) {
+			continue
+		}
+		chunks, err := clip.SplitAnalysis(s.cfg.Analysis, a)
+		if err != nil {
+			continue
+		}
+		r.Sources = append(slices.DeleteFunc(r.Sources, func(v clip.AnalysisSource) bool { return v.ID == a.Source.ID }), a.Source)
+		r.Chunks = append(slices.DeleteFunc(r.Chunks, func(c clip.ChunkAnalysis) bool { return c.SourceID == a.Source.ID }), chunks...)
+	}
+	slices.SortFunc(r.Chunks, func(a, b clip.ChunkAnalysis) int {
+		if a.SourceID == b.SourceID {
+			return a.Index - b.Index
+		}
+		return cmp.Compare(a.SourceID, b.SourceID)
+	})
+	return r
+}
+
 func recoveryChunk(r clip.RecoveryState, id string, index int) *clip.ChunkAnalysis {
 	for _, c := range r.Chunks {
 		if c.SourceID == id && c.Index == index {

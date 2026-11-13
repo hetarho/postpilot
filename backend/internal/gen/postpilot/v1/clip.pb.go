@@ -1386,9 +1386,12 @@ func (x *ClipObservations) GetSources() []*ClipSourceObservation {
 }
 
 type ClipSourceObservation struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Source        *ClipRetainedSource    `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
-	Segments      []*ClipObservedSegment `protobuf:"bytes,2,rep,name=segments,proto3" json:"segments,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Source   *ClipRetainedSource    `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`
+	Segments []*ClipObservedSegment `protobuf:"bytes,2,rep,name=segments,proto3" json:"segments,omitempty"`
+	// The owner corrected at least one of its scenes by hand (CLIP-235): kept
+	// whatever analysis model is chosen later, until 다시 관찰하기 replaces it.
+	OwnerEdited   bool `protobuf:"varint,3,opt,name=owner_edited,json=ownerEdited,proto3" json:"owner_edited,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1437,6 +1440,13 @@ func (x *ClipSourceObservation) GetSegments() []*ClipObservedSegment {
 	return nil
 }
 
+func (x *ClipSourceObservation) GetOwnerEdited() bool {
+	if x != nil {
+		return x.OwnerEdited
+	}
+	return false
+}
+
 type ClipObservedSegment struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	StartMs  int32                  `protobuf:"varint,1,opt,name=start_ms,json=startMs,proto3" json:"start_ms,omitempty"`
@@ -1455,10 +1465,12 @@ type ClipObservedSegment struct {
 	// Server-projected focal/default used when adding footage from this scene.
 	Focal *ClipFocal `protobuf:"bytes,11,opt,name=focal,proto3" json:"focal,omitempty"`
 	// Read-only source-space observation, never correction or editorial input.
-	Scene         string                     `protobuf:"bytes,12,opt,name=scene,proto3" json:"scene,omitempty"`
-	ReadableText  bool                       `protobuf:"varint,13,opt,name=readable_text,json=readableText,proto3" json:"readable_text,omitempty"`
-	Subject       *ClipNormalizedSourceBox   `protobuf:"bytes,14,opt,name=subject,proto3" json:"subject,omitempty"`
-	CaptionSafe   []*ClipNormalizedSourceBox `protobuf:"bytes,15,rep,name=caption_safe,json=captionSafe,proto3" json:"caption_safe,omitempty"`
+	Scene        string                     `protobuf:"bytes,12,opt,name=scene,proto3" json:"scene,omitempty"`
+	ReadableText bool                       `protobuf:"varint,13,opt,name=readable_text,json=readableText,proto3" json:"readable_text,omitempty"`
+	Subject      *ClipNormalizedSourceBox   `protobuf:"bytes,14,opt,name=subject,proto3" json:"subject,omitempty"`
+	CaptionSafe  []*ClipNormalizedSourceBox `protobuf:"bytes,15,rep,name=caption_safe,json=captionSafe,proto3" json:"caption_safe,omitempty"`
+	// The owner corrected this scene's descriptive text by hand (CLIP-235).
+	OwnerEdited   bool `protobuf:"varint,16,opt,name=owner_edited,json=ownerEdited,proto3" json:"owner_edited,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1596,6 +1608,13 @@ func (x *ClipObservedSegment) GetCaptionSafe() []*ClipNormalizedSourceBox {
 		return x.CaptionSafe
 	}
 	return nil
+}
+
+func (x *ClipObservedSegment) GetOwnerEdited() bool {
+	if x != nil {
+		return x.OwnerEdited
+	}
+	return false
 }
 
 type ClipNormalizedSourceBox struct {
@@ -5975,10 +5994,11 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x06action\x18\x04 \x01(\tR\x06action\"i\n" +
 	"\x10ClipObservations\x12\x16\n" +
 	"\x06status\x18\x01 \x01(\tR\x06status\x12=\n" +
-	"\asources\x18\x02 \x03(\v2#.postpilot.v1.ClipSourceObservationR\asources\"\x90\x01\n" +
+	"\asources\x18\x02 \x03(\v2#.postpilot.v1.ClipSourceObservationR\asources\"\xb3\x01\n" +
 	"\x15ClipSourceObservation\x128\n" +
 	"\x06source\x18\x01 \x01(\v2 .postpilot.v1.ClipRetainedSourceR\x06source\x12=\n" +
-	"\bsegments\x18\x02 \x03(\v2!.postpilot.v1.ClipObservedSegmentR\bsegments\"\x8c\x04\n" +
+	"\bsegments\x18\x02 \x03(\v2!.postpilot.v1.ClipObservedSegmentR\bsegments\x12!\n" +
+	"\fowner_edited\x18\x03 \x01(\bR\vownerEdited\"\xaf\x04\n" +
 	"\x13ClipObservedSegment\x12\x19\n" +
 	"\bstart_ms\x18\x01 \x01(\x05R\astartMs\x12\x15\n" +
 	"\x06end_ms\x18\x02 \x01(\x05R\x05endMs\x12\x14\n" +
@@ -5995,7 +6015,8 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\x05scene\x18\f \x01(\tR\x05scene\x12#\n" +
 	"\rreadable_text\x18\r \x01(\bR\freadableText\x12?\n" +
 	"\asubject\x18\x0e \x01(\v2%.postpilot.v1.ClipNormalizedSourceBoxR\asubject\x12H\n" +
-	"\fcaption_safe\x18\x0f \x03(\v2%.postpilot.v1.ClipNormalizedSourceBoxR\vcaptionSafe\"c\n" +
+	"\fcaption_safe\x18\x0f \x03(\v2%.postpilot.v1.ClipNormalizedSourceBoxR\vcaptionSafe\x12!\n" +
+	"\fowner_edited\x18\x10 \x01(\bR\vownerEdited\"c\n" +
 	"\x17ClipNormalizedSourceBox\x12\f\n" +
 	"\x01x\x18\x01 \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\x02 \x01(\x01R\x01y\x12\x14\n" +

@@ -194,6 +194,9 @@ message ClipObservations {
 message ClipSourceObservation {
   ClipRetainedSource source = 1;
   repeated ClipObservedSegment segments = 2;
+  // The owner corrected at least one of its scenes by hand (CLIP-235): kept
+  // whatever analysis model is chosen later, until 다시 관찰하기 replaces it.
+  bool owner_edited = 3;
 }
 message ClipObservedSegment {
   int32 start_ms = 1;
@@ -216,6 +219,8 @@ message ClipObservedSegment {
   bool readable_text = 13;
   ClipNormalizedSourceBox subject = 14;
   repeated ClipNormalizedSourceBox caption_safe = 15;
+  // The owner corrected this scene's descriptive text by hand (CLIP-235).
+  bool owner_edited = 16;
 }
 message ClipNormalizedSourceBox {
   double x = 1;

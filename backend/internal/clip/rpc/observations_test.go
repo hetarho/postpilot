@@ -137,3 +137,24 @@ func TestAbsentOrUnreadableObservationsPreserveTheResult(t *testing.T) {
 		})
 	}
 }
+
+// CLIP-235: the projection says which scenes and sources the owner corrected by hand, and a
+// refused correction reaches the client with the observation and field it concerns.
+func TestObservationProjectionMarksOwnerCorrections(t *testing.T) {
+	analyses := []clip.SourceAnalysis{
+		{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "a"}}, OwnerEdited: true, Segments: []clip.Segment{{Event: "observed"}, {Event: "corrected", OwnerEdited: true, OwnerFields: []string{"event"}}}},
+		{Source: clip.AnalysisSource{RenderSource: clip.RenderSource{ID: "b"}}, Segments: []clip.Segment{{Event: "observed"}}},
+	}
+	got := analysisObservationsProto(analyses)
+	if !got.Sources[0].OwnerEdited || got.Sources[0].Segments[0].OwnerEdited || !got.Sources[0].Segments[1].OwnerEdited || got.Sources[1].OwnerEdited || got.Sources[1].Segments[0].OwnerEdited {
+		t.Fatal("owner corrections are not projected as recorded", got)
+	}
+	refused := toConnectError(&clip.ObservationEditError{ObservationID: "a/1", Field: "speech", Check: "speech_audibility"}).(*connect.Error)
+	detail, err := refused.Details()[0].Value()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := detail.(*v1.AppErrorDetail); refused.Code() != connect.CodeInvalidArgument || d.Reason != "CLIP_INVALID_INPUT" || d.Params["observation_id"] != "a/1" || d.Params["field"] != "speech" || d.Params["check"] != "speech_audibility" {
+		t.Fatal(refused.Code(), d)
+	}
+}

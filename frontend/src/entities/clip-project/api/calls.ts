@@ -7,6 +7,10 @@ import { CLIP_START_RPC_TIMEOUT_MS } from '../config/network'
 import { clipProjectsKey, toClipProject } from './clip-project'
 import type { ClipProject } from '../model/types'
 import {
+  toClipObservations,
+  type ClipObservations,
+} from '@/entities/clip-observation/@x/clip-project'
+import {
   getClipSourcePlayback,
   getClipSources,
   reorderClipSources,
@@ -28,10 +32,26 @@ export interface ClipProjectCalls {
   startAnalysis(
     input: ClipStartInput & { reanalyzeSourceIds?: readonly string[] },
   ): Promise<{ jobId: string }>
+  /** Saving the owner's corrections to observed scenes' descriptive text (CLIP-235); answers
+   *  the observations as they now stand. */
+  saveObservationEdits(
+    projectId: string,
+    edits: readonly ClipObservationEdit[],
+  ): Promise<ClipObservations>
   /** Starting an approved storyline request (CLIP-181). */
   startStorylineRevision(
     input: Omit<ClipStartInput, 'batchId'> & { request: string },
   ): Promise<{ jobId: string }>
+}
+
+/** One scene's correction, keyed by its observation id `<sourceId>/<index>`: an absent field
+ *  is left as observed, and `subjects` replaces the list only when present. */
+export interface ClipObservationEdit {
+  observationId: string
+  event?: string
+  action?: string
+  subjects?: readonly string[]
+  speech?: string
 }
 
 export interface ClipStartInput {
@@ -74,6 +94,18 @@ export function clipProjectCalls(transport: Transport): ClipProjectCalls {
       )
       if (!response.jobId) throw new Error('Missing durable clip job')
       return { jobId: response.jobId }
+    },
+    async saveObservationEdits(projectId, edits) {
+      const response = await client.saveClipObservationEdits({
+        clipId: projectId,
+        edits: edits.map(({ subjects, ...edit }) => ({
+          ...edit,
+          subjects: [...(subjects ?? [])],
+          subjectsSet: subjects !== undefined,
+        })),
+      })
+      if (!response.observations) throw new Error('Missing clip observations')
+      return toClipObservations(response.observations)
     },
     async startStorylineRevision(input) {
       const response = await client.startClipStorylineRevision(input)

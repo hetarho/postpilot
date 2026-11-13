@@ -32,10 +32,14 @@ export interface ClipObservedSegment {
   quality: string
   certainty: ClipObservationCertainty
   usability: ClipObservationUsability
+  /** The owner corrected this scene's descriptive text by hand (CLIP-235); absent otherwise. */
+  ownerEdited?: true
 }
 export interface ClipSourceObservation {
   source: RetainedClipSource
   segments: ClipObservedSegment[]
+  /** At least one of its scenes was corrected by hand (CLIP-235); absent otherwise. */
+  ownerEdited?: true
 }
 /** Stored native-layout authority, kept separate from attempt inspection. */
 export type ClipLayoutObservations = ClipObservations

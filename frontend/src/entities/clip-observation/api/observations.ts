@@ -48,7 +48,9 @@ export function toClipObservations(value: ProtoClipObservations): ClipObservatio
             ? [...item.source!.allowedRatePermille]
             : CLIP_RATES.filter((rate) => rate >= CLIP_PLAYBACK.unit_permille),
       },
+      ...(item.ownerEdited ? { ownerEdited: true as const } : {}),
       segments: item.segments.map((segment) => ({
+        ...(segment.ownerEdited ? { ownerEdited: true as const } : {}),
         ...(segment.focal ? { focal: { x: segment.focal.x, y: segment.focal.y } } : {}),
         ...(segment.subject || segment.scene || segment.readableText || segment.captionSafe.length
           ? {

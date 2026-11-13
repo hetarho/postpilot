@@ -13,6 +13,7 @@
 | c261113 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T02:47Z | 2026-11-13T02:47Z | - |
 
 ## inbox
+- 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
 - 261113 decided T786 GEN-8 GEN-9: the impl notes say runs send no `reobserve`, but GEN-9 reads an absent selection as "observe every attachment"? → 바로 글 쓰기, 스토리라인 먼저 and 다시 만들기 send the EMPTY selection, which GEN-9 reads as reuse-everything and the current server decides for a run on its own anyway (alt: send nothing as the notes say | keep the picker on runs). An absent selection on a server that still honours it would re-observe every photo and replace the owner's corrections, while the empty one means the same as GEN-8 on every server.
 - 261113 decided T784 POST-126 GEN-90 GEN-80: how does an owner observation correction map onto revisions, refusals and origin sources where the impl notes left gaps? → a changed save advances the input revision like other material edits (POST-111) but no content revision; an unknown/duplicate filename or `events` on a photo is InvalidArgument with the existing `UNKNOWN_FAILURE` reason; owner-changed fields enter the writing catalog (`WritingOriginSources`, not the observe-pass `observationSources`) as attachment-bound `owner_observation` sources, the rest as `visual_observation` (alt: leave input revision untouched | add a dedicated FailureReason and FE catalog entry | keep the observer's stale spans for unchanged fields). The editor only offers observed attachments, so a dedicated reason would explain a client bug; the observe pass never carries owner input.
 - 261113 decided T783 GEN-89: the impl notes' StartObservation shape has no observe model and a GenerationJob response unlike StartGeneration's actual `job_id`? → request `{post_slug, reobserve, observe_model}` and response `{job_id}`, matching the sibling starts (alt: `{slug, reobserve}` reading the observe model from the account selection | return the full GenerationJob). Every other start names its models explicitly, and the FE polls by id through `useJob`.
@@ -216,7 +217,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T789 | Save owner corrections to clip observations | CLIP ARCH | T788 | todo |
 | T790 | Give the clip workspace five lifecycle steps with the storyline as its own step | CLIP THEME ARCH | T785 | todo |
 | T791 | Analyze and correct clip sources on ② 관찰 | CLIP QUOTA THEME ARCH | T788 T789 T790 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
@@ -231,10 +231,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T789 T790
+- gusta-implement-task T790
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T789 done
 - 261113 T788 done
 - 261113 T787 done
 - 261113 T786 done
@@ -254,4 +255,3 @@
 - 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
 - 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.
 - 261113 replan T780 before any implementation: retain authoritative generation and add confirmed distinct-URL manual-refresh failure control; existing quota unchanged, original claim released with full history.
-- 261113 si8 execution budget: temporarily exclude only NEVER-CLAIMED T775/T776 from active scope; their tasks remain todo for a later slot, preserving approval/history. Critical observed performance/UI work and90min closing reserve take priority.

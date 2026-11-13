@@ -270,6 +270,12 @@ type AnalysisStore interface {
 	SaveAnalysis(ctx context.Context, user, id, analysis string, now time.Time) error
 }
 
+// ObservationEditStore saves the owner's corrections to the stored observations (CLIP-235):
+// apply turns the analyses as stored into the analyses to store, inside one transaction.
+type ObservationEditStore interface {
+	SaveObservationEdits(ctx context.Context, user, id string, apply func([]SourceAnalysis) ([]SourceAnalysis, error), now time.Time) ([]SourceAnalysis, error)
+}
+
 // ObservationSource is the source an observation id belongs to.
 func ObservationSource(id string) string {
 	if at := strings.LastIndex(id, "/"); at >= 0 {

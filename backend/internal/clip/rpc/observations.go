@@ -1,9 +1,31 @@
 package rpc
 
 import (
+	"context"
+
+	"connectrpc.com/connect"
+
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
+
+// SaveClipObservationEdits saves the owner's corrections to observed scenes (CLIP-235) and
+// answers the observations as they now stand.
+func (h *Handler) SaveClipObservationEdits(ctx context.Context, req *connect.Request[v1.SaveClipObservationEditsRequest]) (*connect.Response[v1.SaveClipObservationEditsResponse], error) {
+	user, err := actingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	edits := make([]clip.ObservationEdit, 0, len(req.Msg.Edits))
+	for _, e := range req.Msg.Edits {
+		edits = append(edits, clip.ObservationEdit{ObservationID: e.ObservationId, Event: e.Event, Action: e.Action, Speech: e.Speech, Subjects: e.Subjects, SubjectsSet: e.SubjectsSet})
+	}
+	analyses, err := h.service.SaveObservationEdits(ctx, user, req.Msg.ClipId, edits)
+	if err != nil {
+		return nil, toConnectError(err)
+	}
+	return connect.NewResponse(&v1.SaveClipObservationEditsResponse{Observations: analysisObservationsProto(analyses)}), nil
+}
 
 // decodeObservations is how a project read decodes the retained analysis; a
 // read decodes it once and hands the result to everything that projects it.
@@ -23,7 +45,7 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 	out := &v1.ClipObservations{Status: "empty"}
 	for _, a := range analyses {
 		source := a.Source
-		item := &v1.ClipSourceObservation{Source: retainedSourceProto(source)}
+		item := &v1.ClipSourceObservation{Source: retainedSourceProto(source), OwnerEdited: a.OwnerEdited}
 		for _, s := range a.Segments {
 			focal := clip.ObservedCutFocal(s)
 			// Action, motion and the two status fields are carried through
@@ -35,6 +57,7 @@ func analysisObservationsProto(analyses []clip.SourceAnalysis) *v1.ClipObservati
 				Action: s.Action, Motion: s.Motion, Certainty: s.Certainty, Usability: s.Usability,
 				Focal: &v1.ClipFocal{X: focal.X, Y: focal.Y},
 				Scene: s.Scene, ReadableText: s.ReadableText, Subject: sourceBoxProto(s.Subject), CaptionSafe: sourceBoxesProto(s.CaptionSafe),
+				OwnerEdited: s.OwnerEdited,
 			})
 		}
 		out.Sources = append(out.Sources, item)
