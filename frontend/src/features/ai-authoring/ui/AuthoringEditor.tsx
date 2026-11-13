@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, SendHorizontal, Sparkles } from 'lucide-react'
+import { SendHorizontal, Sparkles } from 'lucide-react'
 import {
   authoringScopeKey,
   completedAuthoringExchanges,
@@ -363,7 +363,6 @@ function ScopedEditor({
             className="mb-2 sm:mb-6"
             onClick={() => event('BACK')}
           >
-            <ArrowLeft aria-hidden="true" className="size-4" />
             <ReturnIcon />
           </Button>
         )}
