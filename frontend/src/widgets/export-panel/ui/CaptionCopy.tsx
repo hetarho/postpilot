@@ -1,3 +1,4 @@
+import { SurfaceButton } from '@/shared/ui'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { CopyFallbackElement } from '@/shared/lib'
@@ -34,7 +35,8 @@ export function CaptionCopy({
   if (!caption) return null
   return (
     <div className="mt-2">
-      <button
+      <SurfaceButton
+        presentation="content"
         type="button"
         ref={captionButtonRef}
         aria-label={ariaLabel}
@@ -44,7 +46,7 @@ export function CaptionCopy({
         <Typography variant="label" as="span" className="block break-words">
           {caption}
         </Typography>
-      </button>
+      </SurfaceButton>
       {/* Revealed only by a refused copy, exactly like the Naver body's raw field: there is
               nothing to select until there is something to select. */}
       {captionFellBack && (

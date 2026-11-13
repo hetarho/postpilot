@@ -1,3 +1,4 @@
+import { MediaAction } from '@/shared/ui'
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { PostImage } from '@/entities/image'
@@ -107,7 +108,7 @@ export function PhotoCopy({
              on the right-click menu — the workaround that carried this before the copy read
              pixels. Focus takes the app-wide `:focus-visible` outline; the press treatment is on
              the photo itself because a fill behind it would never be seen. */
-          <button
+          <MediaAction
             type="button"
             disabled={unreachable}
             aria-label={t('export.photoCopyAria', { number: marker + 1, file })}
@@ -140,7 +141,7 @@ export function PhotoCopy({
                     : 'bg-surface-recessed h-auto w-full rounded-lg'
               }
             />
-          </button>
+          </MediaAction>
         ) : (
           // The view URL is minted per GetPost; until one arrives the box is still held open so
           // the text below it does not jump when the photo paints.

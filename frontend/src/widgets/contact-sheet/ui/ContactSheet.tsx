@@ -1,3 +1,5 @@
+import { Button } from '@/shared/ui'
+import { MediaAction } from '@/shared/ui'
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GenerationJob } from '@/entities/generation-job'
@@ -139,7 +141,7 @@ export function ContactSheet({
                     decoding="async"
                     className="aspect-square w-full rounded-md object-cover"
                   />
-                  <button
+                  <MediaAction
                     type="button"
                     aria-label={t('attachmentViewer.view', { file: image.filename })}
                     onClick={() => setViewing(image.filename)}
@@ -457,7 +459,8 @@ function EventsField({ events }: { events: readonly string[] }) {
           ))}
         </ol>
         {events.length > EVENTS_PREVIEW && (
-          <button
+          <Button
+            variant="ghost"
             type="button"
             onClick={() => setExpanded((open) => !open)}
             className="text-content-secondary mt-1 min-h-11 underline"
@@ -465,7 +468,7 @@ function EventsField({ events }: { events: readonly string[] }) {
             {expanded
               ? t('observation.eventsLess')
               : t('observation.eventsMore', { count: events.length - EVENTS_PREVIEW })}
-          </button>
+          </Button>
         )}
       </dd>
     </div>

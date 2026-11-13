@@ -87,7 +87,6 @@
 | T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
-| T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
 | T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
 | T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 T821 T822 | todo |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
@@ -103,4 +102,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795 T814 T817
+- gusta-implement-task T795 T815 T817

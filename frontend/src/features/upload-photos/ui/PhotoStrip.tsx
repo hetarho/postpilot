@@ -1,3 +1,4 @@
+import { MediaAction } from '@/shared/ui'
 import { useCallback, useState, type DragEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeftRight, RotateCw, X } from 'lucide-react'
@@ -361,7 +362,7 @@ function ViewTarget({
 }) {
   const { t } = useTranslation('posts')
   return (
-    <button
+    <MediaAction
       type="button"
       aria-label={t('attachmentViewer.view', { file: filename })}
       onClick={() => onView(filename)}
@@ -381,7 +382,7 @@ function MoveTarget({
   onPress: () => void
 }) {
   return (
-    <button
+    <MediaAction
       type="button"
       aria-label={ariaLabel}
       onClick={onPress}
@@ -392,7 +393,7 @@ function MoveTarget({
       })}
     >
       {label}
-    </button>
+    </MediaAction>
   )
 }
 

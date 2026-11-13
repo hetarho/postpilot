@@ -1,3 +1,4 @@
+import { MediaAction } from '@/shared/ui'
 import { useState, type DragEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
@@ -160,7 +161,7 @@ export function StorylineTile({
       {filename}
     </span>
   ) : onView ? (
-    <button
+    <MediaAction
       type="button"
       aria-label={t('attachmentViewer.view', { file: filename })}
       onClick={onView}
