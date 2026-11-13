@@ -50,7 +50,7 @@ export function ClipCaptionStylePicker({
               data-style={option.id ?? ''}
               {...tiles.tile(index, 'min-h-11 gap-1')}
             >
-              <span className="bg-media-canvas-bg flex w-full items-center rounded-md p-2">
+              <span className="bg-media-canvas-bg pointer-events-none flex w-full items-center rounded-md p-2">
                 <ClipCaptionStyleSample fragment={sample} className="h-12 w-full" />
               </span>
               <Typography variant="body" as="span" className="min-w-0 break-words">
