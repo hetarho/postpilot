@@ -109,4 +109,4 @@
 
 ## next
 - gusta-implement-task T803 T821 T822
-- Video UX: owner approval is required to reset the vdux verification gate before final validation and landing.
+- Video UX: finish owner-authorized final verification and land T817–T820 on main.
