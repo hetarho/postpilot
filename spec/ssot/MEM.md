@@ -21,7 +21,7 @@
 - MEM-10 [o] two memories may contradict each other and the product never resolves it: nothing merges, supersedes, retires or rewrites a stored fact; the more recent one is injected first and the user deletes what is no longer true ← an automatic merge discards a fact the user approved, silently and with no record
 - MEM-11 [o] `MEMORY_MAX_PER_ACCOUNT` (300) is a hard cap: at the cap nothing is saved, the surface says so and names the cap, and nothing is evicted (→GUIDE-10) ← evicting the oldest would discard exactly what the user chose to keep
 - MEM-12 [o] field rules: `text` trimmed, non-empty, ≤ `MEMORY_TEXT_MAX_CHARS` (120) Unicode scalar values; at most `MEMORY_TAGS_MAX` (5) trimmed non-empty tags, duplicates within one request collapsing to one; an absent or unknown `kind` is refused, never defaulted
-- MEM-13 [o] extraction is explicit: `기억으로 저장` in ③ starts a durable job that passes the shared enqueue credit gate like every other LLM job (→QUOTA-13), is refused with `INSUFFICIENT_CREDITS` the same way, and is retried the same way ← charging for extraction inside a finalize would bill users who never wanted memories
+- MEM-13 [o] extraction is explicit: `기억으로 저장` in ⑤ starts a durable job that passes the shared enqueue credit gate like every other LLM job (→QUOTA-13), is refused with `INSUFFICIENT_CREDITS` the same way, and is retried the same way ← charging for extraction inside a finalize would bill users who never wanted memories
 - MEM-14 [o] extraction reads the post's current canonical content and its memo, and answers candidates each carrying proposed text, kind and tags; it writes no memory, changes nothing about the post, and a failure leaves the finished post exactly as it was
 - MEM-15 [o] a candidate is never stored: the surface lists them with checkboxes, only checked ones are created, and unchecked ones are discarded rather than queued for later review ← the extraction is repeatable on demand, so a pending queue would preserve what the user already declined; the extraction job's payload — its frozen source and the raw candidate list — is cleared once its candidates are resolved (the checked ones created, the rest discarded)
 - MEM-16 [o] what is stored is the approved facts alone — never the post body, never a summary of it, never the raw candidate list, the extraction job's payload included once its candidates are resolved (→MEM-15)
@@ -49,7 +49,7 @@
   - approving a memory is a new explicit fact assertion, not a retroactive change to the source post's original semantic origin
 
 ## flow
-- capture: ③ `기억으로 저장` → credit gate → extraction job → candidate list in a sheet → user checks → approved rows created(new|link added to an identical row)
+- capture: ⑤ `기억으로 저장` → credit gate → extraction job → candidate list in a sheet → user checks → approved rows created(new|link added to an identical row)
 - use: the brief's `기억 사용` on → StartGeneration retrieves and freezes the selected memories → write prompt carries `[기억]` → generated post
 - retrieval: key from memo + 가제 + template answers + observation objects and visible text → `preference`·`persona` always candidates + `place`·`person`·`history` on tag overlap → score by overlap, tie by last sighting then creation → top 8
 

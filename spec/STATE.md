@@ -160,19 +160,19 @@
 |---|---|---|---|---|
 | ARCH | 23 | 23 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
-| QUOTA | 39 | 39 | - | 0 |
-| POST | 47 | 47 | - | 0 |
+| QUOTA | 40 | 39 | QUOTA-13✎ | 0 |
+| POST | 48 | 47 | POST-44✎ POST-45✎ POST-53✎ POST-54✎ POST-56✎ POST-66✎ POST-86✎ POST-95✎ POST-96✎ POST-97✎ POST-98✎ POST-99✎ POST-100✎ POST-122✎ POST-123✎ POST-125+ POST-126+ POST-127+ | 0 |
 | VOICE | 20 | 20 | - | 0 |
-| GEN | 31 | 31 | - | 0 |
+| GEN | 32 | 31 | GEN-8✎ GEN-24✎ GEN-30✎ GEN-43✎ GEN-67✎ GEN-69✎ GEN-71✎ GEN-89+ GEN-90+ | 0 |
 | MODEL | 37 | 37 | - | 0 |
 | TMPL | 32 | 32 | - | 0 |
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 41 | 41 | - | 2 |
+| THEME | 42 | 41 | THEME-18✎ THEME-39✎ THEME-71✎ | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 76 | 76 | - | 2 |
+| CLIP | 77 | 76 | CLIP-36✎ CLIP-39✎ CLIP-40✎ CLIP-48✎ CLIP-52✎ CLIP-53✎ CLIP-150✎ CLIP-160✎ CLIP-165✎ CLIP-177✎ CLIP-179✎ CLIP-180✎ CLIP-182✎ CLIP-197✎ CLIP-227✎ CLIP-234+ CLIP-235+ | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -222,9 +222,13 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
+- gusta-create-task POST GEN QUOTA THEME CLIP
 - inspect work board for remaining tasks
 
 ## log
+- 261113 gusta-update-ssot POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: storyline and observations become lifecycle steps ② 관찰 and ③ 스토리라인 (생성·관찰·스토리라인·다듬기·완성), owner-editable observations, 관찰하기 as its own job, 스토리라인 작성 완료 post badge; CDS GUIDE MEM QUAL TMPL step numerals renumbered ②→④ ③→⑤ (wording, no rev); no doing task affected
+- 261113 gusta-update-ssot POST CLIP THEME start: storyline as its own lifecycle step (sketch storyline-separate-state, option A)
+- 261113 sketch storyline-separate-state start
 - 261112 T782 integrated
 - 261113 gusta-create-task review/performance-design-system-261113 F10: T782 fixes the confirmed paused-frame redraw gap after running block selection; unchanged actual-control oracle and existing source/clock/cancellation contracts, no SSOT rev/pending change.
 - 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
@@ -242,6 +246,3 @@
 - 261112 T774 integrated
 - 261112 T779 integrated
 - 261112 T781 integrated
-- 261112 T780 integrated
-- 261112 T778 integrated
-- 261112 T777 integrated

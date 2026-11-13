@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r41 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r42 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -67,7 +67,7 @@
 - THEME-18 [o] applying colour:
   - surfaces move one physical step (a field is recessed on base, a card is raised, a modal is highest — depth is the step plus rarely a shadow, not a border; `surface-lowest` is not a generic dark fill and `surface-highest` is not emphasis)
   - one CTA per view uses `button-cta-*` and every other button is ghost, secondary or rarely outlined ← two filled CTAs means one is lying about its importance
-  - accent is for action and identity — a control, a selected state, a focus ring, a single word — never area outside a promotional surface (→THEME-37) and ONE hero card per screen tinted accent-subtle (`badge-accent-bg`) — the latest in-progress work (→!THEME-73), the credit balance (→QUOTA-75), waiting guideline candidates (→GUIDE-22), a running writing card (→POST-123) — so the screen's first answer is told at a glance; the screen still has at most one filled CTA and a hero card's own action is never a second one
+  - accent is for action and identity — a control, a selected state, a focus ring, a single word — never area outside a promotional surface (→THEME-37) and ONE hero card per screen tinted accent-subtle (`badge-accent-bg`) — the latest in-progress work (→!THEME-73), the credit balance (→QUOTA-75), waiting guideline candidates (→GUIDE-22), a running writing card (→POST-125) — so the screen's first answer is told at a glance; the screen still has at most one filled CTA and a hero card's own action is never a second one
   - status colour never travels alone
   - inline notices use the notice contract with explanatory text and no border
   - primitives use functions, not foundations
@@ -232,7 +232,7 @@
   - the steps are panels of ONE mounted page, so a step change cannot remount a save queue, a job poll or an upload session
   - everything the screen has to SAY about its own state lives in ONE region — the `top-chrome` sticky bar plus one `meta` line carrying at most one thing in a precedence the surface states — and nowhere else outside the focused-job exception in THEME-40 and the post's writing card (→POST-45)
   - visible location and contextual return coexist with the lifecycle; exactly one bar per step — the step bar wherever the step is a guided or composing screen (→THEME-71) — holds its committing control and refusal reasons (→THEME-24 →THEME-25)
-  - the post editor (→POST-44 →POST-45 →POST-47) and the clip workspace (→CLIP-36) are its instances, while a screen that only edits and saves one record has no lifecycle and keeps the directory-item form's shape instead — back link, the record's name as the heading, one status line above the dock, one docked save
+  - the post editor (→POST-44 →POST-45 →POST-47) and the clip workspace (→CLIP-36) are its instances, running the same five stations under the same short names (생성, 관찰, 스토리라인, 다듬기, 완성) so the row fits a 360 px phone without running past its end, while a screen that only edits and saves one record has no lifecycle and keeps the directory-item form's shape instead — back link, the record's name as the heading, one status line above the dock, one docked save
 - THEME-40 [o] running clip generation/rendering shows its actual stage/progress, bounded read-only original playback, explicit cancellation and contextual return under THEME-58; editing controls remain hidden while mounted uploads/save/polling survive. Leaving is not cancellation.
 - THEME-42 [o] keyboard in an anchored panel: Tab and Shift+Tab move through the panel's own controls in order, a composite control moved through by arrow keys (a `Listbox`) counting as one; Tab from the last or Shift+Tab from the first closes the panel and continues from its trigger in page order ← handing focus back on any Tab leaves every control after the first unreachable (→THEME-33)
 - THEME-43 [o] a read-only document the operator copies from inside a sheet — 일괄 편집's current document (→MODEL-55) — is capped at `max-h-field` with `overflow-y-auto`, is a keyboard-focusable named region, and carries an icon copy control pinned to its top-right corner over the text, which leaves room for it ← an export runs to hundreds of lines and would push the paste field a sheet's height below it, and the control stays in reach however far the text is scrolled
@@ -332,8 +332,8 @@
   - loading, a failure with 다시 시도 and an empty account are page text (→THEME-29)
 - THEME-70 [o] 내 스타일's overview (`/style`) is one card per section, in the chip row's order (→=THEME-38), named by what it changes in the owner's writing (글이 내 말투로 써져요) with the section's name and what it holds now — the 기본 voice's name or the voice count, and the template, guideline and memory counts — each opening its section (→THEME-38)
   - a count still loading shows nothing rather than zero (→THEME-29)
-- THEME-71 [o] every stepped screen ends on ONE shared step bar — the post's 글 생성 guide (→POST-122), 글 다듬기 and 글 완성 (→POST-56 →POST-57), the template wizards (→TMPL-71 →CLIP-213) and first-use setup ← moving through any stepped screen is the same gesture in the same place
-  - top to bottom it holds what the screen has to say about its actions — a failure with its retry, a refusal, the one-line reason the big action is held (named by that action through `aria-describedby`), a composer such as 글 다듬기's request field — then ONE row: the back control (named by where it goes), at most one secondary action, then the screen's one big action (`hero`) filling the rest; a reason stands above its control so the software keyboard never hides it (→THEME-31)
+- THEME-71 [o] every stepped screen ends on ONE shared step bar — the post's 글 생성 guide (→POST-122), its 관찰, 스토리라인, 다듬기 and 완성 steps (→POST-53 →POST-97 →POST-56 →POST-57), the template wizards (→TMPL-71 →CLIP-213) and first-use setup ← moving through any stepped screen is the same gesture in the same place
+  - top to bottom it holds what the screen has to say about its actions — a failure with its retry, a refusal, the one-line reason the big action is held (named by that action through `aria-describedby`), a composer such as 다듬기's request field — then ONE row: the back control (named by where it goes), at most one secondary action, then the screen's one big action (`hero`) filling the rest; a reason stands above its control so the software keyboard never hides it (→THEME-31)
   - on a phone it meets the screen's bottom edge full-bleed with rounded top corners and its padding adding the safe area, and it takes the column's remaining height so it sits on that edge under a short screen; from `sm:` it floats as a rounded bar in the readable column
   - it is near-opaque with backdrop blur (solid where blur is unsupported) so the page under it never competes with the big action
   - it is the screen's one docked bar (→THEME-24), absent on a step holding neither a control nor a refusal
@@ -357,4 +357,5 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
+- r42 261113 THEME-39✎ instances named only→same five stations 생성·관찰·스토리라인·다듬기·완성 under short names; THEME-71✎ post steps 글 생성 guide, 글 다듬기, 글 완성→글 생성 guide, 관찰, 스토리라인, 다듬기, 완성; THEME-18✎ writing card ref POST-123→POST-125
 - r41 261112 THEME-44✎ preview + time ruler + named tracks + properties panel→scene-block list beside/under a preview kept in view; THEME-45✎ manual tools before AI request form→scene blocks first, AI request in the step bar

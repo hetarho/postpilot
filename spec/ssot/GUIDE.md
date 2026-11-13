@@ -119,7 +119,7 @@
   - the section's 새 지침 button opens its new-guideline Sheet (`?new=1`), whose scope control offers 전역 / 특정 영상 템플릿; `기본 지침` and the direct-writing choice sit in the page above the list, not in a dock (→THEME-67)
   - above the list the `새 영상 지침 후보` banner and its one-at-a-time review (→!GUIDE-22/23/27), each candidate linking the clip it came from (plain text once that clip is gone)
   - its queries are keyed `(accountId, 'video-guidelines')` and `(accountId, 'video-guideline-candidates')` with `staleTime: 0` and `refetchOnMount: 'always'`, and a video template rename or delete marks the list stale
-- GUIDE-45 [o] after a completed clip revision request (→CLIP-131), ②'s composer offers `영상 지침으로 저장`, which opens the standard create seeded with that request, offering 전역 (default) and the project's video template when it has one, as `지침으로 저장` does for a post (→GUIDE-21)
+- GUIDE-45 [o] after a completed clip revision request (→CLIP-131), ④'s composer offers `영상 지침으로 저장`, which opens the standard create seeded with that request, offering 전역 (default) and the project's video template when it has one, as `지침으로 저장` does for a post (→GUIDE-21)
 - GUIDE-46 [o] a guideline's `title` is optional: trimmed, ≤ `GUIDELINE_TITLE_MAX_CHARS` (40) Unicode scalar values, empty meaning none, and never unique ← 전부 수락 and the revision capture stay one step, which a required title would break
   - a closed owner row shows its whole text, wrapping, with the title, when set, as a label above it
   - every surface that creates a guideline offers the title field empty — `새 지침` and `새 영상 지침`, a candidate's 저장 (→!GUIDE-23), `지침으로 저장` (→!GUIDE-21) and `영상 지침으로 저장` (→!GUIDE-45) — and 전부 수락 creates without one (→!GUIDE-27)

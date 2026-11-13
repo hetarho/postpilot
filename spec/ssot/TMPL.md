@@ -227,7 +227,7 @@
 - assign: post picks template → each set number copied onto the post's option in the assigning save(unset → post's own value kept) → 없음 or a later template edit copies nothing
 - run: post picks template → ① fills the template's data fields (제목 + textarea + switch, autosaved →POST-62) → StartGeneration / StartRevision(resolve once → drop every off or blank field's node → render photo places and repeats unbound → freeze) → prompt section after the voice projection → model output(the storyline → photos placed along it) → attachment filter(→GEN-2) → post with single photos and photo groups(→TMPL-39)
 - AI refinement: saved template → explicit EDIT chat → validated private draft → optional direct editing → explicit named publication
-- from a post: ③ 이 글 형식으로 템플릿 만들기 → wizard(target → the post's headings as checked custom sections)
+- from a post: ⑤ 이 글 형식으로 템플릿 만들기 → wizard(target → the post's headings as checked custom sections)
 - preview: any draft change(builder | `원문` parsable | result | undo) → preview redrawn from stand-ins
 - delete: DeleteTemplate → trigger detaches posts (count returned) + cascades guideline links → name free again
 
