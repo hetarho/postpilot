@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
-| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:41Z | T797 | main | 94580ba3a6d3 |
+| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:41Z | - | main | 853d9e566fa1 |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:23Z | - | task/video-ux | fcbdaab664b2 |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:41Z | T809 | task/design-system-audit-serial | d8dad5d8c0dc |
 
@@ -164,8 +164,10 @@
 | T806 | dsui | task/design-system-audit-serial | 3d360aba95e5 | 2026-11-13T16:36Z |
 | T807 | dsui | task/design-system-audit-serial | a70f84f4b9e8 | 2026-11-13T16:39Z |
 | T808 | dsui | task/design-system-audit-serial | 87bd8b2354f5 | 2026-11-13T16:41Z |
+| T797 | ldui | main | 853d9e566fa1 | 2026-11-13T16:41Z |
 
 ## log
+- 261113 T797 done
 - 261113 T808 done
 - 261113 T807 done
 - 261113 T806 done
@@ -185,4 +187,3 @@
 - 261113 T794 done
 - 261113 T793 done
 - 261113 T792 done
-- 261113 T792 regression repair planned from the unchanged CLIP-235 contract; main publication waits for the final CI/deployment/media gate.
