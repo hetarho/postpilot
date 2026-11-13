@@ -101,6 +101,8 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 // Every frozen member survives the job row: what Start encodes is what Generate decodes.
 func TestEveryGenerationOptionRoundTrips(t *testing.T) {
 	fixture := filledGenerationOptions()
+	// The owner's mark is set here alone, so the fixture's other uses keep their bytes (GEN-90).
+	fixture.Observations[0].OwnerEdited, fixture.Observations[0].OwnerFields = true, []string{"scene"}
 	probe := fixture
 	profile := *fixture.Profile
 	profile.NoVoice = true // Absence is separately pinned; a real profile keeps this false.
@@ -166,6 +168,7 @@ func TestStartFreezesEveryOption(t *testing.T) {
 	observation := Observation{
 		File: "IMG_1.jpg", Scene: "골목", Mood: "차분함", VisibleText: "영업중", Objects: []string{"간판"},
 		PeoplePresent: true, Model: observeRef.String(), Events: []string{"문이 열린다"}, Speech: "어서 오세요", Rotation: 90,
+		OwnerEdited: true, OwnerFields: []string{"scene"},
 	}
 	posts := &fakePosts{input: PostInput{
 		Slug: "post", UserID: "alice", Voice: liveVoice, TargetLanguage: LanguageKorean, TagCount: 7,

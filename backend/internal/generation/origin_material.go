@@ -3,6 +3,7 @@ package generation
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -100,6 +101,10 @@ func WritingOriginSources(input WritePromptInput, fictional bool, attachmentIDs 
 				break
 			}
 		}
+		if observation.OwnerEdited {
+			ownerObservationSources(&catalog, i, observation, currentIDs[observation.File])
+			continue
+		}
 		validated := ValidateStoredObservationOrigins(observation, observation.Origins, kind)
 		byID := map[string]post.OriginSource{}
 		for _, source := range validated.Sources {
@@ -119,6 +124,35 @@ func WritingOriginSources(input WritePromptInput, fictional bool, attachmentIDs 
 		}
 	}
 	return catalog.sources
+}
+
+// ownerObservationSources describes an entry the owner corrected by hand field by field: each
+// field the owner changed is the owner's own statement about the attachment and supports
+// owner_input, while every field the owner left stands as the observer's reading (GEN-80,
+// GEN-90). The observer's stored spans no longer match the corrected entry, so the fields
+// themselves are the material.
+func ownerObservationSources(catalog *originCatalog, index int, observation Observation, attachmentID string) {
+	add := func(field, text string, item int) {
+		kind := post.OriginSourceVisualObservation
+		if slices.Contains(observation.OwnerFields, field) {
+			kind = post.OriginSourceOwnerObservation
+		}
+		id := fmt.Sprintf("current.observation.%d.%s", index, field)
+		if item >= 0 {
+			id = fmt.Sprintf("%s.%d", id, item)
+		}
+		catalog.add(id, kind, text, observation.File, true, attachmentID)
+	}
+	add(post.ObservationFieldScene, observation.Scene, -1)
+	add(post.ObservationFieldMood, observation.Mood, -1)
+	add(post.ObservationFieldVisibleText, observation.VisibleText, -1)
+	for i, object := range observation.Objects {
+		add(post.ObservationFieldObjects, object, i)
+	}
+	for i, event := range observation.Events {
+		add(post.ObservationFieldEvents, event, i)
+	}
+	add("speech", observation.Speech, -1)
 }
 
 const originResponseContract = `Semantic-origin metadata is optional and follows all complete canonical members in a final origins array. Use exact meaningful quotes, not Unicode offsets; split different meanings within one sentence. Each candidate has field, quote, optional zero-based occurrence, category and source_refs. Categories are owner_input, photo_interpretation and ai_added. owner_input requires an actual supplied memo/answer/edit/memory source; photo_interpretation requires an identified visual observation. Style examples, generic rules, template topics/form, saved ownership and plan approval do not supply owner facts. Preserve prior meaning's origins; unknown historical evidence stays unconfirmed. Source labels are not factual certification. A flavor, texture, aroma or explanation beyond supplied meaning is ai_added, not a paraphrase. Never invent events or chronology merely by labeling it AI-added. Omit uncertain or unsupported annotations rather than guessing. Refer only to catalog IDs supplied below; do not fabricate live references, URLs, filenames as evidence IDs or new origin categories. For post fields, field.kind is title, summary, tag, block_content, block_item, block_alt or block_caption with the applicable zero-based tag_index/block_index/item_index. For returned storyline text only, field.kind is storyline_paragraph with paragraph_index. Do not annotate filenames, JSON keys or format enums. A frozen-story write returns no new plan, and a revision returns no plan or memories. Never add a provider pass to finish metadata.`

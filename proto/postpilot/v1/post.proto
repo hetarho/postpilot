@@ -151,6 +151,9 @@ message Observation {
   // the photo fields too — these are what a still frame cannot show.
   repeated string events = 8;
   string speech = 9;
+  // The owner corrected this entry by hand (POST-126): every later run reuses it unchanged
+  // until a re-observation the owner selected replaces it (GEN-90).
+  bool owner_edited = 10;
 }
 
 // The voice a post is written in, as the post screens need it. Transport-only: a deleted
@@ -497,6 +500,23 @@ message SavePostDraftRequest {
   optional bool campaign = 10;
   AdvertiserGuide advertiser_guide = 11;
   ChecklistTicks checklist_ticks = 12;
+  // The owner's corrections to observations (POST-126), one entry per attachment filename.
+  // Each field is presence-aware: absent keeps the stored value, present replaces it. A saved
+  // value that differs from the stored one marks the entry edited by hand (GEN-90).
+  repeated ObservationEdit observation_edits = 13;
+}
+
+// One attachment's observation as the owner corrected it. `objects` and `events` are lists,
+// so their presence rides on the `_set` flags: a set flag with an empty list clears the field.
+message ObservationEdit {
+  string file = 1;
+  optional string scene = 2;
+  optional string mood = 3;
+  optional string visible_text = 4;
+  repeated string objects = 5;
+  bool objects_set = 6;
+  repeated string events = 7;
+  bool events_set = 8;
 }
 
 // The paragraphs as the owner edited them: the count is the stored one, the files are the

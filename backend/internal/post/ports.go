@@ -139,6 +139,9 @@ type DraftWriter interface {
 	// UpdateObservations also turns each observed photo by its entry's rotation, in the same
 	// transaction, unless the owner has turned that photo (GEN-79).
 	UpdateObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
+	// EditObservations stores the owner's corrected snapshot (POST-126) and advances the input
+	// revision as any material change does (POST-111); it turns no photo.
+	EditObservations(ctx context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error)
 	// UpdateStoryline replaces the storyline alone, nil for none (GEN-68, GEN-69).
 	UpdateStoryline(ctx context.Context, slug, userID string, storyline *Storyline, updatedAt time.Time) (bool, error)
 	// UpdateAttachmentTraces removes a deleted filename from the current observations and

@@ -335,7 +335,7 @@ func (a generationPosts) AttachedImages(ctx context.Context, userID, slug string
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
-			Origins: observation.Origins,
+			Origins: observation.Origins, OwnerEdited: observation.OwnerEdited, OwnerFields: observation.OwnerFields,
 		})
 	}
 	if found.Storyline != nil {
@@ -380,7 +380,7 @@ func (a generationPosts) SetObservations(ctx context.Context, userID, slug strin
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
-			Origins: observation.Origins,
+			Origins: observation.Origins, OwnerEdited: observation.OwnerEdited, OwnerFields: observation.OwnerFields,
 		})
 	}
 	return generationPostError(a.service.SetObservations(ctx, userID, slug, values))

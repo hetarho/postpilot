@@ -48,3 +48,49 @@ func TestTheGuideIsAnAdvertiserRequestSource(t *testing.T) {
 		}
 	}
 }
+
+// GEN-90, GEN-80: an owner-edited observation offers each field the owner changed as owner
+// material that supports owner_input, while the fields the owner left stay visual observation.
+func TestOwnerEditedObservationFieldsAreOwnerMaterial(t *testing.T) {
+	input := WritePromptInput{Photos: []string{"a.jpg"}, Observations: []Observation{{
+		File: "a.jpg", Scene: "가게 입구", Mood: "밝음", Objects: []string{"간판", "화분"},
+		OwnerEdited: true, OwnerFields: []string{post.ObservationFieldScene, post.ObservationFieldObjects},
+	}}}
+	sources := WritingOriginSources(input, false, map[string]string{"a.jpg": "img-1"})
+	catalog := map[string]post.OriginSource{}
+	kinds := map[string]post.OriginSourceKind{}
+	for _, source := range sources {
+		catalog[source.ID] = source
+		kinds[source.Text] = source.Kind
+		if source.AttachmentFilename != "a.jpg" || source.AttachmentID != "img-1" || !source.Available {
+			t.Fatalf("source %+v is not bound to its attachment", source)
+		}
+	}
+	want := map[string]post.OriginSourceKind{
+		"가게 입구": post.OriginSourceOwnerObservation, "간판": post.OriginSourceOwnerObservation, "화분": post.OriginSourceOwnerObservation,
+		"밝음": post.OriginSourceVisualObservation,
+	}
+	if len(kinds) != len(want) {
+		t.Fatalf("sources = %+v", sources)
+	}
+	for text, kind := range want {
+		if kinds[text] != kind {
+			t.Fatalf("%q catalogued as %q, want %q", text, kinds[text], kind)
+		}
+	}
+	for id, source := range catalog {
+		owner := source.Kind == post.OriginSourceOwnerObservation
+		if originSourceCategoryCompatible(post.OriginOwnerInput, []string{id}, catalog) != owner {
+			t.Fatalf("%q owner_input compatibility = %v", source.Text, !owner)
+		}
+		if originSourceCategoryCompatible(post.OriginPhotoInterpretation, []string{id}, catalog) == owner {
+			t.Fatalf("%q photo_interpretation compatibility = %v", source.Text, owner)
+		}
+	}
+	// Deleting the attachment withdraws the owner's material about it too (POST-114).
+	for _, source := range OriginSourcesWithAttachments(sources, nil, nil) {
+		if source.Available {
+			t.Fatalf("source %+v outlived its attachment", source)
+		}
+	}
+}

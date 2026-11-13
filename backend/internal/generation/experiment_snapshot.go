@@ -140,6 +140,9 @@ type snapshotObservation struct {
 	Speech        string                       `json:"Speech"`
 	// omitempty keeps every snapshot frozen before rotations existed byte-identical (GEN-79).
 	Rotation int `json:"Rotation,omitempty"`
+	// The same for the owner's correction mark (GEN-90).
+	OwnerEdited bool     `json:"OwnerEdited,omitempty"`
+	OwnerFields []string `json:"OwnerFields,omitempty"`
 }
 
 type snapshotContent struct {
@@ -382,6 +385,7 @@ func toSnapshotObservation(o Observation) snapshotObservation {
 		Origins: encodeObservationOrigins(o.Origins),
 		File:    o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: copyTexts(o.Objects),
 		PeoplePresent: o.PeoplePresent, Model: o.Model, Events: copyTexts(o.Events), Speech: o.Speech, Rotation: o.Rotation,
+		OwnerEdited: o.OwnerEdited, OwnerFields: cloneTexts(o.OwnerFields),
 	}
 }
 
@@ -390,6 +394,7 @@ func fromSnapshotObservation(wire snapshotObservation) Observation {
 		Origins: decodeObservationOrigins(wire.Origins),
 		File:    wire.File, Scene: wire.Scene, Mood: wire.Mood, VisibleText: wire.VisibleText, Objects: copyTexts(wire.Objects),
 		PeoplePresent: wire.PeoplePresent, Model: wire.Model, Events: copyTexts(wire.Events), Speech: wire.Speech, Rotation: wire.Rotation,
+		OwnerEdited: wire.OwnerEdited, OwnerFields: cloneTexts(wire.OwnerFields),
 	}
 }
 

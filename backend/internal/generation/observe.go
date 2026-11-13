@@ -241,12 +241,14 @@ func observationEmpty(observation Observation) bool {
 }
 
 // reusableObservations indexes the stored snapshot by filename, keeping only the entries a run
-// may actually carry over. An empty entry is deliberately excluded: reusing it would let the
-// write stage build from a photo nothing has ever described.
+// may actually carry over. An empty machine entry is deliberately excluded: reusing it would let
+// the write stage build from a photo nothing has ever described. An entry the owner edited is
+// kept even when the owner emptied it, since that is the owner's answer about the photo and
+// never a reason to look again (GEN-90).
 func reusableObservations(observations []Observation) map[string]Observation {
 	byFile := make(map[string]Observation, len(observations))
 	for _, observation := range observations {
-		if observation.File == "" || observationEmpty(observation) {
+		if observation.File == "" || (!observation.OwnerEdited && observationEmpty(observation)) {
 			continue
 		}
 		byFile[observation.File] = observation

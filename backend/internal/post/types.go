@@ -352,7 +352,7 @@ func (s Storyline) WithoutFile(name string) Storyline {
 		copy.Sources = slices.Clone(s.Origins.Sources)
 		copy.Spans = slices.Clone(s.Origins.Spans)
 		for i := range copy.Sources {
-			if copy.Sources[i].Kind == OriginSourceVisualObservation && copy.Sources[i].AttachmentFilename == name {
+			if copy.Sources[i].Kind.AttachmentBound() && copy.Sources[i].AttachmentFilename == name {
 				copy.Sources[i].Available = false
 			}
 		}
@@ -535,6 +535,12 @@ type Observation struct {
 	// Rotation is the clockwise turn in degrees (0, 90, 180, 270) the observation says makes the
 	// photo's scene upright (GEN-79); stored only when non-zero, so older rows read as 0.
 	Rotation int
+	// OwnerEdited marks an entry the owner corrected by hand (POST-126): every later run reuses
+	// it unchanged and only a re-observation that selected it replaces it (GEN-90). OwnerFields
+	// is the cumulative set of fields the owner changed, which count as the owner's own meaning
+	// (GEN-80). Both are absent on a machine-written entry, every row before them included.
+	OwnerEdited bool
+	OwnerFields []string
 }
 
 // Summary is a row of the post list.

@@ -87,13 +87,22 @@ const (
 	OriginSourceAIProposal        OriginSourceKind = "ai_proposal"
 	OriginSourceLiteralText       OriginSourceKind = "literal_text"
 	OriginSourceAdvertiserGuide   OriginSourceKind = "advertiser_guide"
+	// OriginSourceOwnerObservation is an observation field the owner corrected by hand: the
+	// owner's own statement about the attachment, not the observer's reading (GEN-90).
+	OriginSourceOwnerObservation OriginSourceKind = "owner_observation"
 )
+
+// AttachmentBound reports a source tied to one attachment: deleting that attachment withdraws
+// it as evidence (POST-114), whether the observer read it or the owner corrected it.
+func (k OriginSourceKind) AttachmentBound() bool {
+	return k == OriginSourceVisualObservation || k == OriginSourceOwnerObservation
+}
 
 func (k OriginSourceKind) Valid() bool {
 	switch k {
 	case OriginSourceMemo, OriginSourceTemplateAnswer, OriginSourceOwnerEdit,
 		OriginSourceMemory, OriginSourceVisualObservation, OriginSourceAIProposal, OriginSourceLiteralText,
-		OriginSourceAdvertiserGuide:
+		OriginSourceAdvertiserGuide, OriginSourceOwnerObservation:
 		return true
 	}
 	return false

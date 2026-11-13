@@ -42,6 +42,10 @@ type observationPayload struct {
 	// Omitted at 0 for the same reason: a payload frozen before rotations existed decodes as
 	// no turn (GEN-79).
 	Rotation int `json:"rotation,omitempty"`
+	// The owner's correction mark (GEN-90), carried through the seed so the run's persist keeps
+	// it; omitted on a machine entry, so earlier payloads decode unchanged.
+	OwnerEdited bool     `json:"owner_edited,omitempty"`
+	OwnerFields []string `json:"owner_fields,omitempty"`
 }
 
 type generationPayload struct {
@@ -253,6 +257,7 @@ func encodeObservations(observations []Observation) []observationPayload {
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: cloneTexts(observation.Events), Speech: observation.Speech, Rotation: observation.Rotation,
+			OwnerEdited: observation.OwnerEdited, OwnerFields: cloneTexts(observation.OwnerFields),
 		})
 	}
 	return wire
@@ -270,6 +275,7 @@ func decodeObservations(wire []observationPayload) []Observation {
 			VisibleText: observation.VisibleText, Objects: cloneTexts(observation.Objects),
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: cloneTexts(observation.Events), Speech: observation.Speech, Rotation: observation.Rotation,
+			OwnerEdited: observation.OwnerEdited, OwnerFields: cloneTexts(observation.OwnerFields),
 		})
 	}
 	return out

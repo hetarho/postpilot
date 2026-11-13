@@ -306,6 +306,39 @@ func isVoiceOwnershipViolation(err error) bool {
 		strings.Contains(strings.ToUpper(err.Error()), "POST VOICE MUST BE ACTIVE")
 }
 
+// EditObservations writes the owner's corrected snapshot and advances the input revision in one
+// transaction (POST-126, POST-111). Unlike a machine snapshot it turns no photo: an owner edit
+// changes no rotation.
+func (s *Store) EditObservations(ctx context.Context, slug, userID string, observations []post.Observation, updatedAt time.Time) (bool, error) {
+	encoded, err := marshalObservations(observations)
+	if err != nil {
+		return false, fmt.Errorf("encode observations: %w", err)
+	}
+	tx, err := s.writer.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("begin observation edit: %w", err)
+	}
+	defer tx.Rollback() //nolint:errcheck // no-op once committed
+	q := s.write.WithTx(tx)
+	n, err := q.UpdatePostObservations(ctx, sqlc.UpdatePostObservationsParams{
+		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Slug: slug, UserID: userID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("update observations: %w", err)
+	}
+	if n == 0 {
+		return false, nil
+	}
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: formatTime(updatedAt)}); err != nil {
+		return false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return false, fmt.Errorf("commit observation edit: %w", err)
+	}
+	return true, nil
+}
+
 func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, observations []post.Observation, updatedAt time.Time) (bool, error) {
 	encoded, err := marshalObservations(observations)
 	if err != nil {

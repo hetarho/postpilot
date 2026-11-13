@@ -124,7 +124,7 @@ func alignmentAvailableSources(prior *OriginReview, attached []string) *OriginRe
 	copy := *prior
 	copy.Sources = slices.Clone(prior.Sources)
 	for i := range copy.Sources {
-		if copy.Sources[i].Kind == OriginSourceVisualObservation && !slices.Contains(attached, copy.Sources[i].AttachmentFilename) {
+		if copy.Sources[i].Kind.AttachmentBound() && !slices.Contains(attached, copy.Sources[i].AttachmentFilename) {
 			copy.Sources[i].Available = false
 		}
 	}

@@ -173,6 +173,8 @@ func TestEveryWriteSnapshotMemberRoundTrips(t *testing.T) {
 	for i := range fixture.observations {
 		fixture.observations[i].Origins = originFixtureObservation(fixture.observations[i])
 	}
+	// The owner's mark is set here alone, so the pinned golden keeps its bytes (GEN-90).
+	fixture.observations[0].OwnerEdited, fixture.observations[0].OwnerFields = true, []string{"scene"}
 	fixture.post.Observations = fixture.observations
 	fixture.post.ContentOrigins = originFixtureContent(*fixture.post.Content)
 	identity := OriginContentIdentity(*fixture.post.Content)

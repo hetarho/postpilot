@@ -100,6 +100,21 @@ func (f *fakeStore) UpdateDraft(_ context.Context, slug, userID, title, memo str
 	return true, nil
 }
 
+func (f *fakeStore) EditObservations(_ context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error) {
+	f.guarded(slug)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	existing, ok := f.posts[slug]
+	if !ok || existing.UserID != userID || f.publishedLocked(slug) {
+		return false, nil
+	}
+	existing.Observations = append([]Observation(nil), observations...)
+	existing.InputRevision++
+	existing.UpdatedAt = updatedAt
+	f.posts[slug] = existing
+	return true, nil
+}
+
 func (f *fakeStore) UpdateObservations(_ context.Context, slug, userID string, observations []Observation, updatedAt time.Time) (bool, error) {
 	f.guarded(slug)
 	f.mu.Lock()

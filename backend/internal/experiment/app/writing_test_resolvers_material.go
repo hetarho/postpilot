@@ -96,7 +96,7 @@ func (r *WritingTestResolvers) ResolveWritingTestSource(ctx context.Context, use
 		}
 		for _, o := range source.Observations {
 			if names[o.File] {
-				value.Post.Observations = append(value.Post.Observations, generation.Observation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: slices.Clone(o.Objects), PeoplePresent: o.PeoplePresent, Model: o.Model, Events: slices.Clone(o.Events), Speech: o.Speech, Rotation: o.Rotation, Origins: o.Origins})
+				value.Post.Observations = append(value.Post.Observations, generation.Observation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: slices.Clone(o.Objects), PeoplePresent: o.PeoplePresent, Model: o.Model, Events: slices.Clone(o.Events), Speech: o.Speech, Rotation: o.Rotation, Origins: o.Origins, OwnerEdited: o.OwnerEdited, OwnerFields: slices.Clone(o.OwnerFields)})
 			}
 		}
 	}

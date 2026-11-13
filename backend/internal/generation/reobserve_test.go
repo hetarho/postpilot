@@ -493,3 +493,60 @@ func TestEachPhotoIsNamedRightBeforeItself(t *testing.T) {
 		t.Fatalf("labelled photos = %v, want %v", named, want)
 	}
 }
+
+// GEN-90, GEN-8 — an entry the owner edited is reused unchanged whatever observe model runs, even
+// when the owner emptied every field: it is the owner's answer, never a photo still unseen.
+func TestStartReusesAnOwnerEditedObservationEvenWhenEmptied(t *testing.T) {
+	images, stored := storedSnapshot(3, "old/observer")
+	stored[1] = Observation{File: "IMG_2.jpg", Model: "old/observer", OwnerEdited: true, OwnerFields: []string{"scene", "mood"}}
+	stored[2].OwnerEdited, stored[2].OwnerFields, stored[2].Scene = true, []string{"scene"}, "주인이 고친 장면"
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images, Observations: stored}}
+	jobs := &fakeJobs{id: "job"}
+	svc := NewService(posts, fakeProfiles{}, newFakeModels(), fakeImages{}, jobs, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
+
+	if _, err := svc.Start(context.Background(), StartRequest{
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	frozen := jobs.frozen(t, 0)
+	if frozen.ObserveFiles == nil || len(*frozen.ObserveFiles) != 0 {
+		t.Fatalf("frozen set = %v, want nothing forced", frozen.ObserveFiles)
+	}
+	if !reflect.DeepEqual(frozen.Observations, stored) {
+		t.Fatalf("frozen snapshot = %+v, want the stored entries with their marks", frozen.Observations)
+	}
+	if calls := jobs.generations[0].ObserveCalls; calls != 0 {
+		t.Fatalf("ObserveCalls = %d, want 0", calls)
+	}
+}
+
+// GEN-90, GEN-11 — only a re-observation that selected the file replaces an owner-edited entry,
+// and the fresh entry carries no mark; an unselected edited entry survives the persist marked.
+func TestReobservationReplacesAnOwnerEditedEntryOnlyWhenSelected(t *testing.T) {
+	images, stored := storedSnapshot(3, "old/observer")
+	for i := range stored[:2] {
+		stored[i].OwnerEdited, stored[i].OwnerFields, stored[i].Scene = true, []string{"scene"}, "주인이 고친 장면"
+	}
+	posts := &fakePosts{input: PostInput{Slug: "post", UserID: "alice", Voice: liveVoice, Images: images}}
+	models := observingModels(t)
+	svc := NewService(posts, fakeProfiles{}, models, fakeImages{}, &fakeJobs{}, reobserveBatchSize, testReasoningPolicy, testBudget, testDeps())
+
+	selected := filenames(2)
+	if err := svc.Generate(context.Background(), GenerateJob{VoiceID: liveVoice.ID,
+		UserID: "alice", PostSlug: "post", ObserveModel: observeRef.String(), WriteModel: writeRef.String(),
+		Payload: mustGeneratePayload(t, generationOptions{ObserveFiles: &selected, Observations: stored}),
+	}, func(string, int, int) {}); err != nil {
+		t.Fatal(err)
+	}
+	final := posts.observationWrites[len(posts.observationWrites)-1]
+	if len(final) != 3 {
+		t.Fatalf("persist = %+v", final)
+	}
+	if kept := final[0]; !kept.OwnerEdited || kept.Scene != "주인이 고친 장면" || !reflect.DeepEqual(kept.OwnerFields, []string{"scene"}) {
+		t.Fatalf("unselected edited entry = %+v", kept)
+	}
+	if fresh := final[1]; fresh.OwnerEdited || fresh.OwnerFields != nil || fresh.Scene != "fresh" {
+		t.Fatalf("re-observed entry = %+v, want a fresh unmarked one", fresh)
+	}
+}

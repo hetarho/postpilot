@@ -91,7 +91,7 @@ func PreservePlanOrigins(before []StorylineParagraph, prior *PlanOriginReview, a
 		withdrawn := false
 		for _, ref := range span.SourceRefs {
 			oldSource := catalog[ref]
-			if current, exists := freshCatalog[ref]; exists && oldSource.Kind == post.OriginSourceVisualObservation && current.Kind == oldSource.Kind && current.AttachmentFilename == oldSource.AttachmentFilename && !current.Available {
+			if current, exists := freshCatalog[ref]; exists && oldSource.Kind.AttachmentBound() && current.Kind == oldSource.Kind && current.AttachmentFilename == oldSource.AttachmentFilename && !current.Available {
 				withdrawn = true
 			}
 		}

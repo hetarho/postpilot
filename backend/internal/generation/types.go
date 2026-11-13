@@ -128,6 +128,11 @@ type Observation struct {
 	// Rotation is the clockwise turn, in degrees (0, 90, 180, 270), that makes a photo's scene
 	// upright (GEN-79); always 0 for a video.
 	Rotation int
+	// OwnerEdited marks an entry the owner corrected by hand: a run reuses it unchanged, and
+	// only a re-observation that selected its file replaces it (GEN-90). OwnerFields names the
+	// fields the owner changed, offered to the writer as the owner's own material (GEN-80).
+	OwnerEdited bool
+	OwnerFields []string
 }
 
 type ObservationOriginCandidate struct {

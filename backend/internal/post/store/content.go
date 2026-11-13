@@ -48,6 +48,10 @@ type observationJSON struct {
 	Speech string   `json:"speech,omitempty"`
 	// The photo's upright turn (GEN-79), omitted at 0 like the members above.
 	Rotation int `json:"rotation,omitempty"`
+	// The owner's correction mark (POST-126), omitted on a machine-written entry so every
+	// earlier row decodes as one.
+	OwnerEdited bool     `json:"ownerEdited,omitempty"`
+	OwnerFields []string `json:"ownerFields,omitempty"`
 }
 
 func marshalContent(content post.PostContent) (string, error) {
@@ -91,6 +95,7 @@ func marshalObservations(observations []post.Observation) (string, error) {
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
+			OwnerEdited: observation.OwnerEdited, OwnerFields: observation.OwnerFields,
 		})
 	}
 	data, err := json.Marshal(wire)
@@ -113,6 +118,7 @@ func unmarshalObservations(data string) ([]post.Observation, error) {
 			VisibleText: observation.VisibleText, Objects: observation.Objects,
 			PeoplePresent: observation.PeoplePresent, Model: observation.Model,
 			Events: observation.Events, Speech: observation.Speech, Rotation: observation.Rotation,
+			OwnerEdited: observation.OwnerEdited, OwnerFields: observation.OwnerFields,
 		})
 	}
 	return out, nil

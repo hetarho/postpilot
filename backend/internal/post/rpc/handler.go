@@ -66,6 +66,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		Storyline: fromProtoStorylineEdit(req.Msg.GetStoryline()),
 		Campaign:  req.Msg.Campaign, AdvertiserGuide: fromProtoAdvertiserGuide(req.Msg.GetAdvertiserGuide()),
 		ChecklistTicks: fromProtoChecklistTicks(req.Msg.GetChecklistTicks()),
+		Observations:   fromProtoObservationEdits(req.Msg.GetObservationEdits()),
 	})
 	if err != nil {
 		return nil, toConnectError("save draft", err)
@@ -423,6 +424,10 @@ func toConnectError(op string, err error) error {
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "uploaded object is missing", postpilotv1.FailureReason_UPLOAD_OBJECT_MISSING, nil)
 	case errors.Is(err, post.ErrStorylineMissing):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "the post holds no storyline", postpilotv1.FailureReason_POST_STORYLINE_MISSING, nil)
+	case errors.Is(err, post.ErrObservationEditInvalid):
+		// The editor offers only the observed attachments' own fields, so this is a client bug
+		// with no reason of its own to explain.
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the observation edit is invalid", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 	case errors.Is(err, post.ErrStorylineInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "the storyline edit is invalid", postpilotv1.FailureReason_POST_STORYLINE_INVALID, nil)
 	case errors.Is(err, post.ErrPostBusy):
@@ -575,6 +580,28 @@ func fromProtoStorylineEdit(edit *postpilotv1.StorylineEdit) *post.StorylineEdit
 		out.Paragraphs = append(out.Paragraphs, post.StorylineParagraph{
 			Text: paragraph.GetText(), Files: append([]string(nil), paragraph.GetFiles()...),
 		})
+	}
+	return out
+}
+
+// fromProtoObservationEdits keeps each field's presence: an absent optional string and an unset
+// list flag keep the stored value (POST-126).
+func fromProtoObservationEdits(edits []*postpilotv1.ObservationEdit) []post.ObservationEdit {
+	if len(edits) == 0 {
+		return nil
+	}
+	out := make([]post.ObservationEdit, 0, len(edits))
+	for _, edit := range edits {
+		next := post.ObservationEdit{File: edit.GetFile(), Scene: edit.Scene, Mood: edit.Mood, VisibleText: edit.VisibleText}
+		if edit.GetObjectsSet() {
+			objects := append([]string{}, edit.GetObjects()...)
+			next.Objects = &objects
+		}
+		if edit.GetEventsSet() {
+			events := append([]string{}, edit.GetEvents()...)
+			next.Events = &events
+		}
+		out = append(out, next)
 	}
 	return out
 }
@@ -776,7 +803,7 @@ func toProtoObservation(value post.Observation) *postpilotv1.Observation {
 	return &postpilotv1.Observation{
 		File: value.File, Scene: value.Scene, Mood: value.Mood, VisibleText: value.VisibleText,
 		Objects: value.Objects, PeoplePresent: value.PeoplePresent, Model: value.Model,
-		Events: value.Events, Speech: value.Speech,
+		Events: value.Events, Speech: value.Speech, OwnerEdited: value.OwnerEdited,
 	}
 }
 

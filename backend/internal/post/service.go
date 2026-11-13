@@ -187,11 +187,14 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		}
 		ticks = &normalized
 	}
-	// A storyline edit's shape is checked ahead of every write too.
+	// A storyline edit's shape is checked ahead of every write too, and so are observation edits.
 	if save.Storyline != nil {
 		if err := save.Storyline.validShape(); err != nil {
 			return Post{}, err
 		}
+	}
+	if err := validObservationEdits(save.Observations); err != nil {
+		return Post{}, err
 	}
 	// The same for the 분야: an id the product does not know mints nothing and changes nothing.
 	field := ""
@@ -203,9 +206,12 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 	}
 
 	if slug == "" {
-		// A post being created holds no storyline to edit.
+		// A post being created holds no storyline and no observation to edit.
 		if save.Storyline != nil {
 			return Post{}, ErrStorylineMissing
+		}
+		if len(save.Observations) > 0 {
+			return Post{}, ErrObservationEditInvalid
 		}
 		if targetLanguage == nil {
 			return Post{}, ErrLanguageRequired
@@ -247,6 +253,10 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 		if storyline, err = s.checkStorylineEdit(ctx, found, *save.Storyline); err != nil {
 			return Post{}, err
 		}
+	}
+	observations, err := s.checkObservationEdits(ctx, found, save.Observations)
+	if err != nil {
+		return Post{}, err
 	}
 	if voiceID != nil && *voiceID != found.VoiceID {
 		if err := s.reassignVoice(ctx, found, *voiceID); err != nil {
@@ -312,6 +322,17 @@ func (s *Service) SaveDraft(ctx context.Context, userID string, save DraftSave) 
 			return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
 		}
 	}
+	// The owner's observation corrections: the snapshot with the edited entries marked, and
+	// nothing about the status, the content, its revision or baseline (POST-126).
+	if observations != nil {
+		written, err := s.drafts.EditObservations(ctx, slug, userID, observations, now)
+		if err != nil {
+			return Post{}, fmt.Errorf("save observation edit: %w", err)
+		}
+		if !written {
+			return Post{}, s.lockedOrGone(ctx, userID, slug, ErrNotFound)
+		}
+	}
 
 	return s.Get(ctx, userID, slug)
 }
@@ -327,6 +348,8 @@ type DraftSave struct {
 	Answers                    []TemplateAnswer
 	// Storyline is the owner's storyline edit, nil to keep the stored one (POST-96).
 	Storyline *StorylineEdit
+	// Observations are the owner's observation corrections, one per filename (POST-126).
+	Observations []ObservationEdit
 	// Campaign, AdvertiserGuide and ChecklistTicks are presence-aware option saves (POST-117–
 	// 119): nil keeps what the post holds, a present guide replaces the whole guide.
 	Campaign        *bool

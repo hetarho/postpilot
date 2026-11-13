@@ -97,7 +97,7 @@ func originSourceCategoryCompatible(category post.OriginCategory, refs []string,
 		switch category {
 		case post.OriginOwnerInput:
 			switch source.Kind {
-			case post.OriginSourceMemo, post.OriginSourceTemplateAnswer, post.OriginSourceOwnerEdit, post.OriginSourceMemory, post.OriginSourceLiteralText:
+			case post.OriginSourceMemo, post.OriginSourceTemplateAnswer, post.OriginSourceOwnerEdit, post.OriginSourceMemory, post.OriginSourceLiteralText, post.OriginSourceOwnerObservation:
 			default:
 				return false
 			}
@@ -147,7 +147,7 @@ func OriginSourcesWithAttachments(sources []post.OriginSource, photos, videos []
 	result := slices.Clone(sources)
 	attached := nameSet(append(append([]string(nil), photos...), videos...))
 	for i := range result {
-		if result[i].Kind == post.OriginSourceVisualObservation {
+		if result[i].Kind.AttachmentBound() {
 			if _, exists := attached[result[i].AttachmentFilename]; !exists {
 				result[i].Available = false
 			}
@@ -285,7 +285,7 @@ func PreserveRevisionOrigins(current PostContent, beforeOrigins *post.OriginRevi
 		withdrawn := false
 		for _, ref := range span.SourceRefs {
 			old := catalog[ref]
-			if now, exists := freshCatalog[ref]; exists && old.Kind == post.OriginSourceVisualObservation && now.Kind == old.Kind && now.AttachmentFilename == old.AttachmentFilename && !now.Available {
+			if now, exists := freshCatalog[ref]; exists && old.Kind.AttachmentBound() && now.Kind == old.Kind && now.AttachmentFilename == old.AttachmentFilename && !now.Available {
 				withdrawn = true
 			}
 		}

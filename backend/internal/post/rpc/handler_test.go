@@ -34,6 +34,7 @@ func TestToConnectErrorMapsEveryDomainError(t *testing.T) {
 		{"busy", "save draft", post.ErrPostBusy, connect.CodeFailedPrecondition, "POST_BUSY"},
 		{"no storyline", "save draft", post.ErrStorylineMissing, connect.CodeFailedPrecondition, "POST_STORYLINE_MISSING"},
 		{"storyline edit", "save draft", post.ErrStorylineInvalid, connect.CodeInvalidArgument, "POST_STORYLINE_INVALID"},
+		{"observation edit", "save draft", post.ErrObservationEditInvalid, connect.CodeInvalidArgument, "UNKNOWN_FAILURE"},
 		{"stale", "save post content", post.ErrStaleContentRevision, connect.CodeAborted, "POST_CONTENT_STALE"},
 		{"baseline", "finalize post", post.ErrNoMachineBaseline, connect.CodeFailedPrecondition, "POST_MACHINE_BASELINE_REQUIRED"},
 		{"not finalized", "publish", post.ErrPostNotFinalized, connect.CodeFailedPrecondition, "POST_NOT_FINALIZED"},
@@ -379,5 +380,37 @@ func TestTheStorylineEditTravelsWhole(t *testing.T) {
 	want := &post.StorylineEdit{Paragraphs: []post.StorylineParagraph{{Text: "가게 앞", Files: []string{"a.jpg"}}, {Text: "마무리"}}}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("edit = %+v, want %+v", got, want)
+	}
+}
+
+// POST-126: each field of an observation edit keeps its presence — an absent string and an unset
+// list flag keep the stored value, a set flag with no items clears the list.
+func TestTheObservationEditKeepsEachFieldsPresence(t *testing.T) {
+	if fromProtoObservationEdits(nil) != nil {
+		t.Fatal("no edits arrived as some")
+	}
+	scene, empty := "가게 입구", ""
+	got := fromProtoObservationEdits([]*postpilotv1.ObservationEdit{
+		{File: "a.jpg", Scene: &scene, VisibleText: &empty, Objects: []string{"간판"}, ObjectsSet: true},
+		{File: "clip.mp4", EventsSet: true, Objects: []string{"ignored"}},
+	})
+	objects, events := []string{"간판"}, []string{}
+	want := []post.ObservationEdit{
+		{File: "a.jpg", Scene: &scene, VisibleText: &empty, Objects: &objects},
+		{File: "clip.mp4", Events: &events},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("edits = %+v, want %+v", got, want)
+	}
+}
+
+// GEN-90: GetPost says which observations the owner corrected.
+func TestToProtoObservationCarriesTheOwnerMark(t *testing.T) {
+	if toProtoObservation(post.Observation{File: "a.jpg", Scene: "가게"}).GetOwnerEdited() {
+		t.Fatal("a machine entry read as edited")
+	}
+	edited := toProtoObservation(post.Observation{File: "a.jpg", Scene: "가게 입구", OwnerEdited: true, OwnerFields: []string{"scene"}})
+	if !edited.GetOwnerEdited() || edited.GetScene() != "가게 입구" {
+		t.Fatalf("edited entry = %+v", edited)
 	}
 }
