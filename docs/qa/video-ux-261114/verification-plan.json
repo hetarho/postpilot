@@ -1,0 +1,101 @@
+{
+  "schemaVersion": 1,
+  "checks": [
+    {
+      "id": "dev-scripts",
+      "tier": "batch",
+      "command": "pnpm test:dev",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "generated-proto",
+      "tier": "batch",
+      "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "generated-sql",
+      "tier": "batch",
+      "command": "pnpm gen:sql && git diff --exit-code -- backend",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "frontend-lint-format",
+      "tier": "batch",
+      "command": "pnpm lint",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "frontend-boundaries",
+      "tier": "batch",
+      "command": "pnpm lint:fsd",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "publishing-retirement",
+      "tier": "batch",
+      "command": "pnpm lint:retirement",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "style-rules",
+      "tier": "batch",
+      "command": "pnpm lint:style:probe && pnpm lint:style",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "gusta-skill-integrity",
+      "tier": "batch",
+      "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "frontend-suite",
+      "tier": "batch",
+      "command": "pnpm --filter ./frontend test",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "frontend-build",
+      "tier": "batch",
+      "command": "pnpm build:web",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "deploy-python",
+      "tier": "batch",
+      "command": "python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v",
+      "inputs": [
+        "."
+      ]
+    },
+    {
+      "id": "backend-suite",
+      "tier": "batch",
+      "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+      "inputs": [
+        "."
+      ]
+    }
+  ]
+}
