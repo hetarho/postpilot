@@ -193,6 +193,7 @@
 | T826 | dsui | task/design-system-audit-serial | 4f24088b69a8 | 2026-11-13T18:03Z |
 
 ## log
+- 261113 dsui: preserve first gate failure 1/3 and 22-case recovery pass; defer the queued second gate while the active loading owner validates overlapping editor/template screens, then synchronize published changes before final verification
 - 261113 T826 done
 - 261113 ldui: loading UI T795-T802 complete; reviewed candidate 7cc538ae8479 fixed on task/loading-ui-final; final ARCH batch retry is queued behind the shared design-system heavy check; no independent UI/video scope claimed.
 - 261113 fix navigation: default video-template returns to naver_clip instead of undefined; default and Instagram regressions included in 69 passing tests
@@ -212,4 +213,3 @@
 - 261113 T820 done
 - 261113 T813 done
 - 261113 T812 done
-- 261113 T811 done
