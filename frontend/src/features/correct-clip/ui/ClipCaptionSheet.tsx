@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
@@ -12,7 +13,8 @@ import {
   type ClipEditableText,
   type TimelineEdit,
 } from '@/entities/clip-plan'
-import { Button, Sheet, Typography } from '@/shared/ui'
+import { CLIP_TIMELINE } from '@/entities/clip-design'
+import { Button, Sheet, Typography, useVisualViewport } from '@/shared/ui'
 import { ClipCaptionStage } from './ClipCaptionStage'
 import { ClipTextControls } from './ClipTextControls'
 import { ClipTextReading } from './ClipItemReading'
@@ -62,6 +64,21 @@ export function ClipCaptionSheet({
 }) {
   const { t } = useTranslation('clips')
   const { t: tCommon } = useTranslation('common')
+  const viewport = useVisualViewport()
+  const headerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const panel = headerRef.current?.closest<HTMLElement>('[role=dialog]')
+    const overlay = panel?.parentElement
+    if (!open || !panel || !overlay) return
+    overlay.style.top = `${viewport.offsetTop}px`
+    overlay.style.bottom = `${Math.max(0, window.innerHeight - viewport.offsetTop - viewport.height)}px`
+    panel.style.maxHeight = `${viewport.height}px`
+    return () => {
+      overlay.style.top = ''
+      overlay.style.bottom = ''
+      panel.style.maxHeight = ''
+    }
+  }, [open, viewport.height, viewport.offsetTop])
   const titleId = `clip-text-sheet-${text.instanceId}`
   // The cut the caption's interval STARTS in: a caption may cross several, and it is placed once,
   // against the frame it opens over (CLIP-143).
@@ -73,18 +90,43 @@ export function ClipCaptionSheet({
       labelledBy={titleId}
       onClose={onClose}
       header={
-        <div className="mb-3 flex items-start justify-between gap-3">
-          <Typography variant="fieldTitle" id={titleId} className="min-w-0">
-            {t('timeline.textControls')}
-          </Typography>
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={tCommon('action.close')}
-            onClick={onClose}
-          >
-            <X aria-hidden="true" className="size-5" />
-          </Button>
+        <div ref={headerRef}>
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <Typography variant="fieldTitle" id={titleId} className="min-w-0">
+              {t('timeline.textControls')}
+            </Typography>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={tCommon('action.close')}
+              onClick={onClose}
+            >
+              <X aria-hidden="true" className="size-5" />
+            </Button>
+          </div>
+          {!readOnly && text.role === 'caption' && stage && startCut && (
+            <ClipCaptionStage
+              text={text}
+              fragment={stage.fragment}
+              canvas={stage.canvas}
+              safeArea={stage.safeArea}
+              frameUrl={footage.localSources.find((s) => s.fingerprint === frameFingerprint)?.url}
+              frameFingerprint={frameFingerprint}
+              frameStartMs={outputToSourceMs(startCut, textInterval(plan, text).startMs)}
+              resolvePlayback={footage.resolvePlayback}
+              notices={notices}
+              language={language}
+              change={change}
+              disabled={disabled}
+              compact
+              maxFrameHeight={
+                viewport.height *
+                (viewport.height < CLIP_TIMELINE.compactViewportHeight
+                  ? CLIP_TIMELINE.compactPreviewFraction
+                  : CLIP_TIMELINE.previewViewportFraction)
+              }
+            />
+          )}
         </div>
       }
       footer={
@@ -110,21 +152,11 @@ export function ClipCaptionSheet({
         <fieldset disabled={disabled} className="min-w-0 space-y-4">
           {text.role === 'caption' && stage && startCut && (
             <>
-              <ClipCaptionStage
-                text={text}
-                fragment={stage.fragment}
-                canvas={stage.canvas}
-                safeArea={stage.safeArea}
-                frameUrl={footage.localSources.find((s) => s.fingerprint === frameFingerprint)?.url}
-                frameFingerprint={frameFingerprint}
-                frameStartMs={outputToSourceMs(startCut, textInterval(plan, text).startMs)}
-                resolvePlayback={footage.resolvePlayback}
-                notices={notices}
-                language={language}
-                change={change}
-                disabled={disabled}
-              />
               <Typography variant="meta">{t('placement.mainHelp')}</Typography>
+              {stage.fragment?.representativeFrame && (
+                <Typography variant="meta">{t('placement.representative')}</Typography>
+              )}
+              {!stage.fragment && <Typography variant="meta">{t('placement.drawing')}</Typography>}
             </>
           )}
           <ClipTextControls

@@ -145,6 +145,54 @@ export function ClipTextControls({
         </div>
       )}
       <ClipNoticeList notices={textNotices} language={language} />
+      {text.role === 'caption' && (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            {/* A new style keeps the owner's size and place: a size it cannot take is reported
+                on the size field below and holds the save, never quietly cleared (CDS-100). */}
+            <ClipCaptionStylePicker
+              value={text.ownerStyle}
+              drawn={drawn}
+              samples={styleSamples}
+              unavailable={samplesUnavailable}
+              onChange={(ownerStyle) => patch({ ownerStyle })}
+            />
+          </div>
+          <div>
+            <FieldLabel htmlFor="clip-caption-size">{t('placement.size')}</FieldLabel>
+            <TextField
+              id="clip-caption-size"
+              inputMode="numeric"
+              aria-invalid={sizeRefused || undefined}
+              aria-describedby="clip-caption-size-range"
+              value={size}
+              onChange={(e) => setSize(e.target.value)}
+              onBlur={() => {
+                const value = Number(size)
+                if (!size.trim()) return patch({ ownerSizePx: undefined })
+                // CDS-3's floor is refused AT THE CONTROL: the owner keeps what
+                // they typed and the caption keeps the size it had.
+                if (!Number.isFinite(value) || value < sizes.min || value > sizes.max) return
+                patch({ ownerSizePx: Math.round(value) })
+              }}
+            />
+            {sizeRefused ? (
+              <FieldMessage id="clip-caption-size-range">
+                {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
+              </FieldMessage>
+            ) : (
+              <Typography variant="meta" id="clip-caption-size-range">
+                {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
+              </Typography>
+            )}
+          </div>
+          {text.ownerPosition && (
+            <Button variant="ghost" onClick={() => patch({ ownerPosition: undefined })}>
+              {t('placement.reset')}
+            </Button>
+          )}
+        </div>
+      )}
       {/* An intro or outro draws its slots, one row each, and no text of its
           own beside them (CLIP-188). */}
       {!(regionRole(text.role) && text.rows.length > 0) && (
@@ -310,54 +358,6 @@ export function ClipTextControls({
             />
           </div>
         </>
-      )}
-      {text.role === 'caption' && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            {/* A new style keeps the owner's size and place: a size it cannot take is reported
-                on the size field below and holds the save, never quietly cleared (CDS-100). */}
-            <ClipCaptionStylePicker
-              value={text.ownerStyle}
-              drawn={drawn}
-              samples={styleSamples}
-              unavailable={samplesUnavailable}
-              onChange={(ownerStyle) => patch({ ownerStyle })}
-            />
-          </div>
-          <div>
-            <FieldLabel htmlFor="clip-caption-size">{t('placement.size')}</FieldLabel>
-            <TextField
-              id="clip-caption-size"
-              inputMode="numeric"
-              aria-invalid={sizeRefused || undefined}
-              aria-describedby="clip-caption-size-range"
-              value={size}
-              onChange={(e) => setSize(e.target.value)}
-              onBlur={() => {
-                const value = Number(size)
-                if (!size.trim()) return patch({ ownerSizePx: undefined })
-                // CDS-3's floor is refused AT THE CONTROL: the owner keeps what
-                // they typed and the caption keeps the size it had.
-                if (!Number.isFinite(value) || value < sizes.min || value > sizes.max) return
-                patch({ ownerSizePx: Math.round(value) })
-              }}
-            />
-            {sizeRefused ? (
-              <FieldMessage id="clip-caption-size-range">
-                {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
-              </FieldMessage>
-            ) : (
-              <Typography variant="meta" id="clip-caption-size-range">
-                {t('placement.sizeRange', { min: sizes.min, max: sizes.max })}
-              </Typography>
-            )}
-          </div>
-          {text.ownerPosition && (
-            <Button variant="ghost" onClick={() => patch({ ownerPosition: undefined })}>
-              {t('placement.reset')}
-            </Button>
-          )}
-        </div>
       )}
       {text.role === 'caption' && (
         <div className="space-y-3">

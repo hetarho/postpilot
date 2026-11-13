@@ -231,6 +231,7 @@ it('draws each style from the renderer and marks the animated ones', () => {
   controls({ styleSamples: [sample('neon', true), sample('film', false)] })
   const neon = within(styles()).getByRole('radio', { name: /네온 사인/ })
   expect(neon.querySelector('[data-sample="neon"]')).toBeInTheDocument()
+  expect(neon.querySelector('svg')?.parentElement).toHaveClass('bg-media-canvas-bg')
   expect(within(neon).getByText('움직이는 스타일')).toBeInTheDocument()
   const film = within(styles()).getByRole('radio', { name: '필름 자막' })
   expect(within(film).queryByText('움직이는 스타일')).not.toBeInTheDocument()
@@ -333,4 +334,33 @@ it("opens a caption's own sheet over a frame from the cut it starts in, with its
     sheet.getByRole('button', { name: '자막을 끌어서 옮기기 (방향키로 미세 조정)' }),
   ).toBeInTheDocument()
   expect(sheet.getByRole('button', { name: '문구 삭제' })).toBeInTheDocument()
+  const dialog = screen.getByRole('dialog', { name: '선택한 문구' })
+  const body = sheet.getByRole('radiogroup', { name: '자막 스타일' }).closest('.overflow-y-auto')!
+  expect(body).not.toContainElement(frame)
+  expect(dialog).toContainElement(frame)
+  expect(
+    sheet
+      .getByRole('radiogroup', { name: '자막 스타일' })
+      .compareDocumentPosition(sheet.getByLabelText('글자 크기 (px)')) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+  expect(
+    sheet
+      .getByLabelText('글자 크기 (px)')
+      .compareDocumentPosition(sheet.getByLabelText('자막 원문')) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy()
+})
+
+it('keeps an invalid typed size while choosing another style', async () => {
+  const { change } = controls()
+  const size = screen.getByLabelText('글자 크기 (px)')
+  await userEvent.type(size, '12')
+  await userEvent.click(within(styles()).getByRole('radio', { name: '네온 사인' }))
+  expect(size).toHaveValue('12')
+  expect(size).toHaveAttribute('aria-invalid', 'true')
+  expect(change).toHaveBeenLastCalledWith(
+    expect.objectContaining({ patch: { ownerStyle: 'neon' } }),
+    undefined,
+  )
 })
