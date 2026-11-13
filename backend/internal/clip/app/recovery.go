@@ -55,6 +55,9 @@ func planRecoveryDigest(p clip.GenerationPayload) string {
 
 func (s *GenerationService) saveRecovery(ctx context.Context, user, project string, r clip.RecoveryState) error {
 	if store, ok := s.store.(clip.RecoveryStore); ok {
+		// A pin's authority is the project's own analysis (CLIP-235), which the next quote
+		// reads again; the stored attempt evidence keeps no copy of it.
+		r.Pinned = nil
 		return store.SaveRecovery(ctx, user, project, r)
 	}
 	return nil
@@ -128,36 +131,58 @@ func (s *GenerationService) selectRecovery(r *clip.RecoveryState, b clip.SourceB
 	return out
 }
 
-// withPinned puts the observations the owner corrected by hand in place of whatever the
+// withPinned keeps the observations the owner corrected by hand in place of whatever the
 // recovery holds for their sources (CLIP-235): such a source counts as analyzed while its id
 // and fingerprint match the batch, whatever observe model, contract or language is selected
 // now, and every writing call reads it as corrected. Only 다시 관찰하기, which drops a source's
-// chunks after this, replaces it. A stored analysis no complete chunk sequence merges into is
-// left to be observed again rather than reshaped.
-func (s *GenerationService) withPinned(r clip.RecoveryState, p clip.Project, b clip.SourceBatch) clip.RecoveryState {
+// pin after this, replaces it.
+func withPinned(l clip.AnalysisLimits, r clip.RecoveryState, p clip.Project, b clip.SourceBatch) clip.RecoveryState {
 	stored, err := clip.RetainedObservations(p)
 	if err != nil {
 		return r
 	}
-	for _, a := range stored {
+	return pinRecovery(l, r, stored, b)
+}
+
+// pinRecovery puts each corrected analysis that still matches its batch source in place of
+// the source's kept chunks, whole and as recorded: a range recorded under clip-observation-v1
+// or crossing today's chunk boundary is neither split nor given a status, and an analysis the
+// owner never corrected pins nothing. A run applies it again to the pins its payload froze,
+// so the batch it runs is held to the same identity.
+func pinRecovery(l clip.AnalysisLimits, r clip.RecoveryState, analyses []clip.SourceAnalysis, b clip.SourceBatch) clip.RecoveryState {
+	r.Pinned = nil
+	for _, a := range analyses {
 		at := slices.IndexFunc(b.Sources, func(v clip.SourceLease) bool { return v.ID == a.Source.ID })
-		if !a.OwnerEdited || at < 0 || !recoverySourceMatches(a.Source, b.Sources[at]) {
+		if at < 0 || !recoverySourceMatches(a.Source, b.Sources[at]) || clip.ValidatePinnedAnalysis(l, a) != nil {
 			continue
 		}
-		chunks, err := clip.SplitAnalysis(s.cfg.Analysis, a)
-		if err != nil {
+		if _, exists := recoveryPin(r, a.Source.ID); exists {
 			continue
 		}
 		r.Sources = append(slices.DeleteFunc(r.Sources, func(v clip.AnalysisSource) bool { return v.ID == a.Source.ID }), a.Source)
-		r.Chunks = append(slices.DeleteFunc(r.Chunks, func(c clip.ChunkAnalysis) bool { return c.SourceID == a.Source.ID }), chunks...)
+		r.Chunks = slices.DeleteFunc(r.Chunks, func(c clip.ChunkAnalysis) bool { return c.SourceID == a.Source.ID })
+		r.Pinned = append(r.Pinned, a)
 	}
-	slices.SortFunc(r.Chunks, func(a, b clip.ChunkAnalysis) int {
-		if a.SourceID == b.SourceID {
-			return a.Index - b.Index
-		}
-		return cmp.Compare(a.SourceID, b.SourceID)
-	})
 	return r
+}
+
+func recoveryPin(r clip.RecoveryState, id string) (clip.SourceAnalysis, bool) {
+	for _, a := range r.Pinned {
+		if a.Source.ID == id {
+			return a, true
+		}
+	}
+	return clip.SourceAnalysis{}, false
+}
+
+// reusedChunks is how many chunk slots the recovery answers without an observation call:
+// its kept observations and every slot of a pinned source.
+func reusedChunks(cfg clip.MediaConfig, r clip.RecoveryState) int {
+	n := len(r.Chunks)
+	for _, a := range r.Pinned {
+		n += chunkCount(cfg, a.Source.Info.DurationMS)
+	}
+	return n
 }
 
 func recoveryChunk(r clip.RecoveryState, id string, index int) *clip.ChunkAnalysis {

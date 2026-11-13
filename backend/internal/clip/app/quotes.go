@@ -69,8 +69,9 @@ func (m quoteMode) kind() string {
 	return ""
 }
 
-// withoutReanalyzed is the recovery with no chunk of the sources 다시 관찰하기 names, so they
-// are counted, prepared and observed again as missing (CLIP-234).
+// withoutReanalyzed is the recovery with no chunk and no pinned correction of the sources
+// 다시 관찰하기 names, so they are counted, prepared and observed again as missing and their
+// hand edits are replaced (CLIP-234, CLIP-235).
 func withoutReanalyzed(r clip.RecoveryState, reanalyze []string) clip.RecoveryState {
 	if len(reanalyze) == 0 {
 		return r
@@ -82,6 +83,13 @@ func withoutReanalyzed(r clip.RecoveryState, reanalyze []string) clip.RecoverySt
 		}
 	}
 	r.Chunks = kept
+	pinned := make([]clip.SourceAnalysis, 0, len(r.Pinned))
+	for _, a := range r.Pinned {
+		if !slices.Contains(reanalyze, a.Source.ID) {
+			pinned = append(pinned, a)
+		}
+	}
+	r.Pinned = pinned
 	return r
 }
 
@@ -207,7 +215,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		return p, t, b, pricing, guidelines, err
 	}
 	// A source the owner corrected by hand counts as analyzed (CLIP-235).
-	recovered := s.withPinned(s.selectRecovery(upgraded, b, modelRef(observe), p.Language), p, b)
+	recovered := withPinned(s.cfg.Analysis, s.selectRecovery(upgraded, b, modelRef(observe), p.Language), p, b)
 	// 다시 관찰하기 observes the sources it names again: their kept chunks count as missing.
 	if len(reanalyze) > 0 && mode != quoteAnalyze {
 		return p, t, b, pricing, guidelines, clip.ErrInvalid
@@ -254,9 +262,13 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 				n--
 			}
 		}
+		if _, pinned := recoveryPin(recovered, v.ID); pinned {
+			n = 0
+		}
 		count += max(0, n)
 	}
-	count = min(count, max(0, upperCount-len(recovered.Chunks)))
+	reused := reusedChunks(s.cfg.Media, recovered)
+	count = min(count, max(0, upperCount-reused))
 	if skipFlow && count != 0 {
 		skipFlow, skipNarration = false, false
 	}
@@ -289,7 +301,7 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 		}
 	}
 	pricing.RecoveryDigest = clip.RecoveryDigest(rawRecovery)
-	pricing.ReusedChunks = len(recovered.Chunks)
+	pricing.ReusedChunks = reused
 	if err != nil {
 		return p, t, b, pricing, guidelines, admissionRefusal(modelRef(observe), err)
 	}
@@ -500,7 +512,7 @@ func (s *GenerationService) startFor(ctx context.Context, user, id, batch, obser
 	if err != nil {
 		return "", err
 	}
-	recovery := withoutReanalyzed(s.withPinned(s.selectRecovery(upgraded, b, modelRef(observe), p.Language), p, b), pricing.ReanalyzedSources())
+	recovery := withoutReanalyzed(withPinned(s.cfg.Analysis, s.selectRecovery(upgraded, b, modelRef(observe), p.Language), p, b), pricing.ReanalyzedSources())
 	regions := clip.EffectiveProjectRegions(p)
 	version := clip.GenerationPayloadVersion
 	if a.AnalysisPreparationID != "" {

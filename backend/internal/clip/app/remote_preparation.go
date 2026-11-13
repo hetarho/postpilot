@@ -18,10 +18,12 @@ func (r *generationRun) prepareRemote(revision int) error {
 		// A browser source measurement never enters native v3 as original
 		// proof. The worker re-probes/re-prepares it; accepted observations
 		// below remain reusable and are never sent to a model again.
+		// A source the owner corrected by hand needs no copy of any slot (CLIP-235).
+		_, pinned := recoveryPin(r.recovery, source.ID)
 		if cached, ok := recoverySource(r.recovery, source.ID); ok && cached.OriginalMeasurementProvenance == "" {
 			frozen.Info = cached.Info
 			for i := 0; i < chunkCount(s.cfg.Media, cached.Info.DurationMS); i++ {
-				if recoveryChunk(r.recovery, source.ID, i) != nil {
+				if pinned || recoveryChunk(r.recovery, source.ID, i) != nil {
 					frozen.ReusedChunks = append(frozen.ReusedChunks, i)
 				}
 			}
@@ -72,7 +74,9 @@ func (r *generationRun) prepareRemote(revision int) error {
 			if clip.ValidateChunkInput(s.cfg.Analysis, clip.ChunkInput{Source: input, Index: index, OffsetMS: offset, DurationMS: c.DurationMS}) != nil {
 				return clip.ErrInvalidMedia
 			}
-			if old := recoveryChunk(r.recovery, source.ID, index); old != nil {
+			if _, pinned := recoveryPin(r.recovery, source.ID); pinned {
+				r.prepared = append(r.prepared, preparedChunk{source: i, chunk: c, pinned: true})
+			} else if old := recoveryChunk(r.recovery, source.ID, index); old != nil {
 				if old.Fingerprint != source.Fingerprint || old.OffsetMS != offset || old.DurationMS != c.DurationMS {
 					return clip.ErrInvalidMedia
 				}

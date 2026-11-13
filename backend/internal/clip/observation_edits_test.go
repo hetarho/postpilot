@@ -56,21 +56,47 @@ func TestApplyObservationEdits(t *testing.T) {
 	}
 }
 
-// SplitAnalysis is MergeAnalyses' inverse, so a corrected analysis re-enters a run as chunks.
-func TestSplitAnalysisInvertsMerge(t *testing.T) {
+// CLIP-235: a corrected analysis is kept whole as recorded, whichever contract recorded it,
+// including a legacy scene with no status crossing today's chunk boundary; an uncorrected or
+// malformed one is not.
+func TestValidatePinnedAnalysis(t *testing.T) {
 	l, analyses := editFixture()
-	analyses[0].Segments[2].OwnerEdited = true
-	chunks, err := SplitAnalysis(l, analyses[0])
-	if err != nil || len(chunks) != 2 || len(chunks[0].Segments) != 2 || chunks[1].OffsetMS != 60000 || chunks[1].DurationMS != 30000 {
-		t.Fatalf("%v %+v", err, chunks)
+	pinned := analyses[0]
+	pinned.OwnerEdited = true
+	if err := ValidatePinnedAnalysis(l, pinned); err != nil {
+		t.Fatal("a corrected v2 analysis was refused", err)
 	}
-	merged, err := MergeAnalyses(l, []AnalysisSource{analyses[0].Source}, chunks)
-	if err != nil || !merged[0].OwnerEdited || len(merged[0].Segments) != 3 {
-		t.Fatal("the merge of the split is not the analysis", err)
+	legacy := pinned
+	legacy.Segments = []Segment{{StartMS: 0, EndMS: 90000, Event: "corrected legacy scene", Quality: "clear", Focal: Point{X: .5, Y: .5}, OwnerEdited: true, OwnerFields: []string{OwnerFieldEvent}}}
+	if err := ValidatePinnedAnalysis(l, legacy); err != nil {
+		t.Fatal("a corrected legacy range crossing a chunk boundary was refused", err)
 	}
-	crossing := analyses[0]
-	crossing.Segments = []Segment{crossing.Segments[0], {StartMS: 30000, EndMS: 90000, Event: "long", Quality: "clear", Certainty: CertaintyCertain, Usability: UsabilityUsable, Focal: Point{X: .5, Y: .5}}}
-	if _, err := SplitAnalysis(l, crossing); err == nil {
-		t.Fatal("a scene crossing a chunk boundary was split")
+	scenes := func(step int) SourceAnalysis {
+		a := pinned
+		a.Segments = nil
+		for at := 0; at < 90000; at += step {
+			a.Segments = append(a.Segments, Segment{StartMS: at, EndMS: at + step, Event: "scene", Quality: "clear", Focal: Point{X: .5, Y: .5}, Certainty: CertaintyCertain, Usability: UsabilityUsable})
+		}
+		return a
+	}
+	if err := ValidatePinnedAnalysis(l, scenes(10000)); err != nil {
+		t.Fatal("the scenes two chunks admit together were refused", err)
+	}
+	uncorrected := legacy
+	uncorrected.OwnerEdited = false
+	overlapping := legacy
+	overlapping.Segments = []Segment{legacy.Segments[0], legacy.Segments[0]}
+	outside := legacy
+	outside.Segments = []Segment{legacy.Segments[0]}
+	outside.Segments[0].EndMS = 91000
+	invented := legacy
+	invented.Segments = []Segment{legacy.Segments[0]}
+	invented.Segments[0].Certainty = "probably"
+	foreign := legacy
+	foreign.Source.Fingerprint = ""
+	for name, a := range map[string]SourceAnalysis{"uncorrected": uncorrected, "overlapping": overlapping, "outside": outside, "invented status": invented, "no fingerprint": foreign, "more scenes than two chunks admit": scenes(5000)} {
+		if ValidatePinnedAnalysis(l, a) == nil {
+			t.Fatal("a pinned analysis was accepted:", name)
+		}
 	}
 }

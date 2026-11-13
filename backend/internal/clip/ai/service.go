@@ -480,6 +480,14 @@ func validateInput(cfg Config, in clip.PlanningInput) error {
 		return inputFailure(err, "input_sources", 0)
 	}
 	for index, a := range in.Analyses {
+		// An analysis the owner corrected by hand is written from as recorded, whichever
+		// contract recorded it (CLIP-235); every other one owes complete v2 coverage.
+		if a.OwnerEdited {
+			if err := clip.ValidatePinnedAnalysis(cfg.Analysis, a); err != nil {
+				return inputFailure(err, "input_sources", index+1)
+			}
+			continue
+		}
 		limits := cfg.Analysis
 		limits.MaxSegments *= (a.Source.Info.DurationMS + limits.ChunkMS - 1) / limits.ChunkMS
 		if err := clip.ValidateSegments(limits, a.Segments, 0, a.Source.Info.DurationMS); err != nil {

@@ -169,8 +169,22 @@ func (a *AnalysisPreparations) Begin(ctx context.Context, user string, in clip.A
 		}
 		out = clip.AnalysisPreparation{ID: newID(), UserID: user, ProjectID: in.ProjectID, BatchID: in.BatchID, QuoteID: in.QuoteID, ProfileVersion: in.ProfileVersion, ExpectedRevision: in.ExpectedRevision, OriginalDigest: q.InputDigest, RecoveryDigest: q.Pricing.RecoveryDigest, Originals: in.Originals, State: "preparing", CreatedAt: now, ExpiresAt: now.Add(a.limits.TTL), QueueDeadlineAt: now.Add(a.limits.TTL), DeadlineAt: now.Add(a.limits.TTL)}
 		coverage := slices.Clone(in.Originals)
+		// A source the owner corrected by hand is copied for no slot, whatever model observes
+		// the rest, unless 다시 관찰하기 names it (CLIP-235), exactly as the quote counted it.
+		pins := withoutReanalyzed(withPinned(clip.DefaultAnalysisLimits(), clip.RecoveryState{}, project, b), q.Pricing.ReanalyzedSources())
 		for i, m := range in.Originals {
 			source := clip.AnalysisSource{RenderSource: clip.RenderSource{ID: m.SourceID, Fingerprint: m.Fingerprint, Info: m.Info}, Filename: b.Sources[i].Filename, OriginalMeasurementProvenance: clip.BrowserOriginalProvenance}
+			if pin, ok := recoveryPin(pins, m.SourceID); ok {
+				if pin.Source.Info.HasAudio != m.Info.HasAudio {
+					return clip.ErrInvalidMedia
+				}
+				coverage[i].Info = pin.Source.Info
+				for index, offset := 0, 0; offset < pin.Source.Info.DurationMS; index, offset = index+1, offset+a.cfg.ChunkDurationMS {
+					out.Reused = append(out.Reused, clip.AnalysisChunk{SourceID: pin.Source.ID, Fingerprint: pin.Source.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(a.cfg.ChunkDurationMS, pin.Source.Info.DurationMS-offset)})
+				}
+				out.Sources = append(out.Sources, pin.Source)
+				continue
+			}
 			if r != nil && r.Version == 1 && r.Contract == clip.AnalysisContractVersion && r.Observe == q.Pricing.Observe.Ref && r.Language == project.Language {
 				for _, cached := range r.Sources {
 					if !recoverySourceMatches(cached, b.Sources[i]) || clip.ValidateAnalysisSources(clip.DefaultAnalysisLimits(), []clip.AnalysisSource{cached}) != nil {

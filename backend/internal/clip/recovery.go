@@ -34,7 +34,13 @@ type RecoveryState struct {
 	RegionDrafts []RegionDraft `json:",omitempty"`
 	Sources      []AnalysisSource
 	Chunks       []ChunkAnalysis
-	Legacy       *AttemptCheckpoint
+	// The analyses the owner corrected by hand (CLIP-235), each kept whole as recorded for
+	// a source whose identity and fingerprint the batch still holds. Such a source has no
+	// chunk here: every chunk slot it would need counts as reused, none is observed, and
+	// the writer receives this analysis unchanged. Only a generation payload carries them;
+	// the project's own analysis stays their authority, so a stored recovery holds none.
+	Pinned []SourceAnalysis `json:",omitempty"`
+	Legacy *AttemptCheckpoint
 }
 type RecoveryStore interface {
 	GetRecovery(context.Context, string, string) (*RecoveryState, error)

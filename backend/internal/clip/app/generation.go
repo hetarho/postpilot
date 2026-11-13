@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -507,8 +508,12 @@ func (r *generationRun) accept(payload []byte) error {
 		return clip.ErrQuoteChanged
 	}
 	recovery := s.selectRecovery(p.Recovery, b, pricing.Observe.Ref, p.Language)
+	if p.Recovery != nil {
+		// The corrections the start froze, held to this batch again (CLIP-235).
+		recovery = pinRecovery(s.cfg.Analysis, recovery, p.Recovery.Pinned, b)
+	}
 	recovery.JobID = r.job
-	if p.Recovery != nil && len(recovery.Chunks) != pricing.ReusedChunks {
+	if p.Recovery != nil && reusedChunks(s.cfg.Media, recovery) != pricing.ReusedChunks {
 		return clip.ErrQuoteChanged
 	}
 	if pricing.SkipNarration && (!recovery.PlanReady || recovery.Plan == "" || recovery.PlanDigest != planRecoveryDigest(p)) {
@@ -575,7 +580,7 @@ func (r *generationRun) admitPrepared() error {
 	sources, prepared := r.sources, r.prepared
 	count := 0
 	for _, v := range prepared {
-		if v.reused == nil {
+		if v.observes() {
 			count++
 		}
 	}
@@ -625,7 +630,9 @@ func (r *generationRun) admitPrepared() error {
 }
 
 // analyze observes every prepared chunk that the recovery did not already hold, checks
-// each observation against the chunk it was asked about, and merges them per source.
+// each observation against the chunk it was asked about, and merges them per source. A
+// source the owner corrected by hand is observed by no call: its pinned analysis stands for
+// all of its slots, unchanged (CLIP-235).
 func (r *generationRun) analyze() error {
 	s, ctx := r.s, r.ctx
 	r.set("analyze", 0, len(r.prepared))
@@ -635,47 +642,88 @@ func (r *generationRun) analyze() error {
 		if err := s.checkpoint(ctx, r.user, r.project, r.checkpoint); err != nil {
 			return err
 		}
-		slog.Info("clip analysis started", "job", r.job, "source", v.source+1, "chunk", index+1, "total", len(r.prepared), "reused", v.reused != nil)
-		var observation clip.ChunkAnalysis
-		var err error
-		if v.reused != nil {
-			observation = *v.reused
-		} else {
-			observation, err = s.observePrepared(r.correcting("analyze"), v, r.sources[v.source], r.pricing, r.p.Language)
-		}
-		if err != nil {
-			return admissionRefusal(r.pricing.Observe.Ref, err)
-		}
-		// The observer validates its chunk; check the identity and range again
-		// before making it durable or allowing the next paid call.
+		slog.Info("clip analysis started", "job", r.job, "source", v.source+1, "chunk", index+1, "total", len(r.prepared), "reused", !v.observes())
 		source := r.sources[v.source]
-		if observation.SourceID != source.ID || observation.Fingerprint != source.Fingerprint || observation.Index != v.chunk.Index || observation.OffsetMS != v.chunk.OffsetMS || observation.DurationMS != v.chunk.DurationMS {
-			return clip.ErrInvalid
-		}
-		if err := clip.ValidateSegments(s.cfg.Analysis, observation.Segments, observation.OffsetMS, observation.OffsetMS+observation.DurationMS); err != nil {
-			return err
-		}
-		if v.reused == nil {
-			r.recovery.Chunks = append(r.recovery.Chunks, observation)
-			if err := s.saveRecovery(ctx, r.user, r.project, r.recovery); err != nil {
+		if v.pinned {
+			pin, ok := recoveryPin(r.recovery, source.ID)
+			if !ok || v.chunk.SourceID != source.ID || pin.Source.Fingerprint != source.Fingerprint || v.chunk.Fingerprint != source.Fingerprint {
+				return clip.ErrInvalid
+			}
+			if index == 0 || r.prepared[index-1].source != v.source {
+				r.checkpoint.Observations[v.source].Segments, r.checkpoint.Observations[v.source].OwnerEdited = slices.Clone(pin.Segments), true
+			}
+		} else {
+			var observation clip.ChunkAnalysis
+			var err error
+			if v.reused != nil {
+				observation = *v.reused
+			} else {
+				observation, err = s.observePrepared(r.correcting("analyze"), v, source, r.pricing, r.p.Language)
+			}
+			if err != nil {
+				return admissionRefusal(r.pricing.Observe.Ref, err)
+			}
+			// The observer validates its chunk; check the identity and range again
+			// before making it durable or allowing the next paid call.
+			if observation.SourceID != source.ID || observation.Fingerprint != source.Fingerprint || observation.Index != v.chunk.Index || observation.OffsetMS != v.chunk.OffsetMS || observation.DurationMS != v.chunk.DurationMS {
+				return clip.ErrInvalid
+			}
+			if err := clip.ValidateSegments(s.cfg.Analysis, observation.Segments, observation.OffsetMS, observation.OffsetMS+observation.DurationMS); err != nil {
 				return err
 			}
+			if v.reused == nil {
+				r.recovery.Chunks = append(r.recovery.Chunks, observation)
+				if err := s.saveRecovery(ctx, r.user, r.project, r.recovery); err != nil {
+					return err
+				}
+			}
+			chunks = append(chunks, observation)
+			r.checkpoint.Observations[v.source].Segments = append(r.checkpoint.Observations[v.source].Segments, observation.Segments...)
 		}
-		chunks = append(chunks, observation)
-		r.checkpoint.Observations[v.source].Segments = append(r.checkpoint.Observations[v.source].Segments, observation.Segments...)
-		r.checkpoint.CompletedChunks = len(chunks)
+		r.checkpoint.CompletedChunks = index + 1
 		if index+1 == len(r.prepared) || r.prepared[index+1].source != v.source {
 			r.checkpoint.CompletedSources++
 		}
-		r.set("analyze", len(chunks), len(r.prepared))
+		r.set("analyze", index+1, len(r.prepared))
 	}
-	analyses, err := clip.MergeAnalyses(s.cfg.Analysis, r.sources, chunks)
+	analyses, err := r.merge(chunks)
 	if err != nil {
 		return err
 	}
 	r.analyses = analyses
 	r.checkpoint.Diagnostic = clip.AttemptDiagnostic{}
 	return nil
+}
+
+// merge joins every observed source's chunks and puts each pinned source's corrected
+// analysis, as recorded, at its own place in the batch (CLIP-235).
+func (r *generationRun) merge(chunks []clip.ChunkAnalysis) ([]clip.SourceAnalysis, error) {
+	l := r.s.cfg.Analysis
+	if err := clip.ValidateAnalysisSources(l, r.sources); err != nil {
+		return nil, err
+	}
+	observed := make([]clip.AnalysisSource, 0, len(r.sources))
+	for _, source := range r.sources {
+		if _, pinned := recoveryPin(r.recovery, source.ID); !pinned {
+			observed = append(observed, source)
+		}
+	}
+	var merged []clip.SourceAnalysis
+	if len(observed) > 0 || len(chunks) > 0 {
+		var err error
+		if merged, err = clip.MergeAnalyses(l, observed, chunks); err != nil {
+			return nil, err
+		}
+	}
+	out := make([]clip.SourceAnalysis, 0, len(r.sources))
+	for _, source := range r.sources {
+		if pin, pinned := recoveryPin(r.recovery, source.ID); pinned {
+			out = append(out, pin)
+			continue
+		}
+		out, merged = append(out, merged[0]), merged[1:]
+	}
+	return out, nil
 }
 
 // correcting is a model call's own context: one retry observer per stage, so a
@@ -889,7 +937,13 @@ type preparedChunk struct {
 	reused *clip.ChunkAnalysis
 	source int
 	chunk  clip.AnalysisChunk
+	// The slot belongs to a source the owner corrected by hand (CLIP-235): no copy of it is
+	// observed, and the source's pinned analysis answers it whole.
+	pinned bool
 }
+
+// observes is whether the slot still needs its observation call.
+func (p preparedChunk) observes() bool { return p.reused == nil && !p.pinned }
 
 func (s *GenerationService) prepareBatch(ctx context.Context, ws clip.MediaWorkspace, b clip.SourceBatch, progress func(int)) ([]clip.AnalysisSource, []preparedChunk, error) {
 	return s.prepareRecoveredBatch(ctx, ws, b, clip.RecoveryState{}, progress)
@@ -906,11 +960,12 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws clip.M
 	seen := map[string]bool{}
 	count := 0
 	for i, v := range b.Sources {
+		_, pinned := recoveryPin(recovery, v.ID)
 		if cached, ok := recoverySource(recovery, v.ID); ok && cached.OriginalMeasurementProvenance == "" {
 			n := (cached.Info.DurationMS + 59999) / 60000
 			complete := true
 			for index := 0; index < n; index++ {
-				complete = complete && recoveryChunk(recovery, v.ID, index) != nil
+				complete = complete && (pinned || recoveryChunk(recovery, v.ID, index) != nil)
 			}
 			if complete {
 				probed = append(probed, clip.ProbedSource{Metadata: v.SourceMetadata, Info: cached.Info})
@@ -920,7 +975,11 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws clip.M
 					return nil, nil, err
 				}
 				sources = append(sources, cached)
-				for index := 0; index < n; index++ {
+				for index, offset := 0, 0; index < n; index, offset = index+1, offset+s.cfg.Media.ChunkDurationMS {
+					if pinned {
+						prepared = append(prepared, preparedChunk{source: i, chunk: clip.AnalysisChunk{SourceID: v.ID, Fingerprint: v.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(s.cfg.Media.ChunkDurationMS, cached.Info.DurationMS-offset)}, pinned: true})
+						continue
+					}
 					c := recoveryChunk(recovery, v.ID, index)
 					prepared = append(prepared, preparedChunk{source: i, chunk: clip.AnalysisChunk{SourceID: c.SourceID, Fingerprint: c.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS}, reused: c})
 				}
@@ -947,6 +1006,15 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws clip.M
 			sources = append(sources, input)
 			next := 0
 			consume := func(c clip.AnalysisChunk) error {
+				if pinned {
+					// The decode still measures the original natively; no slot is observed.
+					if c.SourceID != v.ID || c.Fingerprint != v.Fingerprint || c.Index != next {
+						return clip.ErrInvalidMedia
+					}
+					next++
+					prepared = append(prepared, preparedChunk{source: i, chunk: c, pinned: true})
+					return nil
+				}
 				if old := recoveryChunk(recovery, v.ID, c.Index); old != nil && old.OffsetMS == c.OffsetMS && old.DurationMS == c.DurationMS {
 					if c.Index != next {
 						return clip.ErrInvalidMedia
@@ -981,7 +1049,7 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws clip.M
 			if media, ok := s.media.(interface {
 				PrepareAnalysisChunksExcept(context.Context, clip.MediaWorkspace, clip.MediaSource, func(int) bool, func(clip.AnalysisChunk) error) (clip.MediaInfo, error)
 			}); ok {
-				verified, err = media.PrepareAnalysisChunksExcept(ctx, ws, source, func(i int) bool { return recoveryChunk(recovery, v.ID, i) != nil }, consume)
+				verified, err = media.PrepareAnalysisChunksExcept(ctx, ws, source, func(i int) bool { return pinned || recoveryChunk(recovery, v.ID, i) != nil }, consume)
 			} else {
 				verified, err = s.media.PrepareAnalysisChunks(ctx, ws, source, consume)
 			}
@@ -1015,7 +1083,7 @@ func (s *GenerationService) prepareRecoveredBatch(ctx context.Context, ws clip.M
 	// availability, not an allocation. Other filesystem users can still consume
 	// space later, so actual writes retain the live guard too.
 	for _, p := range prepared {
-		if p.reused != nil {
+		if !p.observes() {
 			continue
 		}
 		file, err := os.Lstat(p.chunk.Path)

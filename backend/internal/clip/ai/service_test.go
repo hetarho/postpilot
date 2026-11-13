@@ -521,3 +521,26 @@ func TestCutBoundsRejectIntegerWraparoundBeforeRendering(t *testing.T) {
 	}
 	assertExecutableTimeline(t, planningInput(), delivered)
 }
+
+// CLIP-235, CLIP-93: a writer reads an analysis the owner corrected by hand as recorded, a
+// legacy range with no status included, while an uncorrected legacy range is still refused
+// before any provider call.
+func TestWriterInputAdmitsALegacyRangeOnlyOnceCorrected(t *testing.T) {
+	for _, corrected := range []bool{false, true} {
+		s, f := newService(t, raw(observation()), true)
+		in := flowInput()
+		a := in.Analyses[0]
+		legacy := a.Segments[0]
+		legacy.StartMS, legacy.EndMS, legacy.Certainty, legacy.Usability = 0, a.Source.Info.DurationMS, "", ""
+		legacy.OwnerEdited, a.OwnerEdited = corrected, corrected
+		a.Segments = []clip.Segment{legacy}
+		in.Analyses = []clip.SourceAnalysis{a}
+		_, _, err := s.Flow(t.Context(), testRef(), in)
+		if !corrected && (err == nil || len(f.calls) != 0) {
+			t.Fatal("an uncorrected legacy range reached the writer", err)
+		}
+		if corrected && len(f.calls) == 0 {
+			t.Fatal("a corrected legacy range was refused as writer input", err)
+		}
+	}
+}

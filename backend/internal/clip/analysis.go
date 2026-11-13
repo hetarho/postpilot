@@ -309,7 +309,8 @@ func ValidateSegments(l AnalysisLimits, segments []Segment, start, end int) erro
 // ValidateLegacySegments reads a record written under clip-observation-v1: its
 // scenes are ordered and non-overlapping but may leave an unobserved gap and
 // carry no status at all. It exists so stored v1 work stays readable; no v1
-// record may enter a v2 writer input (CLIP-93).
+// record may enter a v2 writer input (CLIP-93) unless the owner corrected it by
+// hand, which pins it whole as recorded (CLIP-235, ValidatePinnedAnalysis).
 func ValidateLegacySegments(l AnalysisLimits, segments []Segment, start, end int) error {
 	return validateSegments(l, segments, start, end, false)
 }
@@ -419,32 +420,22 @@ func MergeAnalyses(l AnalysisLimits, sources []AnalysisSource, chunks []ChunkAna
 	return out, nil
 }
 
-// SplitAnalysis is MergeAnalyses' inverse for one source: the chunk sequence whose merge is
-// the analysis, each chunk holding the scenes inside its own interval. An analysis that no
-// complete chunk sequence merges into is refused rather than reshaped.
-func SplitAnalysis(l AnalysisLimits, a SourceAnalysis) ([]ChunkAnalysis, error) {
+// ValidatePinnedAnalysis holds a source analysis the owner corrected by hand (CLIP-235) to
+// what a retained observation of the whole source owes, whichever contract recorded it:
+// ordered, non-overlapping scenes inside the source's timeline with bounded text, a status
+// only where one was recorded, and no more scenes than its chunks together admit. It is
+// kept as recorded rather than reshaped to today's chunk boundaries, and an analysis the
+// owner never corrected is no pinned analysis at all.
+func ValidatePinnedAnalysis(l AnalysisLimits, a SourceAnalysis) error {
+	if !a.OwnerEdited {
+		return ErrInvalid
+	}
 	if err := ValidateAnalysisSources(l, []AnalysisSource{a.Source}); err != nil {
-		return nil, err
+		return err
 	}
-	var out []ChunkAnalysis
-	rest := a.Segments
-	for offset, index := 0, 0; offset < a.Source.Info.DurationMS; offset, index = offset+l.ChunkMS, index+1 {
-		duration := min(l.ChunkMS, a.Source.Info.DurationMS-offset)
-		n := 0
-		for n < len(rest) && rest[n].EndMS <= offset+duration {
-			n++
-		}
-		segments := slices.Clone(rest[:n])
-		if err := ValidateSegments(l, segments, offset, offset+duration); err != nil {
-			return nil, err
-		}
-		out = append(out, ChunkAnalysis{SourceID: a.Source.ID, Fingerprint: a.Source.Fingerprint, Index: index, OffsetMS: offset, DurationMS: duration, Segments: segments})
-		rest = rest[n:]
-	}
-	if len(rest) != 0 {
-		return nil, ErrInvalid
-	}
-	return out, nil
+	whole := l
+	whole.MaxSegments *= (a.Source.Info.DurationMS + l.ChunkMS - 1) / l.ChunkMS
+	return validateSegments(whole, a.Segments, 0, a.Source.Info.DurationMS, false)
 }
 
 // CutSubject projects the principal-subject boxes a cut spans through the same

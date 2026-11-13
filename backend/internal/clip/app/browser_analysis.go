@@ -117,7 +117,12 @@ func (r *generationRun) prepareBrowser() error {
 	for i, source := range s.Sources {
 		for index, offset := 0, 0; offset < source.Info.DurationMS; index, offset = index+1, offset+r.s.cfg.Media.ChunkDurationMS {
 			c := clip.AnalysisChunk{SourceID: source.ID, Fingerprint: source.Fingerprint, Index: index, OffsetMS: offset, DurationMS: min(r.s.cfg.Media.ChunkDurationMS, source.Info.DurationMS-offset)}
-			if old := recoveryChunk(r.recovery, source.ID, index); old != nil {
+			if _, pinned := recoveryPin(r.recovery, source.ID); pinned {
+				if !containsAnalysisReuse(s.Reused, c) {
+					return clip.ErrInvalidMedia
+				}
+				r.prepared = append(r.prepared, preparedChunk{source: i, chunk: c, pinned: true})
+			} else if old := recoveryChunk(r.recovery, source.ID, index); old != nil {
 				if old.Fingerprint != c.Fingerprint || old.OffsetMS != c.OffsetMS || old.DurationMS != c.DurationMS || !containsAnalysisReuse(s.Reused, c) {
 					return clip.ErrInvalidMedia
 				}
