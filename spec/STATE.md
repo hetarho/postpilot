@@ -96,7 +96,6 @@
 | T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
-| T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
 
 ## work
@@ -105,5 +104,5 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T796 T802 T803
+- gusta-implement-task T802 T803 T817
 - This request: T803–T816; T795–T802 remain with the independent contextual-loading run.
