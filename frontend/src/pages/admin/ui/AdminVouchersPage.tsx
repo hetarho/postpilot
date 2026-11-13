@@ -3,7 +3,7 @@ import { CopyGiftLink, useVouchers, type Voucher, type VoucherState } from '@/en
 import { IssueVoucherForm } from '@/features/issue-voucher'
 import { RevokeVoucherButton } from '@/features/revoke-voucher'
 import { formatDate } from '@/shared/lib'
-import { Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
+import { Badge, LoadingState, Notice, Typography, type BadgeTone } from '@/shared/ui'
 
 const STATE_TONE = {
   redeemable: 'accent',
@@ -39,9 +39,7 @@ export function AdminVouchersPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
-          {t('adminVouchers.loading')}
-        </Typography>
+        <LoadingState variant="list" label={t('adminVouchers.loading')} className="mt-4" />
       )}
       {!isError && !isPending && vouchers.length === 0 && (
         <Typography variant="body" className="text-content-tertiary mt-4">

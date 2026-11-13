@@ -4,7 +4,7 @@ import { useSession } from '@/entities/session'
 import { UserPlanSelect } from '@/features/manage-users'
 import { RefundReviewSection } from '@/features/review-refunds'
 import { formatDate } from '@/shared/lib'
-import { Notice, Typography } from '@/shared/ui'
+import { LoadingState, Notice, Typography } from '@/shared/ui'
 
 /** The operator's account list (QUOTA-25), now the 계정 관리 tab of `/admin`. Composition only:
  *  the tier control is its own feature, and every refusal is the server's — this tab is reachable
@@ -31,9 +31,7 @@ export function AdminPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-8">
-          {t('admin.loading')}
-        </Typography>
+        <LoadingState variant="list" label={t('admin.loading')} className="mt-6 sm:mt-8" />
       )}
       {!isError && !isPending && accounts.length === 0 && (
         <Typography variant="body" className="text-content-tertiary mt-8">

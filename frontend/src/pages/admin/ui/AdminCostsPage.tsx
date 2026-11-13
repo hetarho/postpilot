@@ -7,7 +7,15 @@ import {
 } from '@/entities/model-experiment'
 import { useExchangeRate } from '@/entities/plan'
 import { formatNumber } from '@/shared/lib'
-import { Badge, Button, Notice, SegmentedControl, Typography, typographyStyles } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  LoadingState,
+  Notice,
+  SegmentedControl,
+  Typography,
+  typographyStyles,
+} from '@/shared/ui'
 
 /** The 비용·환율 tab of `/admin`: the operating figures customer screens never show, master
  *  included (QUOTA-65, QUOTA-68). Each figure is its own titled section, so the comparison cost
@@ -71,9 +79,7 @@ function ComparisonCostsSection() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary">
-          {t('admin.costs.comparisonLoading')}
-        </Typography>
+        <LoadingState variant="table" label={t('admin.costs.comparisonLoading')} />
       )}
       {!isError && !isPending && rows.length === 0 && (
         <Typography variant="body" className="text-content-tertiary">
@@ -155,9 +161,7 @@ function ExchangeRateSection() {
         </Notice>
       )}
       {!isError && isPending && (
-        <Typography variant="body" role="status" className="text-content-tertiary">
-          {t('admin.costs.loading')}
-        </Typography>
+        <LoadingState variant="form" label={t('admin.costs.loading')} rows={2} />
       )}
       {!isError && exchangeRate?.unavailable && (
         <Notice tone="info" role="status">

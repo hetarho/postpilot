@@ -5,7 +5,7 @@ import { Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
-import { ActionBar, Typography, pageStyles, buttonStyles } from '@/shared/ui'
+import { ActionBar, LoadingState, Typography, pageStyles, buttonStyles } from '@/shared/ui'
 export function SpokenVoicesPage() {
   const { t } = useTranslation('spokenVoices'),
     { t: model } = useTranslation('models'),
@@ -22,14 +22,15 @@ export function SpokenVoicesPage() {
       <Typography role="status" as="p" variant="meta" className="mt-4 min-h-5">
         {library.voicesQuery.isError || library.draftsQuery.isError
           ? t('failed')
-          : library.voicesQuery.isPending
-            ? t('loading')
-            : status
-              ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-              : !library.voices.length
-                ? t('empty')
-                : '\u00a0'}
+          : status
+            ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
+            : !library.voicesQuery.isPending && !library.voices.length
+              ? t('empty')
+              : '\u00a0'}
       </Typography>
+      {!library.voicesQuery.isError && library.voicesQuery.isPending && (
+        <LoadingState variant="list" label={t('loading')} className="mt-4" />
+      )}
       <ul className="divide-divider mt-4 divide-y" aria-label={t('title')}>
         {library.voices.map((voice) => (
           <li key={voice.id} className="min-w-0 space-y-3 py-5">
