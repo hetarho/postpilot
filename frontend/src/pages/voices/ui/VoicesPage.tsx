@@ -21,6 +21,7 @@ import {
   Button,
   Notice,
   LoadingState,
+  LoadingStatus,
   Typography,
   cardStyles,
   typographyStyles,
@@ -112,21 +113,33 @@ export function VoicesPage() {
           </Button>
         </Notice>
       )}
+      <LoadingStatus
+        label={
+          isError
+            ? ''
+            : isPending
+              ? t('state.loading', { ns: 'common' })
+              : active.length === 0
+                ? t('page.empty', { ns: 'voices' })
+                : ''
+        }
+        className={
+          !isError && !isPending && active.length === 0
+            ? typographyStyles({
+                variant: 'body',
+                className: 'text-content-tertiary mt-8 block px-4 sm:px-6 lg:px-8',
+              })
+            : 'sr-only'
+        }
+      />
       {!isError && isPending && (
-        <LoadingState
-          variant="cards"
-          label={t('state.loading', { ns: 'common' })}
-          className="mt-6 px-4 sm:px-6 lg:px-8 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
-        />
-      )}
-      {!isError && !isPending && active.length === 0 && (
-        <Typography
-          variant="body"
-          role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
-        >
-          {t('page.empty', { ns: 'voices' })}
-        </Typography>
+        <div aria-hidden="true">
+          <LoadingState
+            variant="cards"
+            label={t('state.loading', { ns: 'common' })}
+            className="mt-6 px-4 sm:px-6 lg:px-8 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+          />
+        </div>
       )}
 
       {!isError && !isPending && (

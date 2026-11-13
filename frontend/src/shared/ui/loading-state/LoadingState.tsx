@@ -35,7 +35,7 @@ export function Skeleton({ className }: { className?: string }) {
   return (
     <span
       aria-hidden="true"
-      className={twMerge('loading-skeleton bg-card-well block rounded-md', className)}
+      className={twMerge('loading-skeleton bg-surface-recessed block rounded-md', className)}
     />
   )
 }
