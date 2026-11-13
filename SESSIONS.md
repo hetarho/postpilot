@@ -148,6 +148,7 @@
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
 - 261113 decided THEME-74: Which loading treatment and timing? → Content-shaped skeletons for initial lists/forms/details/tables, compact spinner for inline reads, one short CSS reveal delay without delaying ready data, retain cached content (alt: spinner everywhere or minimum loading duration). This preserves page geometry and avoids fast-response flashes.
+- 261113 decided review/video-editing-ux-261114 T817 T818 T819 T820: video editing UX proposals → adopt bounded pinned caption preview, readable renderer samples, explicit preview expansion and static visual template summaries (alt: retain prose-only surfaces); explicit invocation authorizes UI policy CLIP r78, APIs/storage/media semantics preserved. Isolated group vdux-261114; T820 follows T797/T798 to avoid active loading ownership.
 
 ## unlanded
 | id | tag | branch | commit | at |
