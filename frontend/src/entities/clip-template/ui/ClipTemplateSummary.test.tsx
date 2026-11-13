@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { ClipTemplateSummary } from './ClipTemplateSummary'
 import { emptyClipRecipe } from '../model/types'
@@ -65,6 +65,23 @@ describe('ClipTemplateSummary', () => {
       />,
     )
     expect(screen.getByText('도착 → 자막: 장소 → 공개 문구: 광고 → 마무리')).toBeInTheDocument()
+  })
+
+  it('keeps all example regions present with a long valid caption', () => {
+    const caption = '긴 문구'.repeat(35)
+    render(
+      <ClipTemplateSummary
+        template={{
+          ...template,
+          compositionBody: `<clip version="1"><text id="caption" kind="fixed" role="caption" basis="whole">${caption}</text></clip>`,
+        }}
+      />,
+    )
+    const example = screen.getByText('구성 예시').parentElement!
+    expect(within(example).getByText(/인트로.*심플 제목/)).toBeVisible()
+    expect(within(example).getByText(`자막: ${caption}`)).toBeVisible()
+    expect(within(example).getByText(/아웃트로.*가로선 구분/)).toBeVisible()
+    expect(screen.getAllByText(`자막: ${caption}`)).toHaveLength(2)
   })
 
   it.each(['', '<clip><broken>'])(

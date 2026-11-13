@@ -54,10 +54,18 @@ export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
   return (
     <span className="mt-3 flex min-w-0 items-start gap-4">
       <span className="bg-media-canvas-bg text-media-scrim-fg flex aspect-9/16 w-24 shrink-0 flex-col justify-between overflow-hidden rounded-lg p-2">
-        <Typography as="span" variant="meta" className="text-media-scrim-fg block break-words">
+        <Typography
+          as="span"
+          variant="meta"
+          className="text-media-scrim-fg line-clamp-1 shrink-0 break-words"
+        >
           {t('composition.summary.example')}
         </Typography>
-        <Typography as="span" variant="label" className="text-media-scrim-fg block break-words">
+        <Typography
+          as="span"
+          variant="label"
+          className="text-media-scrim-fg line-clamp-2 shrink-0 break-words"
+        >
           {t('composition.summary.intro')}
           <br />
           {design('intro', template.introPreset)}
@@ -65,11 +73,15 @@ export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
         <Typography
           as="span"
           variant="label"
-          className="bg-media-scrim-bg text-media-scrim-fg block rounded-sm p-1 break-words"
+          className="bg-media-scrim-bg text-media-scrim-fg line-clamp-2 shrink-0 rounded-sm p-1 break-words"
         >
           {example || outline[0] || t('composition.summary.body')}
         </Typography>
-        <Typography as="span" variant="label" className="text-media-scrim-fg block break-words">
+        <Typography
+          as="span"
+          variant="label"
+          className="text-media-scrim-fg line-clamp-2 shrink-0 break-words"
+        >
           {t('composition.summary.outro')}
           <br />
           {design('outro', template.outroPreset)}
