@@ -109,4 +109,4 @@
 
 ## next
 - gusta-implement-task T803 T821 T822
-- Video UX: finish owner-authorized final verification and land T817–T820 on main.
+- Video UX: final14-check gate passed; publish reviewed T817–T820 on main.
