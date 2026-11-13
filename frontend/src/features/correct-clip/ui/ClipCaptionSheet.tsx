@@ -75,6 +75,22 @@ export function ClipCaptionSheet({
     panel.style.maxHeight = `${viewport.height}px`
     const body = panel.querySelector<HTMLElement>('.overflow-y-auto')
     let frame = 0
+    let bounded:
+      | {
+          field: HTMLTextAreaElement
+          maxHeight: string
+          overflowY: string
+          overscrollBehaviorY: string
+        }
+      | undefined
+    const restoreField = () => {
+      if (!bounded) return
+      const { field, maxHeight, overflowY, overscrollBehaviorY } = bounded
+      field.style.maxHeight = maxHeight
+      field.style.overflowY = overflowY
+      field.style.overscrollBehaviorY = overscrollBehaviorY
+      bounded = undefined
+    }
     const revealFocusedField = () => {
       cancelAnimationFrame(frame)
       frame = requestAnimationFrame(() => {
@@ -85,11 +101,32 @@ export function ClipCaptionSheet({
           !body.contains(field)
         )
           return
-        const fieldBox = field.getBoundingClientRect()
         const bodyBox = body.getBoundingClientRect()
         const top = Math.max(bodyBox.top, viewport.offsetTop) + CLIP_TIMELINE.fieldGapPx
         const bottom =
           Math.min(bodyBox.bottom, viewport.offsetTop + viewport.height) - CLIP_TIMELINE.fieldGapPx
+        const available = Math.max(0, bottom - top)
+        if (
+          field instanceof HTMLTextAreaElement &&
+          available > 0 &&
+          field.getBoundingClientRect().height > available
+        ) {
+          if (bounded?.field !== field) {
+            restoreField()
+            bounded = {
+              field,
+              maxHeight: field.style.maxHeight,
+              overflowY: field.style.overflowY,
+              overscrollBehaviorY: field.style.overscrollBehaviorY,
+            }
+          }
+          // Keep the entire active field inside the sheet scrollport. Native
+          // textarea scrolling keeps its caret visible without guessing line positions.
+          field.style.maxHeight = `${available}px`
+          field.style.overflowY = 'auto'
+          field.style.overscrollBehaviorY = 'contain'
+        }
+        const fieldBox = field.getBoundingClientRect()
         if (fieldBox.bottom > bottom) body.scrollTop += fieldBox.bottom - bottom
         else if (fieldBox.top < top) body.scrollTop += fieldBox.top - top
       })
@@ -97,10 +134,13 @@ export function ClipCaptionSheet({
     // The sheet owns its scrollport; scrolling the document would leave a focused
     // field behind the pinned frame when the software keyboard changes its height.
     panel.addEventListener('focusin', revealFocusedField)
+    panel.addEventListener('focusout', restoreField)
     revealFocusedField()
     return () => {
       cancelAnimationFrame(frame)
       panel.removeEventListener('focusin', revealFocusedField)
+      panel.removeEventListener('focusout', restoreField)
+      restoreField()
       overlay.style.top = ''
       overlay.style.bottom = ''
       panel.style.maxHeight = ''

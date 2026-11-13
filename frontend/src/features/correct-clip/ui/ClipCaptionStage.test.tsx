@@ -446,3 +446,59 @@ it('retains the manually checked style after closing and reopening the caption s
   await userEvent.click(screen.getByRole('button', { name: 'Open caption' }))
   expect(film()).toHaveAttribute('aria-checked', 'true')
 })
+
+it('bounds a tall focused textarea on keyboard resize without hiding its selection near the start', async () => {
+  const state = clipTimelineFixture()
+  const originalHeight = window.innerHeight
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 800 })
+  try {
+    const view = render(
+      <ClipCaptionSheet
+        open
+        onClose={() => {}}
+        plan={state.plan}
+        text={{ ...state.plan.elements![0], text: '긴 자막\n'.repeat(100) }}
+        stage={{ canvas, safeArea, fragment: fragment() }}
+        styles={{ samples: [] }}
+        footage={{ localSources: [] }}
+        change={vi.fn()}
+      />,
+    )
+    const field = screen.getByLabelText<HTMLTextAreaElement>('자막 원문')
+    const body = field.closest<HTMLElement>('.overflow-y-auto')!
+    const original = { maxHeight: '700px', overflowY: 'hidden', overscrollBehaviorY: '' }
+    Object.assign(field.style, original)
+    vi.spyOn(body, 'getBoundingClientRect').mockReturnValue({ top: 180, bottom: 420 } as DOMRect)
+    vi.spyOn(field, 'getBoundingClientRect').mockImplementation(
+      () =>
+        ({
+          top: 200 - body.scrollTop,
+          bottom: 200 - body.scrollTop + Math.min(600, parseFloat(field.style.maxHeight) || 600),
+          height: Math.min(600, parseFloat(field.style.maxHeight) || 600),
+        }) as DOMRect,
+    )
+    field.focus()
+    field.setSelectionRange(2, 4, 'backward')
+    const value = field.value
+    act(() => {
+      Object.defineProperty(window, 'innerHeight', { configurable: true, value: 480 })
+      fireEvent(window, new Event('resize'))
+    })
+    await waitFor(() => expect(field.style.maxHeight).toBe('224px'))
+    expect(field.style.overflowY).toBe('auto')
+    expect(field.getBoundingClientRect().top).toBeGreaterThanOrEqual(188)
+    expect(field.getBoundingClientRect().bottom).toBeLessThanOrEqual(412)
+    expect(document.activeElement).toBe(field)
+    expect(field.value).toBe(value)
+    expect(field.selectionStart).toBe(2)
+    expect(field.selectionEnd).toBe(4)
+    expect(field.selectionDirection).toBe('backward')
+    expect(field.scrollTop).toBe(0)
+    view.unmount()
+    expect(field.style.maxHeight).toBe(original.maxHeight)
+    expect(field.style.overflowY).toBe(original.overflowY)
+    expect(field.style.overscrollBehaviorY).toBe(original.overscrollBehaviorY)
+  } finally {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: originalHeight })
+  }
+})
