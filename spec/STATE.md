@@ -96,7 +96,7 @@
 | T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
-| T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
+| T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | doing@261113.vdux |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
