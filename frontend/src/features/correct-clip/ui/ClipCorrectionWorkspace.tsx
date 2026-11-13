@@ -23,7 +23,7 @@ import {
   type ClipSpokenSegment,
 } from '@/entities/clip-plan'
 import { type ClipDisplayedFrame } from '@/entities/clip-preview'
-import { Info } from 'lucide-react'
+import { Info, Maximize2, Minimize2 } from 'lucide-react'
 import type { AppFailure } from '@/shared/api'
 import { CLIP_DRAFT_PREVIEW, CLIP_TIMELINE } from '@/entities/clip-design'
 import {
@@ -136,6 +136,7 @@ export function ClipCorrectionWorkspace({
   const previewRoot = useRef<HTMLDivElement>(null)
   const chromeProbe = useRef<HTMLSpanElement>(null)
   const actions = useRef<HTMLDivElement>(null)
+  const [expandedPreview, setExpandedPreview] = useState(false)
   const [pinPreview, setPinPreview] = useState(true)
   const [previewBudget, setPreviewBudget] = useState<number>()
   const measureEditingRoom = useCallback(() => {
@@ -367,8 +368,12 @@ export function ClipCorrectionWorkspace({
                 previewBudget ?? Infinity,
                 viewport.height *
                   (viewport.height < CLIP_TIMELINE.compactViewportHeight
-                    ? CLIP_TIMELINE.compactPreviewFraction
-                    : CLIP_TIMELINE.previewViewportFraction),
+                    ? expandedPreview
+                      ? CLIP_TIMELINE.expandedCompactPreviewFraction
+                      : CLIP_TIMELINE.compactPreviewFraction
+                    : expandedPreview
+                      ? CLIP_TIMELINE.expandedPreviewViewportFraction
+                      : CLIP_TIMELINE.previewViewportFraction),
               ),
               compact: true,
               stickyTop: pinPreview ? viewport.offsetTop : undefined,
@@ -376,38 +381,53 @@ export function ClipCorrectionWorkspace({
               // file plus every notice that names no cut and no caption (CLIP-148), on the frame it
               // is about — a video player's corner, not a row of the page.
               corner: (
-                <Popover
-                  label={t('preview.aboutLabel')}
-                  triggerSize="icon"
-                  triggerVariant="scrim"
-                  triggerLabel={<Info aria-hidden="true" className="size-5" />}
-                  placement="below"
-                  align="end"
-                  phone="sheet"
-                >
-                  {() => (
-                    <div className="space-y-2">
-                      <Typography variant="body" className="text-content-secondary">
-                        {t('preview.parity')}
-                      </Typography>
-                      {/* The flow view is still frames, never the delivered render (CLIP-176). */}
-                      <Typography variant="body" className="text-content-secondary">
-                        {t('preview.flowParity')}
-                      </Typography>
-                      {/* The preview reports the precision of the frame it is showing, so
-                      this says the position is approximate only while it is. */}
-                      {frame && !frame.precise && (
+                <>
+                  <Button
+                    variant="scrim"
+                    size="icon"
+                    aria-label={t(expandedPreview ? 'previewSize.compact' : 'previewSize.expand')}
+                    aria-pressed={expandedPreview}
+                    onClick={() => setExpandedPreview((value) => !value)}
+                  >
+                    {expandedPreview ? (
+                      <Minimize2 aria-hidden="true" className="size-5" />
+                    ) : (
+                      <Maximize2 aria-hidden="true" className="size-5" />
+                    )}
+                  </Button>
+                  <Popover
+                    label={t('preview.aboutLabel')}
+                    triggerSize="icon"
+                    triggerVariant="scrim"
+                    triggerLabel={<Info aria-hidden="true" className="size-5" />}
+                    placement="below"
+                    align="end"
+                    phone="sheet"
+                  >
+                    {() => (
+                      <div className="space-y-2">
                         <Typography variant="body" className="text-content-secondary">
-                          {t('preview.frameApproximate')}
+                          {t('preview.parity')}
                         </Typography>
-                      )}
-                      <ClipNoticeList
-                        notices={notices.filter((n) => !n.cutId && !n.elementId)}
-                        language={language}
-                      />
-                    </div>
-                  )}
-                </Popover>
+                        {/* The flow view is still frames, never the delivered render (CLIP-176). */}
+                        <Typography variant="body" className="text-content-secondary">
+                          {t('preview.flowParity')}
+                        </Typography>
+                        {/* The preview reports the precision of the frame it is showing, so
+                      this says the position is approximate only while it is. */}
+                        {frame && !frame.precise && (
+                          <Typography variant="body" className="text-content-secondary">
+                            {t('preview.frameApproximate')}
+                          </Typography>
+                        )}
+                        <ClipNoticeList
+                          notices={notices.filter((n) => !n.cutId && !n.elementId)}
+                          language={language}
+                        />
+                      </div>
+                    )}
+                  </Popover>
+                </>
               ),
             })}
           </div>
