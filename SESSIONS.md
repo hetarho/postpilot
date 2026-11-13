@@ -156,6 +156,7 @@
 | T794 | r115 | main | 8c310798a25e | 2026-11-13T08:20Z |
 
 ## log
+- 261113 gusta-update-ssot THEME start; audit all product routes for shared navigation, catalogs, clip workflow and native-control escapes in isolated checkout
 - 261113 gusta-update-ssot THEME r43: contextual loading; gusta-create-task THEME start
 - 261113 gusta-update-ssot THEME start: replace flashing page loading copy with contextual skeletons and indicators
 - 261113 gusta-update complete: 0.17.1; auto version and managed instructions enabled; caller-provider preference, independent review and fallback; ARCH r24/DUB r4 policy-only deltas consumed; 23 Git-proven chg records restored
@@ -175,4 +176,3 @@
 - 261113 T785 done
 - 261113 T784 done
 - 261113 T776 done
-- 261113 T775 done
