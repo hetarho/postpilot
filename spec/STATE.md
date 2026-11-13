@@ -91,6 +91,7 @@
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
+| T826 | Unify post editor loading and recovery returns | ARCH THEME | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
