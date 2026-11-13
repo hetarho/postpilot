@@ -1,3 +1,4 @@
+import { RadioTile } from '@/shared/ui'
 import { useClipLocalStyleSamples, useClipLocalPresetSamples } from '@/entities/clip-preview'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -50,7 +51,7 @@ function PresetPicker<T extends string>({
         {ids.map((id, index) => {
           const svg = drawing.get(id)
           return (
-            <button key={id} {...tiles.tile(index, 'gap-2')}>
+            <RadioTile key={id} {...tiles.tile(index, 'gap-2')}>
               <span
                 aria-hidden="true"
                 className="bg-media-canvas-bg block w-full overflow-hidden rounded-sm"
@@ -69,7 +70,7 @@ function PresetPicker<T extends string>({
               <Typography variant="body" as="span" className="min-w-0 break-words">
                 {name(id)}
               </Typography>
-            </button>
+            </RadioTile>
           )
         })}
       </div>

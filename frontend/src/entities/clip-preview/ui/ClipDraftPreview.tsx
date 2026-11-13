@@ -1,3 +1,4 @@
+import { MediaAction } from '@/shared/ui'
 import { ClipBrowserDraftPreview } from './ClipBrowserDraftPreview'
 import type { ClipLocalCompositionRuntime } from '../model/local-preview'
 import {
@@ -726,7 +727,7 @@ function ClipLegacyDraftPreview({
                 )
               })}
             {!flow && (
-              <button
+              <MediaAction
                 type="button"
                 aria-label={t(
                   playing ? 'preview.pause' : atEnd ? 'preview.replay' : 'preview.play',
@@ -745,7 +746,7 @@ function ClipLegacyDraftPreview({
                     {atEnd ? <RotateCcw className="size-7" /> : <Play className="size-7" />}
                   </span>
                 )}
-              </button>
+              </MediaAction>
             )}
             {editingOverlay}
           </div>

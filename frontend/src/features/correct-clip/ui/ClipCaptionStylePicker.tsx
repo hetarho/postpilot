@@ -1,3 +1,4 @@
+import { RadioTile } from '@/shared/ui'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ClipCaptionStyleSample, type ClipCaptionFragment } from '@/entities/clip-plan'
@@ -45,7 +46,7 @@ export function ClipCaptionStylePicker({
         {options.map((option, index) => {
           const sample = byStyle.get(option.style)
           return (
-            <button
+            <RadioTile
               key={option.id ?? ''}
               data-style={option.id ?? ''}
               {...tiles.tile(index, 'min-h-11 gap-1')}
@@ -59,7 +60,7 @@ export function ClipCaptionStylePicker({
                   {t('placement.perFrame')}
                 </Typography>
               )}
-            </button>
+            </RadioTile>
           )
         })}
       </div>

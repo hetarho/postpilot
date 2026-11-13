@@ -1,3 +1,4 @@
+import { MediaAction } from '@/shared/ui'
 import {
   useCallback,
   useEffect,
@@ -664,7 +665,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
               </Typography>
             )}
             {!flow && (
-              <button
+              <MediaAction
                 type="button"
                 aria-label={t(
                   playing || continuing
@@ -691,7 +692,7 @@ export function ClipBrowserDraftPreview(props: ClipBrowserDraftPreviewProps) {
                     )}
                   </span>
                 )}
-              </button>
+              </MediaAction>
             )}
             {editingOverlay}
           </div>
