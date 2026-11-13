@@ -157,7 +157,7 @@ func validClipStart(kind string, s clip.GenerationStart, policy int) error {
 		return clip.ErrNotFound
 	case (kind == clip.JobKindRender || kind == clip.JobKindSampleBrowserRender) && (s.Observe != "" || s.Write != ""):
 		return clip.ErrNotFound
-	case (kind == clip.JobKindGenerate || kind == clip.JobKindStoryline) && (s.Observe == "" || s.Write == ""):
+	case (kind == clip.JobKindGenerate || kind == clip.JobKindStoryline || kind == clip.JobKindAnalyze) && (s.Observe == "" || s.Write == ""):
 		return clip.ErrNotFound
 	case kind == clip.JobKindUploadText && (s.Observe != "" || s.Write == ""):
 		return clip.ErrNotFound

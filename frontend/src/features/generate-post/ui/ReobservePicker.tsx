@@ -8,6 +8,7 @@ import { formatDuration } from '@/shared/lib'
 import { Button, Checkbox, Dialog, Notice, RotatedImage, Typography } from '@/shared/ui'
 import {
   defaultSelection,
+  editedInSelection,
   reobserveRows,
   storedObservationModels,
   type ReobserveRow,
@@ -51,9 +52,13 @@ export function ReobservePicker({
   // observation arriving while the picker is up cannot silently move the user's checkboxes.
   // Adjusted during render rather than in an effect — the same pattern `Sheet` uses for its own
   // `present` — because an effect here would render once with the previous answer's checkboxes.
+  // The hand-edit confirmation stands in the picker's place rather than over it: two sheets
+  // would both lock the body and trap focus. Cancelling it returns to the picker.
+  const [confirmingEdited, setConfirmingEdited] = useState(false)
   const [wasOpen, setWasOpen] = useState(open)
   if (open !== wasOpen) {
     setWasOpen(open)
+    setConfirmingEdited(false)
     if (open) setSelected(defaultSelection(rows))
   }
 
@@ -86,71 +91,91 @@ export function ReobservePicker({
 
   // Confirm sends the checked names in POST order, so the frozen set reads the way the picker
   // looked. The server re-derives the forced photos regardless of what arrives here.
-  const confirm = () => onConfirm(effective)
+  const edited = editedInSelection(rows, effective)
+  // Ticking an observation the owner corrected replaces those corrections, so it asks once
+  // (GEN-8, POST-126); a selection holding none starts at once.
+  const confirm = () => (edited.length > 0 ? setConfirmingEdited(true) : onConfirm(effective))
 
   const modelNames = (refs: readonly string[]) =>
     refs.map((ref) => ref || t('generation.reobserve.storedModelUnknown')).join(', ')
 
   return (
-    <Dialog
-      open={open}
-      title={t('generation.reobserve.title')}
-      confirmLabel={t('generation.reobserve.confirm')}
-      onConfirm={confirm}
-      onClose={onCancel}
-      pending={pending}
-    >
-      <Typography variant="body" as="p" className="text-content-secondary">
-        {t('generation.reobserve.purpose')}
-      </Typography>
-      {storedModels.length > 0 && (
-        <Typography variant="label" as="p" className="text-content-tertiary mt-2">
-          {t('generation.reobserve.storedModel', { models: modelNames(storedModels) })}
+    <>
+      <Dialog
+        open={open && confirmingEdited}
+        title={t('generation.reobserve.editedTitle')}
+        confirmLabel={t('generation.reobserve.editedConfirm')}
+        onConfirm={() => onConfirm(effective)}
+        onClose={() => setConfirmingEdited(false)}
+        pending={pending}
+      >
+        {t('generation.reobserve.editedBody', { files: edited.join(', ') })}
+      </Dialog>
+      <Dialog
+        open={open && !confirmingEdited}
+        title={t('generation.reobserve.title')}
+        confirmLabel={t('generation.reobserve.confirm')}
+        onConfirm={confirm}
+        onClose={onCancel}
+        pending={pending}
+      >
+        <Typography variant="body" as="p" className="text-content-secondary">
+          {t('generation.reobserve.purpose')}
         </Typography>
-      )}
-      {changedModel && (
-        <Notice tone="warning" className="mt-3">
-          {t('generation.reobserve.modelChanged', {
-            selected: selectedRef,
-            stored: modelNames(knownStoredModels),
-          })}
-        </Notice>
-      )}
+        {storedModels.length > 0 && (
+          <Typography variant="label" as="p" className="text-content-tertiary mt-2">
+            {t('generation.reobserve.storedModel', { models: modelNames(storedModels) })}
+          </Typography>
+        )}
+        {changedModel && (
+          <Notice tone="warning" className="mt-3">
+            {t('generation.reobserve.modelChanged', {
+              selected: selectedRef,
+              stored: modelNames(knownStoredModels),
+            })}
+          </Notice>
+        )}
 
-      {/* The two bulk controls and the running count on one row. Clearing everything is the
+        {/* The two bulk controls and the running count on one row. Clearing everything is the
           reuse-everything answer, so it is as reachable as selecting everything. */}
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          onClick={() => setSelected(rows.map((row) => row.filename))}
-          disabled={pending}
-        >
-          {t('generation.reobserve.selectAll')}
-        </Button>
-        <Button variant="secondary" onClick={() => setSelected(forced)} disabled={pending}>
-          {t('generation.reobserve.clearAll')}
-        </Button>
-        <Typography variant="label" as="p" role="status" className="text-content-tertiary min-w-0">
-          {effective.length === 0
-            ? t('generation.reobserve.selectedNone')
-            : t('generation.reobserve.selectedCount', { count: effective.length })}
-        </Typography>
-      </div>
-
-      {/* Rows, not cards: they are peers in a list and carry no surface of their own, so the
-          hairline is the THEME-12 divider exception rather than a plane change per photo. */}
-      <ul className="divide-divider mt-4 divide-y">
-        {rows.map((row) => (
-          <PhotoRow
-            key={row.filename}
-            row={row}
-            checked={effective.includes(row.filename)}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button
+            variant="secondary"
+            onClick={() => setSelected(rows.map((row) => row.filename))}
             disabled={pending}
-            onChange={(checked) => toggle(row.filename, checked)}
-          />
-        ))}
-      </ul>
-    </Dialog>
+          >
+            {t('generation.reobserve.selectAll')}
+          </Button>
+          <Button variant="secondary" onClick={() => setSelected(forced)} disabled={pending}>
+            {t('generation.reobserve.clearAll')}
+          </Button>
+          <Typography
+            variant="label"
+            as="p"
+            role="status"
+            className="text-content-tertiary min-w-0"
+          >
+            {effective.length === 0
+              ? t('generation.reobserve.selectedNone')
+              : t('generation.reobserve.selectedCount', { count: effective.length })}
+          </Typography>
+        </div>
+
+        {/* Rows, not cards: they are peers in a list and carry no surface of their own, so the
+          hairline is the THEME-12 divider exception rather than a plane change per photo. */}
+        <ul className="divide-divider mt-4 divide-y">
+          {rows.map((row) => (
+            <PhotoRow
+              key={row.filename}
+              row={row}
+              checked={effective.includes(row.filename)}
+              disabled={pending}
+              onChange={(checked) => toggle(row.filename, checked)}
+            />
+          ))}
+        </ul>
+      </Dialog>
+    </>
   )
 }
 

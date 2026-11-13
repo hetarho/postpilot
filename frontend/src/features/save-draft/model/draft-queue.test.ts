@@ -4,6 +4,7 @@ import type { ContentLanguage } from '@/shared/api'
 import {
   type Draft,
   type DraftRequest,
+  type ObservationEditFields,
   type SaveState,
   type SendDraft,
   attachDraftQueue,
@@ -873,5 +874,118 @@ describe('the campaign parts', () => {
     expect(api.sent).toEqual([
       { campaign: false, advertiserGuide: undefined, checklistTicks: undefined },
     ])
+  })
+})
+
+// POST-126: the owner's observation corrections ride the same queue as the title, go out only
+// for the cards that differ from what the server holds, and rebase like the storyline.
+describe('observation corrections', () => {
+  const PHOTO: ObservationEditFields = {
+    scene: '바닷가',
+    mood: '차분함',
+    visibleText: '',
+    objects: ['우산'],
+  }
+  const CLIP: ObservationEditFields = { ...PHOTO, scene: '파도', events: ['파도가 친다'] }
+  const STORED: Draft = {
+    title: '제주',
+    memo: '',
+    answers: [],
+    observationEdits: { 'a.jpg': PHOTO, 'b.mp4': CLIP },
+  }
+
+  function recorder(options: { holds?: number } = {}) {
+    let holds = options.holds ?? 0
+    const requests: DraftRequest[] = []
+    const held: Array<() => void> = []
+    const send: SendDraft = async (request) => {
+      requests.push(structuredClone(request))
+      if (holds > 0) {
+        holds -= 1
+        await new Promise<void>((resolve) => held.push(resolve))
+      }
+      return request.slug
+    }
+    return { send, requests, open: () => held.shift()?.() }
+  }
+
+  function attachStored(send: SendDraft) {
+    return attachDraftQueue({
+      slug: 'p',
+      saved: STORED,
+      voiceId: '',
+      templateId: '',
+      targetLanguage: 'ko',
+      send,
+      onState: () => {},
+      onMinted: () => {},
+    })
+  }
+
+  const corrected = (scene: string) => ({
+    ...STORED,
+    observationEdits: { ...STORED.observationEdits, 'a.jpg': { ...PHOTO, scene } },
+  })
+
+  it('sends only the changed card, the newest fields, and not again on a title save', async () => {
+    const api = recorder()
+    const handle = attachStored(api.send)
+    handle.queue(corrected('바'))
+    handle.queue(corrected('바닷가 산책로'))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.requests).toHaveLength(1)
+    expect(api.requests[0]!.observationEdits).toEqual([
+      { file: 'a.jpg', ...PHOTO, scene: '바닷가 산책로' },
+    ])
+
+    handle.queue({ ...corrected('바닷가 산책로'), title: '제주 바다' })
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.requests).toHaveLength(2)
+    expect(api.requests[1]!.observationEdits).toBeUndefined()
+  })
+
+  it('carries a clip its events and is no edit when typed back to the stored fields', async () => {
+    const api = recorder()
+    const handle = attachStored(api.send)
+    handle.queue({
+      ...STORED,
+      observationEdits: { ...STORED.observationEdits, 'b.mp4': { ...CLIP, events: [] } },
+    })
+    handle.queue({ ...STORED, observationEdits: { 'a.jpg': { ...PHOTO, objects: ['우산'] } } })
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(api.requests).toHaveLength(0)
+
+    handle.queue({
+      ...STORED,
+      observationEdits: { 'b.mp4': { ...CLIP, events: ['파도가 친다', '새가 난다'] } },
+    })
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    expect(api.requests[0]!.observationEdits).toEqual([
+      { file: 'b.mp4', ...CLIP, events: ['파도가 친다', '새가 난다'] },
+    ])
+  })
+
+  it('keeps a correction made during a save, flushes it, and rebases only when none is queued', async () => {
+    const api = recorder({ holds: 1 })
+    const handle = attachStored(api.send)
+    handle.queue(corrected('바'))
+    await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS)
+    handle.queue(corrected('바닷가 산책로'))
+    // An observation job cannot replace the baseline underneath a queued correction.
+    expect(handle.rebaseObservations({ 'a.jpg': { ...PHOTO, scene: '새 관찰' } })).toBe(false)
+    const flushed = handle.flush()
+    api.open()
+    await vi.advanceTimersByTimeAsync(0)
+    await flushed
+    expect(api.requests.map((request) => request.observationEdits?.[0]?.scene)).toEqual([
+      '바',
+      '바닷가 산책로',
+    ])
+
+    // Nothing queued: the server's observations become the baseline.
+    expect(handle.rebaseObservations({ 'a.jpg': { ...PHOTO, scene: '새 관찰' } })).toBe(true)
+    handle.queue({ ...STORED, observationEdits: { 'a.jpg': { ...PHOTO, scene: '새 관찰' } } })
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(api.requests).toHaveLength(2)
   })
 })

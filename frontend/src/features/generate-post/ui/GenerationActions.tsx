@@ -19,7 +19,6 @@ import {
   Typography,
   buttonStyles,
 } from '@/shared/ui'
-import { needsPicker } from '../model/reobserve'
 import {
   isSetupBlocker,
   ordinaryGenerationPreconditions,
@@ -27,7 +26,6 @@ import {
   type GenerationPreconditions,
 } from '../model/preconditions'
 import { useGenerationSelections } from '../model/useBriefIssues'
-import { ReobservePicker } from './ReobservePicker'
 
 export interface GenerationActionsHandle {
   /** 바로 글 쓰기 — the name the retry path has always called. */
@@ -88,9 +86,6 @@ export const GenerationActions = forwardRef<
   const [preparing, setPreparing] = useState<ActionMode | ''>('')
   const [prepareFailure, setPrepareFailure] = useState<AppFailure>()
   const [reviewingResult, setReviewingResult] = useState(false)
-  // The mode a confirmed picker will start. Non-empty IS the picker's open state: there is one
-  // picker for both actions, and the answer only means something together with the action.
-  const [picking, setPicking] = useState<ActionMode | ''>('')
   // The mode waiting on the no-photo confirmation; non-empty is that dialog's open state.
   const [confirmingEmpty, setConfirmingEmpty] = useState<ActionMode | ''>('')
 
@@ -117,21 +112,21 @@ export const GenerationActions = forwardRef<
     reviewingResult
   const sharedDisabled = modelPending || busy
 
-  // `reobserveFiles` undefined is a start with no re-observation decision (no picker was
-  // shown), which observes every attached photo. An empty array is the picker's answer to reuse
-  // everything, and the two must not collapse into one.
+  // A run never opens the re-observation picker: it reuses every stored observation and observes
+  // only an attachment still lacking one (GEN-8). It says so with the EMPTY selection, which is
+  // that answer for any server, though the current one decides it for a run on its own.
   const enqueue = useCallback(
-    async (mode: ActionMode, reobserveFiles?: readonly string[]) => {
-      // The WHOLE guard, re-checked here and not only in `start`: the picker can sit open long
-      // enough for a catalog refetch to disable the observe model, for an ordinary job to
-      // appear, or for the voice to be deleted. Confirming a dialog that went stale must not
-      // force a draft save and fire an RPC the server is going to refuse.
+    async (mode: ActionMode) => {
+      // The WHOLE guard, re-checked here and not only in `start`: the no-photo confirmation can
+      // sit open long enough for a catalog refetch to disable the observe model, for an ordinary
+      // job to appear, or for the voice to be deleted. Confirming a dialog that went stale must
+      // not force a draft save and fire an RPC the server is going to refuse.
       if (sharedDisabled || !ordinary.ok || !writeSelection) return
       if (checkRequiredAnswers?.() === false) return
       setPreparing(mode)
       setPrepareFailure(undefined)
-      // Deliberately here and not before the picker: a cancelled picker must not have forced a
-      // draft save, so the save sits immediately before the RPC that consumes it.
+      // Deliberately here and not before the confirmation: a cancelled dialog must not have forced
+      // a draft save, so the save sits immediately before the RPC that consumes it.
       try {
         await beforeStart?.()
       } catch (cause) {
@@ -149,9 +144,9 @@ export const GenerationActions = forwardRef<
                 observeRef,
                 writeSelection.ref,
                 targetLength,
-                reobserveFiles,
+                NO_REOBSERVE,
               )
-            : await storyline.start(post.slug, observeRef, writeSelection.ref, reobserveFiles)
+            : await storyline.start(post.slug, observeRef, writeSelection.ref, NO_REOBSERVE)
         onStarted(response.jobId)
       } catch {
         // The mode-specific mutation renders its transport error below the actions.
@@ -194,12 +189,6 @@ export const GenerationActions = forwardRef<
         setConfirmingEmpty(mode)
         return
       }
-      // A post with observations worth reusing decides what to re-observe first; one with
-      // nothing to reuse would observe everything either way, so it starts directly.
-      if (needsPicker(post.images, post.observations, post.videos)) {
-        setPicking(mode)
-        return
-      }
       await enqueue(mode)
     },
     [
@@ -207,9 +196,8 @@ export const GenerationActions = forwardRef<
       enqueue,
       onOpenBrief,
       ordinary,
-      post.images,
-      post.observations,
-      post.videos,
+      post.images.length,
+      post.videos.length,
       sharedDisabled,
       writeSelection,
     ],
@@ -298,21 +286,6 @@ export const GenerationActions = forwardRef<
           <AppFailureMessage failure={prepareFailure} />
         </Notice>
       )}
-      <ReobservePicker
-        open={Boolean(picking)}
-        images={post.images}
-        videos={post.videos}
-        observations={post.observations}
-        observeModel={observeSelection?.ref}
-        pending={Boolean(preparing)}
-        onConfirm={(files) => {
-          const mode = picking
-          setPicking('')
-          if (mode) void enqueue(mode, files)
-        }}
-        // Cancel enqueues nothing and saves nothing — the draft save lives on the confirm path.
-        onCancel={() => setPicking('')}
-      />
       <Dialog
         open={Boolean(confirmingEmpty)}
         title={t('noPhotos.title')}
@@ -329,6 +302,9 @@ export const GenerationActions = forwardRef<
     </div>
   )
 })
+
+/** Reuse every stored observation; observe only what lacks one (GEN-8, GEN-89). */
+const NO_REOBSERVE: readonly string[] = []
 
 /** Refused only because a brief field is missing or cannot serve this post. */
 function refusedForSetup(precondition: GenerationPreconditions): boolean {

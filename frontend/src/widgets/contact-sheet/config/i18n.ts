@@ -21,6 +21,8 @@ export const i18n = {
       eventsMore: '{{count}}개 더 보기',
       eventsLess: '접기',
       none: '없음',
+      ownerEdited: '직접 고침',
+      listHelp: '한 줄에 하나씩 적어 주세요',
     },
   },
   en: {
@@ -41,6 +43,8 @@ export const i18n = {
       eventsMore: 'Show {{count}} more',
       eventsLess: 'Show less',
       none: 'None',
+      ownerEdited: 'Corrected by you',
+      listHelp: 'One per line',
     },
   },
 } as const satisfies I18nFragment

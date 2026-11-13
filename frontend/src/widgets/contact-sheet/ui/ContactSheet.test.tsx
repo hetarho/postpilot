@@ -209,3 +209,88 @@ it('opens nothing for a photo still showing its local preview', () => {
   )
   expect(screen.queryByRole('button', { name: /크게 보기/ })).toBeNull()
 })
+
+// POST-126: each field edits in place, a list one entry per line, and every change reports the
+// card's whole field set; a photo's carries no events.
+it('edits a card in place and reports the whole field set', async () => {
+  const user = userEvent.setup()
+  const onEdit = vi.fn()
+  render(
+    <ContactSheet images={images} observations={[OBSERVATION_FIXTURE]} editable onEdit={onEdit} />,
+  )
+
+  const scene = screen.getByRole('textbox', { name: '장면' })
+  expect(scene).toHaveValue('비가 그친 바닷가')
+  await user.type(scene, '!')
+  expect(onEdit).toHaveBeenLastCalledWith('IMG_1.jpg', {
+    scene: '비가 그친 바닷가!',
+    mood: '차분함',
+    visibleText: 'JEJU',
+    objects: ['우산', '파도'],
+  })
+
+  const objects = screen.getByRole('textbox', { name: '사물' })
+  expect(objects).toHaveValue('우산\n파도')
+  await user.type(objects, '{Enter}{Enter}모래')
+  // Blank lines are dropped from what is saved, while the typed text keeps them.
+  expect(onEdit).toHaveBeenLastCalledWith(
+    'IMG_1.jpg',
+    expect.objectContaining({ objects: ['우산', '파도', '모래'] }),
+  )
+  expect(onEdit.mock.calls.at(-1)?.[1]).not.toHaveProperty('events')
+  // The second photo has no observation yet, so it has nothing to edit.
+  expect(screen.getByText('관찰 결과 없음')).toBeInTheDocument()
+})
+
+it('lays an unsaved correction over the stored entry and marks a corrected card', () => {
+  render(
+    <ContactSheet
+      images={images}
+      observations={[
+        OBSERVATION_FIXTURE,
+        create(ObservationSchema, { file: 'IMG_2.jpg', scene: '하늘', ownerEdited: true }),
+      ]}
+      edits={{
+        'IMG_1.jpg': { scene: '고친 장면', mood: '', visibleText: '', objects: [] },
+      }}
+    />,
+  )
+
+  // Read-only: no field edits, and both cards say they were corrected by the owner.
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(screen.getByText('고친 장면')).toBeInTheDocument()
+  expect(screen.getAllByText('직접 고침')).toHaveLength(2)
+})
+
+it('edits a clip’s events one per line', async () => {
+  const user = userEvent.setup()
+  const onEdit = vi.fn()
+  render(
+    <ContactSheet
+      images={[]}
+      videos={[
+        {
+          id: 'video-1',
+          filename: 'CLIP.mp4',
+          viewUrl: 'https://storage.test/CLIP.mp4?signature=read',
+          contentType: 'video/mp4',
+          durationMs: 4_000,
+          width: 720,
+          height: 1280,
+          bytes: 1_000,
+        },
+      ]}
+      observations={[
+        create(ObservationSchema, { file: 'CLIP.mp4', scene: '파도', events: ['파도가 친다'] }),
+      ]}
+      editable
+      onEdit={onEdit}
+    />,
+  )
+
+  await user.type(screen.getByRole('textbox', { name: '일어난 일' }), '{Enter}새가 난다')
+  expect(onEdit).toHaveBeenLastCalledWith(
+    'CLIP.mp4',
+    expect.objectContaining({ events: ['파도가 친다', '새가 난다'] }),
+  )
+})

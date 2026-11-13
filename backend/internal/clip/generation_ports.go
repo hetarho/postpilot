@@ -16,7 +16,8 @@ const JobSubject = "clip_project"
 // The kinds of clip work. They are the clip context's words, handed to the queue as opaque
 // strings: a generation, an owner's revision of a saved plan (CLIP-131), a render that writes
 // nothing and spends nothing (CLIP-19, CLIP-20, CLIP-132), the 스토리라인 먼저 call that stops
-// at the storyline, and the storyline request that rewrites it (CLIP-177, CLIP-181).
+// at the storyline, the storyline request that rewrites it (CLIP-177, CLIP-181), and
+// 관찰하기, which prepares and analyzes and stops at the stored observations (CLIP-234).
 const (
 	JobKindUploadText      = "clip_upload_text"
 	JobKindSpeech          = "speech_clip"
@@ -25,6 +26,7 @@ const (
 	JobKindRevise          = "revise_clip"
 	JobKindStoryline       = "storyline_clip"
 	JobKindReviseStoryline = "revise_storyline_clip"
+	JobKindAnalyze         = "analyze_clip"
 	// The sampling a browser render waits on before it draws (CLIP-192): like a
 	// render it makes no model call, spends nothing and may always be stopped.
 	JobKindSampleBrowserRender = "sample_browser_render"
@@ -49,7 +51,7 @@ func SafeJobStage(stage string) string {
 
 // IsJobKind reports whether a job belongs to the clip surface at all.
 func IsJobKind(kind string) bool {
-	return kind == JobKindUploadText || kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline || kind == JobKindSampleBrowserRender
+	return kind == JobKindUploadText || kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRender || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline || kind == JobKindAnalyze || kind == JobKindSampleBrowserRender
 }
 
 // ChargedJobKind reports whether a clip job reserves an approved credit ceiling before
@@ -57,12 +59,15 @@ func IsJobKind(kind string) bool {
 // Every admission, metering and settlement gate asks this instead of naming the
 // generation alone — naming it is what left the revision unable to reserve.
 func ChargedJobKind(kind string) bool {
-	return kind == JobKindUploadText || kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline
+	return kind == JobKindUploadText || kind == JobKindSpeech || kind == JobKindGenerate || kind == JobKindRevise || kind == JobKindStoryline || kind == JobKindReviseStoryline || kind == JobKindAnalyze
 }
 
 // PreparesMedia reports whether a clip job observes footage and so takes the prepare stage:
-// a generation and the 스토리라인 먼저 call, which analyzes what is not yet analyzed.
-func PreparesMedia(kind string) bool { return kind == JobKindGenerate || kind == JobKindStoryline }
+// a generation, the 스토리라인 먼저 call, which analyzes what is not yet analyzed, and
+// 관찰하기, which does nothing else (CLIP-234).
+func PreparesMedia(kind string) bool {
+	return kind == JobKindGenerate || kind == JobKindStoryline || kind == JobKindAnalyze
+}
 
 // One budget per call the generation makes: the observation, then the two
 // writing calls the assembly contract names (CLIP-135).

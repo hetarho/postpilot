@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import { createFakeAuthTransport } from '@/test/session'
 import type { Transport } from '@connectrpc/connect'
+import { POST_CONTENT_FIXTURE } from '@/test/fixtures/postContent'
 
 const clip = {
   videoTemplateId: '',
@@ -69,6 +70,71 @@ it('counts and emphasizes the latest unfinished work inside its single group', a
     '만들기',
   ])
   expect(calls.filter((call) => /^(Start|Create|Generate|Save)/.test(call))).toEqual([])
+})
+
+// POST-127: aggregate 내 글 shows a post's chip exactly as the blog list does, so one stage of a
+// post and of a clip reads 스토리라인 작성 완료 here too, below a running job and a failure.
+it('labels a storyline-only draft as the blog list does, with the same precedence', async () => {
+  const story = { paragraphs: [{ text: '도착해서 바다를 봤다', files: ['sea.jpg'] }] }
+  renderAppAt('/my', {
+    user: { id: 'alice' },
+    posts: {
+      posts: [
+        { slug: 'story', title: '스토리만', storyline: story, updatedAt: '2026-11-09T00:00:00Z' },
+        {
+          slug: 'story-running',
+          title: '쓰는 중',
+          storyline: story,
+          updatedAt: '2026-11-08T00:00:00Z',
+          activeJob: { id: 'job-1', status: 'running', stage: 'write' },
+        },
+        {
+          slug: 'story-failed',
+          title: '실패한 작업',
+          storyline: story,
+          updatedAt: '2026-11-07T00:00:00Z',
+          latestOrdinaryFailure: {
+            id: 'failed-write',
+            kind: 'generate_post',
+            status: 'failed',
+            stage: 'write',
+          },
+        },
+        {
+          slug: 'story-pending',
+          title: '비교 대기',
+          storyline: story,
+          updatedAt: '2026-11-06T00:00:00Z',
+          pendingExperimentId: 'experiment-1',
+        },
+        {
+          slug: 'story-finalized',
+          title: '확정한 글',
+          status: 'finalized',
+          storyline: story,
+          updatedAt: '2026-11-05T00:00:00Z',
+          content: POST_CONTENT_FIXTURE,
+        },
+      ],
+    },
+    clips: { projects: [] },
+  })
+
+  const inProgress = (await screen.findByRole('heading', { name: /^작성 중/ })).closest('section')!
+  const storyRow = within(inProgress).getByRole('link', { name: /스토리만/ })
+  expect(within(storyRow).getByText('스토리라인 작성 완료')).toHaveClass('bg-badge-accent-bg')
+  expect(within(inProgress).getByRole('link', { name: /쓰는 중/ })).toHaveTextContent('AI 생성 중')
+  expect(within(inProgress).getByRole('link', { name: /실패한 작업/ })).toHaveTextContent(
+    'AI 결과 오류',
+  )
+  expect(within(inProgress).getByRole('link', { name: /비교 대기/ })).toHaveTextContent(
+    'AI 결과 확인',
+  )
+  const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
+  const finalized = within(done).getByRole('link', { name: /확정한 글/ })
+  expect(finalized).toHaveTextContent('확정')
+  expect(finalized).not.toHaveTextContent('스토리라인 작성 완료')
+  expect(screen.getAllByText('스토리라인 작성 완료')).toHaveLength(1)
 })
 
 // THEME-58 →THEME-69: work opened from 내 글 전체 returns to it — its way back names 내 글 and

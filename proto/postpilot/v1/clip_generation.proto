@@ -20,6 +20,11 @@ service ClipGenerationService {
   // writing call, which stops at the storyline. Quoted and approved like a generation.
   rpc QuoteClipStoryline(QuoteClipStorylineRequest) returns (QuoteClipGenerationResponse) {}
   rpc StartClipStoryline(StartClipStorylineRequest) returns (StartClipGenerationResponse) {}
+  // 관찰하기 and 다시 관찰하기 (CLIP-234): source preparation and the analysis still missing, or
+  // of the sources named again, which stops at the project's stored observations. Quoted and
+  // approved like a generation, with no writing call.
+  rpc QuoteClipAnalysis(QuoteClipAnalysisRequest) returns (QuoteClipGenerationResponse) {}
+  rpc StartClipAnalysis(StartClipAnalysisRequest) returns (StartClipGenerationResponse) {}
   // The storyline request (CLIP-181): one writing call on the stored observations that
   // rewrites the storyline as the owner asks.
   rpc QuoteClipStorylineRevision(QuoteClipStorylineRevisionRequest) returns (QuoteClipGenerationResponse) {}
@@ -185,6 +190,29 @@ message StartClipStorylineRequest {
   optional int32 approved_max_credits = 6;
   int32 cancellation_policy_version = 7;
   string analysis_preparation_id = 8;
+}
+
+message QuoteClipAnalysisRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+  // 다시 관찰하기: sources observed again although their observations are kept; empty for
+  // 관찰하기, which observes only what is missing.
+  repeated string reanalyze_source_ids = 5;
+}
+
+message StartClipAnalysisRequest {
+  string project_id = 1;
+  string batch_id = 2;
+  ModelRef observe_model = 3;
+  ModelRef write_model = 4;
+  string quote_id = 5;
+  optional int32 approved_max_credits = 6;
+  int32 cancellation_policy_version = 7;
+  string analysis_preparation_id = 8;
+  // The list the quote was taken with (QUOTA-45).
+  repeated string reanalyze_source_ids = 9;
 }
 
 message QuoteClipStorylineRevisionRequest {

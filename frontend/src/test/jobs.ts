@@ -5,6 +5,7 @@ import {
   GenerationService,
   GetGenerationResponseSchema,
   StartGenerationResponseSchema,
+  StartObservationResponseSchema,
   StartRevisionResponseSchema,
   StartStorylineResponseSchema,
   StartStorylineRevisionResponseSchema,
@@ -44,6 +45,8 @@ export interface FakeJobsOptions {
   starts?: FakeGenerationStart[]
   /** Every StartStoryline, in the shape of a generation start (no target length). */
   storylineStarts?: FakeGenerationStart[]
+  /** Every StartObservation, in the shape of a generation start (no writer). */
+  observationStarts?: FakeGenerationStart[]
   /** Every StartStorylineRevision as it arrived. */
   storylineRequests?: Array<{ postSlug: string; request: string }>
   /** Refuse every StartStorylineRevision with this reason. */
@@ -126,6 +129,18 @@ export function registerGenerationService(router: ConnectRouter, options: FakeJo
       reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
     })
     return create(StartStorylineResponseSchema, { jobId: options.startJobId ?? 'job-started' })
+  })
+  router.rpc(GenerationService.method.startObservation, (req) => {
+    options.calls?.push('StartObservation')
+    if (options.startFails) throw connectAppError('NETWORK_UNAVAILABLE', Code.Unavailable)
+    options.observationStarts?.push({
+      postSlug: req.postSlug,
+      observeModel: req.observeModel
+        ? { providerId: req.observeModel.providerId, modelId: req.observeModel.modelId }
+        : undefined,
+      reobserveFiles: req.reobserve ? req.reobserve.files : undefined,
+    })
+    return create(StartObservationResponseSchema, { jobId: options.startJobId ?? 'job-started' })
   })
   router.rpc(GenerationService.method.startStorylineRevision, (req) => {
     options.calls?.push('StartStorylineRevision')

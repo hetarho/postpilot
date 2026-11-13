@@ -250,4 +250,42 @@ describe('ReobservePicker', () => {
     expect(boxes[2]).toBeChecked()
     expect(boxes[2]).toBeDisabled()
   })
+
+  // GEN-8, POST-126: ticking an observation the owner corrected asks once before starting; its
+  // cancel returns to the picker, and a selection holding none starts at once.
+  it('confirms once over an observation edited by hand', async () => {
+    const user = userEvent.setup()
+    const { onConfirm } = renderPicker({
+      observations: [
+        create(ObservationSchema, { file: 'IMG_1.jpg', scene: '고친 장면', ownerEdited: true }),
+        observation('IMG_2.jpg'),
+      ],
+    })
+
+    await user.click(screen.getByRole('checkbox', { name: 'IMG_1.jpg 다시 관찰' }))
+    await user.click(screen.getByRole('button', { name: '이대로 시작' }))
+    expect(onConfirm).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: '직접 고친 관찰을 바꿀까요?' })).toHaveTextContent(
+      'IMG_1.jpg',
+    )
+    await user.click(screen.getByRole('button', { name: '취소' }))
+    expect(screen.getByRole('dialog', { name: '다시 관찰할 사진 선택' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '이대로 시작' }))
+    await user.click(screen.getByRole('button', { name: '다시 관찰하기' }))
+    expect(onConfirm).toHaveBeenCalledWith(['IMG_1.jpg'])
+  })
+
+  it('starts at once when no hand-edited observation is ticked', async () => {
+    const user = userEvent.setup()
+    const { onConfirm } = renderPicker({
+      observations: [
+        create(ObservationSchema, { file: 'IMG_1.jpg', scene: '고친 장면', ownerEdited: true }),
+        observation('IMG_2.jpg'),
+      ],
+    })
+    await user.click(screen.getByRole('checkbox', { name: 'IMG_2.jpg 다시 관찰' }))
+    await user.click(screen.getByRole('button', { name: '이대로 시작' }))
+    expect(onConfirm).toHaveBeenCalledWith(['IMG_2.jpg'])
+  })
 })

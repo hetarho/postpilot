@@ -334,6 +334,9 @@ message PostSummary {
   GenerationJob latest_ordinary_failure = 15;
   int64 input_revision = 16;
   int64 content_revision = 17;
+  // The stored storyline holds at least one paragraph. With no content it is what the list's
+  // 스토리라인 작성 완료 badge is derived from (POST-127); the status filter never reads it.
+  bool storyline_ready = 18;
 }
 
 message GenerationJob {

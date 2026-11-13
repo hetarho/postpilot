@@ -124,3 +124,58 @@ func TestClipMeteringRequiresTheCompleteAdmittedExecutionPolicy(t *testing.T) {
 		})
 	}
 }
+
+// CLIP-234, QUOTA-44: an approved analysis reserves its observation calls alone, so the job
+// meters its observations and a writing call under it is refused before any provider is reached.
+func TestAnAnalysisMetersObservationsAndNoWritingCall(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "meter.db")
+	dbtest.WriteMigrated(t, path)
+	d, err := db.Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	ctx := t.Context()
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	if _, err = d.Writer.Exec("INSERT INTO users(id,password_hash,created_at) VALUES ('alice','hash',?)", now); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = d.Writer.Exec("INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,created_at,updated_at) VALUES ('clip','alice','test','square',15000,?,?)", now, now); err != nil {
+		t.Fatal(err)
+	}
+	st := jobstore.New(d.Writer, d.Reader, jobKindsForTest())
+	q := job.New(st, time.Millisecond, jobReportingForTest())
+	q.AllowCancellation(clipCancellation{})
+	q.Admit(clipMeterAdmission{})
+	id, err := q.Enqueue(ctx, clipJob(job.NewJob{UserID: "alice", Kind: clip.JobKindAnalyze, ObserveModel: "p/o", WriteModel: "p/w"}, "clip"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = q.Activate(ctx, "alice", id); err != nil {
+		t.Fatal(err)
+	}
+	picked, err := st.PickNextQueued(ctx, time.Now())
+	if err != nil || picked.Kind != clip.JobKindAnalyze || picked.Stage != "prepare" {
+		t.Fatalf("the analysis job was not dispatched in prepare: %+v %v", picked, err)
+	}
+	p := llm.CallPolicy{Ref: llm.ModelRef{ProviderID: "p", ModelID: "o"}, Stage: "observe", CompletionTokens: 8192, InputUSDPerMillion: "1", OutputUSDPerMillion: "2", Pricing: llm.CallPricing{Version: llm.CallPricingVersion, Fingerprint: strings.Repeat("a", 64), Delivery: llm.ExecutionInlineStatic, Endpoint: "leaf", RequiredParameters: "max_tokens", PromptUSDPerMillion: "1", CompletionUSDPerMillion: "2", RequestUSD: "0", ImageUSD: "0.000001", AudioUSDPerToken: "0.000001"}}
+	w := p
+	w.Ref.ModelID = "w"
+	w.Stage = "write"
+	w.CompletionTokens = 32768
+	w.Pricing.Delivery = llm.ExecutionTextOnly
+	pricing := clip.GenerationPricing{Version: clip.PricingPolicyVersion, Analysis: true, Observe: p, Plan: w, Narration: w, ObservationCalls: 1, MaxCredits: 100}
+	if !pricing.Valid() || pricing.PlanCalls() != 0 {
+		t.Fatalf("an analysis pricing is not observations alone: %+v", pricing)
+	}
+	ctx, err = clipapp.NewJobs(q, clipMeterAdmission{}).ReserveApproved(ctx, "alice", id, clip.GenerationApproval{QuoteID: "quote", MaxCredits: 100, Pricing: pricing}, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = clipapp.ConsumePolicy(ctx, "alice", id, p.Ref.String(), 8192, "observe"); err != nil {
+		t.Fatal("the approved observation was refused", err)
+	}
+	if _, err = clipapp.ConsumePolicy(ctx, "alice", id, w.Ref.String(), 32768, "write"); !errors.Is(err, clip.ErrCreditAllowance) {
+		t.Fatal("an analysis admitted a writing call", err)
+	}
+}

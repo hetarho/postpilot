@@ -4,8 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, Clapperboard, Film, PenLine, Plus } from 'lucide-react'
 import {
   displayTitle,
-  isPostStatus,
-  postStatusLabel,
+  postRowState,
   rememberPostEntry,
   usePostList,
   type PostListItem,
@@ -89,13 +88,6 @@ function WorkLink({
   )
 }
 
-const POST_TONE: Record<string, BadgeTone> = {
-  draft: 'neutral',
-  review: 'accent',
-  finalized: 'success',
-  published: 'done',
-}
-
 /** Every work appears once in its counted group; the latest unfinished item is quietly emphasized. */
 export function MyWorkPage() {
   const { t } = useTranslation(['channel', 'posts', 'clips', 'common', 'nav'])
@@ -106,21 +98,14 @@ export function MyWorkPage() {
 
   const postItem = (post: PostListItem): WorkItem => {
     const running = post.activeJob && !isTerminal(post.activeJob)
-    const failed = !!post.latestOrdinaryFailure || post.activeJob?.status === 'failed'
     const finished = post.status === 'finalized' || post.status === 'published'
     return {
       key: `post:${post.slug}`,
       kind: 'post',
       title: displayTitle(post),
       updatedAt: post.updatedAt,
-      status: running
-        ? { label: t('list.state.generating', { ns: 'posts' }), tone: 'info' }
-        : failed
-          ? { label: t('list.state.failed', { ns: 'posts' }), tone: 'danger' }
-          : {
-              label: postStatusLabel(post.status),
-              tone: isPostStatus(post.status) ? POST_TONE[post.status] : 'neutral',
-            },
+      // The blog list's chip, with its precedence (POST-127); this page reads no test status.
+      status: postRowState(post),
       finished: finished && !running,
       icon: PenLine,
       id: post.slug,

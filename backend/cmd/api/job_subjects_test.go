@@ -232,6 +232,7 @@ func TestOnlyTheApprovedPolicyLetsChargedWorkBeStopped(t *testing.T) {
 	}{
 		{clip.JobKindGenerate, false, true}, {clip.JobKindRevise, false, true},
 		{clip.JobKindStoryline, false, true}, {clip.JobKindReviseStoryline, false, true},
+		{clip.JobKindAnalyze, false, true},
 		{job.KindTemplateRequest, false, true},
 		{clip.JobKindRender, true, true}, {clip.JobKindSampleBrowserRender, true, true},
 		{job.KindGenerate, false, false},
@@ -248,7 +249,7 @@ func TestOnlyTheApprovedPolicyLetsChargedWorkBeStopped(t *testing.T) {
 func TestDispatchStartsEveryKindInItsFirstStage(t *testing.T) {
 	store, _ := migratedJobs(t)
 	stages := jobKinds().FirstStages
-	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline} {
+	for _, kind := range []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindAnalyze} {
 		if !clip.ChargedJobKind(kind) || stages[kind] != "prepare" {
 			t.Errorf("charged clip kind %s starts in %q, want prepare", kind, stages[kind])
 		}

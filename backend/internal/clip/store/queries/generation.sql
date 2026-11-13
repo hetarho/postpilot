@@ -22,6 +22,9 @@ UPDATE clip_projects SET storyline_json=? WHERE user_id=? AND id=? AND deleting=
 -- The storyline call's result (CLIP-177): the analysis it read and the storyline, and no plan.
 -- name: SaveClipStorylineAnalysis :execrows
 UPDATE clip_projects SET analysis_json=?,storyline_json=?,updated_at=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
+-- The analysis job's result (CLIP-234): the stored observations, and nothing else.
+-- name: SaveClipAnalysis :execrows
+UPDATE clip_projects SET analysis_json=?,updated_at=? WHERE user_id=? AND id=? AND deleting=0 AND finalized_at IS NULL;
 -- A revision's save is a writer's plan too (CLIP-180), unlike the owner's correction beside it.
 -- name: MarkGeneratedPlanRevision :execrows
 UPDATE clip_projects SET generated_plan_revision=edit_plan_revision WHERE id=? AND user_id=?;

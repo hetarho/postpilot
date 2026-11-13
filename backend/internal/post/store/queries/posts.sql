@@ -131,12 +131,14 @@ SELECT EXISTS (SELECT 1 FROM posts WHERE slug = ? AND status = 'published');
 -- name: ListPostSummariesByUser :many
 -- One keyset page of the list (POST-90). The content is never read whole: the list shows its
 -- title only as the blank-title fallback and its tags only for the search, so two JSON paths
--- are all it needs. The cursor is the stored updated_at string plus the slug, compared the same
+-- are all it needs. The storyline is read only for whether it holds a paragraph, the fact the
+-- storyline-ready badge is derived from (POST-127). The cursor is the stored updated_at string plus the slug, compared the same
 -- way the ORDER BY compares them, so a walk never repeats or skips a row. A row_limit of -1 is
 -- SQLite's "no limit", which the search asks for because its match runs in Go.
 SELECT slug, title, status, updated_at, voice_id, template_id, target_language, content_language,
     input_revision, content_revision, published_url,
     CAST(content IS NOT NULL AND content <> 'null' AND COALESCE(json_array_length(content, '$.blocks'), 0) > 0 AS INTEGER) AS content_ready,
+    CAST(storyline IS NOT NULL AND storyline <> 'null' AND COALESCE(json_array_length(storyline, '$.paragraphs'), 0) > 0 AS INTEGER) AS storyline_ready,
     json_extract(content, '$.title') AS content_title,
     json_extract(content, '$.tags') AS content_tags
 FROM posts

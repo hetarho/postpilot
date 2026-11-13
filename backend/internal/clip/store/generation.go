@@ -236,6 +236,21 @@ func (s *Store) SaveStoryline(ctx context.Context, user, id, analysis, storyline
 		return getProject(ctx, q, user, id)
 	})
 }
+
+// SaveAnalysis is the analysis job's save (CLIP-234): the stored observations alone.
+func (s *Store) SaveAnalysis(ctx context.Context, user, id, analysis string, now time.Time) error {
+	_, err := transact(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
+		p, err := getProject(ctx, q, user, id)
+		if err != nil {
+			return struct{}{}, err
+		}
+		if p.Finalized != nil {
+			return struct{}{}, clip.ErrFinalized
+		}
+		return struct{}{}, affected(q.SaveClipAnalysis(ctx, sqlc.SaveClipAnalysisParams{AnalysisJson: nullable(analysis), UpdatedAt: stamp(now), UserID: user, ID: id}))
+	})
+	return err
+}
 func (s *Store) DeletionKeys(ctx context.Context) ([]string, error) { return s.read.DeletionKeys(ctx) }
 func (s *Store) RemoveDeletion(ctx context.Context, key string) error {
 	return s.write.RemoveDeletion(ctx, key)

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math"
+	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
@@ -72,6 +73,20 @@ type GenerationPricing struct {
 	// The storyline an approval was taken against (QUOTA-45): the one 이 스토리로 만들기 builds
 	// along, or the current one a storyline request rewrites. Empty when neither.
 	StorylineDigest string `json:",omitempty"`
+	// Analysis prices 관찰하기 and 다시 관찰하기 (CLIP-234): the observation chunks alone, with no
+	// writing call after them; Reanalyze names, comma-separated in batch order, the sources whose
+	// every chunk it observes again although the recovery holds them, which the approval binds
+	// (QUOTA-45). A string keeps the pricing a comparable value.
+	Analysis  bool   `json:",omitempty"`
+	Reanalyze string `json:",omitempty"`
+}
+
+// ReanalyzedSources is the list Reanalyze names.
+func (p GenerationPricing) ReanalyzedSources() []string {
+	if p.Reanalyze == "" {
+		return nil
+	}
+	return strings.Split(p.Reanalyze, ",")
 }
 
 // Both stages must have the complete enforceable profile, not a legacy pair of
@@ -87,6 +102,7 @@ func (p GenerationPricing) Valid() bool {
 			p.Observe == (llm.CallPolicy{}) && p.Narration == (llm.CallPolicy{})
 	}
 	return (p.Dubbing == nil || p.Dubbing.Version == 1 && p.Dubbing.Voice.Binding.ID != "" && len(p.Dubbing.Units) <= 1 && !p.Storyline) && p.Version == PricingPolicyVersion && p.CancellationPolicyVersion >= 0 && p.CancellationPolicyVersion <= CancellationPolicyVersion && p.ObservationCalls >= 0 && p.ObservationCalls <= 49 && p.MaxCredits >= 0 && p.ReusedChunks >= 0 && p.ReusedChunks <= 49 && (!p.SkipFlow || p.ObservationCalls == 0) && (!p.SkipNarration || p.SkipFlow) && (!p.Storyline || !p.SkipFlow && !p.SkipNarration) &&
+		(!p.Analysis || !p.Storyline && p.Dubbing == nil && !p.SkipFlow && !p.SkipNarration) && (p.Analysis || p.Reanalyze == "") &&
 		p.Observe.Valid() && p.Observe.Pricing.Valid() && p.Observe.Pricing.Delivery == llm.ExecutionInlineStatic && p.Observe.Stage == llm.StageNameObserve && p.Observe.CompletionTokens == 8192 &&
 		writing(p.Plan) && writing(p.Narration) && p.Plan.Ref == p.Narration.Ref
 }
@@ -95,13 +111,13 @@ func (p GenerationPricing) Valid() bool {
 // response corrections included. A call whose result the recovery already
 // holds costs nothing.
 func (p GenerationPricing) FlowCalls() int {
-	if p.SkipFlow {
+	if p.SkipFlow || p.Analysis {
 		return 0
 	}
 	return 1 + p.Plan.ResponseRetries
 }
 func (p GenerationPricing) NarrationCalls() int {
-	if p.SkipNarration || p.Storyline || p.UploadText {
+	if p.SkipNarration || p.Storyline || p.UploadText || p.Analysis {
 		return 0
 	}
 	return 1 + p.Narration.ResponseRetries

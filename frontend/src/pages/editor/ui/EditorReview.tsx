@@ -1,10 +1,8 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGuidelines } from '@/entities/guideline'
-import { isTerminal, progressRatio, type GenerationJob } from '@/entities/generation-job'
 import { Thumbnail } from '@/entities/image'
 import type { PostDraft } from '@/entities/post'
-import { PenLine } from 'lucide-react'
 import { Button, Typography, cardStyles, typographyStyles } from '@/shared/ui'
 import type { GuideStep } from '../model/guide'
 
@@ -22,8 +20,6 @@ export function EditorReview({
   voice,
   voiceWarning,
   brief,
-  job,
-  onWritingCardShown,
   onGo,
   onOpenGuidelines,
 }: {
@@ -38,16 +34,12 @@ export function EditorReview({
   voiceWarning?: ReactNode
   /** The writing brief's trigger, drawn as this row's 바꾸기. */
   brief: ReactNode
-  job?: GenerationJob
-  /** Whether the writing card is in view, so the page-top bar can step aside while it is. */
-  onWritingCardShown?: (shown: boolean) => void
   onGo: (step: GuideStep) => void
   onOpenGuidelines: () => void
 }) {
   const { t } = useTranslation('posts')
   const images = post?.images ?? []
   const videos = post?.videos ?? []
-  const running = job && !isTerminal(job) ? job : undefined
   const media = [
     images.length > 0 ? t('guide.photos', { count: images.length }) : '',
     videos.length > 0 ? t('guide.videos', { count: videos.length }) : '',
@@ -56,7 +48,6 @@ export function EditorReview({
     .join(' · ')
   return (
     <div className="mt-6 flex flex-col gap-4">
-      {running && <WritingCard job={running} onShown={onWritingCardShown} />}
       <ul className={cardStyles({ padding: 'none', className: 'divide-divider divide-y' })}>
         <SummaryRow
           label={t('guide.summary.kind')}
@@ -204,71 +195,6 @@ function GuidelinesRow({ ownerId, onOpen }: { ownerId: string; onOpen: () => voi
       >
         {t('guide.change')}
       </Button>
-    </div>
-  )
-}
-
-/** The run in progress, said warmly on the summary it was started from. The page-top hairline
- *  and the status line carry the same job; this is the one place it is big enough to wait on.
- *  While it is in view it is the ONE bar the owner sees: it reports itself so the hairline fades
- *  out, and back in once the card has scrolled away (or the run ends and the card goes). */
-function WritingCard({ job, onShown }: { job: GenerationJob; onShown?: (shown: boolean) => void }) {
-  const { t } = useTranslation('posts')
-  const ratio = progressRatio(job)
-  const share = ratio ? Math.round((ratio.done / Math.max(ratio.total, 1)) * 100) : undefined
-  const card = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const node = card.current
-    if (!node || !onShown || typeof IntersectionObserver === 'undefined') return
-    const observer = new IntersectionObserver(
-      (entries) => onShown(entries.some((entry) => entry.isIntersecting)),
-      { threshold: 0.5 },
-    )
-    observer.observe(node)
-    return () => {
-      observer.disconnect()
-      onShown(false)
-    }
-  }, [onShown])
-  return (
-    <div
-      ref={card}
-      className={cardStyles({
-        className: 'bg-badge-accent-bg flex items-center gap-4 shadow-none',
-      })}
-    >
-      {/* A still mark, not a spinner: the bar below is the card's one moving progress. A spinner
-          beside it said "working" twice, and while the write stage has no ratio both of them
-          swept with nothing to tell apart. */}
-      <span
-        aria-hidden="true"
-        className="text-badge-accent-fg flex size-12 shrink-0 items-center justify-center rounded-full"
-      >
-        <PenLine className="size-7" />
-      </span>
-      <span className="min-w-0 flex-1">
-        {/* The stage itself is the status line's, at the top; this card only says it is working
-            and how far along. */}
-        <Typography variant="fieldTitle" as="span" className="block">
-          {t('guide.writing')}
-        </Typography>
-        <span
-          aria-hidden="true"
-          className="bg-meter-track mt-3 block h-2 overflow-hidden rounded-full"
-        >
-          {share === undefined ? (
-            <span className="bg-meter-fill animate-progress-sweep block h-full w-1/4 rounded-full" />
-          ) : (
-            // A full-width fill slid in from the left, so the bar moves on `transform` alone
-            // (THEME-28) and its leading end keeps its round cap, which a scale would squash.
-            <span
-              data-writing-fill
-              className="bg-meter-fill duration-slow ease-standard block h-full w-full rounded-full transition-transform"
-              style={{ transform: `translateX(${share - 100}%)` }}
-            />
-          )}
-        </span>
-      </span>
     </div>
   )
 }

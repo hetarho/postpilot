@@ -23,6 +23,11 @@ export interface ClipProjectCalls {
   startGeneration(input: ClipStartInput & { fromStoryline?: boolean }): Promise<{ jobId: string }>
   /** Starting the approved storyline call: 스토리라인 먼저 and 다시 만들기 (CLIP-177). */
   startStoryline(input: ClipStartInput): Promise<{ jobId: string }>
+  /** Starting the approved 관찰하기 or 다시 관찰하기 (CLIP-234), with the list its quote was taken
+   *  with. */
+  startAnalysis(
+    input: ClipStartInput & { reanalyzeSourceIds?: readonly string[] },
+  ): Promise<{ jobId: string }>
   /** Starting an approved storyline request (CLIP-181). */
   startStorylineRevision(
     input: Omit<ClipStartInput, 'batchId'> & { request: string },
@@ -59,6 +64,14 @@ export function clipProjectCalls(transport: Transport): ClipProjectCalls {
       const response = await client.startClipStoryline(input, {
         timeoutMs: CLIP_START_RPC_TIMEOUT_MS,
       })
+      if (!response.jobId) throw new Error('Missing durable clip job')
+      return { jobId: response.jobId }
+    },
+    async startAnalysis(input) {
+      const response = await client.startClipAnalysis(
+        { ...input, reanalyzeSourceIds: [...(input.reanalyzeSourceIds ?? [])] },
+        { timeoutMs: CLIP_START_RPC_TIMEOUT_MS },
+      )
       if (!response.jobId) throw new Error('Missing durable clip job')
       return { jobId: response.jobId }
     },

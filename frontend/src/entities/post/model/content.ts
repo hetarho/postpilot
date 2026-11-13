@@ -29,6 +29,16 @@ export function newBlock(init: BlockPatch & { type: BlockType }): Block {
   return create(BlockSchema, init)
 }
 
+/** One attachment's observation fields as the owner corrects them on ② (POST-126). `events` is
+ *  a clip's alone: a photo carries none, and the server refuses `events` on a photo. */
+export interface ObservationEditFields {
+  scene: string
+  mood: string
+  visibleText: string
+  objects: string[]
+  events?: string[]
+}
+
 /** What the observe stage saw in each attached photo. A post carries its observations
  *  (`PostDraft.observations`), so the lookup lives with the post rather than in a slice of its
  *  own — the picker and the contact sheet are both reading one post's own rows. */

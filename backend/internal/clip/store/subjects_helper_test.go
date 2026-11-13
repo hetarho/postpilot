@@ -55,11 +55,11 @@ func voiceOwnedTestKind(kind string) bool {
 // jobKindsForTest is the same shape the composition root wires.
 func jobKindsForTest() jobstore.Kinds {
 	return jobstore.Kinds{
-		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
-		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline},
+		Deferred:    []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindAnalyze},
+		Cancellable: []string{clip.JobKindGenerate, clip.JobKindRender, clip.JobKindSampleBrowserRender, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindAnalyze},
+		Authorized:  []string{clip.JobKindGenerate, clip.JobKindRevise, clip.JobKindStoryline, clip.JobKindReviseStoryline, clip.JobKindAnalyze},
 		FirstStages: map[string]string{
-			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare",
+			clip.JobKindGenerate: "prepare", clip.JobKindRevise: "prepare", clip.JobKindStoryline: "prepare", clip.JobKindReviseStoryline: "prepare", clip.JobKindAnalyze: "prepare",
 			job.KindAnalyzeVoice: "analyze", job.KindCheckVoice: "write", job.KindRevise: "write",
 		},
 	}

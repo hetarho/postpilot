@@ -12,6 +12,8 @@ import {
   type DraftQueueHandle,
   type SaveState,
   type StorylineParagraphDraft,
+  type ObservationEditFields,
+  copyObservations,
   type TemplateAnswerDraft,
 } from './draft-queue'
 
@@ -63,6 +65,10 @@ export interface UseAutosaveArgs {
         templateAnswers: TemplateAnswerDraft[]
         /** The stored storyline, absent when the post has none. */
         storyline?: { paragraphs: StorylineParagraphDraft[] }
+        /** The stored observations, the baseline the owner's corrections compare against. */
+        observations?: readonly StoredObservation[]
+        /** Which attachments are clips: only a clip's correction carries `events`. */
+        videos?: readonly { filename: string }[]
         /** The campaign parts as the server holds them (POST-117–119). */
         campaign?: boolean
         advertiserGuide?: AdvertiserGuide
@@ -99,6 +105,11 @@ export interface Autosave {
   /** Records the owner's storyline edit, the whole paragraph list (POST-96). Does nothing while
    *  the post is published or has no storyline. */
   setStoryline: (paragraphs: StorylineParagraphDraft[]) => void
+  /** The owner's observation corrections not yet known to be saved, by filename (POST-126); none
+   *  while the post is published. */
+  observationEdits: Readonly<Record<string, ObservationEditFields>>
+  /** Records one card's corrected fields. Does nothing while the post is published. */
+  setObservationEdit: (file: string, fields: ObservationEditFields) => void
   /** The campaign parts as ① shows them: the owner's unsaved edit, or the server's (POST-117–119). */
   campaign: CampaignDraft
   /** Records an edit of the campaign parts. Does nothing while the post is published. */
@@ -136,6 +147,38 @@ export interface Autosave {
  *  nothing, shows the server's text and ignores edits. A save refused as published takes the
  *  text back all the way to the screen, so nothing the lock refused is shown or queued again,
  *  and a post that reopens saves again from the server's values. */
+interface StoredObservation {
+  file: string
+  scene: string
+  mood: string
+  visibleText: string
+  objects: readonly string[]
+  events: readonly string[]
+}
+
+/** The stored observations as the queue compares corrections against them, keyed by filename. */
+function observationBaseline(
+  observations: readonly StoredObservation[] | undefined,
+  videos: readonly { filename: string }[] | undefined,
+): Record<string, ObservationEditFields> | undefined {
+  if (!observations) return undefined
+  const clips = new Set((videos ?? []).map((video) => video.filename))
+  return Object.fromEntries(
+    observations.map((entry) => [
+      entry.file,
+      {
+        scene: entry.scene,
+        mood: entry.mood,
+        visibleText: entry.visibleText,
+        objects: [...entry.objects],
+        ...(clips.has(entry.file) ? { events: [...entry.events] } : {}),
+      },
+    ]),
+  )
+}
+
+const NO_OBSERVATION_EDITS: Readonly<Record<string, ObservationEditFields>> = {}
+
 export function useAutosave({
   post,
   answerPatch,
@@ -159,6 +202,9 @@ export function useAutosave({
       storyline: post ? peekPendingDraft(post.slug)?.storyline : undefined,
       // The same for the campaign parts: a queued edit outranks what the server reported.
       campaign: post ? peekPendingDraft(post.slug)?.campaign : undefined,
+      observationEdits: post
+        ? copyObservations(peekPendingDraft(post.slug)?.observationEdits)
+        : undefined,
     } as {
       title: string
       memo: string
@@ -167,6 +213,8 @@ export function useAutosave({
       storyline: StorylineParagraphDraft[] | undefined
       /** The owner's campaign edit not yet known to be saved; undefined is none. */
       campaign: CampaignDraft | undefined
+      /** The owner's observation corrections not yet known to be saved; undefined is none. */
+      observationEdits: Record<string, ObservationEditFields> | undefined
     }
   })
   const [campaignRefusal, setCampaignRefusal] = useState<AppFailure>()
@@ -227,6 +275,7 @@ export function useAutosave({
         memo: opened?.memo ?? '',
         answers: opened?.templateAnswers ?? [],
         storyline: opened?.storyline?.paragraphs,
+        observationEdits: observationBaseline(opened?.observations, opened?.videos),
         campaign: copyCampaign(campaignOf(opened)),
       },
       // An existing post's own voice, '' when it has none — never the picker's seed, which only
@@ -241,6 +290,7 @@ export function useAutosave({
         templateId,
         targetLanguage,
         storyline,
+        observationEdits,
         campaign,
         advertiserGuide,
         checklistTicks,
@@ -256,6 +306,7 @@ export function useAutosave({
           templateId,
           targetLanguage,
           storyline,
+          observationEdits,
           campaign,
           advertiserGuide,
           checklistTicks,
@@ -283,6 +334,7 @@ export function useAutosave({
           edits: NO_ANSWERS,
           storyline: undefined,
           campaign: undefined,
+          observationEdits: undefined,
         })
       },
     })
@@ -304,8 +356,15 @@ export function useAutosave({
   // costs nothing but a comparison. A published post queues nothing at all.
   useLayoutEffect(() => {
     if (locked) return
-    queueRef.current?.queue({ title, memo, answers, storyline: local.storyline, campaign })
-  }, [locked, title, memo, answers, local.storyline, campaign])
+    queueRef.current?.queue({
+      title,
+      memo,
+      answers,
+      storyline: local.storyline,
+      observationEdits: local.observationEdits,
+      campaign,
+    })
+  }, [locked, title, memo, answers, local.storyline, local.observationEdits, campaign])
 
   // The server's campaign parts moved: this editor's own save landed, or another tab changed
   // them. A local copy equal to the new value, or to the value it was made over (no edit at all),
@@ -340,6 +399,26 @@ export function useAutosave({
     if (queueRef.current?.rebaseStoryline(paragraphs) ?? true)
       setLocal((current) => (current.storyline ? { ...current, storyline: undefined } : current))
   }, [serverStorylineKey])
+
+  // The server's observations moved: a batch of an observation job persisted, or this editor's own
+  // correction landed. The same rule as the storyline's: with no correction still queued, ② reads
+  // the server's and the queue compares the next correction against them.
+  const serverObservationsKey = JSON.stringify(
+    observationBaseline(post?.observations, post?.videos) ?? null,
+  )
+  const followedObservations = useRef(serverObservationsKey)
+  useLayoutEffect(() => {
+    if (followedObservations.current === serverObservationsKey) return
+    followedObservations.current = serverObservationsKey
+    const baseline =
+      serverObservationsKey === 'null'
+        ? undefined
+        : (JSON.parse(serverObservationsKey) as Record<string, ObservationEditFields>)
+    if (queueRef.current?.rebaseObservations(baseline) ?? true)
+      setLocal((current) =>
+        current.observationEdits ? { ...current, observationEdits: undefined } : current,
+      )
+  }, [serverObservationsKey])
 
   // Only a draft with no post yet follows the picker (see `UseAutosaveArgs.voiceId`).
   useLayoutEffect(() => {
@@ -387,6 +466,16 @@ export function useAutosave({
       setLocal((current) => ({ ...current, campaign: copyCampaign(next) }))
     },
     campaignRefusal,
+    observationEdits: locked
+      ? NO_OBSERVATION_EDITS
+      : (local.observationEdits ?? NO_OBSERVATION_EDITS),
+    setObservationEdit: (file, fields) => {
+      if (locked || !post) return
+      setLocal((current) => ({
+        ...current,
+        observationEdits: { ...current.observationEdits, [file]: fields },
+      }))
+    },
     setStoryline: (next) => {
       if (!locked && serverStoryline) setLocal((current) => ({ ...current, storyline: next }))
     },

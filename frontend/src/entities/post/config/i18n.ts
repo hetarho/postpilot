@@ -7,6 +7,13 @@ export const i18n = {
     title: '글',
     untitled: '제목 없음',
     status: { draft: '초안', review: '검토', finalized: '확정', published: '발행됨' },
+    /** A row's derived state where it outranks the status (POST-127); never a filter value. */
+    rowState: {
+      generating: 'AI 생성 중',
+      failed: 'AI 결과 오류',
+      review: 'AI 결과 확인',
+      storylineReady: '스토리라인 작성 완료',
+    },
     published: {
       locked: '발행된 글은 바꿀 수 없어요. 글 완성에서 발행 URL을 지우면 다시 고칠 수 있어요.',
     },
@@ -183,6 +190,11 @@ export const i18n = {
         selectedCount: '{{count}}장 다시 관찰',
         selectedNone: '다시 관찰할 사진 없음',
         confirm: '이대로 시작',
+        open: '다시 관찰하기',
+        editedTitle: '직접 고친 관찰을 바꿀까요?',
+        editedBody:
+          '{{files}}의 관찰은 직접 고친 내용이에요. 다시 관찰하면 고친 내용이 사라집니다.',
+        editedConfirm: '다시 관찰하기',
       },
       options: {
         useTarget: '목표 글자 수 사용',
@@ -200,6 +212,12 @@ export const i18n = {
     title: 'Posts',
     untitled: 'Untitled',
     status: { draft: 'Draft', review: 'Review', finalized: 'Finalized', published: 'Published' },
+    rowState: {
+      generating: 'AI generation',
+      failed: 'AI result error',
+      review: 'Review AI result',
+      storylineReady: 'Storyline ready',
+    },
     published: {
       locked: 'A published post cannot be changed. Clear its URL in Finish to reopen it.',
     },
@@ -381,6 +399,11 @@ export const i18n = {
         selectedCount: '{{count}} photo(s) to observe again',
         selectedNone: 'No photo will be observed again',
         confirm: 'Start with this',
+        open: 'Observe again',
+        editedTitle: 'Replace observations you corrected?',
+        editedBody:
+          'You corrected the observation of {{files}} by hand. Observing again replaces those corrections.',
+        editedConfirm: 'Observe again',
       },
       options: {
         useTarget: 'Use a target length',

@@ -188,7 +188,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   // The durable job is watched HERE, not inside the step panels: the page-top status region
   // reports it and the panels act on it, and one poll has to serve both ([I5]).
   const jobView = useEditorJob(post)
-  // 확인's writing card has a bar of its own; while it is in view the page-top one fades out.
+  // ②'s run card has a bar of its own; while it is in view the page-top one fades out (POST-45).
   const [writingCardShown, setWritingCardShown] = useState(false)
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
@@ -452,8 +452,6 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
           post ? <EditorVoiceWarning ownerId={ownerId} voice={post.voice} /> : undefined
         }
         brief={choices.brief}
-        job={jobView.job}
-        onWritingCardShown={setWritingCardShown}
         onGo={setGuide}
         onOpenGuidelines={openGuidelines}
       />
@@ -579,6 +577,11 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
             onChange: autosave.setStoryline,
             saveState: autosave.state,
           }}
+          observations={{
+            edits: autosave.observationEdits,
+            onEdit: autosave.setObservationEdit,
+          }}
+          onRunCardShown={setWritingCardShown}
           campaign={{
             on: autosave.campaign.on,
             guide: autosave.campaign.guide,

@@ -16,13 +16,14 @@ import {
 import { toPostDraft, toPostListItem } from './post-queries'
 
 describe('toPostListItem', () => {
-  it('projects canonical readiness, published address, revisions and the ordinary failure snapshot', () => {
+  it('projects canonical and storyline readiness, published address, revisions and the ordinary failure snapshot', () => {
     const row = toPostListItem(
       create(PostSummarySchema, {
         slug: 'post',
         status: 'review',
         targetLanguage: contentLanguageToProto('ko'),
         contentReady: true,
+        storylineReady: true,
         exportReady: true,
         publishedUrl: 'https://blog.naver.com/alice/1',
         inputRevision: 8n,
@@ -36,6 +37,7 @@ describe('toPostListItem', () => {
       }),
     )
     expect(row.contentReady).toBe(true)
+    expect(row.storylineReady).toBe(true)
     expect(row.exportReady).toBe(true)
     expect(row.publishedUrl).toBe('https://blog.naver.com/alice/1')
     expect(row.inputRevision).toBe(8n)
@@ -56,6 +58,7 @@ describe('toPostListItem', () => {
       }),
     )
     expect(row.contentReady).toBe(false)
+    expect(row.storylineReady).toBe(false)
     expect(row.exportReady).toBe(false)
     expect(row.latestOrdinaryFailure).toBeUndefined()
   })

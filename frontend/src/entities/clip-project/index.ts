@@ -100,6 +100,7 @@ export {
 } from './api/calls'
 export type { ClipProjectCalls, ClipSourceCalls, ClipStartInput } from './api/calls'
 export {
+  useClipAnalysisQuote,
   useClipGenerationQuote,
   useClipStorylineRevisionQuote,
   type ClipQuoteMode,

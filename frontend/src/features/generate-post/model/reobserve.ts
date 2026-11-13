@@ -19,6 +19,9 @@ export interface ReobserveRow {
    *  Such a photo is observed whether or not the user asks — the run must not write from a
    *  photo nothing has looked at — so its checkbox is checked and cannot be cleared. */
   forced: boolean
+  /** The owner corrected this entry by hand (POST-126): it never counts as missing, and ticking
+   *  it means those edits will be lost, which the picker confirms once (GEN-8). */
+  ownerEdited: boolean
 }
 
 /** True when the entry carries no eyesight. `file` and `model` are deliberately not part of
@@ -51,8 +54,10 @@ export function reobserveRows(
     return {
       filename,
       attachment,
-      stored: stored && !empty(stored) ? stored : undefined,
-      forced: !stored || empty(stored),
+      stored: stored && (stored.ownerEdited || !empty(stored)) ? stored : undefined,
+      // An owner-edited entry is the owner's material even when every field was cleared (GEN-90).
+      forced: !stored || (!stored.ownerEdited && empty(stored)),
+      ownerEdited: Boolean(stored?.ownerEdited),
     }
   }
   return [
@@ -68,9 +73,30 @@ export function defaultSelection(rows: readonly ReobserveRow[]): string[] {
   return rows.filter((row) => row.forced).map((row) => row.filename)
 }
 
-/** Whether starting a run on this post has a reuse decision to make. False means there is
- *  nothing to reuse, so the run would observe everything anyway and the picker would only be
- *  a confirmation of the one available answer: start directly, as before the picker existed. */
+/** Whether an attached photo or clip has no observation to reuse, so ①'s big action reads
+ *  관찰하기 rather than 다음 (POST-123). An owner-edited entry never counts as missing. */
+export function lacksObservation(
+  images: readonly PostImage[],
+  observations: readonly Observation[],
+  videos: readonly PostVideo[] = [],
+): boolean {
+  return reobserveRows(images, observations, videos).some((row) => row.forced)
+}
+
+/** The ticked rows whose observation the owner edited by hand, whose edits a re-observation
+ *  replaces — the ones the picker's confirmation names (GEN-8, POST-126). */
+export function editedInSelection(
+  rows: readonly ReobserveRow[],
+  selection: readonly string[],
+): string[] {
+  return rows
+    .filter((row) => row.ownerEdited && selection.includes(row.filename))
+    .map((row) => row.filename)
+}
+
+/** Whether starting a writing test on this post has a reuse decision to make. False means there
+ *  is nothing to reuse, so the run would observe everything anyway and the picker would only be
+ *  a confirmation of the one available answer. */
 export function needsPicker(
   images: readonly PostImage[],
   observations: readonly Observation[],

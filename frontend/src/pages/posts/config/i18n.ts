@@ -10,7 +10,6 @@ export const i18n = {
       loadFailed: '목록을 불러오지 못했어요.',
       empty: '아직 글이 없어요. 아래 + 새 글에서 시작할 수 있어요.',
       writingAria: '글 작성',
-      state: { generating: 'AI 생성 중', failed: 'AI 결과 오류', review: 'AI 결과 확인' },
       history: {
         directory: '글 작업 내역',
         continue: '이어서 작성',
@@ -46,7 +45,6 @@ export const i18n = {
       loadFailed: 'Could not load the post list.',
       empty: 'There are no posts yet. Start one from + New post below.',
       writingAria: 'Write a post',
-      state: { generating: 'AI generation', failed: 'AI result error', review: 'Review AI result' },
       history: {
         directory: 'Writing history',
         continue: 'Continue writing',
