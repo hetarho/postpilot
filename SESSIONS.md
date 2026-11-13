@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
-| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | T801 | main | 3d591e1ae852 |
+| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | - | main | a7ac949f760a |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:42Z | - | task/video-ux | 4eb7c1b2e9d8 |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:41Z | T809 | task/design-system-audit-serial | d8dad5d8c0dc |
 
@@ -168,8 +168,10 @@
 | T798 | ldui | main | dd2972cc4d2e | 2026-11-13T16:42Z |
 | T799 | ldui | main | cb2c17c585de | 2026-11-13T16:42Z |
 | T800 | ldui | main | d7a9526b3c1f | 2026-11-13T16:42Z |
+| T801 | ldui | main | a7ac949f760a | 2026-11-13T16:42Z |
 
 ## log
+- 261113 T801 done
 - 261113 T800 done
 - 261113 T799 done
 - 261113 T798 done
@@ -189,4 +191,3 @@
 - 261113 gusta-update complete: 0.17.1; auto version and managed instructions enabled; caller-provider preference, independent review and fallback; ARCH r24/DUB r4 policy-only deltas consumed; 23 Git-proven chg records restored
 - 261113 gusta-update-ssot DUB start: align DUB-27 per-task build obligation with approved ARCH task/batch ownership; live voice gates unchanged
 - 261113 gusta-create-task ARCH r24 no-op: framework policy, settings and documentation only; no application code delta; blocked qualification conditions retained
-- 261113 gusta-update-ssot ARCH start: owner-approved framework verification tiers, chg retention and workflow delegation
