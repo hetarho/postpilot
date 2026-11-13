@@ -10,6 +10,7 @@ import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import {
   Button,
   Notice,
+  LoadingState,
   TabLinks,
   Typography,
   typographyStyles,
@@ -78,17 +79,21 @@ export function VoiceLayout() {
           </Button>
         </Notice>
       ) : isPending ? (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="detail"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-4"
+        />
       ) : !voice ? (
         <Typography variant="body" role="alert" className="text-notice-danger-fg mt-4">
           {t('missing', { ns: 'voices' })}
         </Typography>
       ) : profilePending ? (
-        <Typography variant="body" role="status" className="text-content-tertiary mt-4">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="detail"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-4"
+        />
       ) : !made && pathname !== learningPath ? (
         <Navigate to="/voices/$voiceId/materials" params={{ voiceId }} replace />
       ) : (
