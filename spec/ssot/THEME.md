@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r43 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r44 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -332,7 +332,7 @@
   - loading reserves representative work-group geometry (→!THEME-74); a failure with 다시 시도 and an empty account are page text (→THEME-29)
 - THEME-70 [o] 내 스타일's overview (`/style`) is one card per section, in the chip row's order (→=THEME-38), named by what it changes in the owner's writing (글이 내 말투로 써져요) with the section's name and what it holds now — the 기본 voice's name or the voice count, and the template, guideline and memory counts — each opening its section (→THEME-38)
   - a count still loading shows nothing rather than zero (→THEME-29)
-- THEME-71 [o] every stepped screen ends on ONE shared step bar — the post's 글 생성 guide (→POST-122), its 관찰, 스토리라인, 다듬기 and 완성 steps (→POST-53 →POST-97 →POST-56 →POST-57), the template wizards (→TMPL-71 →CLIP-213) and first-use setup ← moving through any stepped screen is the same gesture in the same place
+- THEME-71 [o] every stepped screen, including clip preparation, observation, storyline, refinement and completion, ends on ONE shared step bar — the post's 글 생성 guide (→POST-122), its 관찰, 스토리라인, 다듬기 and 완성 steps (→POST-53 →POST-97 →POST-56 →POST-57), the template wizards (→TMPL-71 →CLIP-213) and first-use setup ← moving through any stepped screen is the same gesture in the same place
   - top to bottom it holds what the screen has to say about its actions — a failure with its retry, a refusal, the one-line reason the big action is held (named by that action through `aria-describedby`), a composer such as 다듬기's request field — then ONE row: the back control (named by where it goes), at most one secondary action, then the screen's one big action (`hero`) filling the rest; a reason stands above its control so the software keyboard never hides it (→THEME-31)
   - on a phone it meets the screen's bottom edge full-bleed with rounded top corners and its padding adding the safe area, and it takes the column's remaining height so it sits on that edge under a short screen; from `sm:` it floats as a rounded bar in the readable column
   - it is near-opaque with backdrop blur (solid where blur is unsupported) so the page under it never competes with the big action
@@ -354,6 +354,23 @@
   - skeleton motion is a quiet opacity pulse only; reduced motion leaves static shapes and a still indicator; both themes, 320 px reflow and 200% zoom remain readable (→!THEME-28)
   - initial loading, empty, failure and long-running generation remain distinct; failures retain their retry/exit actions, and generation keeps truthful job status, cancellation and progress
 
+- THEME-75 [o] backward navigation has one shared visual contract throughout the product: a round secondary icon control carrying the left arrow, with the actual destination as its localized accessible name and tooltip.
+  - contextual route returns, workspace returns and previous-step actions use the same shared recipe; an icon-only route return remains a real link with its existing href, modified-click behavior and validated contextual destination
+  - step changes remain buttons and preserve disabled, pending, save/flush, cancellation and focus behavior; dialog cancel/close actions and ordinary inline content links retain their own semantics
+  - the control keeps the shared pointer-dependent target floor and visible keyboard focus; route loading, failure and missing-object states retain a usable way back
+- THEME-76 [o] saved-resource directories in My style and clip channels use one shared card composition: consistent grid, spacing, leading icon, readable resource name, supporting description/status, compact metadata and separate secondary actions.
+  - post and video templates share that composition, including unfinished authoring-session entries; whole-card navigation and delete/resume controls are distinct keyboard targets without nested links or buttons
+  - preserve every resource, count, draft/publication/conflict/job status, owner scope and deletion-focus recovery; repeated boilerplate does not outrank the resource name
+  - a directory has one floating creation action (→!THEME-67); operational billing/admin tables and chronological histories retain their purpose-specific layouts
+- THEME-77 [o] the complete clip creation workflow uses the writing workflow's shared design language: one current question, consistent heading and card hierarchy, grouped fields on a single raised plane, shared progress and round return controls, and one bottom step bar.
+  - preparation, observation, storyline, refinement, completion, waiting, failure and finalized reading use the same contracts; the clip keeps its wide workspace frame with a bounded readable input column and deliberately composed desktop preview/control areas (→!THEME-26)
+  - source lists, template/style choices, summary rows, scene actions and publication/download sections use shared primitives instead of separately styled controls; no nested cards or second dock
+  - visual changes preserve all media lifetimes, mounted inputs, autosave, job ownership, quotations, confirmations, cancellation, render/export and navigation context
+- THEME-78 [o] design-system coverage includes every public, authenticated, administrative and recovery route and the distinct working states it renders, including embedded pickers and previews.
+  - generic native buttons and text inputs are implemented in shared/ui; slices compose their semantic content through those controls and shared style recipes; hidden file inputs and semantically necessary native file/radio/checkbox elements using the shared control recipe are inventoried explicitly
+  - a source audit records each route/control family as migrated or already conforming with concrete evidence, and a regression guard rejects new unsanctioned generic native controls outside shared/ui
+  - browser review covers both themes at320/360/390/430px and1440/1920px, keyboard focus,200% zoom, software-keyboard-height input continuity, return destinations and meaningful creation/list/edit/finish/error states; source review and fixture checks do not claim real payment/provider/media execution
+
 ## flow
 - bootstrap: read `postpilot.theme` → resolve(`system` → matchMedia | `light` → `day` | `dark` → `night`) → set `data-theme`, `color-scheme`, `theme-color` before React → provider from the snapshot → menu selection → apply + persist | remove key
 - shipping a screen: author unprefixed for 360 → tokens and `shared/ui` primitives only → `pnpm lint:style` → the THEME-34 checklist → both themes
@@ -364,6 +381,7 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
+- r44 261114 THEME-71✎ post/template step bars→all clip steps included; THEME-75+ shared icon return; THEME-76+ consistent resource catalogs; THEME-77+ complete clip/writing visual parity; THEME-78+ exhaustive route/control audit and regression enforcement
 - r43 261114 THEME-29✎ loading page text→shared contextual feedback; THEME-69✎ loading page text→work-group geometry; THEME-74+ page-specific skeletons, inline spinner, delayed decoration, retained content and accessible reduced-motion feedback
 - r42 261113 THEME-39✎ instances named only→same five stations 생성·관찰·스토리라인·다듬기·완성 under short names; THEME-71✎ post steps 글 생성 guide, 글 다듬기, 글 완성→글 생성 guide, 관찰, 스토리라인, 다듬기, 완성; THEME-18✎ writing card ref POST-123→POST-125
 - r41 261112 THEME-44✎ preview + time ruler + named tracks + properties panel→scene-block list beside/under a preview kept in view; THEME-45✎ manual tools before AI request form→scene blocks first, AI request in the step bar
