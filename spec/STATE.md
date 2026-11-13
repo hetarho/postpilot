@@ -70,6 +70,7 @@
 | perf-quality-261109 | converted@261109 |
 | perf-quality-si4-261109 | converted@261109 |
 | perf-quality-sil5-261110 | converted@261110 |
+
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
@@ -78,8 +79,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T796 | Stabilize route, history and voice loading shells | ARCH THEME | T795 | doing@261113.ldui |
-| T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | doing@261113.ldui |
 | T803 | Unify route and step return controls | ARCH THEME | - | todo |
 | T804 | Provide shared controls for actionable content | ARCH THEME | T803 | todo |
 | T805 | Replace remaining text route returns | ARCH THEME | T804 | todo |
@@ -107,5 +106,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T796 T802 T803
-- This request: T803–T816; T795–T802 remain with the independent contextual-loading run.
+- gusta-implement-task T803 T817 T819
