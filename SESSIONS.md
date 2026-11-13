@@ -160,8 +160,10 @@
 | T795 | ldui | main | b635d3d3cced | 2026-11-13T16:18Z |
 | T803 | dsui | task/design-system-audit-serial | b754ff465fde | 2026-11-13T16:25Z |
 | T804 | dsui | task/design-system-audit-serial | 490d07986547 | 2026-11-13T16:30Z |
+| T805 | dsui | task/design-system-audit-serial | 786db29ed0db | 2026-11-13T16:34Z |
 
 ## log
+- 261113 T805 done
 - 261113 T804 done
 - 261113 T803 done
 - 261113 video UX: adopting bounded caption-preview and visual-template proposals; planning isolated from active si8 and dsui groups
@@ -181,4 +183,3 @@
 - 261113 T791 done
 - 261113 T790 done
 - 261113 T789 done
-- 261113 T788 done
