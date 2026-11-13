@@ -163,17 +163,13 @@
 | T808 | dsui | task/design-system-audit-serial | 87bd8b2354f5 | 2026-11-13T16:41Z |
 | T809 | dsui | task/design-system-audit-serial | d8dad5d8c0dc | 2026-11-13T16:43Z |
 | T810 | dsui | task/design-system-audit-serial | f9d60eefa35c | 2026-11-13T16:47Z |
-| T819 | vdux | task/video-ux-serial | 567a50f7b49d | 2026-11-13T16:48Z |
 | T811 | dsui | task/design-system-audit-serial | 68c3b3e7abba | 2026-11-13T16:49Z |
 | T812 | dsui | task/design-system-audit-serial | 3be636499bb6 | 2026-11-13T16:51Z |
 | T813 | dsui | task/design-system-audit-serial | 8c72529bda23 | 2026-11-13T16:53Z |
-| T820 | vdux | task/video-ux-serial | 1f9e87bbdb96 | 2026-11-13T16:54Z |
 | T814 | dsui | task/design-system-audit-serial | 63a293f63b22 | 2026-11-13T16:54Z |
 | T815 | dsui | task/design-system-audit-serial | d26c3d31655d | 2026-11-13T16:56Z |
 | T821 | dsui | task/design-system-audit-serial | 7b15f73a0a56 | 2026-11-13T17:01Z |
 | T822 | dsui | task/design-system-audit-serial | 6ab1b18c33fc | 2026-11-13T17:02Z |
-| T817 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:04Z |
-| T818 | vdux | task/video-ux-serial | 4860c0dc18ef | 2026-11-13T17:05Z |
 | T823 | dsui | task/design-system-audit-serial | c1fe104bdc95 | 2026-11-13T17:10Z |
 | T824 | dsui | task/design-system-audit-serial | 715e82af465f | 2026-11-13T17:11Z |
 | T825 | dsui | task/design-system-audit-serial | 9b9c8b59f956 | 2026-11-13T17:12Z |
