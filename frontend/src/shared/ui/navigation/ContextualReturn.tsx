@@ -1,6 +1,6 @@
-import { ArrowLeft } from 'lucide-react'
 import { safeInternalPath } from '@/shared/lib/navigation'
-import { buttonStyles } from '../button/buttonStyles'
+import { ReturnIcon } from './ReturnIcon'
+import { returnControlStyles } from './returnControlStyles'
 import { useNavigationContext, type NavigationLinkProps } from './context'
 
 function NativeLink(props: NavigationLinkProps) {
@@ -17,9 +17,13 @@ export function ContextualReturn({ className }: { className?: string }) {
   if (!navigation || !destination || !safeInternalPath(destination.href)) return null
   const Link = navigation.Link ?? NativeLink
   return (
-    <Link href={destination.href} className={buttonStyles({ variant: 'ghost', className })}>
-      <ArrowLeft aria-hidden="true" className="size-4" />
-      {destination.label}
+    <Link
+      href={destination.href}
+      aria-label={destination.label}
+      title={destination.label}
+      className={returnControlStyles(className)}
+    >
+      <ReturnIcon />
     </Link>
   )
 }

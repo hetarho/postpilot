@@ -23,6 +23,7 @@ describe('StepBar', () => {
     expect(bar).toHaveAttribute('data-action-bar', 'step')
     expect(bar).toHaveClass('sticky', 'bottom-0', 'mt-auto')
     const previous = screen.getByRole('button', { name: '이전' })
+    expect(previous).toHaveAttribute('title', '이전')
     expect(previous).toHaveClass('ui-button-icon')
     expect(previous).toHaveTextContent('')
     const next = screen.getByRole('button', { name: '다음' })
@@ -38,5 +39,16 @@ describe('StepBar', () => {
 
     await user.click(previous)
     expect(back).toHaveBeenCalledOnce()
+  })
+
+  it('does not invoke a disabled return', async () => {
+    const user = userEvent.setup()
+    const back = vi.fn()
+    render(<StepBarBack label="스토리라인으로 돌아가기" onClick={back} disabled />)
+    const previous = screen.getByRole('button', { name: '스토리라인으로 돌아가기' })
+    expect(previous).toBeDisabled()
+    expect(previous).toHaveAttribute('title', '스토리라인으로 돌아가기')
+    await user.click(previous)
+    expect(back).not.toHaveBeenCalled()
   })
 })

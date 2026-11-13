@@ -15,6 +15,8 @@ describe('injected navigation primitives', () => {
       </NavigationProvider>,
     )
     expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.getByRole('link')).toHaveAttribute('title', 'Return to filtered history')
+    expect(screen.getByRole('link').querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
     expect(screen.getByRole('link', { name: 'Return to filtered history' })).toHaveAttribute(
       'href',
       '/history?status=failed',
