@@ -1,3 +1,4 @@
+import { SurfaceButton } from '@/shared/ui'
 import { clsx } from 'clsx'
 import { useEffect, useRef } from 'react'
 import { useNavigate } from '@tanstack/react-router'
@@ -136,7 +137,9 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                   ['/clips/new', 'setup.ready.clip', Clapperboard],
                 ] as const
               ).map(([target, label, Icon], position) => (
-                <button
+                <SurfaceButton
+                  presentation="card"
+                  padding="none"
                   key={target}
                   type="button"
                   onClick={() => controller.finish(target)}
@@ -156,7 +159,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                     aria-hidden="true"
                     className="text-content-tertiary size-6 shrink-0"
                   />
-                </button>
+                </SurfaceButton>
               ))}
             </div>
           )}

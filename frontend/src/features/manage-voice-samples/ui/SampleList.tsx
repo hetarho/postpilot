@@ -1,3 +1,4 @@
+import { SurfaceButton } from '@/shared/ui'
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
@@ -59,10 +60,11 @@ function OwnedSampleList({
         <ul className="divide-divider divide-y">
           {samples.map((sample) => (
             <li key={sample.id}>
-              <button
+              <SurfaceButton
+                presentation="row"
                 type="button"
                 onClick={() => setOpened(sample)}
-                className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-14 w-full items-center gap-3 py-2 text-left"
+                className="gap-3"
               >
                 <span className="min-w-0 flex-1">
                   <Typography variant="body" as="span" className="block truncate">
@@ -74,7 +76,7 @@ function OwnedSampleList({
                   </Typography>
                 </span>
                 {sample.hasPhoto && <Badge>{t('samples.photo')}</Badge>}
-              </button>
+              </SurfaceButton>
             </li>
           ))}
         </ul>

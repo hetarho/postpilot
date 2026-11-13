@@ -1,3 +1,4 @@
+import { SurfaceButton } from '@/shared/ui'
 import { useEffect, useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -517,12 +518,13 @@ function BlockRow({
 
   return (
     <div>
-      <button
+      <SurfaceButton
+        presentation="row"
         type="button"
         aria-expanded={open}
         aria-controls={open ? `${id}-fields` : undefined}
         onClick={() => context.onOpen(block.id)}
-        className="hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 w-full min-w-0 items-center gap-2 rounded-md px-1 text-left"
+        className="gap-2"
       >
         <Badge tone={block.kind === 'repeat' ? 'accent' : 'neutral'}>
           {t(`builder.palette.${blockKindKey(block)}`)}
@@ -543,7 +545,7 @@ function BlockRow({
         >
           {summary || t(`composition.placeholder.${blockKindKey(block)}`)}
         </span>
-      </button>
+      </SurfaceButton>
 
       {open && (
         <div id={`${id}-fields`} className="pt-1 pb-3">

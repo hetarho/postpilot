@@ -1,3 +1,4 @@
+import { SurfaceButton } from '@/shared/ui'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
@@ -214,7 +215,9 @@ export function ModelPicker({ stage }: { stage: StageName }) {
           const free = model.access?.[stage]?.grade === 'free'
           const checked = (pendingKey || selectedKey) === key
           return (
-            <button
+            <SurfaceButton
+              presentation="card"
+              padding="none"
               key={key}
               type="button"
               role="radio"
@@ -254,7 +257,7 @@ export function ModelPicker({ stage }: { stage: StageName }) {
               >
                 {checked && <Check className="size-4" />}
               </span>
-            </button>
+            </SurfaceButton>
           )
         })}
       </div>
