@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:46Z | T802 | main | 046f7686b444 |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:49Z | T820 | task/video-ux-serial | a4dd51dc2af3 |
-| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:47Z | T811 | task/design-system-audit-serial | 68c3b3e7abba |
+| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:49Z | - | task/design-system-audit-serial | 68c3b3e7abba |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -173,8 +173,10 @@
 | T809 | dsui | task/design-system-audit-serial | d8dad5d8c0dc | 2026-11-13T16:43Z |
 | T810 | dsui | task/design-system-audit-serial | f9d60eefa35c | 2026-11-13T16:47Z |
 | T819 | vdux | task/video-ux-serial | 567a50f7b49d | 2026-11-13T16:48Z |
+| T811 | dsui | task/design-system-audit-serial | 68c3b3e7abba | 2026-11-13T16:49Z |
 
 ## log
+- 261113 T811 done
 - 261113 T819 done
 - 261113 fix loading: consistent shared feedback in voice prompts, saved replies, memory candidate reads and refund history; three presentation-only files, existing complete regression scope retained
 - 261113 T810 done
@@ -194,4 +196,3 @@
 - 261113 video UX: adopting bounded caption-preview and visual-template proposals; planning isolated from active si8 and dsui groups
 - 261113 T795 done
 - 261113 gusta-create-task THEME r44: T803–T816; shared foundation then return/resource/clip/attachment lanes and complete-route audit
-- 261113 gusta-update-ssot THEME start; audit all product routes for shared navigation, catalogs, clip workflow and native-control escapes in isolated checkout
