@@ -1,8 +1,10 @@
 import { forwardRef, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { twMerge } from '@/shared/lib'
 import { ActionBar } from '../action-bar/ActionBar'
 import { Button, type ButtonProps } from '../button/Button'
+import { ReturnIcon } from '../navigation/ReturnIcon'
+import { returnControlStyles } from '../navigation/returnControlStyles'
 import { Typography } from '../typography/Typography'
 
 /** Guide: the ONE bottom bar of every stepped screen — the writing guide, 글 다듬기, 글 완성's
@@ -71,10 +73,12 @@ export function StepBarBack({
       variant="secondary"
       size="icon"
       aria-label={label}
+      title={label}
+      className={returnControlStyles()}
       disabled={disabled}
       onClick={onClick}
     >
-      <ArrowLeft aria-hidden="true" className="size-5" />
+      <ReturnIcon />
     </Button>
   )
 }

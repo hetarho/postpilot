@@ -28,6 +28,7 @@ it('names its one icon return with its actual destination and delegates normal c
   const link = screen.getByRole('link', { name: destination.label })
   expect(screen.getAllByRole('link')).toHaveLength(1)
   expect(link).toHaveAttribute('href', destination.href)
+  expect(link).toHaveAttribute('title', destination.label)
   expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   expect(screen.getByText(destination.label)).toHaveClass('sr-only')
   expect(click(link)).toBe(true)

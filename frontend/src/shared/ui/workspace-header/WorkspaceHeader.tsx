@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { ArrowLeft } from 'lucide-react'
-import { buttonStyles } from '../button/buttonStyles'
+import { ReturnIcon } from '../navigation/ReturnIcon'
+import { returnControlStyles } from '../navigation/returnControlStyles'
 import { Typography } from '../typography/Typography'
 
 /** Presentation only: the owner resolves the destination and flushes its work before leaving. */
@@ -27,7 +27,8 @@ export function WorkspaceHeader({
       <a
         href={returnTo.href}
         aria-label={returnTo.label}
-        className={buttonStyles({ variant: 'secondary', size: 'icon', className: 'shadow-sm' })}
+        title={returnTo.label}
+        className={returnControlStyles()}
         onClick={(event) => {
           if (
             !returnTo.onReturn ||
@@ -43,7 +44,7 @@ export function WorkspaceHeader({
           void returnTo.onReturn()
         }}
       >
-        <ArrowLeft aria-hidden="true" className="size-5" />
+        <ReturnIcon />
         <span className="sr-only">{returnTo.label}</span>
       </a>
       {steps && (
