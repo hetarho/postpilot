@@ -252,6 +252,7 @@ try {
         const ctx = await contextFor(width, theme);
         const page = await ctx.newPage();
         for (const r of unique.values()) {
+          await page.setViewportSize({width, height:width >= 1920 ? 1080 : width >= 768 ? 900 : 800})
           page.removeAllListeners("pageerror");
           const errors = [];
           page.on("pageerror", (e) => errors.push(e.message));
