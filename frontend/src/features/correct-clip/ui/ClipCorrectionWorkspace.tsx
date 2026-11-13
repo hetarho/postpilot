@@ -296,17 +296,14 @@ export function ClipCorrectionWorkspace({
       : expandedPreview
         ? CLIP_TIMELINE.expandedPreviewViewportFraction
         : CLIP_TIMELINE.previewViewportFraction
-  const desiredPreviewHeight = viewport.height * previewFraction
   const controlsHeight = expandedPreview
     ? CLIP_TIMELINE.minExpandedPreviewControlsHeightPx
     : CLIP_TIMELINE.minPreviewControlsHeightPx
-  const canPinPreview =
-    pinPreview &&
-    (previewBudget ?? Infinity) >= controlsHeight &&
-    desiredPreviewHeight >= controlsHeight
+  const desiredPreviewHeight = Math.max(controlsHeight, viewport.height * previewFraction)
+  const canPinPreview = pinPreview && (previewBudget ?? Infinity) >= controlsHeight
   const previewHeight = canPinPreview
     ? Math.min(previewBudget ?? Infinity, desiredPreviewHeight)
-    : Math.max(controlsHeight, desiredPreviewHeight)
+    : desiredPreviewHeight
   return (
     <section
       ref={container}

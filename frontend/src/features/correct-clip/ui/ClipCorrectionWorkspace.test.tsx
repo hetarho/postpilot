@@ -1,7 +1,7 @@
 import { useReducer, useState } from 'react'
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { clipTimelineReducer, createClipTimeline } from '@/entities/clip-plan'
 import { clipTimelineFixture } from '@/test/clip-editing'
 import { ClipCorrectionWorkspace, type ClipEditorPreviewProps } from './ClipCorrectionWorkspace'
@@ -13,8 +13,14 @@ vi.mock('@/entities/clip-preview', async (original) => ({
 }))
 
 const initialHeight = window.innerHeight
+beforeEach(() => {
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+    () => ({ top: window.innerHeight, bottom: window.innerHeight, height: 0 }) as DOMRect,
+  )
+})
 afterEach(() => {
   cleanup()
+  vi.restoreAllMocks()
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: initialHeight })
 })
 
@@ -79,10 +85,25 @@ it('expands and compacts the same preview while retaining its mode, selection an
     fireEvent(window, new Event('resize'))
   })
   expect(frame).toHaveStyle({ maxHeight: '260px' })
-  expect(frame).toHaveAttribute('data-pinned', 'false')
+  await waitFor(() => expect(frame).toHaveAttribute('data-pinned', 'true'))
   await userEvent.click(screen.getByRole('button', { name: '미리보기 작게 보기' }))
   expect(frame).toHaveStyle({ maxHeight: '200px' })
-  expect(frame).toHaveAttribute('data-pinned', 'false')
+  expect(frame).toHaveAttribute('data-pinned', 'true')
   expect(screen.getByTestId('media')).toBe(media)
   expect(screen.getByRole('button', { name: 'flow' })).toBeInTheDocument()
+})
+
+it('pins the minimum compact frame when it fits and unpins when editing room is insufficient', async () => {
+  Object.defineProperty(window, 'innerHeight', { configurable: true, value: 600 })
+  render(<Harness />)
+  const frame = screen.getByTestId('frame')
+  await act(() => new Promise(requestAnimationFrame))
+  expect(frame).toHaveStyle({ maxHeight: '200px' })
+  await waitFor(() => expect(frame).toHaveAttribute('data-pinned', 'true'))
+  act(() => {
+    Object.defineProperty(window, 'innerHeight', { configurable: true, value: 180 })
+    fireEvent(window, new Event('resize'))
+  })
+  await waitFor(() => expect(frame).toHaveAttribute('data-pinned', 'false'))
+  expect(frame).toHaveStyle({ maxHeight: '200px' })
 })
