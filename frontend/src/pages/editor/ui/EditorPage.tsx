@@ -6,7 +6,13 @@ import { useSession } from '@/entities/session'
 import { useVoices } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
-import { AppFailureMessage, Button, typographyStyles, pageStyles } from '@/shared/ui'
+import {
+  AppFailureMessage,
+  Button,
+  WorkspaceHeader,
+  typographyStyles,
+  pageStyles,
+} from '@/shared/ui'
 import { DraftEditor } from './DraftEditor'
 import { editorNavigationCopy } from '../config/i18n'
 
@@ -111,28 +117,13 @@ export function PostEditorPage() {
 }
 
 function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () => void }) {
-  const { t, i18n } = useTranslation(['posts', 'common'])
-  const { user } = useSession()
-  const { slug } = useParams({ strict: false })
-  const navigate = useNavigate()
-  const returnTo = postReturnDestination(user?.id ?? '', slug)
-  const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
+  const { t } = useTranslation(['posts', 'common'])
   return (
     <EditorPlaceholder>
       <span role="alert" className="text-notice-danger-fg">
         {message}
       </span>
       <span className="mt-4 flex flex-wrap items-center gap-2">
-        <a
-          href={returnTo.href}
-          onClick={(event) => {
-            event.preventDefault()
-            void navigate({ href: returnTo.href })
-          }}
-          className="text-link-fg hover:text-link-fg-hover inline-flex min-h-11 items-center px-2 underline"
-        >
-          {returnTo.path === '/my' ? copy.mine : copy.home}
-        </a>
         {onRetry && (
           <Button variant="ghost" onClick={onRetry} className="underline">
             {t('action.retry', { ns: 'common' })}
@@ -144,16 +135,32 @@ function LoadFailure({ message, onRetry }: { message: ReactNode; onRetry?: () =>
 }
 
 function EditorPlaceholder({ children }: { children: ReactNode }) {
+  const { i18n } = useTranslation('posts')
+  const { user } = useSession()
+  const { slug } = useParams({ strict: false })
+  const navigate = useNavigate()
+  const returnTo = postReturnDestination(user?.id ?? '', slug)
+  const copy = editorNavigationCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   return (
     <main
       className={typographyStyles({
         variant: 'body',
         className: pageStyles({
-          width: 'workspace',
-          className: 'text-content-tertiary flex flex-col items-start py-16',
+          width: 'prose',
+          className: 'text-content-tertiary flex flex-1 flex-col items-start gap-4 pt-3 sm:pt-6',
         }),
       })}
     >
+      <WorkspaceHeader
+        returnTo={{
+          href: returnTo.href,
+          label: returnTo.path === '/my' ? copy.mine : copy.home,
+          onReturn: async () => {
+            await navigate({ href: returnTo.href })
+            window.requestAnimationFrame(() => window.scrollTo(0, returnTo.scrollY))
+          },
+        }}
+      />
       {children}
     </main>
   )

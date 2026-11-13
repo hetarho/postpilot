@@ -595,6 +595,8 @@ try {
       state: "populated",
       kind: "direct-template",
     },
+    {at:'/posts/review',state:'post-loading',kind:'post-loading-return',pending:'GetPost'},
+    {at:'/posts/new',state:'post-new-loading',kind:'post-loading-return',pending:'ListVoices'},
     {at:'/templates/template',state:'loading',kind:'loading-return'},
     {at:'/video-templates/video-template?channel=instagram_clip',state:'loading',kind:'loading-return',return:{href:'/video-templates?channel=instagram_clip',name:'영상 템플릿'}},
     {at:'/video-templates/new?channel=instagram_clip',state:'populated',kind:'scoped-return',return:{href:'/video-templates?channel=instagram_clip',name:'영상 템플릿'}},
@@ -818,6 +820,10 @@ try {
             g.alerts.length || /불러오지 못|오류|연결/.test(g.body),
             `Expected mounted error on ${c.at}`,
           );
+        if (c.kind === 'post-loading-return') {
+          assert.ok(g.methods.includes(c.pending), 'Actual editor prerequisite is pending')
+          assert.ok(/불러오|Loading/.test(g.body), 'Pending editor keeps its loading state')
+        }
         if (c.kind === 'loading-return') {
           assert.ok(g.methods.some((name) => /^(Get|List).*Template/.test(name)), 'Actual template read is pending')
           assert.ok(/불러오|Loading/.test(g.body), 'Pending template has a visible loading state')

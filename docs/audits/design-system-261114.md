@@ -6,7 +6,7 @@ Scope: the complete product router, public/recovery routes and administration. T
 
 | Surface family | Sources inspected / meaningful states | Result |
 | --- | --- | --- |
-| Returns and docks | shared navigation, WorkspaceHeader, StepBar; creation, failure, saved result, local previous-step | T803/T805–807: one round secondary arrow, localized destination name/title, original link/modified-click semantics and previous-step actions; no duplicate shell returns. Authoring duplicate glyph repaired. |
+| Returns and docks | shared navigation, WorkspaceHeader, StepBar; creation, failure, saved result, local previous-step | T803/T805–807/T826: one round secondary arrow, localized destination name/title, original link/modified-click semantics and previous-step actions; no duplicate shell returns. Authoring duplicate glyph repaired. |
 | Generic controls | shared SurfaceButton, MediaAction, RadioTile; pickers, previews, media, financial forms | T804/T810/T813–815/T821: shared focus, touch and selection behavior; no generic native button/text input/textarea remains outside shared/ui. |
 | Saved/draft directories | post/video templates, spoken voices, guideline sessions, memories/writing voices | T808–809: DirectoryItem cards, metadata/status/count/availability, separate delete/sample targets and one creation dock; existing disclosure directories retained where already conforming. |
 | Post/video template host and wizard | method choice, AI editor, direct editor, pending/conflict/failed publication, examples | T807/T810/T821: shared return, title, choice, card/well and dock recipes; preview text and all editing/publication behavior retained. |
@@ -112,6 +112,8 @@ Task-stage probes found stale harness expectations (canonical hubs, current Kore
 
 Independent Codex fallback review at `018f7c690` found no substantiated product regression and three harness gaps: effective day/night theme mapping, shell-return presence/exact context, and desktop lifecycle device contexts. All three were repaired before the final gate. Strengthened context checks additionally found and repaired a missing-channel video-template return (`channel=undefined`); default Naver and explicit Instagram destinations now have behavioral regressions.
 
-Final full-suite/build/browser receipts: pending coordinator gate. This line is updated only from actual completed receipts.
+First final gate at `582bac463`: 12 of 13 checks passed (628 FE files / 5,112 tests; production build; 90 Go packages; 69 deployment tests). Browser matrix completed 948 combinations: all 756 route/device/theme combinations and 190 state combinations passed; the same legacy text return on the post error page failed in both themes. Original receipts remain in `tmp/browser-media/design-system-round1/receipts.json`; no unavailable route passed. T826 replaces that failure return and the pending/new-draft placeholders with WorkspaceHeader, preserving contextual destinations, standard modified-link behavior and retryability. Two affected files / 44 lifecycle/navigation tests pass, including new pending-read regressions. The browser fixture now also holds actual GetPost/ListVoices prerequisites pending.
+
+Final repaired full-suite/build/browser receipts: pending coordinator gate. This line is updated only from actual completed receipts.
 
 Limits: local deterministic RPC fixtures verify presentation and interaction, not live provider calls, payment authorization, physical software keyboards, native browser chrome zoom, remote storage/CORS, GPU qualification or media export fidelity. The zoom check uses 200% CSS zoom and the keyboard check resizes available height; they do not certify real-device browser behavior. Existing unqualified media tasks remain separate.

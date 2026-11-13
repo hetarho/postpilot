@@ -5,6 +5,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { createFakeAuthTransport } from '@/test/session'
 import {
   GUIDE,
   USER,
@@ -31,6 +32,27 @@ afterEach(() => {
 })
 
 describe('opening a post', () => {
+  it.each([
+    ['/posts/pending', 'GetPost'],
+    ['/posts/new', 'ListVoices'],
+  ])('retains the named round return while %s waits for its first read', async (path, pending) => {
+    const base = createFakeAuthTransport({ user: USER })
+    const transport = new Proxy(base, {
+      get(target, property) {
+        if (property !== 'unary') return Reflect.get(target, property)
+        return async (...args: unknown[]) => {
+          if ((args[0] as { name: string }).name === pending) await new Promise(() => {})
+          return Reflect.apply(target.unary, target, args)
+        }
+      },
+    })
+    renderAppAt(path, { transport })
+    const back = await screen.findByRole('link', { name: '네이버 블로그로 돌아가기' })
+    expect(back).toHaveAttribute('href', '/naver-blog')
+    expect(back).toHaveAttribute('title', '네이버 블로그로 돌아가기')
+    expect(screen.getAllByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveLength(1)
+  })
+
   it('restores the title and the memo', async () => {
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
@@ -101,13 +123,20 @@ describe('opening a post', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('다른 사람의 글이에요')
-    expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveAttribute(
+      'title',
+      '네이버 블로그로 돌아가기',
+    )
   })
 
   it('reports an unknown slug as missing', async () => {
     renderAppAt('/posts/20260101-ghost', { user: USER })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('없는 글이에요')
+    expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveAttribute(
+      'title',
+      '네이버 블로그로 돌아가기',
+    )
     // Only a failure that is not an answer is worth asking again.
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()
   })
