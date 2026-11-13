@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
-| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | - | main | d7a9526b3c1f |
+| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | T801 | main | 3d591e1ae852 |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:23Z | - | task/video-ux | fcbdaab664b2 |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:41Z | T809 | task/design-system-audit-serial | d8dad5d8c0dc |
 
