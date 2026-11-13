@@ -151,7 +151,6 @@
 - 261113 decided review/video-editing-ux-261114 T817 T818 T819 T820: video editing UX proposals → adopt bounded pinned caption preview, readable renderer samples, explicit preview expansion and static visual template summaries (alt: retain prose-only surfaces); explicit invocation authorizes UI policy CLIP r78, APIs/storage/media semantics preserved. Isolated group vdux-261114; T820 follows T797/T798 to avoid active loading ownership.
 - 261113 decided T804: Parallel work-group integration rejects pre-existing spec warnings although ordinary lint succeeds; use the supported serial vibe host and retain the complete affected-unit, full CI-equivalent and browser gates. Preserve approved T803 source and review evidence. Alternative: edit historical spec records or modify package internals; neither belongs to this request.
 - 261113 decided review/video-editing-ux-261114 T819: Parallel-group integration wrapper rejects unchanged legacy spec warnings despite lint exit 0 → collect independently reviewed submissions through supervised native Git/serial task APIs, preserving actual review snapshots, affected tests, spec lint and all ARCH-31 final checks (alt: leave approved changes parked). No warning suppression, package patch, forged group completion or verification reduction; original failed group/runtime remains preserved.
-- 261113 parked T817 T818 T819 T820: Video UI implementation and independent reviews complete on task/video-ux-serial; strict6-context mobile gate passed. Final batch reached vdux3/3 failure cap:4 loading assertions plus TypeScript role-query option. Own test option is fixed and reviewed at bdef561; loading owner correction is arriving on main. No code landing/push, reset, alternate tag or further batch retry. Await explicit owner authorization to reset vdux and rerun all required checks before landing.
 
 ## unlanded
 | id | tag | branch | commit | at |
@@ -193,6 +192,7 @@
 | T826 | dsui | task/design-system-audit-serial | 4f24088b69a8 | 2026-11-13T18:03Z |
 
 ## log
+- 261113 Owner explicitly resumed video UI repair and main integration; archived prior3/3 gate history and reset vdux once without changing required checks.
 - 261113 dsui: preserve first gate failure 1/3 and 22-case recovery pass; defer the queued second gate while the active loading owner validates overlapping editor/template screens, then synchronize published changes before final verification
 - 261113 T826 done
 - 261113 ldui: loading UI T795-T802 complete; reviewed candidate 7cc538ae8479 fixed on task/loading-ui-final; final ARCH batch retry is queued behind the shared design-system heavy check; no independent UI/video scope claimed.
@@ -212,4 +212,3 @@
 - 261113 T814 done
 - 261113 T820 done
 - 261113 T813 done
-- 261113 T812 done
