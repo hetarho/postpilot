@@ -10,7 +10,7 @@ import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-templ
 import { useClipProject } from '@/entities/clip-project'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
-import { Button, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
+import { Button, LoadingState, Notice, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 export function VideoTemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
@@ -40,9 +40,11 @@ export function VideoTemplatePage() {
     return (
       <main className={pageStyles({ width: 'wide' })}>
         <BackLink />
-        <Typography variant="body" role="status" className="mt-8">
-          {t('state.loading', { ns: 'common' })}
-        </Typography>
+        <LoadingState
+          variant="detail"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
       </main>
     )
   if (templateId && !stored && !isFetching)
@@ -80,12 +82,7 @@ function SeededClipTemplateWizard({
 }) {
   const { t } = useTranslation('common')
   const query = useClipProject(ownerId, fromClip)
-  if (fromClip && query.isPending)
-    return (
-      <Typography variant="body" role="status">
-        {t('state.loading')}
-      </Typography>
-    )
+  if (fromClip && query.isPending) return <LoadingState variant="form" label={t('state.loading')} />
   const project = fromClip ? query.data : undefined
   const seed = project
     ? clipWizardSeed({
@@ -221,9 +218,11 @@ function VideoTemplateHost({
             )}
           </Typography>
           {summaries.isPending && (
-            <Typography variant="body" role="status" className="mt-4">
-              {t('directory.checkingWork', { ns: 'clips' })}
-            </Typography>
+            <LoadingState
+              variant="inline"
+              label={t('directory.checkingWork', { ns: 'clips' })}
+              className="mt-4"
+            />
           )}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-4">

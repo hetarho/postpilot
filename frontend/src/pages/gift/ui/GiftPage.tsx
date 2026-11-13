@@ -3,7 +3,7 @@ import { Link, useLoaderData, useParams } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useGift, type VoucherState } from '@/entities/voucher'
 import { RedeemVoucher, clearPendingGift } from '@/features/redeem-voucher'
-import { AppFailureMessage, Notice, Typography, buttonStyles } from '@/shared/ui'
+import { AppFailureMessage, LoadingState, Notice, Typography, buttonStyles } from '@/shared/ui'
 
 const UNAVAILABLE_HEADING = {
   redeemed: 'gift.redeemed',
@@ -32,12 +32,11 @@ export function GiftPage() {
 
   return (
     <main className="bg-surface-base text-content-primary flex min-h-full items-center justify-center px-4 py-10 sm:px-6">
-      <section className="w-full max-w-sm text-center" aria-labelledby="gift-title">
-        {isPending && (
-          <Typography variant="body" as="h1" id="gift-title" className="text-content-secondary">
-            {t('gift.loading')}
-          </Typography>
-        )}
+      <section
+        className="w-full max-w-sm text-center"
+        aria-labelledby={isPending ? undefined : 'gift-title'}
+      >
+        {isPending && <LoadingState variant="detail" label={t('gift.loading')} rows={1} />}
         {!isPending && gift?.state === 'redeemable' && (
           <>
             <Typography variant="body" className="text-content-secondary">
