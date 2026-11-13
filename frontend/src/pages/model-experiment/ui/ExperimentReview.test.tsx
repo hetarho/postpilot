@@ -206,7 +206,7 @@ it('reads a 말투 반영 비교 as the answer and each piece with its compariso
   )
 })
 
-it('forwards the current owner namespace and removes previous-owner results while the next read is pending', () => {
+it('forwards the current owner namespace and removes previous-owner results while the next read is pending', async () => {
   mocks.useExperiment.mockImplementation((_id: string, owner: string) =>
     owner === 'alice'
       ? { experiment, isPending: false, isError: false }
@@ -224,7 +224,9 @@ it('forwards the current owner namespace and removes previous-owner results whil
   expect(mocks.useExperiment).toHaveBeenLastCalledWith('experiment-1', 'bob')
   expect(screen.queryByText('A 결과')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /결과 . 복사/ })).not.toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중')
+  await waitFor(() =>
+    expect(screen.getByRole('status')).toHaveTextContent('비교 결과를 불러오는 중'),
+  )
 })
 
 it('announces a failed read in the same status region and keeps the exit and retry', async () => {
@@ -239,7 +241,8 @@ it('announces a failed read in the same status region and keeps the exit and ret
     <ExperimentReview id="experiment-1" backLink={() => <a href="/tests/history">기록으로</a>} />,
   )
   const status = screen.getByRole('status')
-  expect(status).toHaveTextContent('비교 결과를 불러오는 중')
+  await waitFor(() => expect(status).toHaveTextContent('비교 결과를 불러오는 중'))
+  expect(status.closest('[aria-busy="true"]')).toBeNull()
   expect(status.nextElementSibling).toHaveAttribute('aria-hidden', 'true')
   mocks.useExperiment.mockReturnValue({
     experiment: undefined,

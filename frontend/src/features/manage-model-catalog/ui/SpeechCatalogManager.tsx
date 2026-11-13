@@ -6,6 +6,7 @@ import {
   AppFailureMessage,
   Button,
   FieldLabel,
+  LoadingState,
   Notice,
   TextField,
   Typography,
@@ -52,11 +53,7 @@ export function SpeechCatalogManager() {
         </Notice>
       )}
       {catalog.failure && <AppFailureMessage failure={catalog.failure} />}
-      {catalog.isPending && (
-        <Typography variant="body" role="status">
-          {t('catalog.loading')}
-        </Typography>
-      )}
+      {catalog.isPending && <LoadingState variant="list" label={t('catalog.loading')} />}
       {catalog.hasData && !catalog.isPending && !catalog.isError && rows.size === 0 && (
         <Typography variant="body">{t('speechAdmin.empty')}</Typography>
       )}

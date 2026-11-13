@@ -20,11 +20,13 @@ import {
   Badge,
   Button,
   LoadingState,
+  LoadingStatus,
   Notice,
   SegmentedControl,
   Textarea,
   Typography,
   pageStyles,
+  typographyStyles,
 } from '@/shared/ui'
 
 export function ExperimentReview({
@@ -185,16 +187,16 @@ function Placeholder({
   retryLabel: string
 }) {
   return (
-    <main aria-busy={isPending} className={pageStyles({ className: 'py-10' })}>
+    <main className={pageStyles({ className: 'py-10' })}>
       {backLink}
-      <Typography
-        variant="body"
-        as="div"
-        role="status"
-        className={isPending ? 'sr-only' : 'text-content-tertiary mt-4'}
-      >
-        {message}
-      </Typography>
+      <LoadingStatus
+        label={message}
+        className={
+          isPending
+            ? 'sr-only'
+            : typographyStyles({ variant: 'body', className: 'text-content-tertiary mt-4 block' })
+        }
+      />
       {isPending ? (
         <div aria-hidden="true">
           <LoadingState variant="detail" label={message} className="mt-4" />
