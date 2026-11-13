@@ -18,11 +18,11 @@ afterEach(() => {
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: initialHeight })
 })
 
-function Preview({ timeMs, maxHeight, corner }: ClipEditorPreviewProps) {
+function Preview({ timeMs, maxHeight, corner, stickyTop }: ClipEditorPreviewProps) {
   const [flow, setFlow] = useState(false)
   return (
     <div>
-      <div data-testid="frame" style={{ maxHeight }}>
+      <div data-testid="frame" data-pinned={stickyTop !== undefined} style={{ maxHeight }}>
         <video data-testid="media" />
         {corner}
       </div>
@@ -78,9 +78,11 @@ it('expands and compacts the same preview while retaining its mode, selection an
     Object.defineProperty(window, 'innerHeight', { configurable: true, value: 400 })
     fireEvent(window, new Event('resize'))
   })
-  expect(frame).toHaveStyle({ maxHeight: '140px' })
+  expect(frame).toHaveStyle({ maxHeight: '260px' })
+  expect(frame).toHaveAttribute('data-pinned', 'false')
   await userEvent.click(screen.getByRole('button', { name: '미리보기 작게 보기' }))
-  expect(frame).toHaveStyle({ maxHeight: '80px' })
+  expect(frame).toHaveStyle({ maxHeight: '200px' })
+  expect(frame).toHaveAttribute('data-pinned', 'false')
   expect(screen.getByTestId('media')).toBe(media)
   expect(screen.getByRole('button', { name: 'flow' })).toBeInTheDocument()
 })

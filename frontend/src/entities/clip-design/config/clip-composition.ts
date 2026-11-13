@@ -61,6 +61,9 @@ export const CLIP_TIMELINE = {
   compactViewportHeight: 520,
   compactPreviewFraction: 0.2,
   expandedCompactPreviewFraction: 0.35,
+  // Room for two columns of coarse-pointer frame controls on a 9:16 frame.
+  minPreviewControlsHeightPx: 200,
+  minExpandedPreviewControlsHeightPx: 260,
   fieldGapPx: 8,
   minimumEditingRoomPx: 96,
   pixelsPerSecond: 80,

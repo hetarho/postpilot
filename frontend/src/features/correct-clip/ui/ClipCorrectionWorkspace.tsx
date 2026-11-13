@@ -285,6 +285,28 @@ export function ClipCorrectionWorkspace({
   const failure = correction.failure ?? renderFailure
   const refresh = captionRefresh(draft)
   const captionSlot = draft.nativeComposition ? narrationSlot(draft, timeline.timeMs) : undefined
+  // A 9:16 frame narrower than two touch targets spills its corner controls over
+  // the editor. When the available budget cannot hold them, let the document
+  // scroll instead of pinning an unusably small frame over the focused field.
+  const previewFraction =
+    viewport.height < CLIP_TIMELINE.compactViewportHeight
+      ? expandedPreview
+        ? CLIP_TIMELINE.expandedCompactPreviewFraction
+        : CLIP_TIMELINE.compactPreviewFraction
+      : expandedPreview
+        ? CLIP_TIMELINE.expandedPreviewViewportFraction
+        : CLIP_TIMELINE.previewViewportFraction
+  const desiredPreviewHeight = viewport.height * previewFraction
+  const controlsHeight = expandedPreview
+    ? CLIP_TIMELINE.minExpandedPreviewControlsHeightPx
+    : CLIP_TIMELINE.minPreviewControlsHeightPx
+  const canPinPreview =
+    pinPreview &&
+    (previewBudget ?? Infinity) >= controlsHeight &&
+    desiredPreviewHeight >= controlsHeight
+  const previewHeight = canPinPreview
+    ? Math.min(previewBudget ?? Infinity, desiredPreviewHeight)
+    : Math.max(controlsHeight, desiredPreviewHeight)
   return (
     <section
       ref={container}
@@ -364,19 +386,9 @@ export function ClipCorrectionWorkspace({
               onTimeChange: seek,
               onDisplayedFrame: setFrame,
               suspended: false,
-              maxHeight: Math.min(
-                previewBudget ?? Infinity,
-                viewport.height *
-                  (viewport.height < CLIP_TIMELINE.compactViewportHeight
-                    ? expandedPreview
-                      ? CLIP_TIMELINE.expandedCompactPreviewFraction
-                      : CLIP_TIMELINE.compactPreviewFraction
-                    : expandedPreview
-                      ? CLIP_TIMELINE.expandedPreviewViewportFraction
-                      : CLIP_TIMELINE.previewViewportFraction),
-              ),
+              maxHeight: previewHeight,
               compact: true,
-              stickyTop: pinPreview ? viewport.offsetTop : undefined,
+              stickyTop: canPinPreview ? viewport.offsetTop : undefined,
               // ONE info control holding what the draft preview cannot promise about the delivered
               // file plus every notice that names no cut and no caption (CLIP-148), on the frame it
               // is about — a video player's corner, not a row of the page.

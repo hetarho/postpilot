@@ -484,6 +484,7 @@ it('carries its scrubber, its info control and its download on the preview itsel
     '미리보기 소리 듣기',
     '미리보기 새로고침',
     '흐름 보기',
+    '미리보기 크게 보기',
     '이 미리보기에 대해',
   ])
   await userEvent.click(about)
