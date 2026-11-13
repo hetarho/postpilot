@@ -285,9 +285,8 @@ export function ClipCorrectionWorkspace({
   const failure = correction.failure ?? renderFailure
   const refresh = captionRefresh(draft)
   const captionSlot = draft.nativeComposition ? narrationSlot(draft, timeline.timeMs) : undefined
-  // A 9:16 frame narrower than two touch targets spills its corner controls over
-  // the editor. When the available budget cannot hold them, let the document
-  // scroll instead of pinning an unusably small frame over the focused field.
+  // Keep the 9:16 frame large enough for its wrapped corner controls to clear
+  // the central play target. Unpin when that frame would crowd the focused field.
   const previewFraction =
     viewport.height < CLIP_TIMELINE.compactViewportHeight
       ? expandedPreview
