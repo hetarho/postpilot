@@ -77,7 +77,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T795 | Build accessible contextual loading primitives | ARCH THEME | - | doing@261113.ldui |
 | T796 | Stabilize route, history and voice loading shells | ARCH THEME | T795 | todo |
 | T797 | Add skeletons to style and template directories | ARCH THEME | T795 | todo |
 | T798 | Add skeletons to authoring and template detail reads | ARCH THEME | T795 | todo |
@@ -92,4 +91,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T795; then T796–T802 for contextual page loading
+- gusta-implement-task T796 T797 T798
