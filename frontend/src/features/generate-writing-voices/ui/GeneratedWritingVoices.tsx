@@ -20,6 +20,7 @@ import {
   WRITING_VOICE_CANDIDATE_COUNTS,
 } from '@/entities/voice-candidate'
 import {
+  cardStyles,
   AppFailureMessage,
   Button,
   Dialog,
@@ -287,10 +288,12 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
             {state.candidates.map((candidate) => (
               <li key={`${state.resultJobId}:${candidate.id}`} className="min-w-0">
                 <article
-                  className={clsx(
-                    'flex h-full min-w-0 flex-col gap-4 rounded-lg p-5',
-                    state.selectedId === candidate.id ? 'bg-surface-recessed' : 'bg-surface-raised',
-                  )}
+                  className={cardStyles({
+                    className: clsx(
+                      'flex h-full min-w-0 flex-col gap-4',
+                      state.selectedId === candidate.id && 'ring-stroke-accent ring-2',
+                    ),
+                  })}
                 >
                   <Typography variant="eyebrow" className="text-content-secondary">
                     {t('writingCandidates.created')}

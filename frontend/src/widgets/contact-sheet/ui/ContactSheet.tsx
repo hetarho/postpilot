@@ -1,4 +1,4 @@
-import { Button } from '@/shared/ui'
+import { cardStyles, Button } from '@/shared/ui'
 import { MediaAction } from '@/shared/ui'
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -126,7 +126,10 @@ export function ContactSheet({
           return (
             <article
               key={image.filename}
-              className="bg-surface-raised w-carousel-card shrink-0 snap-start rounded-lg p-3 sm:w-60"
+              className={cardStyles({
+                padding: 'sm',
+                className: 'w-carousel-card shrink-0 snap-start sm:w-60',
+              })}
             >
               {viewUrl ? (
                 <div className="relative">
@@ -178,7 +181,10 @@ export function ContactSheet({
           return (
             <article
               key={video.filename}
-              className="bg-surface-raised w-carousel-card shrink-0 snap-start rounded-lg p-3 sm:w-60"
+              className={cardStyles({
+                padding: 'sm',
+                className: 'w-carousel-card shrink-0 snap-start sm:w-60',
+              })}
             >
               {viewUrl ? (
                 // Played in place, on demand: no autoplay and metadata only, so opening the

@@ -280,7 +280,7 @@ function BlockControls({
   // to the content as they are typed. This ref IS the saved value 취소 restores.
   const opened = useRef(block)
   return (
-    <article className="bg-surface-raised rounded-lg p-4">
+    <article className="bg-card-well rounded-lg p-4">
       <div className="flex flex-wrap items-center gap-2">
         <FieldLabel
           id={`block-type-label-${index}`}
@@ -411,7 +411,7 @@ function HeaderFields({
   // revert block edits made while the header happened to be open — the two editors are independent.
   const opened = useRef({ title: content.title, summary: content.summary, tags: [...content.tags] })
   return (
-    <div className="bg-surface-raised mt-6 grid gap-4 rounded-lg p-4 sm:mt-12">
+    <div className="bg-card-well mt-6 grid gap-4 rounded-lg p-4 sm:mt-12">
       <div>
         <FieldLabel htmlFor="generated-title">{t('edit.bodyTitle', { ns: 'posts' })}</FieldLabel>
         <TextField
