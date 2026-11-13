@@ -214,7 +214,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T775 | Share the clip design radio tile control | ARCH | T774 | todo |
 | T776 | Share dropdown directional focus movement | ARCH | T775 | todo |
 | T784 | Save owner corrections to post observations | POST GEN VIDEO ARCH | T783 | todo |
 | T785 | Give the post editor five lifecycle steps with the storyline as its own step | POST THEME GEN ARCH | - | todo |
@@ -236,10 +235,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T775 T784 T785
+- gusta-implement-task T776 T784 T785
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T775 done
 - 261113 T783 done
 - 261113 sketch storyline-separate-state done: option A (storyline as its own step, short station names, 스토리라인 작성 완료 post badge) plus a separate owner-editable observation step for posts and clips; B (end of the 생성 guide), C (two faces inside 다듬기) and D (side-by-side workbench) not taken; no ideation left open
 - 261113 gusta-create-task POST r48 GEN r32 QUOTA r40 THEME r42 CLIP r77: T783–T791 (post observation job, owner observation edits, five-step post editor, post observation step, storyline-ready post badge, clip analysis job, clip observation edits, five-step clip workspace, clip observation step); no SSOT change
@@ -259,4 +259,3 @@
 - 261113 si8: user confirmed Mac/Chrome, delegated all needed permissions and no questions through08:00KST; specifically prioritize blog/video back-button and page-layout consistency after performance.
 - 261113 si8 steering: prioritize measured real-media slow refine entry and jumping playback time; T773 bounded redundant-work fix continues separately, UI tasks wait for symptom diagnosis.
 - 261113 gusta-create-task review/performance-design-system-261113: T773–T776; coordinator-adopted bounded behavior-preserving findings, serial performance-first execution, no SSOT rev/pending changes.
-- 261113 gusta-self-improve si8 start: performance first, then shared design-system consolidation and source/token reduction; cutoff 2026-11-12T23:00Z (08:00 KST); clean main 2a224b1d, native independent scout/worker/reviewer sessions, no unrelated blocked tasks or INFRA planning.

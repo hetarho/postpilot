@@ -1,16 +1,14 @@
-import clsx from 'clsx'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ClipCaptionStyleSample, type ClipCaptionFragment } from '@/entities/clip-plan'
 import { CLIP_CAPTION_STYLES } from '@/entities/clip-design'
-import { Typography } from '@/shared/ui'
+import { radioTiles, Typography } from '@/shared/ui'
 
 /** One caption's style, chosen from EVERY approved style (CLIP-142, CLIP-143): the project's AI
  *  set bounds what a writer picks, never the owner. Each tile is the renderer's own drawing of
  *  the style (CDS-83) above its name; the first is the caption's own style — the one its plan
- *  names, or the AI set's first — drawn as it is now. Only the chosen tile is tabbable and the
- *  arrows move focus and choice together (WAI-APG radio group). While the drawings load, or
- *  when they fail, the tiles show names and stay selectable. */
+ *  names, or the AI set's first — drawn as it is now. While the drawings load, or when they
+ *  fail, the tiles show names and stay selectable. */
 export function ClipCaptionStylePicker({
   value,
   drawn,
@@ -37,47 +35,20 @@ export function ClipCaptionStylePicker({
     0,
     options.findIndex((option) => option.id === value),
   )
+  const tiles = radioTiles(options.length, chosen, (index) => onChange(options[index].id))
   return (
-    <div
-      role="radiogroup"
-      aria-labelledby={label}
-      className="min-w-0"
-      onKeyDown={(event) => {
-        const step =
-          event.key === 'ArrowDown' || event.key === 'ArrowRight'
-            ? 1
-            : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
-              ? -1
-              : 0
-        if (step === 0) return
-        event.preventDefault()
-        const next = (chosen + step + options.length) % options.length
-        onChange(options[next].id)
-        event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus()
-      }}
-    >
+    <div {...tiles.group} aria-labelledby={label} className="min-w-0">
       <Typography id={label} variant="fieldTitle" as="p">
         {t('placement.style')}
       </Typography>
       <div className="mt-2 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
         {options.map((option, index) => {
           const sample = byStyle.get(option.style)
-          const selected = index === chosen
           return (
             <button
               key={option.id ?? ''}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              tabIndex={selected ? 0 : -1}
               data-style={option.id ?? ''}
-              onClick={() => onChange(option.id)}
-              className={clsx(
-                'flex min-h-11 min-w-0 flex-col gap-1 rounded-md p-2 text-left transition-colors',
-                selected
-                  ? 'bg-row-bg-active text-content-primary ring-stroke-accent ring-2'
-                  : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
-              )}
+              {...tiles.tile(index, 'min-h-11 gap-1')}
             >
               <ClipCaptionStyleSample fragment={sample} />
               <Typography variant="body" as="span" className="min-w-0 break-words">

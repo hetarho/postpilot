@@ -1,5 +1,4 @@
 import { useClipLocalStyleSamples, useClipLocalPresetSamples } from '@/entities/clip-preview'
-import clsx from 'clsx'
 import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ClipCaptionStyleSample, type ClipRegionPresetSample } from '@/entities/clip-plan'
@@ -10,7 +9,7 @@ import {
   CLIP_DEFAULT_REGION_PRESETS,
   CLIP_DESIGN,
 } from '@/entities/clip-design'
-import { Checkbox, Typography } from '@/shared/ui'
+import { Checkbox, radioTiles, Typography } from '@/shared/ui'
 
 /** The tile that turns a region off (CLIP-111): it draws nothing, and choosing it keeps the
  *  region's slot draft for when a preset is chosen again (CLIP-189). */
@@ -18,10 +17,8 @@ const OFF = 'off'
 
 /** One region's presets as a radiogroup of tiles (CLIP-111, CLIP-165): 사용 안 함 first, then
  *  each preset as the renderer's drawing of its numbered slots on the whole canvas, so an
- *  edge-anchored preset shows at its true place, above the preset's name. Only the
- *  chosen tile is tabbable and the arrows move focus and choice together (WAI-APG
- *  radio group). While the drawings load, or when they fail, the tiles show names
- *  and stay selectable. */
+ *  edge-anchored preset shows at its true place, above the preset's name. While the
+ *  drawings load, or when they fail, the tiles show names and stay selectable. */
 function PresetPicker<T extends string>({
   kind,
   ids,
@@ -43,47 +40,17 @@ function PresetPicker<T extends string>({
   const { t } = useTranslation('clips')
   const label = useId()
   const drawing = new Map<string, string>((samples ?? []).map((s) => [s.preset, s.svg]))
+  const tiles = radioTiles(ids.length, ids.indexOf(value), (index) => onChange(ids[index]))
   return (
-    <div
-      role="radiogroup"
-      aria-labelledby={label}
-      className="min-w-0"
-      onKeyDown={(event) => {
-        const step =
-          event.key === 'ArrowDown' || event.key === 'ArrowRight'
-            ? 1
-            : event.key === 'ArrowUp' || event.key === 'ArrowLeft'
-              ? -1
-              : 0
-        if (step === 0) return
-        event.preventDefault()
-        const next = (ids.indexOf(value) + step + ids.length) % ids.length
-        onChange(ids[next])
-        event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus()
-      }}
-    >
+    <div {...tiles.group} aria-labelledby={label} className="min-w-0">
       <Typography id={label} variant="fieldTitle" as="p">
         {t(`composition.design.${kind}`)}
       </Typography>
       <div className="mt-2 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-4">
-        {ids.map((id) => {
+        {ids.map((id, index) => {
           const svg = drawing.get(id)
-          const chosen = id === value
           return (
-            <button
-              key={id}
-              type="button"
-              role="radio"
-              aria-checked={chosen}
-              tabIndex={chosen ? 0 : -1}
-              onClick={() => onChange(id)}
-              className={clsx(
-                'flex min-w-0 flex-col gap-2 rounded-md p-2 text-left transition-colors',
-                chosen
-                  ? 'bg-row-bg-active text-content-primary ring-stroke-accent ring-2'
-                  : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
-              )}
-            >
+            <button key={id} {...tiles.tile(index, 'gap-2')}>
               <span
                 aria-hidden="true"
                 className="bg-media-canvas-bg block w-full overflow-hidden rounded-sm"
