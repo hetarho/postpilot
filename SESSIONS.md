@@ -145,6 +145,7 @@
 - 261015 suggest T677 T678 T679 T680 T681: review-code over the five campaign tasks done so far (principle tier, advertiser guide storage and editor fields, advertiser origin)
 - 261015 decided POST-119 T683: which count meets 최소 글자 수? → the count without spaces, the stricter of the two the checklist shows, so a met mark holds whichever way the campaign counts (alt: with spaces | either one)
 - 261015 decided TMPL-72 T685: how does a product kind adapt role wording? → each kind adds its own section after 주요 기능 (가전 설치·소음, 화장품 제형·발림성, 식품 맛·조리법, 육아·반려 안전·반응; 생활·주방 none) (alt: rename the shared roles per kind | no kind-specific wording)
+- 261113 decided THEME-74: Which loading treatment and timing? → Content-shaped skeletons for initial lists/forms/details/tables, compact spinner for inline reads, one short CSS reveal delay without delaying ready data, retain cached content (alt: spinner everywhere or minimum loading duration). This preserves page geometry and avoids fast-response flashes.
 
 ## unlanded
 | id | tag | branch | commit | at |
