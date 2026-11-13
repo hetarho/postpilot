@@ -99,10 +99,11 @@
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
 | T821 | Align template example and choice surfaces | ARCH | - | todo |
 | T822 | Align remaining operational card and row surfaces | ARCH | - | todo |
-
 | T823 | Align catalog and recommendation cards | ARCH THEME | - | todo |
 | T824 | Align editing and observation surfaces | ARCH THEME | - | todo |
 | T825 | Align comparison and plan disclosure surfaces | ARCH THEME | - | todo |
+| T826 | Unify post editor loading and recovery returns | ARCH THEME | - | todo |
+
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
