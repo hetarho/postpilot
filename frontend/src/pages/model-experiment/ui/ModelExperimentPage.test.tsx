@@ -4,6 +4,7 @@ import { afterEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
+import { openStep } from '@/test/editor'
 import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
 const history = [{ id: 'review-1', stage: Stage.WRITE, postSlug: 'draft-1' }]
@@ -145,6 +146,9 @@ it('opens the editor result in canonical test navigation and returns to its owne
     posts: { posts },
     experiments: { history },
   })
+  // An unobserved draft opens ① 생성 (POST-44); the retained result rides with ②'s writing
+  // actions (POST-53).
+  await openStep(user, '관찰')
   const record = await screen.findByRole('link', { name: 'A/B 결과 확인' })
   expect(record).toHaveAttribute('href', '/tests/records/review-1?source=draft-1')
   await user.click(record)

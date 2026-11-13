@@ -783,10 +783,25 @@ it('keeps the open quote while ① is typed in and saves the settings before sta
     starts: unknown[] = [],
     writes: ClipProjectDraft[] = [],
     quotes: unknown[] = []
-  mount({ calls, generationStarts: starts, projectWrites: writes, quoteRequests: quotes })
+  // The quote is bound to the SAVED settings, so a landed save rightly reads a new one. The save
+  // is held so the typing is still unsaved however long a loaded runner takes to reach the asserts.
+  let release!: () => void
+  const held = new Promise<void>((resolve) => (release = resolve))
+  let holding = false
+  mount({
+    calls,
+    generationStarts: starts,
+    projectWrites: writes,
+    quoteRequests: quotes,
+    projectSaveGate: async () => {
+      if (holding) await held
+    },
+  })
   const { user } = await selectSource()
   await openApproval(20)
   await clipGuideTo('content')
+  const savesBefore = calls.filter((call) => call === 'UpdateClipProject').length
+  holding = true
   fireEvent.change(screen.getByLabelText('클립 제목'), { target: { value: '제주 여행 2' } })
   await clipGuideTo('sources')
   expect(screen.getByLabelText(/^원본 영상 (다시 )?선택$/)).toBeEnabled()
@@ -800,6 +815,17 @@ it('keeps the open quote while ① is typed in and saves the settings before sta
   const approve = await openApproval(20)
   await waitFor(() => expect(approve).toBeEnabled())
   await user.click(approve)
+  // The approval waits for the held settings save rather than starting beside it.
+  await waitFor(
+    () =>
+      expect(calls.filter((call) => call === 'UpdateClipProject').length).toBeGreaterThan(
+        savesBefore,
+      ),
+    { timeout: 3000 },
+  )
+  await new Promise((resolve) => setTimeout(resolve, 200))
+  expect(starts).toHaveLength(0)
+  release()
   await waitFor(() => expect(starts).toHaveLength(1))
   expect(writes.at(-1)?.title).toBe('제주 여행 2')
   expect(calls.lastIndexOf('UpdateClipProject')).toBeLessThan(calls.indexOf('StartClipGeneration'))
