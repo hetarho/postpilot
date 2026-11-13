@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { AppFailure } from '@/shared/api'
-import { AppFailureMessage, Badge, Notice, Typography } from '@/shared/ui'
+import { cardStyles, AppFailureMessage, Badge, Notice, Typography } from '@/shared/ui'
 
 export interface TextComparisonCandidate {
   id: string
@@ -24,7 +24,10 @@ export function TextCandidateComparison({
         <article
           key={candidate.id}
           aria-label={t('comparison.candidate', { label: candidate.label })}
-          className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised md:block md:rounded-lg md:p-4`}
+          className={cardStyles({
+            padding: 'none',
+            className: `${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-card-bg min-w-0 rounded-none bg-transparent break-words shadow-none md:block md:rounded-xl md:p-4 md:shadow-md`,
+          })}
         >
           <div className="flex min-h-11 items-center justify-between gap-2">
             <Typography variant="title">

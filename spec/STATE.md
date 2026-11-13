@@ -93,7 +93,6 @@
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
 
-| T825 | Align comparison and plan disclosure surfaces | ARCH THEME | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |

@@ -9,7 +9,14 @@ import type {
 } from '@/entities/model-experiment'
 import { candidateSides } from '@/entities/model-experiment'
 import { badgeGroup, badgeTone } from '@/entities/model-experiment'
-import { AppFailureMessage, Badge, Notice, Typography, type BadgeTone } from '@/shared/ui'
+import {
+  cardStyles,
+  AppFailureMessage,
+  Badge,
+  Notice,
+  Typography,
+  type BadgeTone,
+} from '@/shared/ui'
 import type { FingerprintComparisonItem } from '@/entities/voice'
 import { formatNumber } from '@/shared/lib'
 import { BlockType, GalleryLayout } from '@/shared/api'
@@ -74,7 +81,10 @@ export function CandidateComparison({
             // the screen, was impossible. The card is a `md:` treatment for the same reason: below
             // that only one panel is on screen, so a raised box around it frames the entire page
             // and costs two Korean characters per line of gutter (THEME-13).
-            className={`${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-surface-raised min-w-0 break-words md:block md:rounded-lg md:p-4`}
+            className={cardStyles({
+              padding: 'none',
+              className: `${candidate.id === activeCandidateId ? 'block' : 'hidden'} md:bg-card-bg min-w-0 rounded-none bg-transparent break-words shadow-none md:block md:rounded-xl md:p-4 md:shadow-md`,
+            })}
           >
             <div className="flex min-h-11 items-center justify-between gap-2">
               <Typography variant="title">{t('comparison.candidate', { label })}</Typography>

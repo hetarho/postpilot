@@ -15,6 +15,7 @@ import {
 import { billablePlan, useMyBilling, type BillingTerm } from '@/entities/subscription'
 import { ScheduledChangeButton } from '@/features/manage-subscription'
 import {
+  cardStyles,
   Badge,
   Button,
   Notice,
@@ -335,7 +336,7 @@ function ProductionComparison({
           />
         </Button>
         {conditionsOpen && (
-          <div id={conditionsId} className="bg-surface-raised mt-2 rounded-md p-4">
+          <div id={conditionsId} className={cardStyles({ padding: 'sm', className: 'mt-2' })}>
             <PlanEstimator
               clipInput={clipInput}
               sourceSeconds={myPlan.clipSourceSeconds}
