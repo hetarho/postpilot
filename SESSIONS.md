@@ -191,6 +191,7 @@
 | T816 | dsui | task/design-system-audit-serial | 5469ba604a90 | 2026-11-13T17:13Z |
 
 ## log
+- 261113 ldui: loading UI T795-T802 complete; reviewed candidate 7cc538ae8479 fixed on task/loading-ui-final; final ARCH batch retry is queued behind the shared design-system heavy check; no independent UI/video scope claimed.
 - 261113 fix navigation: default video-template returns to naver_clip instead of undefined; default and Instagram regressions included in 69 passing tests
 - 261113 T816 done
 - 261113 T825 done
@@ -210,4 +211,3 @@
 - 261113 T812 done
 - 261113 T811 done
 - 261113 T819 done
-- 261113 fix loading: consistent shared feedback in voice prompts, saved replies, memory candidate reads and refund history; three presentation-only files, existing complete regression scope retained
