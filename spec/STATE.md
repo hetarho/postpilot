@@ -253,6 +253,8 @@
 | T824 | Align editing and observation surfaces | ARCH THEME | - | todo |
 | T825 | Align comparison and plan disclosure surfaces | ARCH THEME | - | todo |
 
+| T826 | Unify post editor loading and recovery returns | ARCH THEME | - | todo |
+
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|

@@ -12,6 +12,8 @@ The exhaustive visual audit found remaining generic bordered panels and independ
 - F4 [o] P2 inline block editing, generated voice candidates and observation carousels retain old generic surfaces; harmonize independent cards and inner wells without changing content/media. →T824
 - F5 [o] P2 desktop comparison panels and plan-estimator conditions retain independent old card recipes; preserve deliberate plain phone comparisons and financial calculations. →T825
 
+- F6 [o] P1 frontend/src/pages/editor/ui/EditorPage.tsx: failure reads retain a legacy text return and pending placeholders omit the focused workflow return; final matrix found it in both themes. Preserve one shared named return throughout recovery. →T826
+
 ## notes
 - Adopted scope is the explicit gusta-start request to migrate every nonconforming product screen, under ARCH-20 and THEME-12/13/78. Changes preserve every action, value, state and chronological/injection order; promotional frames, data-table rules, selection rings and content drawings retain their named exceptions.
 - Refund/billing controls are already assigned to T815. Native buttons and fields remain in T810/T813/T814/T815; this review adds only uncovered panel/example surfaces.
