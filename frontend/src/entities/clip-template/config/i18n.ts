@@ -5,6 +5,15 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     composition: {
+      summary: {
+        example: '구성 예시',
+        intro: '인트로',
+        body: '본문',
+        outro: '아웃트로',
+        noOutline: '표시할 구성 단계가 없어요.',
+        unspecified: '지정 없음',
+        design: '인트로 {{intro}} · 자막 {{styles}} · 아웃트로 {{outro}}',
+      },
       design: {
         title: '영상 디자인',
         help: '인트로·자막·아웃트로 디자인을 고르면 본문을 편집할 수 있어요.',
@@ -224,6 +233,15 @@ export const i18n = {
   },
   en: {
     composition: {
+      summary: {
+        example: 'Composition example',
+        intro: 'Intro',
+        body: 'Body',
+        outro: 'Outro',
+        noOutline: 'No outline stages to show.',
+        unspecified: 'Not specified',
+        design: 'Intro {{intro}} · Captions {{styles}} · Outro {{outro}}',
+      },
       design: {
         title: 'Video design',
         help: 'Choose the intro, caption and outro before editing the body.',

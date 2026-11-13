@@ -33,7 +33,7 @@ import {
 import { clipKeywordCoverage } from '../model/requirements'
 import type { ClipPreparationContent } from '../model/preparation'
 import { clipPreparationRows } from './ClipPreparationSummary'
-import { CLIP_ACCENTS, useClipTemplates } from '@/entities/clip-template'
+import { CLIP_ACCENTS, ClipTemplateSummary, useClipTemplates } from '@/entities/clip-template'
 import { CLIP_DEFAULT_REGION_PRESETS, CLIP_DESIGN } from '@/entities/clip-design'
 import { appFailureFromConnect } from '@/shared/api'
 import {
@@ -496,6 +496,7 @@ export function ClipProjectForm({
           <ChoiceButton
             key={template.id}
             title={template.name}
+            description={<ClipTemplateSummary template={template} />}
             selected={draft.videoTemplateId === template.id}
             onClick={() => change('videoTemplateId', template.id)}
           />
