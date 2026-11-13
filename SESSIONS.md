@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
-| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | T799 | main | dfcdfd03d943 |
+| ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:42Z | - | main | cb2c17c585de |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:23Z | - | task/video-ux | fcbdaab664b2 |
 | dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:41Z | T809 | task/design-system-audit-serial | d8dad5d8c0dc |
 
@@ -166,8 +166,10 @@
 | T808 | dsui | task/design-system-audit-serial | 87bd8b2354f5 | 2026-11-13T16:41Z |
 | T797 | ldui | main | 853d9e566fa1 | 2026-11-13T16:41Z |
 | T798 | ldui | main | dd2972cc4d2e | 2026-11-13T16:42Z |
+| T799 | ldui | main | cb2c17c585de | 2026-11-13T16:42Z |
 
 ## log
+- 261113 T799 done
 - 261113 T798 done
 - 261113 T797 done
 - 261113 T808 done
@@ -187,4 +189,3 @@
 - 261113 gusta-create-task ARCH r24 no-op: framework policy, settings and documentation only; no application code delta; blocked qualification conditions retained
 - 261113 gusta-update-ssot ARCH start: owner-approved framework verification tiers, chg retention and workflow delegation
 - 261113 T794 done
-- 261113 T793 done
