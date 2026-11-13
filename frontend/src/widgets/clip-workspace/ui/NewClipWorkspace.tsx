@@ -126,7 +126,6 @@ export function NewClipWorkspace({
             }}
             rows={content.rows}
             models={null}
-            actions={null}
             refusal={content.refusal}
             // Nothing is entered yet: the way to make it possible is to pick footage (POST-123).
             correction={{ screen: 'sources', label: t('guide.noSources') }}

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import type { ClipPreparationScreen } from '@/features/edit-clip-project'
 import { Button, TextField } from '@/shared/ui'
 import { preparationOpening } from '../model/steps'
+import { ClipObserveBar } from './ClipObserveBar'
 import { ClipPreparationGuide } from './ClipPreparationGuide'
 
 function Mounted({ mounted }: { mounted: () => void }) {
@@ -36,14 +37,14 @@ const EMPTY = {
 function Fixture({
   active = true,
   campaign = false,
-  refusal,
   onSubmit = () => {},
+  onNext = () => {},
   mounted = () => {},
 }: {
   active?: boolean
   campaign?: boolean
-  refusal?: 'sources' | 'style' | 'content' | 'save'
   onSubmit?: () => void
+  onNext?: () => void
   mounted?: () => void
 }) {
   const [step, select] = useState<ClipPreparationScreen>('kind')
@@ -89,7 +90,6 @@ function Fixture({
             <TextField
               aria-label="제목"
               value={value}
-              aria-invalid={refusal === 'content'}
               onChange={(event) => change(event.target.value)}
             />
           ),
@@ -104,13 +104,7 @@ function Fixture({
         }}
         rows={[{ id: 'title', label: '제목', value: value || '비었어요', screen: 'content' }]}
         models={<TextField aria-label="선택 모델" defaultValue="저장된 모델" />}
-        refusal={refusal === 'save' ? <p role="alert">저장 실패</p> : undefined}
-        correction={
-          refusal
-            ? { screen: refusal === 'save' ? 'content' : refusal, label: '입력을 확인해 주세요.' }
-            : undefined
-        }
-        actions={<Approval />}
+        onNext={onNext}
       />
     </form>
   )
@@ -208,35 +202,29 @@ describe('retained clip preparation questions', () => {
     expect(input).toHaveValue('아직 저장 안 된 한글')
   })
 
-  it.each(['sources', 'style', 'content', 'save'] as const)(
-    'keeps a %s refusal actionable and navigation available',
-    async (refusal) => {
-      const submit = vi.fn()
-      render(<Fixture refusal={refusal} onSubmit={submit} />)
-      await go('확인')
-      expect(screen.getByText('입력을 확인해 주세요.')).toBeVisible()
-      if (refusal === 'save') expect(screen.getByRole('alert')).toHaveTextContent('저장 실패')
-      await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
-      expect(screen.getByRole('button', { name: '다음' })).toBeEnabled()
-      if (refusal === 'content')
-        await waitFor(() => expect(screen.getByRole('textbox', { name: '제목' })).toHaveFocus())
-      expect(submit).not.toHaveBeenCalled()
-    },
-  )
+  it('ends 확인 on 이전 and 다음, which moves on without submitting', async () => {
+    const submit = vi.fn(),
+      next = vi.fn()
+    render(<Fixture onSubmit={submit} onNext={next} />)
+    await go('확인')
+    expect(screen.queryByRole('button', { name: '바로 만들기' })).toBeNull()
+    expect(screen.getByRole('button', { name: '덧붙임로 이전' })).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: '다음' }))
+    expect(next).toHaveBeenCalledOnce()
+    expect(submit).not.toHaveBeenCalled()
+  })
 
-  it('retains cursor, approval state, fields and actor mounts across lifecycle visits, resetting at the keyed boundary', async () => {
+  it('retains cursor, fields and actor mounts across lifecycle visits, resetting at the keyed boundary', async () => {
     const mounted = vi.fn()
     const view = render(<Fixture key="alice/one" mounted={mounted} />)
     await go('확인')
-    await userEvent.click(screen.getByRole('button', { name: '바로 만들기' }))
     view.rerender(<Fixture key="alice/one" active={false} mounted={mounted} />)
     expect(screen.queryByRole('heading')).toBeNull()
     view.rerender(<Fixture key="alice/one" active mounted={mounted} />)
     expect(screen.getByText('7 / 7')).toBeVisible()
-    expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
     await go('영상')
     await go('확인')
-    expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
+    expect(screen.getByText('7 / 7')).toBeVisible()
     expect(mounted).toHaveBeenCalledTimes(1)
     view.rerender(<Fixture key="alice/two" mounted={mounted} />)
     expect(screen.getByText('1 / 7')).toBeVisible()
@@ -256,63 +244,103 @@ it('opens on 확인 for an instruction, a source or a running job, otherwise on 
   expect(preparationOpening({ sources: 0, running: true })).toBe('review')
 })
 
-it('describes a held action and routes a region refusal to its original editor without submitting', async () => {
-  const fix = vi.fn(),
-    submit = vi.fn()
-  render(
-    <form
-      onSubmit={(event) => {
-        event.preventDefault()
-        submit()
-      }}
-    >
-      <ClipPreparationGuide
-        screen="review"
-        onSelect={vi.fn()}
-        campaign={false}
-        noteEmpty
-        screens={EMPTY}
-        rows={[]}
-        models={null}
-        reasonId="region-refusal"
-        correction={{ retry: fix, label: '스토리라인 문구를 바로잡아 주세요.' }}
-        actions={
-          <Button disabled aria-describedby="region-refusal">
-            바로 만들기
-          </Button>
-        }
-      />
-    </form>,
-  )
-  expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAccessibleDescription(
-    '스토리라인 문구를 바로잡아 주세요.',
-  )
-  await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
-  expect(fix).toHaveBeenCalledOnce()
-  expect(submit).not.toHaveBeenCalled()
-})
-
-it('names the wait for running work without offering a fix that does nothing', () => {
+it('holds an unminted 확인 on its reason with the way to fix it and no 다음', async () => {
+  const select = vi.fn()
   render(
     <ClipPreparationGuide
       screen="review"
-      onSelect={vi.fn()}
+      onSelect={select}
       campaign={false}
       noteEmpty
       screens={EMPTY}
       rows={[]}
       models={null}
-      reasonId="busy-refusal"
-      correction={{ label: '진행 중인 작업이 끝나면 시작할 수 있어요.' }}
-      actions={
-        <Button disabled aria-describedby="busy-refusal">
-          바로 만들기
-        </Button>
-      }
+      correction={{ screen: 'sources', label: '먼저 영상을 넣어 주세요.' }}
     />,
   )
-  expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAccessibleDescription(
-    '진행 중인 작업이 끝나면 시작할 수 있어요.',
-  )
-  expect(screen.queryByRole('button', { name: '바로잡기' })).not.toBeInTheDocument()
+  expect(screen.getByText('먼저 영상을 넣어 주세요.')).toBeVisible()
+  expect(screen.queryByRole('button', { name: '다음' })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
+  expect(select).toHaveBeenCalledWith('sources')
+})
+
+describe('② 관찰 step bar', () => {
+  it('holds 이전 and the quoted actions in one row, with the refusal above it', async () => {
+    const back = vi.fn()
+    render(
+      <ClipObserveBar
+        reasonId="observe-reason"
+        refusal={<p role="alert">저장 실패</p>}
+        onBack={back}
+        onRoute={vi.fn()}
+        actions={<Approval />}
+      />,
+    )
+    expect(screen.getByRole('alert')).toHaveTextContent('저장 실패')
+    await userEvent.click(screen.getByRole('button', { name: '바로 만들기' }))
+    expect(screen.getByRole('button', { name: '승인 확인 중' })).toBeVisible()
+    await userEvent.click(screen.getByRole('button', { name: '이전: 생성' }))
+    expect(back).toHaveBeenCalledOnce()
+  })
+
+  it('routes an input refusal back to its ① screen', async () => {
+    const route = vi.fn()
+    render(
+      <ClipObserveBar
+        reasonId="input-reason"
+        correction={{ screen: 'content', label: '입력을 확인해 주세요.' }}
+        onBack={vi.fn()}
+        onRoute={route}
+        actions={
+          <Button disabled aria-describedby="input-reason">
+            바로 만들기
+          </Button>
+        }
+      />,
+    )
+    expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAccessibleDescription(
+      '입력을 확인해 주세요.',
+    )
+    await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
+    expect(route).toHaveBeenCalledWith('content')
+  })
+
+  it('retries a region refusal from its own editor', async () => {
+    const fix = vi.fn()
+    render(
+      <ClipObserveBar
+        reasonId="region-refusal"
+        correction={{ retry: fix, label: '스토리라인 문구를 바로잡아 주세요.' }}
+        onBack={vi.fn()}
+        onRoute={vi.fn()}
+        actions={
+          <Button disabled aria-describedby="region-refusal">
+            바로 만들기
+          </Button>
+        }
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
+    expect(fix).toHaveBeenCalledOnce()
+  })
+
+  it('names the wait for running work without offering a fix that does nothing', () => {
+    render(
+      <ClipObserveBar
+        reasonId="busy-refusal"
+        correction={{ label: '진행 중인 작업이 끝나면 시작할 수 있어요.' }}
+        onBack={vi.fn()}
+        onRoute={vi.fn()}
+        actions={
+          <Button disabled aria-describedby="busy-refusal">
+            바로 만들기
+          </Button>
+        }
+      />,
+    )
+    expect(screen.getByRole('button', { name: '바로 만들기' })).toHaveAccessibleDescription(
+      '진행 중인 작업이 끝나면 시작할 수 있어요.',
+    )
+    expect(screen.queryByRole('button', { name: '바로잡기' })).not.toBeInTheDocument()
+  })
 })

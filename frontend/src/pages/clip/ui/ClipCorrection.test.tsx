@@ -180,7 +180,7 @@ it('explicitly refreshes derived wording while preserving owner words, timing an
   expect(planWrites[0].plan.narration).toEqual(plan.narration)
   expect(calls.some((call) => /Start|Quote|Synthesize/.test(call))).toBe(false)
 })
-async function goToStep(name: '영상 생성' | '영상 다듬기' | '영상 완성') {
+async function goToStep(name: '생성' | '다듬기' | '완성') {
   await userEvent.click(await screen.findByRole('tab', { name }))
 }
 const timeline = () => within(screen.getByRole('region', { name: '장면 블록' }))
@@ -329,7 +329,7 @@ it('keeps the AI request in the step bar and the script behind its named entry',
 
 it('opens a matching result in refine with one action bar and an available download', async () => {
   await mount()
-  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '다듬기' })).toHaveAttribute('aria-selected', 'true')
   // ② carries no download: it stands under the delivered video in ③ (CLIP-149).
   expect(screen.queryByRole('link', { name: '렌더 1 다운로드' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /^(렌더하기|다시 렌더)$/ })).not.toBeInTheDocument()
@@ -337,7 +337,7 @@ it('opens a matching result in refine with one action bar and an available downl
   expect(screen.queryByLabelText('원본 시작 (초)')).not.toBeInTheDocument()
   await selectCut()
   expect(screen.getAllByLabelText('원본 시작 (초)')).toHaveLength(1)
-  await goToStep('영상 생성')
+  await goToStep('생성')
   expect(screen.queryByRole('button', { name: RENDER })).not.toBeInTheDocument()
 })
 
@@ -502,7 +502,7 @@ it('offers no download while the plan has no render, and says nothing is wrong',
   p.result = undefined
   p.renderedPlanRevision = 0
   await mount({ projects: [p] })
-  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '다듬기' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.queryByRole('link', { name: /다운로드/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: '이 미리보기에 대해' })).toBeInTheDocument()
@@ -629,9 +629,9 @@ it('requires matching sources for rerender while text edits and previous video r
   await userEvent.click(await screen.findByRole('button', { name: RENDER }))
   const render = await screen.findByRole('button', { name: '렌더하기' })
   expect(render).toBeDisabled()
-  await goToStep('영상 다듬기')
+  await goToStep('다듬기')
   await select()
-  await goToStep('영상 완성')
+  await goToStep('완성')
   await waitFor(() => expect(screen.getByRole('button', { name: '렌더하기' })).toBeEnabled())
   expect(calls).not.toContain('StartClipGeneration')
 })
@@ -761,7 +761,7 @@ it('shares retained sound across both steps, stales the old render and offers cr
   await waitFor(() => expect(soundWrites).toHaveLength(1))
   await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
   expect(calls).not.toContain('SaveClipEditPlan')
-  await goToStep('영상 생성')
+  await goToStep('생성')
   await clipGuideTo('sources')
   expect(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ })).toBeChecked()
   await userEvent.click(screen.getByRole('switch', { name: /source-a.mp4 원본 소리 유지/ }))
@@ -769,7 +769,7 @@ it('shares retained sound across both steps, stales the old render and offers cr
   expect(soundWrites.map((w) => w.expectedRevision)).toEqual([1, 2])
   expect(calls).not.toContain('StartClipGeneration')
   expect(calls).not.toContain('QuoteClipGeneration')
-  await goToStep('영상 다듬기')
+  await goToStep('다듬기')
   await userEvent.click(screen.getByRole('button', { name: '실행 취소' }))
   await waitFor(() => expect(soundWrites).toHaveLength(3))
   expect(soundWrites[2]).toMatchObject({ expectedRevision: 3, retainOriginalAudio: true })

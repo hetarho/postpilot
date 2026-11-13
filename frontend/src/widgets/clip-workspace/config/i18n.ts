@@ -62,8 +62,16 @@ export const i18n = {
       returnCreation: '{{channel}}으로 돌아가기',
       returnMine: '내 글로 돌아가기',
     },
+    observeStep: {
+      back: '이전: 생성',
+      actions: '관찰 단계 동작',
+    },
+    storylineStep: {
+      back: '이전: 관찰',
+      actions: '스토리라인 단계 동작',
+    },
     refineDock: {
-      back: '이전: 영상 생성',
+      back: '이전: 스토리라인',
       openScript: '대본 열기',
     },
     editorEntries: {
@@ -75,16 +83,18 @@ export const i18n = {
     },
     reference: {
       label: '원본 소스',
-      tabs: { observations: '관찰 기록', sources: '원본 영상', requests: '요청 기록' },
+      tabs: { sources: '원본 영상', requests: '요청 기록' },
+      addScene: '관찰한 장면에서 추가',
     },
     steps: {
-      generate: '영상 생성',
-      refine: '영상 다듬기',
-      finish: '영상 완성',
       aria: '클립 단계',
       goGenerate: '생성으로 가기',
+      goObserve: '관찰로 가기',
+      goStoryline: '스토리라인으로 가기',
+      storylineWaiting:
+        '아직 스토리라인이 없어요. ②에서 스토리라인 먼저나 바로 만들기를 기다리고 있어요.',
       refineWaiting:
-        '아직 다듬을 편집안이 없어요. ①에서 스토리라인 먼저나 바로 만들기로 시작해 주세요.',
+        '아직 다듬을 편집안이 없어요. ③에서 이 스토리로 만들기나 ②에서 바로 만들기를 기다리고 있어요.',
       finishWaiting:
         '아직 완성된 영상이 없어요. ①에서 스토리라인 먼저나 바로 만들기로 시작해 주세요.',
     },
@@ -168,8 +178,16 @@ export const i18n = {
       returnCreation: 'Back to {{channel}}',
       returnMine: 'Back to My work',
     },
-    refineDock: {
+    observeStep: {
       back: 'Back: Create',
+      actions: 'Observe actions',
+    },
+    storylineStep: {
+      back: 'Back: Observe',
+      actions: 'Storyline actions',
+    },
+    refineDock: {
+      back: 'Back: Storyline',
       openScript: 'Open script',
     },
     editorEntries: {
@@ -181,16 +199,17 @@ export const i18n = {
     },
     reference: {
       label: 'Source material',
-      tabs: { observations: 'Observations', sources: 'Sources', requests: 'Requests' },
+      tabs: { sources: 'Sources', requests: 'Requests' },
+      addScene: 'Add from observed scenes',
     },
     steps: {
-      generate: 'Create video',
-      refine: 'Refine video',
-      finish: 'Finish video',
       aria: 'Clip steps',
       goGenerate: 'Go to Create',
+      goObserve: 'Go to Observe',
+      goStoryline: 'Go to Storyline',
+      storylineWaiting: 'There is no storyline yet. It waits for Storyline first or Make now in ②.',
       refineWaiting:
-        'There is no edit plan to refine yet. Start in ① with Storyline first or Make now.',
+        'There is no edit plan to refine yet. It waits for Build from this story in ③ or Make now in ②.',
       finishWaiting: 'There is no finished video yet. Start in ① with Storyline first or Make now.',
     },
     finish: {

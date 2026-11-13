@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RequirementsTracker, type RequirementsCoverage } from '@/entities/advertiser-guide'
+import { focusPreparationField } from '../lib/preparation-focus'
 import {
   clipPreparationScreens,
   type ClipPreparationRow,
@@ -19,14 +20,17 @@ import {
   cardStyles,
 } from '@/shared/ui'
 
-/** Retained questions and a single shared dock. The keyed workspace owns the cursor. */
+/** Retained questions and a single shared dock. The keyed workspace owns the cursor. A minted
+ *  project's 확인 ends on 이전 and 다음, which moves to ② without a call: the generation actions,
+ *  their reasons and their refusals are ②'s step bar's (CLIP-40, `ClipObserveBar`). An unminted
+ *  one has no ② to move to, so its 확인 holds only the reason with the way to fix it. */
 export function ClipPreparationGuide({
   screen,
   onSelect,
+  onNext,
   screens,
   rows,
   models,
-  actions,
   refusal,
   correction,
   reasonId,
@@ -36,6 +40,8 @@ export function ClipPreparationGuide({
 }: {
   screen: ClipPreparationScreen
   onSelect: (screen: ClipPreparationScreen) => void
+  /** 확인's 다음: on to ② 관찰; absent before the project is minted. */
+  onNext?: () => void
   screens: Record<Exclude<ClipPreparationScreen, 'review'>, ReactNode>
   /** 체험단으로 다녀왔어요 adds 요청 and the tracker on every screen after it (CLIP-228). */
   campaign: boolean
@@ -44,14 +50,9 @@ export function ClipPreparationGuide({
   noteEmpty: boolean
   rows: readonly ClipPreparationRow[]
   models: ReactNode
-  actions: ReactNode
   refusal?: ReactNode
-  /** Why review's actions are held: with a route or retry when the owner can fix it, or only the
-   *  reason while other work finishes. */
-  correction?:
-    | { screen: ClipPreparationScreen; label: string }
-    | { retry: () => void; label: string }
-    | { label: string }
+  /** Why 확인 cannot go on: with a route when the owner can fix it, or only the reason. */
+  correction?: { screen: ClipPreparationScreen; label: string } | { label: string }
   reasonId?: string
 }) {
   const { t } = useTranslation('clips')
@@ -68,20 +69,11 @@ export function ClipPreparationGuide({
   }
   const index = SCREENS.indexOf(current)
   const go = (next: ClipPreparationScreen, focusInvalid = false) => {
-    if (next === current) return focusInvalid ? focusField(next) : undefined
+    if (next === current) return focusInvalid ? focusPreparationField(next) : undefined
     onSelect(next)
     window.scrollTo(0, 0)
-    if (focusInvalid) focusField(next)
+    if (focusInvalid) focusPreparationField(next)
   }
-  // A required answer missing at run start brings 내용 back with that field focused (CLIP-225).
-  const focusField = (target: ClipPreparationScreen) =>
-    window.requestAnimationFrame(() =>
-      document
-        .querySelector<HTMLElement>(
-          `[data-clip-screen="${target}"] [aria-invalid="true"]:not([disabled])`,
-        )
-        ?.focus(),
-    )
   const tracked = campaign && requirements && index > SCREENS.indexOf('requirements')
   const back = (target: ClipPreparationScreen) => (
     <StepBarBack
@@ -170,31 +162,28 @@ export function ClipPreparationGuide({
             </StepBarCta>
           </StepBarActions>
         )}
-        {/* Approval/quote components keep their identity while another question is visible. */}
-        <div hidden={current !== 'review'}>
-          {refusal}
-          {correction && (
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <StepBarReason id={id}>{correction.label}</StepBarReason>
-              {('screen' in correction || 'retry' in correction) && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() =>
-                    'screen' in correction ? go(correction.screen, true) : correction.retry()
-                  }
-                >
-                  {t('guide.fix')}
-                </Button>
+        {current === 'review' && (
+          <>
+            {refusal}
+            {correction && (
+              <div className="flex flex-wrap items-center gap-2">
+                <StepBarReason id={id}>{correction.label}</StepBarReason>
+                {'screen' in correction && (
+                  <Button type="button" variant="ghost" onClick={() => go(correction.screen, true)}>
+                    {t('guide.fix')}
+                  </Button>
+                )}
+              </div>
+            )}
+            <StepBarActions back={back('note')}>
+              {onNext && (
+                <StepBarCta type="button" forward onClick={onNext}>
+                  {t('guide.next')}
+                </StepBarCta>
               )}
-            </div>
-          )}
-          {/* Two quoted actions beside the way back can outgrow a 320px row: wrapping gives
-              the committing one a row of its own rather than a label broken per syllable. */}
-          <StepBarActions back={back('note')} className="flex-wrap">
-            {actions}
-          </StepBarActions>
-        </div>
+            </StepBarActions>
+          </>
+        )}
       </StepBar>
     </>
   )

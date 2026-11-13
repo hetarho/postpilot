@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { ClipProject } from '@/entities/clip-project'
 import type { GenerationJob } from '@/entities/generation-job'
-import { stepForProject } from './steps'
+import { clipSteps, stepForProject } from './steps'
 
 const failedJob = (kind: string, stage: string): GenerationJob => ({
   id: 'job',
@@ -34,9 +34,75 @@ const base: ClipProject = {
 }
 const result = { contentType: 'video/mp4', bytes: 1, durationMs: 1000, createdAt: '2026-09-11' }
 
+const observations: ClipProject['observations'] = {
+  status: 'available',
+  sources: [
+    {
+      source: {
+        id: 'a',
+        fingerprint: 'fa',
+        filename: 'a.mp4',
+        durationMs: 1000,
+        width: 1080,
+        height: 1920,
+        allowedRatePermille: [1000],
+      },
+      segments: [],
+    },
+  ],
+}
+const storyline = {
+  paragraphs: [],
+  editedByHand: false,
+  addedSourceIds: [],
+  takenOutObservationIds: [],
+}
+
+describe('clipSteps', () => {
+  // THEME-39: the clip runs the post's five stations under the same short names.
+  it('lists the five shared stations', () => {
+    expect(clipSteps().map((step) => step.value)).toEqual([
+      'generate',
+      'observe',
+      'storyline',
+      'refine',
+      'finish',
+    ])
+    expect(clipSteps().map((step) => step.label)).toEqual([
+      '생성',
+      '관찰',
+      '스토리라인',
+      '다듬기',
+      '완성',
+    ])
+  })
+})
+
 describe('stepForProject', () => {
-  it('opens a project with no plan on 클립 생성', () => {
+  it('opens a project with no observation, storyline or plan on ① 생성', () => {
     expect(stepForProject(base)).toBe('generate')
+    expect(stepForProject({ ...base, observations: { status: 'empty', sources: [] } })).toBe(
+      'generate',
+    )
+  })
+
+  it('opens a project holding observations only on ② 관찰', () => {
+    expect(
+      stepForProject({
+        ...base,
+        observations,
+      }),
+    ).toBe('observe')
+  })
+
+  it('opens a project holding a storyline and no plan on ③ 스토리라인', () => {
+    expect(
+      stepForProject({
+        ...base,
+        observations,
+        storyline,
+      }),
+    ).toBe('storyline')
   })
 
   it('opens a project whose plan is newer than its render on 클립 다듬기', () => {

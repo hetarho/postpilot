@@ -45,6 +45,9 @@ const (
 	// ClipGenerationServiceUpdateClipProjectProcedure is the fully-qualified name of the
 	// ClipGenerationService's UpdateClipProject RPC.
 	ClipGenerationServiceUpdateClipProjectProcedure = "/postpilot.v1.ClipGenerationService/UpdateClipProject"
+	// ClipGenerationServiceSaveClipObservationEditsProcedure is the fully-qualified name of the
+	// ClipGenerationService's SaveClipObservationEdits RPC.
+	ClipGenerationServiceSaveClipObservationEditsProcedure = "/postpilot.v1.ClipGenerationService/SaveClipObservationEdits"
 	// ClipGenerationServiceDeleteClipProjectProcedure is the fully-qualified name of the
 	// ClipGenerationService's DeleteClipProject RPC.
 	ClipGenerationServiceDeleteClipProjectProcedure = "/postpilot.v1.ClipGenerationService/DeleteClipProject"
@@ -107,6 +110,8 @@ type ClipGenerationServiceClient interface {
 	CreateClipProject(context.Context, *connect.Request[v1.CreateClipProjectRequest]) (*connect.Response[v1.CreateClipProjectResponse], error)
 	GetClipProject(context.Context, *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error)
 	UpdateClipProject(context.Context, *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error)
+	// Saves the owner's corrections to observed scenes' descriptive text (CLIP-235).
+	SaveClipObservationEdits(context.Context, *connect.Request[v1.SaveClipObservationEditsRequest]) (*connect.Response[v1.SaveClipObservationEditsResponse], error)
 	DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
@@ -171,6 +176,12 @@ func NewClipGenerationServiceClient(httpClient connect.HTTPClient, baseURL strin
 			httpClient,
 			baseURL+ClipGenerationServiceUpdateClipProjectProcedure,
 			connect.WithSchema(clipGenerationServiceMethods.ByName("UpdateClipProject")),
+			connect.WithClientOptions(opts...),
+		),
+		saveClipObservationEdits: connect.NewClient[v1.SaveClipObservationEditsRequest, v1.SaveClipObservationEditsResponse](
+			httpClient,
+			baseURL+ClipGenerationServiceSaveClipObservationEditsProcedure,
+			connect.WithSchema(clipGenerationServiceMethods.ByName("SaveClipObservationEdits")),
 			connect.WithClientOptions(opts...),
 		),
 		deleteClipProject: connect.NewClient[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse](
@@ -290,6 +301,7 @@ type clipGenerationServiceClient struct {
 	createClipProject           *connect.Client[v1.CreateClipProjectRequest, v1.CreateClipProjectResponse]
 	getClipProject              *connect.Client[v1.GetClipProjectRequest, v1.GetClipProjectResponse]
 	updateClipProject           *connect.Client[v1.UpdateClipProjectRequest, v1.UpdateClipProjectResponse]
+	saveClipObservationEdits    *connect.Client[v1.SaveClipObservationEditsRequest, v1.SaveClipObservationEditsResponse]
 	deleteClipProject           *connect.Client[v1.DeleteClipProjectRequest, v1.DeleteClipProjectResponse]
 	quoteClipGeneration         *connect.Client[v1.QuoteClipGenerationRequest, v1.QuoteClipGenerationResponse]
 	startClipGeneration         *connect.Client[v1.StartClipGenerationRequest, v1.StartClipGenerationResponse]
@@ -328,6 +340,11 @@ func (c *clipGenerationServiceClient) GetClipProject(ctx context.Context, req *c
 // UpdateClipProject calls postpilot.v1.ClipGenerationService.UpdateClipProject.
 func (c *clipGenerationServiceClient) UpdateClipProject(ctx context.Context, req *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error) {
 	return c.updateClipProject.CallUnary(ctx, req)
+}
+
+// SaveClipObservationEdits calls postpilot.v1.ClipGenerationService.SaveClipObservationEdits.
+func (c *clipGenerationServiceClient) SaveClipObservationEdits(ctx context.Context, req *connect.Request[v1.SaveClipObservationEditsRequest]) (*connect.Response[v1.SaveClipObservationEditsResponse], error) {
+	return c.saveClipObservationEdits.CallUnary(ctx, req)
 }
 
 // DeleteClipProject calls postpilot.v1.ClipGenerationService.DeleteClipProject.
@@ -427,6 +444,8 @@ type ClipGenerationServiceHandler interface {
 	CreateClipProject(context.Context, *connect.Request[v1.CreateClipProjectRequest]) (*connect.Response[v1.CreateClipProjectResponse], error)
 	GetClipProject(context.Context, *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error)
 	UpdateClipProject(context.Context, *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error)
+	// Saves the owner's corrections to observed scenes' descriptive text (CLIP-235).
+	SaveClipObservationEdits(context.Context, *connect.Request[v1.SaveClipObservationEditsRequest]) (*connect.Response[v1.SaveClipObservationEditsResponse], error)
 	DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error)
 	QuoteClipGeneration(context.Context, *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error)
 	StartClipGeneration(context.Context, *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error)
@@ -487,6 +506,12 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 		ClipGenerationServiceUpdateClipProjectProcedure,
 		svc.UpdateClipProject,
 		connect.WithSchema(clipGenerationServiceMethods.ByName("UpdateClipProject")),
+		connect.WithHandlerOptions(opts...),
+	)
+	clipGenerationServiceSaveClipObservationEditsHandler := connect.NewUnaryHandler(
+		ClipGenerationServiceSaveClipObservationEditsProcedure,
+		svc.SaveClipObservationEdits,
+		connect.WithSchema(clipGenerationServiceMethods.ByName("SaveClipObservationEdits")),
 		connect.WithHandlerOptions(opts...),
 	)
 	clipGenerationServiceDeleteClipProjectHandler := connect.NewUnaryHandler(
@@ -607,6 +632,8 @@ func NewClipGenerationServiceHandler(svc ClipGenerationServiceHandler, opts ...c
 			clipGenerationServiceGetClipProjectHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceUpdateClipProjectProcedure:
 			clipGenerationServiceUpdateClipProjectHandler.ServeHTTP(w, r)
+		case ClipGenerationServiceSaveClipObservationEditsProcedure:
+			clipGenerationServiceSaveClipObservationEditsHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceDeleteClipProjectProcedure:
 			clipGenerationServiceDeleteClipProjectHandler.ServeHTTP(w, r)
 		case ClipGenerationServiceQuoteClipGenerationProcedure:
@@ -666,6 +693,10 @@ func (UnimplementedClipGenerationServiceHandler) GetClipProject(context.Context,
 
 func (UnimplementedClipGenerationServiceHandler) UpdateClipProject(context.Context, *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.UpdateClipProject is not implemented"))
+}
+
+func (UnimplementedClipGenerationServiceHandler) SaveClipObservationEdits(context.Context, *connect.Request[v1.SaveClipObservationEditsRequest]) (*connect.Response[v1.SaveClipObservationEditsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ClipGenerationService.SaveClipObservationEdits is not implemented"))
 }
 
 func (UnimplementedClipGenerationServiceHandler) DeleteClipProject(context.Context, *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error) {

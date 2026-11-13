@@ -32,6 +32,7 @@ import { useBrowserRender } from '@/features/render-clip-browser'
 import { useClipSourceBinding } from '@/features/bind-clip-source-item'
 import { useClipSourceUpload } from '@/features/upload-clip-sources'
 import {
+  stepAfterJob,
   useDiscardQueueWhenFinalized,
   useSoundBatchHandoff,
   useUploadAttemptLifecycle,
@@ -123,16 +124,17 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   )
   const job = generation.job
   // A project that already has a plan stays in the refining lifecycle throughout another
-  // storyline/generation run. Follow the successful job too, so a request started from ①
-  // reveals its newly written storyline in ② when the focused run view closes.
+  // storyline/generation run. Follow the successful job too, so a finished run carries the owner
+  // to the step showing its result when the focused run view closes: ③ after a storyline, ④
+  // after a plan (CLIP-234).
   const [followedJob, setFollowedJob] = useState({
     id: project.latestJob?.id,
     status: project.latestJob?.status,
   })
   if (job && (followedJob.id !== job.id || followedJob.status !== job.status)) {
     setFollowedJob({ id: job.id, status: job.status })
-    if (job.status === 'done' && (job.kind === 'storyline_clip' || job.kind === 'generate_clip'))
-      setStep('refine')
+    const landing = job.status === 'done' ? stepAfterJob(job.kind) : undefined
+    if (landing) setStep(landing)
   }
   const encoderCapability = useClipBrowserRenderCapability(
     project.ratio,

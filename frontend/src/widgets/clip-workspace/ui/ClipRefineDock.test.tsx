@@ -71,7 +71,7 @@ it('docks the revision field and 확정하기 the way the post’s 글 다듬기
   expect(bar().getByLabelText('수정 요청을 입력하세요').tagName).toBe('TEXTAREA')
   const send = bar().getByRole('button', { name: 'AI에 수정 요청' })
   expect(send).toHaveTextContent('')
-  expect(bar().getByRole('button', { name: '이전: 영상 생성' })).toBeInTheDocument()
+  expect(bar().getByRole('button', { name: '이전: 스토리라인' })).toBeInTheDocument()
   expect(bar().getByRole('button', { name: '확정하기' })).toHaveClass('bg-button-cta-bg')
   expect(bar().queryByRole('button', { name: /렌더/ })).not.toBeInTheDocument()
   expect(screen.queryByRole('tablist', { name: '고칠 대상' })).not.toBeInTheDocument()
@@ -130,7 +130,7 @@ it('flushes, confirms the saved plan revision and moves to ③ with no dialog', 
   expect(confirmations[0]).toMatchObject({ expectedPlanRevision: 1 })
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   await waitFor(() =>
-    expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true'),
+    expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true'),
   )
   expect(calls).not.toContain('FinalizeClipProject')
   expect(screen.queryByLabelText('클립 수정 작업')).not.toBeInTheDocument()

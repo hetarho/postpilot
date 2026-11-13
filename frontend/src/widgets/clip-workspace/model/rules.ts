@@ -6,9 +6,10 @@ import {
 } from '@/entities/clip-plan'
 import type { ClipStep } from './steps'
 
-/** Which originals the session must hold for the step it is on (CLIP-23). ① needs every source,
- *  because a fresh AI run reads them all; ② needs only the sources its cuts play. Narrowing the
- *  set is what RELEASES the picked originals, so this is the rule, not a filter. */
+/** Which originals the session must hold for the step it is on (CLIP-23). ① 생성, ② 관찰 and ③
+ *  스토리라인 need every source, because the runs started there read them all; ④ 다듬기 needs
+ *  only the sources its cuts play, and ⑤ every source a rerender may need. Narrowing the set is
+ *  what RELEASES the picked originals, so this is the rule, not a filter. */
 export function requiredSourcesForStep(
   step: ClipStep,
   draft: ClipEditPlan,

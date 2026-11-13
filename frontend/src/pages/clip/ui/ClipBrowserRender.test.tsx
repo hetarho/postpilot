@@ -230,12 +230,12 @@ it('keeps the steps reachable and reports one monotonic scale from encoding thro
   expect(screen.queryByRole('region', { name: '클립 작업 진행' })).not.toBeInTheDocument()
   // The browser render runs inside ③, docked in its step bar, never as the focused job view
   // (CLIP-156), and the other steps stay reachable meanwhile.
-  expect(screen.getByRole('tab', { name: '영상 완성' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '완성' })).toHaveAttribute('aria-selected', 'true')
   expect(within(screen.getByLabelText('렌더 작업')).getByRole('progressbar')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '생성' }))
   await clipGuideTo('content')
   expect(screen.getByLabelText('클립 제목')).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('tab', { name: '영상 완성' }))
+  await userEvent.click(screen.getByRole('tab', { name: '완성' }))
   await act(async () => encoded.resolve(track))
   await screen.findByText('완성된 영상 저장 중')
   expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '80')

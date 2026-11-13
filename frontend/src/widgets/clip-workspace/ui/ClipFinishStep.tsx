@@ -142,7 +142,11 @@ export function ClipFinishStep({
       </Typography>
       <section aria-labelledby={headingId} className="min-w-0 space-y-4">
         {!finalized && !confirmed && (
-          <ClipStepWaiting message={t('finalization.waiting')} refine onGo={onGoRefine} />
+          <ClipStepWaiting
+            message={t('finalization.waiting')}
+            goLabel={t('finalization.goRefine')}
+            onGo={onGoRefine}
+          />
         )}
         {!finalized && confirmed && (
           <ClipBrowserLocalResult state={render.browser.state} retry={render.browser.retry} />

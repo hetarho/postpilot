@@ -177,6 +177,8 @@ type plannerFake struct {
 	storylineErr    error
 	// The intro/outro words the storyline call and 바로 만들기's flow call draft (CLIP-187).
 	regionDrafts []clip.RegionDraft
+	// The speech every observed scene records, empty for silent footage.
+	speech string
 }
 
 func (p *plannerFake) Storyline(ctx context.Context, r llm.ModelRef, in clip.StorylineInput) (clip.Storyline, llm.Usage, error) {
@@ -245,7 +247,7 @@ func (p *plannerFake) ObserveChunk(ctx context.Context, r llm.ModelRef, c clip.C
 	if p.observeErr != nil && (p.failObserveAt == 0 || p.observe == p.failObserveAt) {
 		return clip.ChunkAnalysis{}, llm.Usage{}, p.observeErr
 	}
-	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", CaptionSafe: p.captionSafe, Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}, llm.Usage{}, nil
+	return clip.ChunkAnalysis{SourceID: c.Source.ID, Fingerprint: c.Source.Fingerprint, Index: c.Index, OffsetMS: c.OffsetMS, DurationMS: c.DurationMS, Segments: []clip.Segment{{StartMS: c.OffsetMS, EndMS: c.OffsetMS + c.DurationMS, Event: "scene", Speech: p.speech, CaptionSafe: p.captionSafe, Quality: "usable", Focal: clip.Point{X: .5, Y: .5}, Certainty: clip.CertaintyCertain, Usability: clip.UsabilityUsable}}}, llm.Usage{}, nil
 }
 
 // The flow call writes the cuts through written(): what the generation is

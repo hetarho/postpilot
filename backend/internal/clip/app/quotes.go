@@ -206,7 +206,8 @@ func (s *GenerationService) quoteInputs(ctx context.Context, user, id, batch, ob
 	if err != nil {
 		return p, t, b, pricing, guidelines, err
 	}
-	recovered := s.selectRecovery(upgraded, b, modelRef(observe), p.Language)
+	// A source the owner corrected by hand counts as analyzed (CLIP-235).
+	recovered := s.withPinned(s.selectRecovery(upgraded, b, modelRef(observe), p.Language), p, b)
 	// 다시 관찰하기 observes the sources it names again: their kept chunks count as missing.
 	if len(reanalyze) > 0 && mode != quoteAnalyze {
 		return p, t, b, pricing, guidelines, clip.ErrInvalid
@@ -499,7 +500,7 @@ func (s *GenerationService) startFor(ctx context.Context, user, id, batch, obser
 	if err != nil {
 		return "", err
 	}
-	recovery := withoutReanalyzed(s.selectRecovery(upgraded, b, modelRef(observe), p.Language), pricing.ReanalyzedSources())
+	recovery := withoutReanalyzed(s.withPinned(s.selectRecovery(upgraded, b, modelRef(observe), p.Language), p, b), pricing.ReanalyzedSources())
 	regions := clip.EffectiveProjectRegions(p)
 	version := clip.GenerationPayloadVersion
 	if a.AnalysisPreparationID != "" {

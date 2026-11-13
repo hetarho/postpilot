@@ -1,4 +1,4 @@
-import { clipGuideTo } from '@/test/clip-preparation'
+import { clipGuideTo, clipGuideToActions } from '@/test/clip-preparation'
 import { localSamplesForControls } from '@/test/clip-local-samples'
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
@@ -99,12 +99,18 @@ async function mount(
       ...clips,
     },
   })
-  if (wait === 'space') await screen.findByRole('button', { name: '스토리라인' })
-  if (wait === 'tab') await screen.findByRole('tab', { name: '영상 다듬기' })
+  // ③ is where the storyline stands (CLIP-179): a project with a plan opens on ④, so the
+  // storyline tests move to ③ first.
+  if (wait === 'space') {
+    const tab = await screen.findByRole('tab', { name: '스토리라인' })
+    if (tab.getAttribute('aria-selected') !== 'true') await userEvent.click(tab)
+    await screen.findByRole('heading', { name: '스토리라인', level: 2 })
+  }
+  if (wait === 'tab') await screen.findByRole('tab', { name: '스토리라인' })
   return view
 }
 
-const heading = () => screen.getByRole('button', { name: '스토리라인' })
+const heading = () => screen.getByRole('heading', { name: '스토리라인', level: 2 })
 const paragraph = (n: number) => within(screen.getByRole('listitem', { name: `${n}번째 문단` }))
 const AUTOSAVE = { timeout: 3000 }
 
@@ -175,12 +181,11 @@ function sent(writes: NonNullable<FakeClipsOptions['regionWrites']>, kind: Kind)
   return out
 }
 
-// CLIP-36, CLIP-177: a storyline without a plan is already ②, where its space is open — the
-// storyline is what the owner works on until something is built from it.
-it('opens ② on a storyline with no plan, its space open with paragraphs and scenes', async () => {
+// CLIP-36, CLIP-179: a storyline without a plan opens ③, the storyline standing as the whole step.
+it('opens ③ on a storyline with no plan, with paragraphs and scenes', async () => {
   await mount(storylined())
-  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
-  expect(heading()).toHaveAttribute('aria-expanded', 'true')
+  expect(screen.getByRole('tab', { name: '스토리라인' })).toHaveAttribute('aria-selected', 'true')
+  expect(heading()).toBeVisible()
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
   expect(paragraph(1).getByText('장면 1')).toBeVisible()
   // No footage in the session: the scene shows what was observed in it instead of a frame.
@@ -189,14 +194,21 @@ it('opens ② on a storyline with no plan, its space open with paragraphs and sc
   expect(out.getByText('장면 2')).toBeVisible()
 })
 
-// CLIP-179: with a plan the space starts closed — the plan is what ② is for then.
-it('closes the space when ② shows a plan', async () => {
+// CLIP-179, CLIP-197: the storyline is ③'s whole step, and ④ starts with the preview and the
+// blocks with nothing above them.
+it('keeps the storyline on ③ and off ④ once there is a plan', async () => {
   await mount(
     storylined({ editPlanRevision: 1, renderedPlanRevision: 0, editing: clipTimelineFixture() }),
+    {},
+    {},
+    'tab',
   )
+  expect(screen.getByRole('tab', { name: '다듬기' })).toHaveAttribute('aria-selected', 'true')
   expect(screen.queryByRole('listitem', { name: '1번째 문단' })).not.toBeInTheDocument()
-  await userEvent.click(heading())
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
+  expect(screen.getByRole('button', { name: '이 스토리로 다시 만들기' })).toBeVisible()
+  expect(screen.getByRole('button', { name: '이전: 관찰' })).toBeVisible()
 })
 
 it.each([
@@ -240,13 +252,14 @@ it.each([
     expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
 
     await user.keyboard('{Escape}')
+    await user.click(screen.getByRole('tab', { name: '다듬기' }))
     await user.click(screen.getByRole('button', { name: '더빙 대본' }))
     expect(await screen.findByRole('dialog', { name: '더빙 대본' })).toBeVisible()
     await user.keyboard('{Escape}')
-    await user.click(heading())
+    await user.click(screen.getByRole('tab', { name: '스토리라인' }))
     expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
     await user.keyboard('{Escape}')
-    for (const step of ['영상 생성', '영상 완성', '영상 다듬기']) {
+    for (const step of ['생성', '완성', '스토리라인']) {
       await user.click(screen.getByRole('tab', { name: step }))
     }
     await user.click(heading())
@@ -274,7 +287,7 @@ it.each([
     await act(async () => {
       view.queryClient.setQueryData(key, project)
     })
-    await user.click(await screen.findByRole('tab', { name: '영상 다듬기' }))
+    await user.click(await screen.findByRole('tab', { name: '스토리라인' }))
     await user.click(heading())
     expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue(request)
     expect(calls.filter((call) => /Start|Cancel|Update|Finalize/.test(call))).toEqual([])
@@ -306,8 +319,12 @@ it('starts with no prior request when the owner changes in the same clip route',
       create(GetMeResponseSchema, { user: { id: 'bob' } }),
     )
   })
-  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
-  expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
+  // Bob's workspace mounts afresh on ④, the step his project's plan puts it in.
+  await waitFor(() =>
+    expect(screen.getByRole('tab', { name: '다듬기' })).toHaveAttribute('aria-selected', 'true'),
+  )
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
+  expect(await screen.findByLabelText('스토리라인 수정 요청')).toHaveValue('')
   expect(calls.filter((call) => /Start|Cancel|Update|Finalize/.test(call))).toEqual([])
 })
 
@@ -323,20 +340,20 @@ it('does not carry request text to another project, back from route departure, o
     target: { value: '이 영상에만 보낼 요청' },
   })
   await act(() => view.router.navigate({ href: '/clips/other' }))
-  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  await userEvent.click(await screen.findByRole('tab', { name: '스토리라인' }))
   expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
   fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
     target: { value: '다른 영상 요청' },
   })
   await act(() => view.router.navigate({ href: '/clips/clip' }))
-  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  await userEvent.click(await screen.findByRole('tab', { name: '스토리라인' }))
   expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
   fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
     target: { value: '새로 고침 전에 쓴 요청' },
   })
   view.unmount()
   renderAppAt('/clips/clip', { transport: view.transport })
-  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  await userEvent.click(await screen.findByRole('tab', { name: '스토리라인' }))
   expect(screen.getByLabelText('스토리라인 수정 요청')).toHaveValue('')
   expect(calls.filter((call) => /Start|Cancel|Update|Finalize/.test(call))).toEqual([])
 })
@@ -448,8 +465,8 @@ it.each([
   ],
 ])('reads the storyline without controls when %s', async (_, project) => {
   await mount(project, {}, {}, 'tab')
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
-  await screen.findByRole('button', { name: '스토리라인' })
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
+  await screen.findByRole('heading', { name: '스토리라인', level: 2 })
   if (heading().getAttribute('aria-expanded') !== 'true') await userEvent.click(heading())
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
   expect(paragraph(1).queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
@@ -462,7 +479,7 @@ it.each([
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveAttribute('readonly')
 })
 
-// A job that ② owns keeps ② on screen, and the storyline is read-only under it.
+// A job that ④ owns leaves the workspace on screen, and ③'s storyline is read-only under it.
 it('reads the storyline without controls while a job runs', async () => {
   const job = {
     id: 'running',
@@ -483,7 +500,7 @@ it('reads the storyline without controls while a job runs', async () => {
     { jobs: [job] },
     'tab',
   )
-  await userEvent.click(await screen.findByRole('button', { name: '스토리라인' }))
+  await userEvent.click(await screen.findByRole('tab', { name: '스토리라인' }))
   expect(paragraph(1).getByText('음식을 가까이 보여줘요.')).toBeVisible()
   expect(paragraph(1).queryByRole('button', { name: '1번째 문단 고치기' })).not.toBeInTheDocument()
   expect(block('인트로').queryByRole('switch')).not.toBeInTheDocument()
@@ -540,11 +557,11 @@ it.each(['storyline_clip', 'revise_storyline_clip'])(
 
 // CLIP-179, CLIP-186: the slots stand in ② before any template, storyline or plan, and an edit
 // saves itself as a region edit naming the revision it was made over.
-it('writes the slots on ② before any template, storyline or plan', async () => {
+it('writes the slots on ③ before any template, storyline or plan', async () => {
   const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
   await mount(bare(), { regionWrites, templates: [] }, {}, 'tab')
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
-  expect(heading()).toHaveAttribute('aria-expanded', 'true')
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
+  expect(heading()).toBeVisible()
   expect(block('인트로').getByText('심플 제목')).toBeVisible()
   // The renderer's own numbered drawing of the chosen preset, as ① shows it (CLIP-165).
   await waitFor(() =>
@@ -559,7 +576,7 @@ it('writes the slots on ② before any template, storyline or plan', async () =>
   // No body to edit and no storyline action to build one from: ① starts that.
   expect(screen.queryByRole('listitem', { name: '1번째 문단' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: '다시 만들기' })).not.toBeInTheDocument()
-  expect(screen.getByText(/아직 다듬을 편집안이 없어요/)).toBeVisible()
+  expect(screen.getByText(/아직 스토리라인이 없어요/)).toBeVisible()
   expect(block('인트로').getByText('아직 영상에 보일 문구가 없어요.')).toBeVisible()
 
   const user = userEvent.setup()
@@ -610,7 +627,7 @@ it('turns a region off and on from ①, keeping its slots', async () => {
     'aria-checked',
     'true',
   )
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   expect(block('인트로').getByText('사용 안 함')).toBeVisible()
   expect(line('아웃트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('다시 만나요')
 })
@@ -649,7 +666,7 @@ it('shows the server’s seed when ① chooses a template, the owner’s words k
       ),
     AUTOSAVE,
   )
-  await user.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await user.click(screen.getByRole('tab', { name: '스토리라인' }))
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('내가 쓴 첫 줄')
   expect(line('인트로', 1).getByText('직접 입력')).toBeVisible()
   expect(line('인트로', 2).getByLabelText('2번째 줄 문구')).toHaveValue('템플릿 둘째 줄')
@@ -666,7 +683,7 @@ it('keeps a deliberate blank apart from a slot awaiting words', async () => {
     {},
     'tab',
   )
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   expect(line('인트로', 1).getByText('생성됨')).toBeVisible()
   await userEvent.clear(line('인트로', 1).getByLabelText('1번째 줄 문구'))
   expect(line('인트로', 1).getByText('비워 둠')).toBeVisible()
@@ -700,7 +717,7 @@ it('keeps unused words, moves them into a slot and restores them with room', asy
     {},
     'tab',
   )
-  await user.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await user.click(screen.getByRole('tab', { name: '스토리라인' }))
   const unused = () => within(screen.getByRole('region', { name: '쓰지 않는 문구' }))
   expect(unused().getByLabelText('쓰지 않는 문구 1')).toHaveValue('셋째 줄')
   expect(unused().getByText(/담을 수 있는 줄 수를 넘겨서/)).toBeVisible()
@@ -724,13 +741,13 @@ it('keeps unused words, moves them into a slot and restores them with room', asy
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('셋째 줄')
 
   // A preset with three slots draws the third again.
-  await user.click(screen.getByRole('tab', { name: '영상 생성' }))
+  await user.click(screen.getByRole('tab', { name: '생성' }))
   await clipGuideTo('style')
   await userEvent.setup().click(await screen.findByRole('button', { name: '디자인과 자막 스타일' }))
   await clipGuideTo('style')
   const intro = await screen.findByRole('radiogroup', { name: '인트로 디자인' })
   await user.click(within(intro).getByRole('radio', { name: '매거진 커버' }))
-  await user.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await user.click(screen.getByRole('tab', { name: '스토리라인' }))
   await waitFor(
     () => expect(line('인트로', 3).getByLabelText('3번째 줄 문구')).toHaveValue('첫 줄'),
     AUTOSAVE,
@@ -743,7 +760,7 @@ it('keeps unused words, moves them into a slot and restores them with room', asy
 it('refuses words a slot cannot draw in its field and keeps them', async () => {
   const regionWrites: NonNullable<FakeClipsOptions['regionWrites']> = []
   await mount(bare(), { regionWrites }, {}, 'tab')
-  await userEvent.click(screen.getByRole('tab', { name: '영상 다듬기' }))
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   const field = line('인트로', 1).getByLabelText('1번째 줄 문구')
   // Paperlogy does not draw 갂 (CDS-17).
   fireEvent.change(field, { target: { value: '갂' } })
@@ -834,8 +851,9 @@ it('lands a delayed slot save before the correction and the render it precedes',
   await selectSources()
   await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled())
 
-  await userEvent.click(heading())
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   await userEvent.click(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' }))
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   fireEvent.change(
     within(screen.getByRole('region', { name: '장면 블록' })).getByDisplayValue('caption a'),
     { target: { value: '렌더 직전 수정' } },
@@ -877,7 +895,7 @@ it('shares one set of region words between the storyline block and the correctio
   projectFakeRegions(project)
   await mount(project, { planWrites, regionWrites }, {}, 'tab')
   await screen.findByRole('region', { name: '컷·자막 수정' })
-  await userEvent.click(heading())
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   // The space reads 인트로 → body → 아웃트로 (CLIP-179).
   const [intro, body, outro] = [
     storyline().getByRole('region', { name: '인트로' }),
@@ -901,12 +919,14 @@ it('shares one set of region words between the storyline block and the correctio
   // The words went as the plan's row, not as a second copy in a region edit.
   expect(sent(regionWrites, 'intro')).toEqual({})
 
-  // The scene list's intro block is the same region editor, not a second copy (CLIP-17).
+  // The scene list's intro block on ④ is the same region editor, not a second copy (CLIP-17).
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   const sceneLine = (n: number) => within(sceneBlock('인트로').getAllByRole('listitem')[n - 1])
   expect(sceneLine(2).getByLabelText('2번째 줄 문구')).toHaveValue('저녁 영업')
   fireEvent.change(sceneLine(1).getByLabelText('1번째 줄 문구'), {
     target: { value: '성수 로컬 가이드' },
   })
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   expect(line('인트로', 1).getByLabelText('1번째 줄 문구')).toHaveValue('성수 로컬 가이드')
   await waitFor(
     () =>
@@ -982,8 +1002,9 @@ it('launches no render past a slot save that fails, keeping both edits', async (
   )
   await screen.findByRole('region', { name: '컷·자막 수정' })
   await selectSources()
-  await userEvent.click(heading())
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   await userEvent.click(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' }))
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   await editCaption('렌더 직전 수정')
   await renderOnServer()
   // Fail the held save only after the render has tried to flush it, independent of debounce timing.
@@ -991,7 +1012,9 @@ it('launches no render past a slot save that fails, keeping both edits', async (
   await waitFor(() => expect(calls).toContain('UpdateClipProject'), AUTOSAVE)
   await new Promise((resolve) => setTimeout(resolve, 300))
   expect(calls).not.toContain('ConfirmClipProject')
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   expect(block('아웃트로').getByRole('switch', { name: '아웃트로 사용' })).toBeChecked()
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   expect(
     within(screen.getByRole('region', { name: '장면 블록' })).getByDisplayValue('렌더 직전 수정'),
   ).toBeInTheDocument()
@@ -1023,20 +1046,21 @@ it('holds the render while a slot holds words it cannot draw', async () => {
   await selectSources()
   await editCaption('다시 렌더할 수정')
   await waitFor(() => expect(screen.getByRole('button', { name: RENDER })).toBeEnabled(), AUTOSAVE)
-  await userEvent.click(heading())
+  // The slot is ③'s; the render it holds is ④'s (CLIP-179, CLIP-188).
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   const field = line('인트로', 1).getByLabelText('1번째 줄 문구')
   fireEvent.change(field, { target: { value: '갂' } })
   expect(field).toHaveAttribute('aria-invalid', 'true')
-  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
   expect(field).toHaveValue('갂')
-  await userEvent.click(screen.getByRole('tab', { name: '영상 생성' }))
-  await clipGuideTo('review')
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
+  expect(screen.getByRole('button', { name: RENDER })).toBeDisabled()
+  await clipGuideToActions()
   const create = screen.getByRole('button', { name: '바로 만들기' })
   expect(create).toBeDisabled()
   expect(create).toHaveAccessibleDescription(/스토리라인에서 표시된 문구를 바로잡아/)
   expect(screen.getByRole('button', { name: '스토리라인 먼저' })).toBeDisabled()
   await userEvent.click(screen.getByRole('button', { name: '바로잡기' }))
-  expect(screen.getByRole('tab', { name: '영상 다듬기' })).toHaveAttribute('aria-selected', 'true')
+  expect(screen.getByRole('tab', { name: '스토리라인' })).toHaveAttribute('aria-selected', 'true')
   // The route lands keyboard focus on the slot holding the words, not on the page body.
   await waitFor(() =>
     expect(document.activeElement).toBe(line('인트로', 1).getByLabelText('1번째 줄 문구')),
@@ -1052,10 +1076,11 @@ it('never confirms an earlier render for a plan a slot edit moved', async () => 
   const confirmations: Array<{ expectedPlanRevision: number }> = []
   await mount(rendered(), { confirmations }, {}, 'tab')
   await screen.findByRole('region', { name: '컷·자막 수정' })
-  await userEvent.click(heading())
+  await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
   fireEvent.change(line('인트로', 2).getByLabelText('2번째 줄 문구'), {
     target: { value: '저녁 영업' },
   })
+  await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   await userEvent.click(screen.getByRole('button', { name: '확정하기' }))
   await waitFor(() => expect(confirmations).toHaveLength(1), AUTOSAVE)
   expect(confirmations[0].expectedPlanRevision).toBeGreaterThan(rendered().renderedPlanRevision!)
