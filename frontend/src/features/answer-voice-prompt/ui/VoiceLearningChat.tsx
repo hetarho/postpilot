@@ -13,6 +13,7 @@ import {
   FieldLabel,
   FieldMessage,
   Listbox,
+  LoadingState,
   ProgressBar,
   Typography,
   type ChatMessage,
@@ -286,9 +287,7 @@ function AccountLearningChat({
           </Button>
         </div>
       ) : state.phase === 'loading' ? (
-        <Typography variant="body" role="status" className="mt-6">
-          {t('prompts.loading')}
-        </Typography>
+        <LoadingState variant="detail" rows={2} label={t('prompts.loading')} className="mt-6" />
       ) : (
         <>
           <Chat
@@ -395,11 +394,7 @@ function QuestionAnswerComposer({
       </div>
     )
   if (needsSavedAnswer && !detail)
-    return (
-      <Typography variant="body" role="status" className="mt-4">
-        {t('prompts.loading')}
-      </Typography>
-    )
+    return <LoadingState variant="form" rows={1} label={t('prompts.loading')} className="mt-4" />
   return (
     <VoiceAnswerComposer
       {...props}
@@ -431,5 +426,5 @@ function SavedReply({
         {t('prompts.retry')}
       </Button>
     )
-  return <span>{t('prompts.loading')}</span>
+  return <LoadingState variant="inline" label={t('prompts.loading')} />
 }
