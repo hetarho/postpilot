@@ -144,8 +144,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
-| r114 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T07:41Z | 2026-11-13T07:50Z | - | main | bf4b5076c4f4 |
-| r115 | DESKTOP-VKPLS8P | pair | 2026-11-13T08:12Z | 2026-11-13T08:20Z | - | main | 8c310798a25e |
+| u17b | ihaelam-ui-MacBookPro | pair | 2026-11-13T14:58Z | 2026-11-13T14:58Z | - | main | 442b4c4fb9f6 |
 
 ## unlanded
 | id | tag | branch | commit | at |
