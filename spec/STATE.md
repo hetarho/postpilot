@@ -49,6 +49,7 @@
 ## review
 | id | st |
 |---|---|
+| design-system-panels-261114 | converted@261114 |
 | video-editing-ux-261114 | converted@261114 |
 | performance-design-system-261113 | converted@261113 |
 | video-preparation-guide-261112 | converted@261112 |
@@ -69,7 +70,6 @@
 | perf-quality-261109 | converted@261109 |
 | perf-quality-si4-261109 | converted@261109 |
 | perf-quality-sil5-261110 | converted@261110 |
-
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
@@ -93,11 +93,13 @@
 | T813 | Use shared media and radio controls in video editors | ARCH THEME | T812 | todo |
 | T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
 | T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
-| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 | todo |
+| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 T821 T822 | todo |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
+| T821 | Align template example and choice surfaces | ARCH | - | todo |
+| T822 | Align remaining operational card and row surfaces | ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
