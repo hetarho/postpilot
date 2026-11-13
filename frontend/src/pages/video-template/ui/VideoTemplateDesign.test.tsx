@@ -22,6 +22,16 @@ function mount(writes: ClipRecipe[] = []) {
   })
 }
 describe('separate retained video template design', () => {
+  it('leads the saved detail with an example of its stored design before editing actions', async () => {
+    mount()
+    const example = await screen.findByText('구성 예시')
+    expect(
+      screen.getByText('인트로 매거진 커버 · 자막 네온 사인 · 아웃트로 점수 강조'),
+    ).toBeInTheDocument()
+    const edit = screen.getByRole('button', { name: /시작 디자인 편집$/ })
+    expect(example.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('combobox', { name: /^인트로 디자인/ })).not.toBeInTheDocument()
+  })
   it('shows saved design editing beside named text methods and exposes no competing name/body draft', async () => {
     const user = userEvent.setup()
     mount()
