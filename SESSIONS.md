@@ -173,6 +173,7 @@
 | T810 | dsui | task/design-system-audit-serial | f9d60eefa35c | 2026-11-13T16:47Z |
 
 ## log
+- 261113 fix loading: consistent shared feedback in voice prompts, saved replies, memory candidate reads and refund history; three presentation-only files, existing complete regression scope retained
 - 261113 T810 done
 - 261113 fix shared-ui: merge caller classes and expose card padding for concrete card/row/media migrations;9 existing primitive tests and scoped ESLint passed
 - 261113 T809 done
@@ -192,4 +193,3 @@
 - 261113 gusta-create-task THEME r44: T803–T816; shared foundation then return/resource/clip/attachment lanes and complete-route audit
 - 261113 gusta-update-ssot THEME start; audit all product routes for shared navigation, catalogs, clip workflow and native-control escapes in isolated checkout
 - 261113 gusta-update-ssot THEME r43: contextual loading; gusta-create-task THEME start
-- 261113 gusta-update-ssot THEME start: replace flashing page loading copy with contextual skeletons and indicators
