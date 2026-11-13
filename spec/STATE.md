@@ -87,12 +87,10 @@
 | T800 | Add loading geometry to billing, plans and gifts | ARCH THEME | T795 | todo |
 | T801 | Add skeletons to administration and spoken voice pages | ARCH THEME | T795 | todo |
 | T802 | Smooth embedded catalogs and incremental history loading | ARCH THEME | T795 | todo |
-| T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 T821 T822 T823 T824 T825 | doing@261113.dsui |
 | T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
 | T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T819 | Show visual composition summaries when choosing video templates | CLIP ARCH | - | todo |
 | T820 | Present visual video templates in the directory and detail | CLIP THEME ARCH | T797 T798 T819 | todo |
-
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
