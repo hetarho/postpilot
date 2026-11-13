@@ -1,3 +1,4 @@
+import { Clapperboard } from 'lucide-react'
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRef, type Ref } from 'react'
@@ -9,6 +10,7 @@ import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
 import { ChannelActions } from '@/widgets/channel-actions'
 import {
   Badge,
+  DirectoryItem,
   Button,
   Notice,
   Typography,
@@ -40,7 +42,10 @@ export function VideoTemplatesPage() {
   })
 
   return (
-    <main ref={page} className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <main
+      ref={page}
+      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
+    >
       <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('directory.description', { ns: 'clips' })}
@@ -85,12 +90,12 @@ export function VideoTemplatesPage() {
           {templates.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-labelledby="video-templates-heading" className="mt-8">
+            <section aria-labelledby="video-templates-heading" className="mt-6">
               <Typography variant="title" id="video-templates-heading">
                 {t('directory.saved', { ns: 'clips' })}
               </Typography>
-              {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
-              <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
+              {/* Saved resources share one card composition with the writing catalog. */}
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -115,29 +120,37 @@ export function VideoTemplatesPage() {
               <Typography variant="title" as="h2" id="video-templates-unsaved-heading">
                 {t('directory.unsavedWork', { ns: 'clips' })}
               </Typography>
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
-                    <li key={row.sessionId}>
-                      <Link
-                        to="/video-templates/new"
-                        search={(previous) => ({ ...previous, session: row.sessionId })}
-                        className={typographyStyles({
-                          variant: 'body',
-                          className: 'text-link-fg inline-flex min-h-11 items-center underline',
-                        })}
-                      >
-                        {t('directory.resumeNew', {
-                          ns: 'clips',
-                          name: row.displayName || t('directory.create', { ns: 'clips' }),
-                        })}
-                      </Link>
-                      <Typography variant="body" className="text-content-secondary">
-                        {t('directory.unsaved', { ns: 'clips' })}
-                      </Typography>
-                      <EditingStatus summary={row} />
-                    </li>
+                    <DirectoryItem
+                      key={row.sessionId}
+                      interactive
+                      icon={<Clapperboard className="size-6" />}
+                      title={
+                        <Link
+                          to="/video-templates/new"
+                          search={(previous) => ({ ...previous, session: row.sessionId })}
+                          className={typographyStyles({
+                            variant: 'fieldTitle',
+                            className:
+                              'text-content-primary break-words after:absolute after:inset-0',
+                          })}
+                        >
+                          {t('directory.resumeNew', {
+                            ns: 'clips',
+                            name: row.displayName || t('directory.create', { ns: 'clips' }),
+                          })}
+                        </Link>
+                      }
+                      description={
+                        <Typography variant="meta" as="p">
+                          {t('directory.unsaved', { ns: 'clips' })}
+                        </Typography>
+                      }
+                      status={<EditingStatus summary={row} />}
+                    />
                   ))}
               </ul>
             </section>
@@ -185,38 +198,43 @@ function TemplateRow({
 }) {
   const { t } = useTranslation('clips')
   return (
-    // `min-h-16` and `py-2`, not the list row's usual `min-h-11`/`py-3`: every row carries the
-    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (THEME-23).
-    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
-      <Link
-        to="/video-templates/$templateId"
-        params={{ templateId: template.id }}
-        search={({ channel }) => ({ channel })}
-        className={typographyStyles({
-          variant: 'label',
-          className: 'min-w-0 truncate after:absolute after:inset-0',
-        })}
-      >
-        {template.name}
-      </Link>
-      <div className="basis-full">
-        <Typography variant="body" className="text-content-secondary">
-          {t('directory.savedAvailable')}
-        </Typography>
-        <EditingStatus summary={summary} />
-      </div>
-      <div className="relative ml-auto flex shrink-0 items-center gap-2">
-        <Badge tone="neutral">
-          {t('directory.projectCount', { count: template.projectCount })}
-        </Badge>
+    <DirectoryItem
+      interactive
+      icon={<Clapperboard className="size-6" />}
+      title={
+        <Link
+          to="/video-templates/$templateId"
+          params={{ templateId: template.id }}
+          search={({ channel }) => ({ channel })}
+          className={typographyStyles({
+            variant: 'fieldTitle',
+            className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
+          })}
+        >
+          {template.name}
+        </Link>
+      }
+
+      status={summary && <EditingStatus summary={summary} />}
+      metadata={
+        <>
+          <Badge tone="neutral">
+            {t('directory.projectCount', { count: template.projectCount })}
+          </Badge>
+          <Typography variant="meta" as="span">
+            {t('directory.savedAvailable')}
+          </Typography>
+        </>
+      }
+      actions={
         <DeleteClipTemplateButton
           ownerId={ownerId}
           template={template}
           buttonRef={deleteButtonRef}
           onDeleted={onDeleted}
         />
-      </div>
-    </li>
+      }
+    />
   )
 }
 function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
@@ -229,7 +247,7 @@ function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
   return (
     <div role="status" className="mt-1 space-y-1">
       {summary.lastPublication?.outcome && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('directory.lastPublication', {
             ns: 'clips',
             result: t(
@@ -240,20 +258,22 @@ function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
         </Typography>
       )}
       {summary.hasUnpublishedChanges && (
-        <Typography variant="body">{t('unpublished', { ns: 'authoring', ...named })}</Typography>
+        <Typography variant="meta" as="p">
+          {t('unpublished', { ns: 'authoring', ...named })}
+        </Typography>
       )}
       {summary.activeJobId && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('directory.activeAI', { ns: 'clips', name: named.name })}
         </Typography>
       )}
       {summary.publicationPending && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('directory.publicationPending', { ns: 'clips', name: named.name })}
         </Typography>
       )}
       {summary.targetConflict && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('directory.conflict', { ns: 'clips', name: named.name })}
         </Typography>
       )}

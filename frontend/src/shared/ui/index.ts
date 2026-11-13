@@ -79,3 +79,5 @@ export {
   type NavigationLinkProps,
 } from './navigation/context'
 export { WorkspaceHeader } from './workspace-header/WorkspaceHeader'
+
+export { DirectoryItem } from './directory-item/DirectoryItem'

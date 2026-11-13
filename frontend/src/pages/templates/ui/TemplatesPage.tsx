@@ -9,10 +9,10 @@ import { ChannelActions } from '@/widgets/channel-actions'
 import { LayoutList } from 'lucide-react'
 import {
   Badge,
+  DirectoryItem,
   Button,
   Notice,
   Typography,
-  cardStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
@@ -92,7 +92,7 @@ export function TemplatesPage() {
                 {t('page.saved', { ns: 'templates' })}
               </Typography>
               {/* Guide: each template is a card; the card opens its own focused screen. */}
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -118,29 +118,37 @@ export function TemplatesPage() {
               <Typography variant="title" as="h2" id="templates-unsaved-heading">
                 {t('screen.unsavedWork', { ns: 'templates' })}
               </Typography>
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
-                    <li key={row.sessionId}>
-                      <Link
-                        to="/templates/new"
-                        search={{ session: row.sessionId }}
-                        className={typographyStyles({
-                          variant: 'body',
-                          className: 'text-link-fg inline-flex min-h-11 items-center underline',
-                        })}
-                      >
-                        {t('screen.resumeNew', {
-                          ns: 'templates',
-                          name: row.displayName || t('page.new', { ns: 'templates' }),
-                        })}
-                      </Link>
-                      <Typography variant="body" className="text-content-secondary">
-                        {t('screen.unsaved', { ns: 'templates' })}
-                      </Typography>
-                      <EditingStatus summary={row} />
-                    </li>
+                    <DirectoryItem
+                      key={row.sessionId}
+                      interactive
+                      icon={<LayoutList className="size-6" />}
+                      title={
+                        <Link
+                          to="/templates/new"
+                          search={{ session: row.sessionId }}
+                          className={typographyStyles({
+                            variant: 'fieldTitle',
+                            className:
+                              'text-content-primary break-words after:absolute after:inset-0',
+                          })}
+                        >
+                          {t('screen.resumeNew', {
+                            ns: 'templates',
+                            name: row.displayName || t('page.new', { ns: 'templates' }),
+                          })}
+                        </Link>
+                      }
+                      description={
+                        <Typography variant="meta" as="p">
+                          {t('screen.unsaved', { ns: 'templates' })}
+                        </Typography>
+                      }
+                      status={<EditingStatus summary={row} />}
+                    />
                   ))}
               </ul>
             </section>
@@ -189,54 +197,46 @@ function TemplateRow({
 }) {
   const { t } = useTranslation('templates')
   return (
-    // Guide: a raised card — a glyph tile, the name in a heading's size and the description under
-    // it. The link stretches over the whole card through its `::after`; the delete paints above.
-    <li
-      className={cardStyles({
-        interactive: true,
-        padding: 'sm',
-        className: 'relative flex min-h-16 flex-wrap items-start gap-x-3 gap-y-2 sm:p-5',
-      })}
-    >
-      <span
-        aria-hidden="true"
-        className="bg-badge-accent-bg text-badge-accent-fg flex size-11 shrink-0 items-center justify-center rounded-lg"
-      >
-        <LayoutList className="size-5" />
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
+    <DirectoryItem
+      interactive
+      icon={<LayoutList className="size-6" />}
+      title={
         <Link
           to="/templates/$templateId"
           params={{ templateId: template.id }}
           className={typographyStyles({
             variant: 'fieldTitle',
-            className: 'text-content-primary min-w-0 truncate after:absolute after:inset-0',
+            className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
           })}
         >
           {template.name}
         </Link>
-        {template.description && (
-          <Typography variant="body" as="span" className="text-content-secondary line-clamp-2">
+      }
+      description={
+        template.description && (
+          <Typography variant="body" as="span" className="line-clamp-2">
             {template.description}
           </Typography>
-        )}
-      </span>
-      <div className="basis-full">
-        <Typography variant="body" className="text-content-secondary">
-          {t('screen.savedAvailable')}
-        </Typography>
-        <EditingStatus summary={summary} />
-      </div>
-      <div className="relative ml-auto flex shrink-0 items-center gap-2">
-        <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
+        )
+      }
+      status={summary && <EditingStatus summary={summary} />}
+      metadata={
+        <>
+          <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
+          <Typography variant="meta" as="span">
+            {t('screen.savedAvailable')}
+          </Typography>
+        </>
+      }
+      actions={
         <DeleteTemplateButton
           ownerId={ownerId}
           template={template}
           buttonRef={deleteButtonRef}
           onDeleted={onDeleted}
         />
-      </div>
-    </li>
+      }
+    />
   )
 }
 
@@ -250,7 +250,7 @@ function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
   return (
     <div className="mt-1 space-y-1" role="status">
       {summary.lastPublication?.outcome && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('screen.lastPublication', {
             ns: 'templates',
             result: t(
@@ -261,20 +261,22 @@ function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
         </Typography>
       )}
       {summary.hasUnpublishedChanges && (
-        <Typography variant="body">{t('unpublished', { ns: 'authoring', ...named })}</Typography>
+        <Typography variant="meta" as="p">
+          {t('unpublished', { ns: 'authoring', ...named })}
+        </Typography>
       )}
       {summary.activeJobId && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('screen.activeAI', { ns: 'templates', name: named.name })}
         </Typography>
       )}
       {summary.publicationPending && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('screen.publicationPending', { ns: 'templates', name: named.name })}
         </Typography>
       )}
       {summary.targetConflict && (
-        <Typography variant="body">
+        <Typography variant="meta" as="p">
           {t('screen.conflict', { ns: 'templates', name: named.name })}
         </Typography>
       )}
