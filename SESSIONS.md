@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit |
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:26Z | - | main | 619e998349b0 |
-| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:13Z | 2026-11-13T16:28Z | T804 | task/design-system-audit-serial | 490d07986547 |
+| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:13Z | 2026-11-13T16:30Z | - | task/design-system-audit-serial | 490d07986547 |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:23Z | - | task/video-ux | fcbdaab664b2 |
 
 ## inbox
@@ -159,8 +159,10 @@
 | T794 | r115 | main | 8c310798a25e | 2026-11-13T08:20Z |
 | T795 | ldui | main | b635d3d3cced | 2026-11-13T16:18Z |
 | T803 | dsui | task/design-system-audit-serial | b754ff465fde | 2026-11-13T16:25Z |
+| T804 | dsui | task/design-system-audit-serial | 490d07986547 | 2026-11-13T16:30Z |
 
 ## log
+- 261113 T804 done
 - 261113 T803 done
 - 261113 video UX: adopting bounded caption-preview and visual-template proposals; planning isolated from active si8 and dsui groups
 - 261113 T795 done
@@ -180,4 +182,3 @@
 - 261113 T790 done
 - 261113 T789 done
 - 261113 T788 done
-- 261113 T787 done
