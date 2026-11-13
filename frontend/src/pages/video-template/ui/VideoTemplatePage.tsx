@@ -2,7 +2,7 @@ import { clsx } from 'clsx'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
+import { ClipTemplateSummary, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
 import { useSession } from '@/entities/session'
 import { ClipTemplateDirectEditor, ClipTemplateEditor } from '@/features/edit-clip-template'
@@ -257,7 +257,8 @@ function VideoTemplateHost({
             </div>
           )}
           {stored && (
-            <div className="order-2 mt-4 sm:order-none sm:mt-6">
+            <div className="mt-4 space-y-6 sm:mt-6">
+              <ClipTemplateSummary template={stored} />
               <AuthoringPreview
                 kind="video-template"
                 artifact={{
@@ -270,7 +271,7 @@ function VideoTemplateHost({
               />
             </div>
           )}
-          <div className="order-1 mt-4 flex flex-wrap gap-2 sm:order-none sm:mt-8 sm:gap-4">
+          <div className="mt-4 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
             <Button
               aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
               variant="secondary"

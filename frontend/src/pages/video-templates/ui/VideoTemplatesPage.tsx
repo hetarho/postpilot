@@ -1,8 +1,9 @@
 import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRef, type Ref } from 'react'
+import { Film } from 'lucide-react'
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '@/entities/clip-project'
-import { useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
+import { ClipTemplateSummary, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
@@ -12,14 +13,15 @@ import {
   Button,
   Notice,
   LoadingState,
+  Skeleton,
   Typography,
+  cardStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
 } from '@/shared/ui'
 
-/** The video-template directory, in the shape the post-template directory already has (CLIP-42):
- *  the same rows, the same usage badge, the same failure and empty treatments, and one docked CTA. */
+/** Saved video compositions share directory controls while showing their own visual vocabulary. */
 export function VideoTemplatesPage() {
   const { t } = useTranslation(['clips', 'common'])
   const { user } = useSession()
@@ -63,11 +65,29 @@ export function VideoTemplatesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <LoadingState
-          variant="list"
-          label={t('state.loading', { ns: 'common' })}
-          className="mt-8"
-        />
+        <div aria-busy="true" className="mt-8">
+          <span role="status" aria-live="polite" className="sr-only">
+            {t('state.loading', { ns: 'common' })}
+          </span>
+          <div
+            aria-hidden="true"
+            className="loading-reveal grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          >
+            {[0, 1, 2].map((item) => (
+              <div key={item} className={cardStyles()}>
+                <Skeleton className="h-5 w-2/3" />
+                <div className="mt-3 flex items-start gap-4">
+                  <Skeleton className="aspect-9/16 w-24 shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+                <Skeleton className="mt-4 h-10 w-full" />
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {!isError && !isPending && (
@@ -94,8 +114,7 @@ export function VideoTemplatesPage() {
               <Typography variant="title" id="video-templates-heading">
                 {t('directory.saved', { ns: 'clips' })}
               </Typography>
-              {/* Rows are full-bleed against the page gutter, so the list cancels it (THEME-23). */}
-              <ul className="divide-divider -mx-4 mt-3 divide-y sm:-mx-6 lg:-mx-8">
+              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -120,19 +139,24 @@ export function VideoTemplatesPage() {
               <Typography variant="title" as="h2" id="video-templates-unsaved-heading">
                 {t('directory.unsavedWork', { ns: 'clips' })}
               </Typography>
-              <ul className="mt-3 space-y-3">
+              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
-                    <li key={row.sessionId}>
+                    <li
+                      key={row.sessionId}
+                      className={cardStyles({ className: 'relative min-w-0' })}
+                    >
                       <Link
                         to="/video-templates/new"
                         search={(previous) => ({ ...previous, session: row.sessionId })}
                         className={typographyStyles({
                           variant: 'body',
-                          className: 'text-link-fg inline-flex min-h-11 items-center underline',
+                          className:
+                            'text-link-fg inline-flex min-h-11 items-center gap-3 break-words underline after:absolute after:inset-0 after:rounded-xl',
                         })}
                       >
+                        <Film aria-hidden="true" className="size-5 shrink-0" />
                         {t('directory.resumeNew', {
                           ns: 'clips',
                           name: row.displayName || t('directory.create', { ns: 'clips' }),
@@ -171,7 +195,7 @@ function EmptyState() {
   )
 }
 
-/** One template, one target. The link stretches over the whole row through its `::after`, so the
+/** One template, one target. The link stretches over the whole card through its `::after`, so the
  *  padding and the empty space navigate too, while the delete paints above that layer and acts
  *  without navigating — a row is one target, not a row with a button inside it (THEME-23). */
 function TemplateRow({
@@ -189,36 +213,38 @@ function TemplateRow({
 }) {
   const { t } = useTranslation('clips')
   return (
-    // `min-h-16` and `py-2`, not the list row's usual `min-h-11`/`py-3`: every row carries the
-    // delete, which keeps the 44px floor, so the row is 44 plus its own padding (THEME-23).
-    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
+    <li className={cardStyles({ interactive: true, className: 'relative flex min-w-0 flex-col' })}>
       <Link
         to="/video-templates/$templateId"
         params={{ templateId: template.id }}
         search={({ channel }) => ({ channel })}
-        className={typographyStyles({
-          variant: 'label',
-          className: 'min-w-0 truncate after:absolute after:inset-0',
-        })}
+        aria-label={template.name}
+        className="block min-w-0 after:absolute after:inset-0 after:rounded-xl"
       >
-        {template.name}
+        <Typography variant="fieldTitle" as="span" className="flex items-start gap-3 break-words">
+          <Film aria-hidden="true" className="mt-1 size-5 shrink-0" />
+          <span className="min-w-0 break-words">{template.name}</span>
+        </Typography>
+        <ClipTemplateSummary template={template} />
       </Link>
-      <div className="basis-full">
+      <div className="mt-4">
         <Typography variant="body" className="text-content-secondary">
           {t('directory.savedAvailable')}
         </Typography>
         <EditingStatus summary={summary} />
       </div>
-      <div className="relative ml-auto flex shrink-0 items-center gap-2">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
         <Badge tone="neutral">
           {t('directory.projectCount', { count: template.projectCount })}
         </Badge>
-        <DeleteClipTemplateButton
-          ownerId={ownerId}
-          template={template}
-          buttonRef={deleteButtonRef}
-          onDeleted={onDeleted}
-        />
+        <div className="relative">
+          <DeleteClipTemplateButton
+            ownerId={ownerId}
+            template={template}
+            buttonRef={deleteButtonRef}
+            onDeleted={onDeleted}
+          />
+        </div>
       </div>
     </li>
   )
