@@ -8,6 +8,7 @@ import {
   type ReadyClipBatch,
 } from '@/entities/clip-project'
 import { ClipGenerationActions } from './ClipGenerationActions'
+import { ClipAnalyzeAction, ClipReanalyzeAction } from './ClipAnalyzeActions'
 
 const state = vi.hoisted(() => ({ expired: false, quoted: vi.fn() }))
 vi.mock('@/entities/plan', () => ({
@@ -85,6 +86,7 @@ it.each(['storyline', 'generate'] as const)(
       model,
       'eligible',
       mode,
+      undefined,
     )
     expect(approve).not.toHaveBeenCalled()
     const dialog = within(screen.getByRole('dialog', { name }))
@@ -183,4 +185,119 @@ it('refuses an expired ceiling without invoking approval', async () => {
     }),
   ).toBeDisabled()
   expect(approve).not.toHaveBeenCalled()
+})
+
+it('quotes only the analysis on 관찰하기 and approves its own ceiling (CLIP-234)', async () => {
+  const approve = vi.fn()
+  const user = userEvent.setup()
+  render(
+    <ClipAnalyzeAction
+      ownerId="owner"
+      project={project}
+      batch={batch}
+      observe={model}
+      write={model}
+      observeStatus="eligible"
+      ready
+      pending={false}
+      onApprove={approve}
+    />,
+  )
+  expect(state.quoted).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: '관찰하기' }))
+  expect(state.quoted).toHaveBeenLastCalledWith(
+    'owner',
+    project,
+    batch,
+    model,
+    model,
+    'eligible',
+    'analysis',
+    undefined,
+  )
+  const dialog = within(screen.getByRole('dialog', { name: '관찰하기' }))
+  await user.click(dialog.getByRole('button', { name: '최대 12 크레딧 · 승인하고 관찰하기' }))
+  expect(approve).toHaveBeenCalledExactlyOnceWith('analysis', quote)
+})
+
+it('chooses sources for 다시 관찰하기, confirms over hand edits, then quotes those sources', async () => {
+  const approve = vi.fn()
+  const user = userEvent.setup()
+  render(
+    <ClipReanalyzeAction
+      ownerId="owner"
+      project={project}
+      batch={batch}
+      observe={model}
+      write={model}
+      observeStatus="eligible"
+      ready
+      pending={false}
+      sources={[
+        { id: 'a', filename: 'a.mp4', ownerEdited: true },
+        { id: 'b', filename: 'b.mp4', ownerEdited: false },
+      ]}
+      onApprove={approve}
+    />,
+  )
+  await user.click(screen.getByRole('button', { name: '다시 관찰하기' }))
+  const sheet = within(screen.getByRole('dialog', { name: '다시 관찰할 영상' }))
+  expect(sheet.getByText('직접 고침')).toBeVisible()
+  expect(sheet.getByRole('button', { name: '다음' })).toBeDisabled()
+  await user.click(sheet.getByRole('checkbox', { name: /a\.mp4/ }))
+  await user.click(sheet.getByRole('button', { name: '다음' }))
+  const confirm = within(screen.getByRole('dialog', { name: '직접 고친 내용이 사라져요' }))
+  expect(confirm.getByText(/a\.mp4의 관찰 내용을 직접 고쳤어요/)).toBeVisible()
+  expect(state.quoted).not.toHaveBeenCalled()
+  await user.click(confirm.getByRole('button', { name: '그래도 다시 관찰하기' }))
+  expect(state.quoted).toHaveBeenLastCalledWith(
+    'owner',
+    project,
+    batch,
+    model,
+    model,
+    'eligible',
+    'analysis',
+    ['a'],
+  )
+  await user.click(screen.getByRole('button', { name: '최대 12 크레딧 · 승인하고 관찰하기' }))
+  expect(approve).toHaveBeenCalledExactlyOnceWith(quote, ['a'])
+})
+
+it('confirms an observation correction acknowledged after the reanalysis quote opened', async () => {
+  const approve = vi.fn()
+  const props = {
+    ownerId: 'owner',
+    project,
+    batch,
+    observe: model,
+    write: model,
+    observeStatus: 'eligible' as const,
+    ready: true,
+    pending: false,
+    onApprove: approve,
+  }
+  const view = render(
+    <ClipReanalyzeAction
+      {...props}
+      sources={[{ id: 'a', filename: 'a.mp4', ownerEdited: false }]}
+    />,
+  )
+  const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: '다시 관찰하기' }))
+  await user.click(screen.getByRole('checkbox', { name: 'a.mp4' }))
+  await user.click(screen.getByRole('button', { name: '다음' }))
+  view.rerender(
+    <ClipReanalyzeAction
+      {...props}
+      sources={[{ id: 'a', filename: 'a.mp4', ownerEdited: true }]}
+    />,
+  )
+  await user.click(screen.getByRole('button', { name: '최대 12 크레딧 · 승인하고 관찰하기' }))
+  expect(approve).not.toHaveBeenCalled()
+  const confirm = within(screen.getByRole('dialog', { name: '직접 고친 내용이 사라져요' }))
+  expect(confirm.getByText(/a\.mp4의 관찰 내용을 직접 고쳤어요/)).toBeVisible()
+  await user.click(confirm.getByRole('button', { name: '그래도 다시 관찰하기' }))
+  await user.click(screen.getByRole('button', { name: '최대 12 크레딧 · 승인하고 관찰하기' }))
+  expect(approve).toHaveBeenCalledExactlyOnceWith(quote, ['a'])
 })

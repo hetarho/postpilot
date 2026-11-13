@@ -42,6 +42,7 @@ const RATIO_STAGES = new Set(['observe', 'compare_observe', 'compare_write', 'co
 const CLIP_KINDS = new Set([
   'clip_upload_text',
   'generate_clip',
+  'analyze_clip',
   'speech_clip',
   'render_clip',
   'revise_clip',

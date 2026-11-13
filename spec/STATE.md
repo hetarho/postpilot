@@ -7,11 +7,6 @@
 - lang: ko
 - docs: en
 
-## active
-| tag | host | mode | since | at | doing |
-|---|---|---|---|---|---|
-| r113 | DESKTOP-VKPLS8P | autopilot | 2026-11-13T06:27Z | 2026-11-13T06:27Z | - |
-
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
 - 261113 decided T786 GEN-8 GEN-9: the impl notes say runs send no `reobserve`, but GEN-9 reads an absent selection as "observe every attachment"? → 바로 글 쓰기, 스토리라인 먼저 and 다시 만들기 send the EMPTY selection, which GEN-9 reads as reuse-everything and the current server decides for a run on its own anyway (alt: send nothing as the notes say | keep the picker on runs). An absent selection on a server that still honours it would re-observe every photo and replace the owner's corrections, while the empty one means the same as GEN-8 on every server.
@@ -217,7 +212,6 @@
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
-| T791 | Analyze and correct clip sources on ② 관찰 | CLIP QUOTA THEME ARCH | T788 T789 T790 | todo |
 | T539 | Qualify the complete Korean voice-creation milestone | ARCH DUB MODEL CDS THEME | T538 | blocked@261005 |
 | T550 | Qualify narrated editing, delivery and private asset lifecycle | ARCH DUB CLIP MODEL QUOTA CDS THEME | T542 T543 T549 | blocked@261005 |
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
@@ -230,10 +224,11 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T791
+- no runnable task: resolve blocked, parked or deps
 - inspect work board for remaining tasks
 
 ## log
+- 261113 T791 done
 - 261113 T790 done
 - 261113 T789 done
 - 261113 T788 done
@@ -253,4 +248,3 @@
 - 261112 T782 integrated
 - 261113 gusta-create-task review/performance-design-system-261113 F10: T782 fixes the confirmed paused-frame redraw gap after running block selection; unchanged actual-control oracle and existing source/clock/cancellation contracts, no SSOT rev/pending change.
 - 261113 gusta-create-task review/performance-design-system-261113 F10 start: adopt the real BASE/current15sec stale-frame failure under the existing self-improve delegation; preserve all seven integrated IDs and leave T775/T776 outside scope.
-- 261113 replan unclaimed T781 from real backend/source-session retention audit: changed-save lease hydration may arrive before/during/after ACK; bounded typed lease-only continuity preserves complete access/renderer invalidation and all authority/cancellation guards.

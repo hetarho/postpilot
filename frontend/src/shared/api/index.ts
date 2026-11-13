@@ -35,6 +35,7 @@ export {
 export {
   GetClipUploadTextsResponseSchema,
   SaveClipUploadTextResponseSchema,
+  SaveClipObservationEditsResponseSchema,
   ClipUploadTextSchema,
   ClipUploadTextLimitsSchema,
   CreateClipProjectResponseSchema,

@@ -62,6 +62,8 @@ export function clipQuoteBinding(
   observe: ModelRef,
   write: ModelRef,
   status: ClipEligibilityStatus | undefined,
+  /** 다시 관찰하기's chosen sources: a different choice is a different quote. */
+  reanalyze?: readonly string[],
 ) {
   return JSON.stringify([
     project.id,
@@ -72,7 +74,25 @@ export function clipQuoteBinding(
     observe,
     write,
     status ?? null,
+    ...(reanalyze ? [[...reanalyze].sort()] : []),
   ])
+}
+
+/** Whether a selected source has no stored observation of its current footage — 관찰하기 then
+ *  analyzes it, and otherwise ① moves on to ② without a call (CLIP-234, CLIP-40). A source is
+ *  observed only while the observation was made of the same file (identity and fingerprint). */
+export function lacksClipObservation(
+  sources: ReadonlyArray<{ sourceId: string; fingerprint: string }>,
+  observations: ClipProject['observations'],
+): boolean {
+  const observed = new Set(
+    (observations?.status === 'available' ? observations.sources : []).map((entry) =>
+      JSON.stringify([entry.source.id, entry.source.fingerprint]),
+    ),
+  )
+  return sources.some(
+    (source) => !observed.has(JSON.stringify([source.sourceId, source.fingerprint])),
+  )
 }
 
 export function readyClipBatch(batch: ReadyClipBatch | undefined, projectId: string, now: number) {

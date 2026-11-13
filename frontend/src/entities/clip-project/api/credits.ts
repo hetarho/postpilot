@@ -207,8 +207,9 @@ export function toClipRevisionQuote(value: ProtoClipRevisionQuote, binding: stri
 /** The price a generation is approved against. A quote binds the exact settings it was taken
  *  for (CLIP-131), so it is read fresh for every binding and never served from a cache — the
  *  binding string the caller computes IS the identity of the request. */
-/** Which work a clip quote prices: 바로 만들기, 이 스토리로 만들기, or the storyline call. */
-export type ClipQuoteMode = 'generate' | 'fromStoryline' | 'storyline'
+/** Which work a clip quote prices: 바로 만들기, 이 스토리로 만들기, the storyline call, or 관찰하기 and
+ *  다시 관찰하기's analysis alone (CLIP-234). */
+export type ClipQuoteMode = 'generate' | 'fromStoryline' | 'storyline' | 'analysis'
 
 export function useClipGenerationQuote(
   ownerId: string,
@@ -217,13 +218,17 @@ export function useClipGenerationQuote(
     batchId: string
     observeModel: { providerId: string; modelId: string }
     writeModel: { providerId: string; modelId: string }
+    /** 다시 관찰하기's sources, analyzed again in full; read only by an analysis quote. */
+    reanalyzeSourceIds?: readonly string[]
   },
   binding: string,
   mode: ClipQuoteMode = 'generate',
+  enabled = true,
 ) {
   const transport = useTransport()
   return useQuery({
     queryKey: ['clip-quote', transport, ownerId, mode, binding],
+    enabled,
     gcTime: 0,
     staleTime: 0,
     refetchOnMount: 'always',
@@ -231,13 +236,19 @@ export function useClipGenerationQuote(
     refetchOnReconnect: false,
     queryFn: async ({ signal }) => {
       const client = createClient(ClipGenerationService, transport)
+      const { reanalyzeSourceIds, ...common } = input
       const response =
-        mode === 'storyline'
-          ? await client.quoteClipStoryline(input, { signal })
-          : await client.quoteClipGeneration(
-              { ...input, fromStoryline: mode === 'fromStoryline' },
+        mode === 'analysis'
+          ? await client.quoteClipAnalysis(
+              { ...common, reanalyzeSourceIds: [...(reanalyzeSourceIds ?? [])] },
               { signal },
             )
+          : mode === 'storyline'
+            ? await client.quoteClipStoryline(common, { signal })
+            : await client.quoteClipGeneration(
+                { ...common, fromStoryline: mode === 'fromStoryline' },
+                { signal },
+              )
       return toClipQuote(response, binding)
     },
   })
@@ -247,34 +258,11 @@ export function useClipGenerationQuote(
  *  sources, plus every chunk of the sources named in `reanalyzeSourceIds`, and no writing call. */
 export function useClipAnalysisQuote(
   ownerId: string,
-  input: {
-    projectId: string
-    batchId: string
-    observeModel: { providerId: string; modelId: string }
-    writeModel: { providerId: string; modelId: string }
-    reanalyzeSourceIds?: readonly string[]
-  },
+  input: Parameters<typeof useClipGenerationQuote>[1],
   binding: string,
   enabled = true,
 ) {
-  const transport = useTransport()
-  return useQuery({
-    queryKey: ['clip-quote', transport, ownerId, 'analysis', binding],
-    enabled,
-    gcTime: 0,
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    queryFn: async ({ signal }) => {
-      const client = createClient(ClipGenerationService, transport)
-      const response = await client.quoteClipAnalysis(
-        { ...input, reanalyzeSourceIds: [...(input.reanalyzeSourceIds ?? [])] },
-        { signal },
-      )
-      return toClipQuote(response, binding)
-    },
-  })
+  return useClipGenerationQuote(ownerId, input, binding, 'analysis', enabled)
 }
 
 /** A storyline request's quote (CLIP-181): one writing call on the stored observations, bound to

@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react'
 import type { GenerationJob } from '@/entities/generation-job'
 import type { ClipStep } from './steps'
 
-/** The step a finished run carries the owner to (CLIP-234): ③ after a storyline, ④ after a
- *  plan; any other run leaves the step where it is. */
+/** The step a finished run carries the owner to (CLIP-234): ② after analysis, ③ after a
+ *  storyline, ④ after a plan; any other run leaves the step where it is. */
 export function stepAfterJob(kind: string): ClipStep | undefined {
+  if (kind === 'analyze_clip') return 'observe'
   if (kind === 'storyline_clip') return 'storyline'
   if (kind === 'generate_clip') return 'refine'
   return undefined

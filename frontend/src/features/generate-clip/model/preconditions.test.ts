@@ -4,6 +4,7 @@ import type { CatalogModel, StageSelectionState } from '@/entities/model-catalog
 import {
   clipModelsReady,
   clipQuoteBinding,
+  lacksClipObservation,
   renderClipSourcesAvailable,
   selectedClipStatus,
 } from './preconditions'
@@ -108,5 +109,53 @@ describe('render source admission', () => {
     expect(
       renderClipSourcesAvailable(batch(['first', 'first', 'second']), ['first', 'second']),
     ).toBe(false)
+  })
+})
+
+describe('analysis (CLIP-234)', () => {
+  const observed = (id: string, fingerprint: string) => ({
+    source: {
+      id,
+      fingerprint,
+      filename: `${id}.mp4`,
+      durationMs: 1000,
+      width: 1,
+      height: 1,
+    },
+    segments: [],
+  })
+  it('asks for 관찰하기 while a selected source has no observation of its current footage', () => {
+    const observations = {
+      status: 'available',
+      sources: [observed('a', 'fa')],
+    } as unknown as ClipProject['observations']
+    expect(lacksClipObservation([{ sourceId: 'a', fingerprint: 'fa' }], observations)).toBe(false)
+    expect(
+      lacksClipObservation(
+        [
+          { sourceId: 'a', fingerprint: 'fa' },
+          { sourceId: 'b', fingerprint: 'fb' },
+        ],
+        observations,
+      ),
+    ).toBe(true)
+    // A replaced file under the same source is footage nothing observed.
+    expect(lacksClipObservation([{ sourceId: 'a', fingerprint: 'other' }], observations)).toBe(true)
+    expect(lacksClipObservation([{ sourceId: 'a', fingerprint: 'fa' }], undefined)).toBe(true)
+  })
+
+  it('binds 다시 관찰하기 quotes to the chosen sources in any order', () => {
+    const project = {
+      ...emptyClipProject(),
+      id: 'clip',
+      updatedAt: 'now',
+    } as unknown as ClipProject
+    const batch = { id: 'batch', sources: [] } as unknown as ReadyClipBatch
+    const ref = { providerId: 'p', modelId: 'o' }
+    const plain = clipQuoteBinding(project, batch, ref, ref, 'eligible')
+    const chosen = clipQuoteBinding(project, batch, ref, ref, 'eligible', ['b', 'a'])
+    expect(chosen).not.toBe(plain)
+    expect(clipQuoteBinding(project, batch, ref, ref, 'eligible', ['a', 'b'])).toBe(chosen)
+    expect(clipQuoteBinding(project, batch, ref, ref, 'eligible', ['a'])).not.toBe(chosen)
   })
 })

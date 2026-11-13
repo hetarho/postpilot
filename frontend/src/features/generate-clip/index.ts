@@ -5,6 +5,11 @@ export {
   ClipStorylineBuildActions,
   type ClipGenerationContext,
 } from './ui/ClipGenerationActions'
+export {
+  ClipAnalyzeAction,
+  ClipReanalyzeAction,
+  type ClipReanalyzeSource,
+} from './ui/ClipAnalyzeActions'
 export { ClipCreditSettlement } from './ui/ClipCreditSettlement'
 
-export { readyClipBatch } from './model/preconditions'
+export { readyClipBatch, lacksClipObservation } from './model/preconditions'

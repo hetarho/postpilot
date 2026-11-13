@@ -1,7 +1,10 @@
+import { discardClipObservationQueues } from '@/features/inspect-clip-observations'
+import { Code } from '@connectrpc/connect'
+import { connectAppError } from '@/test/app-error'
 import { clipGuideTo } from '@/test/clip-preparation'
-import { screen, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { renderAppAt } from '@/test/app'
 import { observedClipFixture } from '@/test/clip-observations'
 
@@ -123,6 +126,36 @@ describe('observations in the clip workspace', () => {
     expect(calls).not.toContain('CreateClipSourceBatch')
   })
 
+  // CLIP-235: ② corrects an observed scene's descriptive text in place and autosaves it; the
+  // saved correction comes back marked as the owner's, and 다시 관찰하기 stands in the heading row.
+  it('autosaves an in-place correction on ② and marks it as the owner’s', async () => {
+    const calls: string[] = [],
+      edits: unknown[] = []
+    const project = observedClipFixture()
+    renderAppAt('/clips/project', {
+      user: { id: 'alice' },
+      clips: { projects: [project], calls, observationEdits: edits },
+    })
+    const user = userEvent.setup()
+    const tabs = within(await screen.findByRole('tablist', { name: '클립 단계' }))
+    await user.click(tabs.getByRole('tab', { name: '관찰' }))
+    const panel = within(screen.getByRole('tabpanel', { name: '관찰' }))
+    expect(panel.getByRole('button', { name: '다시 관찰하기' })).toBeInTheDocument()
+    await user.click(panel.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
+    const event = panel.getAllByRole('textbox', { name: '장면' })[0]!
+    await user.clear(event)
+    await user.type(event, '국수를 집어 든다')
+    await waitFor(() => expect(edits).toHaveLength(1), { timeout: 3000 })
+    expect(edits[0]).toMatchObject({
+      clipId: 'project',
+      edits: [{ observationId: 'a/0', event: '국수를 집어 든다' }],
+    })
+    expect(await panel.findAllByText('직접 고침')).not.toHaveLength(0)
+    // CLIP-49's usage stays beside the corrected text.
+    expect(panel.getByText('1번 컷에 사용 · 1× · 원본 0:03.500–0:10')).toBeVisible()
+    expect(calls).not.toContain('StartClipAnalysis')
+  })
+
   it.each(['failed', 'cancelled'])(
     'identifies previous observations during a %s regeneration',
     async (status) => {
@@ -158,3 +191,29 @@ it.each(['queued', 'running'])('hides observations during %s work', async (statu
   expect(screen.queryByRole('heading', { name: 'AI가 관찰한 내용' })).not.toBeInTheDocument()
   expect(screen.queryByRole('tablist', { name: '클립 단계' })).not.toBeInTheDocument()
 })
+
+it('keeps a failed observation save on the shared status line after changing steps', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/clips/project', {
+    user: { id: 'alice' },
+    clips: {
+      projects: [observedClipFixture()],
+      observationSaveGate: async () => {
+        throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+      },
+    },
+  })
+  await user.click(await screen.findByRole('tab', { name: '관찰' }))
+  await user.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
+  fireEvent.change(screen.getAllByRole('textbox', { name: '장면' })[0]!, {
+    target: { value: 'owner correction' },
+  })
+  const line = await screen.findByRole('status', { name: '클립 상태' })
+  await waitFor(() => expect(line).toHaveTextContent('고친 관찰 내용을 저장하지 못했어요.'))
+  await user.click(screen.getByRole('tab', { name: '스토리라인' }))
+  expect(line).toBeVisible()
+  expect(line).toHaveTextContent('고친 관찰 내용을 저장하지 못했어요.')
+  expect(screen.getAllByText(/고친 관찰 내용을 저장하지 못했어요/)).toHaveLength(1)
+})
+
+afterEach(() => discardClipObservationQueues())

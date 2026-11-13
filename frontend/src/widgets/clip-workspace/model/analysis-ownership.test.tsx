@@ -52,6 +52,14 @@ vi.mock('@/features/edit-clip-project', () => ({
 vi.mock('@/features/correct-clip', () => ({
   useClipCorrection: () => ({ draft: { cuts: [], elements: [] }, revision: 1, pending: false }),
 }))
+vi.mock('@/features/inspect-clip-observations', () => ({
+  useClipObservationEditing: () => ({
+    flush: vi.fn(),
+    editable: false,
+    status: { failing: false, label: '' },
+  }),
+  discardClipObservationQueue: vi.fn(),
+}))
 vi.mock('@/features/edit-clip-storyline', () => ({
   flushClipStoryline: vi.fn(),
   discardClipStorylineQueue: vi.fn(),

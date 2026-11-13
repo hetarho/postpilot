@@ -1,3 +1,4 @@
+import { discardClipObservationQueues } from '@/features/inspect-clip-observations'
 import { clipGuideTo, clipGuideToActions } from '@/test/clip-preparation'
 import { localSamplesForControls } from '@/test/clip-local-samples'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -1129,3 +1130,47 @@ it('lists a current source with no observations as unused', async () => {
   const list = await screen.findByRole('region', { name: '사용하지 않은 영상' })
   expect(within(list).getByText(all[1].filename)).toBeInTheDocument()
 })
+it('the storyline revision waits for pending observation corrections', async () => {
+  const calls: string[] = []
+  const view = await mount(storylined(), { calls })
+  const events: string[] = []
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const original = view.transport.unary.bind(view.transport)
+  vi.spyOn(view.transport, 'unary').mockImplementation(async (...args) => {
+    const name = args[0].name
+    if (name === 'SaveClipObservationEdits') {
+      events.push('save-entered')
+      await gate
+      const r = await original(...args)
+      events.push('save-ack')
+      return r
+    }
+    if (name === 'StartClipStorylineRevision') events.push('writer-started')
+    return original(...args)
+  })
+  try {
+    await userEvent.click(screen.getByRole('tab', { name: '관찰' }))
+    await userEvent.click(screen.getByRole('button', { name: '관찰 구간 2개 자세히 보기' }))
+    fireEvent.change(screen.getAllByRole('textbox', { name: '장면' })[0], {
+      target: { value: 'owner corrected scene' },
+    })
+    await userEvent.click(screen.getByRole('tab', { name: '스토리라인' }))
+    fireEvent.change(screen.getByLabelText('스토리라인 수정 요청'), {
+      target: { value: 'correct the beginning' },
+    })
+    await userEvent.click(screen.getByRole('button', { name: '스토리라인 수정 요청 보내기' }))
+    await userEvent.click(await screen.findByRole('button', { name: /4.*크레딧/ }))
+    await waitFor(() => expect(events).toContain('save-entered'), { timeout: 3000 })
+    expect(events).not.toContain('writer-started')
+    release()
+    await waitFor(() => expect(events).toContain('writer-started'))
+    expect(events.indexOf('save-ack')).toBeLessThan(events.indexOf('writer-started'))
+  } finally {
+    release()
+  }
+})
+
+afterEach(() => discardClipObservationQueues())

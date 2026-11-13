@@ -66,6 +66,21 @@ export const i18n = {
       hasResult: '영상 있음',
       noResult: '아직 생성 전',
     },
+    analysisActions: {
+      analyze: '관찰하기',
+      reanalyze: '다시 관찰하기',
+      reanalyzeTitle: '다시 관찰할 영상',
+      reanalyzeHelp: '고른 영상을 처음부터 다시 관찰해요. 다른 영상의 관찰 내용은 그대로예요.',
+      editedMark: '직접 고침',
+      choose: '다음',
+      chooseNone: '다시 관찰할 영상을 하나 이상 골라 주세요.',
+      confirmTitle: '직접 고친 내용이 사라져요',
+      confirmBody:
+        '{{names}}의 관찰 내용을 직접 고쳤어요. 다시 관찰하면 고친 내용이 새 관찰로 바뀌어요.',
+      confirm: '그래도 다시 관찰하기',
+      back: '이전',
+      cancel: '닫기',
+    },
     storylineActions: {
       remake: '다시 만들기',
       build: '이 스토리로 만들기',
@@ -140,6 +155,22 @@ export const i18n = {
       refreshing: 'Refreshing the preview link',
       hasResult: 'Video ready',
       noResult: 'Not generated yet',
+    },
+    analysisActions: {
+      analyze: 'Analyze',
+      reanalyze: 'Analyze again',
+      reanalyzeTitle: 'Videos to analyze again',
+      reanalyzeHelp:
+        'The chosen videos are analyzed again from the start. Other videos keep their observations.',
+      editedMark: 'Edited by you',
+      choose: 'Next',
+      chooseNone: 'Choose at least one video to analyze again.',
+      confirmTitle: 'Your edits will be lost',
+      confirmBody:
+        'You edited the observations of {{names}}. Analyzing again replaces your edits with new observations.',
+      confirm: 'Analyze again anyway',
+      back: 'Back',
+      cancel: 'Close',
     },
     storylineActions: {
       remake: 'Make again',

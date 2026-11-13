@@ -2,6 +2,7 @@ import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RequirementsTracker, type RequirementsCoverage } from '@/entities/advertiser-guide'
 import { focusPreparationField } from '../lib/preparation-focus'
+import type { ClipObserveCorrection } from './ClipObserveBar'
 import {
   clipPreparationScreens,
   type ClipPreparationRow,
@@ -21,13 +22,15 @@ import {
 } from '@/shared/ui'
 
 /** Retained questions and a single shared dock. The keyed workspace owns the cursor. A minted
- *  project's 확인 ends on 이전 and 다음, which moves to ② without a call: the generation actions,
- *  their reasons and their refusals are ②'s step bar's (CLIP-40, `ClipObserveBar`). An unminted
- *  one has no ② to move to, so its 확인 holds only the reason with the way to fix it. */
+ *  project's 확인 ends on 이전 and its big action: `관찰하기` while a selected source lacks an
+ *  observation, with that run's reason and refusal above it, otherwise 다음, which moves to ②
+ *  without a call; the generation actions are ②'s step bar's (CLIP-40, `ClipObserveBar`). An
+ *  unminted one has no ② to move to, so its 확인 holds only the reason with the way to fix it. */
 export function ClipPreparationGuide({
   screen,
   onSelect,
   onNext,
+  analyze,
   screens,
   rows,
   models,
@@ -42,6 +45,8 @@ export function ClipPreparationGuide({
   onSelect: (screen: ClipPreparationScreen) => void
   /** 확인's 다음: on to ② 관찰; absent before the project is minted. */
   onNext?: () => void
+  /** 확인's `관찰하기`, standing in 다음's place while a source lacks an observation (CLIP-234). */
+  analyze?: ReactNode
   screens: Record<Exclude<ClipPreparationScreen, 'review'>, ReactNode>
   /** 체험단으로 다녀왔어요 adds 요청 and the tracker on every screen after it (CLIP-228). */
   campaign: boolean
@@ -51,8 +56,9 @@ export function ClipPreparationGuide({
   rows: readonly ClipPreparationRow[]
   models: ReactNode
   refusal?: ReactNode
-  /** Why 확인 cannot go on: with a route when the owner can fix it, or only the reason. */
-  correction?: { screen: ClipPreparationScreen; label: string } | { label: string }
+  /** Why 확인 cannot go on: with a route or a retry when the owner can fix it, or only the
+   *  reason. */
+  correction?: ClipObserveCorrection
   reasonId?: string
 }) {
   const { t } = useTranslation('clips')
@@ -168,19 +174,26 @@ export function ClipPreparationGuide({
             {correction && (
               <div className="flex flex-wrap items-center gap-2">
                 <StepBarReason id={id}>{correction.label}</StepBarReason>
-                {'screen' in correction && (
-                  <Button type="button" variant="ghost" onClick={() => go(correction.screen, true)}>
+                {('screen' in correction || 'retry' in correction) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() =>
+                      'screen' in correction ? go(correction.screen, true) : correction.retry()
+                    }
+                  >
                     {t('guide.fix')}
                   </Button>
                 )}
               </div>
             )}
             <StepBarActions back={back('note')}>
-              {onNext && (
-                <StepBarCta type="button" forward onClick={onNext}>
-                  {t('guide.next')}
-                </StepBarCta>
-              )}
+              {analyze ??
+                (onNext && (
+                  <StepBarCta type="button" forward onClick={onNext}>
+                    {t('guide.next')}
+                  </StepBarCta>
+                ))}
             </StepBarActions>
           </>
         )}

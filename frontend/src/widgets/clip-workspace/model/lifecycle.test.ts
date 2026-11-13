@@ -53,6 +53,7 @@ it('drops the save queue when the project is finalized, and not before', () => {
 
 describe('stepAfterJob', () => {
   it('lands a storyline on ③ and a generation on ④, and leaves other runs where they are', () => {
+    expect(stepAfterJob('analyze_clip')).toBe('observe')
     expect(stepAfterJob('storyline_clip')).toBe('storyline')
     expect(stepAfterJob('generate_clip')).toBe('refine')
     expect(stepAfterJob('revise_clip')).toBeUndefined()

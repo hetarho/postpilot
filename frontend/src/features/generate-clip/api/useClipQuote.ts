@@ -20,11 +20,19 @@ export function useClipQuote(
   write: ModelRef,
   status: ClipEligibilityStatus | undefined,
   mode: ClipQuoteMode = 'generate',
+  /** 다시 관찰하기's chosen sources, for an analysis quote (CLIP-234). */
+  reanalyze?: readonly string[],
 ) {
-  const binding = clipQuoteBinding(project, batch, observe, write, status)
+  const binding = clipQuoteBinding(project, batch, observe, write, status, reanalyze)
   const query = useClipGenerationQuote(
     ownerId,
-    { projectId: project.id, batchId: batch.id, observeModel: observe, writeModel: write },
+    {
+      projectId: project.id,
+      batchId: batch.id,
+      observeModel: observe,
+      writeModel: write,
+      ...(reanalyze ? { reanalyzeSourceIds: reanalyze } : {}),
+    },
     binding,
     mode,
   )

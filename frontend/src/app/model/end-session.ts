@@ -4,6 +4,7 @@ import { discardUploadBatches } from '@/features/upload-photos'
 import { discardClipSourceSessions } from '@/features/upload-clip-sources'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
 import { discardClipStorylineQueues } from '@/features/edit-clip-storyline'
+import { discardClipObservationQueues } from '@/features/inspect-clip-observations'
 
 /** Everything that must not outlive the session, in one place.
  *
@@ -19,4 +20,5 @@ export function endSession(): void {
   discardClipSourceSessions()
   discardClipDraftQueues()
   discardClipStorylineQueues()
+  discardClipObservationQueues()
 }

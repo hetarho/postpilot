@@ -1411,3 +1411,26 @@ it('does not activate a qualified readiness record for a different analysis prof
   expect(await screen.findByText('서버에서 원본 영상을 준비하고 분석해요.')).toBeVisible()
   expect(preparationFixture.runs).toBe(0)
 })
+
+// CLIP-234: while a selected source lacks an observation ①'s 확인 ends on 관찰하기, which quotes and
+// approves the analysis alone and starts it through browser preparation in the focused job view.
+it('analyzes from ①’s 관찰하기 with its own quote, through browser preparation', async () => {
+  const calls: string[] = [],
+    analyses: unknown[] = []
+  mount({ calls, analysisStarts: analyses })
+  const { user } = await selectSource()
+  await clipGuideTo('review')
+  const analyze = await screen.findByRole('button', { name: '관찰하기' })
+  await waitFor(() => expect(analyze).toBeEnabled())
+  await user.click(analyze)
+  const approve = await screen.findByRole('button', { name: /크레딧 · 승인하고 관찰하기$/ })
+  expect(calls).toContain('QuoteClipAnalysis')
+  expect(calls).not.toContain('QuoteClipGeneration')
+  await waitFor(() => expect(approve).toBeEnabled())
+  await user.click(approve)
+  await waitFor(() => expect(analyses).toHaveLength(1))
+  expect(preparationFixture.runs).toBe(1)
+  expect(analyses[0]).toMatchObject({ analysisPreparationId: 'preparation-fixture' })
+  expect(calls).not.toContain('StartClipGeneration')
+  expect(calls).not.toContain('StartClipStoryline')
+})

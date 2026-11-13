@@ -27,6 +27,10 @@ import {
 } from '@/features/edit-clip-regions'
 import { confirmationRefusal, useConfirmClip, useFinalizeClip } from '@/features/finalize-clip'
 import { useGenerateClip } from '@/features/generate-clip'
+import {
+  discardClipObservationQueue,
+  useClipObservationEditing,
+} from '@/features/inspect-clip-observations'
 import { usePrepareClipBrowser } from '@/features/prepare-clip-browser'
 import { useBrowserRender } from '@/features/render-clip-browser'
 import { useClipSourceBinding } from '@/features/bind-clip-source-item'
@@ -176,18 +180,26 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
     readOnly: !!project.finalized || generation.busy,
     before: () => save.flush(true),
   })
+  /** ②'s corrections to the observed scenes: read-only while a job runs or once finalized
+   *  (CLIP-235, CLIP-160), and flushed by every committing action (CLIP-39). */
+  const observationEditing = useClipObservationEditing(
+    ownerId,
+    project,
+    !!project.finalized || generation.busy,
+  )
   /** The storyline's own autosave, which a build or a request from it must not outrun. */
   const storyline = {
     flush: (failFast = false) => flushClipStoryline(project.id, failFast),
   }
   /** Every queue the owner types into, in the order their writes depend on each other: the
    *  settings (a preset reshapes the regions), the region slots (they project into the plan),
-   *  the storyline (이 스토리로 만들기 builds from the saved one), then the correction, whose
+   *  the observation corrections (every writing call reads them), the storyline (이 스토리로 만들기 builds from the saved one), then the correction, whose
    *  revision is what a committing action runs against (CLIP-39, CLIP-188). An invalid slot or
    *  plan refuses the action and keeps its error. */
   const flushAll = async (failFast = false) => {
     await save.flush(failFast)
     await regions.flush(failFast)
+    await observationEditing.flush(failFast)
     await storyline.flush(failFast)
     return correction.flush()
   }
@@ -228,6 +240,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipDraftQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipRegionQueue)
   useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipStorylineQueue)
+  useDiscardQueueWhenFinalized(project.id, project.finalized, discardClipObservationQueue)
   const reorderSources = useReorderClipSources()
   const localSources = upload.entries.map((entry) => {
     const lease = {
@@ -381,6 +394,7 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
           : confirmationRefusal(project, { unsaved: correction.dirty }),
   }
   const observations = {
+    editing: observationEditing,
     localSources,
     resolvePlayback: upload.ensurePlayback,
     /** Adding a cut from recorded evidence is ②'s, and only while nothing else holds the plan. */
@@ -396,10 +410,9 @@ export function useClipWorkspace(ownerId: string, project: ClipProject) {
   }
   // The one status line hears the region slots' save as it hears the settings' (CLIP-38): a
   // failing save first, then whichever is saying something.
+  const saves = [save, regions.status, observationEditing.status]
   const saveStatus =
-    save.failing || (!regions.status.failing && (save.label || !regions.status.label))
-      ? save
-      : regions.status
+    saves.find((status) => status.failing) ?? saves.find((status) => status.label) ?? save
   return {
     project,
     ownerId,

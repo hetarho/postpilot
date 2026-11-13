@@ -39,8 +39,11 @@ interface Ownership {
 type StartInput =
   | {
       kind: 'generate'
-      /** Which approved work: 바로 만들기, 이 스토리로 만들기 or the storyline call (CLIP-177). */
+      /** Which approved work: 바로 만들기, 이 스토리로 만들기, the storyline call (CLIP-177), or
+       *  관찰하기 and 다시 관찰하기's analysis (CLIP-234). */
       mode: ClipQuoteMode
+      /** 다시 관찰하기's chosen sources, analyzed again in full. */
+      reanalyzeSourceIds?: readonly string[]
       batchId: string
       quote: ClipQuote
       observe: ModelRef
@@ -149,6 +152,18 @@ export function useGenerateClip(
       unresolved.current = undefined
     }
   }, [])
+  // What every approved AI start carries: the batch, both models, the preparation it ran through
+  // and the quote the owner approved.
+  const approvedStart = (input: Extract<StartInput, { kind: 'generate' }>) => ({
+    projectId: project.id,
+    batchId: input.batchId,
+    observeModel: input.observe,
+    writeModel: input.write,
+    analysisPreparationId: input.analysisPreparationId,
+    quoteId: input.quote.quoteId,
+    approvedMaxCredits: input.quote.maxCredits,
+    cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
+  })
   const mutation = useMutation({
     mutationFn: async (input: StartInput) => {
       const response =
@@ -160,28 +175,17 @@ export function useGenerateClip(
               expectedRevision: input.revision,
               reuseExisting: input.reuseExisting,
             })
-          : input.mode === 'storyline'
-            ? await calls.startStoryline({
-                projectId: project.id,
-                batchId: input.batchId,
-                observeModel: input.observe,
-                writeModel: input.write,
-                analysisPreparationId: input.analysisPreparationId,
-                quoteId: input.quote.quoteId,
-                approvedMaxCredits: input.quote.maxCredits,
-                cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
+          : input.mode === 'analysis'
+            ? await calls.startAnalysis({
+                ...approvedStart(input),
+                reanalyzeSourceIds: input.reanalyzeSourceIds,
               })
-            : await calls.startGeneration({
-                projectId: project.id,
-                batchId: input.batchId,
-                observeModel: input.observe,
-                writeModel: input.write,
-                analysisPreparationId: input.analysisPreparationId,
-                quoteId: input.quote.quoteId,
-                approvedMaxCredits: input.quote.maxCredits,
-                cancellationPolicyVersion: input.quote.cancellationPolicy?.version,
-                ...(input.mode === 'fromStoryline' ? { fromStoryline: true } : {}),
-              })
+            : input.mode === 'storyline'
+              ? await calls.startStoryline(approvedStart(input))
+              : await calls.startGeneration({
+                  ...approvedStart(input),
+                  ...(input.mode === 'fromStoryline' ? { fromStoryline: true } : {}),
+                })
       if (
         !response.jobId &&
         !(input.kind === 'render' && 'reusedResult' in response && response.reusedResult)
@@ -353,6 +357,7 @@ export function useGenerateClip(
     quote: ClipQuote,
     ownership: Ownership,
     mode: ClipQuoteMode = 'generate',
+    reanalyze?: readonly string[],
   ) {
     if (
       starting.current ||
@@ -374,7 +379,14 @@ export function useGenerateClip(
     }
     if (
       quote.binding !==
-        clipQuoteBinding(project, batch, observe.selected, write.selected, observeStatus) ||
+        clipQuoteBinding(
+          project,
+          batch,
+          observe.selected,
+          write.selected,
+          observeStatus,
+          reanalyze,
+        ) ||
       Date.parse(quote.expiresAt) <= Date.now()
     ) {
       setLocalFailure({ reason: 'CLIP_QUOTE_EXPIRED', params: {} })
@@ -385,6 +397,7 @@ export function useGenerateClip(
       {
         kind: 'generate',
         mode,
+        ...(reanalyze ? { reanalyzeSourceIds: reanalyze } : {}),
         batchId: batch.id,
         quote,
         observe: observe.selected,

@@ -150,7 +150,7 @@ export function ClipStorylineBuildActions({
 }
 
 /** One generation action: its trigger, and the quote and approval it opens from itself. */
-function ClipQuotedPopover({
+export function ClipQuotedPopover({
   className,
   hero = false,
   mode,
@@ -216,7 +216,7 @@ function ClipQuotedPopover({
   )
 }
 
-function QuotedAction({
+export function QuotedAction({
   ownerId,
   project,
   batch,
@@ -227,6 +227,7 @@ function QuotedAction({
   label,
   onApprove,
   preparationRoute = 'browser',
+  reanalyze,
 }: {
   ownerId: string
   project: ClipProject
@@ -238,17 +239,33 @@ function QuotedAction({
   label: string
   onApprove(quote: ClipQuote): void
   preparationRoute?: ClipAnalysisPreparationRoute
+  /** 다시 관찰하기's chosen sources (CLIP-234). */
+  reanalyze?: readonly string[]
 }) {
   const { t } = useTranslation('clips')
-  const query = useClipQuote(ownerId, project, batch, observe, write, observeStatus, mode)
+  const query = useClipQuote(
+    ownerId,
+    project,
+    batch,
+    observe,
+    write,
+    observeStatus,
+    mode,
+    reanalyze,
+  )
   const { myPlan } = useMyPlan()
   const quote = query.quote
   const approval = quote?.recovery?.renderOnly
     ? t('credits.resumeRender')
     : quote
-      ? t(mode === 'storyline' ? 'credits.approveStoryline' : 'credits.approve', {
-          amount: quote.maxCredits,
-        })
+      ? t(
+          mode === 'storyline'
+            ? 'credits.approveStoryline'
+            : mode === 'analysis'
+              ? 'credits.approveAnalysis'
+              : 'credits.approve',
+          { amount: quote.maxCredits },
+        )
       : label
   return (
     <ClipQuoteApproval

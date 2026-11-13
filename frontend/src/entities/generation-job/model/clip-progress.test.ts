@@ -106,3 +106,26 @@ it('keeps cancellation pending until the terminal acknowledgement, including a c
   expect(progressRatio(job)).toBeUndefined()
   expect(progressLabel({ ...job, status: 'done' })).not.toBe('취소 중')
 })
+
+it.each(['ko', 'en'] as const)(
+  'reports analysis-only clip stages and cancellation in %s',
+  (locale) => {
+    initializeI18n(locale)
+    for (const stage of ['prepare', 'analyze']) {
+      expect(progressLabel({ kind: 'analyze_clip', stage })).toBe(
+        progressLabel({ kind: 'generate_clip', stage }),
+      )
+      expect(
+        progressRatio({ kind: 'analyze_clip', stage, progressDone: 1, progressTotal: 3 }),
+      ).toEqual({ done: 1, total: 3 })
+    }
+    expect(
+      progressLabel({
+        kind: 'analyze_clip',
+        stage: 'analyze',
+        status: 'running',
+        cancelRequestedAt: '2026-11-13T00:00:00Z',
+      }),
+    ).toBe(locale === 'ko' ? '취소 중' : 'Cancelling')
+  },
+)

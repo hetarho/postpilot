@@ -18,6 +18,7 @@ import {
   ListVideoTemplatesResponseSchema,
   GetClipUploadTextsResponseSchema,
   SaveClipUploadTextResponseSchema,
+  SaveClipObservationEditsResponseSchema,
   ClipProjectSchema,
   ClipSourceBatchSchema,
   ListClipProjectsResponseSchema,
@@ -187,6 +188,11 @@ export interface FakeClipsOptions {
   generationJobId?: string
   /** Every StartClipStoryline as it arrived, and the job id it answers with (CLIP-177). */
   storylineStarts?: unknown[]
+  /** 관찰하기 and 다시 관찰하기's starts (CLIP-234). */
+  analysisStarts?: unknown[]
+  /** ②'s saved observation corrections (CLIP-235). */
+  observationEdits?: unknown[]
+  observationSaveGate?: () => Promise<void>
   storylineJobId?: string
   /** Every storyline edit an UpdateClipProject carried (CLIP-178). */
   storylineEdits?: Array<Array<{ text: string; observationIds: string[] }>>
@@ -1342,6 +1348,74 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
         { label: 'observe', stage: 'observe', calls: 3 },
         { label: 'storyline', stage: 'write', calls: 1 },
       ],
+    })
+  })
+  // 관찰하기 and 다시 관찰하기 (CLIP-234): the analysis alone, with no writing call.
+  router.rpc(ClipGenerationService.method.quoteClipAnalysis, (req) => {
+    options.calls?.push('QuoteClipAnalysis')
+    options.quoteRequests?.push(req)
+    if (options.quoteFails) throw connectAppError(options.quoteFails, Code.FailedPrecondition)
+    const batch = batches.get(req.batchId)
+    if (!batch || batch.projectId !== req.projectId || batch.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const q = { id: `quote-${++quoteNumber}`, max: options.quoteMaxCredits ?? 12 }
+    quotes.set(batch.id, q)
+    return create(QuoteClipGenerationResponseSchema, {
+      quoteId: q.id,
+      maxCredits: q.max,
+      cancellationPolicy: {
+        version: 1,
+        unusedReservationNumerator: 1,
+        unusedReservationDenominator: 2,
+        rounding: 'ceil',
+      },
+      expiresAt: options.quoteExpiresAt ?? '2099-01-01T00:00:00Z',
+      pricedCalls: [{ label: 'observe', stage: 'observe', calls: 3 }],
+    })
+  })
+  router.rpc(ClipGenerationService.method.startClipAnalysis, (req) => {
+    options.calls?.push('StartClipAnalysis')
+    options.analysisStarts?.push(req)
+    const p = projects.get(req.projectId)
+    const b = batches.get(req.batchId)
+    if (!p || !b || b.state !== 'ready')
+      throw connectAppError('CLIP_SOURCE_UNAVAILABLE', Code.FailedPrecondition)
+    const quote = quotes.get(b.id)
+    if (!quote || quote.id !== req.quoteId || quote.max !== req.approvedMaxCredits)
+      throw connectAppError('CLIP_QUOTE_REQUIRED', Code.FailedPrecondition)
+    b.state = 'consuming'
+    const jobId = 'clip-analysis-job'
+    p.latestJob = {
+      id: jobId,
+      kind: 'analyze_clip',
+      status: 'queued',
+      stage: 'prepare',
+      clipProjectId: p.id,
+    }
+    p.latestAttempt = { jobId, batchId: b.id, quoteId: quote.id }
+    return create(StartClipGenerationResponseSchema, { jobId })
+  })
+  // ②'s corrections (CLIP-235): the descriptive text changes and the scene is marked edited.
+  router.rpc(ClipGenerationService.method.saveClipObservationEdits, async (req) => {
+    options.calls?.push('SaveClipObservationEdits')
+    await options.observationSaveGate?.()
+    options.observationEdits?.push(req)
+    const p = projects.get(req.clipId)
+    if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
+    for (const edit of req.edits) {
+      const [sourceId, index] = edit.observationId.split('/')
+      const source = p.observations?.sources.find((entry) => entry.source.id === sourceId)
+      const segment = source?.segments[Number(index)]
+      if (!source || !segment) throw connectAppError('CLIP_INVALID_INPUT', Code.InvalidArgument)
+      if (edit.event !== undefined) segment.event = edit.event
+      if (edit.action !== undefined) segment.action = edit.action
+      if (edit.speech !== undefined) segment.speech = edit.speech
+      if (edit.subjectsSet) segment.subjects = [...edit.subjects]
+      segment.ownerEdited = true
+      source.ownerEdited = true
+    }
+    return create(SaveClipObservationEditsResponseSchema, {
+      observations: projectProto(p).observations,
     })
   })
   // The storyline request (CLIP-181): one writing call, bound to the stored storyline.

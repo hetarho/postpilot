@@ -14,6 +14,7 @@ import {
   markClipHistoryReturn,
   type ClipChannel,
   type ClipProject,
+  type ClipQuote,
 } from '@/entities/clip-project'
 import { ClipCorrectionWorkspace } from '@/features/correct-clip'
 import { ClipStorylineSpace, discardClipStorylineQueue } from '@/features/edit-clip-storyline'
@@ -36,10 +37,13 @@ import { DeleteClipProjectButton } from '@/features/delete-clip-project'
 import { discardClipDraftQueue } from '@/features/edit-clip-project'
 import { ClipRegionEditor, discardClipRegionQueue } from '@/features/edit-clip-regions'
 import {
+  ClipAnalyzeAction,
   ClipGenerationActions,
+  ClipReanalyzeAction,
   ClipStorylineBuildActions,
   ClipCreditSettlement,
   ClipResult,
+  lacksClipObservation,
   readyClipBatch,
 } from '@/features/generate-clip'
 import { ClipBrowserRenderStatus } from '@/features/render-clip-browser'
@@ -63,7 +67,7 @@ import { useClipWorkspace } from '../model/useClipWorkspace'
 import { clipStepLabel, clipSteps, preparationOpening } from '../model/steps'
 import { focusPreparationField } from '../lib/preparation-focus'
 import { ClipPreparationGuide } from './ClipPreparationGuide'
-import { ClipObserveBar } from './ClipObserveBar'
+import { ClipObserveBar, type ClipObserveCorrection } from './ClipObserveBar'
 import { ClipPreparationSources } from './ClipPreparationSources'
 import { RetainedPreparationMedia } from './RetainedPreparationMedia'
 import { usePreparationClock } from '../model/usePreparationClock'
@@ -117,7 +121,7 @@ export function ClipWorkspace({
     observations,
     run,
   } = workspace
-  const { pending, uploading, plan, save, regions, storyline, flushAll } = workspace
+  const { pending, uploading, plan, save, regions, flushAll } = workspace
   const upload = sources.upload
   const step = workspace.step.value
   const setStep = workspace.step.set
@@ -125,6 +129,7 @@ export function ClipWorkspace({
   // of controls, and no original behind them (CLIP-160, CLIP-76).
   const reading = !!project.finalized
   const reasonId = useId()
+  const analyzeReasonId = useId()
   const now = usePreparationClock([
     upload.readyBatch?.expiresAt,
     ...upload.entries.map((entry) => entry.retentionExpiresAt),
@@ -187,9 +192,79 @@ export function ClipWorkspace({
     window.scrollTo(0, 0)
   }
 
+  // 관찰하기 analyzes every selected source lacking a stored observation of its footage; with none
+  // missing, ① moves on to ② without a call (CLIP-234, CLIP-40).
+  const lacksObservation = lacksClipObservation(
+    upload.entries.map((entry) => ({
+      sourceId: entry.sourceId ?? '',
+      fingerprint: entry.metadata.fingerprint,
+    })),
+    project.observations,
+  )
+  const analyzeOnReview = lacksObservation && step === 'generate' && !run.focused
+  const runAnalysis = (ready: boolean, quote: ClipQuote, reanalyze?: readonly string[]) => {
+    // Every queue is flushed BEFORE the run starts (CLIP-39).
+    void flushAll(true)
+      .then(() =>
+        generation.start(
+          upload.readyBatch,
+          ready,
+          quote,
+          generation.ownership,
+          'analysis',
+          reanalyze,
+        ),
+      )
+      .catch(() => undefined)
+  }
+  // 다시 관찰하기 offers the selected sources holding a stored observation, naming those the
+  // owner corrected by hand (CLIP-234, CLIP-235).
+  const reanalyzable = (upload.readyBatch?.sources ?? []).flatMap((source) => {
+    const observed = (
+      project.observations?.status === 'available' ? project.observations.sources : []
+    ).find(
+      (entry) =>
+        entry.source.id === source.id && entry.source.fingerprint === source.metadata.fingerprint,
+    )
+    return observed
+      ? [
+          {
+            id: source.id,
+            filename: source.metadata.filename,
+            ownerEdited: !!observed.ownerEdited || observations.editing.hasEdits(source.id),
+          },
+        ]
+      : []
+  })
   const observationPanel = (
     <ClipObservationViewer
       project={project}
+      editing={observations.editing}
+      headingAction={
+        reading ? undefined : (
+          <ClipReanalyzeAction
+            sources={reanalyzable}
+            describedBy={reasonId}
+            preparationRoute={generation.preparationRoute}
+            ownerId={ownerId}
+            project={project}
+            batch={upload.readyBatch}
+            observe={generation.observeRef}
+            write={generation.writeRef}
+            observeStatus={generation.observeStatus}
+            ready={
+              !pending &&
+              sourceReady &&
+              generation.canQuote &&
+              !generation.busy &&
+              !render.browser.busy &&
+              !regions.invalid
+            }
+            pending={generation.starting}
+            onApprove={(quote, sourceIds) => runAnalysis(true, quote, sourceIds)}
+          />
+        )
+      }
       onAddCut={
         reading
           ? undefined
@@ -289,6 +364,50 @@ export function ClipWorkspace({
       )}
     </>
   )
+  // Why a run cannot start, shared by ① 확인's 관찰하기 and ②'s actions: an input to correct on ①,
+  // an invalid slot or failing save to retry, missing sources or models, or other work finishing.
+  const runCorrection = (
+    inputRefusal: ClipPreparationScreen | undefined,
+  ): ClipObserveCorrection | undefined =>
+    inputRefusal
+      ? {
+          screen: inputRefusal,
+          label: t('guide.inputRefusal', {
+            screen: t(`guide.${inputRefusal}`),
+          }),
+        }
+      : regions.invalid
+        ? {
+            // ③ shows the regions in its storyline space, each slot
+            // carrying its own error (CLIP-179, CLIP-188).
+            retry: () => {
+              setStep('storyline')
+              // Land on the first slot holding words it cannot draw.
+              requestAnimationFrame(() =>
+                document
+                  .querySelector<HTMLElement>('[data-clip-regions] [aria-invalid="true"]')
+                  ?.focus(),
+              )
+            },
+            label: t('guide.regionRefusal'),
+          }
+        : save.failing || regions.status.failing
+          ? {
+              retry: () => {
+                void flushAll(true).catch(() => undefined)
+              },
+              label: t('guide.saveRefusal'),
+            }
+          : !sourceReady
+            ? { screen: 'sources', label: t('guide.sourceRefusal') }
+            : !generation.canQuote
+              ? {
+                  retry: generation.retryEligibility,
+                  label: t('guide.modelRefusal'),
+                }
+              : pending || generation.busy || render.browser.busy
+                ? { label: t('guide.busyRefusal') }
+                : undefined
   const generatePanel = (
     <ClipProjectForm
       ownerId={ownerId}
@@ -325,6 +444,36 @@ export function ClipWorkspace({
                   screen={guide}
                   onSelect={setGuide}
                   onNext={() => goStep('observe')}
+                  // ① holds the run's reason and refusal only while it is on screen: ②'s bar
+                  // says the same, and one reason is read once.
+                  reasonId={analyzeOnReview ? analyzeReasonId : undefined}
+                  correction={analyzeOnReview ? runCorrection(content.inputRefusal) : undefined}
+                  refusal={analyzeOnReview ? content.refusal : undefined}
+                  analyze={
+                    lacksObservation ? (
+                      <ClipAnalyzeAction
+                        describedBy={analyzeReasonId}
+                        preparationRoute={generation.preparationRoute}
+                        ownerId={ownerId}
+                        project={project}
+                        batch={upload.readyBatch}
+                        observe={generation.observeRef}
+                        write={generation.writeRef}
+                        observeStatus={generation.observeStatus}
+                        ready={
+                          !content.inputRefusal &&
+                          !pending &&
+                          sourceReady &&
+                          generation.canQuote &&
+                          !generation.busy &&
+                          !render.browser.busy &&
+                          !regions.invalid
+                        }
+                        pending={generation.starting}
+                        onApprove={(_mode, quote) => runAnalysis(!content.inputRefusal, quote)}
+                      />
+                    ) : undefined
+                  }
                   campaign={content.campaign}
                   requirements={content.requirements}
                   noteEmpty={content.noteEmpty}
@@ -372,49 +521,7 @@ export function ClipWorkspace({
                       reasonId={reasonId}
                       onBack={() => goStep('generate')}
                       onRoute={routeToPreparation}
-                      correction={
-                        content.inputRefusal
-                          ? {
-                              screen: content.inputRefusal,
-                              label: t('guide.inputRefusal', {
-                                screen: t(`guide.${content.inputRefusal}`),
-                              }),
-                            }
-                          : regions.invalid
-                            ? {
-                                // ③ shows the regions in its storyline space, each slot
-                                // carrying its own error (CLIP-179, CLIP-188).
-                                retry: () => {
-                                  setStep('storyline')
-                                  // Land on the first slot holding words it cannot draw.
-                                  requestAnimationFrame(() =>
-                                    document
-                                      .querySelector<HTMLElement>(
-                                        '[data-clip-regions] [aria-invalid="true"]',
-                                      )
-                                      ?.focus(),
-                                  )
-                                },
-                                label: t('guide.regionRefusal'),
-                              }
-                            : save.failing || regions.status.failing
-                              ? {
-                                  retry: () => {
-                                    void flushAll(true).catch(() => undefined)
-                                  },
-                                  label: t('guide.saveRefusal'),
-                                }
-                              : !sourceReady
-                                ? { screen: 'sources', label: t('guide.sourceRefusal') }
-                                : !generation.canQuote
-                                  ? {
-                                      retry: generation.retryEligibility,
-                                      label: t('guide.modelRefusal'),
-                                    }
-                                  : pending || generation.busy || render.browser.busy
-                                    ? { label: t('guide.busyRefusal') }
-                                    : undefined
-                      }
+                      correction={runCorrection(content.inputRefusal)}
                     />,
                     observeBar,
                   )}
@@ -585,12 +692,7 @@ export function ClipWorkspace({
           // A storyline request writes the slots too, from their instructions and exact words
           // (CLIP-178), over the storyline the owner is looking at: all three land before it
           // starts.
-          flush={() =>
-            save
-              .flush()
-              .then(() => regions.flush())
-              .then(() => storyline.flush())
-          }
+          flush={() => flushAll(true)}
         />
         <StepBarActions
           back={<StepBarBack label={t('storylineStep.back')} onClick={() => goStep('observe')} />}

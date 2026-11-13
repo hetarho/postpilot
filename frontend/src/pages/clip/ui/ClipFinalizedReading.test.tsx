@@ -170,3 +170,15 @@ it('offers upload text in the finished reading alone, the other channel from 더
   ).toBe(false)
   expect(starts).toEqual([])
 })
+
+// CLIP-235, CLIP-160: a finalized project's ② reads its observations without a correction field
+// or 다시 관찰하기.
+it('reads ②’s observations without corrections or 다시 관찰하기 once finalized', async () => {
+  mount()
+  await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
+  await userEvent.click(screen.getByRole('tab', { name: '관찰' }))
+  const panel = within(screen.getByRole('tabpanel', { name: '관찰' }))
+  await userEvent.click(panel.getByRole('button', { name: /자세히 보기/ }))
+  expect(panel.queryByRole('textbox')).not.toBeInTheDocument()
+  expect(panel.queryByRole('button', { name: '다시 관찰하기' })).not.toBeInTheDocument()
+})
