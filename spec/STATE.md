@@ -70,6 +70,7 @@
 | perf-quality-261109 | converted@261109 |
 | perf-quality-si4-261109 | converted@261109 |
 | perf-quality-sil5-261110 | converted@261110 |
+
 ## tasks
 | id | title | ssot | dep | st |
 |---|---|---|---|---|
@@ -94,8 +95,6 @@
 | T814 | Use shared actions throughout attachments and export | ARCH THEME | T804 | todo |
 | T815 | Use shared fields in billing and refund forms | ARCH THEME | T814 | todo |
 | T816 | Complete the route and control design-system audit | ARCH THEME | T807 T810 T813 T815 T821 T822 | todo |
-| T817 | Keep caption preview and appearance controls together | CLIP CDS ARCH | - | todo |
-| T818 | Add a larger inspection view to the clip preview | CLIP ARCH | T817 | todo |
 | T821 | Align template example and choice surfaces | ARCH | - | todo |
 | T822 | Align remaining operational card and row surfaces | ARCH | - | todo |
 
@@ -105,5 +104,5 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T802 T803 T817
+- gusta-implement-task T803 T821 T822
 - This request: T803–T816; T795–T802 remain with the independent contextual-loading run.
