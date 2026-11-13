@@ -6,7 +6,7 @@
 |---|---|---|---|---|---|---|---|
 | ldui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:10Z | 2026-11-13T16:59Z | - | main | 58e244d41e8d |
 | vdux | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:22Z | 2026-11-13T16:54Z | - | task/video-ux-serial | 1f9e87bbdb96 |
-| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T16:56Z | T821 | task/design-system-audit-serial | 7b15f73a0a56 |
+| dsui | ihaelam-ui-MacBookPro | autopilot | 2026-11-13T16:32Z | 2026-11-13T17:01Z | - | task/design-system-audit-serial | 7b15f73a0a56 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -181,8 +181,10 @@
 | T815 | dsui | task/design-system-audit-serial | d26c3d31655d | 2026-11-13T16:56Z |
 | T796 | ldui | main | 24e7dc6044e4 | 2026-11-13T16:59Z |
 | T802 | ldui | main | 24e7dc6044e4 | 2026-11-13T16:59Z |
+| T821 | dsui | task/design-system-audit-serial | 7b15f73a0a56 | 2026-11-13T17:01Z |
 
 ## log
+- 261113 T821 done
 - 261113 T802 done
 - 261113 T796 done
 - 261113 T815 done
@@ -202,4 +204,3 @@
 - 261113 T798 done
 - 261113 T797 done
 - 261113 T808 done
-- 261113 T807 done
