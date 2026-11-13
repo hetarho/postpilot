@@ -27,7 +27,7 @@ export function radioTiles(count: number, selected: number, select: (index: numb
       tabIndex: index === selected ? 0 : -1,
       onClick: () => select(index),
       className: clsx(
-        'flex min-w-0 flex-col rounded-md p-2 text-left transition-colors',
+        'flex min-h-11 min-w-11 flex-col rounded-md p-2 text-left transition-colors',
         layout,
         index === selected
           ? 'bg-row-bg-active text-content-primary ring-stroke-accent ring-2'

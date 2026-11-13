@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, it, vi } from 'vitest'
 import { radioTiles } from './radioTiles'
+import { RadioTile } from './RadioTile'
 
 function Tiles({
   title,
@@ -25,9 +26,9 @@ function Tiles({
     <div {...tiles.group} aria-labelledby={label}>
       <p id={label}>{title}</p>
       {options.map((option, index) => (
-        <button key={option} {...tiles.tile(index, 'gap-1')}>
+        <RadioTile key={option} {...tiles.tile(index, 'gap-1')}>
           {option}
-        </button>
+        </RadioTile>
       ))}
     </div>
   )
