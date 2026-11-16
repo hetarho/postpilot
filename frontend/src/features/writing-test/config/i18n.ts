@@ -21,6 +21,12 @@ export const writingTestI18n = {
     factorTitle: '무엇을 비교할까요?',
     factorHelp: '한 가지 항목만 바꿔 실제 글을 만들어요. 나머지 조건은 같게 유지해요.',
     factor: { model: 'AI 모델', voice: '말투', template: '글 템플릿', guideline: '글 지침' },
+    factorWhat: {
+      model: '같은 글감과 말투로 AI만 바꿔 글을 써요. 완성된 글을 읽고 더 잘 쓴 AI를 골라요.',
+      voice: '같은 AI와 글감으로 말투만 바꿔 글을 써요. 더 내 글 같은 말투를 골라요.',
+      template: '같은 AI와 글감으로 글의 틀(템플릿)만 바꿔 써요. 더 잘 맞는 틀을 골라요.',
+      guideline: '같은 AI와 글감으로 지침만 바꿔 써요. 어떤 지침이 글을 더 낫게 하는지 골라요.',
+    },
     format: '비교 형식',
     formatLabel: { '2': 'A/B 테스트', '4': '4강전', '8': '8강전', '16': '16강전' },
     modelStage: '비교할 모델',
@@ -199,6 +205,16 @@ export const writingTestI18n = {
       voice: 'Writing styles',
       template: 'Post templates',
       guideline: 'Post guidelines',
+    },
+    factorWhat: {
+      model:
+        'Only the AI changes; the material and style stay the same. Read the finished posts and pick the AI that wrote better.',
+      voice:
+        'Only the writing style changes; the AI and material stay the same. Pick the style that sounds more like you.',
+      template:
+        'Only the template changes; the AI and material stay the same. Pick the structure that fits better.',
+      guideline:
+        'Only the guideline changes; the AI and material stay the same. Pick the guideline that makes the post better.',
     },
     format: 'Test format',
     formatLabel: {

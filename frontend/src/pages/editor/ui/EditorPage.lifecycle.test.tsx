@@ -764,18 +764,33 @@ describe('the editor status region', () => {
     expect(screen.queryByText('작업 준비 중')).not.toBeInTheDocument()
   })
 
-  // A4: the line goes quiet on its own, so the status can get back onto it.
-  it('shows 저장됨 for the settle interval and then returns the line to the status', async () => {
+  // A4 kept the status reachable by letting 저장됨 go quiet; now a waiting, running or done save
+  // says nothing at all (owner 2026-11-16), so the line holds the post's status throughout.
+  it('keeps the post status on the line while an autosave waits, runs and lands', async () => {
     const user = userEvent.setup()
+    const materials: Array<{ slug: string; title: string; memo: string }> = []
     renderAppAt('/posts/20260820-jeju', {
       user: USER,
-      posts: { posts: [{ slug: '20260820-jeju', status: 'draft', title: '제주' }] },
+      posts: {
+        posts: [{ slug: '20260820-jeju', status: 'draft', title: '제주' }],
+        draftMaterials: materials,
+      },
     })
 
-    await user.type(await screen.findByLabelText('제목'), ' 여행')
-    await waitFor(() => expect(statusLine()).toHaveTextContent('저장됨'), { timeout: 5_000 })
-    await waitFor(() => expect(statusLine()).toHaveTextContent('초안'), { timeout: 5_000 })
-    expect(statusLine()).not.toHaveTextContent('저장됨')
+    const title = await screen.findByLabelText('제목')
+    const said: string[] = []
+    const observer = new MutationObserver(() => said.push(statusLine().textContent ?? ''))
+    observer.observe(statusLine(), { childList: true, subtree: true, characterData: true })
+    await user.type(title, ' 여행')
+    await waitFor(
+      () => expect(materials).toContainEqual(expect.objectContaining({ title: '제주 여행' })),
+      { timeout: 5_000 },
+    )
+    // A beat for that save's answer to land, which is when 저장됨 used to appear.
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    observer.disconnect()
+    expect(said.filter((text) => /저장/.test(text))).toEqual([])
+    expect(statusLine()).toHaveTextContent('초안')
   })
 
   // A5: one statement of what to do, and it is the control that resolves it.

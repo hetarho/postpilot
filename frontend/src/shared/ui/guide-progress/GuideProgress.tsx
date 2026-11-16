@@ -3,12 +3,15 @@ import { twMerge } from '@/shared/lib'
 
 export interface GuideStep<T extends string> {
   value: T
-  label: string
+  /** The step's short name under its segment. A count of like steps — the learning chat's
+   *  answers, a review's candidates — names none, and the row is then the segments alone. */
+  label?: string
 }
 
-/** Guide: the slim progress a guided flow wears at its top — one rounded segment per step, the
- *  steps behind and the one on screen filled, the ones ahead a recess — with each step's short
- *  name under its segment, the current one in ink.
+/** Guide: the ONE way the app shows where the owner is in a sequence — the writing guide, the
+ *  template wizards, first-use setup, the learning chat's answers and the candidate review. One
+ *  rounded segment per step, the steps behind and the one on screen filled, the ones ahead a
+ *  recess — with each step's short name under its segment, the current one in ink.
  *
  *  Every segment is a button when the flow lets the owner jump (`onSelect`): a busy owner who
  *  wants to change the photos from the summary taps 사진 rather than pressing 이전 twice. The
@@ -30,9 +33,14 @@ export function GuideProgress<T extends string>({
     0,
     steps.findIndex((step) => step.value === current),
   )
+  const labelled = steps.some((step) => step.label)
+  // Unlabelled segments carry no text row, so the row is only as tall as a segment.
+  const cell = labelled
+    ? 'flex min-h-11 w-full flex-col items-start justify-center gap-1.5'
+    : 'flex w-full flex-col items-start justify-center'
   return (
     <nav aria-label={ariaLabel} className={twMerge('w-full', className)}>
-      <ol className="flex w-full gap-1.5">
+      <ol className={clsx('flex w-full', labelled ? 'gap-1.5' : 'gap-1')}>
         {steps.map((step, position) => {
           const reached = position <= index
           const here = position === index
@@ -45,14 +53,22 @@ export function GuideProgress<T extends string>({
                   reached ? 'bg-progress-step-done' : 'bg-progress-step-todo',
                 )}
               />
-              <span
-                className={clsx(
-                  'text-meta block truncate leading-tight',
-                  here ? 'text-content-primary font-bold' : 'text-content-tertiary font-medium',
-                )}
-              >
-                {step.label}
-              </span>
+              {labelled ? (
+                <span
+                  className={clsx(
+                    'text-meta block truncate leading-tight',
+                    here ? 'text-content-primary font-bold' : 'text-content-tertiary font-medium',
+                  )}
+                >
+                  {step.label}
+                </span>
+              ) : (
+                here && (
+                  <span className="sr-only">
+                    {position + 1} / {steps.length}
+                  </span>
+                )
+              )}
             </>
           )
           return (
@@ -62,15 +78,12 @@ export function GuideProgress<T extends string>({
                   type="button"
                   aria-current={here ? 'step' : undefined}
                   onClick={() => onSelect(step.value)}
-                  className="flex min-h-11 w-full flex-col items-start justify-center gap-1.5 rounded-sm text-left"
+                  className={clsx(cell, 'rounded-sm text-left')}
                 >
                   {body}
                 </button>
               ) : (
-                <span
-                  aria-current={here ? 'step' : undefined}
-                  className="flex min-h-11 w-full flex-col items-start justify-center gap-1.5"
-                >
+                <span aria-current={here ? 'step' : undefined} className={cell}>
                   {body}
                 </span>
               )}

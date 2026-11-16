@@ -3,7 +3,11 @@ import { Link, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRef, type Ref } from 'react'
 import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '@/entities/clip-project'
-import { ClipTemplateSummary, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
+import {
+  ClipTemplateDescription,
+  useClipTemplates,
+  type ClipTemplate,
+} from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
@@ -14,9 +18,7 @@ import {
   Button,
   Notice,
   LoadingState,
-  Skeleton,
   Typography,
-  cardStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
@@ -69,29 +71,11 @@ export function VideoTemplatesPage() {
         </Notice>
       )}
       {!isError && isPending && (
-        <div aria-busy="true" className="mt-8">
-          <span role="status" aria-live="polite" className="sr-only">
-            {t('state.loading', { ns: 'common' })}
-          </span>
-          <div
-            aria-hidden="true"
-            className="loading-reveal grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {[0, 1, 2].map((item) => (
-              <div key={item} className={cardStyles()}>
-                <Skeleton className="h-5 w-2/3" />
-                <div className="mt-3 flex items-start gap-4">
-                  <Skeleton className="aspect-9/16 w-24 shrink-0" />
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-3/4" />
-                  </div>
-                </div>
-                <Skeleton className="mt-4 h-10 w-full" />
-              </div>
-            ))}
-          </div>
-        </div>
+        <LoadingState
+          variant="cards"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8 [&>.loading-reveal]:gap-3 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+        />
       )}
 
       {!isError && !isPending && (
@@ -223,21 +207,21 @@ function TemplateRow({
   return (
     <DirectoryItem
       interactive
+      icon={<Clapperboard className="size-6" />}
       title={
         <Link
           to="/video-templates/$templateId"
           params={{ templateId: template.id }}
           search={({ channel }) => ({ channel })}
-          aria-label={template.name}
-          className="block min-w-0 after:absolute after:inset-0"
+          className={typographyStyles({
+            variant: 'fieldTitle',
+            className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
+          })}
         >
-          <Typography variant="fieldTitle" as="span" className="line-clamp-2 block break-words">
-            {template.name}
-          </Typography>
-          <ClipTemplateSummary template={template} />
+          {template.name}
         </Link>
       }
-
+      description={<ClipTemplateDescription template={template} className="line-clamp-2" />}
       status={summary && <EditingStatus summary={summary} />}
       metadata={
         <>

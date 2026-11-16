@@ -10,7 +10,7 @@ import { TemplateDirectEditor } from '@/features/edit-template'
 import { TemplateWizard } from '@/features/create-template-wizard'
 import { BlockType } from '@/shared/api'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
-import { Button, LoadingState, Notice, Typography, pageStyles } from '@/shared/ui'
+import { Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
 
 export function TemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
@@ -26,32 +26,32 @@ export function TemplatePage() {
   const stored = templateId ? templates.find((template) => template.id === templateId) : undefined
   if (isError)
     return (
-      <main className={pageStyles({ width: 'wide' })}>
+      <PageFrame width="wide">
         <Notice tone="danger" role="alert" className="mt-4">
           {t('loadFailed', { ns: 'templates' })}
           <Button variant="ghost" onClick={refetch} pending={isFetching}>
             {t('action.retry', { ns: 'common' })}
           </Button>
         </Notice>
-      </main>
+      </PageFrame>
     )
   if (templateId && (isPending || (!stored && isFetching)))
     return (
-      <main className={pageStyles({ width: 'wide' })}>
+      <PageFrame width="wide">
         <LoadingState
           variant="detail"
           label={t('state.loading', { ns: 'common' })}
           className="mt-8"
         />
-      </main>
+      </PageFrame>
     )
   if (templateId && !stored && !isFetching)
     return (
-      <main className={pageStyles({ width: 'wide' })}>
+      <PageFrame width="wide">
         <Notice tone="danger" role="alert" className="mt-4">
           {t('screen.notFound', { ns: 'templates' })}
         </Notice>
-      </main>
+      </PageFrame>
     )
   return (
     <TemplateAuthoringPage
@@ -111,16 +111,16 @@ function TemplateAuthoringPage({
     name: stored?.name ?? t('page.new', { ns: 'templates' }),
   }
   return (
-    <main
-      className={pageStyles({
-        width: 'board',
-        // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
-        className: clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0'),
-      })}
+    <PageFrame
+      width="board"
+      // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
+      className={clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0')}
+      title={
+        <Typography variant="title" as="h1" className="text-content-secondary truncate">
+          {named.name}
+        </Typography>
+      }
     >
-      <Typography variant="title" as="h1" className="text-content-secondary">
-        {named.name}
-      </Typography>
       {publication?.outcome && (
         <Typography variant="body" role="status" className="mt-4">
           {t(publication.outcome === 'updated' ? 'confirmedUpdate' : 'confirmedCreate', {
@@ -321,6 +321,6 @@ function TemplateAuthoringPage({
           className="mt-8"
         />
       )}
-    </main>
+    </PageFrame>
   )
 }

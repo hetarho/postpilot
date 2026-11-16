@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
@@ -60,6 +61,7 @@ export function LifecycleSteps({
   onRunCardShown,
   clipMaterial,
   inspection,
+  inspectionSlot,
 }: {
   post: PostDraft
   ownerId: string
@@ -95,6 +97,9 @@ export function LifecycleSteps({
   campaign?: FinishCampaign
   clipMaterial?: Pick<PostDraft, 'title' | 'memo'>
   inspection?: { contextKey: string; sourcePending: boolean }
+  /** Where the top row keeps a place for 요청 기술 보기, so it stands beside ← rather than on a
+   *  row of its own under the steps. */
+  inspectionSlot?: HTMLElement | null
 }) {
   const { t } = useTranslation('posts')
   const generateRef = useRef<GenerationActionsHandle>(null)
@@ -258,29 +263,32 @@ export function LifecycleSteps({
     jobView.jobId && (jobView.isError || jobView.job?.status === 'failed'),
   )
 
+  const inspectAction = ownerId && (
+    <InspectWritingRequestAction
+      target={{
+        kind: 'post',
+        ownerId,
+        postSlug: post.slug,
+        sourceRevision: String(post.inputRevision),
+        resultRevision: `${post.contentRevision}:${post.contentHash ?? ''}`,
+        planRevision: JSON.stringify(post.storyline),
+      }}
+      contextKey={JSON.stringify([inspection?.contextKey, liveContent])}
+      stages={['observe', 'plan', 'write', 'write-from-storyline', 'revise']}
+      blockedReason={
+        inspection?.sourcePending ||
+        (liveContent && result && !originContentMatches(liveContent, result))
+          ? t('unsavedSource', { ns: 'requestInspection' })
+          : undefined
+      }
+      className={inspectionSlot ? undefined : 'my-2 self-end'}
+    />
+  )
+
   return (
     <>
-      {ownerId && (
-        <InspectWritingRequestAction
-          target={{
-            kind: 'post',
-            ownerId,
-            postSlug: post.slug,
-            sourceRevision: String(post.inputRevision),
-            resultRevision: `${post.contentRevision}:${post.contentHash ?? ''}`,
-            planRevision: JSON.stringify(post.storyline),
-          }}
-          contextKey={JSON.stringify([inspection?.contextKey, liveContent])}
-          stages={['observe', 'plan', 'write', 'write-from-storyline', 'revise']}
-          blockedReason={
-            inspection?.sourcePending ||
-            (liveContent && result && !originContentMatches(liveContent, result))
-              ? t('unsavedSource', { ns: 'requestInspection' })
-              : undefined
-          }
-          className="my-2 self-end"
-        />
-      )}
+      {inspectAction &&
+        (inspectionSlot ? createPortal(inspectAction, inspectionSlot) : inspectAction)}
       <div
         id={STEP_PANEL_ID}
         role="tabpanel"

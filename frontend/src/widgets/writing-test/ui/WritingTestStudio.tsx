@@ -4,10 +4,12 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type ComponentProps,
+  type ReactNode,
 } from 'react'
 import {
   useModels,
@@ -46,6 +48,7 @@ import {
 } from '@/features/writing-test'
 import {
   StepBar,
+  StepBarCta,
   AppFailureMessage,
   Button,
   Checkbox,
@@ -101,6 +104,8 @@ const choiceKey = (entrant: TestEntrant) =>
       : `ai:${entrant.authoring.sessionId}:${entrant.authoring.candidateId}:${entrant.authoring.revision}`
 
 export interface WritingTestStudioProps {
+  /** The page's heading, set beside ← on the studio's top row. */
+  heading?: ReactNode
   ownerId: string
   seedKey: string
   initialPlan: WritingTestPlan
@@ -117,6 +122,7 @@ export function WritingTestStudio(props: WritingTestStudioProps) {
   )
 }
 function OwnedStudio({
+  heading,
   ownerId,
   seedKey,
   initialPlan,
@@ -137,6 +143,8 @@ function OwnedStudio({
   const flow = useWritingTestFlow({ ownerId, seedKey, initialDraft: initialPlan, testId, client })
   const plan = flow.context.draft ?? initialPlan
   const test = flow.context.test
+  // The photo-reading comparison: AIs are its only factor.
+  const observing = plan.factor === 'model' && plan.modelStage === 'observe'
   const kind: TestSettingKind =
     plan.factor === 'model' ? 'writing-voice' : SETTING_KIND[plan.factor]
   const preparation = useCandidatePreparation({
@@ -167,6 +175,12 @@ function OwnedStudio({
   const sourceName = source.data?.name
   const { send } = flow
   const draft = useCallback((next: WritingTestPlan) => send({ type: 'DRAFT', draft: next }), [send])
+  // Photo reading compares AIs and nothing else, so it has no "what to compare" question: it opens
+  // on its candidates (owner 2026-11-16). Before paint, so the question never flashes.
+  const { sendPresentation } = flow
+  useLayoutEffect(() => {
+    if (observing && flow.view === 'factor') sendPresentation({ type: 'NEXT' })
+  }, [observing, flow.view, sendPresentation])
   const context = (patch: Partial<WritingTestPlan['context']>) =>
     draft({ ...plan, context: { ...plan.context, ...patch } })
   const prepBusy = ['quoting', 'creating', 'starting', 'reading', 'running', 'cancelling'].includes(
@@ -634,13 +648,9 @@ function OwnedStudio({
   }
   return (
     <div className="flex min-w-0 flex-1 flex-col">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-h-11 flex-wrap items-center gap-2">
         <ContextualReturn />
-        {!testId && flow.view === 'factor' && (
-          <a href="/tests/history" className={buttonStyles({ variant: 'ghost' })}>
-            {t('history')}
-          </a>
-        )}
+        {heading && <div className="min-w-0 flex-1">{heading}</div>}
       </div>
       <Typography
         variant="stepTitle"
@@ -667,7 +677,7 @@ function OwnedStudio({
         </Notice>
       )}
       {flow.view === 'factor' && (
-        <section className="mt-4 space-y-4 sm:mt-5 sm:space-y-6">
+        <section className="mt-4 flex flex-1 flex-col gap-4 sm:mt-5 sm:gap-6">
           <Typography variant="body" id={`${headingId}-help`} className="max-w-measure">
             {t('factorHelp')}
           </Typography>
@@ -678,6 +688,8 @@ function OwnedStudio({
                 title={t(`factor.${factor}`)}
                 aria-describedby={`${headingId}-help`}
                 selected={factor === plan.factor}
+                // A tap only chooses; what the choice compares shows under the tiles and 다음
+                // moves on (THEME-52).
                 onClick={() => {
                   if (factor !== plan.factor)
                     draft({
@@ -697,11 +709,18 @@ function OwnedStudio({
                             : (writer.selected ?? undefined),
                       },
                     })
-                  flow.sendPresentation({ type: 'NEXT' })
                   setAttempted(false)
                 }}
               />
             ))}
+          </div>
+          <div role="status" className="bg-card-well rounded-xl p-4">
+            <Typography variant="fieldTitle" as="p">
+              {t(`factor.${plan.factor}`)}
+            </Typography>
+            <Typography variant="body" as="p" className="text-content-secondary mt-1">
+              {t(`factorWhat.${plan.factor}`)}
+            </Typography>
           </div>
           <WritingSelect
             label={t('format')}
@@ -719,10 +738,23 @@ function OwnedStudio({
               })
             }
           />
+          <StepBar ariaLabel={title}>
+            <StepBarActions>
+              <StepBarCta
+                forward
+                onClick={() => {
+                  flow.sendPresentation({ type: 'NEXT' })
+                  setAttempted(false)
+                }}
+              >
+                {t('next')}
+              </StepBarCta>
+            </StepBarActions>
+          </StepBar>
         </section>
       )}
       {flow.view === 'candidates' && (
-        <section className="mt-5 space-y-6">
+        <section className="mt-5 flex flex-1 flex-col gap-6">
           <WritingSelect
             label={t('format')}
             disabled={prepLocked}
@@ -917,20 +949,23 @@ function OwnedStudio({
           )}
           <StepBar ariaLabel={title}>
             <StepBarActions className="flex-wrap">
-              <Button
-                variant="secondary"
-                size="icon"
-                aria-label={t('back')}
-                title={t('back')}
-                disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
-                onClick={() =>
-                  preparation.phase === 'quoted'
-                    ? preparation.send({ type: 'BACK' })
-                    : flow.sendPresentation({ type: 'BACK' })
-                }
-              >
-                <ReturnIcon />
-              </Button>
+              {/* The photo comparison's first screen is this one; its way out is the page's ←. */}
+              {(!observing || preparation.phase === 'quoted') && (
+                <Button
+                  variant="secondary"
+                  size="icon"
+                  aria-label={t('back')}
+                  title={t('back')}
+                  disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
+                  onClick={() =>
+                    preparation.phase === 'quoted'
+                      ? preparation.send({ type: 'BACK' })
+                      : flow.sendPresentation({ type: 'BACK' })
+                  }
+                >
+                  <ReturnIcon />
+                </Button>
+              )}
               {['quoted', 'created'].includes(preparation.phase) && plan.factor !== 'model' ? (
                 <Button
                   variant="cta"

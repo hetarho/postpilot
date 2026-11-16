@@ -335,9 +335,10 @@ describe('clip directory', () => {
   })
 })
 
-it("lists one channel's clips", async () => {
+// One 영상 list: a video is a video, whichever channel it was made for (owner 2026-11-16).
+it("lists both channels' videos on the one 영상 list", async () => {
   const user = userEvent.setup()
-  const view = renderAppAt('/insta-clip', {
+  const view = renderAppAt('/naver-clip', {
     user: { id: 'alice' },
     clips: {
       projects: [
@@ -346,48 +347,50 @@ it("lists one channel's clips", async () => {
       ],
     },
   })
-  expect(await screen.findByRole('link', { name: /Instagram only/ })).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: /Naver only/ })).not.toBeInTheDocument()
+  expect(await row(/Instagram only/)).toBeInTheDocument()
+  expect(await row(/Naver only/)).toBeInTheDocument()
   await openFind(user)
   await user.type(screen.getByRole('searchbox'), 'missing')
   await screen.findByRole('button', { name: '전체 보기' })
   await user.click(screen.getByRole('button', { name: '전체 보기' }))
-  expect(view.router.state.location.pathname).toBe('/insta-clip')
+  expect(view.router.state.location.pathname).toBe('/naver-clip')
   expect(view.router.state.location.search).toEqual({})
-  expect(await screen.findByRole('link', { name: /Instagram only/ })).toBeInTheDocument()
-  expect(screen.queryByRole('link', { name: /Naver only/ })).not.toBeInTheDocument()
+  expect(await row(/Instagram only/)).toBeInTheDocument()
+  expect(await row(/Naver only/)).toBeInTheDocument()
 })
 
-// THEME-38, CLIP-41: the channel opens straight onto its history with its 새 영상 button, and the
-// old shared address lands on the channel it named.
-it('opens a clip channel on its history with no visible heading and its creation button', async () => {
-  renderAppAt('/insta-clip', { user: { id: 'alice' }, clips: { projects: [] } })
-  expect(await screen.findByRole('heading', { level: 1, name: '인스타 클립' })).toHaveClass(
-    'sr-only',
-  )
-  // The 영상 section's one creation opens the clip workspace in this channel (THEME-67).
+// THEME-38, CLIP-41: the 영상 list opens straight onto its history with its 새 영상 button, and the
+// old Instagram address lands on it.
+it('opens the old Instagram address on the 영상 history with no visible heading and its creation button', async () => {
+  const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, clips: { projects: [] } })
+  expect(await screen.findByRole('heading', { level: 1, name: '영상' })).toHaveClass('sr-only')
+  expect(view.router.state.location.pathname).toBe('/naver-clip')
+  // The 영상 section's one creation opens the clip workspace (THEME-67).
   expect(screen.getByRole('link', { name: '새 영상' })).toHaveAttribute(
     'href',
-    '/clips/new?channel=instagram_clip',
+    '/clips/new?channel=naver_clip',
   )
   expect(screen.queryByRole('menu')).toBeNull()
 })
 
 it.each([
-  ['/clips?channel=instagram_clip&q=바다', '/insta-clip', { q: '바다' }],
+  ['/clips?channel=instagram_clip&q=바다', '/naver-clip', { q: '바다' }],
+  ['/insta-clip?status=draft', '/naver-clip', { status: 'draft' }],
   ['/clips?status=draft', '/naver-clip', { status: 'draft' }],
-] as const)('replaces the old %s address with its channel', async (from, path, search) => {
+] as const)('replaces the old %s address with the 영상 list', async (from, path, search) => {
   const view = renderAppAt(from, { user: { id: 'alice' }, clips: { projects: [] } })
   await waitFor(() => expect(view.router.state.location.pathname).toBe(path))
   expect(view.router.state.location.search).toEqual(search)
 })
 
+// Either channel's video is on the one 영상 list, and its way back keeps the narrowing.
 it.each([
-  ['/naver-clip', 'naver_clip', false],
-  ['/insta-clip', 'instagram_clip', true],
+  ['naver_clip', false, '네이버 클립', '/naver-clip'],
+  ['instagram_clip', true, '인스타 클립', '/insta-clip'],
 ] as const)(
-  'shows a prepared story and filters it on %s without calling it a finished video',
-  async (path, channel, narrated) => {
+  'shows a prepared %s story on the 영상 list and filters it without calling it a finished video',
+  async (channel, narrated, channelName, channelPath) => {
+    const path = '/naver-clip'
     const user = userEvent.setup()
     const storyline = {
       paragraphs: [{ text: '직접 겪은 이야기', observationIds: [] }],
@@ -432,10 +435,9 @@ it.each([
     await user.click(screen.getByRole('button', { name: '결과 보기' }))
     await user.click(await row(/이야기만 준비한 영상/))
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips/ready'))
-    const back = await screen.findByRole('link', {
-      name: `${channel === 'naver_clip' ? '네이버 클립' : '인스타 클립'}으로 돌아가기`,
-    })
-    expect(back).toHaveAttribute('href', `${path}?status=storyline_ready`)
+    const back = await screen.findByRole('link', { name: `${channelName}으로 돌아가기` })
+    // An Instagram video's way back names its channel's old address, which lands on 영상.
+    expect(back).toHaveAttribute('href', `${channelPath}?status=storyline_ready`)
     await user.click(back)
     await waitFor(() => expect(router.state.location.pathname).toBe(path))
     expect(router.state.location.search).toMatchObject({ status: 'storyline_ready' })

@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
-import { ProgressBar } from '../progress-bar/ProgressBar'
+import { GuideProgress, type GuideStep } from '../guide-progress/GuideProgress'
 import {
   StepBar,
   StepBarActions,
@@ -35,8 +35,14 @@ export function WizardFrame({
   screen: string
   title: ReactNode
   help?: ReactNode
-  /** Numbers only when the total is known; otherwise the words alone say what is under way. */
-  progress: { text: string; label: string; current?: number; total?: number }
+  /** Where the owner is, drawn the way every guided flow draws it (`GuideProgress`): one
+   *  segment per screen the owner actually answers, and the position over the question. */
+  progress: {
+    steps: readonly GuideStep<string>[]
+    current: string
+    label: string
+    position?: ReactNode
+  }
   back?: { label: string; onClick: () => void; disabled?: boolean }
   /** The screen's one big action, `forward` (→) when it only moves to the next screen. While it
    *  is held, `reason` says why in one line above it and names the button for a screen reader. */
@@ -65,23 +71,21 @@ export function WizardFrame({
   }, [screen])
   return (
     <section aria-labelledby={titleId} className="flex min-w-0 flex-1 flex-col">
-      <Typography variant="label" as="p" className="text-content-secondary">
-        {progress.text}
-      </Typography>
-      {/* A count it does not know yet is said in words over a still, empty track. The job bar's
-          indeterminate sweep means "something is running", and on a question that is only
-          waiting for the owner's answer it read as a load that never ended. */}
-      {progress.total ? (
-        <ProgressBar
-          label={progress.label}
-          done={progress.current}
-          total={progress.total}
-          className="mt-2"
-        />
-      ) : (
-        <div aria-hidden="true" className="relative mt-2 h-0">
-          <div className="bg-meter-track h-progress-bar absolute inset-x-0 top-0" />
-        </div>
+      <GuideProgress
+        steps={progress.steps}
+        current={progress.current}
+        ariaLabel={progress.label}
+        className="mt-2"
+      />
+      {progress.position && (
+        <p
+          className={typographyStyles({
+            variant: 'label',
+            className: 'text-link-fg-current mt-6',
+          })}
+        >
+          {progress.position}
+        </p>
       )}
       {/* A stage heading takes focus for announcement on navigation; it is not a control. */}
       <h2
@@ -90,7 +94,9 @@ export function WizardFrame({
         tabIndex={-1}
         className={typographyStyles({
           variant: 'stepTitle',
-          className: 'mt-6 focus:outline-none!',
+          className: progress.position
+            ? 'mt-1 text-balance focus:outline-none!'
+            : 'mt-6 text-balance focus:outline-none!',
         })}
       >
         {title}
@@ -104,7 +110,13 @@ export function WizardFrame({
       <div className="mt-6 mb-8">{children}</div>
       {(back || next || barFooter) && (
         <StepBar>
-          {next?.reason && <StepBarReason id={reasonId}>{next.reason}</StepBarReason>}
+          {/* The reason names the held button for a screen reader only: a line that appeared
+              above the row and vanished on the first tap jolted the whole bar (owner 2026-11-16). */}
+          {next?.reason && (
+            <div className="sr-only">
+              <StepBarReason id={reasonId}>{next.reason}</StepBarReason>
+            </div>
+          )}
           {(back || next || barAction) && (
             <StepBarActions
               back={

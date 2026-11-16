@@ -23,33 +23,45 @@ describe('useSaveStatus', () => {
   })
 
   // The queue's own `saved` holds for the life of a queue that has ever saved, so without this
-  // 저장됨 never came down and the post's status could never reach the line (A4).
-  it('shows 저장됨 on a completed save and then goes quiet', () => {
+  // the line never came down and the post's status could never reach it (A4). Waiting, running
+  // and done saves say nothing on screen (owner 2026-11-16); the resolved state still settles.
+  it('resolves a completed save silently and then settles quiet', () => {
     const view = render(<Probe state="saving" />)
     const line = () => view.container.querySelector('p')
-    expect(screen.getByText('저장하는 중…')).toBeInTheDocument()
+    expect(line()).toHaveAttribute('data-state', 'saving')
+    expect(line()).toBeEmptyDOMElement()
 
     view.rerender(<Probe state="saved" />)
-    expect(screen.getByText('저장됨')).toBeInTheDocument()
+    expect(line()).toHaveAttribute('data-state', 'saved')
+    expect(line()).toBeEmptyDOMElement()
 
     act(() => void vi.advanceTimersByTime(SAVE_STATUS_SETTLED_MS - 1))
-    expect(screen.getByText('저장됨')).toBeInTheDocument()
+    expect(line()).toHaveAttribute('data-state', 'saved')
 
     act(() => void vi.advanceTimersByTime(1))
-    expect(screen.queryByText('저장됨')).not.toBeInTheDocument()
     expect(line()).toHaveAttribute('data-state', 'quiet')
     expect(line()).toBeEmptyDOMElement()
   })
 
-  it('re-arms for the next save, so a settled line speaks again', () => {
+  it('re-arms for the next save, so a settled line resolves again', () => {
     const view = render(<Probe state="saved" />)
+    const line = () => view.container.querySelector('p')
     act(() => void vi.advanceTimersByTime(SAVE_STATUS_SETTLED_MS))
-    expect(screen.queryByText('저장됨')).not.toBeInTheDocument()
+    expect(line()).toHaveAttribute('data-state', 'quiet')
 
     view.rerender(<Probe state="dirty" />)
-    expect(screen.getByText('저장 대기 중')).toBeInTheDocument()
+    expect(line()).toHaveAttribute('data-state', 'dirty')
+    expect(line()).toBeEmptyDOMElement()
     view.rerender(<Probe state="saved" />)
-    expect(screen.getByText('저장됨')).toBeInTheDocument()
+    expect(line()).toHaveAttribute('data-state', 'saved')
+    expect(line()).toBeEmptyDOMElement()
+  })
+
+  it('still speaks for a save that is failing or refused', () => {
+    const view = render(<Probe state="error" />)
+    expect(screen.getByText('저장하지 못했어요 · 다시 시도 중')).toBeInTheDocument()
+    view.rerender(<Probe state="refused" />)
+    expect(screen.getByText('저장이 거절됐어요')).toBeInTheDocument()
   })
 
   it('never settles a state that is still true', () => {

@@ -17,13 +17,10 @@ export function WorkspaceHeader({
   actions?: ReactNode
   status?: ReactNode
 }) {
+  // One row: ←, then what this is, then its actions at the far end — the title used to take a row
+  // of its own above or below the arrow and left the row beside it empty (owner 2026-11-16).
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
-      {contextTitle && (
-        <Typography variant="label" as="p" className="text-content-secondary w-full break-words">
-          {contextTitle}
-        </Typography>
-      )}
       <a
         href={returnTo.href}
         aria-label={returnTo.label}
@@ -47,6 +44,19 @@ export function WorkspaceHeader({
         <ReturnIcon />
         <span className="sr-only">{returnTo.label}</span>
       </a>
+      {contextTitle && (
+        <Typography
+          variant="label"
+          as="p"
+          className={
+            steps
+              ? 'text-content-primary min-w-0 flex-1 truncate sm:max-w-48 sm:flex-none'
+              : 'text-content-primary min-w-0 flex-1 truncate'
+          }
+        >
+          {contextTitle}
+        </Typography>
+      )}
       {steps && (
         <div className="order-last w-full min-w-0 overflow-x-auto overscroll-x-contain sm:order-none sm:w-auto sm:flex-1">
           {steps}

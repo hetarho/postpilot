@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useSession } from '@/entities/session'
 import { ChangePasswordForm } from '@/features/change-password'
 import { RegisterEmailForm } from '@/features/register-email'
-import { Badge, pageStyles, Typography } from '@/shared/ui'
+import { Badge, PageFrame, Typography } from '@/shared/ui'
 
 export function AccountPage() {
   const { t } = useTranslation('auth')
@@ -11,11 +11,14 @@ export function AccountPage() {
   const navigate = useNavigate()
 
   return (
-    <main className={pageStyles()}>
-      <Typography variant="display" as="h1">
-        {t('accountSettings.heading')}
-      </Typography>
-      <section className="mt-6 grid gap-4" aria-labelledby="account-identity">
+    <PageFrame
+      title={
+        <Typography variant="title" as="h1" className="truncate">
+          {t('accountSettings.heading')}
+        </Typography>
+      }
+    >
+      <section className="mt-2 grid gap-4" aria-labelledby="account-identity">
         <Typography variant="title" as="h2" id="account-identity">
           {t('accountSettings.identity')}
         </Typography>
@@ -79,6 +82,6 @@ export function AccountPage() {
           )}
         </section>
       )}
-    </main>
+    </PageFrame>
   )
 }

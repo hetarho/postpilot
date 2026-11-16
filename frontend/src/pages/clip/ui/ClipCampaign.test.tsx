@@ -5,6 +5,7 @@ import { renderAppAt } from '@/test/app'
 import { clipGuideTo } from '@/test/clip-preparation'
 import { emptyClipProject, type ClipProjectDraft } from '@/entities/clip-project'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
+import { clipDraftState } from '@/features/edit-clip-project/model/clip-draft-queue'
 
 const project = {
   id: 'project',
@@ -93,8 +94,9 @@ it('keeps the guide and a half-typed item while its autosave lands', async () =>
       }),
     { timeout: 4000 },
   )
-  // The status turns 저장됨 only once that save's answer has reached the form.
-  expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
+  // The queue turns saved only once that save's answer has reached the form; the status line no
+  // longer says 저장됨 (owner 2026-11-16), so the queue itself is read.
+  await waitFor(() => expect(clipDraftState(project.id)).toBe('saved'), { timeout: 4000 })
   expect(keyword).toBeInTheDocument()
   expect(keyword).toHaveValue('대표')
   await user.type(keyword, ' 메뉴{Enter}')

@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r37 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
+> r38 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -118,7 +118,8 @@
   - deletion/expiry marks a durable payload-purge fence; queued/in-flight/late callbacks cannot restore purged private data or publish a result from it
   - payload expiry is not a new generation or a reason to recreate an adopted setting
 - MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId, placed under the AI 고르기 tab at /ai-models (→=THEME-38), which also holds the stage model choices (→=MODEL-96)
-  - AI 고르기's one primary action opens the two-contestant writer comparison; the observer comparison and test history sit beside it
+  - AI 고르기 shows 지금 쓰는 AI with 추천으로 적용 beside its heading (→MODEL-71), then 비교해 보기 as two equal cards — 글 쓰는 AI 비교 and 사진 보는 AI 비교 — with 지난 비교 a link beside that heading, then the default two-model candidates (→MODEL-65) in a card of their own
+  - a factor choice only selects, stating in one line what that comparison changes, and the step bar's 다음 moves on; the observer comparison has no factor question and opens on its candidates
   - voice/template/guideline/model entry points all seed the same factor/format/material flow; changing routes or choosing candidates starts no work
   - model/setting selectors show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
   - desktop review shows two complete readable posts beside each other; phone review preserves candidate reading positions and shows the same pair with explicit winner controls
@@ -173,7 +174,7 @@
   - a later deregistration, delisting or declassification never edits a saved set; the admin list flags the affected slots, derived at read time (→MODEL-22)
 
 - MODEL-71 [o] a set is advice: saving, reordering or deleting it rewrites no account's selections, pairs, experiments or history, and applying copies the set as it is at that moment (→MODEL-25)
-  - `/ai-models` lists every set in the operator's order, each with its label, its blocking reasons and its own apply control (→MODEL-26); the id is never shown; with no set the section says there is no recommendation
+  - `/ai-models`' 추천으로 적용 opens one `Sheet` listing every set in the operator's order, each with its label, its blocking reasons and its own apply control (→MODEL-26); the id is never shown; with no set the sheet says there is no recommendation
 
 - MODEL-72 [o] the document's `[recommendations]` section is the complete ordered list of recommendation sets: applying makes the sets exactly the section's, in its order; a document without the section leaves the sets untouched, and an empty section removes every set
   - a set is a `set <label>` line followed by exactly one line per stage, ids verbatim as MODEL-51 with the registry's single provider implied (→MODEL-10):
@@ -257,7 +258,7 @@
   - unchanged existing owned winners may be used directly; changed/deleted synthetic styles, templates or guidelines offer an explicitly named new copy rather than silent overwrite/resurrection
   - personal-voice winners use only their still-active owned accepted profile; changed/deleted personal sources remain historical results until explicit restore/reanalysis/retest, never transferring personal materials/analyses to a new voice
   - default/assignment choices are explicit; lost-response retries return the same confirmed setting and never repeat defaulting or undo a later edit
-- MODEL-91 [o] explicit cancellation/abandonment names the test and its confirmed usage consequence; stop remaining planned work where possible, settle issued usage once and fence late results. Closing/navigating only preserves recoverable work and never cancels or spends.
+- MODEL-91 [o] explicit cancellation/abandonment names the test and its confirmed usage consequence; stop remaining planned work where possible, settle issued usage once and fence late results. Closing/navigating never cancels or spends and preserves every created test and started preparation; a setup with no created test is discarded by navigating away, so the next entry starts over, while a reload resumes it.
 - MODEL-92 [o] setting-test contestants choose one saved item per slot; an unassigned slot is visibly allocated to AI preparation by default, with no separate saved-versus-AI method.
   - saved and prepared references may coexist; preserve assigned entries and fill only unassigned indices, including a single slot
   - preparation uses EDIT's exact bounded1..16 count, with optional direction and a useful kind-specific default; all-saved tests skip preparation entirely
@@ -289,7 +290,7 @@
 - curate: 모델 관리 tab → ListCatalog(live read ∪ DB rows | DB rows + fetch_error) → SetModelPurpose | SetModelReasoning | SetModelLevel → the next Complete sees it
 - curate speech: 목소리 → supported combination list + saved registrations → check 사용 → choose classification | adjust optional synthesis settings → versioned effective binding and resolved common tariff → readiness/entitlement gates → explicit customer selection
 - speech pricing: common ElevenLabs account setup → verified supplier/account terms and operation rules → resolve combination tariffs/limits → freeze evidence for a bounded quote → explicit paid-work approval under QUOTA-69
-- recommend: 모델 관리 추천 조합 tab → save(whole-set validation → one write) | reorder | delete → /ai-models lists sets in order → owner apply(MODEL-26 gate over seven refs → one transaction)
+- recommend: 모델 관리 추천 조합 tab → save(whole-set validation → one write) | reorder | delete → /ai-models 추천으로 적용 sheet lists sets in order → owner apply(MODEL-26 gate over seven refs → one transaction)
 - bulk curate: 일괄 편집 → export(current five sections + recommendations) | paste → preview(per-purpose diff + set diff | rejected lines, no write) → apply(re-validate against the document's own registrations → one transaction) → the next Complete sees it
 - test: choose factor/format → owned or prepared entrants + common material → freeze/validate/estimate → explicit generation → all outputs ready → N-1 human pair decisions → champion/reveal → explicit save/adopt/export → thirty-day private-payload sweep
 
@@ -303,5 +304,6 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r38 261116 MODEL-44✎ one primary writer action, observer and history beside→two equal comparison cards + 지난 비교 link, factor tap selects then 다음, observer skips the factor; MODEL-71✎ page section→추천으로 적용 sheet; MODEL-91✎ navigating preserves recoverable setup→discards a setup with no test
 - r37 261111 MODEL-44✎ place of tests "a destination beside model settings at /ai-models"→"under the AI 고르기 tab (/ai-models), whose one primary action is the two-writer comparison"; MODEL-96+ /ai-models stage rows and picker: radio cards, a tap saves, free-first order, owner-chosen 품질 먼저/균형/가격 먼저, locked cards disabled with reason, credits only
 - r35 261007 MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ capability-only schema boundary→syntax and semantic accuracy distinguished; unrestricted blind details→identity-safe inspection; content-only application→matching origin review; input/output expiry→origin/request expiry

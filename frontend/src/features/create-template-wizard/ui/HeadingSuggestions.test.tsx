@@ -60,7 +60,7 @@ describe('explicit heading suggestions', () => {
     expect(calls.filter((name) => name.startsWith('Start'))).toEqual([])
   })
 
-  it('keeps navigation and manual input while one call runs, then offers editable choices per section', async () => {
+  it('holds 다음 but keeps 이전 and manual input while one call runs, then offers editable choices per section', async () => {
     let finish!: () => void
     const headingStartGate = new Promise<void>((resolve) => {
       finish = resolve
@@ -87,18 +87,33 @@ describe('explicit heading suggestions', () => {
     // A slow admission does not hold the owner: the sheet closes and the request goes on.
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    const field = await screen.findByLabelText('소제목')
+    // The suggestions asked for are waited for on this screen, so they are picked here: 다음 is
+    // held, saying why to a screen reader, while 이전 and the owner's own words stay open.
+    const next = screen.getByRole('button', { name: '다음' })
+    expect(next).toBeDisabled()
+    expect(next).toHaveAttribute('aria-busy', 'true')
+    expect(next).toHaveAccessibleDescription('제목 제안을 받는 중이에요. 끝나면 골라 주세요.')
+    expect(screen.getByRole('button', { name: '이전' })).toBeEnabled()
+    const field = screen.getByLabelText('방문 계기 소제목')
     await user.clear(field)
     await user.type(field, '내가 쓴 제목')
     expect(screen.getByRole('status')).toHaveTextContent('소제목을 제안하는 중')
     await act(async () => finish())
     await screen.findByRole('button', { name: '방문 계기 후보 하나' })
     expect(field).toHaveValue('내가 쓴 제목')
+    await waitFor(() => expect(screen.getByRole('button', { name: '다음' })).toBeEnabled())
     await user.click(screen.getByRole('button', { name: '방문 계기 후보 둘' }))
     expect(field).toHaveValue('방문 계기 후보 둘')
     await user.type(field, ' 내 표현')
     expect(field).toHaveValue('방문 계기 후보 둘 내 표현')
+    await user.click(screen.getByRole('button', { name: '다음' }))
+    expect(await screen.findByLabelText('소제목')).toHaveValue('방문 계기 후보 둘 내 표현')
+    // The first part's screen opens 이 자리에 들어갈 것's explanation by itself; close it to go on.
+    expect(
+      await screen.findByRole('dialog', { name: '이 자리에 들어갈 것, 이렇게 골라요' }),
+    ).toBeInTheDocument()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await user.click(screen.getByRole('button', { name: '이전' }))
     expect(screen.getByLabelText('방문 계기 소제목')).toHaveValue('방문 계기 후보 둘 내 표현')
     expect(starts).toHaveLength(1)

@@ -230,20 +230,32 @@ describe('the voice title row', () => {
     { id: 'voice-new', name: '새 말투', made: false },
   ]
 
-  it('keeps the named return and rename near the content, with management and tests after it', async () => {
+  it('keeps the named return, rename and management in one row above the content, with tests after it', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt(DEFAULT, { user: { id: 'alice' }, calls, voice: { voices: VOICES } })
     const title = await screen.findByRole('heading', { level: 1, name: '기본 말투' })
-    expect(screen.getByRole('link', { name: '← 말투 목록' })).toHaveAttribute('href', '/voices')
+    // The one shared round return, named by where it leads; no second text link of its own.
+    const back = screen.getByRole('link', { name: '말투' })
+    expect(back).toHaveAttribute('href', '/voices')
+    expect(screen.queryByRole('link', { name: '← 말투 목록' })).toBeNull()
     const content = screen.getByRole('region', { name: '분석 항목' })
     const management = screen.getByRole('button', { name: '기본 해제' })
+    const remove = screen.getByRole('button', { name: '기본 말투 삭제' })
     const tests = screen.getByRole('link', { name: '글쓰기 테스트' })
-    expect(title.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(
-      content.compareDocumentPosition(management) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy()
-    expect(content.compareDocumentPosition(tests) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // The return, the title and management share one row, which holds none of the content.
+    let row = title.parentElement
+    while (row && !row.contains(management)) row = row.parentElement
+    expect(row).not.toBeNull()
+    expect(row).toContainElement(back)
+    expect(row).toContainElement(remove)
+    expect(row).not.toContainElement(content)
+    const follows = (a: Node, b: Node) =>
+      !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+    expect(follows(back, title)).toBe(true)
+    expect(follows(title, management)).toBe(true)
+    expect(follows(management, content)).toBe(true)
+    expect(follows(content, tests)).toBe(true)
     const writes = calls.filter((call) => /^(SetDefault|Delete|Rename|Analyze)/.test(call))
     await user.click(screen.getByRole('button', { name: '기본 말투 이름 바꾸기' }))
     const input = screen.getByRole('textbox', { name: '말투 이름' }) as HTMLInputElement

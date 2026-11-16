@@ -49,6 +49,18 @@ async function start() {
   await user.click(await screen.findByRole('button', { name: '내 작업 공간 준비하기' }))
   return user
 }
+/** Where a sequence stands, drawn as every guided flow draws it (GuideProgress): one segment per
+ *  step, the one on screen marked as the current step. */
+function guideStep(name: string) {
+  const progress = screen.getByRole('navigation', { name })
+  const segments = within(progress).getAllByRole('listitem')
+  return {
+    total: segments.length,
+    current: segments.findIndex((segment) => segment.querySelector('[aria-current="step"]')),
+  }
+}
+const SETUP_PROGRESS = '나만의 작업 공간 준비'
+const ANSWER_PROGRESS = '이번 대화의 저장한 답변 수'
 
 it('offers setup after missing settings were read without creating content or paid work', async () => {
   const calls: string[] = []
@@ -68,7 +80,7 @@ it('offers setup after missing settings were read without creating content or pa
 it('shows the two-choice launch for configured users and acknowledges that browser', async () => {
   renderAppAt('/', READY)
   expect(
-    await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ }),
+    await within(await screen.findByRole('main')).findByRole('link', { name: '글' }),
   ).toHaveAttribute('href', '/posts/new')
   expect(screen.queryByRole('heading', { name: /처음 한 번/ })).toBeNull()
   expect(readSetupProgress(OWNER).completed).toBe(true)
@@ -90,7 +102,7 @@ it('distinguishes failed directory reads from missing settings and offers explic
   expect(screen.queryByRole('button', { name: '내 작업 공간 준비하기' })).toBeNull()
   await user.click(screen.getByRole('button', { name: '먼저 시작하기' }))
   expect(
-    await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ }),
+    await within(await screen.findByRole('main')).findByRole('link', { name: '글' }),
   ).toBeInTheDocument()
   expect(readSetupProgress(OWNER).completed).toBe(true)
 })
@@ -178,10 +190,10 @@ it('defers once, survives reload and does not share the acknowledgement with ano
   const user = userEvent.setup()
   const first = mountFresh()
   await user.click(await screen.findByRole('button', { name: '나중에 설정할게요' }))
-  await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ })
+  await within(await screen.findByRole('main')).findByRole('link', { name: '글' })
   first.unmount()
   const second = mountFresh()
-  await within(await screen.findByRole('main')).findByRole('link', { name: /블로그 글/ })
+  await within(await screen.findByRole('main')).findByRole('link', { name: '글' })
   expect(second.router.state.location.pathname).toBe('/create')
   second.unmount()
   renderAppAt('/', { user: { id: 'setup-bob' }, firstUseSetup: true, voice: { voices: [] } })
@@ -194,8 +206,14 @@ it('skips optional setup without entity writes and finishes at the explicitly ch
   mountFresh({ voice: { voices: [], calls }, templates: { calls }, clips: { calls } })
   const user = await start()
   await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })
-  for (let i = 0; i < 3; i++)
+  // Setup's place among its questions is a segment row, not a bar, and it moves on each skip.
+  expect(screen.queryByRole('progressbar')).toBeNull()
+  expect(guideStep(SETUP_PROGRESS)).toEqual({ total: 3, current: 0 })
+  for (let i = 0; i < 3; i++) {
     await user.click(await screen.findByRole('button', { name: '지금은 건너뛰기' }))
+    if (i < 2)
+      await waitFor(() => expect(guideStep(SETUP_PROGRESS)).toEqual({ total: 3, current: i + 1 }))
+  }
   await user.click(await screen.findByRole('button', { name: '첫 클립 만들기' }))
   await screen.findByLabelText('클립 제목')
   expect(calls.filter((call) => /Create|Start|Analyze|Save/.test(call))).toEqual([])
@@ -444,7 +462,7 @@ it('saves a clip template once before offering completion', async () => {
   expect(calls.filter((call) => call === 'CreateVideoTemplate')).toHaveLength(1)
   await user.click(screen.getByRole('button', { name: '만들러 가기' }))
   expect(
-    await within(screen.getByRole('main')).findByRole('link', { name: '네이버 클립' }),
+    await within(screen.getByRole('main')).findByRole('link', { name: '영상' }),
   ).toBeInTheDocument()
   expect(router.state.location.pathname).toBe('/create')
 })
@@ -500,14 +518,14 @@ it('saves ten chat replies through setup and waits for an explicit analysis acti
   const user = userEvent.setup()
   await screen.findByLabelText('답')
   expect(screen.queryByRole('navigation', { name: '현재 위치' })).not.toBeInTheDocument()
+  // One segment per answer the chat asks for; the one being answered now is current.
+  expect(guideStep(ANSWER_PROGRESS)).toEqual({ total: 10, current: 0 })
   for (let index = 0; index < 10; index++) {
     await user.type(screen.getByLabelText('답'), '친구에게 평소처럼 편하게 이야기했어요.')
     await user.click(screen.getByRole('button', { name: '보내기' }))
     if (index < 9)
       await waitFor(() =>
-        expect(
-          screen.getByRole('progressbar', { name: '이번 대화의 저장한 답변 수' }),
-        ).toHaveAttribute('aria-valuenow', String(index + 1)),
+        expect(guideStep(ANSWER_PROGRESS)).toEqual({ total: 10, current: index + 1 }),
       )
   }
   expect(await screen.findByText('열 개의 답변이 모였어요.')).toBeInTheDocument()
@@ -552,11 +570,7 @@ it('guards parent navigation while an inline answer save is pending', async () =
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
   expect(screen.getByRole('button', { name: '이전' })).toBeDisabled()
   expect(screen.getByLabelText('답')).toHaveValue('저장 중에도 입력한 내용은 그대로예요.')
+  expect(guideStep(ANSWER_PROGRESS).current).toBe(0)
   await act(async () => release())
-  await waitFor(() =>
-    expect(screen.getByRole('progressbar', { name: '이번 대화의 저장한 답변 수' })).toHaveAttribute(
-      'aria-valuenow',
-      '1',
-    ),
-  )
+  await waitFor(() => expect(guideStep(ANSWER_PROGRESS).current).toBe(1))
 })

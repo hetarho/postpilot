@@ -30,7 +30,7 @@ vi.mock('@/shared/lib/upload', async (original) => ({
 }))
 
 const SLUG = '20260820-seongsu'
-const ACTION = '이 체험으로 클립 만들기'
+const ACTION = '이 체험으로 영상 만들기'
 function fetchedVideo(content: string) {
   const response = new Response()
   // Node's Response and jsdom's Blob belong to different realms. Use the same native
@@ -85,7 +85,7 @@ async function dialog(user: ReturnType<typeof userEvent.setup>) {
 }
 async function confirm(user: ReturnType<typeof userEvent.setup>) {
   const panel = await dialog(user)
-  await user.click(within(panel).getByRole('button', { name: '클립 만들기' }))
+  await user.click(within(panel).getByRole('button', { name: '영상 만들기' }))
 }
 const video = (filename: string, index = 0) => ({
   id: `video-${index}`,
@@ -116,14 +116,15 @@ describe('making a clip from a finished post', () => {
     })
     const panel = await dialog(user)
     expect(view.writes).toEqual([])
-    await user.click(within(panel).getByRole('tab', { name: '인스타 클립' }))
-    await user.click(within(panel).getByRole('button', { name: '클립 만들기' }))
+    // A video is one kind of work: there is no channel to choose (CLIP-209).
+    expect(within(panel).queryByRole('tab')).toBeNull()
+    await user.click(within(panel).getByRole('button', { name: '영상 만들기' }))
     await arrived(view)
     expect(view.writes[0]).toMatchObject({
       linkedPostSlug: SLUG,
       title: '성수 카페',
       instruction: '친구와 나눈 이야기',
-      channel: 'instagram_clip',
+      channel: 'naver_clip',
       ratio: 'vertical',
       campaign: false,
       advertiserGuide: {
@@ -140,8 +141,8 @@ describe('making a clip from a finished post', () => {
     expect(view.draftSaves).toEqual([])
     expect(readClipReturnContext(USER.id, 'clip-1')).toMatchObject({
       targetId: 'clip-1',
-      path: '/insta-clip',
-      filters: { channel: 'instagram_clip' },
+      path: '/naver-clip',
+      filters: { channel: 'naver_clip' },
     })
     await waitFor(() => expect(view.router.state.location.state.clipImport).toBeUndefined())
   })
@@ -150,7 +151,6 @@ describe('making a clip from a finished post', () => {
     const user = userEvent.setup()
     const view = mount({ videos: [video('one.mp4')] })
     const panel = await dialog(user)
-    await user.click(within(panel).getByRole('tab', { name: '인스타 클립' }))
     await user.click(within(panel).getByRole('button', { name: '취소' }))
     expect(view.writes).toEqual([])
     expect(view.calls).not.toContain('CreateClipProject')
@@ -164,7 +164,7 @@ describe('making a clip from a finished post', () => {
     const view = mount({ memo })
     const panel = await dialog(user)
     expect(within(panel).getByText(/앞 1000자/)).toHaveTextContent(/나머지 메모는 글에 그대로/)
-    await user.click(within(panel).getByRole('button', { name: '클립 만들기' }))
+    await user.click(within(panel).getByRole('button', { name: '영상 만들기' }))
     await arrived(view)
     expect(view.writes[0].instruction).toBe('😀'.repeat(1000))
     expect(Array.from(view.writes[0].instruction!)).toHaveLength(1000)

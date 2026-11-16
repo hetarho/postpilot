@@ -32,7 +32,6 @@ export const nav = {
     materials: 'Training data',
     checks: 'Checks',
     settings: 'Voice settings',
-    backToList: '← Voices',
     short: {
       analysis: 'Analysis',
       materials: 'Training data',

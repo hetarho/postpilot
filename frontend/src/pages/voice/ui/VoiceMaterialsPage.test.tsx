@@ -101,14 +101,12 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '자료 더 보태기' }))
     const sheet = within(await screen.findByRole('region', { name: '대화로 내 말투 알아보기' }))
-    expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expect(sheet.getByText('0 / 10개 답변 저장')).toBeInTheDocument()
     await user.click(sheet.getByLabelText('답'))
     await user.paste(sentences(12))
     await user.click(sheet.getByRole('button', { name: '보내기' }))
 
-    await waitFor(() =>
-      expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1'),
-    )
+    await waitFor(() => expect(sheet.getByText('1 / 10개 답변 저장')).toBeInTheDocument())
     expect(sheet.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
   })
 
@@ -263,7 +261,7 @@ describe('the 학습 데이터 screen', () => {
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
     expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
-    expect(sheet.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expect(sheet.getByText('0 / 10개 답변 저장')).toBeInTheDocument()
     expect(sheet.getByRole('button', { name: '다른 얘기 할래요' })).toBeEnabled()
     expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '안녕하세요!')

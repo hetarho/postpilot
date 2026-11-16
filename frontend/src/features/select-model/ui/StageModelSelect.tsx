@@ -149,18 +149,8 @@ export function StageModelSelect({
           {error}
         </FieldMessage>
       )}
-      {/* Visible, not sr-only: the control greys out for the 1–3s a SaveSelection takes on mobile
-          data, and a touch user watching the field it just closed over is exactly who needs the
-          cause (THEME-28). The region stays mounted so it announces when it fills, and `empty:hidden`
-          keeps it out of the layout while it is idle. */}
-      <Typography
-        variant="body"
-        as="p"
-        role="status"
-        className="text-content-tertiary mt-1 empty:hidden"
-      >
-        {save.isPending ? t('selectField.saving') : null}
-      </Typography>
+      {/* No "saving" line: the choice is saved as it is made and says nothing about it
+          (owner 2026-11-16); a failed save still speaks above. */}
       {unavailable && (
         // `status`, not the default `alert`: this is a standing condition of the saved value, not
         // something that just went wrong, and it renders on first paint.

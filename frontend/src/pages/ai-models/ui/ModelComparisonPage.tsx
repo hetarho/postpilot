@@ -35,7 +35,7 @@ import {
   FieldMessage,
   Listbox,
   Typography,
-  pageStyles,
+  PageFrame,
 } from '@/shared/ui'
 import { stageOfTab, useModelStage } from '../model/useModelStage'
 import { ModelPageHeader } from './ModelPageHeader'
@@ -109,7 +109,7 @@ export function ModelComparisonPage() {
     }
   }
   return (
-    <main className={pageStyles({ width: 'board', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
+    <PageFrame width="board" className="pt-0 sm:pt-0 lg:pt-8">
       <ModelPageHeader title="comparison" description="comparisonDescription" />
       <ModelStageTabs to="/ai-models/compare" withVoice />
       <section className="mt-6" aria-label={t('page.pairSettings', { ns: 'models' })}>
@@ -149,7 +149,7 @@ export function ModelComparisonPage() {
           />
         )}
       </section>
-    </main>
+    </PageFrame>
   )
 }
 

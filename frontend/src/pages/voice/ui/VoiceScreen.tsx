@@ -60,7 +60,9 @@ export function VoiceScreen({
   const hasFreshness = !['current', 'unmade'].includes(voiceMaterialFreshness(profile))
   return (
     <main className="mt-4 pb-4 sm:mt-6 sm:pb-12">
-      <Typography variant="title" className={profile.made ? 'sr-only sm:not-sr-only' : undefined}>
+      {/* While a voice is still learning, the guided screen's own question is the heading the
+          owner reads; the tab's name stays for the outline only. */}
+      <Typography variant="title" className={profile.made ? 'sr-only sm:not-sr-only' : 'sr-only'}>
         {typeof title === 'function' ? title(context) : title}
       </Typography>
       {description && (

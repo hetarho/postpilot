@@ -40,13 +40,21 @@ const all = [draft, refining, finished]
 const ids = (values: ClipProject[]) => values.map((v) => v.id)
 
 describe('narrowClips', () => {
-  it('narrows by channel and defaults older projects to Naver', () => {
+  // One 영상 list (CLIP-41): a clip stored on either channel is listed whatever channel the list
+  // was opened with, and the other narrowings still apply to it.
+  it('keeps clips of every channel on the one video list', () => {
     const instagram = project({ id: 'i', title: '제주', channel: 'instagram_clip' })
-    expect(ids(narrowClips([...all, instagram], {}))).toEqual(['a', 'b', 'c'])
-    expect(ids(narrowClips([...all, instagram], { channel: 'instagram_clip' }))).toEqual(['i'])
-    expect(ids(narrowClips([...all, instagram], { channel: 'instagram_clip', q: '부산' }))).toEqual(
-      [],
-    )
+    expect(ids(narrowClips([...all, instagram], {}))).toEqual(['a', 'b', 'c', 'i'])
+    expect(ids(narrowClips([...all, instagram], { channel: 'naver_clip' }))).toEqual([
+      'a',
+      'b',
+      'c',
+      'i',
+    ])
+    expect(ids(narrowClips([...all, instagram], { channel: 'naver_clip', q: '제주' }))).toEqual([
+      'a',
+      'i',
+    ])
   })
 
   it('keeps everything when nothing is narrowing', () => {

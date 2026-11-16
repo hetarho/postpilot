@@ -732,12 +732,7 @@ function validContent(
 
 function saveLabel(state: ReturnType<typeof useContentAutosave>['state']) {
   switch (state) {
-    case 'dirty':
-      return i18next.t('state.savePending', { ns: 'common' })
-    case 'saving':
-      return i18next.t('action.saving', { ns: 'common' })
-    case 'saved':
-      return i18next.t('state.saved', { ns: 'common' })
+    // Waiting, running and done saves say nothing; only trouble speaks (owner 2026-11-16).
     case 'error':
       return i18next.t('state.saveFailed', { ns: 'common' })
     case 'conflict':

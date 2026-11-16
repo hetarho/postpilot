@@ -89,6 +89,7 @@ export {
   ROLES as TEMPLATE_ROLE_DEFAULTS,
   TARGET_TREE as TEMPLATE_TARGET_TREE,
   leaves as templateTargetLeaves,
+  targetQuestionCount as templateTargetQuestionCount,
 } from './config/target-catalog'
 export type { RoleKey, TargetNode, SectionContent } from './config/target-catalog'
 export { useWizardHeadingSuggestions } from './api/useWizardHeadingSuggestions'

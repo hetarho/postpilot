@@ -47,12 +47,29 @@ function mount(fixture: Fixture, ownerId = 'alice') {
     },
   )
 }
+/** A reload never runs React's cleanup, while leaving the setup does and forgets it: keep the
+ *  session's storage exactly as the page left it, then open the page again. */
+function reload(mounted: ReturnType<typeof mount>, fixture: Fixture) {
+  const kept = Array.from({ length: sessionStorage.length }, (_, index) => {
+    const key = sessionStorage.key(index)!
+    return [key, sessionStorage.getItem(key)!] as const
+  })
+  const recovery = kept.filter(([key]) => key.startsWith('postpilot:writing-test:'))
+  expect(recovery).toHaveLength(1)
+  mounted.unmount()
+  expect(sessionStorage.getItem(recovery[0][0])).toBeNull()
+  for (const [key, value] of kept) sessionStorage.setItem(key, value)
+  return mount(fixture)
+}
 async function select(label: string, option: string) {
   await userEvent.click(screen.getByRole('combobox', { name: new RegExp(`^${label}(?:\\s|$)`) }))
   await userEvent.click(await screen.findByRole('option', { name: option }))
 }
 async function enter(fixture: Fixture, label: string) {
+  // A tile only chooses the factor; the step bar's 다음 moves on to the candidates.
   await userEvent.click(await screen.findByRole('button', { name: label }))
+  expect(screen.queryByRole('textbox', { name: '후보의 방향 (선택)' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '다음' }))
   await waitFor(() => expect(fixture.calls).toContain('GetSelections'))
   await waitFor(() => expect(screen.getByRole('button', { name: '다음' })).toBeEnabled())
 }
@@ -181,8 +198,7 @@ it('retains saved and prepared references through reload, format changes and ano
   await prepare(fixture, 1)
   const firstQuote = await postQuote(fixture)
   const references = firstQuote.entrants.slice()
-  first.unmount()
-  mount(fixture)
+  reload(first, fixture)
   // Cost quotes do not survive reload as approval; the frozen contestants and material do.
   await screen.findByRole('textbox', { name: '공통 글감' })
   expect(fixture.preparations).toHaveLength(1)
@@ -232,8 +248,7 @@ it('retains required fields from a previous prepared template after a second bat
   await prepare(fixture, 1)
   expect(screen.getByRole('textbox', { name: /^첫 장소/ })).toBeVisible()
   expect(screen.getByRole('textbox', { name: /^두 번째 장소/ })).toBeVisible()
-  first.unmount()
-  mount(fixture)
+  reload(first, fixture)
   const firstField = await screen.findByRole('textbox', { name: /^첫 장소/ })
   const secondField = await screen.findByRole('textbox', { name: /^두 번째 장소/ })
   expect(fixture.preparations.map((batch) => batch.count)).toEqual([1, 1])

@@ -10,7 +10,7 @@ import {
   Button,
   ListRowIcon,
   Notice,
-  ProgressBar,
+  GuideProgress,
   StepBar,
   StepBarActions,
   StepBarBack,
@@ -109,12 +109,14 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
               </Typography>
             )}
           </div>
-          <ProgressBar
-            label={t('setup.progress')}
-            done={index}
-            total={Math.max(1, state.plan.length)}
-            className="mt-2 md:mt-3"
-          />
+          {state.plan.length > 0 && (
+            <GuideProgress
+              steps={state.plan.map((step) => ({ value: step }))}
+              current={state.plan[Math.min(index, state.plan.length) - 1] ?? state.plan[0]}
+              ariaLabel={t('setup.progress')}
+              className="mt-2 md:mt-3"
+            />
+          )}
           {/* The question, large, on every screen and every width. */}
           <Typography
             variant="stepTitle"
