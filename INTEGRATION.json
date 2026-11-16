@@ -11,8 +11,8 @@
       "branch": "gusta-session-start-vfid-2c92eccf",
       "head": "b9dd0dd54324be003e41f0a701395aa8501c4e33",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T03:14:09.914Z",
+      "status": "ready",
+      "at": "2026-11-16T03:14:17.715Z",
       "agentChecks": [
         {
           "id": "T828-backend-contract",
