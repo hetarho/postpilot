@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { screen, waitFor } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
@@ -11,6 +11,32 @@ const providers = {
   selections: [{ stage: Stage.ANALYZE, providerId: 'stub', modelId: 'analyze' }],
 }
 describe('personal learning transport flow', () => {
+  it.each([
+    ['만들기', '/create'],
+    ['내 콘텐츠', '/my'],
+    ['내 스타일', '/style'],
+    ['AI 고르기', '/ai-models'],
+    ['나', '/settings'],
+  ])('leaves an unmade voice through the %s navigation link', async (label, destination) => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const { router } = renderAppAt(route, {
+      user: { id: 'alice' },
+      calls,
+      voice: { voices: personal },
+      providers,
+    })
+    await screen.findByRole('heading', { name: '내 말투, 어떻게 알려 줄까요?' })
+    await user.click(
+      within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', { name: label }),
+    )
+    await waitFor(() => {
+      expect(router.state.status).toBe('idle')
+      expect(router.state.location.pathname).toBe(destination)
+      expect(screen.queryByRole('heading', { name: '내 말투, 어떻게 알려 줄까요?' })).toBeNull()
+    })
+    expect(calls.filter((call) => /^(Create|Start|Analyze|SetDefault)/.test(call))).toEqual([])
+  })
   it('offers 대화하기 beside paste and AI without an analysis or a create/start call', async () => {
     const calls: string[] = []
     renderAppAt(route, {

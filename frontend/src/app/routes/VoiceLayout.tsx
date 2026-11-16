@@ -42,7 +42,9 @@ export function VoiceLayout() {
   const { profile, isPending: profilePending } = useVoiceProfile(ownerId, voice ? voiceId : '')
   const pathname = useRouterState({ select: (state) => state.location.pathname })
   const made = profile?.made ?? voice?.made ?? false
-  const learningPath = `/voices/${voiceId}/materials`
+  const voicePath = `/voices/${voiceId}`
+  const learningPath = `${voicePath}/materials`
+  const withinVoice = pathname === voicePath || pathname.startsWith(`${voicePath}/`)
 
   const ready = !!voice && !isPending && !profilePending
   return (
@@ -99,7 +101,7 @@ export function VoiceLayout() {
           label={t('state.loading', { ns: 'common' })}
           className="mt-4"
         />
-      ) : !made && pathname !== learningPath ? (
+      ) : !made && withinVoice && pathname !== learningPath ? (
         <Navigate to="/voices/$voiceId/materials" params={{ voiceId }} replace />
       ) : (
         <>
