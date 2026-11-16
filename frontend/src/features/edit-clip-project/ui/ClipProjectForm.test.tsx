@@ -226,8 +226,8 @@ it('starts from a queued draft, keeps an empty title optional and refuses only a
 
 it('saves 영상 종류 as two explicit choices, each tap only marking its card', async () => {
   render(<Form stored={{ ...project, campaign: false }} start="kind" />)
-  const sponsored = byName(/체험단으로 다녀왔어요/)
-  const paid = byName(/내 돈으로 다녀왔어요/)
+  const sponsored = byName(/제품이나 서비스를 제공받았어요/)
+  const paid = byName(/내돈내산이에요/)
   expect(paid).toHaveAttribute('aria-pressed', 'true')
   await userEvent.click(sponsored)
   expect(sponsored).toHaveAttribute('aria-pressed', 'true')
@@ -239,7 +239,7 @@ it('saves 영상 종류 as two explicit choices, each tap only marking its card'
   )
   await open('review')
   expect(screen.getByRole('region', { name: '체험단 글' })).toHaveTextContent(
-    '체험단으로 다녀왔어요',
+    '제품이나 서비스를 제공받았어요',
   )
   expect(screen.getByRole('region', { name: '광고주 가이드' })).toBeVisible()
 })
@@ -398,7 +398,7 @@ it('mints an unminted clip with the whole queued draft once and updates it after
   render(<Form unminted start="kind" onMinted={minted} />)
   // The guide stands on /clips/new too, with nothing that creates the clip.
   expect(screen.queryByRole('button', { name: '클립 만들기' })).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: /내 돈으로 다녀왔어요/ }))
+  await user.click(screen.getByRole('button', { name: /내돈내산이에요/ }))
   await open('content')
   // An empty title saves: nothing in the draft is required to mint it.
   await user.click(byName('발급'))

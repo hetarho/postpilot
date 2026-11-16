@@ -24,7 +24,7 @@ describe('campaign-led writing', () => {
       posts: { draftSaves, posts: [{ slug: SLUG, campaign: true }] },
     })
     await guideTo(user, GUIDE.kind)
-    expect(screen.getByRole('button', { name: '체험단으로 다녀왔어요' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '제품이나 서비스를 제공받았어요' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -75,7 +75,7 @@ describe('campaign-led writing', () => {
       },
     })
     await guideTo(user, GUIDE.kind)
-    await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
+    await user.click(screen.getByRole('button', { name: '내돈내산이에요' }))
     await waitFor(() => expect(draftSaves.at(-1)?.campaign).toBe(false), AUTOSAVED)
     expect(draftSaves.at(-1)?.advertiserGuide).toBeUndefined()
     expect(
@@ -87,7 +87,7 @@ describe('campaign-led writing', () => {
     expect(screen.getByRole('heading', { name: '사진을 골라 주세요' })).toBeInTheDocument()
     expect(screen.queryByRole('complementary')).toBeNull()
     await guideTo(user, GUIDE.kind)
-    await user.click(screen.getByRole('button', { name: '체험단으로 다녀왔어요' }))
+    await user.click(screen.getByRole('button', { name: '제품이나 서비스를 제공받았어요' }))
     await guideTo(user, GUIDE.requirements)
     expect(guideText()).toHaveValue('대표 메뉴')
   })
@@ -95,7 +95,7 @@ describe('campaign-led writing', () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/posts/new', { user: USER })
     await guideTo(user, GUIDE.kind)
-    expect(screen.getByRole('button', { name: '체험단으로 다녀왔어요' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '제품이나 서비스를 제공받았어요' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -117,13 +117,13 @@ describe('campaign-led writing', () => {
     const { router } = renderAppAt('/posts/new', { user: USER, posts: { draftSaves } })
     await guideTo(user, GUIDE.kind)
     const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined)
-    await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
+    await user.click(screen.getByRole('button', { name: '내돈내산이에요' }))
     await waitFor(
       () => expect(router.state.location.pathname).toBe('/posts/20260828-untitled'),
       AUTOSAVED,
     )
     expect(draftSaves[0]?.campaign).toBe(false)
-    expect(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: '내돈내산이에요' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
@@ -176,7 +176,7 @@ describe('campaign-led writing', () => {
     })
     await openStep(user, '생성')
     await guideTo(user, GUIDE.kind)
-    expect(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '내돈내산이에요' })).toBeDisabled()
     await guideTo(user, GUIDE.requirements)
     expect(guideText()).toBeDisabled()
     expect(screen.getByLabelText('최소 사진 수')).toBeDisabled()
