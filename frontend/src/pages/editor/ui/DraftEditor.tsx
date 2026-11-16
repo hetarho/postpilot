@@ -53,7 +53,16 @@ import {
   Typography,
 } from '@/shared/ui'
 import { editorNavigationCopy } from '../config/i18n'
-import { initialGuideStep, stashGuideStep, takeGuideStep, type GuideStep } from '../model/guide'
+import {
+  initialGuideStep,
+  peekGuideStep,
+  stashGuideStep,
+  takeGuideStep,
+  stashGuidelinesRequest,
+  peekGuidelinesRequest,
+  takeGuidelinesRequest,
+  type GuideStep,
+} from '../model/guide'
 import { editorSteps } from '../model/steps'
 import { useDraftAssignments } from '../model/useDraftAssignments'
 import { useDraftSteps } from '../model/useDraftSteps'
@@ -129,14 +138,34 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   // from the new post's offer, and 템플릿 is where the owner sees what they made (TMPL-32).
   const [guide, setGuide] = useState<GuideStep>(
     () =>
-      takeGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
+      peekGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
   )
-  const [guidelinesOpen, setGuidelinesOpen] = useState(false)
-  const deferredMint = useRef<string | undefined>(undefined)
+  const [resumeGuidelines] = useState(() =>
+    post?.slug ? peekGuidelinesRequest(ownerId, post.slug) : false,
+  )
+  const [guidelinesOpen, setGuidelinesOpen] = useState(resumeGuidelines)
+  const guidelineOpening = useRef<'idle' | 'flushing' | 'minted'>('idle')
+  const guidelinesButton = useRef<HTMLButtonElement>(null)
+  const guidelinesOpenRef = useRef(guidelinesOpen)
   const guideRef = useRef(guide)
+  useLayoutEffect(() => {
+    takeGuideStep(post?.slug)
+  }, [post?.slug])
   useEffect(() => {
     guideRef.current = guide
-  }, [guide])
+    guidelinesOpenRef.current = guidelinesOpen
+  }, [guide, guidelinesOpen])
+  useLayoutEffect(() => {
+    if (resumeGuidelines && post?.slug && takeGuidelinesRequest(ownerId, post.slug)) {
+      guidelinesButton.current?.focus({ preventScroll: true })
+    }
+  }, [resumeGuidelines, ownerId, post?.slug])
+  useEffect(
+    () => () => {
+      if (post?.slug && guidelinesOpenRef.current) stashGuideStep(post.slug, guideRef.current)
+    },
+    [post?.slug],
+  )
 
   // ①'s text and its lock are the autosave's (POST-86); the page only lays the SELECTED template's
   // fields over it (POST-62).
@@ -160,10 +189,14 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       // Replace the unminted address without changing its creation/history context. The scroll
       // stays: the mint is an edit’s side effect, and a router reset would move the input
       // away from the owner.
-      // Keep the open guideline editor mounted while the post's ordinary autosave settles.
-      if (guidelinesOpen) deferredMint.current = slug
-      else
-        void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
+      if (
+        (guidelineOpening.current === 'flushing' || guidelinesOpen) &&
+        guideRef.current === 'review'
+      ) {
+        guidelineOpening.current = 'minted'
+        stashGuidelinesRequest(ownerId, slug)
+      }
+      void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
   // A template the wizard handed back is assigned once, through the same assignment the picker
@@ -363,12 +396,19 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     },
   })
 
-  const closeGuidelines = () => {
-    setGuidelinesOpen(false)
-    const slug = deferredMint.current
-    deferredMint.current = undefined
-    if (slug)
-      void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
+  const openGuidelines = async () => {
+    if (guidelineOpening.current !== 'idle') return
+    guidelineOpening.current = 'flushing'
+    try {
+      await autosave.flush()
+      if (guidelineOpening.current === 'flushing') {
+        guidelineOpening.current = 'idle'
+        if (guideRef.current === 'review') setGuidelinesOpen(true)
+      }
+    } catch {
+      guidelineOpening.current = 'idle'
+      // The autosave status retains and explains a save refusal.
+    }
   }
 
   // Each writing screen holds one task; the summary links back to every input.
@@ -454,7 +494,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         }
         brief={choices.brief}
         onGo={setGuide}
-        onOpenGuidelines={() => setGuidelinesOpen(true)}
+        onOpenGuidelines={() => void openGuidelines()}
+        guidelinesButtonRef={guidelinesButton}
       />
     ),
   }
@@ -612,7 +653,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       <Sheet
         open={guidelinesOpen}
         label={t('guide.summary.guidelines')}
-        onClose={closeGuidelines}
+        onClose={() => setGuidelinesOpen(false)}
         size="wide"
         header={
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -623,7 +664,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
               variant="ghost"
               size="icon"
               aria-label={t('action.close', { ns: 'common' })}
-              onClick={closeGuidelines}
+              onClick={() => setGuidelinesOpen(false)}
             >
               <X aria-hidden="true" className="size-5" />
             </Button>

@@ -1,5 +1,5 @@
 import { afterEach, expect, it } from 'vitest'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { rememberPostEntry, readPostReturnContext } from '@/entities/post'
 import { clearCaret } from '@/features/edit-post-content/model/caret-handoff'
@@ -195,7 +195,7 @@ it('opens guidelines for an empty unsaved draft without creating a post or start
   expect(calls.filter((call) => /^(Start|Analyze|Generate|Create)/.test(call))).toEqual([])
 })
 
-it('keeps guideline editing mounted when an ordinary autosave first mints the post', async () => {
+it('opens guidelines after a pending first save and restores focus to the saved editor', async () => {
   const user = userEvent.setup()
   const calls: string[] = []
   const { router } = renderAppAt('/posts/new', { user: USER, calls })
@@ -207,14 +207,69 @@ it('keeps guideline editing mounted when an ordinary autosave first mints the po
   const sheet = await screen.findByRole('dialog', { name: '지침' })
   await waitFor(() => expect(calls).toContain('SavePostDraft'))
   expect(sheet).toBeVisible()
-  expect(router.state.location.pathname).toBe('/posts/new')
+  expect(router.state.location.pathname).toBe('/posts/20260828-지침을-고치는-동안')
+  const opener = screen.getByRole('button', { name: '지침 바꾸기' })
   await user.click(within(sheet).getByRole('button', { name: '닫기' }))
-  await waitFor(() =>
-    expect(router.state.location.pathname).toBe('/posts/20260828-지침을-고치는-동안'),
-  )
+  await waitFor(() => expect(opener).toHaveFocus())
   expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
   expect(screen.getByLabelText('제목')).toHaveValue('지침을 고치는 동안')
 })
+
+it('returns from a guideline source link to the saved draft instead of a fresh new editor', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/posts/new', {
+    user: USER,
+    posts: { posts: [{ slug: 'source', memo: '기존 글의 경험' }] },
+    guidelines: { candidates: [{ id: 'candidate', text: '과장하지 않기', postSlug: 'source' }] },
+  })
+  fireEvent.change(await screen.findByLabelText('제목'), { target: { value: '돌아올 작성 글' } })
+  await guideTo(user, GUIDE.review)
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  const sheet = await screen.findByRole('dialog', { name: '지침' })
+  const savedPath = router.state.location.pathname
+  expect(savedPath).toBe('/posts/20260828-돌아올-작성-글')
+  await user.click(await within(sheet).findByRole('button', { name: '하나씩 보기' }))
+  const review = await screen.findByRole('dialog', { name: '새 지침 후보' })
+  await user.click(within(review).getByRole('link', { name: '요청한 글 보기' }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/source'))
+  router.history.back()
+  await waitFor(() => expect(router.state.location.pathname).toBe(savedPath))
+  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+  expect(screen.getByLabelText('제목')).toHaveValue('돌아올 작성 글')
+})
+
+it.each(['/posts/new', '/posts/saved'])(
+  'does not open delayed guidelines after leaving review on %s',
+  async (path) => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const { router } = renderAppAt(path, {
+      user: USER,
+      calls,
+      posts: { posts: [{ slug: 'saved' }], draftSaveGate: gate },
+    })
+    fireEvent.change(await screen.findByLabelText('제목'), { target: { value: '느린 저장' } })
+    await guideTo(user, GUIDE.review)
+    await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+    await waitFor(() => expect(calls).toContain('SavePostDraft'))
+    await guideTo(user, GUIDE.photos)
+    await act(async () => {
+      release()
+      await gate
+    })
+    const savedPath = path === '/posts/new' ? '/posts/20260828-느린-저장' : path
+    await waitFor(() => {
+      expect(router.state.status).toBe('idle')
+      expect(router.state.location.pathname).toBe(savedPath)
+    })
+    expect(screen.queryByRole('dialog', { name: '지침' })).toBeNull()
+    expect(await screen.findByRole('heading', { name: '사진을 골라 주세요' })).toBeVisible()
+  },
+)
 
 it('preserves the post return of a standalone guidelines URL', async () => {
   const user = userEvent.setup()

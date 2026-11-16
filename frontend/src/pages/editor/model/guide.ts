@@ -1,6 +1,7 @@
 import i18next from 'i18next'
 import { isTerminal } from '@/entities/generation-job'
 import type { PostDraft } from '@/entities/post'
+import { EDITOR_HANDOFF_TTL_MS } from '@/shared/config'
 
 /** Campaign requirements set the context; photos still precede all writing inputs. */
 export type GuideStep =
@@ -62,9 +63,33 @@ export function stashGuideStep(slug: string, step: GuideStep): void {
   minted.set(slug, step)
 }
 
+export function peekGuideStep(slug: string | undefined): GuideStep | undefined {
+  return slug ? minted.get(slug) : undefined
+}
+
 export function takeGuideStep(slug: string | undefined): GuideStep | undefined {
   if (!slug) return undefined
   const step = minted.get(slug)
   minted.delete(slug)
   return step
+}
+
+let guidelinesRequest: { ownerId: string; slug: string; at: number } | undefined
+
+export function stashGuidelinesRequest(ownerId: string, slug: string): void {
+  guidelinesRequest = { ownerId, slug, at: Date.now() }
+}
+
+export function peekGuidelinesRequest(ownerId: string, slug: string): boolean {
+  return (
+    guidelinesRequest?.ownerId === ownerId &&
+    guidelinesRequest.slug === slug &&
+    Date.now() - guidelinesRequest.at <= EDITOR_HANDOFF_TTL_MS
+  )
+}
+
+export function takeGuidelinesRequest(ownerId: string, slug: string): boolean {
+  if (!peekGuidelinesRequest(ownerId, slug)) return false
+  guidelinesRequest = undefined
+  return true
 }
