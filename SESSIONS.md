@@ -155,6 +155,7 @@
 - 261116 decided CLIP-209 T868: how to fold stored channel data? → keep each project's own-channel upload text (body and tags as written) and posted URL as stored; remove upload texts and unconsumed quotes stored for the project's other channel (alt: keep other-channel texts in a side table | convert Instagram captions to Naver format)
 - 261116 decided THEME-38 POST-43 CLIP-41 T862: list addresses? → /posts and /clips, with /naver-blog, /naver-clip and /insta-clip redirecting (alt: /my/posts and /my/videos | keep /naver-blog and /naver-clip)
 - 261116 decided CLIP-209 T863: identifier scope? → rename channel and section names only; generic clip names and Naver platform rules (ParseNaverBlogURL, Naver Blog export, Naver Clip upload rules) keep their names (alt: rename clip to video everywhere)
+- 261116 decided CLIP-211 T867: upload-text read shape? → one optional text and one limit set, old repeated fields reserved (alt: keep repeated fields holding at most one)
 
 ## unlanded
 | id | tag | branch | commit | at |
