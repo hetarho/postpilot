@@ -167,8 +167,8 @@
       "branch": "gusta-session-start-wopts-7b887426",
       "head": "7641f90be245d577578bd7470d3f233f7d7dded8",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T15:27:31.535Z",
+      "status": "ready",
+      "at": "2026-11-16T15:27:35.943Z",
       "agentChecks": [],
       "verificationCommands": []
     },
