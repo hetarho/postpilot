@@ -16,8 +16,12 @@ description: >-
 - 이 checkout에서 `vibe loop`나 `work run`이 실행 중이면, 끝난 뒤에 업데이트하라고 안내한다. 실행 중인 세션이 읽는 스킬이 바뀌기 때문이다.
 - 맡김 세션에서는 업데이트하지 않는다. 대신 `vibe inbox add --kind parked`로 남긴다. 설치 충돌이나 FORMAT 판단처럼 사람이 골라야 할 일이 생길 수 있다.
 
+- 조회·규칙 조사는 현재 위치에서 할 수 있다. 첫 설치·의존성 변경·이관·설정/agent-block 쓰기·커밋 **전에** Git의 현재 브랜치를 확인하고, land·deploy·plan·저장소 기본 브랜치이면 자기 소유 하위 브랜치를 만들거나 확인한 작업 브랜치로 옮긴다. 다른 세션·checkout·미커밋 사용자 변경을 옮기거나 덮지 않는다.
+
 ## 2. 버전과 프로젝트 규칙
 - `gusta outdated`로 installed(lock 파일), latest, `changes`(installed 이후 CHANGELOG 항목)를 본다. `error`가 있으면 레지스트리 조회 실패를 알리고 멈춘다.
+- 제품 단계·지원 범위도 [제품 지원 정책](../gusta-create-architecture/references/product-support.md)의 현재 승인 ARCH와 대조한다. 미정이면 최초 추천·선택으로 연결하고 기존 지원을 자동 축소하지 않는다.
+- 테스트 감사도 버전과 무관한 필수 단계다. `upgrade-context.testPolicy`의 후보·원시 경로/줄·미확인을 읽고 실제 스크립트 호출망, 테스트 설정과 대표 테스트, ARCH 계획, runtime timings를 대조한다. inventory complete나 후보 없음만으로 의미 검토 완료라 하지 않는다. 결과는 유지/축소/agent 대체/CI 이동/미확인으로 구분하고 중복·지원 밖 브라우저·소스/구현 추종 테스트와 대체 증거·제거될 비용을 남긴다. [감사 기준](references/project-rules.md)을 따른다.
 - 설치·이관 전에 [프로젝트 규칙 대조](references/project-rules.md)를 수행한다. `gusta upgrade-context`의 모든 페이지와 적용 지침·참조를 조사하고, 대조 범위·제외 이유·미확인 항목을 남긴다. 최신 버전이거나 알려진 설정 키가 검색되지 않아도 이 조사를 생략하지 않는다.
 - package.json 의존성에 @haeram/gusta가 있으면 그 패키지 관리자로 올린다(예: `npm i -D @haeram/gusta@latest`, lockfile 포함).
 - `outdated`가 false여도 `gusta migrate --dry-run`과 규칙 대조를 끝낸다. 설치 갱신이 불필요하면 건너뛰되 이관·정합성 확인 전에는 완료로 보고하지 않는다.
@@ -41,5 +45,6 @@ description: >-
 - 다음을 보고한다.
   - 버전(from → to)과 적용된 이관
   - 조사한 문서·범위와 제외·미확인 항목, 해결한 충돌과 남은 판단, 보존한 프로젝트 규칙
+  - 테스트 감사 처분·근거·대체 AC·제거/이동 비용·남은 미확인과 승인/구현할 정리 항목
   - 새로 정한 설정과 lint 결과
   - `changes`를 요약한 "달라진 동작"(cfg.level에 맞춰서)

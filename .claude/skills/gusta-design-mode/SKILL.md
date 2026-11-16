@@ -4,7 +4,7 @@ description: >-
   실시간 디자인 모드. "/gusta-design-mode, 디자인하자, 화면 보면서 고치자, UI 다듬자, 디자인 모드" 일 때 사용.
   이 checkout만 디자인 중으로 표시하고(STATE·다른 worktree는 그대로), 사용자가 말하는 대로 코드만 바로 고쳐 화면에서 실시간으로 보게 한다 —
   그동안 테스트·e2e·커밋·push는 하지 않는다.
-  사용자가 디자인이 끝났다고 하면 그때 전체 테스트를 돌려 확인하고 커밋한다. 커밋·push 전에는 항상 디자인이 끝났는지 묻는다.
+  사용자가 디자인이 끝났다고 하면 영향 범위의 task 검사 뒤 커밋하고 전체 검수는 공동 통합에 제출한다. 커밋·push 전에는 항상 디자인이 끝났는지 묻는다.
 ---
 
 # gusta-design-mode — 디자인 진행자
@@ -13,7 +13,7 @@ description: >-
 
 ## 공통 규칙 (모든 spec 스킬)
 1. 먼저 `vibe status --json` 또는 실행기 brief로 필요한 STATE 요약만 본다. 없으면 gusta-create-architecture 실행을 안내한다. `settings.unset`이 있으면 gusta-init으로 먼저 정한다(맡김·실행기 배정은 묻지 않는다 — land 미정이면 현재 브랜치에 커밋만 하고, agents 미정이면 맡김을 시작하지 않는다).
-2. **문서 먼저**: 쓰기 전 실행기 배정 또는 `work status --json`으로 확인한다(CLI가 없으면 checkout·사용자 배정 확인). 단독/기획은 문서 상태를 STATE에, 세션 기록(시작·상태 변화·활동)을 `vibe` 명령으로만(`beat`·`claim`·`inbox`·`log`) 남기고 SESSIONS.md를 직접 고치지 않는다. 워커는 STATE·SSOT·세션 기록 대신 runtime과 자기 acceptance 체크·result만 쓴다. 리뷰는 읽기 전용이며 리뷰 runtime만 쓴다. 브랜치명은 소유권이 아니다. `vibe status`에 `design`이 있으면(이 checkout이 디자인 중) 커밋·push 전에 사용자에게 디자인이 끝났는지 묻고, 끝났으면 gusta-design-mode 마감부터 한다 — 맡김은 디자인 변경을 건드리지 않고 주차한다.
+2. **문서 먼저**: 쓰기 전 실행기 배정 또는 `work status --json`으로 확인한다(CLI가 없으면 checkout·사용자 배정 확인). 단독/기획은 문서 상태를 STATE에, 세션 기록(시작·상태 변화·활동)을 `vibe` 명령으로만(`beat`·`claim`·`inbox`·`log`) 남기고 SESSIONS.md를 직접 고치지 않는다. 워커는 STATE·SSOT·세션 기록 대신 runtime과 자기 acceptance 체크·result만 쓴다. 리뷰는 읽기 전용이며 리뷰 runtime만 쓴다. 브랜치명은 소유권이 아니다. Git 구현은 land·deploy·plan·저장소 기본 브랜치가 아닌 하위 브랜치에서만 하며, 배정된 격리 작업 공간을 쓴다. `vibe status`에 `design`이 있으면(이 checkout이 디자인 중) 커밋·push 전에 사용자에게 디자인이 끝났는지 묻고, 끝났으면 gusta-design-mode 마감부터 한다 — 맡김은 디자인 변경을 건드리지 않고 주차한다.
 3. 산출 문서는 spec/FORMAT.md 표기를 따른다. `vibe format --section task|state|ssot|report` 중 필요한 발췌만 보고 FORMAT 전체를 읽지 않는다. 규칙에 없는 표기는 만들지 않는다.
 4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. gusta-start가 맡긴 실행(실행기·loop 단위 포함)에서는 묻지 않는다 — 추천안으로 진행하고 inbox(`vibe inbox add`)와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 권한 확인 창도 질문이다 — 창이 뜰 만한 명령은 실행하지 않고 주차한다(gusta-start 3절). 사용자가 직접 부른 스킬(gusta-sketch 등)은 묻는다.
 5. **읽기**: status 요약·`vibe brief <T###|ID-n|ID@rev> --summary`로 필요한 범위를 찾는다. 큰 brief는 `--section decisions|tasks --offset <n> --limit <n>`으로 원문 블록째 읽고 모든 필요 블록의 coverage를 확인한다. 전체 brief의 `end` 줄이 없거나 complete:no면 빠진 부분부터 다시 읽고, unfollowed·related는 필요한 것만 연다. 직접 읽은 결정은 다음 결정 줄·제목까지 본 블록만 근거로 쓴다. STATE·FORMAT·ARCH·큰 코드 전체를 반복 읽지 않는다. tasks/done/은 특정 회귀·검증 근거만 선택 조회한다. 보고서도 필요한 절만 읽고, 출력은 요약·tail, 전체 로그는 파일로 남긴다.
@@ -39,8 +39,8 @@ CLI는 `npx @haeram/gusta` 뒤에 붙인다. 디자인 모드 규칙의 정본�
 커밋·push가 필요해지는 모든 순간 — 사용자의 "커밋해줘/푸시해줘", 다른 스킬로 넘어가기, 대화 마감 — 먼저 묻는다: **"디자인 끝났나요?"** 선택지: 끝났다(→ 4절 마감) / 아직이다(→ 커밋하지 않고 2절 계속) / 중간 저장만(→ `vibe checkpoint`, 디자인 계속). 사용자가 먼저 "디자인 끝"이라고 말했으면 그것이 답이다 — 다시 묻지 않는다. 디자인 중에는 `vibe push`가 거절된다. 우회하지 않는다.
 
 ## 4. 마감
-1. **전체 테스트**: `vibe design verify --json` 한 번(Claude는 셸 백그라운드+완료 알림, Codex는 긴 timeout의 단일 호출). ARCH의 task·batch 명령 전부를 미커밋 작업 트리에서 돌린다 — 빠른 검사가 실패하면 무거운 검사는 skipped로 남는다. 명령이 없다고 나오면 ARCH·package.json에서 전체 테스트 명령을 찾아 `--verify '<command>'`로 넘긴다. 이 실행이 이 디자인의 최종 검증이다.
+1. **영향 검사**: `vibe design verify --json`은 미커밋 트리에서 ARCH task의 영향 검사·빠른 검사만 실행한다. batch(`--verify` 포함)·CI는 `deferred`에 남기고 `finalVerified:false`를 반환한다. 로컬 검사가 없으면 ARCH에 필요한 영향 검사를 정한다. package.json의 전체 테스트 fallback도 로컬에서 돌리지 않는다. 전체 검수는 커밋 후 공동 고정 후보에서 한 번 수행한다.
 2. **실패 처리**: 확정된 디자인 때문에 바뀐 기대값(문구·스냅샷·시각 기준·선택자)은 테스트를 디자인에 맞춘다. 기능이 깨졌으면 디자인을 유지한 채 코드를 고친다. 디자인을 바꿔야만 고칠 수 있으면 사용자에게 묻는다. 고친 뒤 ok가 될 때까지 verify를 다시 돌린다(같은 트리의 통과는 캐시로 건너뛴다).
 3. **커밋**: `vibe design end` → 디자인 변경·테스트 수정을 커밋 하나로 → `vibe log --text 'design <area>: <what>'`. verify 통과 뒤 파일이 바뀌었으면 커밋 전에 verify부터 다시 돌린다.
-4. **반영**: 사용자가 요청했거나 SETTINGS land가 다른 브랜치·push가 true일 때만 `vibe push --verified-commit <디자인 커밋 SHA>`. 커밋이 검증한 트리 그대로라 다시 돌리지 않는다. 그 밖에는 커밋만 한다.
+4. **공동 마감**: 소유 세션의 작업이 모두 끝났으면 `vibe integration finish --tag <tag> --json`으로 제출한다(`--verify`로 선택한 최종 명령은 여기에도 전달). 모든 참여 세션이 준비된 고정 후보에서 전체 검수·필수 agent acceptance·CI를 수행하고 SETTINGS land·land-via·push에 따라 반영한다. 로컬 task 통과를 전체 검증 커밋으로 주장하지 않는다. 다른 작업·세션이나 도구를 기다리는 상태면 후보·보류 이유를 보고한다.
 5. **보고**: 바꾼 것·돌린 검사·커밋 SHA·push 여부, 개발 서버를 띄운 채 둔다는 것. "SSOT 반영 필요"가 있으면 gusta-update-ssot로 넘긴다(기획 커밋은 spec/만 담아 `vibe plan-push`).
