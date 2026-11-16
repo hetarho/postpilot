@@ -202,7 +202,7 @@ func (s *Service) StartRequest(ctx context.Context, userID string, start StartRe
 			return "", ErrTooMany
 		}
 	}
-	ref, ok := parseModelRef(start.WriteModel)
+	ref, ok := llm.ParseModelRef(start.WriteModel)
 	info, found := r.models.Resolve(ref)
 	if !ok || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
@@ -261,7 +261,7 @@ func (s *Service) RunRequest(ctx context.Context, run RequestRun, progress func(
 	if err := json.Unmarshal(run.Payload, &input); err != nil {
 		return fmt.Errorf("decode template request: %w", err)
 	}
-	ref, ok := parseModelRef(run.WriteModel)
+	ref, ok := llm.ParseModelRef(run.WriteModel)
 	if !ok {
 		return ErrWriteModelRequired
 	}
@@ -413,12 +413,4 @@ func (e *RequestAnswerInvalidError) Failure() llm.Failure {
 		detail = e.Cause.Error()
 	}
 	return llm.Failure{Reason: failureReasonRequestAnswerInvalid, TechnicalDetail: detail}
-}
-
-func parseModelRef(value string) (llm.ModelRef, bool) {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
-		return llm.ModelRef{}, false
-	}
-	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}, true
 }

@@ -41,6 +41,16 @@ type ModelRef struct {
 
 func (r ModelRef) String() string { return r.ProviderID + "/" + r.ModelID }
 
+// ParseModelRef is the inverse of String: it splits at the first slash, so a model id may
+// itself contain one, and reports false unless both halves are non-empty.
+func ParseModelRef(value string) (ModelRef, bool) {
+	providerID, modelID, ok := strings.Cut(value, "/")
+	if !ok || providerID == "" || modelID == "" {
+		return ModelRef{}, false
+	}
+	return ModelRef{ProviderID: providerID, ModelID: modelID}, true
+}
+
 // ModelInfo is a registry entry as the catalog exposes it — ids, label and flags only.
 type ModelInfo struct {
 	Ref    ModelRef

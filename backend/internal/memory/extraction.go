@@ -301,11 +301,11 @@ func (s *Service) validCandidate(raw candidateJSON) (Candidate, bool) {
 // parseModelRef reads the frozen "provider/model" the job carries. The same two-part shape
 // every context's job row uses; a malformed one is a refusal rather than a call.
 func parseModelRef(value string) (llm.ModelRef, error) {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
+	ref, ok := llm.ParseModelRef(value)
+	if !ok {
 		return llm.ModelRef{}, fmt.Errorf("기억 추출 모델 정보가 올바르지 않아요")
 	}
-	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}, nil
+	return ref, nil
 }
 
 func encodeExtraction(postSlug string, candidates []Candidate) ([]byte, error) {

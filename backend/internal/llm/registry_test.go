@@ -473,3 +473,27 @@ func TestComplete_RejectsInvalidCallerReasoning(t *testing.T) {
 		t.Fatalf("provider calls = %d, want 0", provider.calls)
 	}
 }
+
+func TestParseModelRef(t *testing.T) {
+	cases := []struct {
+		in   string
+		want llm.ModelRef
+		ok   bool
+	}{
+		{"p/m", llm.ModelRef{ProviderID: "p", ModelID: "m"}, true},
+		{"p/m/x", llm.ModelRef{ProviderID: "p", ModelID: "m/x"}, true},
+		{"p/", llm.ModelRef{}, false},
+		{"/m", llm.ModelRef{}, false},
+		{"pm", llm.ModelRef{}, false},
+		{"", llm.ModelRef{}, false},
+	}
+	for _, c := range cases {
+		got, ok := llm.ParseModelRef(c.in)
+		if got != c.want || ok != c.ok {
+			t.Errorf("ParseModelRef(%q) = %v, %v; want %v, %v", c.in, got, ok, c.want, c.ok)
+		}
+		if ok && got.String() != c.in {
+			t.Errorf("String() = %q, want %q", got.String(), c.in)
+		}
+	}
+}

@@ -38,7 +38,7 @@ func (s *Service) EstimateRequest(ctx context.Context, writeModel string) (Reque
 	if s.requests == nil || s.estimator == nil {
 		return RequestEstimate{}, errRequestsUnwired
 	}
-	ref, ok := parseModelRef(writeModel)
+	ref, ok := llm.ParseModelRef(writeModel)
 	if !ok {
 		return RequestEstimate{}, nil
 	}

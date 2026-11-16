@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/postpilot/backend/internal/llm"
 )
 
 // startRefusal is one link of the start chain, in the order every start checks them.
@@ -101,7 +103,7 @@ func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 			refuseWriteModel: ErrWriteModelRequired, refuseObserveModel: nil,
 		}},
 		{"editor comparison snapshot", func(ctx context.Context, svc *Service, _, observe string) error {
-			ref, _ := parseModelRef(observe)
+			ref, _ := llm.ParseModelRef(observe)
 			_, err := svc.SnapshotWriteInput(ctx, "alice", "post", ref, nil, nil, false)
 			return err
 		}, map[startRefusal]error{
@@ -109,7 +111,7 @@ func TestEveryStartAnswersItsFirstFailingPrecondition(t *testing.T) {
 			refuseWriteModel: ErrObserveModelRequired, refuseObserveModel: ErrObserveModelRequired,
 		}},
 		{"lab comparison snapshot", func(ctx context.Context, svc *Service, _, observe string) error {
-			ref, _ := parseModelRef(observe)
+			ref, _ := llm.ParseModelRef(observe)
 			_, err := svc.SnapshotWriteInput(ctx, "alice", "post", ref, nil, nil, true)
 			return err
 		}, map[startRefusal]error{

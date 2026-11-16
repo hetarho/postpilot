@@ -110,7 +110,7 @@ func (s *HeadingSuggestions) Start(ctx context.Context, userID string, start Hea
 	if err != nil {
 		return "", err
 	}
-	ref, valid := parseModelRef(start.WriteModel)
+	ref, valid := llm.ParseModelRef(start.WriteModel)
 	info, found := s.models.Resolve(ref)
 	if !valid || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
 		return "", ErrWriteModelRequired
@@ -134,7 +134,7 @@ func (s *HeadingSuggestions) Start(ctx context.Context, userID string, start Hea
 }
 
 func (s *HeadingSuggestions) Estimate(ctx context.Context, writeModel string) (RequestEstimate, error) {
-	ref, valid := parseModelRef(writeModel)
+	ref, valid := llm.ParseModelRef(writeModel)
 	info, found := s.models.Resolve(ref)
 	if !valid || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) || info.Levels[llm.StageNameWrite] == "" {
 		return RequestEstimate{}, nil
@@ -196,7 +196,7 @@ func (s *HeadingSuggestions) Run(ctx context.Context, run RequestRun, progress f
 	if _, err := s.normalize(HeadingSuggestionStart{TargetKind: in.TargetKind, TargetPath: in.TargetPath, Sections: in.Sections, StyleRequest: in.StyleRequest}); err != nil {
 		return err
 	}
-	ref, valid := parseModelRef(run.WriteModel)
+	ref, valid := llm.ParseModelRef(run.WriteModel)
 	if !valid {
 		return ErrWriteModelRequired
 	}
