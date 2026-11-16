@@ -4,7 +4,6 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| tidy | DESKTOP-VKPLS8P | pair | 2026-11-16T08:40Z | 2026-11-16T08:46Z | - | gusta-session-self-improve-tidy-9ff3f895 | 6a90ecedf99d | 6401e0e67c58beae207682f6 |
 | onev | DESKTOP-VKPLS8P | autopilot | 2026-11-16T09:17Z | 2026-11-16T09:27Z | T858 | gusta-session-start-onev-54d284a9 | 010847d58a4a | 4097a1e4cadfc7f04c3cfe4d |
 
 ## inbox
