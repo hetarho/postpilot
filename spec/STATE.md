@@ -28,9 +28,9 @@
 | QUOTA | 40 | 40 | - | 0 |
 | POST | 54 | 54 | - | 0 |
 | VOICE | 22 | 22 | - | 0 |
-| GEN | 33 | 33 | - | 0 |
+| GEN | 34 | 34 | - | 0 |
 | MODEL | 38 | 38 | - | 0 |
-| TMPL | 34 | 34 | - | 0 |
+| TMPL | 35 | 35 | - | 0 |
 | GUIDE | 28 | 28 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
@@ -97,6 +97,9 @@
 | T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | todo |
 | T882 | Edit writing guidelines in place without leaving or minting the draft | POST GUIDE THEME ARCH | - | todo |
 | T883 | Preserve first-save guideline history and return focus | POST THEME ARCH | - | todo |
+| T884 | Drop a skipped field's lead lines with the field | TMPL GEN | - | todo |
+| T885 | Add the 별점 part and place 질문's optional 고정 문구 in the wizard body | TMPL | T884 | todo |
+| T886 | Edit and draw 질문을 바탕으로 작성's optional 고정 문구 in the wizard | TMPL | T885 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -105,6 +108,7 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
+- gusta-implement-task T884
 - gusta-implement-task T851
 - inspect work board for remaining tasks
 - gusta-implement-task T880
