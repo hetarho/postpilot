@@ -92,7 +92,9 @@ describe('the template wizard', () => {
     )
     expect(saved.body).toContain('아쉬운 점\n<write>')
     // 직접 입력 asks the author, and the AI writes the part from the answer (TMPL-74).
-    expect(saved.body).toMatch(/매장 정보\n<ask label="매장 정보" required="true">[^<]+<\/ask>$/)
+    expect(saved.body).toMatch(/매장 정보\n<ask label="매장 정보" required="true">[^<]+<\/ask>\n/)
+    // Every leaf ends with 별점, asked of the author (TMPL-72).
+    expect(saved.body.endsWith('별점\n<ask label="별점">직접 매긴 별점과 그 이유</ask>')).toBe(true)
     expect(saved.body).not.toContain('서비스·응대')
     expect(parseTemplate('', saved.body, TEMPLATE_PARSE_OPTIONS).ok).toBe(true)
   })

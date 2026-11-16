@@ -38,6 +38,35 @@ describe('the wizard body', () => {
     )
   })
 
+  it("puts a 질문 part's fixed text directly between its heading and its field", () => {
+    const rating = section({
+      id: 'rating',
+      role: 'rating',
+      name: '별점',
+      help: '직접 매긴 별점과 그 이유',
+      heading: '⭐ 평점 / 한줄평',
+      content: 'ask',
+      question: '별점',
+      literal: '\n  평가 기준  \n\n⭐ 다시는 안 갈 것 같음\n⭐⭐⭐⭐⭐ 언제든 갈 수 있는 맛집\n\n',
+    })
+    const body = toWizardBody([rating])
+    // No blank line anywhere between heading, criteria and field: they are the field's lead
+    // and leave with it when the rating is skipped (TMPL-45).
+    expect(body).toBe(
+      '⭐ 평점 / 한줄평\n  평가 기준\n⭐ 다시는 안 갈 것 같음\n⭐⭐⭐⭐⭐ 언제든 갈 수 있는 맛집\n<ask label="별점">직접 매긴 별점과 그 이유</ask>',
+    )
+    expect(parses(body)).toBe(true)
+    // An empty fixed text writes nothing, and 고정 문구 parts keep their text as written.
+    expect(toWizardBody([{ ...rating, literal: ' \n ' }])).toBe(
+      '⭐ 평점 / 한줄평\n<ask label="별점">직접 매긴 별점과 그 이유</ask>',
+    )
+    expect(toWizardBody([section({ content: 'literal', literal: '첫 줄\n\n둘째 줄' })])).toBe(
+      '먹어 본 메뉴\n첫 줄\n\n둘째 줄',
+    )
+    // A fixed text holding a `<` stays prose.
+    expect(parses(toWizardBody([{ ...rating, literal: '3 <write> 5' }]))).toBe(true)
+  })
+
   it('wraps a repeating section in 사진마다 반복, but never a 직접 입력 field', () => {
     expect(toWizardBody([section({ photos: 1, repeat: true })])).toBe(
       '먹어 본 메뉴\n<repeat each="photo">\n<write>주문한 메뉴의 모습과 맛을 씁니다</write>\n<slot kind="photo"/>\n</repeat>',

@@ -421,6 +421,10 @@ export const templateTargetsI18n = {
         name: '안전·반응',
         help: '안전한지, 아이나 반려동물의 반응을 씁니다',
       },
+      rating: {
+        name: '별점',
+        help: '직접 매긴 별점과 그 이유',
+      },
     },
     headings: {
       title: '부분마다 소제목을 정해요',
@@ -867,6 +871,10 @@ export const templateTargetsI18n = {
       safetyReaction: {
         name: 'Safety · reaction',
         help: 'How safe it is and how they reacted',
+      },
+      rating: {
+        name: 'Rating',
+        help: 'The rating you gave and why',
       },
     },
     headings: {

@@ -24,6 +24,12 @@ describe('the target catalog (TMPL-72)', () => {
       expect(JSON.stringify(i18n.ko.targets)).not.toContain(word)
   })
 
+  it('ends every leaf with 별점, asked of the owner with no photo', () => {
+    for (const { path, roles } of leaves()) expect(roles.at(-1), path.join('/')).toBe('rating')
+    expect(ROLES.rating).toEqual({ content: 'ask', photos: 0 })
+    expect(i18n.ko.roles.rating.name).toBe('별점')
+  })
+
   it('keeps the six targets and the product kind and review form steps', () => {
     expect(TARGET_TREE.children!.map((child) => child.key)).toEqual([
       'restaurant',

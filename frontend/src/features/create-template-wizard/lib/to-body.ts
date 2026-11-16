@@ -12,6 +12,11 @@ export function toWizardBlocks(sections: readonly SectionDraft[]): BuilderBlock[
   for (const section of sections) {
     if (!section.checked) continue
     blocks.push({ ...literal(section.heading.trim()) })
+    // 질문을 바탕으로 작성's optional fixed text (rating criteria above a 별점, TMPL-74) stands
+    // directly between the heading and the field with no blank line, so a skipped answer takes
+    // heading and text along (TMPL-45).
+    const fixed = section.content === 'ask' ? closedUp(section.literal) : ''
+    if (fixed !== '') blocks.push(literal(fixed))
     const content = contentBlock(section)
     const photo: BuilderBlock | undefined =
       section.photos > 0
@@ -29,6 +34,15 @@ export function toWizardBlocks(sections: readonly SectionDraft[]): BuilderBlock[
 
 export function toWizardBody(sections: readonly SectionDraft[]): string {
   return toBody(toWizardBlocks(sections))
+}
+
+/** The text's nonblank lines, trimmed at their ends, one under another. */
+function closedUp(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim() !== '')
+    .join('\n')
 }
 
 function literal(text: string): BuilderBlock {

@@ -76,7 +76,8 @@ describe('template creation from post headings', () => {
       },
     })
     await target(user)
-    expect(screen.getAllByRole('checkbox')).toHaveLength(11)
+    // 식사's eleven roles and 별점 (TMPL-72).
+    expect(screen.getAllByRole('checkbox')).toHaveLength(12)
     expect(screen.queryByRole('button', { name: /부분 빼기/ })).not.toBeInTheDocument()
   })
   it('keeps an unavailable post out and offers a fresh wizard', async () => {

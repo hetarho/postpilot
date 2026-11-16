@@ -264,7 +264,9 @@ describe('the guards', () => {
 
   it('reorders the checked sections and counts the steps once the target is known', () => {
     let state = run(...toMeal, { type: 'toggle', id: 'service', checked: false }, { type: 'next' })
-    expect(wizardProgress(state)).toEqual({ current: 2, total: 3 + 10 + 1 })
+    // 식사's eleven roles and 별점, less 서비스·응대.
+    expect(wizardProgress(state)).toEqual({ current: 2, total: 3 + 11 + 1 })
+    expect(checkedSections(state).at(-1)!.id).toBe('rating')
     state = wizardTransition(state, { type: 'reorder', from: 0, to: 2 })
     expect(
       checkedSections(state)

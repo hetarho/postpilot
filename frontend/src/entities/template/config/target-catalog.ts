@@ -95,6 +95,8 @@ export const ROLES = {
   textureSpread: write(1),
   tasteRecipe: write(1),
   safetyReaction: write(0),
+  // 공통: every leaf ends with the owner's own rating, asked rather than written for them
+  rating: ask,
 } as const satisfies Record<string, RoleDefault>
 
 export type RoleKey = keyof typeof ROLES
@@ -106,7 +108,11 @@ export interface TargetNode {
   roles?: readonly RoleKey[]
 }
 
-const leaf = (key: string, roles: readonly RoleKey[]): TargetNode => ({ key, roles })
+/** Every leaf ends with 별점 (TMPL-72). */
+const leaf = (key: string, roles: readonly RoleKey[]): TargetNode => ({
+  key,
+  roles: [...roles, 'rating'],
+})
 
 /** `roles` with `extra` placed after `after`, or at the end when `after` is absent. */
 function insertAfter(roles: readonly RoleKey[], after: RoleKey, extra: readonly RoleKey[]) {
