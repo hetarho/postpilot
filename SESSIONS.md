@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T03:08Z | T835 | gusta-session-start-vfid-2c92eccf | e541820cb640 | 2c49cb3071a34ca1b4d9fe9c |
+| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T03:10Z | - | gusta-session-start-vfid-2c92eccf | beb882c47846 | 2c49cb3071a34ca1b4d9fe9c |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -164,8 +164,10 @@
 | T832 | vfid | gusta-session-start-vfid-2c92eccf | 565fe336940b | 2026-11-16T02:57Z |
 | T833 | vfid | gusta-session-start-vfid-2c92eccf | bcf5ac8b6 | 2026-11-16T03:05Z |
 | T834 | vfid | gusta-session-start-vfid-2c92eccf | c423adc78 | 2026-11-16T03:08Z |
+| T835 | vfid | gusta-session-start-vfid-2c92eccf | beb882c47846 | 2026-11-16T03:10Z |
 
 ## log
+- 261116 T835 done
 - 261116 T834 done
 - 261116 T833 done
 - 261116 T832 done
@@ -185,4 +187,3 @@
 - 261113 dsui: preserve first gate failure 1/3 and 22-case recovery pass; defer the queued second gate while the active loading owner validates overlapping editor/template screens, then synchronize published changes before final verification
 - 261113 T826 done
 - 261113 ldui: loading UI T795-T802 complete; reviewed candidate 7cc538ae8479 fixed on task/loading-ui-final; final ARCH batch retry is queued behind the shared design-system heavy check; no independent UI/video scope claimed.
-- 261113 fix navigation: default video-template returns to naver_clip instead of undefined; default and Instagram regressions included in 69 passing tests
