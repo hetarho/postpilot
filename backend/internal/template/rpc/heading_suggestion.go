@@ -5,6 +5,7 @@ import (
 	"context"
 	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
+	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/template"
 )
 
@@ -12,7 +13,7 @@ func (h *Handler) EstimateTemplateHeadingSuggestions(ctx context.Context, req *c
 	if _, err := authrpc.ActingUser(ctx); err != nil {
 		return nil, err
 	}
-	estimate, err := h.headings.Estimate(ctx, modelRefValue(req.Msg.GetWriteModel()))
+	estimate, err := h.headings.Estimate(ctx, rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()))
 	if err != nil {
 		return nil, toConnectError("estimate heading suggestions", err)
 	}
@@ -33,7 +34,7 @@ func (h *Handler) StartTemplateHeadingSuggestions(ctx context.Context, req *conn
 	for i, section := range req.Msg.GetSections() {
 		sections[i] = template.HeadingSection{Role: section.GetRole(), Description: section.GetDescription()}
 	}
-	id, err := h.headings.Start(ctx, user, template.HeadingSuggestionStart{WriteModel: modelRefValue(req.Msg.GetWriteModel()), TargetKind: req.Msg.GetTargetKind(), TargetPath: req.Msg.GetTargetPath(), Sections: sections, StyleRequest: req.Msg.GetStyleRequest()})
+	id, err := h.headings.Start(ctx, user, template.HeadingSuggestionStart{WriteModel: rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()), TargetKind: req.Msg.GetTargetKind(), TargetPath: req.Msg.GetTargetPath(), Sections: sections, StyleRequest: req.Msg.GetStyleRequest()})
 	if err != nil {
 		return nil, toConnectError("start heading suggestions", err)
 	}

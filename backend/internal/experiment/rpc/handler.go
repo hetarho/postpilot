@@ -387,14 +387,10 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 }
 
 func failureToProto(found *experiment.Failure) *postpilotv1.Failure {
-	if found == nil || found.Reason == "" {
+	if found == nil {
 		return nil
 	}
-	params := make(map[string]string, len(found.Params))
-	for key, value := range found.Params {
-		params[key] = value
-	}
-	return &postpilotv1.Failure{Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail}
+	return rpcserver.FailureToProto(found.Reason, found.Params, found.TechnicalDetail)
 }
 
 type outputPost struct {
