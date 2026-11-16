@@ -148,6 +148,7 @@
 - 261114 parked ARCH-31 ARCH-1: Gusta 0.17.2 installation verified; owner decision required for shared fixed-candidate verification and FORMAT alignment, primary browser/agent AC allocation, and explicit product-stage/support windows. Preserve current deterministic/media/human/hardware/live gates and existing support until approved. Evidence and concrete proposal: docs/qa/gusta-update-261114.md.
 
 ## log
+- 261116 gusta-update-ssot VOICE POST GEN start
 - 261116 sketch voice-fidelity start
 - 261113 ldui: all 13 final ARCH checks passed at 02b42f965b7e (5118 frontend tests); published to origin/main e5dea5248300 with SETTINGS version auto 0.1.0; CI wait is attached to that exact commit.
 - 261113 Owner explicitly resumed video UI repair and main integration; archived prior3/3 gate history and reset vdux once without changing required checks.
@@ -167,4 +168,3 @@
 - 261113 T802 done
 - 261113 T796 done
 - 261113 T815 done
-- 261113 T814 done
