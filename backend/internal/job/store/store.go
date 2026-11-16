@@ -12,6 +12,7 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/job/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbfailure"
 	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
@@ -381,70 +382,17 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 
 func failureColumns(failure *job.Failure) (sql.NullString, sql.NullString, sql.NullString, error) {
 	if failure == nil {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, nil
+		return dbfailure.Columns(nil)
 	}
-	if !validFailureReason(failure.Reason) {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("invalid reason %q", failure.Reason)
-	}
-	params := failure.Params
-	if params == nil {
-		params = map[string]string{}
-	}
-	raw, err := json.Marshal(params)
-	if err != nil {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("encode params: %w", err)
-	}
-	return nullString(failure.Reason), sql.NullString{String: string(raw), Valid: true}, nullString(failure.TechnicalDetail), nil
+	return dbfailure.Columns(&dbfailure.Failure{Reason: failure.Reason, Params: failure.Params, TechnicalDetail: failure.TechnicalDetail})
 }
 
 func failureFromRow(reason, params, detail, legacy sql.NullString) (*job.Failure, error) {
-	if !reason.Valid || strings.TrimSpace(reason.String) == "" {
-		if params.Valid || detail.Valid {
-			return nil, errors.New("failure params/detail present without reason")
-		}
-		technical := strings.TrimSpace(legacy.String)
-		if technical == "" {
-			return nil, nil
-		}
-		return &job.Failure{Reason: job.FailureReasonUnknown, TechnicalDetail: technical}, nil
+	f, err := dbfailure.FromRow(reason, params, detail, legacy, job.FailureReasonUnknown)
+	if f == nil || err != nil {
+		return nil, err
 	}
-	if !validFailureReason(reason.String) {
-		return nil, fmt.Errorf("invalid reason %q", reason.String)
-	}
-	if !params.Valid || !strings.HasPrefix(strings.TrimSpace(params.String), "{") {
-		return nil, errors.New("failure params must be a JSON object")
-	}
-	decoded := map[string]string{}
-	if err := json.Unmarshal([]byte(params.String), &decoded); err != nil {
-		return nil, fmt.Errorf("decode failure params: %w", err)
-	}
-	if len(decoded) == 0 {
-		decoded = nil
-	}
-	return &job.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
-}
-
-func validFailureReason(reason string) bool {
-	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
-		return false
-	}
-	previousUnderscore := false
-	for i, char := range reason {
-		if char >= 'A' && char <= 'Z' {
-			previousUnderscore = false
-			continue
-		}
-		if char == '_' && !previousUnderscore {
-			previousUnderscore = true
-			continue
-		}
-		if i > 0 && char >= '0' && char <= '9' {
-			previousUnderscore = false
-			continue
-		}
-		return false
-	}
-	return true
+	return &job.Failure{Reason: f.Reason, Params: f.Params, TechnicalDetail: f.TechnicalDetail}, nil
 }
 
 func mapNotFound(err error, op string) error {
