@@ -119,8 +119,8 @@
       "branch": "gusta-session-start-onev-54d284a9",
       "head": "7e43e6f7de4dbfcccc596b61525d86208107fcce",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T11:11:46.275Z",
+      "status": "ready",
+      "at": "2026-11-16T11:11:53.823Z",
       "agentChecks": [],
       "verificationCommands": []
     }
