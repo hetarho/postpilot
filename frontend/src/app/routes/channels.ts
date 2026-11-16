@@ -14,12 +14,12 @@ const clipsListRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/clips',
   validateSearch: clipsSearchSchema,
-  component: lazyRouteComponent(() => import('@/pages/clips'), 'NaverClipHistoryPage'),
+  component: lazyRouteComponent(() => import('@/pages/clips'), 'ClipHistoryPage'),
 })
 
 // The earlier addresses replace themselves with the lists, keeping the narrowing. A video has no
 // channel any more, so one stored in a link is dropped.
-const naverBlogRoute = createRoute({
+const legacyBlogRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/naver-blog',
   validateSearch: postsSearchSchema,
@@ -27,7 +27,7 @@ const naverBlogRoute = createRoute({
     throw redirect({ to: '/posts', search, replace: true })
   },
 })
-const naverClipRoute = createRoute({
+const legacyNaverVideoRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/naver-clip',
   validateSearch: clipsSearchSchema,
@@ -35,7 +35,7 @@ const naverClipRoute = createRoute({
     throw redirect({ to: '/clips', search: { q, status }, replace: true })
   },
 })
-const instaClipRoute = createRoute({
+const legacyInstagramVideoRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/insta-clip',
   validateSearch: clipsSearchSchema,
@@ -47,7 +47,7 @@ const instaClipRoute = createRoute({
 export const channelRoutes = [
   postsListRoute,
   clipsListRoute,
-  naverBlogRoute,
-  naverClipRoute,
-  instaClipRoute,
+  legacyBlogRoute,
+  legacyNaverVideoRoute,
+  legacyInstagramVideoRoute,
 ]

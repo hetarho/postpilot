@@ -8,8 +8,8 @@ import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
 import { ListRowIcon, Typography, cardStyles, pageStyles } from '@/shared/ui'
 
 const CHOICES = [
-  { key: 'blog', channel: undefined, icon: PenLine },
-  { key: 'naverClip', channel: 'naver_clip', icon: Clapperboard },
+  { key: 'post', channel: undefined, icon: PenLine },
+  { key: 'video', channel: 'naver_clip', icon: Clapperboard },
 ] as const
 
 /** Guide: 만들기 — the one tab that asks a question rather than showing a list. Two big tiles,
@@ -27,7 +27,7 @@ export function CreatePage() {
         })
       : rememberPostEntry(user?.id ?? '', {
           path: POST_LIST_PATH,
-          section: 'naverBlog',
+          section: 'post',
           filters: {},
           scrollY: 0,
         })

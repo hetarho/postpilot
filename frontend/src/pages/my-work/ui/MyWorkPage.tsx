@@ -47,7 +47,7 @@ import {
 } from '@/widgets/work-list'
 import { useMyWorkScrollReturn } from '../model/useMyWorkScrollReturn'
 
-type Kind = 'post' | 'naverClip' | 'instaClip'
+type Kind = 'post' | 'video'
 type Sort = 'updated' | 'oldest' | 'title'
 type StatusFilter = 'all' | 'inProgress' | 'done'
 interface Narrowing {
@@ -57,7 +57,7 @@ interface Narrowing {
   sort: Sort
 }
 const NO_NARROWING: Narrowing = { q: '', kind: 'all', status: 'all', sort: 'updated' }
-const KINDS: readonly (Kind | 'all')[] = ['all', 'post', 'naverClip']
+const KINDS: readonly (Kind | 'all')[] = ['all', 'post', 'video']
 const SORTS: readonly Sort[] = ['updated', 'oldest', 'title']
 interface WorkItem {
   key: string
@@ -143,7 +143,7 @@ export function MyWorkPage() {
     return {
       key: `clip:${project.id}`,
       // One 영상 kind, whichever channel the video was made for.
-      kind: 'naverClip',
+      kind: 'video',
       title: clipDisplayTitle(project),
       updatedAt: project.updatedAt,
       status: clipHistoryStatus(project),

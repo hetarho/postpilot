@@ -178,10 +178,7 @@ it('opens hub pages on the hub title and their sibling chips, with no back link'
   expect(styleChips.getByRole('link', { name: '템플릿' })).toHaveAttribute('aria-current', 'page')
   const kinds = within(screen.getByRole('navigation', { name: '글 · 영상' }))
   expect(kinds.getByRole('link', { name: '글' })).toHaveAttribute('aria-current', 'page')
-  expect(kinds.getByRole('link', { name: '영상' })).toHaveAttribute(
-    'href',
-    '/video-templates?channel=naver_clip',
-  )
+  expect(kinds.getByRole('link', { name: '영상' })).toHaveAttribute('href', '/video-templates')
   expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
 })
 it('gives a 나 child one way back to 나, and remembers where it was opened from', async () => {

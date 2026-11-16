@@ -115,7 +115,7 @@ it('mints an unsaved draft once and opens tests with its newest material and ret
 it('preserves channel scroll through first draft mount and address minting', async () => {
   rememberPostEntry(USER.id, {
     path: '/posts',
-    section: 'naverBlog',
+    section: 'post',
     filters: {},
     scrollY: 480,
   })

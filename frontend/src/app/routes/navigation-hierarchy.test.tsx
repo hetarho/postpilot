@@ -344,12 +344,12 @@ it('keeps a directly opened Instagram project channel when visiting shared video
 it.each([
   ['템플릿', '/templates', '영상 템플릿'],
   ['지침', '/guidelines', '영상 지침'],
-])('keeps Instagram when its %s 영상 side opens in a fresh tab', async (section, from, heading) => {
+])('opens the %s 영상 side with no channel in its link', async (section, from, heading) => {
   const calls: string[] = []
   const view = renderAppAt(`${from}?channel=instagram_clip`, { user: { id: 'alice' }, calls })
   const kinds = await screen.findByRole('navigation', { name: '글 · 영상' })
   const href = within(kinds).getByRole('link', { name: '영상' }).getAttribute('href')!
-  expect(href).toContain('channel=instagram_clip')
+  expect(href).not.toContain('channel=')
   view.unmount()
   sessionStorage.clear()
   renderAppAt(href, { transport: view.transport })

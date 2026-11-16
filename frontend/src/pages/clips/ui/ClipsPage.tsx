@@ -48,11 +48,15 @@ import {
 import { pageStyles } from '@/shared/ui'
 import { i18n } from '../config/i18n'
 
-/** A clip channel's own page: the way back to its unfinished clips (CLIP-3, CLIP-41). The server
+/** Only the new clip's creation origin still reads a channel (T862); the list itself has none. */
+const CREATION_CHANNEL: ClipChannel = 'naver_clip'
+
+/** The 영상 list: the way back to unfinished clips (CLIP-3, CLIP-41). The server
  *  returns only the acting user's projects (CLIP-2); the one list has no channel address, and the
  *  search and the status filter narrow that one answer here in the browser, reading and writing
  *  the URL so the narrowing survives opening a project, coming back, a reload and a shared link. */
-function ClipsPage({ channel }: { channel: ClipChannel }) {
+export function ClipHistoryPage() {
+  const channel = CREATION_CHANNEL
   const { t } = useTranslation(['clips', 'common'])
   // The app registers the fragment centrally. Slice defaults keep the
   // history usable before that wiring lands and still follow the selected UI language.
@@ -137,9 +141,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
     >
       {/* The channel opens straight onto this list: the marked channel link names the place, so
           the heading is for assistive technology only (THEME-38, CLIP-41). */}
-      <h1 className="sr-only">
-        {historyText(channel === 'instagram_clip' ? 'instaClip' : 'naverClip')}
-      </h1>
+      <h1 className="sr-only">{historyText('videos')}</h1>
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
           the list opens on its work. */}
@@ -344,11 +346,4 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
       <ChannelActions channel={channel} section="work" className="action-list-inset mt-auto" />
     </main>
   )
-}
-
-export function NaverClipHistoryPage() {
-  return <ClipsPage channel="naver_clip" />
-}
-export function InstaClipHistoryPage() {
-  return <ClipsPage channel="instagram_clip" />
 }

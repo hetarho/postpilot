@@ -58,7 +58,7 @@ export function ChannelActions({
     else
       rememberPostEntry(user?.id ?? '', {
         path: POST_LIST_PATH,
-        section: 'naverBlog',
+        section: 'post',
         filters: {},
         scrollY: window.scrollY,
       })

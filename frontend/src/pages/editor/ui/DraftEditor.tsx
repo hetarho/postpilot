@@ -100,7 +100,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     if (!post && !readPostReturnContext(ownerId))
       rememberPostEntry(ownerId, {
         path: POST_LIST_PATH,
-        section: 'naverBlog',
+        section: 'post',
         filters: {},
         scrollY: 0,
         targetId: 'new',

@@ -368,7 +368,6 @@ export function AuthenticatedLayout() {
     icon: TAB_ICONS[to],
     current: current === to,
   }))
-  const clipScope = channel ?? navigationChannelFromHref(location.href)
   const chips =
     section?.hub === 'mine'
       ? MINE_SECTIONS.map(({ key, href }) => ({
@@ -387,7 +386,7 @@ export function AuthenticatedLayout() {
         : []
   const kinds =
     section?.hub === 'style' && (section.key === 'templates' || section.key === 'guidelines')
-      ? styleKinds(section.key, clipScope).map(({ key, href }) => ({
+      ? styleKinds(section.key).map(({ key, href }) => ({
           key,
           href,
           label: t(`kinds.${key}`),

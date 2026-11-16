@@ -77,8 +77,8 @@ export const marketing = {
     title: 'Where the result goes',
     body: 'Prepare a Naver Blog post, or Naver Clip and Instagram Clip videos with upload text. Origin labels and technical details stay out of the copied writing. Copy the post or export the video, then publish manually on each service.',
     naver: 'Naver Blog post',
-    naverClip: 'Naver Clip video and upload text',
-    instaClip: 'Instagram Clip video and upload text',
+    naverVideo: 'Naver Clip video and upload text',
+    instagramVideo: 'Instagram Clip video and upload text',
   },
   plans: {
     title: 'Plans',

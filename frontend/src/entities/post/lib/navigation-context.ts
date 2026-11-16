@@ -82,7 +82,7 @@ export function readPostReturnContext(
   const entry = store(ownerId, storage, slug ?? 'new').read() ?? store(ownerId, storage).read()
   if (!entry || entry.targetId !== (slug ?? 'new')) return undefined
   if (entry.path === '/' || entry.path === '/library')
-    return { ...entry, path: POST_LIST_PATH, section: 'naverBlog', filters: {} }
+    return { ...entry, path: POST_LIST_PATH, section: 'post', filters: {} }
   return entry.path === '/naver-blog' ? { ...entry, path: POST_LIST_PATH } : entry
 }
 
@@ -98,7 +98,7 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
   return {
     path,
     href: query ? `${path}?${query}` : path,
-    section: entry?.section ?? (slug ? 'posts' : 'naverBlog'),
+    section: entry?.section ?? (slug ? 'posts' : 'post'),
     scrollY: entry?.scrollY ?? 0,
   }
 }
@@ -107,7 +107,7 @@ export function retainMintedPostEntry(ownerId: string, slug: string) {
   const entry = readPostReturnContext(ownerId)
   return rememberPostEntry(ownerId, {
     path: entry && isMyWorkEntry(entry) ? '/my' : POST_LIST_PATH,
-    section: entry?.section ?? 'naverBlog',
+    section: entry?.section ?? 'post',
     filters: entry?.filters ?? {},
     scrollY: entry?.scrollY ?? 0,
     targetId: slug,

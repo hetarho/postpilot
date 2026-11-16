@@ -129,7 +129,7 @@ export function AboutPage() {
           </Typography>
           <ul className="text-content-primary mt-4 flex flex-wrap gap-2">
             {/* Only shipped channel outputs (MKT-4). */}
-            {(['naver', 'naverClip', 'instaClip'] as const).map((format) => (
+            {(['naver', 'naverVideo', 'instagramVideo'] as const).map((format) => (
               <Typography
                 variant="label"
                 as="li"

@@ -186,7 +186,7 @@ it('marks and reads the history scroll return by section on the channel address'
   expect(readPostHistoryReturn('owner')).toMatchObject({ path: '/posts', scrollY: 640 })
   rememberPostEntry('owner', {
     path: '/posts',
-    section: 'naverBlog',
+    section: 'post',
     filters: {},
     scrollY: 0,
     targetId: 'created',
