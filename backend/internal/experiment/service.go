@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,6 +11,8 @@ import (
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 type Service struct {
@@ -1136,11 +1137,11 @@ func shuffledSides(count int) ([]DisplaySide, error) {
 }
 
 func newID() string {
-	value := make([]byte, 16)
-	if _, err := rand.Read(value); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("experiment: cannot create id: " + err.Error())
 	}
-	return hex.EncodeToString(value)
+	return id
 }
 
 // runCandidates runs the pending candidates, at most s.concurrency at once: a ranked comparison
