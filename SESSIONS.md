@@ -164,6 +164,7 @@
 - 261116 decided T869 T870: 참고 줄을 누가 뽑나 → 브라우저가 템플릿 목록에서 뽑아 보내고 서버는 개수·길이·한 줄만 검사, 예상 크레딧은 기존 추정 그대로 (alt: 서버가 계정 템플릿을 직접 읽음 / 참고분만큼 추정 상향)
 - 261116 decided POST-123: Guidelines bounce while changing writing settings: standard saved/new-draft route tests show no runtime error -> open account guideline management in place (alt: retain the full-page detour and request error details). This preserves the editor and removes the reported navigation boundary without changing rule ownership.
 - 261116 decided TMPL-45 T884: 빈 질문 칸 위의 소제목을 어떻게 함께 뺄까 → 빈 줄 없이 칸 바로 위에 붙은 줄(소제목·고정 문구)을 그 칸의 머리말로 보고 칸이 빠질 때 함께 뺌, 붙어 있는 칸 여럿은 모두 빠질 때만 (alt: 문법에 섹션/머리말 속성 추가 / 위저드 템플릿만 표시 / 그대로 둠)
+- 261116 decided TMPL-72 T885: 별점 칸을 어디에 둘까 → 모든 세부 종류의 마지막 파트 "별점"(질문을 바탕으로 작성, 사진 없음, 필수 아님) (alt: 4번째 내용 종류 "별점" / 1~5 별 선택 입력 UI)
 
 ## unlanded
 | id | tag | branch | commit | at |
