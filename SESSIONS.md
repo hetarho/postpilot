@@ -199,6 +199,7 @@
 | T883 | wopts | gusta-session-start-wopts-7b887426 | e7c56321a26c | 2026-11-16T15:26Z |
 
 ## log
+- 261116 fix creation: align remaining clip and clip-from-post self-paid choice expectations; affected tests and scoped static checks passed
 - 261116 T883 done
 - 261116 T877 done
 - 261116 T876 done
@@ -218,4 +219,3 @@
 - 261116 T869 done
 - 261116 sketch voice-chat-examples done: VOICE r22, T871-T879
 - 261116 gusta-create-task VOICE renumbered T869-T877→T871-T879 (another checkout published T869 T870 first)
-- 261116 fix voice-navigation completed: main 012c6f776; all 12 batch checks passed, frontend 5176 tests passed; CI skipped because no run appeared
