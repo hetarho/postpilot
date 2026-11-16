@@ -156,6 +156,7 @@
 - 261116 decided THEME-38 POST-43 CLIP-41 T862: list addresses? → /posts and /clips, with /naver-blog, /naver-clip and /insta-clip redirecting (alt: /my/posts and /my/videos | keep /naver-blog and /naver-clip)
 - 261116 decided CLIP-209 T863: identifier scope? → rename channel and section names only; generic clip names and Naver platform rules (ParseNaverBlogURL, Naver Blog export, Naver Clip upload rules) keep their names (alt: rename clip to video everywhere)
 - 261116 decided CLIP-211 T867: upload-text read shape? → one optional text and one limit set, old repeated fields reserved (alt: keep repeated fields holding at most one)
+- 261116 decided CLIP-209: historical evidence? → docs/handoff, docs/qa, docs/audits, docs/research and earlier SSOT chg lines keep their Instagram and channel wording as history (alt: scrub them)
 
 ## unlanded
 | id | tag | branch | commit | at |
