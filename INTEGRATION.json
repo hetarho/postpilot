@@ -9,11 +9,56 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-vfid-2c92eccf",
-      "head": "b4048994578d5cb4ead474c5b4cfd52abbc1796b",
+      "head": "b9dd0dd54324be003e41f0a701395aa8501c4e33",
       "land": "main",
       "status": "working",
-      "at": "2026-11-16T03:13:46.304Z",
-      "agentChecks": [],
+      "at": "2026-11-16T03:14:09.914Z",
+      "agentChecks": [
+        {
+          "id": "T828-backend-contract",
+          "scenario": "T828 changes only the backend contract (VOICE-62 verdicts, the lead key and the additive proto field), so no screen exists for an agent to observe",
+          "steps": [
+            "no computer-use step applies: the change has no UI surface; the FE consumers come in later tasks"
+          ],
+          "expected": "Go unit and rpc tests cover every acceptance item",
+          "observed": "not run by an agent; Go tests in backend/internal/voice and backend/internal/voice/rpc passed at ade22c182",
+          "evidence": [
+            "go test ./internal/voice/... ./internal/experiment/... ok",
+            "vibe check --tier task (gusta lint) ok"
+          ],
+          "status": "not-run",
+          "reason": "backend-only contract change with no user-facing screen in this task; the batch gate covers the cmd/api and FE suites",
+          "replaces": [],
+          "stage": "integration",
+          "required": false,
+          "owner": "host batch gate",
+          "candidate": null,
+          "duplicationReason": "no existing e2e is replaced"
+        },
+        {
+          "id": "T833-voice-view-browser",
+          "scenario": "In ④ refine, 출처 보기 switches between 의미 출처 and 말투; 말투 underlines habit phrases and opens their sheet; the legend names 출처 미확인",
+          "steps": [
+            "open a post with a made voice on ④",
+            "choose 말투 in 출처 보기's switch",
+            "activate an underlined habit and read its sheet",
+            "switch back to 의미 출처 and read the legend"
+          ],
+          "expected": "one view at a time with 의미 출처 first, habits underlined in the voice-habit role with thick solid line, sheet shows habit name, rate line and example, legend lists four categories plus 출처 미확인",
+          "observed": "not observed in a browser; covered only by the jsdom unit tests in WritingOriginReview.test.tsx",
+          "evidence": [
+            "vibe check --tier task tree 02e7c859 (vitest, tsc, eslint, lint:style)"
+          ],
+          "status": "not-run",
+          "reason": "unit has no browser/computer-use tool, and the page does not yet pass the voice reading (wiring is T834)",
+          "replaces": [],
+          "stage": "integration",
+          "required": false,
+          "owner": "host",
+          "candidate": null,
+          "duplicationReason": ""
+        }
+      ],
       "verificationCommands": []
     }
   },
