@@ -18,6 +18,7 @@ import {
   markPostHistoryReturn,
   type PostDraft,
   type PostTemplateAnswer,
+  POST_LIST_PATH,
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { noTemplateLabel, useTemplates } from '@/entities/template'
@@ -98,7 +99,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   useLayoutEffect(() => {
     if (!post && !readPostReturnContext(ownerId))
       rememberPostEntry(ownerId, {
-        path: '/naver-blog',
+        path: POST_LIST_PATH,
         section: 'naverBlog',
         filters: {},
         scrollY: 0,

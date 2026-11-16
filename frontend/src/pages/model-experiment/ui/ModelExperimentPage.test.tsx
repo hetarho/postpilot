@@ -41,7 +41,7 @@ const entries = [
   },
   {
     path: '/posts/experiments/review-1?from=posts&q=Draft&status=draft',
-    back: '/naver-blog?q=Draft&status=draft',
+    back: '/posts?q=Draft&status=draft',
     ko: '글',
     en: 'Posts',
   },
@@ -76,7 +76,7 @@ it.each(
       name: locale === 'ko' ? '현재 위치' : 'Current location',
     }),
   ).toBeNull()
-  if (back.startsWith('/naver-blog')) {
+  if (back.startsWith('/posts')) {
     await user.click(link)
     await waitFor(() => expect(router.state.location.href).toBe(back))
   }
@@ -123,7 +123,7 @@ it('opens a retained paid record from canonical history and returns to the same 
 
 it('carries the narrowed post list through a pending result and back', async () => {
   const user = userEvent.setup()
-  const { router } = renderAppAt('/naver-blog?q=Draft&status=draft', {
+  const { router } = renderAppAt('/posts?q=Draft&status=draft', {
     user: { id: 'alice' },
     posts: { posts },
     experiments: { history },
@@ -131,11 +131,11 @@ it('carries the narrowed post list through a pending result and back', async () 
   const record = await screen.findByRole('link', { name: /Draft/ })
   const recordUrl = new URL(record.getAttribute('href')!, 'https://fixture')
   expect(recordUrl.pathname).toBe('/tests/records/review-1')
-  expect(recordUrl.searchParams.get('entry')).toBe('/naver-blog?q=Draft&status=draft')
+  expect(recordUrl.searchParams.get('entry')).toBe('/posts?q=Draft&status=draft')
   await user.click(record)
   await waitFor(() => expect(router.state.location.pathname).toBe('/tests/records/review-1'))
   await user.click(await screen.findByRole('link', { name: '글' }))
-  await waitFor(() => expect(router.state.location.href).toBe('/naver-blog?q=Draft&status=draft'))
+  await waitFor(() => expect(router.state.location.href).toBe('/posts?q=Draft&status=draft'))
   expect(await screen.findByRole('link', { name: /Draft/ })).toBeInTheDocument()
 })
 
@@ -173,7 +173,7 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
 
 it.each([
   ['/ai-models/experiments/review-1?from=compare&stage=write', '테스트 기록', '/tests/history'],
-  ['/posts/experiments/review-1?from=posts&q=Draft', '글', '/naver-blog?q=Draft'],
+  ['/posts/experiments/review-1?from=posts&q=Draft', '글', '/posts?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {
   let release!: () => void
   const readGate = new Promise<void>((resolve) => {

@@ -5,7 +5,7 @@ import {
   clipDisplayTitle,
   clipFinished,
   clipState,
-  clipChannelPath,
+  CLIP_LIST_PATH,
   clipHistoryStateLabel,
   clipHistoryStatus,
   type ClipProject,
@@ -49,7 +49,7 @@ import { pageStyles } from '@/shared/ui'
 import { i18n } from '../config/i18n'
 
 /** A clip channel's own page: the way back to its unfinished clips (CLIP-3, CLIP-41). The server
- *  returns only the acting user's projects (CLIP-2); the channel comes from the address, and the
+ *  returns only the acting user's projects (CLIP-2); the one list has no channel address, and the
  *  search and the status filter narrow that one answer here in the browser, reading and writing
  *  the URL so the narrowing survives opening a project, coming back, a reload and a shared link. */
 function ClipsPage({ channel }: { channel: ClipChannel }) {
@@ -63,7 +63,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
   const templates = useClipTemplates(user?.id ?? '')
   const search: Omit<ClipNarrowing, 'channel'> = useSearch({ strict: false })
   const narrowing: ClipNarrowing = { q: search.q, status: search.status, channel }
-  const path = clipChannelPath(channel)
+  const path = CLIP_LIST_PATH
   const navigate = useNavigate()
   useEffect(() => {
     if (projects.isPending || projects.isError || !user?.id) return

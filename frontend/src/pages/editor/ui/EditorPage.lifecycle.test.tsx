@@ -48,7 +48,7 @@ describe('opening a post', () => {
     })
     renderAppAt(path, { transport })
     const back = await screen.findByRole('link', { name: '네이버 블로그로 돌아가기' })
-    expect(back).toHaveAttribute('href', '/naver-blog')
+    expect(back).toHaveAttribute('href', '/posts')
     expect(back).toHaveAttribute('title', '네이버 블로그로 돌아가기')
     expect(screen.getAllByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveLength(1)
   })

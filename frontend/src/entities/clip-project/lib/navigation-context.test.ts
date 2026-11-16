@@ -11,7 +11,7 @@ import {
 } from './navigation-context'
 
 beforeEach(() => sessionStorage.clear())
-it.each(['/naver-clip', '/insta-clip'] as const)(
+it.each(['/clips'] as const)(
   'retains the prepared-story filter and scroll on return to %s',
   (path) => {
     rememberClipEntry('alice', {
@@ -34,23 +34,23 @@ it.each(['/naver-clip', '/insta-clip'] as const)(
   },
 )
 it('retains creation through minting and reload without adopting another owner or record origin', () => {
-  rememberClipEntry('alice', { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 40 })
+  rememberClipEntry('alice', { path: '/clips', section: 'creation', filters: {}, scrollY: 40 })
   expect(retainMintedClipEntry('alice', 'minted')).toBe(true)
-  expect(readClipReturnContext('alice', 'minted')?.path).toBe('/naver-clip')
-  expect(clipReturnDestination('alice', 'minted').href).toBe('/naver-clip')
-  expect(clipReturnDestination('bob', 'minted').href).toBe('/naver-clip')
-  expect(clipReturnDestination('alice', 'other').href).toBe('/naver-clip')
+  expect(readClipReturnContext('alice', 'minted')?.path).toBe('/clips')
+  expect(clipReturnDestination('alice', 'minted').href).toBe('/clips')
+  expect(clipReturnDestination('bob', 'minted').href).toBe('/clips')
+  expect(clipReturnDestination('alice', 'other').href).toBe('/clips')
 })
 it('keeps each clip origin when another clip or post context is entered and restores filtered history once', () => {
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'creation',
     filters: {},
     scrollY: 0,
     targetId: 'first',
   })
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { q: '여행 & 50%', status: 'draft', private: 'omit' },
     scrollY: 740,
@@ -68,7 +68,7 @@ it('keeps each clip origin when another clip or post context is entered and rest
       targetId: 'post',
     }),
   )
-  expect(clipReturnDestination('alice', 'first').href).toBe('/naver-clip')
+  expect(clipReturnDestination('alice', 'first').href).toBe('/clips')
   const destination = clipReturnDestination('alice', 'second')
   const query = new URL(destination.href, 'https://test.invalid').searchParams
   expect(query.get('q')).toBe('여행 & 50%')
@@ -101,21 +101,21 @@ it('refuses external, malformed and deleted-record parents rather than routing t
       }),
     )
     expect(readClipReturnContext('alice', 'saved')).toBeUndefined()
-    expect(clipReturnDestination('alice', 'saved').href).toBe('/naver-clip')
+    expect(clipReturnDestination('alice', 'saved').href).toBe('/clips')
   }
   sessionStorage.setItem(
     'postpilot.return.alice.clip.saved',
     JSON.stringify({
       version: 1,
       ownerKey: 'bob',
-      path: '/naver-clip',
+      path: '/clips',
       section: 'creation',
       filters: {},
       scrollY: 0,
       targetId: 'saved',
     }),
   )
-  expect(clipReturnDestination('alice', 'saved').href).toBe('/naver-clip')
+  expect(clipReturnDestination('alice', 'saved').href).toBe('/clips')
 })
 it('uses named safe parents when storage is unavailable and does not leak unsafe query controls', () => {
   const storage = {
@@ -127,27 +127,27 @@ it('uses named safe parents when storage is unavailable and does not leak unsafe
     },
     removeItem: () => {},
   }
-  expect(clipReturnDestination('alice', undefined, storage).href).toBe('/naver-clip')
-  expect(clipReturnDestination('alice', 'saved', storage).href).toBe('/naver-clip')
+  expect(clipReturnDestination('alice', undefined, storage).href).toBe('/clips')
+  expect(clipReturnDestination('alice', 'saved', storage).href).toBe('/clips')
   expect(
     rememberClipEntry(
       'alice',
-      { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 0 },
+      { path: '/clips', section: 'creation', filters: {}, scrollY: 0 },
       storage,
     ),
   ).toBe(false)
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { status: 'unknown', redirect: 'https://outside.test' },
     scrollY: 0,
     targetId: 'saved',
   })
-  expect(clipReturnDestination('alice', 'saved').href).toBe('/naver-clip')
+  expect(clipReturnDestination('alice', 'saved').href).toBe('/clips')
 })
 it('confirmed deletion forgets the record origin while retaining the pending filtered history scroll', () => {
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { q: '여행' },
     scrollY: 340,
@@ -156,30 +156,30 @@ it('confirmed deletion forgets the record origin while retaining the pending fil
   markClipHistoryReturn('alice', 'deleted')
   forgetClipEntry('alice', 'deleted')
   expect(readClipReturnContext('alice', 'deleted')).toBeUndefined()
-  expect(readClipHistoryReturn('alice')).toMatchObject({ path: '/naver-clip', scrollY: 340 })
-  expect(clipReturnDestination('alice', 'deleted').href).toBe('/naver-clip')
+  expect(readClipHistoryReturn('alice')).toMatchObject({ path: '/clips', scrollY: 340 })
+  expect(clipReturnDestination('alice', 'deleted').href).toBe('/clips')
 })
 
 it('returns to the current project channel history before the saved origin is updated', () => {
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { channel: 'naver_clip', q: '제주' },
     scrollY: 10,
     targetId: 'clip',
   })
   expect(clipReturnDestination('alice', 'clip', undefined, 'instagram_clip').href).toBe(
-    '/insta-clip?q=%EC%A0%9C%EC%A3%BC',
+    '/clips?q=%EC%A0%9C%EC%A3%BC',
   )
-  expect(clipReturnDestination('alice', 'clip').href).toBe('/naver-clip?q=%EC%A0%9C%EC%A3%BC')
+  expect(clipReturnDestination('alice', 'clip').href).toBe('/clips?q=%EC%A0%9C%EC%A3%BC')
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { channel: 'instagram_clip' },
     scrollY: 10,
     targetId: 'clip',
   })
-  expect(clipReturnDestination('alice', 'clip', undefined, 'naver_clip').href).toBe('/naver-clip')
+  expect(clipReturnDestination('alice', 'clip', undefined, 'naver_clip').href).toBe('/clips')
 })
 
 it.each(['/', '/library'])(
@@ -197,10 +197,8 @@ it.each(['/', '/library'])(
         scrollY: 0,
       }),
     )
-    expect(clipReturnDestination('alice', 'saved').href).toBe('/insta-clip')
-    expect(clipReturnDestination('alice', 'saved', undefined, 'naver_clip').href).toBe(
-      '/naver-clip',
-    )
+    expect(clipReturnDestination('alice', 'saved').href).toBe('/clips')
+    expect(clipReturnDestination('alice', 'saved', undefined, 'naver_clip').href).toBe('/clips')
   },
 )
 
@@ -218,25 +216,49 @@ it('reads a stored /clips history entry as its channel history with the narrowin
     }),
   )
   expect(readClipReturnContext('alice', 'saved')).toMatchObject({
-    path: '/insta-clip',
+    path: '/clips',
     section: 'clips',
   })
   expect(clipReturnDestination('alice', 'saved')).toMatchObject({
-    href: '/insta-clip?status=draft',
+    href: '/clips?status=draft',
     scrollY: 120,
   })
   expect(markClipHistoryReturn('alice', 'saved')).toBe(true)
-  expect(readClipHistoryReturn('alice')).toMatchObject({ path: '/insta-clip', scrollY: 120 })
+  expect(readClipHistoryReturn('alice')).toMatchObject({ path: '/clips', scrollY: 120 })
 })
 
 it('does not treat a channel creation entry as a history return', () => {
   rememberClipEntry('alice', {
-    path: '/insta-clip',
+    path: '/clips',
     section: 'instagram_clip',
     filters: { channel: 'instagram_clip' },
     scrollY: 0,
     targetId: 'created',
   })
-  expect(clipReturnDestination('alice', 'created').href).toBe('/insta-clip')
+  expect(clipReturnDestination('alice', 'created').href).toBe('/clips')
   expect(markClipHistoryReturn('alice', 'created')).toBe(false)
 })
+
+it.each(['/naver-clip', '/insta-clip'])(
+  'returns a context stored under the earlier %s address to the 영상 list',
+  (path) => {
+    sessionStorage.setItem(
+      'postpilot.return.alice.clip.saved',
+      JSON.stringify({
+        version: 1,
+        ownerKey: 'alice',
+        path,
+        section: 'clips',
+        filters: { q: '여행', status: 'draft' },
+        scrollY: 55,
+        targetId: 'saved',
+      }),
+    )
+    expect(readClipReturnContext('alice', 'saved')?.path).toBe('/clips')
+    expect(clipReturnDestination('alice', 'saved')).toMatchObject({
+      path: '/clips',
+      href: '/clips?q=%EC%97%AC%ED%96%89&status=draft',
+      scrollY: 55,
+    })
+  },
+)

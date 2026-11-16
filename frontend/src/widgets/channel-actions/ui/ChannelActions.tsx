@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 import { twMerge } from '@/shared/lib'
 import { useSession } from '@/entities/session'
-import { rememberPostEntry } from '@/entities/post'
-import { clipChannelPath, rememberClipEntry, type ClipChannel } from '@/entities/clip-project'
+import { POST_LIST_PATH, rememberPostEntry } from '@/entities/post'
+import { CLIP_LIST_PATH, rememberClipEntry, type ClipChannel } from '@/entities/clip-project'
 import {
   ActionBar,
   buttonStyles,
@@ -50,14 +50,14 @@ export function ChannelActions({
   const rememberCreation = () => {
     if (channel)
       rememberClipEntry(user?.id ?? '', {
-        path: clipChannelPath(channel),
+        path: CLIP_LIST_PATH,
         section: channel,
         filters: { channel },
         scrollY: window.scrollY,
       })
     else
       rememberPostEntry(user?.id ?? '', {
-        path: '/naver-blog',
+        path: POST_LIST_PATH,
         section: 'naverBlog',
         filters: {},
         scrollY: window.scrollY,

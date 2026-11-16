@@ -30,7 +30,7 @@ it('keeps home creation through minting on the first save and reload, then confi
   const view = renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { calls } })
   expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
     'href',
-    '/naver-clip',
+    '/clips',
   )
   await clipGuideTo('content')
   // The first saved change mints it; nothing else creates the clip (CLIP-130).
@@ -38,10 +38,10 @@ it('keeps home creation through minting on the first save and reload, then confi
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips/clip-1'), {
     timeout: 4000,
   })
-  expect(readClipReturnContext('alice', 'clip-1')?.path).toBe('/naver-clip')
+  expect(readClipReturnContext('alice', 'clip-1')?.path).toBe('/clips')
   expect(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
     'href',
-    '/naver-clip',
+    '/clips',
   )
   view.unmount()
   const reopened = renderAppAt('/clips/clip-1', { transport: view.transport })
@@ -50,7 +50,7 @@ it('keeps home creation through minting on the first save and reload, then confi
   expect(screen.getByText('바다 여행')).toBeVisible()
   await user.click(screen.getByRole('button', { name: '삭제' }))
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
-  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/naver-clip'))
+  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/clips'))
   expect(readClipReturnContext('alice', 'clip-1')).toBeUndefined()
   expect(calls.filter((call) => call === 'CreateClipProject')).toHaveLength(1)
   expect(calls.filter((call) => call === 'DeleteClipProject')).toHaveLength(1)
@@ -61,7 +61,7 @@ it('opens from filtered history and returns to the same filters and scroll after
   const calls: string[] = []
   const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
   vi.spyOn(window, 'scrollY', 'get').mockReturnValue(720)
-  const view = renderAppAt('/naver-clip?q=제주&status=draft', {
+  const view = renderAppAt('/clips?q=제주&status=draft', {
     user: { id: 'alice' },
     clips: { projects: [project], calls },
   })
@@ -69,7 +69,7 @@ it('opens from filtered history and returns to the same filters and scroll after
   await clipGuideTo('content')
   await screen.findByLabelText('클립 제목')
   expect(readClipReturnContext('alice', 'saved')).toMatchObject({
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { q: '제주', status: 'draft' },
     scrollY: 720,
@@ -79,9 +79,9 @@ it('opens from filtered history and returns to the same filters and scroll after
   await clipGuideTo('content')
   await screen.findByLabelText('클립 제목')
   const back = await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })
-  expect(back).toHaveAttribute('href', '/naver-clip?q=%EC%A0%9C%EC%A3%BC&status=draft')
+  expect(back).toHaveAttribute('href', '/clips?q=%EC%A0%9C%EC%A3%BC&status=draft')
   await user.click(back)
-  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/naver-clip'))
+  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/clips'))
   expect(reopened.router.state.location.search).toMatchObject({ q: '제주', status: 'draft' })
   await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 720))
   expect(calls.filter((call) => /Create|Start|Cancel|Update/.test(call))).toEqual([])
@@ -91,7 +91,7 @@ it.each(['ko', 'en'] as const)(
   async (language) => {
     initializeI18n(language)
     rememberClipEntry('alice', {
-      path: '/naver-clip',
+      path: '/clips',
       section: 'creation',
       filters: {},
       scrollY: 0,
@@ -122,13 +122,13 @@ it.each(['ko', 'en'] as const)(
     })
     expect(status).toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: label }))
-    await waitFor(() => expect(view.router.state.location.pathname).toBe('/naver-clip'))
+    await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips'))
     expect(calls.filter((call) => /Create|Start|Cancel|Update/.test(call))).toEqual([])
   },
 )
 it('a direct or foreign-owner record uses named history without adopting another owner creation context', async () => {
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'creation',
     filters: {},
     scrollY: 0,
@@ -139,12 +139,12 @@ it('a direct or foreign-owner record uses named history without adopting another
     clips: { projects: [{ ...project, ownerId: 'bob' }] },
   })
   const back = await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })
-  expect(back).toHaveAttribute('href', '/naver-clip')
+  expect(back).toHaveAttribute('href', '/clips')
   expect(screen.getAllByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveLength(1)
 })
 it('freezes the creation origin and ignores late mint navigation after the owner workspace closes', async () => {
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'clips',
     filters: { q: '기존 맥락' },
     scrollY: 360,
@@ -178,20 +178,20 @@ it('freezes the creation origin and ignores late mint navigation after the owner
   await waitFor(() => expect(calls).toContain('CreateClipProject'), { timeout: 4000 })
   await waitFor(() => expect(held).toBe(true))
   view.unmount()
-  rememberClipEntry('alice', { path: '/naver-clip', section: 'creation', filters: {}, scrollY: 0 })
+  rememberClipEntry('alice', { path: '/clips', section: 'creation', filters: {}, scrollY: 0 })
   await act(async () => {
     release()
     await gate
   })
   await waitFor(() =>
     expect(readClipReturnContext('alice', 'clip-1')).toMatchObject({
-      path: '/naver-clip',
+      path: '/clips',
       section: 'clips',
       filters: { q: '기존 맥락' },
     }),
   )
   expect(view.router.state.location.pathname).toBe('/clips/new')
-  expect(readClipReturnContext('alice')?.path).toBe('/naver-clip')
+  expect(readClipReturnContext('alice')?.path).toBe('/clips')
 })
 
 it('ignores an old channel through minting and direct reload without creating another project', async () => {
@@ -207,13 +207,13 @@ it('ignores an old channel through minting and direct reload without creating an
     timeout: 4000,
   })
   expect(readClipReturnContext('alice', 'clip-1')).toMatchObject({
-    path: '/naver-clip',
+    path: '/clips',
   })
   view.unmount()
   renderAppAt('/clips/clip-1', { transport: view.transport })
   expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
     'href',
-    '/naver-clip',
+    '/clips',
   )
   expect(calls.filter((call) => call === 'CreateClipProject')).toHaveLength(1)
   expect(calls.filter((call) => /Start|Cancel/.test(call))).toEqual([])

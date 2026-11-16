@@ -15,12 +15,10 @@ function at(href: string, entryKey = 'entry-1'): ParsedLocation {
 describe('scrollRestorationKey', () => {
   // POST-93: the list keeps its place however it is reached again — back, or the editor's 목록,
   // which is a new history entry — and each narrowing keeps its own.
-  it('keys the post history (/naver-blog) by its address, not by the history entry', () => {
-    expect(scrollRestorationKey(at('/naver-blog', 'a'))).toBe(
-      scrollRestorationKey(at('/naver-blog', 'b')),
-    )
-    expect(scrollRestorationKey(at('/naver-blog?q=제주', 'a'))).not.toBe(
-      scrollRestorationKey(at('/naver-blog', 'a')),
+  it('keys the post history (/posts) by its address, not by the history entry', () => {
+    expect(scrollRestorationKey(at('/posts', 'a'))).toBe(scrollRestorationKey(at('/posts', 'b')))
+    expect(scrollRestorationKey(at('/posts?q=제주', 'a'))).not.toBe(
+      scrollRestorationKey(at('/posts', 'a')),
     )
   })
 
@@ -28,7 +26,7 @@ describe('scrollRestorationKey', () => {
   it('keys every other screen by its history entry', () => {
     expect(scrollRestorationKey(at('/posts/20260828-jeju', 'a'))).toBe('a')
     expect(scrollRestorationKey(at('/posts/20260828-jeju', 'b'))).toBe('b')
-    expect(scrollRestorationKey(at('/naver-clip', 'c'))).toBe('c')
+    expect(scrollRestorationKey(at('/clips', 'c'))).toBe('c')
   })
 })
 

@@ -67,7 +67,7 @@ const projects: FakeClipProject[] = [
     result,
   },
 ]
-const mount = (path = '/naver-clip', clips: FakeClipsOptions = {}) =>
+const mount = (path = '/clips', clips: FakeClipsOptions = {}) =>
   renderAppAt(path, {
     user: { id: 'alice' },
     clips: { templates: [{ ...template }], projects, ...clips },
@@ -84,7 +84,7 @@ describe('clip directory', () => {
     let finished = false
     const calls: string[] = []
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
-    const view = mount('/naver-clip', {
+    const view = mount('/clips', {
       projects: [{ ...base, id: 'running', title: '부산 바다', latestJob: running }],
       calls,
       readProject: (p) =>
@@ -123,7 +123,7 @@ describe('clip directory', () => {
     const finalized = { at: '2026-09-13T00:00:00Z', planRevision: 2, resultId: 'result' }
     const confirmed = { planRevision: 2, at: '2026-09-12T00:00:00Z' }
     const finishedRow = { ...base, editPlanRevision: 2, renderedPlanRevision: 2, result, confirmed }
-    const { router } = mount('/naver-clip', {
+    const { router } = mount('/clips', {
       projects: [
         { ...finishedRow, id: 'confirmed', title: '확정한 영상' },
         { ...finishedRow, id: 'completed', title: '완료한 영상', finalized },
@@ -159,7 +159,7 @@ describe('clip directory', () => {
   })
 
   it('opens a link saved with the former finished filter on 완료', async () => {
-    const { router } = mount('/naver-clip?status=finished')
+    const { router } = mount('/clips?status=finished')
     expect(await row(/JEJU 다시/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /제주 여행/ })).toBeNull()
     expect(router.state.location.search).toMatchObject({ status: 'completed' })
@@ -174,7 +174,7 @@ describe('clip directory', () => {
   })
 
   it('shows no template as a normal state and asks again only for a template that is gone', async () => {
-    mount('/naver-clip', {
+    mount('/clips', {
       projects: [
         { ...base, id: 'none', title: '템플릿 없는 클립', videoTemplateId: '' },
         { ...base, id: 'gone', title: '지워진 템플릿 클립', videoTemplateId: 'deleted' },
@@ -209,7 +209,7 @@ describe('clip directory', () => {
 
   it('drops an emptied query from the address rather than carrying it', async () => {
     const user = userEvent.setup()
-    const { router } = mount('/naver-clip?q=바다')
+    const { router } = mount('/clips?q=바다')
     // The 찾기 button counts the narrowing that is on.
     expect(await screen.findByRole('button', { name: '찾기 · 1' })).toBeInTheDocument()
     await openFind(user)
@@ -222,7 +222,7 @@ describe('clip directory', () => {
   it('says what is narrowing when nothing matches, and offers the way back', async () => {
     const user = userEvent.setup()
     // 강릉 바다 exists, but it is finished — so this pair matches nothing.
-    const { router } = mount('/naver-clip?q=강릉&status=draft')
+    const { router } = mount('/clips?q=강릉&status=draft')
     expect(await screen.findByText(/'강릉'와 맞는 초안 클립이 없어요/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '전체 보기' }))
     await waitFor(() => expect(router.state.location.search).toEqual({}))
@@ -230,18 +230,18 @@ describe('clip directory', () => {
   })
 
   it('ignores a status the list cannot honour', async () => {
-    mount('/naver-clip?status=nonsense')
+    mount('/clips?status=nonsense')
     // Dropped at the route, so the directory renders rather than refusing (CLIP-41).
     expect(await row(/제주 여행/)).toBeInTheDocument()
   })
 
   it('reports a failed directory in a notice with a retry, and an empty one in a live region', async () => {
-    const failing = mount('/naver-clip', { projectListFails: true })
+    const failing = mount('/clips', { projectListFails: true })
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
     failing.unmount()
 
-    mount('/naver-clip', { projects: [] })
+    mount('/clips', { projects: [] })
     expect(
       await screen.findByText('아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.'),
     ).toBeInTheDocument()
@@ -249,7 +249,7 @@ describe('clip directory', () => {
 
   it('offers separate continuation and retained download actions without a creation dock or preview', async () => {
     const calls: string[] = []
-    mount('/naver-clip', { calls })
+    mount('/clips', { calls })
     const directory = await screen.findByRole('region', { name: '저장된 클립' })
     const finished = (await within(directory).findByRole('link', { name: /JEJU 다시/ })).closest(
       'li',
@@ -271,7 +271,7 @@ describe('clip directory', () => {
   })
 
   it('links an existing signed download separately when the summary supplies one', async () => {
-    mount('/naver-clip', {
+    mount('/clips', {
       projects: [
         { ...projects[2], result: { ...result, downloadUrl: 'https://private.test/download.mp4' } },
       ],
@@ -284,13 +284,13 @@ describe('clip directory', () => {
   })
 
   it('uses a readable fallback for an untitled work item', async () => {
-    mount('/naver-clip', { projects: [{ ...base, id: 'untitled', title: '   ' }] })
+    mount('/clips', { projects: [{ ...base, id: 'untitled', title: '   ' }] })
     expect(await row(/제목 없는 영상/)).toHaveAttribute('href', '/clips/untitled')
   })
 
   // The newest unfinished clip is emphasized inside 작성 중 and counted once.
   it('emphasizes and counts the latest unfinished clip inside its group', async () => {
-    mount('/naver-clip', {
+    mount('/clips', {
       // Newest first, the order the server lists them in.
       projects: [
         {
@@ -338,7 +338,7 @@ describe('clip directory', () => {
 // One 영상 list: a video is a video, whichever channel it was made for (owner 2026-11-16).
 it("lists both channels' videos on the one 영상 list", async () => {
   const user = userEvent.setup()
-  const view = renderAppAt('/naver-clip', {
+  const view = renderAppAt('/clips', {
     user: { id: 'alice' },
     clips: {
       projects: [
@@ -353,7 +353,7 @@ it("lists both channels' videos on the one 영상 list", async () => {
   await user.type(screen.getByRole('searchbox'), 'missing')
   await screen.findByRole('button', { name: '전체 보기' })
   await user.click(screen.getByRole('button', { name: '전체 보기' }))
-  expect(view.router.state.location.pathname).toBe('/naver-clip')
+  expect(view.router.state.location.pathname).toBe('/clips')
   expect(view.router.state.location.search).toEqual({})
   expect(await row(/Instagram only/)).toBeInTheDocument()
   expect(await row(/Naver only/)).toBeInTheDocument()
@@ -361,10 +361,10 @@ it("lists both channels' videos on the one 영상 list", async () => {
 
 // THEME-38, CLIP-41: the 영상 list opens straight onto its history with its 새 영상 button, and the
 // old Instagram address lands on it.
-it('opens the old Instagram address on the 영상 history with no visible heading and its creation button', async () => {
-  const view = renderAppAt('/insta-clip', { user: { id: 'alice' }, clips: { projects: [] } })
+it('opens the 영상 history with no visible heading and its creation button', async () => {
+  const view = renderAppAt('/clips', { user: { id: 'alice' }, clips: { projects: [] } })
   expect(await screen.findByRole('heading', { level: 1, name: '영상' })).toHaveClass('sr-only')
-  expect(view.router.state.location.pathname).toBe('/naver-clip')
+  expect(view.router.state.location.pathname).toBe('/clips')
   // The 영상 section's one creation opens the clip workspace (THEME-67).
   expect(screen.getByRole('link', { name: '새 영상' })).toHaveAttribute(
     'href',
@@ -374,9 +374,10 @@ it('opens the old Instagram address on the 영상 history with no visible headin
 })
 
 it.each([
-  ['/clips?channel=instagram_clip&q=바다', '/naver-clip', { q: '바다' }],
-  ['/insta-clip?status=draft', '/naver-clip', { status: 'draft' }],
-  ['/clips?status=draft', '/naver-clip', { status: 'draft' }],
+  ['/insta-clip?channel=instagram_clip&q=바다', '/clips', { q: '바다' }],
+  ['/naver-clip?status=draft', '/clips', { status: 'draft' }],
+  ['/naver-clip/?status=draft', '/clips', { status: 'draft' }],
+  ['/insta-clip/?q=바다&status=refining', '/clips', { q: '바다', status: 'refining' }],
 ] as const)('replaces the old %s address with the 영상 list', async (from, path, search) => {
   const view = renderAppAt(from, { user: { id: 'alice' }, clips: { projects: [] } })
   await waitFor(() => expect(view.router.state.location.pathname).toBe(path))
@@ -385,12 +386,12 @@ it.each([
 
 // Either channel's video is on the one 영상 list, and its way back keeps the narrowing.
 it.each([
-  ['naver_clip', false, '네이버 클립', '/naver-clip'],
-  ['instagram_clip', true, '인스타 클립', '/insta-clip'],
+  ['naver_clip', false, '네이버 클립', '/clips'],
+  ['instagram_clip', true, '인스타 클립', '/clips'],
 ] as const)(
   'shows a prepared %s story on the 영상 list and filters it without calling it a finished video',
   async (channel, narrated, channelName, channelPath) => {
-    const path = '/naver-clip'
+    const path = '/clips'
     const user = userEvent.setup()
     const storyline = {
       paragraphs: [{ text: '직접 겪은 이야기', observationIds: [] }],
@@ -447,7 +448,7 @@ it.each([
 )
 
 it('keeps a narrowed clip list compact without special latest-item emphasis', async () => {
-  mount('/naver-clip?status=draft', {
+  mount('/clips?status=draft', {
     projects: [
       { ...base, id: 'one', title: '첫 초안' },
       { ...base, id: 'two', title: '둘째 초안' },

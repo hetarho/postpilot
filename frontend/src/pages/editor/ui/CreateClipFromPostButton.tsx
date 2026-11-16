@@ -4,10 +4,9 @@ import { useTranslation } from 'react-i18next'
 import type { PostDraft } from '@/entities/post'
 import {
   CLIP_PROJECT_LIMITS,
-  DEFAULT_CLIP_CHANNEL,
   freeTextLength,
   rememberClipEntry,
-  clipChannelPath,
+  CLIP_LIST_PATH,
   useClipProjectMutations,
   useClipSourceCalls,
 } from '@/entities/clip-project'
@@ -60,7 +59,7 @@ export function CreateClipFromPostButton({
       setCreated(result)
       rememberClipEntry(ownerId, {
         // Until T862 renames the helper, the video list path is the default one, with no filters.
-        path: clipChannelPath(DEFAULT_CLIP_CHANNEL),
+        path: CLIP_LIST_PATH,
         section: 'clips',
         filters: {},
         scrollY: 0,

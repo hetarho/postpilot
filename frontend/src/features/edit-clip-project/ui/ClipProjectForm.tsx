@@ -20,7 +20,7 @@ import {
   type ClipProjectDraft,
   useClipProjectMutations,
   retainMintedClipEntry,
-  clipChannelPath,
+  CLIP_LIST_PATH,
   readClipReturnContext,
   validClipProject,
 } from '@/entities/clip-project'
@@ -225,7 +225,7 @@ export function ClipProjectForm({
     const origin = readClipReturnContext(ownerId) ?? {
       version: 1 as const,
       ownerKey: ownerId,
-      path: clipChannelPath(DEFAULT_CLIP_CHANNEL),
+      path: CLIP_LIST_PATH,
       section: DEFAULT_CLIP_CHANNEL,
       filters: {},
       scrollY: 0,

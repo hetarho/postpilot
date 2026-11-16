@@ -8,16 +8,17 @@ import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config
 import { clipHistoryFilter } from '../model/history-state'
 
 export interface ClipEntry {
-  /** The list the clip was opened from: its channel's own, or 내 글 전체 (THEME-69). */
-  path: '/naver-clip' | '/insta-clip' | '/my'
+  /** The list the clip was opened from: the 영상 list, or 내 콘텐츠 전체 (THEME-69). */
+  path: '/clips' | '/my'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
   targetId?: string
 }
-export function clipChannelPath(channel: ClipChannel): '/naver-clip' | '/insta-clip' {
-  return channel === 'instagram_clip' ? '/insta-clip' : '/naver-clip'
-}
+/** The one 영상 list (CLIP-41); a video has no channel address of its own. */
+export const CLIP_LIST_PATH = '/clips'
+/** Addresses the list answered to before CLIP-41; a context stored under one still returns here. */
+const LEGACY_CLIP_LIST_PATHS = ['/naver-clip', '/insta-clip', '/library', '/']
 export interface ClipReturnDestination {
   channel: ClipChannel
   path: ClipEntry['path']
@@ -25,11 +26,10 @@ export interface ClipReturnDestination {
   section: string
   scrollY: number
 }
-/** Each clip channel opens on its own history (CLIP-41), so history and creation share the
- *  channel's address and the section tells them apart. A `/clips` entry stored before that still
- *  names the history. */
+/** The 영상 list opens on its own history (CLIP-41), so history and creation share one address
+ *  and the section tells them apart. */
 export function isClipHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'>): boolean {
-  return entry.path !== '/my' && (entry.section === 'clips' || entry.path === '/clips')
+  return entry.path !== '/my' && entry.section === 'clips'
 }
 /** Work opened from 내 글 전체 returns there, with its scroll (THEME-58 →THEME-69). */
 function isMyWorkEntry(entry: Pick<ReturnContext, 'path'>): boolean {
@@ -38,9 +38,7 @@ function isMyWorkEntry(entry: Pick<ReturnContext, 'path'>): boolean {
 function storedChannel(entry: ReturnContext | undefined): ClipChannel {
   return CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
     ? (entry!.filters.channel as ClipChannel)
-    : entry?.path === '/insta-clip'
-      ? 'instagram_clip'
-      : DEFAULT_CLIP_CHANNEL
+    : DEFAULT_CLIP_CHANNEL
 }
 function browserStorage(): NavigationStorage | undefined {
   try {
@@ -60,8 +58,7 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
       removeItem: (key) => storage.removeItem(`${key}${suffix}`),
     },
     {
-      isAccessible: (path) =>
-        ['/naver-clip', '/insta-clip', '/clips', '/', '/library', '/my'].includes(path),
+      isAccessible: (path) => [CLIP_LIST_PATH, ...LEGACY_CLIP_LIST_PATHS, '/my'].includes(path),
     },
   )
 }
@@ -90,16 +87,13 @@ export function readClipReturnContext(
   if (!storage) return undefined
   const entry = store(ownerId, storage, clipId ?? 'new').read() ?? store(ownerId, storage).read()
   if (entry?.targetId !== (clipId ?? 'new')) return undefined
-  if (entry.path === '/' || entry.path === '/library')
-    return {
-      ...entry,
-      path: clipChannelPath(
-        entry.filters.channel === 'instagram_clip' ? 'instagram_clip' : DEFAULT_CLIP_CHANNEL,
-      ),
-    }
-  return entry.path === '/clips'
-    ? { ...entry, path: clipChannelPath(storedChannel(entry)), section: 'clips' }
-    : entry
+  if (!LEGACY_CLIP_LIST_PATHS.includes(entry.path)) return entry
+  // An Instagram list kept its channel in the address; the channel now rides in the filters.
+  const filters =
+    entry.path === '/insta-clip' && !entry.filters.channel
+      ? { ...entry.filters, channel: 'instagram_clip' }
+      : entry.filters
+  return { ...entry, path: CLIP_LIST_PATH, filters }
 }
 export function clipReturnDestination(
   ownerId: string,
@@ -117,9 +111,8 @@ export function clipReturnDestination(
       section: entry.section,
       scrollY: entry.scrollY,
     }
-  // The channel's address carries the channel; a history entry adds its own narrowing. A clip
-  // moved to the other channel returns to that channel's history (CLIP-209).
-  const path = clipChannelPath(currentChannel)
+  // A history entry adds its own narrowing to the one list's address.
+  const path = CLIP_LIST_PATH
   const history = entry ? isClipHistoryEntry(entry) : !!clipId
   const filters: Record<string, string> = {}
   if (history) {
@@ -147,11 +140,7 @@ export function retainMintedClipEntry(
   return rememberClipEntry(
     ownerId,
     {
-      path: clipChannelPath(
-        entry?.filters.channel === 'instagram_clip' || entry?.path === '/insta-clip'
-          ? 'instagram_clip'
-          : DEFAULT_CLIP_CHANNEL,
-      ),
+      path: CLIP_LIST_PATH,
       section: entry?.section ?? 'naver_clip',
       filters: entry?.filters ?? {},
       scrollY: entry?.scrollY ?? 0,

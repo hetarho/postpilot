@@ -95,7 +95,7 @@ describe('clip directory and setup', () => {
         expect.objectContaining({ hideDisclosure: true, disclosure: 'ad' }),
       ),
     )
-    await router.navigate({ to: '/naver-clip' })
+    await router.navigate({ to: '/clips' })
     await router.navigate({ to: '/clips/$clipId', params: { clipId: 'project' } })
     await clipGuideTo('style')
     expect(await screen.findByRole('checkbox', { name: '영상에 광고·협찬 표시' })).not.toBeChecked()
@@ -109,13 +109,13 @@ describe('clip directory and setup', () => {
   })
   it('guards authenticated routes and does not load clips without a session', async () => {
     const calls: string[] = []
-    const { router } = renderAppAt('/naver-clip', { calls })
+    const { router } = renderAppAt('/clips', { calls })
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     expect(calls).not.toContain('ListClipProjects')
   })
   it('lists the persisted metadata and navigates to a ratio-immutable project', async () => {
     const user = userEvent.setup()
-    mount('/naver-clip')
+    mount('/clips')
     // Guide: the directory is one region holding 이어서 쓰기 and the status groups.
     const list = within(await screen.findByRole('region', { name: '저장된 클립' }))
     const link = await list.findByRole('link', { name: /제주 여행/ })
@@ -133,12 +133,12 @@ describe('clip directory and setup', () => {
     expect(screen.getByText(/화면 비율은 바꿀 수 없어요/)).toBeInTheDocument()
   })
   it('handles empty and failed directories', async () => {
-    const empty = mount('/naver-clip', { projects: [] })
+    const empty = mount('/clips', { projects: [] })
     expect(
       await screen.findByText('아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.'),
     ).toBeInTheDocument()
     empty.unmount()
-    mount('/naver-clip', { projectListFails: true })
+    mount('/clips', { projectListFails: true })
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
@@ -210,7 +210,7 @@ describe('clip directory and setup', () => {
     expect(await screen.findByLabelText('클립 제목')).toHaveValue('첫 기록')
   })
   it('keeps directory and workspace free of group chrome and gives direct records a named history return', async () => {
-    const directory = mount('/naver-clip')
+    const directory = mount('/clips')
     await screen.findByRole('region', { name: '저장된 클립' })
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
     expect(document.querySelector('aside')).toBeNull()
@@ -222,7 +222,7 @@ describe('clip directory and setup', () => {
     expect(document.querySelector('aside')).toBeNull()
     // One chrome group (CLIP-37); phone lifecycle navigation has its own row.
     const back = screen.getByRole('link', { name: '네이버 클립으로 돌아가기' })
-    expect(back).toHaveAttribute('href', '/naver-clip')
+    expect(back).toHaveAttribute('href', '/clips')
     const steps = screen.getByRole('tablist', { name: '클립 단계' })
     const remove = screen.getByRole('button', { name: '삭제' })
     expect(back.parentElement).toBe(steps.parentElement!.parentElement)
@@ -234,7 +234,7 @@ describe('clip directory and setup', () => {
     mount('/clips/new')
     expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
       'href',
-      '/naver-clip',
+      '/clips',
     )
     // The guide follows the template directory read (CLIP-223); a draft with no lifecycle shows
     // no step bar and nothing to delete, and the page's ONE status region is already mounted.
@@ -280,7 +280,7 @@ describe('clip directory and setup', () => {
   // move a clip to the other channel (owner 2026-11-16).
   it('offers no channel move in the clip settings', async () => {
     const user = userEvent.setup()
-    mount('/naver-clip')
+    mount('/clips')
     await user.click(await screen.findByRole('link', { name: /제주 여행/ }))
     await clipGuideTo('sources')
     expect(screen.queryByRole('button', { name: /클립으로 옮기기/ })).not.toBeInTheDocument()
@@ -446,7 +446,7 @@ describe('clip directory and setup', () => {
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     // No dialog: there is nothing to lose by leaving a project that saves itself (CLIP-39).
     await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
-    await waitFor(() => expect(router.state.location.pathname).toBe('/naver-clip'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     unmount()
 
@@ -455,7 +455,7 @@ describe('clip directory and setup', () => {
     await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
     await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
-    await waitFor(() => expect(created.router.state.location.pathname).toBe('/naver-clip'))
+    await waitFor(() => expect(created.router.state.location.pathname).toBe('/clips'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
   it.each(['unknown', 'foreign'])('does not expose %s project metadata', async (id) => {

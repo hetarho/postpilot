@@ -140,7 +140,7 @@ describe('making a clip from a finished post', () => {
     expect(view.draftSaves).toEqual([])
     expect(readClipReturnContext(USER.id, 'clip-1')).toMatchObject({
       targetId: 'clip-1',
-      path: '/naver-clip',
+      path: '/clips',
       section: 'clips',
       filters: {},
     })
@@ -279,13 +279,13 @@ describe('making a clip from a finished post', () => {
     )
     await confirm(user)
     await waitFor(() => expect(release).toBeTypeOf('function'))
-    await act(() => view.router.navigate({ to: '/naver-blog' }))
+    await act(() => view.router.navigate({ to: '/posts' }))
     expect(signal?.aborted).toBe(true)
     await act(async () => {
       release(fetchedVideo('late video'))
       await new Promise((resolve) => setTimeout(resolve, 0))
     })
-    expect(view.router.state.location.pathname).toBe('/naver-blog')
+    expect(view.router.state.location.pathname).toBe('/posts')
     expect(view.calls.filter((name) => name === 'CreateClipProject')).toHaveLength(1)
     expect(view.calls).not.toContain('CreateClipSourceBatch')
     expect(view.calls).not.toContain('DiscardClipSourceBatch')

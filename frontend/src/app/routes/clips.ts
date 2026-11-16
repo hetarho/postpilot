@@ -1,21 +1,8 @@
-import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
-import { clipChannelPath, DEFAULT_CLIP_CHANNEL } from '@/entities/clip-project'
+import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
 import { clipCreationSearchSchema } from '@/pages/clip'
-import { clipsSearchSchema } from '@/pages/clips'
 import { videoTemplateSearchSchema } from '@/pages/video-template'
 import { spokenCreationSearchSchema } from '@/pages/spoken-voices'
 import { authenticatedRoute } from './tree'
-
-/** Each clip channel's history moved onto the channel itself (CLIP-41); a bookmark or an old
- *  return link lands there with its narrowing. */
-export const clipsRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  path: '/clips',
-  validateSearch: clipsSearchSchema,
-  beforeLoad: ({ search: { channel, ...search } }) => {
-    throw redirect({ to: clipChannelPath(channel ?? DEFAULT_CLIP_CHANNEL), search, replace: true })
-  },
-})
 
 export const newClipRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -73,7 +60,6 @@ export const newSpokenVoiceRoute = createRoute({
 /** The group's routes, in the order the tree adds them: a static path always before the
  *  param that would otherwise swallow it. */
 export const clipRoutes = [
-  clipsRoute,
   spokenVoicesRoute,
   newSpokenVoiceRoute,
   newClipRoute,

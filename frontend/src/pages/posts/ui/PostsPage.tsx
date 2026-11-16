@@ -5,6 +5,7 @@ import { CircleCheck, PenLine, Scale, Send, Sparkles, TriangleAlert } from 'luci
 import {
   displayTitle,
   postRowState,
+  POST_LIST_PATH,
   rememberPostEntry,
   usePostList,
   type PostListItem,
@@ -76,7 +77,7 @@ export function PostsPage() {
   const historyFilters = new URLSearchParams()
   if (narrowing.q) historyFilters.set('q', narrowing.q)
   if (narrowing.status) historyFilters.set('status', narrowing.status)
-  const historyEntry = `/naver-blog${historyFilters.size ? '?' + historyFilters : ''}`
+  const historyEntry = `/posts${historyFilters.size ? '?' + historyFilters : ''}`
   const settledQ = useSettledValue(narrowing.q ?? '', POSTS_SEARCH_DEBOUNCE_MS)
   const list = usePostList({ q: settledQ, status: narrowing.status })
   useHistoryScrollReturn(user?.id ?? '', narrowing, settledQ, list)
@@ -89,7 +90,7 @@ export function PostsPage() {
   // carrying `?q=`.
   const narrow = (next: PostNarrowing) =>
     void navigate({
-      to: '/naver-blog',
+      to: '/posts',
       search: { q: next.q?.trim() === '' ? undefined : next.q, status: next.status },
       replace: true,
     })
@@ -123,7 +124,7 @@ export function PostsPage() {
   const remember = (post: PostListItem) => {
     if (!user?.id) return
     rememberPostEntry(user.id, {
-      path: '/naver-blog',
+      path: POST_LIST_PATH,
       section: 'posts',
       filters: {
         ...(narrowing.q ? { q: narrowing.q } : {}),

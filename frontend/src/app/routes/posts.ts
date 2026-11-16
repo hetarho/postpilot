@@ -10,17 +10,6 @@ import { authenticatedRoute } from './tree'
 const lazyEditor = <K extends 'NewDraftPage' | 'PostEditorPage'>(name: K) =>
   lazyRouteComponent(() => import('@/pages/editor'), name)
 
-/** The post history moved onto the channel itself (POST-43); a bookmark or an old return link
- *  lands there with its narrowing. */
-export const postsRoute = createRoute({
-  getParentRoute: () => authenticatedRoute,
-  path: '/posts',
-  validateSearch: postsSearchSchema,
-  beforeLoad: ({ search }) => {
-    throw redirect({ to: '/naver-blog', search, replace: true })
-  },
-})
-
 // A static segment outranks '$slug', so this route — not the editor below — is what
 // '/posts/new' matches.
 export const newDraftRoute = createRoute({
@@ -51,7 +40,7 @@ export const postExperimentRoute = createRoute({
     if (search.status) filters.set('status', search.status)
     const entry =
       search.entry ??
-      (search.from === 'posts' ? `/naver-blog${filters.size ? '?' + filters : ''}` : undefined)
+      (search.from === 'posts' ? `/posts${filters.size ? '?' + filters : ''}` : undefined)
     throw redirect({
       to: '/tests/records/$id',
       params: { id: params.id },
@@ -63,4 +52,4 @@ export const postExperimentRoute = createRoute({
 
 /** The group's routes, in the order the tree adds them: a static path always before the
  *  param that would otherwise swallow it. */
-export const postRoutes = [postsRoute, newDraftRoute, postExperimentRoute, postEditorRoute]
+export const postRoutes = [newDraftRoute, postExperimentRoute, postEditorRoute]

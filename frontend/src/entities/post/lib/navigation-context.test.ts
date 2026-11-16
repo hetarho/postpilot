@@ -12,28 +12,28 @@ beforeEach(() => sessionStorage.clear())
 
 it('retains creation context across minting and reload, scoped to the owner and post', () => {
   rememberPostEntry('owner', {
-    path: '/naver-blog',
+    path: '/posts',
     section: 'creation',
     filters: {},
     scrollY: 0,
     targetId: 'new',
   })
   expect(retainMintedPostEntry('owner', 'minted')).toBe(true)
-  expect(postReturnDestination('owner', 'minted').href).toBe('/naver-blog')
-  expect(postReturnDestination('other', 'minted').href).toBe('/naver-blog')
-  expect(postReturnDestination('owner', 'different').href).toBe('/naver-blog')
+  expect(postReturnDestination('owner', 'minted').href).toBe('/posts')
+  expect(postReturnDestination('other', 'minted').href).toBe('/posts')
+  expect(postReturnDestination('owner', 'different').href).toBe('/posts')
 })
 
 it('retains history filters and scroll in the channel return URL', () => {
   rememberPostEntry('owner', {
-    path: '/naver-blog',
+    path: '/posts',
     section: 'posts',
     filters: { q: '제주 & 여행', status: 'review' },
     scrollY: 820,
     targetId: 'saved',
   })
   const destination = postReturnDestination('owner', 'saved')
-  expect(destination.path).toBe('/naver-blog')
+  expect(destination.path).toBe('/posts')
   expect(new URL(destination.href, 'https://test.invalid').searchParams.get('q')).toBe(
     '제주 & 여행',
   )
@@ -77,7 +77,7 @@ it('rejects external, malformed, deleted-record and foreign-owner parents', () =
       targetId: 'saved',
     }),
   )
-  expect(postReturnDestination('owner', 'saved').href).toBe('/naver-blog')
+  expect(postReturnDestination('owner', 'saved').href).toBe('/posts')
 })
 
 it('falls back safely when storage is unavailable', () => {
@@ -90,11 +90,11 @@ it('falls back safely when storage is unavailable', () => {
     },
     removeItem: () => {},
   }
-  expect(postReturnDestination('owner', undefined, storage).href).toBe('/naver-blog')
+  expect(postReturnDestination('owner', undefined, storage).href).toBe('/posts')
   expect(
     rememberPostEntry(
       'owner',
-      { path: '/naver-blog', section: 'creation', filters: {}, scrollY: 0 },
+      { path: '/posts', section: 'creation', filters: {}, scrollY: 0 },
       storage,
     ),
   ).toBe(false)
@@ -102,14 +102,14 @@ it('falls back safely when storage is unavailable', () => {
 
 it('keeps each post parent when other posts and child contexts replace the generic entry', () => {
   rememberPostEntry('owner', {
-    path: '/naver-blog',
+    path: '/posts',
     section: 'creation',
     filters: {},
     scrollY: 0,
     targetId: 'first',
   })
   rememberPostEntry('owner', {
-    path: '/naver-blog',
+    path: '/posts',
     section: 'posts',
     filters: { q: '여행' },
     scrollY: 840,
@@ -127,7 +127,7 @@ it('keeps each post parent when other posts and child contexts replace the gener
       targetId: 'child',
     }),
   )
-  expect(postReturnDestination('owner', 'first').href).toBe('/naver-blog')
+  expect(postReturnDestination('owner', 'first').href).toBe('/posts')
   expect(postReturnDestination('owner', 'second').scrollY).toBe(840)
   expect(postReturnDestination('owner', 'second').href).toContain('q=')
 })
@@ -147,7 +147,7 @@ it.each(['/', '/library'])(
         scrollY: 0,
       }),
     )
-    expect(postReturnDestination('owner', 'saved').href).toBe('/naver-blog')
+    expect(postReturnDestination('owner', 'saved').href).toBe('/posts')
   },
 )
 
@@ -165,31 +165,52 @@ it('reads a stored /posts history entry as the channel history with its narrowin
     }),
   )
   expect(readPostReturnContext('owner', 'saved')).toMatchObject({
-    path: '/naver-blog',
+    path: '/posts',
     section: 'posts',
   })
   expect(postReturnDestination('owner', 'saved')).toMatchObject({
-    href: '/naver-blog?q=%EC%97%AC%ED%96%89&status=draft',
+    href: '/posts?q=%EC%97%AC%ED%96%89&status=draft',
     scrollY: 420,
   })
 })
 
 it('marks and reads the history scroll return by section on the channel address', () => {
   rememberPostEntry('owner', {
-    path: '/naver-blog',
+    path: '/posts',
     section: 'posts',
     filters: { q: '여행' },
     scrollY: 640,
     targetId: 'saved',
   })
   expect(markPostHistoryReturn('owner', 'saved')).toBe(true)
-  expect(readPostHistoryReturn('owner')).toMatchObject({ path: '/naver-blog', scrollY: 640 })
+  expect(readPostHistoryReturn('owner')).toMatchObject({ path: '/posts', scrollY: 640 })
   rememberPostEntry('owner', {
-    path: '/naver-blog',
+    path: '/posts',
     section: 'naverBlog',
     filters: {},
     scrollY: 0,
     targetId: 'created',
   })
   expect(markPostHistoryReturn('owner', 'created')).toBe(false)
+})
+
+it('returns a context stored under the earlier /naver-blog address to the 글 list', () => {
+  sessionStorage.setItem(
+    'postpilot.return.owner.post.saved',
+    JSON.stringify({
+      version: 1,
+      ownerKey: 'owner',
+      path: '/naver-blog',
+      section: 'posts',
+      filters: { q: '제주', status: 'review' },
+      scrollY: 310,
+      targetId: 'saved',
+    }),
+  )
+  expect(readPostReturnContext('owner', 'saved')?.path).toBe('/posts')
+  expect(postReturnDestination('owner', 'saved')).toMatchObject({
+    path: '/posts',
+    href: '/posts?q=%EC%A0%9C%EC%A3%BC&status=review',
+    scrollY: 310,
+  })
 })

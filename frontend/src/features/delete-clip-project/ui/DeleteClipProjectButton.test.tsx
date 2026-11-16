@@ -65,7 +65,7 @@ it('deletes once and uses its named history parent when there is no retained ori
   await user.click(screen.getByRole('button', { name: '삭제' }))
   await user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
   expect(calls).toEqual(['clip'])
-  expect(navigate).toHaveBeenCalledWith({ href: '/naver-clip', replace: true })
+  expect(navigate).toHaveBeenCalledWith({ href: '/clips', replace: true })
 })
 
 it('keeps the owner on the project and reports a refusal beside the trigger', async () => {
@@ -85,7 +85,7 @@ it('is refused outright while the workspace is busy', () => {
 it('returns a creation-origin clip to home only after server-confirmed deletion', async () => {
   navigate.mockClear()
   rememberClipEntry('alice', {
-    path: '/naver-clip',
+    path: '/clips',
     section: 'creation',
     filters: {},
     scrollY: 0,
@@ -96,7 +96,7 @@ it('returns a creation-origin clip to home only after server-confirmed deletion'
   expect(navigate).not.toHaveBeenCalled()
   await user.click(screen.getAllByRole('button', { name: '삭제', hidden: true })[1]!)
   expect(calls).toEqual(['clip'])
-  expect(navigate).toHaveBeenCalledWith({ href: '/naver-clip', replace: true })
+  expect(navigate).toHaveBeenCalledWith({ href: '/clips', replace: true })
 })
 it('uses the injected return only after confirmed deletion and queue cleanup', async () => {
   navigate.mockClear()

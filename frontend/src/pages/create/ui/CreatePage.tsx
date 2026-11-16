@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { ChevronRight, Clapperboard, PenLine } from 'lucide-react'
 import { FirstUseSetupGate } from '@/widgets/creation-setup'
 import { useSession } from '@/entities/session'
-import { rememberPostEntry } from '@/entities/post'
-import { clipChannelPath, rememberClipEntry } from '@/entities/clip-project'
+import { POST_LIST_PATH, rememberPostEntry } from '@/entities/post'
+import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
 import { ListRowIcon, Typography, cardStyles, pageStyles } from '@/shared/ui'
 
 const CHOICES = [
@@ -20,13 +20,13 @@ export function CreatePage() {
   const remember = (channel: (typeof CHOICES)[number]['channel']) =>
     channel
       ? rememberClipEntry(user?.id ?? '', {
-          path: clipChannelPath(channel),
+          path: CLIP_LIST_PATH,
           section: channel,
           filters: { channel },
           scrollY: 0,
         })
       : rememberPostEntry(user?.id ?? '', {
-          path: '/naver-blog',
+          path: POST_LIST_PATH,
           section: 'naverBlog',
           filters: {},
           scrollY: 0,

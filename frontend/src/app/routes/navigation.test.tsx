@@ -35,8 +35,8 @@ it.each([
   ['/posts/new', '/my'],
   ['/clips/new', '/my'],
   ['/clips/new?channel=instagram_clip', '/my'],
-  ['/naver-blog', '/my'],
-  ['/insta-clip', '/my'],
+  ['/posts', '/my'],
+  ['/clips', '/my'],
   ['/posts/example', '/my'],
   ['/clips/example', '/my'],
   ['/style', '/style'],
@@ -57,9 +57,9 @@ it.each([
   ['/admin/models', '/settings'],
 ] as const)('resolves %s to %s', (path, tab) => expect(currentDestination(path)).toBe(tab))
 it('places every post and clip under its channel list and exposes deterministic hierarchy', () => {
-  expect(routeLocation('/posts/minted').ancestors.map((x) => x.href)).toEqual(['/naver-blog'])
+  expect(routeLocation('/posts/minted').ancestors.map((x) => x.href)).toEqual(['/posts'])
   expect(routeLocation('/clips/minted', 'instagram_clip').ancestors.map((x) => x.href)).toEqual([
-    '/insta-clip',
+    '/clips',
   ])
   expect(routeLocation('/voices/voice/materials').ancestors.map((x) => x.href)).toEqual([
     '/voices',
@@ -80,7 +80,7 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
   viewport(desktop)
   const user = userEvent.setup()
   const calls: string[] = []
-  const view = renderAppAt('/naver-blog', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })
+  const view = renderAppAt('/posts', { user: { id: 'alice', plan: ProtoPlan.FREE }, calls })
   const nav = await screen.findByRole('navigation', { name: '주요' })
   const links = within(nav).getAllByRole('link')
   expect(links.map((link) => link.textContent)).toEqual([
@@ -137,7 +137,7 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
   const choices = within(screen.getByRole('navigation', { name: '만들 것' }))
   expect(choices.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
     '/posts/new',
-    '/clips/new?channel=naver_clip',
+    '/clips/new',
   ])
   // The writing screen hides the bar; the account menu still reaches 나. A new draft opens on
   // the guided flow's first question, 글 종류.
@@ -157,7 +157,7 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
 // Guide: a hub's pages share a large title and a chip row; 템플릿 and 지침 add a 글 · 영상 switch.
 it('opens hub pages on the hub title and their sibling chips, with no back link', async () => {
   viewport(false)
-  const view = renderAppAt('/naver-clip', { user: { id: 'alice' } })
+  const view = renderAppAt('/clips', { user: { id: 'alice' } })
   const chips = within(await screen.findByRole('navigation', { name: '나누어 보기' }))
   // One 영상 section holds every video, whichever channel it is posted to.
   expect(chips.getAllByRole('link').map((link) => link.textContent)).toEqual(['전체', '글', '영상'])
@@ -251,17 +251,14 @@ it.each([
     const main = await screen.findByRole('main')
     expect(within(main).getAllByRole('link')).toHaveLength(2)
     expect(within(main).getByRole('link', { name: post })).toHaveAttribute('href', '/posts/new')
-    expect(within(main).getByRole('link', { name: video })).toHaveAttribute(
-      'href',
-      '/clips/new?channel=naver_clip',
-    )
+    expect(within(main).getByRole('link', { name: video })).toHaveAttribute('href', '/clips/new')
     expect(main.querySelector('a[href*="instagram_clip"]')).toBeNull()
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )
 
 it('derives named child locations and unknown-route behavior from the same hierarchy', () => {
-  for (const path of ['/create', '/my', '/style', '/naver-blog', '/naver-clip', '/insta-clip'])
+  for (const path of ['/create', '/my', '/style', '/posts', '/clips'])
     expect(routeLocation(path).ancestors).toEqual([])
   expect(currentDestination('/setup')).toBeUndefined()
   expect(routeLocation('/admin/models')).toMatchObject({
@@ -282,8 +279,8 @@ it('keeps the My work hub nodes, chip scroll and selected section through every 
   const title = sections.previousElementSibling
   sections.scrollLeft = 24
   for (const [label, path, heading] of [
-    ['글', '/naver-blog', '네이버 블로그'],
-    ['영상', '/naver-clip', '영상'],
+    ['글', '/posts', '네이버 블로그'],
+    ['영상', '/clips', '영상'],
     ['전체', '/my', '내 콘텐츠'],
   ]) {
     await userEvent.click(within(sections).getByRole('link', { name: label }))
@@ -302,7 +299,7 @@ it('keeps the My work hub nodes, chip scroll and selected section through every 
   // The old Instagram list is no longer a section of its own: its address lands on 영상, inside
   // the same hub.
   await act(() => view.router.navigate({ to: '/insta-clip' }))
-  await waitFor(() => expect(view.router.state.location.pathname).toBe('/naver-clip'))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/clips'))
   expect(screen.getByRole('navigation', { name: '나누어 보기' })).toBe(sections)
   expect(within(sections).getByRole('link', { name: '영상' })).toHaveAttribute(
     'aria-current',

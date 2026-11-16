@@ -69,7 +69,7 @@ function legacyEntry(target: string, path: string, ownerKey = 'alice') {
 
 it('traverses the five tabs as sibling destinations without paid work', async () => {
   const user = userEvent.setup()
-  const view = renderLegacyModelRoute('/naver-blog', { user: { id: 'alice' } })
+  const view = renderLegacyModelRoute('/posts', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   expectRoot()
   // Guide: five verb tabs; the account panel still reaches 나.
@@ -103,9 +103,9 @@ it('traverses the five tabs as sibling destinations without paid work', async ()
 })
 
 it.each([
-  ['/naver-clip', '영상'],
+  ['/clips', '영상'],
   ['/settings', '나'],
-  ['/naver-blog', '네이버 블로그'],
+  ['/posts', '네이버 블로그'],
 ])(
   'ignores an old cross-destination origin on direct load and reload of %s',
   async (path, label) => {
@@ -224,7 +224,7 @@ it('does not offer a source-post return after the source is missing or inaccessi
 })
 
 it('does not propagate a sibling visit into a settings child origin', async () => {
-  const view = renderLegacyModelRoute('/naver-blog', { user: { id: 'alice' } })
+  const view = renderLegacyModelRoute('/posts', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   await act(() => view.router.navigate({ to: '/templates' }))
   await screen.findByRole('heading', { name: '템플릿', level: 1 })
@@ -271,9 +271,12 @@ it.each([
 
 // The old Instagram list is one 영상 list now: its address lands there, still a root.
 it.each([
-  ['/naver-blog/', '네이버 블로그', undefined],
+  ['/posts/', '네이버 블로그', undefined],
   ['/settings/', '나', undefined],
-  ['/insta-clip/', '영상', '/naver-clip'],
+  ['/clips/', '영상', '/clips'],
+  ['/naver-blog/', '네이버 블로그', '/posts'],
+  ['/naver-clip/', '영상', '/clips'],
+  ['/insta-clip/', '영상', '/clips'],
 ])('keeps trailing-slash root %s independent of explicit entry', async (path, label, landing) => {
   const view = renderLegacyModelRoute(`${path}?entry=%2Fposts`, { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: label, level: 1 })
@@ -370,7 +373,7 @@ it.each([
   ['/templates', '내 스타일', '템플릿', STYLE_HREFS],
   ['/voices?channel=instagram_clip', '내 스타일', '말투', STYLE_HREFS],
   ['/memories', '내 스타일', '기억', STYLE_HREFS],
-  ['/naver-blog', '내 콘텐츠', '글', ['/my', '/naver-blog', '/naver-clip']],
+  ['/posts', '내 콘텐츠', '글', ['/my', '/posts', '/clips']],
 ] as const)(
   'places the %s section in its hub as a sibling with no way back',
   async (path, channel, section, hrefs) => {

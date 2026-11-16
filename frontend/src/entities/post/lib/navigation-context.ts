@@ -5,8 +5,8 @@ import {
 } from '@/shared/lib/navigation'
 
 export interface PostEntry {
-  /** The list the post was opened from: the channel's own, or 내 글 전체 (THEME-69). */
-  path: '/naver-blog' | '/my'
+  /** The list the post was opened from: the 글 list, or 내 콘텐츠 전체 (THEME-69). */
+  path: '/posts' | '/my'
   section: string
   filters: Readonly<Record<string, string>>
   scrollY: number
@@ -26,14 +26,20 @@ function store(ownerId: string, storage: NavigationStorage, targetId?: string) {
       }
     : storage
   return createReturnContextStore(ownerId, scoped, {
-    isAccessible: (path) => ['/naver-blog', '/posts', '/', '/library', '/my'].includes(path),
+    isAccessible: (path) => [POST_LIST_PATH, ...LEGACY_POST_LIST_PATHS, '/my'].includes(path),
   })
 }
 
-/** The channel opens on its own history (POST-43), so history and creation share one address and
- *  the section tells them apart. A `/posts` entry stored before that still names the history. */
+/** The 글 list (POST-43). */
+export const POST_LIST_PATH = '/posts'
+/** Addresses the list answered to before POST-43 settled on one; a context stored under one
+ *  still returns to the list. */
+const LEGACY_POST_LIST_PATHS = ['/naver-blog', '/', '/library']
+
+/** The list opens on its own history (POST-43), so history and creation share one address and
+ *  the section tells them apart. */
 function isPostHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'>): boolean {
-  return entry.path !== '/my' && (entry.section === 'posts' || entry.path === '/posts')
+  return entry.path !== '/my' && entry.section === 'posts'
 }
 
 /** Work opened from 내 글 전체 returns there, with its scroll (THEME-58 →THEME-69). */
@@ -76,15 +82,15 @@ export function readPostReturnContext(
   const entry = store(ownerId, storage, slug ?? 'new').read() ?? store(ownerId, storage).read()
   if (!entry || entry.targetId !== (slug ?? 'new')) return undefined
   if (entry.path === '/' || entry.path === '/library')
-    return { ...entry, path: '/naver-blog', section: 'naverBlog', filters: {} }
-  return entry.path === '/posts' ? { ...entry, path: '/naver-blog', section: 'posts' } : entry
+    return { ...entry, path: POST_LIST_PATH, section: 'naverBlog', filters: {} }
+  return entry.path === '/naver-blog' ? { ...entry, path: POST_LIST_PATH } : entry
 }
 
 export function postReturnDestination(ownerId: string, slug?: string, storage = browserStorage()) {
   const entry = readPostReturnContext(ownerId, slug, storage)
   if (entry && isMyWorkEntry(entry))
     return { path: '/my' as const, href: '/my', section: entry.section, scrollY: entry.scrollY }
-  const path = '/naver-blog' as const
+  const path = POST_LIST_PATH
   const search = Object.fromEntries(
     Object.entries(entry?.filters ?? {}).filter(([key]) => key === 'q' || key === 'status'),
   )
@@ -100,7 +106,7 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
 export function retainMintedPostEntry(ownerId: string, slug: string) {
   const entry = readPostReturnContext(ownerId)
   return rememberPostEntry(ownerId, {
-    path: entry && isMyWorkEntry(entry) ? '/my' : '/naver-blog',
+    path: entry && isMyWorkEntry(entry) ? '/my' : POST_LIST_PATH,
     section: entry?.section ?? 'naverBlog',
     filters: entry?.filters ?? {},
     scrollY: entry?.scrollY ?? 0,

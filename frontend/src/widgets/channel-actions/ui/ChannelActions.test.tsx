@@ -16,9 +16,9 @@ afterEach(() => {
 // the channel it was started from (THEME-58), and pressing it starts no paid work. Videos are one
 // list: the old Instagram address lands on it, and a video started there returns to it.
 it.each([
-  ['/naver-blog', '새 글', '/posts/new', '네이버 블로그로 돌아가기', '/naver-blog'],
-  ['/naver-clip', '새 영상', '/clips/new', '네이버 클립으로 돌아가기', '/naver-clip'],
-  ['/insta-clip', '새 영상', '/clips/new', '네이버 클립으로 돌아가기', '/naver-clip'],
+  ['/posts', '새 글', '/posts/new', '네이버 블로그로 돌아가기', '/posts'],
+  ['/clips', '새 영상', '/clips/new', '네이버 클립으로 돌아가기', '/clips'],
+  ['/clips', '새 영상', '/clips/new', '네이버 클립으로 돌아가기', '/clips'],
 ] as const)(
   'starts creation from %s at once and keeps the channel as its origin',
   async (path, label, creation, back, origin) => {
@@ -29,7 +29,7 @@ it.each([
     await waitFor(() => expect(view.router.state.location.pathname).toBe(creation))
     expect(calls.filter((call) => /^(Start|Create|Generate|Analyze|Save)/.test(call))).toEqual([])
     expect(
-      path === '/naver-blog' ? readPostReturnContext('alice') : readClipReturnContext('alice'),
+      path === '/posts' ? readPostReturnContext('alice') : readClipReturnContext('alice'),
     ).toMatchObject({ path: origin })
     expect(await screen.findByRole('link', { name: back })).toHaveAttribute('href', origin)
   },

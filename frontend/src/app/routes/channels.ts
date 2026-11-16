@@ -2,26 +2,52 @@ import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-route
 import { clipsSearchSchema } from '@/pages/clips'
 import { PostsPage, postsSearchSchema } from '@/pages/posts'
 import { authenticatedRoute } from './tree'
-/** Each channel opens straight onto its own history (THEME-38, POST-43, CLIP-41). */
+
+/** The 글 list and the 영상 list are 내 콘텐츠's own sections (THEME-38, POST-43, CLIP-41). */
+const postsListRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/posts',
+  validateSearch: postsSearchSchema,
+  component: PostsPage,
+})
+const clipsListRoute = createRoute({
+  getParentRoute: () => authenticatedRoute,
+  path: '/clips',
+  validateSearch: clipsSearchSchema,
+  component: lazyRouteComponent(() => import('@/pages/clips'), 'NaverClipHistoryPage'),
+})
+
+// The earlier addresses replace themselves with the lists, keeping the narrowing. A video has no
+// channel any more, so one stored in a link is dropped.
 const naverBlogRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/naver-blog',
   validateSearch: postsSearchSchema,
-  component: PostsPage,
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/posts', search, replace: true })
+  },
 })
 const naverClipRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/naver-clip',
   validateSearch: clipsSearchSchema,
-  component: lazyRouteComponent(() => import('@/pages/clips'), 'NaverClipHistoryPage'),
+  beforeLoad: ({ search: { q, status } }) => {
+    throw redirect({ to: '/clips', search: { q, status }, replace: true })
+  },
 })
-// Videos are one list now; an old Instagram address lands on it.
 const instaClipRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/insta-clip',
   validateSearch: clipsSearchSchema,
-  beforeLoad: ({ search }) => {
-    throw redirect({ to: '/naver-clip', search, replace: true })
+  beforeLoad: ({ search: { q, status } }) => {
+    throw redirect({ to: '/clips', search: { q, status }, replace: true })
   },
 })
-export const channelRoutes = [naverBlogRoute, naverClipRoute, instaClipRoute]
+
+export const channelRoutes = [
+  postsListRoute,
+  clipsListRoute,
+  naverBlogRoute,
+  naverClipRoute,
+  instaClipRoute,
+]

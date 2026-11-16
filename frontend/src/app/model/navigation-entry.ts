@@ -16,9 +16,8 @@ const STABLE_PARENTS = new Set([
   '/my',
   '/style',
   '/settings',
-  '/naver-blog',
-  '/naver-clip',
-  '/insta-clip',
+  '/posts',
+  '/clips',
   '/tests',
   '/tests/history',
   '/voices',
@@ -34,6 +33,13 @@ const STABLE_PARENTS = new Set([
   '/billing',
   '/admin',
 ])
+/** Addresses the two lists answered to before they settled on `/posts` and `/clips`; a return
+ *  stored under one still lands on the list (THEME-58). */
+const LEGACY_LIST_PATHS: Readonly<Record<string, string>> = {
+  '/naver-blog': '/posts',
+  '/naver-clip': '/clips',
+  '/insta-clip': '/clips',
+}
 const FILTER_KEYS = new Set([
   'q',
   'status',
@@ -57,7 +63,8 @@ export function navigationParent(
 ): { path: string; filters: Record<string, string> } | undefined {
   if (!safeInternalPath(value)) return undefined
   const url = new URL(value, 'https://postpilot.invalid')
-  const pathname = navigationPathname(url.pathname)
+  const given = navigationPathname(url.pathname)
+  const pathname = LEGACY_LIST_PATHS[given] ?? given
   if (!STABLE_PARENTS.has(pathname)) return undefined
   const filters: Record<string, string> = {}
   for (const [key, item] of url.searchParams)

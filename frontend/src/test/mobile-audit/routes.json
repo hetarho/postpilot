@@ -205,12 +205,12 @@
   },
   "/posts": {
     "heading": "네이버 블로그",
-    "expectedPath": "/naver-blog",
-    "expectedLeaf": "/authenticated/naver-blog",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
       "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
-      "status": "checked",
-      "finding": "Legacy route redirects to its current channel destination; no separate product screen.",
+      "status": "changed",
+      "finding": "The 글 list is its own address under 내 콘텐츠; the earlier /naver-blog redirects here (POST-43).",
       "inspectedStates": [
         "populated",
         "loading",
@@ -219,8 +219,7 @@
         "list",
         "working",
         "terminal-result"
-      ],
-      "redirect": "/naver-blog"
+      ]
     }
   },
   "/posts/new": {
@@ -234,7 +233,7 @@
       "inspectedStates": ["input", "loading", "failure"]
     },
     "return": {
-      "href": "/naver-blog",
+      "href": "/posts",
       "name": "네이버 블로그로 돌아가기"
     }
   },
@@ -265,7 +264,7 @@
       "inspectedStates": ["populated", "loading", "failure"]
     },
     "return": {
-      "href": "/naver-blog",
+      "href": "/posts",
       "name": "네이버 블로그로 돌아가기"
     }
   },
@@ -428,13 +427,13 @@
     }
   },
   "/clips": {
-    "heading": "네이버 클립",
-    "expectedPath": "/naver-clip",
-    "expectedLeaf": "/authenticated/naver-clip",
+    "heading": "영상",
+    "expectedPath": "/clips",
+    "expectedLeaf": "/authenticated/clips",
     "sourceReview": {
       "source": "frontend/src/pages/clips/ui/ClipsPage.tsx",
-      "status": "checked",
-      "finding": "Legacy route redirects to its current channel destination; no separate product screen.",
+      "status": "changed",
+      "finding": "The 영상 list is its own address under 내 콘텐츠; /naver-clip and /insta-clip redirect here (CLIP-41).",
       "inspectedStates": [
         "populated",
         "loading",
@@ -443,8 +442,7 @@
         "list",
         "working",
         "terminal-result"
-      ],
-      "redirect": "/naver-clip"
+      ]
     }
   },
   "/voices/voice-default/checks": {
@@ -520,7 +518,7 @@
       "name": "다듬기"
     },
     "return": {
-      "href": "/naver-clip",
+      "href": "/clips",
       "name": "네이버 클립으로 돌아가기"
     }
   },
@@ -616,8 +614,8 @@
   },
   "/publishing-agents": {
     "heading": "네이버 블로그",
-    "expectedPath": "/naver-blog",
-    "expectedLeaf": "/authenticated/naver-blog",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
       "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
       "status": "checked",
@@ -631,7 +629,7 @@
         "working",
         "terminal-result"
       ],
-      "redirect": "/naver-blog"
+      "redirect": "/posts"
     }
   },
   "/admin": {
@@ -933,41 +931,68 @@
       "inspectedStates": ["input", "loading", "failure"]
     },
     "return": {
-      "href": "/naver-clip",
+      "href": "/clips",
       "name": "네이버 클립으로 돌아가기"
     }
   },
   "/naver-blog": {
     "heading": "네이버 블로그",
-    "expectedPath": "/naver-blog",
-    "expectedLeaf": "/authenticated/naver-blog",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
-      "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
+      "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
       "status": "changed",
-      "finding": "Creation comes first, followed by channel history, templates and guidelines.",
-      "inspectedStates": ["populated"]
+      "finding": "Earlier list address replaces itself with /posts, keeping q and status.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/posts"
     }
   },
   "/naver-clip": {
-    "heading": "네이버 클립",
-    "expectedPath": "/naver-clip",
-    "expectedLeaf": "/authenticated/naver-clip",
+    "heading": "영상",
+    "expectedPath": "/clips",
+    "expectedLeaf": "/authenticated/clips",
     "sourceReview": {
-      "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
+      "source": "frontend/src/pages/clips/ui/ClipsPage.tsx",
       "status": "changed",
-      "finding": "Creation comes first, followed by channel history, templates and guidelines.",
-      "inspectedStates": ["populated"]
+      "finding": "Earlier list address replaces itself with /clips, keeping q and status.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/clips"
     }
   },
   "/insta-clip": {
-    "heading": "인스타 클립",
-    "expectedPath": "/insta-clip",
-    "expectedLeaf": "/authenticated/insta-clip",
+    "heading": "영상",
+    "expectedPath": "/clips",
+    "expectedLeaf": "/authenticated/clips",
     "sourceReview": {
-      "source": "frontend/src/pages/channel/ui/ChannelPage.tsx",
+      "source": "frontend/src/pages/clips/ui/ClipsPage.tsx",
       "status": "changed",
-      "finding": "Creation comes first, followed by channel history, templates and guidelines.",
-      "inspectedStates": ["populated"]
+      "finding": "Earlier list address replaces itself with /clips, keeping q and status.",
+      "inspectedStates": [
+        "populated",
+        "loading",
+        "failure",
+        "empty",
+        "list",
+        "working",
+        "terminal-result"
+      ],
+      "redirect": "/clips"
     }
   },
   "/create": {

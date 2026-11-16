@@ -56,10 +56,10 @@ it('refuses external/malformed/unproven record parents and clears unsafe filters
 
 it('separates root switches from structural and explicit workflow entry', () => {
   const storage = memory()
-  for (const target of ['/', '/naver-blog', '/naver-clip', '/insta-clip', '/settings'])
-    expect(
-      rememberNavigationEntry('alice', target, '/naver-blog', 'history', 100, storage, true),
-    ).toBe(false)
+  for (const target of ['/', '/posts', '/clips', '/settings'])
+    expect(rememberNavigationEntry('alice', target, '/posts', 'history', 100, storage, true)).toBe(
+      false,
+    )
   expect(rememberNavigationEntry('alice', '/templates/item', '/tests', 'tests', 100, storage)).toBe(
     false,
   )
@@ -77,7 +77,7 @@ it('separates root switches from structural and explicit workflow entry', () => 
     rememberNavigationEntry(
       'alice',
       '/tests/records/result',
-      '/naver-blog?q=food',
+      '/posts?q=food',
       'history',
       100,
       storage,
@@ -85,10 +85,15 @@ it('separates root switches from structural and explicit workflow entry', () => 
     ),
   ).toBe(true)
   expect(entryHref(readNavigationEntry('alice', '/tests/records/result', storage)!)).toBe(
-    '/naver-blog?q=food',
+    '/posts?q=food',
   )
-  expect(navigationParent('/naver-blog#settings-writing')?.path).toBe('/naver-blog')
-  expect(navigationParent('/posts?q=food')).toBeUndefined()
-  expect(navigationParent('/clips?channel=instagram_clip')).toBeUndefined()
+  expect(navigationParent('/posts#settings-writing')?.path).toBe('/posts')
+  // A return stored under an earlier list address lands on the list, keeping its narrowing.
+  expect(navigationParent('/naver-blog?q=food')).toEqual({ path: '/posts', filters: { q: 'food' } })
+  expect(navigationParent('/naver-clip/?status=draft')).toEqual({
+    path: '/clips',
+    filters: { status: 'draft' },
+  })
+  expect(navigationParent('/insta-clip')?.path).toBe('/clips')
   expect(navigationParent('/settings#settings-unknown')?.path).toBe('/settings')
 })

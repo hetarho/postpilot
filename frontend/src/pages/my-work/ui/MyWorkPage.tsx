@@ -305,7 +305,7 @@ export function MyWorkPage() {
         )}
         {!pending && posts.hasNextPage && (
           <Link
-            to="/naver-blog"
+            to="/posts"
             className={buttonStyles({ variant: 'secondary', className: 'self-start' })}
           >
             {t('work.more', { name: t('work.kind.post') })}

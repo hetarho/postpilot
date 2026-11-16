@@ -1,4 +1,4 @@
-import { clipChannelPath, type ClipChannel } from '@/entities/clip-project'
+import { CLIP_LIST_PATH, type ClipChannel } from '@/entities/clip-project'
 import type { navigationI18n } from './navigation-i18n'
 
 /** Guide: five VERBS, not five product areas — what a busy owner came to do. 만들기 asks what to
@@ -41,9 +41,13 @@ export type HubSection =
   { hub: 'mine'; key: MineSection } | { hub: 'style'; key: StyleSection; kind?: 'post' | 'video' }
 const SECTION_PATHS: Readonly<Record<string, HubSection>> = {
   '/my': { hub: 'mine', key: 'all' },
+  '/posts': { hub: 'mine', key: 'blog' },
+  '/clips': { hub: 'mine', key: 'naverClip' },
+  // The earlier list addresses replace themselves with these two; until they have, the hub chrome
+  // stays mounted rather than flashing away and back (THEME-72).
   '/naver-blog': { hub: 'mine', key: 'blog' },
   '/naver-clip': { hub: 'mine', key: 'naverClip' },
-  '/insta-clip': { hub: 'mine', key: 'instaClip' },
+  '/insta-clip': { hub: 'mine', key: 'naverClip' },
   '/voices': { hub: 'style', key: 'voices' },
   '/templates': { hub: 'style', key: 'templates', kind: 'post' },
   '/video-templates': { hub: 'style', key: 'templates', kind: 'video' },
@@ -59,9 +63,9 @@ export function currentSection(pathname: string): HubSection | undefined {
 /** The chip row of one hub, in its order. */
 export const MINE_SECTIONS: readonly { key: MineSection; href: string }[] = [
   { key: 'all', href: '/my' },
-  { key: 'blog', href: '/naver-blog' },
+  { key: 'blog', href: '/posts' },
   // One 영상 section: a video is a video, whichever channel it is posted to (owner 2026-11-16).
-  { key: 'naverClip', href: '/naver-clip' },
+  { key: 'naverClip', href: CLIP_LIST_PATH },
 ]
 export const STYLE_SECTIONS: readonly { key: StyleSection; href: string }[] = [
   { key: 'voices', href: '/voices' },
@@ -98,7 +102,7 @@ export interface RouteLocation {
   destination?: PrimaryDestination
 }
 const HOME: LocationAncestor = { href: '/', key: 'creation' }
-const NAVER_BLOG: LocationAncestor = { href: '/naver-blog', key: 'naverBlog' }
+const NAVER_BLOG: LocationAncestor = { href: '/posts', key: 'naverBlog' }
 const ME: LocationAncestor = { href: '/settings', key: 'settings' }
 const AI_PICK: LocationAncestor = { href: '/ai-models', key: 'models' }
 const TESTS: LocationAncestor = { href: '/tests', key: 'tests' }
@@ -115,8 +119,6 @@ function tabOf(root: string): PrimaryDestination | undefined {
 
 export function navigationChannelFromHref(href: string): ClipChannel | undefined {
   const url = new URL(href, 'https://postpilot.invalid')
-  if (navigationPathname(url.pathname) === '/insta-clip') return 'instagram_clip'
-  if (navigationPathname(url.pathname) === '/naver-clip') return 'naver_clip'
   const channel = url.searchParams.get('channel')
   return channel === 'instagram_clip' || channel === 'naver_clip' ? channel : undefined
 }
@@ -125,16 +127,15 @@ function structuralLocation(
   channel: ClipChannel | undefined,
 ): Omit<RouteLocation, 'destination'> {
   const clipHub: LocationAncestor = {
-    href: clipChannelPath(channel ?? 'naver_clip'),
+    href: CLIP_LIST_PATH,
     key: channel === 'instagram_clip' ? 'instaClip' : 'naverClip',
   }
   if (path === '/') return { current: 'creation', ancestors: [] }
   if (path === '/create') return { current: 'create', ancestors: [] }
   if (path === '/my') return { current: 'mine', ancestors: [] }
   if (path === '/style') return { current: 'style', ancestors: [] }
-  if (path === '/naver-blog') return { current: 'naverBlog', ancestors: [] }
-  if (path === '/naver-clip') return { current: 'naverClip', ancestors: [] }
-  if (path === '/insta-clip') return { current: 'instaClip', ancestors: [] }
+  if (path === '/posts') return { current: 'naverBlog', ancestors: [] }
+  if (path === CLIP_LIST_PATH) return { current: 'naverClip', ancestors: [] }
   if (
     path.startsWith('/tests/records/') ||
     path.startsWith('/posts/experiments/') ||

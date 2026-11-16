@@ -3,7 +3,7 @@ import { expect, it, vi } from 'vitest'
 import { SegmentedControl } from '../segmented-control/SegmentedControl'
 import { WorkspaceHeader } from './WorkspaceHeader'
 
-const destination = { href: '/naver-blog?q=산책', label: '네이버 블로그로 돌아가기' }
+const destination = { href: '/posts?q=산책', label: '네이버 블로그로 돌아가기' }
 
 // Observe the React handler before suppressing jsdom's unsupported document navigation.
 function click(link: HTMLElement, init: MouseEventInit = {}, alreadyPrevented = false) {

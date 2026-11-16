@@ -1,5 +1,6 @@
 export * from './config'
 export {
+  POST_LIST_PATH,
   rememberPostEntry,
   readPostReturnContext,
   postReturnDestination,

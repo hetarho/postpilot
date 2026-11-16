@@ -59,7 +59,7 @@ describe('canonical creation launch', () => {
     )
     expect(router.state.location.href).toBe('/clips/new')
     expect(readClipReturnContext('home-alice')).toMatchObject({
-      path: '/naver-clip',
+      path: '/clips',
       filters: { channel: 'naver_clip' },
     })
     expect(calls.filter((call) => /^(Create|Start|Analyze|SavePostDraft)/.test(call))).toEqual([])

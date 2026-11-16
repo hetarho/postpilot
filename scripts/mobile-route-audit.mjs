@@ -500,8 +500,8 @@ try {
   // populated route matrix. Browser data remain local deterministic RPC fixtures.
   const stateCases = process.env.MOBILE_STATES === "0" ? [] : [
     ...[
-      "/naver-blog",
-      "/naver-clip",
+      "/posts",
+      "/clips",
       "/templates",
       "/video-templates",
       "/guidelines",
@@ -513,8 +513,8 @@ try {
       "/tests/history",
     ].map((at) => ({ at, state: "empty", kind: "empty" })),
     ...[
-      "/naver-blog",
-      "/naver-clip",
+      "/posts",
+      "/clips",
       "/templates",
       "/video-templates",
       "/guidelines",
@@ -540,8 +540,8 @@ try {
     ...[
       "/posts/review",
       "/clips/review",
-      "/naver-blog",
-      "/naver-clip",
+      "/posts",
+      "/clips",
       "/tests/test",
       "/tests/history",
     ].flatMap((at) =>
