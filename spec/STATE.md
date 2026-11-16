@@ -50,6 +50,7 @@
 ## review
 | id | st |
 |---|---|
+| audio-true-peak-261117 | converted@261117 |
 | tidy-261116 | converted@261116 |
 | design-system-panels-261114 | converted@261114 |
 | video-editing-ux-261114 | converted@261114 |
@@ -83,6 +84,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
+| T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -91,7 +93,4 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T851 T871 T880
-- inspect work board for remaining tasks
-- gusta-implement-task T851 T869 T871
-- gusta-implement-task T869 T878 T879
+- gusta-implement-task T887
