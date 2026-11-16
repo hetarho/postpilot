@@ -68,9 +68,9 @@
     "via": "merge",
     "executor": {
       "host": "DESKTOP-VKPLS8P",
-      "pid": 1925346
+      "pid": 1951492
     },
-    "phase": "failed",
+    "phase": "checking",
     "land": "main",
     "base": "6ac3344dae6c6557021de9013d658b53877247ee",
     "cohort": [
@@ -131,7 +131,7 @@
     ],
     "at": "2026-11-16T03:14:23.442Z",
     "deadline": "2026-11-16T10:37:02.747Z",
-    "candidate": "45db244f17c2d29315a9a0f075ff7b55e6c5fad2",
+    "candidate": "13d9829e259c0ccefa9c0369675e8f17a203eab9",
     "checks": [
       {
         "command": "pnpm test:dev",
@@ -1526,8 +1526,8 @@
         "at": "2026-11-16T03:56:38.987Z"
       }
     ],
-    "path": "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/72fb66a4-740b-499b-8faf-11a2ff6e56e5",
-    "branch": "integration/72fb66a4-740b-499b-8faf-11a2ff6e56e5",
+    "path": "/tmp/claude-1000/-home-hrlee-project-postpilot/86be2273-0a85-441d-bf5d-10a97ad1a5c6/scratchpad/cand",
+    "branch": "integration/72fb66a4-outside-git",
     "version": {
       "level": "minor",
       "from": "0.1.2",
