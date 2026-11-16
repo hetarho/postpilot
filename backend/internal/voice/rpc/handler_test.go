@@ -171,6 +171,17 @@ func TestVoiceMaterialRPCs(t *testing.T) {
 			}
 		}
 	}
+	// VOICE-78: six kinds in display order, and a thread question carries its kind.
+	if kinds := prompts.Msg.GetKinds(); len(kinds) != 6 || kinds[0].GetKind() != postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_FOOD || kinds[0].GetLabel() != "맛집" || kinds[5].GetPlain() != "그 제품" {
+		t.Fatalf("kinds = %+v", kinds)
+	}
+	threadKinds := map[string]postpilotv1.VoiceExperienceKind{}
+	for _, prompt := range prompts.Msg.GetPrompts() {
+		threadKinds[prompt.GetKey()] = prompt.GetExperienceKind()
+	}
+	if threadKinds["thread_cafe_opening_1"] != postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_CAFE || threadKinds["starter_snack"] != postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_UNSPECIFIED {
+		t.Fatalf("thread_cafe_opening_1 = %v, starter_snack = %v", threadKinds["thread_cafe_opening_1"], threadKinds["starter_snack"])
+	}
 	photos := 0
 	parts := map[postpilotv1.VoicePromptPart]int{}
 	for _, prompt := range prompts.Msg.GetPrompts() {

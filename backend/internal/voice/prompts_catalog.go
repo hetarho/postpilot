@@ -16,8 +16,38 @@ func makePromptCatalog() []Prompt {
 		{Key: "starter_day_close", Part: PartClosing, Starter: true, Scene: "가볍게 산책하고 집으로 돌아왔어요. 오늘 이야기를 마무리해 볼까요?", Text: "마지막에 어떤 한마디를 남기고 싶어요?", Hint: "오늘 기분이나 다음에 하고 싶은 일을 말해도 좋아요."},
 		{Key: "starter_friend_close", Part: PartClosing, Starter: true, Scene: "즐거웠던 하루 이야기를 이웃에게 다 들려줬어요.", Text: "글을 읽은 이웃에게 어떤 끝인사를 건네고 싶어요?", Hint: "평소 글을 마무리할 때 쓰는 편한 인사면 충분해요."},
 	}
+	reviews, others := splitReviewMoments(additionalPrompts)
+	out = append(out, reviews...)
 	out = append(out, legacyPrompts...)
-	return append(out, additionalPrompts...)
+	out = append(out, others...)
+	return append(out, threadPrompts()...)
+}
+
+// reviewMomentFamilies are the everyday families that are review moments — a place, food or
+// drink, a thing bought, a recommendation — offered before other everyday scenes (VOICE-60),
+// in this order.
+var reviewMomentFamilies = []string{"food", "drink", "shopping", "recommendations", "neighborhood", "gift", "photos"}
+
+// splitReviewMoments returns the review-moment families' situations in reviewMomentFamilies
+// order, then every other situation in its catalog order. Keys and texts stay as they are.
+func splitReviewMoments(situations []Prompt) (reviews, others []Prompt) {
+	byFamily := map[string][]Prompt{}
+	review := map[string]bool{}
+	for _, family := range reviewMomentFamilies {
+		review["everyday_"+family] = true
+	}
+	for _, prompt := range situations {
+		family := promptFamily(prompt.Key)
+		if review[family] {
+			byFamily[family] = append(byFamily[family], prompt)
+			continue
+		}
+		others = append(others, prompt)
+	}
+	for _, family := range reviewMomentFamilies {
+		reviews = append(reviews, byFamily["everyday_"+family]...)
+	}
+	return reviews, others
 }
 
 // Ordinary imagined situations require no private history, specialist knowledge or upload.

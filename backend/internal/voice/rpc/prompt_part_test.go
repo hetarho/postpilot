@@ -143,3 +143,22 @@ func TestHabitsLocateTheirField(t *testing.T) {
 		t.Fatalf("habit = %+v", first)
 	}
 }
+
+// ARCH-3, VOICE-78: every experience kind maps to its own generated value, and every generated
+// value but UNSPECIFIED is one the domain has.
+func TestEveryExperienceKindMaps(t *testing.T) {
+	seen := map[postpilotv1.VoiceExperienceKind]bool{}
+	for _, info := range voice.ExperienceKinds() {
+		mapped := toProtoExperienceKind(info.Kind)
+		if mapped == postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_UNSPECIFIED || seen[mapped] {
+			t.Fatalf("%q maps to %v", info.Kind, mapped)
+		}
+		seen[mapped] = true
+	}
+	if len(seen) != len(postpilotv1.VoiceExperienceKind_name)-1 {
+		t.Fatalf("the domain maps %d of %d generated kinds", len(seen), len(postpilotv1.VoiceExperienceKind_name)-1)
+	}
+	if got := toProtoExperienceKind(""); got != postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_UNSPECIFIED {
+		t.Fatalf("a situation maps to %v", got)
+	}
+}

@@ -207,9 +207,14 @@ func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postp
 	prompts := h.service.Prompts()
 	out := make([]*postpilotv1.VoicePrompt, 0, len(prompts))
 	for _, prompt := range prompts {
-		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter, Examples: toProtoPromptExamples(prompt.Examples)})
+		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter, Examples: toProtoPromptExamples(prompt.Examples), ExperienceKind: toProtoExperienceKind(prompt.Kind)})
 	}
-	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out}), nil
+	kinds := voice.ExperienceKinds()
+	infos := make([]*postpilotv1.VoiceExperienceKindInfo, 0, len(kinds))
+	for _, info := range kinds {
+		infos = append(infos, &postpilotv1.VoiceExperienceKindInfo{Kind: toProtoExperienceKind(info.Kind), Label: info.Label, Plain: info.Plain})
+	}
+	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out, Kinds: infos}), nil
 }
 
 func (h *Handler) CreateVoicePhotoUpload(ctx context.Context, req *connect.Request[postpilotv1.CreateVoicePhotoUploadRequest]) (*connect.Response[postpilotv1.CreateVoicePhotoUploadResponse], error) {
@@ -520,6 +525,26 @@ func toProtoPart(part voice.PromptPart) postpilotv1.VoicePromptPart {
 		return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING
 	}
 	return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_UNSPECIFIED
+}
+
+// toProtoExperienceKind maps a thread question's kind (VOICE-78); a situation's empty kind is
+// UNSPECIFIED.
+func toProtoExperienceKind(kind voice.ExperienceKind) postpilotv1.VoiceExperienceKind {
+	switch kind {
+	case voice.ExperienceFood:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_FOOD
+	case voice.ExperienceCafe:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_CAFE
+	case voice.ExperienceBeauty:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_BEAUTY
+	case voice.ExperienceStay:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_STAY
+	case voice.ExperienceLeisure:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_LEISURE
+	case voice.ExperienceProduct:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_PRODUCT
+	}
+	return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_UNSPECIFIED
 }
 
 // toProtoPromptExamples carries a question's example replies (VOICE-79); the frame stays in Go.

@@ -24,6 +24,9 @@ type Prompt struct {
 	Scene   string
 	Hint    string
 	Starter bool
+	// Kind is empty for a situation and names the experience kind for a thread question
+	// (VOICE-78).
+	Kind ExperienceKind
 	// Examples are the question's example replies (VOICE-79), attached from prompt_examples.go.
 	Examples []PromptExample
 }

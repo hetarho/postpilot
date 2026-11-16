@@ -278,6 +278,28 @@ message VoicePrompt {
   bool starter = 7;
   // Three example replies in visibly different registers (VOICE-79); code, never 학습 글.
   repeated VoicePromptExample examples = 8;
+  // The experience kind a thread question belongs to (VOICE-78); UNSPECIFIED for a situation.
+  // A thread question's text names the experience through the `{experience}` token.
+  VoiceExperienceKind experience_kind = 9;
+}
+
+// One of the six top-level review kinds the learning chat asks about first (VOICE-78).
+enum VoiceExperienceKind {
+  VOICE_EXPERIENCE_KIND_UNSPECIFIED = 0;
+  VOICE_EXPERIENCE_KIND_FOOD = 1;
+  VOICE_EXPERIENCE_KIND_CAFE = 2;
+  VOICE_EXPERIENCE_KIND_BEAUTY = 3;
+  VOICE_EXPERIENCE_KIND_STAY = 4;
+  VOICE_EXPERIENCE_KIND_LEISURE = 5;
+  VOICE_EXPERIENCE_KIND_PRODUCT = 6;
+}
+
+// An experience kind with its Korean label and the plain word an unnamed experience reads as
+// (그곳 · 그 제품).
+message VoiceExperienceKindInfo {
+  VoiceExperienceKind kind = 1;
+  string label = 2;
+  string plain = 3;
 }
 
 // The sentence-ending register an example reply is written in (VOICE-79).
@@ -382,7 +404,11 @@ message GetVoiceSampleResponse {
 }
 
 message ListVoicePromptsRequest {}
-message ListVoicePromptsResponse { repeated VoicePrompt prompts = 1; }
+message ListVoicePromptsResponse {
+  repeated VoicePrompt prompts = 1;
+  // The six experience kinds in display order (VOICE-78).
+  repeated VoiceExperienceKindInfo kinds = 2;
+}
 
 // A photo prompt's photo is the owner's own, converted in the browser and PUT directly to
 // private storage as a post photo is (VOICE-60, POST-34).
