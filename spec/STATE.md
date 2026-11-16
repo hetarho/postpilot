@@ -95,7 +95,6 @@
 | T877 | Give the voice entity experiences and experience-named question text | VOICE | T872 T876 | todo |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
-| T880 | Keep writing-option popovers inside the viewport and above page docks | POST THEME ARCH | - | doing@261116.wopts |
 | T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | todo |
 
 ## work
@@ -105,9 +104,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T880
-- gusta-implement-task T881
-- gusta-implement-task T869
-- gusta-implement-task T851
-- gusta-implement-task T871
+- gusta-implement-task T851 T869 T871
 - inspect work board for remaining tasks
