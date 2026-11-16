@@ -162,9 +162,15 @@ function Result({ kind, section }: { kind: SectionContent; section: SectionDraft
         </span>
       )
     case 'ask':
-      // The AI writes the part, from what the author typed (TMPL-74).
+      // The AI writes the part, from what the author typed (TMPL-74), under the part's optional
+      // fixed text.
       return (
         <span className="flex min-w-0 flex-col gap-1.5">
+          {section.literal.trim() !== '' && (
+            <Typography variant="meta" as="span" className="text-content-primary line-clamp-1">
+              {section.literal.trim()}
+            </Typography>
+          )}
           <span className="flex min-w-0 items-center gap-1.5">
             <Sparkles className="text-content-tertiary size-3.5 shrink-0" />
             <AnswerChip>{t('wizard.section.kinds.askAnswer')}</AnswerChip>

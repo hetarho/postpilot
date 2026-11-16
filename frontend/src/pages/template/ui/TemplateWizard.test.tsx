@@ -69,6 +69,12 @@ describe('the template wizard', () => {
       if (current.textContent === '이름을 붙이고 저장해요') break
       if (current.textContent === '“매장 정보” 부분')
         await user.click(screen.getByRole('checkbox', { name: '꼭 답하게 하기' }))
+      // The 별점 part takes the owner's own rating criteria above its field (TMPL-74).
+      if (current.textContent === '“별점” 부분')
+        await user.type(
+          screen.getByLabelText('고정 문구 (선택)'),
+          '평가 기준{Enter}⭐ 다시는 안 갈 것 같음',
+        )
       await user.click(next())
     }
 
@@ -94,7 +100,11 @@ describe('the template wizard', () => {
     // 직접 입력 asks the author, and the AI writes the part from the answer (TMPL-74).
     expect(saved.body).toMatch(/매장 정보\n<ask label="매장 정보" required="true">[^<]+<\/ask>\n/)
     // Every leaf ends with 별점, asked of the author (TMPL-72).
-    expect(saved.body.endsWith('별점\n<ask label="별점">직접 매긴 별점과 그 이유</ask>')).toBe(true)
+    expect(
+      saved.body.endsWith(
+        '별점\n평가 기준\n⭐ 다시는 안 갈 것 같음\n<ask label="별점">직접 매긴 별점과 그 이유</ask>',
+      ),
+    ).toBe(true)
     expect(saved.body).not.toContain('서비스·응대')
     expect(parseTemplate('', saved.body, TEMPLATE_PARSE_OPTIONS).ok).toBe(true)
   })

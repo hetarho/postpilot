@@ -75,4 +75,20 @@ describe('the content-kind card', () => {
     expect(within(group).getByLabelText('적을 문구')).toBeInTheDocument()
     expect(screen.queryByLabelText('물어볼 질문')).not.toBeInTheDocument()
   })
+
+  it("draws a 질문 part's fixed text above the written lines only when it has text", () => {
+    const { rerender } = render(
+      <ContentKindCard section={section('ask')} onChange={() => {}} inputs={inputs} />,
+    )
+    expect(screen.getByText('지도는 아래에')).toBeInTheDocument()
+    rerender(
+      <ContentKindCard
+        section={{ ...section('ask'), literal: '  ' }}
+        onChange={() => {}}
+        inputs={inputs}
+      />,
+    )
+    expect(screen.queryByText('지도는 아래에')).not.toBeInTheDocument()
+    expect(screen.getByText('내 답을 바탕으로')).toBeInTheDocument()
+  })
 })

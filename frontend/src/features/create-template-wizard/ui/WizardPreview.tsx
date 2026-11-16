@@ -94,14 +94,24 @@ function SectionStandIns({ section }: { section: SectionDraft }) {
     switch (section.content) {
       case 'write':
         return <WriteStandIn topic={section.help.trim() || section.name} />
-      case 'ask':
-        // The AI flavor (TMPL-74): what the part is about, written from the author's answer.
-        return (
+      case 'ask': {
+        // The AI flavor (TMPL-74): what the part is about, written from the author's answer,
+        // under the part's optional fixed text.
+        const answer = (
           <AnswerStandIn
             label={section.question.trim() || section.name}
             topic={section.help.trim() || section.name}
           />
         )
+        return section.literal.trim() !== '' ? (
+          <>
+            <FixedTextStandIn text={section.literal.trim()} />
+            {answer}
+          </>
+        ) : (
+          answer
+        )
+      }
       case 'literal':
         return section.literal.trim() !== '' ? (
           <FixedTextStandIn text={section.literal.trim()} />

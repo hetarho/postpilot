@@ -116,6 +116,22 @@ export function SectionStep({
                 />
                 {t('wizard.section.required')}
               </label>
+              {/* Optional text placed between the heading and the written part, such as the
+                  rating criteria above a 별점; it leaves with the heading when the answer is
+                  skipped (TMPL-74 →TMPL-45). */}
+              <div className="mt-4">
+                <FieldLabel htmlFor={`${id}-ask-literal`}>
+                  {t('wizard.section.askLiteral')}
+                </FieldLabel>
+                <Textarea
+                  id={`${id}-ask-literal`}
+                  value={section.literal}
+                  rows={3}
+                  autoGrow
+                  onChange={(event) => edit({ literal: event.target.value })}
+                  className="mt-1"
+                />
+              </div>
             </div>
           ),
           literal: (

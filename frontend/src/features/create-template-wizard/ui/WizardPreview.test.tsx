@@ -90,4 +90,23 @@ describe('the wizard preview', () => {
     expect(preview().getByText('지도는 아래에')).toBeInTheDocument()
     expect(preview().getByText('적어 둔 문구가 그대로 들어가요')).toBeInTheDocument()
   })
+
+  it("draws a 질문 part's fixed text above its written part", () => {
+    render(
+      <WizardPreview
+        sections={[
+          section({
+            id: 'rating',
+            heading: '별점',
+            content: 'ask',
+            question: '별점',
+            literal: '평가 기준\n⭐ 다시는 안 갈 것 같음',
+          }),
+        ]}
+      />,
+    )
+    const fixed = preview().getByText(/평가 기준/)
+    const answer = preview().getByText('입력한 내용')
+    expect(fixed.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
 })
