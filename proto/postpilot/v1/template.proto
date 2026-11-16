@@ -205,6 +205,9 @@ message StartTemplateHeadingSuggestionsRequest {
   repeated TemplateHeadingSection sections = 4;
   // The owner's optional wording request (TMPL-73): quoted style direction, never visit facts.
   string style_request = 5;
+  // Heading lines of the owner's saved templates (TMPL-76): wording to follow below the request
+  // and above the 기본 voice, never visit facts. At most 30, each one line.
+  repeated string reference_headings = 6;
 }
 message StartTemplateHeadingSuggestionsResponse { string job_id = 1; }
 message GetTemplateHeadingSuggestionsRequest { string job_id = 1; }

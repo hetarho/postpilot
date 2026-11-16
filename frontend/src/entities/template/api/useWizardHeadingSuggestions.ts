@@ -52,10 +52,15 @@ export function useWizardHeadingSuggestions(
       current
         ? (snapshot.context.groups[sections.findIndex((section) => section.id === id)] ?? [])
         : [],
-    /** The owner's wording request travels with this one job only (TMPL-73). Resolves once the
+    /** The owner's wording request and saved heading lines travel with this one job only
+     *  (TMPL-73 TMPL-76). Resolves once the
      *  request has left admission: true when it was admitted (or not started at all), false when
      *  the admission was refused, so a caller can keep its own surface open over a refusal. */
-    start: async (writeModel: HeadingSuggestionInput['writeModel'], styleRequest = '') => {
+    start: async (
+      writeModel: HeadingSuggestionInput['writeModel'],
+      styleRequest = '',
+      referenceHeadings: readonly string[] = [],
+    ) => {
       actor.send({
         type: 'start',
         ownerId,
@@ -66,6 +71,7 @@ export function useWizardHeadingSuggestions(
           targetPath,
           sections: sections.map(({ role, description }) => ({ role, description })),
           styleRequest: styleRequest.trim(),
+          referenceHeadings,
         },
       })
       const settled = await waitFor(actor, (value) => !value.matches('starting'))

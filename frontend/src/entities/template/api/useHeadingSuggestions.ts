@@ -9,6 +9,7 @@ export function useStartHeadingSuggestions() {
       ...input,
       targetPath: [...input.targetPath],
       sections: [...input.sections],
+      referenceHeadings: [...(input.referenceHeadings ?? [])],
     })
     return result.jobId
   }

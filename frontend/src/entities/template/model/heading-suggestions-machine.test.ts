@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createActor, waitFor } from 'xstate'
-import { HEADING_STYLE_REQUEST_MAX_CHARS } from '../config'
+import { HEADING_REFERENCES_MAX, HEADING_STYLE_REQUEST_MAX_CHARS } from '../config'
 import { headingSuggestionsMachine } from './heading-suggestions-machine'
 
 const request = {
@@ -56,6 +56,30 @@ describe('heading suggestion actor', () => {
     await waitFor(actor, (snapshot) => snapshot.matches('running'))
     expect(start).toHaveBeenCalledWith(
       expect.objectContaining({ styleRequest: '이모지를 넣어 줘' }),
+    )
+    actor.stop()
+  })
+
+  it('carries saved heading references into the start and refuses more than the limit', async () => {
+    const start = vi.fn(async () => 'job-referenced')
+    const actor = createActor(headingSuggestionsMachine, {
+      input: { ownerId: 'alice', start },
+    }).start()
+    actor.send({
+      ...begin,
+      request: {
+        ...request,
+        referenceHeadings: Array.from({ length: HEADING_REFERENCES_MAX + 1 }, () => '소제목'),
+      },
+    })
+    expect(start).not.toHaveBeenCalled()
+    actor.send({
+      ...begin,
+      request: { ...request, referenceHeadings: ['📝 어쩌다 가게 됐냐면요...'] },
+    })
+    await waitFor(actor, (snapshot) => snapshot.matches('running'))
+    expect(start).toHaveBeenCalledWith(
+      expect.objectContaining({ referenceHeadings: ['📝 어쩌다 가게 됐냐면요...'] }),
     )
     actor.stop()
   })

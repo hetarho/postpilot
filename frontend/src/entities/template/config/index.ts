@@ -17,6 +17,9 @@ export const HEADING_SUGGESTION_SECTIONS_MAX = 20
 export const HEADING_CHOICES_PER_SECTION = 3
 /** The owner's optional wording request for heading suggestions (TMPL-73), as the server bounds it. */
 export const HEADING_STYLE_REQUEST_MAX_CHARS = 200
+/** How many saved heading lines one suggestion request may carry as its wording reference
+ *  (TMPL-76), as the server bounds it. */
+export const HEADING_REFERENCES_MAX = 30
 export const TEMPLATE_NAME_MAX_CHARS = positiveIntEnv(ENV_LIMIT_OVERRIDES.templateNameMaxChars, 40)
 export const TEMPLATE_DESCRIPTION_MAX_CHARS = positiveIntEnv(
   ENV_LIMIT_OVERRIDES.templateDescriptionMaxChars,

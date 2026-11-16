@@ -84,7 +84,6 @@
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
-| T869 | Carry saved heading references through heading suggestions | TMPL | - | todo |
 | T870 | Offer 내 템플릿 소제목 참고해서 제안 받기 in the heading sheet | TMPL | T869 | todo |
 
 ## work
@@ -94,6 +93,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T869
-- gusta-implement-task T851
+- gusta-implement-task T851 T870
 - inspect work board for remaining tasks

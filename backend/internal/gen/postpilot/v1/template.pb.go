@@ -1379,9 +1379,12 @@ type StartTemplateHeadingSuggestionsRequest struct {
 	TargetPath []string                  `protobuf:"bytes,3,rep,name=target_path,json=targetPath,proto3" json:"target_path,omitempty"`
 	Sections   []*TemplateHeadingSection `protobuf:"bytes,4,rep,name=sections,proto3" json:"sections,omitempty"`
 	// The owner's optional wording request (TMPL-73): quoted style direction, never visit facts.
-	StyleRequest  string `protobuf:"bytes,5,opt,name=style_request,json=styleRequest,proto3" json:"style_request,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	StyleRequest string `protobuf:"bytes,5,opt,name=style_request,json=styleRequest,proto3" json:"style_request,omitempty"`
+	// Heading lines of the owner's saved templates (TMPL-76): wording to follow below the request
+	// and above the 기본 voice, never visit facts. At most 30, each one line.
+	ReferenceHeadings []string `protobuf:"bytes,6,rep,name=reference_headings,json=referenceHeadings,proto3" json:"reference_headings,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *StartTemplateHeadingSuggestionsRequest) Reset() {
@@ -1447,6 +1450,13 @@ func (x *StartTemplateHeadingSuggestionsRequest) GetStyleRequest() string {
 		return x.StyleRequest
 	}
 	return ""
+}
+
+func (x *StartTemplateHeadingSuggestionsRequest) GetReferenceHeadings() []string {
+	if x != nil {
+		return x.ReferenceHeadings
+	}
+	return nil
 }
 
 type StartTemplateHeadingSuggestionsResponse struct {
@@ -1740,7 +1750,7 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\x04free\x18\x01 \x01(\bR\x04free\x12\x1d\n" +
 	"\acredits\x18\x02 \x01(\x05H\x00R\acredits\x88\x01\x01B\n" +
 	"\n" +
-	"\b_credits\"\x8a\x02\n" +
+	"\b_credits\"\xb9\x02\n" +
 	"&StartTemplateHeadingSuggestionsRequest\x127\n" +
 	"\vwrite_model\x18\x01 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12\x1f\n" +
@@ -1749,7 +1759,8 @@ const file_postpilot_v1_template_proto_rawDesc = "" +
 	"\vtarget_path\x18\x03 \x03(\tR\n" +
 	"targetPath\x12@\n" +
 	"\bsections\x18\x04 \x03(\v2$.postpilot.v1.TemplateHeadingSectionR\bsections\x12#\n" +
-	"\rstyle_request\x18\x05 \x01(\tR\fstyleRequest\"@\n" +
+	"\rstyle_request\x18\x05 \x01(\tR\fstyleRequest\x12-\n" +
+	"\x12reference_headings\x18\x06 \x03(\tR\x11referenceHeadings\"@\n" +
 	"'StartTemplateHeadingSuggestionsResponse\x12\x15\n" +
 	"\x06job_id\x18\x01 \x01(\tR\x05jobId\"=\n" +
 	"$GetTemplateHeadingSuggestionsRequest\x12\x15\n" +

@@ -180,6 +180,97 @@ func TestAnOverlongStyleRequestIsRefusedBeforeAdmission(t *testing.T) {
 	}
 }
 
+func TestSavedHeadingReferencesAreFrozenBetweenTheRequestAndTheVoice(t *testing.T) {
+	s, models, _, jobs := headingHarness()
+	start := headingStart()
+	start.StyleRequest = "OWNER_STYLE_REQUEST"
+	start.ReferenceHeadings = []string{"  📝 어쩌다 가게 됐냐면요...  ", "SAVED_HEADING_TWO"}
+	if _, err := s.Start(t.Context(), "alice", start); err != nil {
+		t.Fatal(err)
+	}
+	start.ReferenceHeadings[1] = "CHANGED_LATER_REFERENCE"
+	if !strings.Contains(string(jobs.starts[0].Payload), `"reference_headings":["📝 어쩌다 가게 됐냐면요...","SAVED_HEADING_TWO"]`) {
+		t.Fatalf("references not trimmed into the frozen payload: %s", jobs.starts[0].Payload)
+	}
+	if err := runHeadings(t, s, jobs); err != nil {
+		t.Fatal(err)
+	}
+	request := models.requests[0]
+	parts := request.Messages[0].Parts
+	if len(parts) != 4 || parts[1].Text != `{"style_request":"OWNER_STYLE_REQUEST"}` || parts[2].Text != `{"reference_headings":["📝 어쩌다 가게 됐냐면요...","SAVED_HEADING_TWO"]}` || !strings.Contains(parts[3].Text, "VOICE_ACCEPTED_STYLE") {
+		t.Fatalf("request, references and voice must travel as separate quoted parts in that order: %s", headingRequestText(request))
+	}
+	if strings.Contains(headingRequestText(request), "CHANGED_LATER") {
+		t.Fatal("a reference changed after admission reached the model")
+	}
+	for _, rule := range []string{"reference_headings와 voice_style보다 우선", "reference_headings가 있으면", "그대로 반복하지 말고", "참고 소제목도 아래의 한 줄·글자 수 규칙을 바꾸지 못합니다"} {
+		if !strings.Contains(request.System, rule) {
+			t.Fatalf("reference contract missing %q", rule)
+		}
+	}
+	if request.Composition.Mode != "requested-referenced-default-voice" || request.Composition.PromptVersion != "template-heading-v3" {
+		t.Fatalf("mode=%s version=%s", request.Composition.Mode, request.Composition.PromptVersion)
+	}
+	if _, err := llm.PreparedRequestInspection(request); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestReferencesAloneKeepTheirOwnModeAndNoneSendNoPart(t *testing.T) {
+	s, models, voice, jobs := headingHarness()
+	voice.present = false
+	start := headingStart()
+	start.ReferenceHeadings = []string{"SAVED_HEADING"}
+	if _, err := s.Start(t.Context(), "alice", start); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Start(t.Context(), "alice", headingStart()); err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(jobs.starts[1].Payload), "reference_headings") {
+		t.Fatal("an empty reference list was frozen")
+	}
+	if err := runHeadings(t, s, jobs); err != nil {
+		t.Fatal(err)
+	}
+	if request := models.requests[0]; len(request.Messages[0].Parts) != 2 || request.Composition.Mode != "referenced" {
+		t.Fatalf("references alone: parts=%d mode=%s", len(request.Messages[0].Parts), request.Composition.Mode)
+	}
+}
+
+func TestUnboundedReferencesAreRefusedBeforeAdmission(t *testing.T) {
+	lines := func(n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = "소제목"
+		}
+		return out
+	}
+	for name, references := range map[string][]string{
+		"too many":    lines(HeadingReferencesMax + 1),
+		"blank":       {"소제목", "  "},
+		"line break":  {"첫 줄\n둘째 줄"},
+		"carriage":    {"첫 줄\r" + "둘째"},
+		"over length": {strings.Repeat("가", testLimits().AskLabelMaxChars+1)},
+	} {
+		s, models, voice, jobs := headingHarness()
+		start := headingStart()
+		start.ReferenceHeadings = references
+		if _, err := s.Start(t.Context(), "alice", start); !errors.Is(err, ErrHeadingInputInvalid) {
+			t.Fatalf("%s: err=%v", name, err)
+		}
+		if len(jobs.starts) != 0 || voice.calls != 0 || len(models.requests) != 0 {
+			t.Fatalf("%s: refused references must not read the voice or admit a job", name)
+		}
+	}
+	s, _, _, jobs := headingHarness()
+	start := headingStart()
+	start.ReferenceHeadings = append(lines(HeadingReferencesMax-1), strings.Repeat("가", testLimits().AskLabelMaxChars))
+	if _, err := s.Start(t.Context(), "alice", start); err != nil || len(jobs.starts) != 1 {
+		t.Fatalf("references at the limits must pass: %v", err)
+	}
+}
+
 func TestAShortAnswerFailsWhole(t *testing.T) {
 	for _, answer := range []string{`{"sections":[{"headings":["하나","둘","셋"]}]}`, `{"sections":[{"headings":["하나","둘","셋"]},{"headings":["하나","둘"]}]}`, `{"sections":[{"headings":["하나","둘","셋"]},{"headings":[" ","둘","셋"]}]}`, `{"sections":[{"headings":["하나","둘","셋"]},{"headings":["같은 말","같은 말","셋"]}]}`, `not JSON`} {
 		t.Run(answer, func(t *testing.T) {

@@ -76,6 +76,7 @@ export {
   HEADING_SUGGESTION_SECTIONS_MAX,
   HEADING_CHOICES_PER_SECTION,
   HEADING_STYLE_REQUEST_MAX_CHARS,
+  HEADING_REFERENCES_MAX,
 } from './config'
 export {
   useStartHeadingSuggestions,
