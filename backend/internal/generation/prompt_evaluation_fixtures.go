@@ -8,7 +8,7 @@ import (
 	"github.com/postpilot/backend/internal/post"
 )
 
-const PromptEvaluationFixtureVersion = "synthetic-writing-material-v2"
+const PromptEvaluationFixtureVersion = "synthetic-writing-material-v3"
 
 // PromptInventoryFixture includes the retained admitted protocol separately from
 // the current protocol. Request is an unissued application request, not provider
@@ -87,7 +87,7 @@ func syntheticPromptEvaluationMaterial() promptEvaluationMaterial {
 	}
 	observations := []Observation{
 		{File: images[0].Filename, Scene: "창가 옆 초록 식물", Mood: "고소한 향이 느껴질 것 같음", VisibleText: "초록창가 7호점", Objects: []string{"컵 2개"}},
-		{File: images[1].Filename, Scene: "탁자 위 흰 컵", Objects: []string{"메뉴판"}},
+		{File: images[1].Filename, Scene: "탁자 위 흰 컵", Objects: []string{"메뉴판", "햄버거"}},
 		{File: images[2].Filename, Scene: "컵을 든 손", Events: []string{"0.0초에 컵을 들고 1.0초에 내려놓음"}, Speech: "어서 오세요"},
 	}
 	for i := range observations {
@@ -127,7 +127,7 @@ func syntheticPromptEvaluationMaterial() promptEvaluationMaterial {
 	return promptEvaluationMaterial{
 		post: PostInput{
 			Slug: "synthetic-only", UserID: "synthetic-only", TargetLanguage: language, ContentLanguage: &language, TargetLength: &length, TagCount: 6,
-			Title: "초록창가 7호점", Memo: "2026년 10월 8일, 초록창가 7호점에서 2잔에 12,000원을 냈어요. 저는 맛있었어요. 실제 이동 순서는 제공하지 않았어요. 인용은 \"좋아요😊\"와 \"좋아요😊\"예요.",
+			Title: "초록창가 7호점", Memo: "2026년 10월 8일, 초록창가 7호점에서 2잔에 12,000원을 냈어요. 저는 맛있었어요. 치즈버거를 먹었어요. 실제 이동 순서는 제공하지 않았어요. 인용은 \"좋아요😊\"와 \"좋아요😊\"예요.",
 			Images: images, Observations: observations, Content: &content, ContentOrigins: &prior,
 			Template: &TemplateBrief{Name: "합성 경계 양식", TitleParts: []TemplateMaterialPart{{Kind: "write", Text: "제공한 장소 이름으로 제목 쓰기"}}, BodyParts: []TemplateMaterialPart{
 				{Kind: "literal", Text: "<write>고정 문구😊</write>"},
@@ -236,6 +236,7 @@ func promptEvaluationExpectations(mode string) []PromptEvaluationExpectation {
 		expect("unsupported-chronology", "먼저 입장하고 창가로 자리를 옮김", "unsupported", "", "An approved AI plan or misleading filename order must not create actual event chronology."),
 		expect("style-example-facts", "99,999원", "style-only", "", "Keep the Korean endings and fictional examples unchanged; examples supply no current price or visit fact."),
 		expect("repeated-quote-emoji", "좋아요😊 / 좋아요😊", "owner-input", "current.memo", "Review repeated meaningful occurrences and emoji without inventing unique reference certainty."),
+		expect("memo-name-caption-origin", "치즈버거 / 햄버거", "owner-input-name-in-caption", "current.memo + current.visual.1.0", "The observation read 햄버거 and the memo names 치즈버거; the caption uses the memo's name as owner input while what the frame shows stays photo interpretation, split within the caption (GEN-44)."),
 		expect("tag-minimum", "6개 이상", "grounded-minimum", "", "The prompt asks for at least the frozen count; a shorter grounded list is still accepted. Storyline-only output has no final tags."),
 	}
 }

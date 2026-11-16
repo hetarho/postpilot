@@ -254,3 +254,17 @@ func TestClipDefaultsOrderAndText(t *testing.T) {
 		}
 	}
 }
+
+// GEN-44: the memo's name wins in prose and in every media alt and caption, not only IMAGE's.
+func TestNamingPrincipleCoversProseAndEveryMediaAltAndCaption(t *testing.T) {
+	naming, ok := DefaultFor(KindPost, "naming")
+	if !ok {
+		t.Fatal("naming principle missing")
+	}
+	if !strings.Contains(naming.Ko.Text, "본문과 모든 IMAGE·GALLERY·VIDEO의 alt와 caption에서") {
+		t.Fatalf("Korean naming principle misses a media block: %s", naming.Ko.Text)
+	}
+	if !strings.Contains(naming.En.Text, "in prose and in every IMAGE, GALLERY and VIDEO alt and caption") {
+		t.Fatalf("English naming principle misses a media block: %s", naming.En.Text)
+	}
+}

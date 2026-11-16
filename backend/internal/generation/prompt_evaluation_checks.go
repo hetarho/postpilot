@@ -39,7 +39,7 @@ func syntheticPromptEvaluationResponse(mode string, protocol int) string {
 	material := syntheticPromptEvaluationMaterial()
 	var core any
 	var origins []originCandidateJSON
-	zero, one := 0, 1
+	zero, one, four := 0, 1, 4
 	switch mode {
 	case "photo-observation", "full-test-photo-observation", "video-observation", "full-test-video-observation":
 		observations := material.post.Observations[:2]
@@ -75,6 +75,8 @@ func syntheticPromptEvaluationResponse(mode string, protocol int) string {
 		// not prove rank or chronology. These are fixed adversarial outputs,
 		// never results observed from a model and never semantic passing claims.
 		content.Blocks[0].Content = "저는 맛있었어요. 창가 옆 초록 식물이 보였어요. 전국 1위이고 먼저 창가로 옮겼어요."
+		// The observation read 햄버거 for this photo while the memo names 치즈버거 (GEN-44).
+		content.Blocks[4].Caption = "치즈버거와 탁자 위 흰 컵"
 		wire := evaluationContentWire(content)
 		wire["nouns"] = []string{"초록창가", "식물", "컵"}
 		if mode != "frozen-storyline" {
@@ -86,6 +88,8 @@ func syntheticPromptEvaluationResponse(mode string, protocol int) string {
 			{Field: originFieldJSON{Kind: "block_content", BlockIndex: &zero}, Quote: "창가 옆 초록 식물", Category: post.OriginPhotoInterpretation, SourceRefs: []string{"current.visual.0.0"}},
 			{Field: originFieldJSON{Kind: "block_content", BlockIndex: &zero}, Quote: "전국 1위", Category: post.OriginOwnerInput, SourceRefs: []string{"current.memo"}},
 			{Field: originFieldJSON{Kind: "block_content", BlockIndex: &zero}, Quote: "먼저 창가로 옮겼어요.", Category: post.OriginAIAdded, SourceRefs: []string{}},
+			{Field: originFieldJSON{Kind: "block_caption", BlockIndex: &four}, Quote: "치즈버거", Category: post.OriginOwnerInput, SourceRefs: []string{"current.memo"}},
+			{Field: originFieldJSON{Kind: "block_caption", BlockIndex: &four}, Quote: "탁자 위 흰 컵", Category: post.OriginPhotoInterpretation, SourceRefs: []string{"current.visual.1.0"}},
 			{Field: originFieldJSON{Kind: "block_content", BlockIndex: &one}, Quote: "좋아요😊", Category: post.OriginOwnerInput, SourceRefs: []string{"current.memo"}},
 			{Field: originFieldJSON{Kind: "block_content", BlockIndex: &one}, Quote: "좋아요😊", Occurrence: &zero, Category: post.OriginOwnerInput, SourceRefs: []string{"current.memo"}},
 			{Field: originFieldJSON{Kind: "block_content", BlockIndex: &one}, Quote: "좋아요😊", Occurrence: &one, Category: post.OriginOwnerInput, SourceRefs: []string{"current.memo"}},
@@ -250,7 +254,7 @@ func checkPromptEvaluationResponse(item PromptEvaluationCase, add func(string, b
 				issues[issue.Code] = true
 			}
 			add("invalid-reference-ambiguous-quote-rejection", issues[post.OriginIssueUnknownSource] && issues[post.OriginIssueAmbiguous] && issues[post.OriginIssueQuote], "Invented catalog IDs, undisambiguated repeated quotes and absent exact quotes are rejected without discarding canonical content.")
-			valid, repeated, owner, visual := true, 0, false, false
+			valid, repeated, owner, visual, memoName := true, 0, false, false, false
 			for _, span := range resolved.Review.Spans {
 				text, exists := post.OriginFieldText(originPostContent(answer.Content), span.Field)
 				runes := []rune(text)
@@ -260,7 +264,9 @@ func checkPromptEvaluationResponse(item PromptEvaluationCase, add func(string, b
 				}
 				owner = owner || span.Quote == "저는 맛있었어요." && span.Category == post.OriginOwnerInput
 				visual = visual || span.Quote == "창가 옆 초록 식물" && span.Category == post.OriginPhotoInterpretation
+				memoName = memoName || span.Field.Kind == post.OriginFieldBlockCaption && span.Quote == "치즈버거" && span.Category == post.OriginOwnerInput && slices.Contains(span.SourceRefs, "current.memo")
 			}
+			add("memo-name-caption-origin", memoName, "The IMAGE caption names the memo's 치즈버거 where the observation read 햄버거, and that caption span resolves as owner input on the memo source; the photo-derived words stay a separate span.")
 			add("mixed-source-unicode-occurrences", valid && repeated == 2 && owner && visual, "Different meaning ranges in one sentence retain separate compatible labels; occurrence 0/1 resolves two emoji-bearing quotes without byte offsets.")
 			semanticTrap := false
 			for _, span := range resolved.Review.Spans {

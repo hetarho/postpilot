@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/post"
 )
 
@@ -162,5 +163,27 @@ func TestCaptionOfSpanlessObservationResolvesAsPhotoInterpretation(t *testing.T)
 	mood := originCandidate(post.OriginFieldLocator{Kind: post.OriginFieldBlockAlt, BlockIndex: originInt(0)}, "입구", post.OriginPhotoInterpretation, "current.observation.0.mood")
 	if len(ResolveWriteOriginCandidates(got.Content, sources, []post.OriginCandidate{mood}).Review.Spans) != 0 {
 		t.Fatal("mood supported a photo interpretation")
+	}
+}
+
+// GEN-44, GEN-80: a caption splits the memo's name (owner input) from what the frame shows, in
+// the common contract every scoped contract inherits.
+func TestOriginContractSplitsCaptionNameFromFrame(t *testing.T) {
+	const clause = "In alt and caption, a subject name the memo or a template field supplies is owner_input and what the frame shows is photo_interpretation; split them within the caption."
+	if !strings.Contains(originResponseContract, clause+" For post fields,") {
+		t.Fatal("the origin contract lost its caption clause")
+	}
+	for _, mode := range []string{"", "frozen-storyline", "storyline-create"} {
+		request := llm.Request{}
+		if mode != "" {
+			request.Composition = &llm.RequestComposition{Mode: mode}
+		}
+		contract := scopedOriginContract(request)
+		if !strings.Contains(contract, clause) {
+			t.Errorf("mode %q drops the caption clause", mode)
+		}
+		if strings.Contains(contract, "For post fields,") {
+			t.Errorf("mode %q keeps the unscoped field sentence", mode)
+		}
 	}
 }
