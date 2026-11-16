@@ -26,8 +26,8 @@ export const marketing = {
   flow: {
     title: 'How it works',
     step1: {
-      title: 'Choose a channel and post type',
-      body: 'Choose Naver Blog, Naver Clip or Instagram Clip, then select whether your post is sponsored.',
+      title: 'Choose 글 or 영상',
+      body: 'Choose 글 (a post) or 영상 (a video), then select whether it is sponsored.',
     },
     step2: {
       title: 'Check the advertiser guide',
@@ -75,10 +75,9 @@ export const marketing = {
   },
   outputs: {
     title: 'Where the result goes',
-    body: 'Prepare a Naver Blog post, or Naver Clip and Instagram Clip videos with upload text. Origin labels and technical details stay out of the copied writing. Copy the post or export the video, then publish manually on each service.',
+    body: 'Prepare a Naver Blog post, or a Naver Clip video with upload text. Origin labels and technical details stay out of the copied writing. Copy the post or export the video, then publish manually on each service.',
     naver: 'Naver Blog post',
     naverVideo: 'Naver Clip video and upload text',
-    instagramVideo: 'Instagram Clip video and upload text',
   },
   plans: {
     title: 'Plans',

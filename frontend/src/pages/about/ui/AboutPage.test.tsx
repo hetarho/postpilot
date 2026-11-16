@@ -110,11 +110,13 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
         name: locale === 'ko' ? '어떻게 쓰나요' : 'How it works',
       }),
     ).getAllByRole('listitem')
-    // MKT-11: channel and sponsorship → the sponsor's requirements → photos and a template →
+    // MKT-11: 글 or 영상 and sponsorship → the sponsor's requirements → photos and a template →
     // what happened, with a closing note → voice and guidelines, then observe and write → review
     // origins and revise → copy and post yourself.
     expect(steps).toHaveLength(7)
-    expect(steps[0]).toHaveTextContent(locale === 'ko' ? '체험단·광고 글인지' : 'sponsored')
+    expect(steps[0]).toHaveTextContent(
+      locale === 'ko' ? '글과 영상 중 무엇을 만들지' : '글 (a post) or 영상 (a video)',
+    )
     expect(steps[1]).toHaveTextContent(locale === 'ko' ? '광고주 지침' : 'advertiser guide')
     expect(steps[1]).toHaveTextContent(
       locale === 'ko' ? '체험단·광고 글일 때만' : 'If your post is sponsored',
@@ -166,12 +168,8 @@ describe.each(['ko', 'en'] as const)('About page in %s', (locale) => {
         .map((item) => item.textContent),
     ).toEqual(
       locale === 'ko'
-        ? ['네이버 블로그 글', '네이버 클립 영상·업로드 문구', '인스타 클립 영상·업로드 문구']
-        : [
-            'Naver Blog post',
-            'Naver Clip video and upload text',
-            'Instagram Clip video and upload text',
-          ],
+        ? ['네이버 블로그 글', '네이버 클립 영상·업로드 문구']
+        : ['Naver Blog post', 'Naver Clip video and upload text'],
     )
     expect(outputs).not.toHaveTextContent(/티스토리|Tistory|마크다운|Markdown|HTML/)
   })
