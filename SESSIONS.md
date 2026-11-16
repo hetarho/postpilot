@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:57Z | T832 | gusta-session-start-vfid-2c92eccf | 565fe336940b | 2c49cb3071a34ca1b4d9fe9c |
+| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:57Z | - | gusta-session-start-vfid-2c92eccf | 565fe336940b | 2c49cb3071a34ca1b4d9fe9c |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -160,8 +160,10 @@
 | T829 | vfid | gusta-session-start-vfid-2c92eccf | 640e2b19d | 2026-11-16T02:47Z |
 | T830 | vfid | gusta-session-start-vfid-2c92eccf | b8a30720ade6 | 2026-11-16T02:50Z |
 | T831 | vfid | gusta-session-start-vfid-2c92eccf | 0d550ac71f81 | 2026-11-16T02:53Z |
+| T832 | vfid | gusta-session-start-vfid-2c92eccf | 565fe336940b | 2026-11-16T02:57Z |
 
 ## log
+- 261116 T832 done
 - 261116 T831 done
 - 261116 T830 done
 - 261116 T829 done
@@ -181,4 +183,3 @@
 - 261113 fix navigation: default video-template returns to naver_clip instead of undefined; default and Instagram regressions included in 69 passing tests
 - 261113 T816 done
 - 261113 T825 done
-- 261113 T824 done
