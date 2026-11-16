@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"connectrpc.com/connect"
 
@@ -308,8 +307,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, provider.ErrTooManyLabCandidates):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "too many lab candidates", postpilotv1.FailureReason_MODEL_LAB_CANDIDATES_INVALID, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

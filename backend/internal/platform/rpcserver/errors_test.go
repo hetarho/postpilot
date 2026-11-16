@@ -1,6 +1,10 @@
 package rpcserver_test
 
 import (
+	"bytes"
+	"errors"
+	"log/slog"
+	"strings"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -52,5 +56,35 @@ func TestNewAppErrorAcceptsNoParams(t *testing.T) {
 	detail := value.(*postpilotv1.AppErrorDetail)
 	if detail.GetParams() != nil {
 		t.Fatalf("params = %#v, want nil", detail.GetParams())
+	}
+}
+
+func TestInternalFailureLogsAndHidesTheCause(t *testing.T) {
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewTextHandler(&buf, nil)))
+	t.Cleanup(func() { slog.SetDefault(previous) })
+
+	err := rpcserver.InternalFailure("save thing", errors.New("disk on fire"))
+
+	logged := buf.String()
+	for _, want := range []string{"level=ERROR", `msg="save thing failed"`, `err="disk on fire"`} {
+		if !strings.Contains(logged, want) {
+			t.Errorf("log %q misses %q", logged, want)
+		}
+	}
+	var connectErr *connect.Error
+	if !errors.As(err, &connectErr) {
+		t.Fatalf("error = %T, want *connect.Error", err)
+	}
+	if connectErr.Code() != connect.CodeInternal || connectErr.Message() != "save thing failed" {
+		t.Fatalf("code/message = %v / %q", connectErr.Code(), connectErr.Message())
+	}
+	value, valueErr := connectErr.Details()[0].Value()
+	if valueErr != nil {
+		t.Fatalf("decode detail: %v", valueErr)
+	}
+	if got := value.(*postpilotv1.AppErrorDetail).GetReason(); got != "UNKNOWN_FAILURE" {
+		t.Fatalf("reason = %q", got)
 	}
 }

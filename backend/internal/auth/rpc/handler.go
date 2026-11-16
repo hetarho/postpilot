@@ -83,8 +83,7 @@ func (h *Handler) Login(ctx context.Context, req *connect.Request[postpilotv1.Lo
 		}
 		// An infrastructure failure must not become "invalid credentials" — that would
 		// hide an outage behind a login form. The detail stays in the log.
-		slog.Error("login failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "login failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return nil, rpcserver.InternalFailure("login", err)
 	}
 
 	res := connect.NewResponse(&postpilotv1.LoginResponse{
@@ -118,8 +117,7 @@ func (h *Handler) SignInWithGoogle(ctx context.Context, req *connect.Request[pos
 // Logout revokes the session and clears the cookie.
 func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.LogoutRequest]) (*connect.Response[postpilotv1.LogoutResponse], error) {
 	if err := h.svc.Logout(ctx, cookieValue(req.Header())); err != nil {
-		slog.Error("logout failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "logout failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return nil, rpcserver.InternalFailure("logout", err)
 	}
 
 	res := connect.NewResponse(&postpilotv1.LogoutResponse{})
@@ -143,8 +141,7 @@ func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetM
 	acting, _ := auth.PlanFromContext(ctx)
 	user, err := h.svc.Account(ctx, userID)
 	if err != nil {
-		slog.Error("get account failed", "err", err)
-		return nil, rpcserver.NewAppError(connect.CodeInternal, "get account failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return nil, rpcserver.InternalFailure("get account", err)
 	}
 	return connect.NewResponse(&postpilotv1.GetMeResponse{
 		User: userToProto(user),
@@ -198,8 +195,7 @@ func authMutationError(operation string, err error) error {
 	case errors.Is(err, auth.ErrCurrentPasswordWrong):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "current password wrong", postpilotv1.FailureReason_CURRENT_PASSWORD_WRONG, nil)
 	default:
-		slog.Error(operation+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, operation+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(operation, err)
 	}
 }
 
@@ -215,8 +211,7 @@ func googleSignInError(err error) error {
 		slog.Info("google sign-in refused", "err", err)
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "google sign-in failed", postpilotv1.FailureReason_GOOGLE_SIGNIN_FAILED, nil)
 	default:
-		slog.Error("google sign-in failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, "google sign-in failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure("google sign-in", err)
 	}
 }
 

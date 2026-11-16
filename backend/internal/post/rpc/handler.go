@@ -5,7 +5,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
 	"time"
 
@@ -451,8 +450,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, post.ErrQualityRuleInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "quality rule is invalid", postpilotv1.FailureReason_POST_QUALITY_RULE_INVALID, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

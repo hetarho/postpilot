@@ -4,7 +4,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	"connectrpc.com/connect"
@@ -34,8 +33,7 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 		case errors.Is(err, job.ErrForbidden):
 			return nil, rpcserver.NewAppError(connect.CodePermissionDenied, "job belongs to another user", postpilotv1.FailureReason_JOB_FORBIDDEN, nil)
 		default:
-			slog.Error("get generation failed", "err", err)
-			return nil, rpcserver.NewAppError(connect.CodeInternal, "get generation failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+			return nil, rpcserver.InternalFailure("get generation", err)
 		}
 	}
 	return connect.NewResponse(&postpilotv1.GetGenerationResponse{Job: ToProto(found)}), nil
