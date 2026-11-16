@@ -689,7 +689,8 @@ describe('theme preferences in the real route tree', () => {
     )
     await user.click(account)
     const menu = screen.getByRole('dialog', { name: '내 계정' })
-    expect(menu).toHaveClass('right-0', 'w-72')
+    // The shared popover places itself in the viewport with fixed coordinates (T880).
+    expect(menu).toHaveClass('fixed', 'w-72')
     expect(within(menu).getByRole('tablist', { name: '테마' })).toBeInTheDocument()
     expect(within(menu).getByRole('tablist', { name: '언어' })).toBeInTheDocument()
     expect(await within(menu).findByText('남은 크레딧')).toBeInTheDocument()
