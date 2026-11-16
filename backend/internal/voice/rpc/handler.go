@@ -207,7 +207,7 @@ func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postp
 	prompts := h.service.Prompts()
 	out := make([]*postpilotv1.VoicePrompt, 0, len(prompts))
 	for _, prompt := range prompts {
-		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter})
+		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter, Examples: toProtoPromptExamples(prompt.Examples)})
 	}
 	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out}), nil
 }
@@ -520,6 +520,30 @@ func toProtoPart(part voice.PromptPart) postpilotv1.VoicePromptPart {
 		return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING
 	}
 	return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_UNSPECIFIED
+}
+
+// toProtoPromptExamples carries a question's example replies (VOICE-79); the frame stays in Go.
+func toProtoPromptExamples(examples []voice.PromptExample) []*postpilotv1.VoicePromptExample {
+	out := make([]*postpilotv1.VoicePromptExample, 0, len(examples))
+	for _, example := range examples {
+		out = append(out, &postpilotv1.VoicePromptExample{Register: toProtoRegister(example.Register), Text: example.Text})
+	}
+	return out
+}
+
+// toProtoRegister maps the four registers; the generated enum is walked by a test (ARCH-3).
+func toProtoRegister(register voice.Register) postpilotv1.VoiceRegister {
+	switch register {
+	case voice.RegisterHaeyo:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_HAEYO
+	case voice.RegisterDa:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_DA
+	case voice.RegisterEumseum:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_EUMSEUM
+	case voice.RegisterHamnida:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_HAMNIDA
+	}
+	return postpilotv1.VoiceRegister_VOICE_REGISTER_UNSPECIFIED
 }
 
 var _ postpilotv1connect.VoiceServiceHandler = (*Handler)(nil)

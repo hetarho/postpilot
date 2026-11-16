@@ -151,6 +151,26 @@ func TestVoiceMaterialRPCs(t *testing.T) {
 	if err != nil || len(prompts.Msg.GetPrompts()) < 200 {
 		t.Fatalf("prompts = %d err=%v", len(prompts.Msg.GetPrompts()), err)
 	}
+	// VOICE-79: one prompt's three examples round-trip with their registers and text.
+	registers := map[voice.Register]postpilotv1.VoiceRegister{
+		voice.RegisterHaeyo: postpilotv1.VoiceRegister_VOICE_REGISTER_HAEYO, voice.RegisterDa: postpilotv1.VoiceRegister_VOICE_REGISTER_DA,
+		voice.RegisterEumseum: postpilotv1.VoiceRegister_VOICE_REGISTER_EUMSEUM, voice.RegisterHamnida: postpilotv1.VoiceRegister_VOICE_REGISTER_HAMNIDA,
+	}
+	want, _ := voice.PromptByKey("starter_snack")
+	for _, prompt := range prompts.Msg.GetPrompts() {
+		if prompt.GetKey() != want.Key {
+			continue
+		}
+		got := prompt.GetExamples()
+		if len(got) != voice.PromptExamples {
+			t.Fatalf("starter_snack examples = %+v", got)
+		}
+		for i, example := range want.Examples {
+			if got[i].GetText() != example.Text || got[i].GetRegister() != registers[example.Register] {
+				t.Fatalf("example %d = %+v, want %+v", i, got[i], example)
+			}
+		}
+	}
 	photos := 0
 	parts := map[postpilotv1.VoicePromptPart]int{}
 	for _, prompt := range prompts.Msg.GetPrompts() {

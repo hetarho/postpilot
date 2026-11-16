@@ -83,7 +83,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T869 | Carry saved heading references through heading suggestions | TMPL | - | todo |
 | T870 | Offer 내 템플릿 소제목 참고해서 제안 받기 in the heading sheet | TMPL | T869 | todo |
-| T871 | Attach three register-labelled example replies to every learning-chat question | VOICE | - | todo |
+| T871 | Attach three register-labelled example replies to every learning-chat question | VOICE | - | doing@261116.vcx |
 | T872 | Show a question's three examples collapsed under the chat bubble | VOICE THEME | T871 | todo |
 | T873 | Add the six experience threads to the prompt catalog | VOICE TMPL | T871 | todo |
 | T874 | Store experiences and thread answers keyed by experience | VOICE | T873 | todo |

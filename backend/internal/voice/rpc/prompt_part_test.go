@@ -32,6 +32,22 @@ func TestEveryPromptPartMapsBothWays(t *testing.T) {
 	}
 }
 
+// ARCH-3, VOICE-79: every register maps to its own generated value, and every generated value but
+// UNSPECIFIED is one the domain has.
+func TestEveryRegisterMaps(t *testing.T) {
+	seen := map[postpilotv1.VoiceRegister]bool{}
+	for _, register := range voice.Registers() {
+		mapped := toProtoRegister(register)
+		if mapped == postpilotv1.VoiceRegister_VOICE_REGISTER_UNSPECIFIED || seen[mapped] {
+			t.Fatalf("%q maps to %v", register, mapped)
+		}
+		seen[mapped] = true
+	}
+	if len(seen) != len(postpilotv1.VoiceRegister_name)-1 {
+		t.Fatalf("the domain maps %d of %d generated registers", len(seen), len(postpilotv1.VoiceRegister_name)-1)
+	}
+}
+
 // ARCH-3: every generated AI field but UNSPECIFIED is one the domain has.
 func TestEveryAIFieldMaps(t *testing.T) {
 	seen := map[postpilotv1.VoiceAiField]bool{}

@@ -276,6 +276,23 @@ message VoicePrompt {
   string scene = 5;
   string hint = 6;
   bool starter = 7;
+  // Three example replies in visibly different registers (VOICE-79); code, never 학습 글.
+  repeated VoicePromptExample examples = 8;
+}
+
+// The sentence-ending register an example reply is written in (VOICE-79).
+enum VoiceRegister {
+  VOICE_REGISTER_UNSPECIFIED = 0;
+  VOICE_REGISTER_HAEYO = 1;
+  VOICE_REGISTER_DA = 2;
+  VOICE_REGISTER_EUMSEUM = 3;
+  VOICE_REGISTER_HAMNIDA = 4;
+}
+
+// One example reply to a learning-chat question, labelled with its register.
+message VoicePromptExample {
+  VoiceRegister register = 1;
+  string text = 2;
 }
 
 // A voice as the directory talks about it. `deleted` is a tombstone: the voice keeps its
