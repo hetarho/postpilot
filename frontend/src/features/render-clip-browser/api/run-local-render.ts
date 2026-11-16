@@ -12,6 +12,7 @@ import {
   measureMp4Output,
   verifyMp4Audio,
 } from '@/shared/lib/media'
+import { sha256Hex } from '@/shared/lib'
 import { browserAudioPreflight } from '../model/audio-preflight'
 import { browserRenderVerdict } from '../model/verdict'
 import { BrowserRenderVerdictError, type VerifiedBrowserResult } from './store-result'
@@ -116,9 +117,7 @@ export async function runLocalBrowserRender(
     const snapshot = await operations.bindSnapshot!(input.snapshot, admitted)
     controller.signal.throwIfAborted()
     const identityBytes = new TextEncoder().encode(`${input.ownerId}/${input.projectId}/${id}`)
-    const identity = [...new Uint8Array(await crypto.subtle.digest('SHA-256', identityBytes))]
-      .map((v) => v.toString(16).padStart(2, '0'))
-      .join('')
+    const identity = await sha256Hex(identityBytes)
     output = await createBoundedMediaOutput(
       {
         maxBytes: CLIP_BROWSER_RENDER.temporaryOutputBytes,

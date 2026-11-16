@@ -3,6 +3,7 @@ import { createClient } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import { ClipSpeechService } from '@/shared/api'
 import { API_URL } from '@/shared/config'
+import { sha256Hex } from '@/shared/lib'
 import { narrationFromProto, narrationToProto } from './spoken'
 import type { ClipNarration } from '../model/spoken'
 import type { ClipSpeechRef } from '../model/spoken'
@@ -105,9 +106,7 @@ export function useClipSpeechCalls() {
           await reader.cancel()
         }
         if (offset !== bytes.length) throw new Error('Invalid speech size')
-        const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (n) =>
-          n.toString(16).padStart(2, '0'),
-        ).join('')
+        const hash = await sha256Hex(bytes)
         if (hash !== speech.audioHash) throw new Error('Speech provenance changed')
         signal.throwIfAborted()
         return bytes.buffer

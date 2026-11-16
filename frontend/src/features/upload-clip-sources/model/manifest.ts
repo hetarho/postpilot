@@ -9,6 +9,7 @@ import {
   CLIP_SOURCE_MAX_FILE_BYTES,
 } from '@/entities/clip-design'
 import { readVideoMetadata, type VideoMetadata } from '@/shared/lib/media'
+import { sha256Hex } from '@/shared/lib'
 
 export type ClipSelectionReason =
   | 'count'
@@ -66,8 +67,7 @@ export async function sourceFingerprint(file: File, metadata: VideoMetadata): Pr
     input.set(prefix)
     input.set(new Uint8Array(first), prefix.length)
     input.set(new Uint8Array(last), prefix.length + first.byteLength)
-    const digest = await crypto.subtle.digest('SHA-256', input)
-    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+    return await sha256Hex(input)
   } catch {
     throw new ClipSelectionError('fingerprint')
   }
