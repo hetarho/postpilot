@@ -84,7 +84,6 @@
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
-| T863 | Name the sections and kinds 글 and 영상 in code | THEME | T862 | todo |
 | T864 | Remove the clip channel type from the frontend | CLIP | T856 T857 T858 T859 T860 T861 T862 T863 | todo |
 | T865 | Say 글 and 영상 in the marketing copy | MKT | - | todo |
 | T866 | Serve every clip as one video kind in the backend | CLIP | - | todo |
@@ -98,5 +97,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T851 T863 T865
+- gusta-implement-task T851 T864 T865
 - inspect work board for remaining tasks
