@@ -26,7 +26,7 @@
 | ARCH | 25 | 25 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 40 | 40 | - | 0 |
-| POST | 51 | 51 | - | 0 |
+| POST | 52 | 52 | - | 0 |
 | VOICE | 22 | 22 | - | 0 |
 | GEN | 33 | 33 | - | 0 |
 | MODEL | 38 | 38 | - | 0 |
@@ -37,7 +37,7 @@
 | THEME | 47 | 47 | - | 2 |
 | MKT | 13 | 13 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 80 | 80 | - | 2 |
+| CLIP | 81 | 81 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -95,6 +95,8 @@
 | T877 | Give the voice entity experiences and experience-named question text | VOICE | T872 T876 | todo |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
+| T880 | Keep writing-option popovers inside the viewport and above page docks | POST THEME ARCH | - | todo |
+| T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -103,6 +105,8 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
+- gusta-implement-task T880
+- gusta-implement-task T881
 - gusta-implement-task T869
 - gusta-implement-task T851
 - gusta-implement-task T871
