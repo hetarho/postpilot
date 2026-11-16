@@ -4,6 +4,15 @@
 
 package sqlc
 
+type VoiceExperience struct {
+	ID        string
+	UserID    string
+	VoiceID   string
+	Kind      string
+	Name      string
+	CreatedAt string
+}
+
 type VoicePhotoUpload struct {
 	ID        string
 	UserID    string

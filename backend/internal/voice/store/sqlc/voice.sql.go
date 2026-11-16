@@ -137,6 +137,82 @@ func (q *Queries) GetAnalysis(ctx context.Context, arg GetAnalysisParams) (GetAn
 	return i, err
 }
 
+const getExperience = `-- name: GetExperience :one
+SELECT id, user_id, voice_id, kind, name, created_at
+FROM voice_experiences
+WHERE id = ? AND voice_id = ? AND user_id = ?
+`
+
+type GetExperienceParams struct {
+	ID      string
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) GetExperience(ctx context.Context, arg GetExperienceParams) (VoiceExperience, error) {
+	row := q.db.QueryRowContext(ctx, getExperience, arg.ID, arg.VoiceID, arg.UserID)
+	var i VoiceExperience
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.VoiceID,
+		&i.Kind,
+		&i.Name,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getExperienceAnswer = `-- name: GetExperienceAnswer :one
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+FROM voice_samples
+WHERE experience_id = ? AND voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer'
+`
+
+type GetExperienceAnswerParams struct {
+	ExperienceID sql.NullString
+	VoiceID      string
+	UserID       string
+	PromptKey    sql.NullString
+}
+
+type GetExperienceAnswerRow struct {
+	ID              string
+	Kind            string
+	PromptKey       sql.NullString
+	Label           string
+	Body            string
+	PhotoKey        sql.NullString
+	PhotoWidth      sql.NullInt64
+	PhotoHeight     sql.NullInt64
+	CreatedAt       string
+	ContentRevision int64
+}
+
+// The one answer a question holds in an experience (voice_samples_experience_prompt).
+func (q *Queries) GetExperienceAnswer(ctx context.Context, arg GetExperienceAnswerParams) (GetExperienceAnswerRow, error) {
+	row := q.db.QueryRowContext(ctx, getExperienceAnswer,
+		arg.ExperienceID,
+		arg.VoiceID,
+		arg.UserID,
+		arg.PromptKey,
+	)
+	var i GetExperienceAnswerRow
+	err := row.Scan(
+		&i.ID,
+		&i.Kind,
+		&i.PromptKey,
+		&i.Label,
+		&i.Body,
+		&i.PhotoKey,
+		&i.PhotoWidth,
+		&i.PhotoHeight,
+		&i.CreatedAt,
+		&i.ContentRevision,
+	)
+	return i, err
+}
+
 const getPhotoUpload = `-- name: GetPhotoUpload :one
 SELECT id, user_id, voice_id, prompt_key, object_key, expires_at, created_at
 FROM voice_photo_uploads
@@ -167,7 +243,7 @@ func (q *Queries) GetPhotoUpload(ctx context.Context, arg GetPhotoUploadParams) 
 const getPromptAnswer = `-- name: GetPromptAnswer :one
 SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
 FROM voice_samples
-WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer'
+WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer' AND experience_id IS NULL
 `
 
 type GetPromptAnswerParams struct {
@@ -189,7 +265,8 @@ type GetPromptAnswerRow struct {
 	ContentRevision int64
 }
 
-// The one answer a prompt holds in a voice (voice_samples_voice_prompt).
+// The one situation answer a prompt holds in a voice (voice_samples_voice_prompt); a thread
+// answer belongs to its experience and is read by GetExperienceAnswer.
 func (q *Queries) GetPromptAnswer(ctx context.Context, arg GetPromptAnswerParams) (GetPromptAnswerRow, error) {
 	row := q.db.QueryRowContext(ctx, getPromptAnswer, arg.VoiceID, arg.UserID, arg.PromptKey)
 	var i GetPromptAnswerRow
@@ -365,6 +442,32 @@ func (q *Queries) InsertCurrentAnalysis(ctx context.Context, arg InsertCurrentAn
 	return err
 }
 
+const insertExperience = `-- name: InsertExperience :exec
+INSERT INTO voice_experiences (id, user_id, voice_id, kind, name, created_at)
+VALUES (?, ?, ?, ?, ?, ?)
+`
+
+type InsertExperienceParams struct {
+	ID        string
+	UserID    string
+	VoiceID   string
+	Kind      string
+	Name      string
+	CreatedAt string
+}
+
+func (q *Queries) InsertExperience(ctx context.Context, arg InsertExperienceParams) error {
+	_, err := q.db.ExecContext(ctx, insertExperience,
+		arg.ID,
+		arg.UserID,
+		arg.VoiceID,
+		arg.Kind,
+		arg.Name,
+		arg.CreatedAt,
+	)
+	return err
+}
+
 const insertPhotoUpload = `-- name: InsertPhotoUpload :exec
 INSERT INTO voice_photo_uploads (id, user_id, voice_id, prompt_key, object_key, expires_at, created_at)
 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -394,22 +497,23 @@ func (q *Queries) InsertPhotoUpload(ctx context.Context, arg InsertPhotoUploadPa
 }
 
 const insertSample = `-- name: InsertSample :exec
-INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, experience_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertSampleParams struct {
-	ID          string
-	VoiceID     string
-	UserID      string
-	Kind        string
-	PromptKey   sql.NullString
-	Label       string
-	Body        string
-	PhotoKey    sql.NullString
-	PhotoWidth  sql.NullInt64
-	PhotoHeight sql.NullInt64
-	CreatedAt   string
+	ID           string
+	VoiceID      string
+	UserID       string
+	Kind         string
+	PromptKey    sql.NullString
+	Label        string
+	Body         string
+	PhotoKey     sql.NullString
+	PhotoWidth   sql.NullInt64
+	PhotoHeight  sql.NullInt64
+	CreatedAt    string
+	ExperienceID sql.NullString
 }
 
 func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) error {
@@ -425,6 +529,7 @@ func (q *Queries) InsertSample(ctx context.Context, arg InsertSampleParams) erro
 		arg.PhotoWidth,
 		arg.PhotoHeight,
 		arg.CreatedAt,
+		arg.ExperienceID,
 	)
 	return err
 }
@@ -490,6 +595,48 @@ func (q *Queries) InsertVoiceSampleMutation(ctx context.Context, arg InsertVoice
 		arg.CreatedAt,
 	)
 	return err
+}
+
+const listExperiences = `-- name: ListExperiences :many
+SELECT id, user_id, voice_id, kind, name, created_at
+FROM voice_experiences
+WHERE voice_id = ? AND user_id = ?
+ORDER BY created_at DESC, id DESC
+`
+
+type ListExperiencesParams struct {
+	VoiceID string
+	UserID  string
+}
+
+func (q *Queries) ListExperiences(ctx context.Context, arg ListExperiencesParams) ([]VoiceExperience, error) {
+	rows, err := q.db.QueryContext(ctx, listExperiences, arg.VoiceID, arg.UserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []VoiceExperience
+	for rows.Next() {
+		var i VoiceExperience
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.VoiceID,
+			&i.Kind,
+			&i.Name,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listPhotoUploadKeys = `-- name: ListPhotoUploadKeys :many
@@ -932,6 +1079,47 @@ func (q *Queries) UpdateOwnedVoiceSample(ctx context.Context, arg UpdateOwnedVoi
 		arg.VoiceID,
 		arg.ID,
 		arg.ContentRevision_2,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const upsertExperienceAnswer = `-- name: UpsertExperienceAnswer :execrows
+INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, created_at, experience_id)
+SELECT ?1, e.voice_id, e.user_id, 'answer', ?2, ?3, ?4, ?5, e.id
+FROM voice_experiences e
+WHERE e.id = ?6 AND e.voice_id = ?7 AND e.user_id = ?8
+ON CONFLICT (experience_id, prompt_key) WHERE experience_id IS NOT NULL
+DO UPDATE SET label = excluded.label, body = excluded.body, created_at = excluded.created_at,
+              content_revision = voice_samples.content_revision + 1
+`
+
+type UpsertExperienceAnswerParams struct {
+	ID           string
+	PromptKey    sql.NullString
+	Label        string
+	Body         string
+	CreatedAt    string
+	ExperienceID string
+	VoiceID      string
+	UserID       string
+}
+
+// Writes the answer an experience's question holds, replacing the previous one in place (a
+// revision bump), and only when the experience belongs to this voice and owner: a foreign id
+// inserts nothing (VOICE-3).
+func (q *Queries) UpsertExperienceAnswer(ctx context.Context, arg UpsertExperienceAnswerParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, upsertExperienceAnswer,
+		arg.ID,
+		arg.PromptKey,
+		arg.Label,
+		arg.Body,
+		arg.CreatedAt,
+		arg.ExperienceID,
+		arg.VoiceID,
+		arg.UserID,
 	)
 	if err != nil {
 		return 0, err
