@@ -3,7 +3,7 @@ package rpc
 import (
 	"connectrpc.com/connect"
 	"context"
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -13,7 +13,7 @@ import (
 
 func (h *Handler) WithSpeech(s *clipapp.SpeechService) *Handler { h.speech = s; return h }
 func (h *Handler) QuoteClipSpeech(ctx context.Context, r *connect.Request[v1.QuoteClipSpeechRequest]) (*connect.Response[v1.ClipSpeechQuote], error) {
-	owner, e := authrpc.ActingUser(ctx)
+	owner, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -31,7 +31,7 @@ func (h *Handler) QuoteClipSpeech(ctx context.Context, r *connect.Request[v1.Quo
 	return connect.NewResponse(&v1.ClipSpeechQuote{QuoteId: q.ID, MaximumCredits: int32(q.MaximumCredits), ExpiresAt: expires, SegmentIds: q.SegmentIDs, PlanRevision: int32(q.Revision), CancellationPolicyVersion: usage.UnitCancellationPolicyVersion}), nil
 }
 func (h *Handler) StartClipSpeech(ctx context.Context, r *connect.Request[v1.StartClipSpeechRequest]) (*connect.Response[v1.StartClipSpeechResponse], error) {
-	owner, e := authrpc.ActingUser(ctx)
+	owner, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -50,7 +50,7 @@ func (h *Handler) StartClipSpeech(ctx context.Context, r *connect.Request[v1.Sta
 	return connect.NewResponse(&v1.StartClipSpeechResponse{JobId: id}), nil
 }
 func (h *Handler) GetClipSpeechReadiness(ctx context.Context, r *connect.Request[v1.GetClipSpeechReadinessRequest]) (*connect.Response[v1.ClipSpeechReadiness], error) {
-	owner, e := authrpc.ActingUser(ctx)
+	owner, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}

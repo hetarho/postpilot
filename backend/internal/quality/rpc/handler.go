@@ -7,7 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -24,7 +24,7 @@ var _ postpilotv1connect.QualityServiceHandler = (*Handler)(nil)
 // the published count mean something on M2 only: it is the one per-post metric that reads the
 // published window, and its count is the account's published count, as the brief's is.
 func (h *Handler) GetPostMeasurement(ctx context.Context, req *connect.Request[postpilotv1.GetPostMeasurementRequest]) (*connect.Response[postpilotv1.GetPostMeasurementResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (h *Handler) GetPostMeasurement(ctx context.Context, req *connect.Request[p
 // GetAccountQuality answers all four metrics in enum order (POST-81). Only an over-band metric
 // carries its rule text, rendered in the target language of the post the brief belongs to.
 func (h *Handler) GetAccountQuality(ctx context.Context, req *connect.Request[postpilotv1.GetAccountQualityRequest]) (*connect.Response[postpilotv1.GetAccountQualityResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"log/slog"
 	"net/http"
 	"time"
@@ -134,7 +135,7 @@ func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.L
 // The plan rides this probe so the app can gate master-only surfaces during boot without
 // a second round-trip; the server still refuses those procedures on its own.
 func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetMeRequest]) (*connect.Response[postpilotv1.GetMeResponse], error) {
-	userID, err := ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetM
 }
 
 func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpilotv1.RegisterEmailRequest]) (*connect.Response[postpilotv1.RegisterEmailResponse], error) {
-	userID, err := ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +162,7 @@ func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) ChangePassword(ctx context.Context, req *connect.Request[postpilotv1.ChangePasswordRequest]) (*connect.Response[postpilotv1.ChangePasswordResponse], error) {
-	userID, err := ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

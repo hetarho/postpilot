@@ -11,7 +11,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/experiment"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
@@ -64,7 +64,7 @@ func (h *Handler) full(ctx context.Context, found experiment.Experiment) *postpi
 }
 
 func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpilotv1.GetExperimentRequest]) (*connect.Response[postpilotv1.GetExperimentResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[postpilotv1.ListExperimentsRequest]) (*connect.Response[postpilotv1.ListExperimentsResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (h *Handler) CompleteExperimentReview(ctx context.Context, req *connect.Req
 }
 
 func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyCandidateOutputRequest]) (*connect.Response[postpilotv1.ApplyCandidateOutputResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request
 }
 
 func (h *Handler) AdoptCandidateModel(ctx context.Context, req *connect.Request[postpilotv1.AdoptCandidateModelRequest]) (*connect.Response[postpilotv1.AdoptCandidateModelResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (h *Handler) AdoptCandidateModel(ctx context.Context, req *connect.Request[
 }
 
 func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyWinnerOutputRequest]) (*connect.Response[postpilotv1.ApplyWinnerOutputResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[po
 }
 
 func (h *Handler) AdoptWinnerModel(ctx context.Context, req *connect.Request[postpilotv1.AdoptWinnerModelRequest]) (*connect.Response[postpilotv1.AdoptWinnerModelResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

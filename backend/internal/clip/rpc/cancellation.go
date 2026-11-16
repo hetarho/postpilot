@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
@@ -13,7 +13,7 @@ import (
 )
 
 func (h *Handler) CancelClipJob(ctx context.Context, req *connect.Request[v1.CancelClipJobRequest]) (*connect.Response[v1.CancelClipJobResponse], error) {
-	user, err := authrpc.ActingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

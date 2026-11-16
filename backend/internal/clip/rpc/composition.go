@@ -5,14 +5,14 @@ import (
 	"maps"
 
 	"connectrpc.com/connect"
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
 
 func (h *Handler) GetClipCapabilities(ctx context.Context, _ *connect.Request[v1.GetClipCapabilitiesRequest]) (*connect.Response[v1.GetClipCapabilitiesResponse], error) {
-	if _, err := authrpc.ActingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&v1.GetClipCapabilitiesResponse{CompositionVersion: clip.CompositionVersion, CompositionPlanVersion: int32(h.service.CompositionCapability())}), nil

@@ -3,14 +3,14 @@ package rpc
 import (
 	"connectrpc.com/connect"
 	"context"
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 	"github.com/postpilot/backend/internal/template"
 )
 
 func (h *Handler) EstimateTemplateHeadingSuggestions(ctx context.Context, req *connect.Request[postpilotv1.EstimateTemplateHeadingSuggestionsRequest]) (*connect.Response[postpilotv1.EstimateTemplateHeadingSuggestionsResponse], error) {
-	if _, err := authrpc.ActingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	estimate, err := h.headings.Estimate(ctx, rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()))
@@ -26,7 +26,7 @@ func (h *Handler) EstimateTemplateHeadingSuggestions(ctx context.Context, req *c
 }
 
 func (h *Handler) StartTemplateHeadingSuggestions(ctx context.Context, req *connect.Request[postpilotv1.StartTemplateHeadingSuggestionsRequest]) (*connect.Response[postpilotv1.StartTemplateHeadingSuggestionsResponse], error) {
-	user, err := authrpc.ActingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (h *Handler) StartTemplateHeadingSuggestions(ctx context.Context, req *conn
 }
 
 func (h *Handler) GetTemplateHeadingSuggestions(ctx context.Context, req *connect.Request[postpilotv1.GetTemplateHeadingSuggestionsRequest]) (*connect.Response[postpilotv1.GetTemplateHeadingSuggestionsResponse], error) {
-	user, err := authrpc.ActingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

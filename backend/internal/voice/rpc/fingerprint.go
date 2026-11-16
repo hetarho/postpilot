@@ -5,14 +5,14 @@ import (
 
 	"connectrpc.com/connect"
 
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/voice"
 )
 
 // GetPostFingerprint is ②'s reading of the caller's post against its voice (POST-102).
 func (h *Handler) GetPostFingerprint(ctx context.Context, req *connect.Request[postpilotv1.GetPostFingerprintRequest]) (*connect.Response[postpilotv1.GetPostFingerprintResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

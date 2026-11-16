@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -21,7 +21,7 @@ type Handler struct {
 func NewHandler(queue *job.Queue) *Handler { return &Handler{queue: queue} }
 
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

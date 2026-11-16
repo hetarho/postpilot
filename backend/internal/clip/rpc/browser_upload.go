@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
 
 func (h *Handler) CancelClipBrowserRender(ctx context.Context, req *connect.Request[v1.CancelClipBrowserRenderRequest]) (*connect.Response[v1.CancelClipBrowserRenderResponse], error) {
-	user, err := authrpc.ActingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +25,7 @@ func (h *Handler) CancelClipBrowserRender(ctx context.Context, req *connect.Requ
 }
 
 func (h *Handler) PrepareClipRenderUpload(ctx context.Context, req *connect.Request[v1.PrepareClipRenderUploadRequest]) (*connect.Response[v1.PrepareClipRenderUploadResponse], error) {
-	user, err := authrpc.ActingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (h *Handler) PrepareClipRenderUpload(ctx context.Context, req *connect.Requ
 }
 
 func (h *Handler) CompleteClipRenderUpload(ctx context.Context, req *connect.Request[v1.CompleteClipRenderUploadRequest]) (*connect.Response[v1.CompleteClipRenderUploadResponse], error) {
-	user, err := authrpc.ActingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

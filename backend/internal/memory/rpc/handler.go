@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -22,7 +22,7 @@ type Handler struct{ service *memory.Service }
 func NewHandler(service *memory.Service) *Handler { return &Handler{service: service} }
 
 func (h *Handler) ListMemories(ctx context.Context, _ *connect.Request[postpilotv1.ListMemoriesRequest]) (*connect.Response[postpilotv1.ListMemoriesResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (h *Handler) ListMemories(ctx context.Context, _ *connect.Request[postpilot
 }
 
 func (h *Handler) CreateMemory(ctx context.Context, req *connect.Request[postpilotv1.CreateMemoryRequest]) (*connect.Response[postpilotv1.CreateMemoryResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (h *Handler) CreateMemory(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) UpdateMemory(ctx context.Context, req *connect.Request[postpilotv1.UpdateMemoryRequest]) (*connect.Response[postpilotv1.UpdateMemoryResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (h *Handler) UpdateMemory(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) DeleteMemory(ctx context.Context, req *connect.Request[postpilotv1.DeleteMemoryRequest]) (*connect.Response[postpilotv1.DeleteMemoryResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (h *Handler) DeleteMemory(ctx context.Context, req *connect.Request[postpil
 // it reaches the client through the error it returns, unchanged — this handler adds no
 // refusal of its own for it.
 func (h *Handler) StartMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.StartMemoryExtractionRequest]) (*connect.Response[postpilotv1.StartMemoryExtractionResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (h *Handler) StartMemoryExtraction(ctx context.Context, req *connect.Reques
 }
 
 func (h *Handler) GetMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.GetMemoryExtractionRequest]) (*connect.Response[postpilotv1.GetMemoryExtractionResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (h *Handler) GetMemoryExtraction(ctx context.Context, req *connect.Request[
 }
 
 func (h *Handler) ResolveMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.ResolveMemoryExtractionRequest]) (*connect.Response[postpilotv1.ResolveMemoryExtractionResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -3,7 +3,7 @@ package rpc
 import (
 	"connectrpc.com/connect"
 	"context"
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
@@ -17,7 +17,7 @@ func spokenRecoveryProto(r *clip.RecoveryState) *v1.ClipSpokenDraft {
 	return out
 }
 func (h *Handler) GetClipSpokenDraft(ctx context.Context, req *connect.Request[v1.GetClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error) {
-	owner, e := authrpc.ActingUser(ctx)
+	owner, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -31,7 +31,7 @@ func (h *Handler) GetClipSpokenDraft(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(spokenRecoveryProto(r)), nil
 }
 func (h *Handler) SaveClipSpokenDraft(ctx context.Context, req *connect.Request[v1.SaveClipSpokenDraftRequest]) (*connect.Response[v1.ClipSpokenDraft], error) {
-	owner, e := authrpc.ActingUser(ctx)
+	owner, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}

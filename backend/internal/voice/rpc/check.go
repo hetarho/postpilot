@@ -6,7 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	authrpc "github.com/postpilot/backend/internal/auth/rpc"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/voice"
@@ -15,7 +15,7 @@ import (
 // --- 검증 (VOICE-43) ---
 
 func (h *Handler) StartVoiceCheck(ctx context.Context, req *connect.Request[postpilotv1.StartVoiceCheckRequest]) (*connect.Response[postpilotv1.StartVoiceCheckResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func (h *Handler) StartVoiceCheck(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) ListVoiceChecks(ctx context.Context, req *connect.Request[postpilotv1.ListVoiceChecksRequest]) (*connect.Response[postpilotv1.ListVoiceChecksResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +43,7 @@ func (h *Handler) ListVoiceChecks(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) RetryVoiceCheck(ctx context.Context, req *connect.Request[postpilotv1.RetryVoiceCheckRequest]) (*connect.Response[postpilotv1.RetryVoiceCheckResponse], error) {
-	userID, err := authrpc.ActingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
