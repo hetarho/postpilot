@@ -25,24 +25,39 @@ func (s *GenerationService) uploadStore() (clip.UploadTextStore, error) {
 	}
 	return store, nil
 }
+
+// UploadTexts returns the project's one upload text. A row stored for the project's
+// other channel was never shown and stays unreachable until it is removed (CLIP-209).
 func (s *GenerationService) UploadTexts(ctx context.Context, user, id string) ([]clip.UploadText, error) {
-	if _, err := s.projects.store.GetProject(ctx, user, id); err != nil {
+	p, err := s.projects.store.GetProject(ctx, user, id)
+	if err != nil {
 		return nil, err
 	}
 	store, err := s.uploadStore()
 	if err != nil {
 		return nil, err
 	}
-	return store.ListUploadTexts(ctx, user, id)
+	rows, err := store.ListUploadTexts(ctx, user, id)
+	if err != nil {
+		return nil, err
+	}
+	own := rows[:0:0]
+	for _, row := range rows {
+		if row.Channel == clip.DefaultChannel(p.Channel) {
+			own = append(own, row)
+		}
+	}
+	return own, nil
 }
-func (s *GenerationService) SaveUploadText(ctx context.Context, user, id, channel, body string, tags []string, revision int) (clip.UploadText, error) {
+func (s *GenerationService) SaveUploadText(ctx context.Context, user, id, body string, tags []string, revision int) (clip.UploadText, error) {
 	p, err := s.projects.store.GetProject(ctx, user, id)
 	if err != nil {
 		return clip.UploadText{}, err
 	}
-	if _, err = clip.UploadTextMaterial(p, channel); err != nil {
+	if _, err = clip.UploadTextMaterial(p); err != nil {
 		return clip.UploadText{}, err
 	}
+	channel := clip.DefaultChannel(p.Channel)
 	checked, err := clip.ValidateUploadTextEdit(channel, p.Language, p.Campaign, body, tags)
 	if err != nil {
 		return clip.UploadText{}, err
@@ -53,7 +68,7 @@ func (s *GenerationService) SaveUploadText(ctx context.Context, user, id, channe
 	}
 	return store.SaveUploadText(ctx, clip.UploadTextSave{UserID: user, ProjectID: id, Channel: channel, Body: checked.Body, Tags: checked.Tags, ExpectedRevision: revision, Edited: true, Now: s.now()})
 }
-func (s *GenerationService) uploadInputs(ctx context.Context, user, id, channel string, confirmed bool) (clip.Project, clip.UploadTextInput, clip.UploadText, error) {
+func (s *GenerationService) uploadInputs(ctx context.Context, user, id string, confirmed bool) (clip.Project, clip.UploadTextInput, clip.UploadText, error) {
 	var empty clip.UploadTextInput
 	var row clip.UploadText
 	if s.uploadWriter == nil || s.uploadVoice == nil {
@@ -73,7 +88,7 @@ func (s *GenerationService) uploadInputs(ctx context.Context, user, id, channel 
 	if p, err = s.projects.freezeLinkedPost(ctx, user, p); err != nil {
 		return p, empty, row, err
 	}
-	in, err := clip.UploadTextMaterial(p, channel)
+	in, err := clip.UploadTextMaterial(p)
 	if err != nil {
 		return p, in, row, err
 	}
@@ -89,7 +104,7 @@ func (s *GenerationService) uploadInputs(ctx context.Context, user, id, channel 
 		return p, in, row, err
 	}
 	for _, text := range rows {
-		if text.Channel == channel {
+		if text.Channel == in.Channel {
 			row = text
 			break
 		}
@@ -121,8 +136,8 @@ func (s *GenerationService) uploadPricing(ctx context.Context, user, write strin
 	}
 	return p, nil
 }
-func (s *GenerationService) QuoteUploadText(ctx context.Context, user, id, channel, write string, confirmed bool) (clip.UploadTextQuote, error) {
-	_, in, row, err := s.uploadInputs(ctx, user, id, channel, confirmed)
+func (s *GenerationService) QuoteUploadText(ctx context.Context, user, id, write string, confirmed bool) (clip.UploadTextQuote, error) {
+	_, in, row, err := s.uploadInputs(ctx, user, id, confirmed)
 	if err != nil {
 		return clip.UploadTextQuote{}, err
 	}
@@ -138,14 +153,14 @@ func (s *GenerationService) QuoteUploadText(ctx context.Context, user, id, chann
 		return clip.UploadTextQuote{}, clip.ErrPricingUnavailable
 	}
 	now := s.now()
-	quote := clip.UploadTextQuote{GenerationQuote: clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, InputDigest: clip.UploadQuoteDigest(in, row.Revision, confirmed, pricing), Pricing: pricing, ExpiresAt: now.Add(s.cfg.QuoteTTL)}, Channel: channel, ExpectedRevision: row.Revision}
+	quote := clip.UploadTextQuote{GenerationQuote: clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, InputDigest: clip.UploadQuoteDigest(in, row.Revision, confirmed, pricing), Pricing: pricing, ExpiresAt: now.Add(s.cfg.QuoteTTL)}, Channel: in.Channel, ExpectedRevision: row.Revision}
 	store, _ := s.uploadStore()
 	if err = store.SaveUploadTextQuote(ctx, quote, now); err != nil {
 		return clip.UploadTextQuote{}, err
 	}
 	return quote, nil
 }
-func (s *GenerationService) StartUploadText(ctx context.Context, user, id, channel, write string, confirmed bool, a clip.QuoteApproval) (string, error) {
+func (s *GenerationService) StartUploadText(ctx context.Context, user, id, write string, confirmed bool, a clip.QuoteApproval) (string, error) {
 	if a.QuoteID == "" || a.MaxCredits == nil || *a.MaxCredits < 0 {
 		return "", clip.ErrQuoteRequired
 	}
@@ -160,7 +175,7 @@ func (s *GenerationService) StartUploadText(ctx context.Context, user, id, chann
 	if err != nil {
 		return "", err
 	}
-	if quote.ProjectID != id || quote.Channel != channel || quote.Pricing.Plan.Ref != modelRef(write) || quote.Pricing.MaxCredits != *a.MaxCredits {
+	if quote.ProjectID != id || quote.Pricing.Plan.Ref != modelRef(write) || quote.Pricing.MaxCredits != *a.MaxCredits {
 		return "", clip.ErrQuoteChanged
 	}
 	if quote.ConsumedJobID != "" {
@@ -169,7 +184,7 @@ func (s *GenerationService) StartUploadText(ctx context.Context, user, id, chann
 			return "", e
 		}
 		var frozen clip.UploadTextSnapshot
-		if j == nil || j.Kind != clip.JobKindUploadText || clip.StrictJSON(string(j.Payload), &frozen) != nil || frozen.UserID != user || frozen.ProjectID != id || frozen.Input.Channel != channel || frozen.ConfirmEdited != confirmed {
+		if j == nil || j.Kind != clip.JobKindUploadText || clip.StrictJSON(string(j.Payload), &frozen) != nil || frozen.UserID != user || frozen.ProjectID != id || frozen.ConfirmEdited != confirmed {
 			return "", clip.ErrQuoteChanged
 		}
 		return j.ID, nil
@@ -177,7 +192,7 @@ func (s *GenerationService) StartUploadText(ctx context.Context, user, id, chann
 	if !s.now().Before(quote.ExpiresAt) {
 		return "", clip.ErrQuoteExpired
 	}
-	p, in, row, err := s.uploadInputs(ctx, user, id, channel, confirmed)
+	p, in, row, err := s.uploadInputs(ctx, user, id, confirmed)
 	if err != nil {
 		return "", err
 	}
@@ -256,7 +271,7 @@ func (s *GenerationService) RunUploadText(ctx context.Context, user, job, projec
 	}
 	// The worker keeps the text approved at start, even if the owner edits the post later.
 	p.LinkedPostText = frozen.Input.LinkedPost
-	material, err := clip.UploadTextMaterial(p, frozen.Input.Channel)
+	material, err := clip.UploadTextMaterial(p)
 	if err != nil {
 		return err
 	}

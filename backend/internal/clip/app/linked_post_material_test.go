@@ -19,14 +19,14 @@ func linkedUploadFixture(t *testing.T) (*GenerationService, *uploadMemory, *uplo
 }
 func TestLinkedPostFrozenWithAttempt(t *testing.T) {
 	s, store, jobs, writer, reader := linkedUploadFixture(t)
-	id, _ := uploadStart(t, s, clip.ChannelNaver, false)
+	id, _ := uploadStart(t, s, false)
 	before := reader.calls
 	reader.texts["alice:post"].Sections[0].Text = "나중에 고친 글"
 	runUpload(t, s, jobs, id)
 	if reader.calls != before || writer.input.LinkedPost == nil || writer.input.LinkedPost.Sections[0].Text != "맛은 좋고 대기는 길었다" {
 		t.Fatal("worker reread or changed frozen text", writer.input.LinkedPost)
 	}
-	id, _ = uploadStart(t, s, clip.ChannelInstagram, false)
+	id, _ = uploadStart(t, s, false)
 	runUpload(t, s, jobs, id)
 	if writer.input.LinkedPost.Sections[0].Text != "나중에 고친 글" {
 		t.Fatal("next call missed the edit")
@@ -56,7 +56,7 @@ func TestLinkedPostFrozenWithAttempt(t *testing.T) {
 }
 func TestPostEditBetweenQuoteAndStartChangesQuote(t *testing.T) {
 	s, store, jobs, writer, reader := linkedUploadFixture(t)
-	q, err := s.QuoteUploadText(t.Context(), "alice", "project", clip.ChannelNaver, "p/w", false)
+	q, err := s.QuoteUploadText(t.Context(), "alice", "project", "p/w", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func TestPostEditBetweenQuoteAndStartChangesQuote(t *testing.T) {
 		t.Fatal(err)
 	}
 	reader.texts["alice:post"].Sections[0].Text = "맛은 별로 대기는 짧았다"
-	_, err = s.StartUploadText(t.Context(), "alice", "project", clip.ChannelNaver, "p/w", false, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: clip.CancellationPolicyVersion})
+	_, err = s.StartUploadText(t.Context(), "alice", "project", "p/w", false, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: clip.CancellationPolicyVersion})
 	if !errors.Is(err, clip.ErrQuoteChanged) || len(jobs.jobs) != 0 || jobs.holds != 0 || writer.calls != 0 {
 		t.Fatal("changed post consumed approval or held credits", err)
 	}
@@ -105,7 +105,7 @@ func TestLinkedTextIdentityUsesOneReadAndNeverAReusedSlug(t *testing.T) {
 
 func TestUploadTextSnapshotCompatibilityKeepsApprovedAccounting(t *testing.T) {
 	s, _, jobs, _, _ := linkedUploadFixture(t)
-	id, _ := uploadStart(t, s, clip.ChannelNaver, false)
+	id, _ := uploadStart(t, s, false)
 	var frozen clip.UploadTextSnapshot
 	if err := json.Unmarshal(jobs.jobs[id].Payload, &frozen); err != nil {
 		t.Fatal(err)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -171,13 +172,13 @@ func uploadFixture(t *testing.T) (*GenerationService, *uploadMemory, *uploadJobs
 	service := &GenerationService{store: store, projects: &Service{store: store}, jobs: jobs, uploadWriter: writer, uploadVoice: voice, pricing: pricing, cfg: clip.GenerationConfig{QuoteTTL: time.Minute, CleanupTimeout: time.Second}, now: time.Now, finisher: uploadFinisher{rows: store, jobs: jobs}}
 	return service, store, jobs, writer, voice, freezer
 }
-func uploadStart(t *testing.T, s *GenerationService, channel string, confirmed bool) (string, clip.UploadTextQuote) {
+func uploadStart(t *testing.T, s *GenerationService, confirmed bool) (string, clip.UploadTextQuote) {
 	t.Helper()
-	q, e := s.QuoteUploadText(t.Context(), "alice", "project", channel, "p/w", confirmed)
+	q, e := s.QuoteUploadText(t.Context(), "alice", "project", "p/w", confirmed)
 	if e != nil {
 		t.Fatal(e)
 	}
-	id, e := s.StartUploadText(t.Context(), "alice", "project", channel, "p/w", confirmed, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: 1})
+	id, e := s.StartUploadText(t.Context(), "alice", "project", "p/w", confirmed, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: 1})
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -195,7 +196,7 @@ func runUpload(t *testing.T, s *GenerationService, jobs *uploadJobs, id string) 
 
 func TestUploadTextIsOneQuotedCall(t *testing.T) {
 	s, store, jobs, writer, voice, _ := uploadFixture(t)
-	id, q := uploadStart(t, s, clip.ChannelNaver, false)
+	id, q := uploadStart(t, s, false)
 	if q.Pricing.PlanCalls() != 1 || q.Pricing.ObservationCalls != 0 || q.Pricing.MaxCredits <= 0 || jobs.holds != 0 || writer.calls != 0 {
 		t.Fatal("quote/start did paid work", q.Pricing, jobs.holds, writer.calls)
 	}
@@ -211,36 +212,54 @@ func TestUploadTextIsOneQuotedCall(t *testing.T) {
 	if store.rows[clip.ChannelNaver].Edited || store.rows[clip.ChannelNaver].Tags[0] != "필수" {
 		t.Fatal(store.rows)
 	}
-	duplicate, e := s.StartUploadText(t.Context(), "alice", "project", clip.ChannelNaver, "p/w", false, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: 1})
+	duplicate, e := s.StartUploadText(t.Context(), "alice", "project", "p/w", false, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: 1})
 	if e != nil || duplicate != id || writer.calls != 1 {
 		t.Fatal("approval was consumed twice", duplicate, e)
 	}
 }
-func TestTheOtherChannelNeedsNoRender(t *testing.T) {
+func TestUploadTextNeedsNoRender(t *testing.T) {
 	s, store, jobs, writer, _, _ := uploadFixture(t)
 	store.project.Finalized = &clip.Finalization{}
 	before := store.project.EditPlan
-	for _, channel := range []string{clip.ChannelNaver, clip.ChannelInstagram} {
-		id, _ := uploadStart(t, s, channel, false)
-		runUpload(t, s, jobs, id)
-	}
-	if len(store.rows) != 2 || writer.calls != 2 || store.project.EditPlan != before || store.project.EditPlanRevision != 1 || store.project.Finalized == nil {
+	id, _ := uploadStart(t, s, false)
+	runUpload(t, s, jobs, id)
+	if len(store.rows) != 1 || writer.calls != 1 || store.project.EditPlan != before || store.project.EditPlanRevision != 1 || store.project.Finalized == nil {
 		t.Fatal("upload text changed the finished video", store.rows, writer.calls)
 	}
 	// Media, source and render collaborators are all nil in this fixture.
 }
+
+// A project stored on the retired Instagram channel reads and saves its one stored text, under the Naver limits (CLIP-209).
+func TestStoredInstagramProjectKeepsItsOneText(t *testing.T) {
+	s, store, _, _, _, _ := uploadFixture(t)
+	const stored = "instagram_clip"
+	store.project.Channel = stored
+	store.rows[stored] = clip.UploadText{ProjectID: "project", UserID: "alice", Channel: stored, Body: "남아 있는 문구", Tags: []string{"저장"}, Revision: 1}
+	store.rows[clip.ChannelNaver] = clip.UploadText{ProjectID: "project", UserID: "alice", Channel: clip.ChannelNaver, Body: "닿지 않는 문구", Revision: 1}
+	rows, e := s.UploadTexts(t.Context(), "alice", "project")
+	if e != nil || len(rows) != 1 || rows[0].Body != "남아 있는 문구" {
+		t.Fatal("the project's other text was reachable", rows, e)
+	}
+	if _, e = s.SaveUploadText(t.Context(), "alice", "project", strings.Repeat("가", clip.UploadTextMaxChars+1), nil, 1); !errors.Is(e, clip.ErrUploadTextLimit) {
+		t.Fatal("the Naver limit was not applied", e)
+	}
+	saved, e := s.SaveUploadText(t.Context(), "alice", "project", "내가 고친 문구", nil, 1)
+	if e != nil || saved.Channel != stored || store.rows[stored].Body != "내가 고친 문구" || store.rows[clip.ChannelNaver].Body != "닿지 않는 문구" {
+		t.Fatal("save did not follow the stored text", saved, e)
+	}
+}
 func TestEditedTextNeedsConfirmation(t *testing.T) {
 	s, store, jobs, writer, _, _ := uploadFixture(t)
-	if _, e := s.SaveUploadText(t.Context(), "alice", "project", clip.ChannelNaver, "내가 고친 문구", nil, 0); e != nil {
+	if _, e := s.SaveUploadText(t.Context(), "alice", "project", "내가 고친 문구", nil, 0); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := s.QuoteUploadText(t.Context(), "alice", "project", clip.ChannelNaver, "p/w", false); !errors.Is(e, clip.ErrUploadTextConfirmation) {
+	if _, e := s.QuoteUploadText(t.Context(), "alice", "project", "p/w", false); !errors.Is(e, clip.ErrUploadTextConfirmation) {
 		t.Fatal("manual edit was overwritten without confirmation", e)
 	}
 	if writer.calls != 0 || jobs.holds != 0 || store.rows[clip.ChannelNaver].Body != "내가 고친 문구" {
 		t.Fatal("confirmation refusal changed text")
 	}
-	id, _ := uploadStart(t, s, clip.ChannelNaver, true)
+	id, _ := uploadStart(t, s, true)
 	runUpload(t, s, jobs, id)
 	if store.rows[clip.ChannelNaver].Revision != 2 || store.rows[clip.ChannelNaver].Edited {
 		t.Fatal(store.rows)
@@ -249,7 +268,7 @@ func TestEditedTextNeedsConfirmation(t *testing.T) {
 func TestImpossibleRequiredHashtagsRefuseBeforeQuoteAndCredits(t *testing.T) {
 	s, store, jobs, writer, _, freezer := uploadFixture(t)
 	store.project.AdvertiserGuide.Hashtags = []string{"a", "b", "c", "d", "e", "f"}
-	if _, e := s.QuoteUploadText(t.Context(), "alice", "project", clip.ChannelNaver, "p/w", false); !errors.Is(e, clip.ErrUploadTextLimit) {
+	if _, e := s.QuoteUploadText(t.Context(), "alice", "project", "p/w", false); !errors.Is(e, clip.ErrUploadTextLimit) {
 		t.Fatal(e)
 	}
 	if len(freezer.calls) != 0 || len(store.quotes) != 0 || writer.calls != 0 || jobs.holds != 0 {

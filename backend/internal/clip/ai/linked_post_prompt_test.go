@@ -42,7 +42,7 @@ func TestNoLinkedPostKeepsCurrentPromptBaseline(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			want := legacyVideoPromptDigests[c.name]
 			if c.name == "upload-text" {
-				want = "805ee197e59f05e3760ccc0d5c15ad900d554cbfcaafcb3e29a54662e8d6c516"
+				want = "c44a57306c0eeb995c8739e6c5e079740b4a5df3c1adc72f33164cf66cb6c390"
 			}
 			got := fmt.Sprintf("%x", sha256.Sum256([]byte(c.system+"\x00"+c.user)))
 			if want == "" || got != want {

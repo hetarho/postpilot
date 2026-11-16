@@ -15,36 +15,25 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 )
 
-// Current upload rules, verified 2026-10-16 from the platforms themselves:
+// Current upload rules, verified 2026-10-16 from the platform itself (CLIP-212),
 // Naver video (photo/post has a different limit):
 // https://help.naver.com/service/30048/contents/24422?osType=COMMONOS
-// Instagram caption: https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media/
-// Instagram's app takes five tags, unlike the API's older thirty-tag allowance:
-// https://help.instagram.com/351460621611097/
 const (
-	UploadTextNaverMaxChars     = 300
-	UploadTextInstagramMaxChars = 2200
-	UploadTextMaxTags           = 5
+	UploadTextMaxChars = 300
+	UploadTextMaxTags  = 5
 )
 
 var (
 	ErrUploadTextConfirmation = errors.New("edited upload text needs confirmation")
-	ErrUploadTextLimit        = errors.New("upload text exceeds the channel limits")
+	ErrUploadTextLimit        = errors.New("upload text exceeds the limits")
 )
 
 type UploadTextLimits struct {
 	MaxChars, MaxTags int
-	TagsInCaption     bool
 }
 
-func UploadLimits(channel string) (UploadTextLimits, error) {
-	switch channel {
-	case ChannelNaver:
-		return UploadTextLimits{MaxChars: UploadTextNaverMaxChars, MaxTags: UploadTextMaxTags}, nil
-	case ChannelInstagram:
-		return UploadTextLimits{MaxChars: UploadTextInstagramMaxChars, MaxTags: UploadTextMaxTags, TagsInCaption: true}, nil
-	}
-	return UploadTextLimits{}, ErrInvalid
+func UploadLimits() UploadTextLimits {
+	return UploadTextLimits{MaxChars: UploadTextMaxChars, MaxTags: UploadTextMaxTags}
 }
 
 type UploadText struct {
@@ -127,10 +116,7 @@ type UploadTextStore interface {
 }
 
 // Material contains owner text only, with no original-file or observation dependency.
-func UploadTextMaterial(p Project, channel string) (UploadTextInput, error) {
-	if _, err := UploadLimits(channel); err != nil {
-		return UploadTextInput{}, err
-	}
+func UploadTextMaterial(p Project) (UploadTextInput, error) {
 	if p.EditPlanRevision <= 0 || p.EditPlan == "" {
 		return UploadTextInput{}, ErrPlanConflict
 	}
@@ -138,7 +124,7 @@ func UploadTextMaterial(p Project, channel string) (UploadTextInput, error) {
 	if err != nil {
 		return UploadTextInput{}, err
 	}
-	in := UploadTextInput{LinkedPost: p.LinkedPostText, Language: p.Language, Channel: channel, Title: p.Title,
+	in := UploadTextInput{LinkedPost: p.LinkedPostText, Language: p.Language, Channel: DefaultChannel(p.Channel), Title: p.Title,
 		Instruction: p.Instruction, Campaign: p.Campaign, Storyline: p.Storyline,
 		AdvertiserGuide: EffectiveAdvertiserGuide(p), Captions: []string{}}
 	if p.Composition != nil {
@@ -197,18 +183,11 @@ func normalizedUploadTags(values []string) ([]string, error) {
 	return tags, nil
 }
 
-func UploadTextBodyLimit(channel, language string, on bool, tags []string) (int, error) {
-	limits, err := UploadLimits(channel)
-	if err != nil {
-		return 0, err
-	}
+func UploadTextBodyLimit(language string, on bool, tags []string) (int, error) {
+	limits := UploadLimits()
 	room := limits.MaxChars
 	if on {
 		room -= utf8.RuneCountInString(UploadTextDisclosure(language)) + 2
-	}
-	if limits.TagsInCaption && len(tags) > 0 {
-		// The body and separately copyable tags must also fit together in a caption.
-		room -= 2 + utf8.RuneCountInString("#"+strings.Join(tags, " #"))
 	}
 	if room < 1 || len(tags) > limits.MaxTags {
 		return 0, ErrUploadTextLimit
@@ -250,7 +229,7 @@ func BoundGeneratedUploadText(in UploadTextInput, body string, suggested []strin
 			tags = candidate
 		}
 	}
-	room, err := UploadTextBodyLimit(in.Channel, in.Language, in.Campaign, tags)
+	room, err := UploadTextBodyLimit(in.Language, in.Campaign, tags)
 	if err != nil {
 		return UploadText{}, err
 	}
@@ -265,17 +244,17 @@ func BoundGeneratedUploadText(in UploadTextInput, body string, suggested []strin
 }
 
 // Owner edits are refused at the bound; only generated output is trimmed.
-func ValidateUploadTextEdit(channel, language string, on bool, body string, rawTags []string) (UploadText, error) {
+func ValidateUploadTextEdit(storedChannel, language string, on bool, body string, rawTags []string) (UploadText, error) {
 	tags, err := normalizedUploadTags(rawTags)
 	if err != nil {
 		return UploadText{}, err
 	}
-	room, err := UploadTextBodyLimit(channel, language, on, tags)
+	room, err := UploadTextBodyLimit(language, on, tags)
 	body = strings.TrimSpace(body)
 	if err != nil || body == "" || utf8.RuneCountInString(body) > room {
 		return UploadText{}, ErrUploadTextLimit
 	}
-	return UploadText{Channel: channel, Body: body, Tags: tags, Edited: true}, nil
+	return UploadText{Channel: storedChannel, Body: body, Tags: tags, Edited: true}, nil
 }
 
 // Match the current caption words, including owner-edited rows and phrase splits.

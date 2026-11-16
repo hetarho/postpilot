@@ -9,8 +9,9 @@ import (
 	"unicode/utf8"
 )
 
-func TestUploadTextBoundsWhatEachChannelActuallyCopies(t *testing.T) {
-	for _, channel := range []string{ChannelNaver, ChannelInstagram} {
+// A project stored on the retired Instagram channel keeps the one Naver rule set (CLIP-209, CLIP-212).
+func TestUploadTextBoundsWhatIsActuallyCopied(t *testing.T) {
+	for _, channel := range []string{ChannelNaver, "instagram_clip"} {
 		for _, language := range []string{"ko", "en"} {
 			for _, on := range []bool{false, true} {
 				in := UploadTextInput{Channel: channel, Language: language, Campaign: on, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#필수 하나", "필수둘", "셋", "넷", "다섯"}}}
@@ -28,14 +29,10 @@ func TestUploadTextBoundsWhatEachChannelActuallyCopies(t *testing.T) {
 				if on {
 					body = UploadTextDisclosure(language) + "\n\n" + body
 				}
-				limits, _ := UploadLimits(channel)
-				if limits.TagsInCaption && len(text.Tags) > 0 {
-					body += "\n\n#" + strings.Join(text.Tags, " #")
-				}
-				if utf8.RuneCountInString(body) > limits.MaxChars {
+				if utf8.RuneCountInString(body) > UploadLimits().MaxChars {
 					t.Fatal("copied caption exceeded limit", channel, language, on)
 				}
-				room, e := UploadTextBodyLimit(channel, language, on, text.Tags)
+				room, e := UploadTextBodyLimit(language, on, text.Tags)
 				if e != nil {
 					t.Fatal(e)
 				}
@@ -50,7 +47,7 @@ func TestUploadTextBoundsWhatEachChannelActuallyCopies(t *testing.T) {
 	}
 }
 func TestUploadTextKeepsRequiredTagsBeforeOptionalOnes(t *testing.T) {
-	in := UploadTextInput{Channel: ChannelInstagram, Language: "ko", Campaign: true, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#제주"}}}
+	in := UploadTextInput{Channel: "instagram_clip", Language: "ko", Campaign: true, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#제주"}}}
 	got, e := BoundGeneratedUploadText(in, "직접 쓴 말", []string{"제 주", "JEJU", "c", "d", "e", "discarded"})
 	if e != nil || len(got.Tags) != 5 || got.Tags[0] != "제주" {
 		t.Fatal(got, e)

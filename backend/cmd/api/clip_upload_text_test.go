@@ -101,7 +101,7 @@ func TestClipUploadTextRegistrationAdmissionAndTerminalSettlement(t *testing.T) 
 	if e != nil {
 		t.Fatal(e)
 	}
-	quote, e := app.clipGeneration.QuoteUploadText(t.Context(), "alice", project.ID, clip.ChannelNaver, "fixture/writer", false)
+	quote, e := app.clipGeneration.QuoteUploadText(t.Context(), "alice", project.ID, "fixture/writer", false)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -109,7 +109,7 @@ func TestClipUploadTextRegistrationAdmissionAndTerminalSettlement(t *testing.T) 
 		t.Fatal(quote.Pricing)
 	}
 	approval := clip.QuoteApproval{QuoteID: quote.ID, MaxCredits: &quote.Pricing.MaxCredits, CancellationPolicyVersion: clip.CancellationPolicyVersion}
-	id, e := app.clipGeneration.StartUploadText(t.Context(), "alice", project.ID, clip.ChannelNaver, "fixture/writer", false, approval)
+	id, e := app.clipGeneration.StartUploadText(t.Context(), "alice", project.ID, "fixture/writer", false, approval)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -155,7 +155,7 @@ func TestClipUploadTextRegistrationAdmissionAndTerminalSettlement(t *testing.T) 
 	if e != nil || read.EditPlanRevision != 1 || read.EditPlan != plan || read.Result == nil || read.Result.ID != "original-result" || read.Finalized == nil {
 		t.Fatal("writing text changed the finished clip", read, e)
 	}
-	duplicate, e := app.clipGeneration.StartUploadText(t.Context(), "alice", project.ID, clip.ChannelNaver, "fixture/writer", false, approval)
+	duplicate, e := app.clipGeneration.StartUploadText(t.Context(), "alice", project.ID, "fixture/writer", false, approval)
 	if e != nil || duplicate != id {
 		t.Fatal("approval was consumed twice", duplicate, e)
 	}
@@ -186,11 +186,11 @@ func TestCancelledUploadTextNeverPublishesItsCandidate(t *testing.T) {
 	if _, e = p.db.Writer.Exec(`UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=1 WHERE id=?`, plan, project.ID); e != nil {
 		t.Fatal(e)
 	}
-	quote, e := app.clipGeneration.QuoteUploadText(t.Context(), "alice", project.ID, clip.ChannelNaver, "fixture/writer", false)
+	quote, e := app.clipGeneration.QuoteUploadText(t.Context(), "alice", project.ID, "fixture/writer", false)
 	if e != nil {
 		t.Fatal(e)
 	}
-	id, e := app.clipGeneration.StartUploadText(t.Context(), "alice", project.ID, clip.ChannelNaver, "fixture/writer", false, clip.QuoteApproval{QuoteID: quote.ID, MaxCredits: &quote.Pricing.MaxCredits, CancellationPolicyVersion: 1})
+	id, e := app.clipGeneration.StartUploadText(t.Context(), "alice", project.ID, "fixture/writer", false, clip.QuoteApproval{QuoteID: quote.ID, MaxCredits: &quote.Pricing.MaxCredits, CancellationPolicyVersion: 1})
 	if e != nil {
 		t.Fatal(e)
 	}

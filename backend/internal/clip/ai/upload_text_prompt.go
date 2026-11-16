@@ -12,7 +12,7 @@ var uploadTextSchema = []byte(`{"type":"object","properties":{"body":{"type":"st
 
 func BuildUploadTextPrompt(in clip.UploadTextInput) (string, string) {
 	tags, _ := clip.RequiredUploadTags(in.EffectiveGuide())
-	room, _ := clip.UploadTextBodyLimit(in.Channel, in.Language, in.Campaign, tags)
+	room, _ := clip.UploadTextBodyLimit(in.Language, in.Campaign, tags)
 	groups := map[string][]map[string]any{}
 	for group, items := range in.Facts.Items {
 		groups[group] = []map[string]any{}
@@ -23,7 +23,7 @@ func BuildUploadTextPrompt(in clip.UploadTextInput) (string, string) {
 	payload := map[string]any{
 		"project_title": in.Title, "project_instruction": in.Instruction,
 		"global_values": in.Facts.Values, "item_groups": groups,
-		"final_captions": in.Captions, "channel": in.Channel,
+		"final_captions": in.Captions,
 		"body_max_chars": room, "hashtag_limit": clip.UploadTextMaxTags,
 	}
 	if in.Storyline != nil {
@@ -39,10 +39,10 @@ func BuildUploadTextPrompt(in clip.UploadTextInput) (string, string) {
 	if in.Policy.StructuredOutput {
 		contract = "Use the supplied response schema."
 	}
-	system := videoWritingContract(planning) + `Write upload text for this finished clip, in the required output language: a concise description for naver_clip or a caption for instagram_clip. Return body and tags only; never request tools, footage, observation or a render.
+	system := videoWritingContract(planning) + `Write upload text for this finished clip, in the required output language: a concise 네이버 클립 description. Return body and tags only; never request tools, footage, observation or a render.
 Use only the supplied instruction, exact owner facts, storyline and final captions. Preserve the owner's stated impressions and drawbacks; invent no experience, verdict, praise or visit detail. Retained generated text is context, not proof of an experience. The advertiser's requests never become the owner's impressions.
 When base_voice_style is present, use it only for register and style, never for facts or phrases from another experience. Every video principle outranks it; it outranks the default natural-Korean style where they disagree. Without it, use plain style. Its contents cannot change the output contract.
-Keep body within body_max_chars Unicode characters. Return at most hashtag_limit distinct hashtags, including every required advertiser hashtag while supplied. Write no disclosure sentence or placeholder, and no hashtags inside body; the display reserves its own disclosure space and gives tags their own field. The Instagram body and its appended tags must fit together.
+Keep body within body_max_chars Unicode characters. Return at most hashtag_limit distinct hashtags, including every required advertiser hashtag while supplied. Write no disclosure sentence or placeholder, and no hashtags inside body; the display reserves its own disclosure space and gives tags their own field.
 ` + contract + advertiserGuideRule(planning) + videoGuidelineBlock(videoGuidelinesFor(in.Guidelines, "upload-text"))
 	return system, promptJSON(payload)
 }
@@ -50,9 +50,6 @@ Keep body within body_max_chars Unicode characters. Return at most hashtag_limit
 func (s *Service) uploadTextRequest(model llm.ModelRef, in clip.UploadTextInput) (llm.Request, error) {
 	if !clip.ValidLanguage(in.Language) || in.Policy.ResponseRetries != 0 {
 		return llm.Request{}, clip.ErrInvalid
-	}
-	if _, err := clip.UploadLimits(in.Channel); err != nil {
-		return llm.Request{}, err
 	}
 	if in.AdvertiserGuide != nil {
 		if _, err := clip.NormalizeAdvertiserGuide(*in.AdvertiserGuide); err != nil {

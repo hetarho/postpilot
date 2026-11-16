@@ -23,20 +23,17 @@ func TestEarlierProjectsAreNaverClipAndKeepTheirRatio(t *testing.T) {
 		if before.Channel != clip.ChannelNaver || before.Ratio != ratio {
 			t.Fatal(before)
 		}
-		channel := clip.ChannelInstagram
+		channel := "instagram_clip"
 		moved, err := service.UpdateProject(t.Context(), "alice", ratio, clip.ProjectPatch{Channel: &channel})
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := before
-		want.Channel = channel
-		want.UpdatedAt = moved.UpdatedAt
-		if !reflect.DeepEqual(moved, want) {
-			t.Fatalf("channel move changed the project: got%+v want%+v", moved, want)
+		if !reflect.DeepEqual(moved, before) {
+			t.Fatalf("a channel patch changed the project: got%+v want%+v", moved, before)
 		}
 	}
 
-	// Completed clips can change directory without reopening their confirmed content.
+	// A channel patch on a completed clip is ignored and reopens none of its confirmed content.
 	for _, ratio := range []string{"horizontal", "square"} {
 		_, err := database.Writer.ExecContext(t.Context(), `UPDATE clip_projects SET result_id='result-'||id,result_key='result-'||id,result_content_type='video/mp4',result_bytes=1,result_duration_ms=15000,result_created_at=?,edit_plan_revision=1,rendered_plan_revision=1,finalized_at=?,finalized_plan_revision=1,finalized_result_key='result-'||id,source_access_revoked_at=? WHERE id=?`, stamp, stamp, stamp, ratio)
 		if err != nil {
@@ -65,11 +62,8 @@ func TestEarlierProjectsAreNaverClipAndKeepTheirRatio(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := before
-		want.Channel = channel
-		want.UpdatedAt = moved.UpdatedAt
-		if !reflect.DeepEqual(moved, want) {
-			t.Fatalf("finalized channel move changed canonical state: %+v %+v", moved, want)
+		if !reflect.DeepEqual(moved, before) {
+			t.Fatalf("finalized channel patch changed canonical state: %+v %+v", moved, before)
 		}
 	}
 	rows, err := st.ListProjectSummaries(t.Context(), "alice")

@@ -44,7 +44,7 @@ func (f Finalizer) Finalize(ctx context.Context, req clip.FinalizationRequest) (
 			return nil
 		}
 		if req.PublishedURL != "" {
-			if req.PublishedURL, err = clip.NormalizePublishedURL(found.Channel, req.PublishedURL); err != nil {
+			if req.PublishedURL, err = clip.NormalizePublishedURL(req.PublishedURL); err != nil {
 				return err
 			}
 		}
@@ -104,7 +104,7 @@ func (f Finalizer) SavePublishedURL(ctx context.Context, user, id, url string) (
 		if found.Finalized == nil {
 			return clip.ErrFinalizationInvalid
 		}
-		normalized, err := clip.NormalizePublishedURL(found.Channel, url)
+		normalized, err := clip.NormalizePublishedURL(url)
 		if err != nil {
 			return err
 		}

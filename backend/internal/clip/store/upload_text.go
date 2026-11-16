@@ -65,7 +65,7 @@ func (s *Store) SaveUploadText(ctx context.Context, in clip.UploadTextSave) (cli
 		if err != nil {
 			return clip.UploadText{}, err
 		}
-		if _, err := clip.UploadTextMaterial(p, in.Channel); err != nil {
+		if _, err := clip.UploadTextMaterial(p); err != nil {
 			return clip.UploadText{}, err
 		}
 		if in.JobID == "" {
@@ -128,7 +128,7 @@ func (s *Store) SaveUploadTextQuote(ctx context.Context, quote clip.UploadTextQu
 		if !now.Before(quote.ExpiresAt) {
 			return struct{}{}, clip.ErrQuoteExpired
 		}
-		if _, e = clip.UploadTextMaterial(p, quote.Channel); e != nil {
+		if _, e = clip.UploadTextMaterial(p); e != nil {
 			return struct{}{}, e
 		}
 		active, e := q.HasActiveClipJob(ctx, nullable(p.ID))
@@ -187,7 +187,7 @@ func (s *Store) LinkUploadTextJob(ctx context.Context, quote clip.UploadTextQuot
 		if e != nil {
 			return struct{}{}, e
 		}
-		material, e := clip.UploadTextMaterial(p, quote.Channel)
+		material, e := clip.UploadTextMaterial(p)
 		if e != nil {
 			return struct{}{}, e
 		}

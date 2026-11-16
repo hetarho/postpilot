@@ -7,15 +7,12 @@ import (
 	"unicode/utf8"
 )
 
-// A clip channel chooses its directory and upload text, never its composition.
-const (
-	ChannelNaver     = "naver_clip"
-	ChannelInstagram = "instagram_clip"
-)
+// Every clip is one kind of video (CLIP-209). The stored channel survives until
+// the columns go (T868) and only finds a project's one stored upload-text row;
+// no request or patch can set it.
+const ChannelNaver = "naver_clip"
 
-func ValidChannel(value string) bool { return value == ChannelNaver || value == ChannelInstagram }
-
-// An omitted channel is the earlier clients' and projects' Naver channel.
+// An omitted stored channel is the Naver one every project began with.
 func DefaultChannel(value string) string {
 	if value == "" {
 		return ChannelNaver
@@ -41,20 +38,17 @@ func (p ProjectPatch) TicksOnly() bool {
 	return p.Channel == nil && p.MetadataOnly()
 }
 
-// A posted URL is an https URL on its channel's platform host or a subdomain of
+// A posted URL is an https URL on 네이버 클립's platform host or a subdomain of
 // one (CLIP-232, decided in T759); nothing is fetched to check it.
 const PublishedURLMaxChars = 2048
 
-var PublishedURLHosts = map[string][]string{
-	ChannelNaver:     {"naver.com", "naver.me"},
-	ChannelInstagram: {"instagram.com"},
-}
+var PublishedURLHosts = []string{"naver.com", "naver.me"}
 
 var ErrPublishedURLInvalid = errors.New("clip published url is invalid")
 
 // NormalizePublishedURL trims the owner's URL and refuses one that is not an https URL on
-// the channel's platform host.
-func NormalizePublishedURL(channel, raw string) (string, error) {
+// the platform host.
+func NormalizePublishedURL(raw string) (string, error) {
 	value := strings.TrimSpace(raw)
 	if value == "" || !utf8.ValidString(value) || utf8.RuneCountInString(value) > PublishedURLMaxChars {
 		return "", ErrPublishedURLInvalid
@@ -64,7 +58,7 @@ func NormalizePublishedURL(channel, raw string) (string, error) {
 		return "", ErrPublishedURLInvalid
 	}
 	host := strings.ToLower(u.Hostname())
-	for _, allowed := range PublishedURLHosts[DefaultChannel(channel)] {
+	for _, allowed := range PublishedURLHosts {
 		if host == allowed || strings.HasSuffix(host, "."+allowed) {
 			return value, nil
 		}

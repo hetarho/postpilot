@@ -185,10 +185,8 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	if input.Ratio != "vertical" {
 		return clip.Project{}, clip.ErrRatioUnsupported
 	}
-	input.Channel = clip.DefaultChannel(input.Channel)
-	if !clip.ValidChannel(input.Channel) {
-		return clip.Project{}, clip.ErrInvalid
-	}
+	// A request's channel is ignored: every project is one kind of video (CLIP-209).
+	input.Channel = clip.ChannelNaver
 	title := strings.TrimSpace(input.Title)
 	// The title is optional: an empty one saves, generates and renders (CLIP-130).
 	// An unset duration is allowed at creation — the owner chooses it in ①
@@ -323,6 +321,14 @@ func (s *Service) SaveObservationEdits(ctx context.Context, user, id string, edi
 
 func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.ProjectPatch) (clip.Project, error) {
 	p.LinkedPostIdentity, p.StaleLinkedPostIdentity = nil, nil
+	// A channel patch is ignored: the stored channel never changes, and a patch
+	// that carried nothing else is the unchanged project (CLIP-209).
+	if p.Channel != nil {
+		p.Channel = nil
+		if p == (clip.ProjectPatch{}) {
+			return s.store.GetProject(ctx, user, id)
+		}
+	}
 	if p.ChecklistTicks != nil {
 		ticks, err := clip.NormalizeChecklistTicks(*p.ChecklistTicks)
 		if err != nil {
@@ -356,9 +362,6 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 	}
 	if err := s.prepareLinkedPostPatch(ctx, user, old, &p); err != nil {
 		return clip.Project{}, err
-	}
-	if p.Channel != nil && !clip.ValidChannel(*p.Channel) {
-		return clip.Project{}, clip.ErrInvalid
 	}
 	if p.AdvertiserGuide != nil {
 		guide, err := clip.NormalizeAdvertiserGuide(*p.AdvertiserGuide)

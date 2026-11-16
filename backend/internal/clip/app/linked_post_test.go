@@ -204,7 +204,7 @@ func TestClipCreationSeedsLinkedPostAtomically(t *testing.T) {
 	}
 }
 
-func TestStaleLinkClearsOnFinalizedChannelMove(t *testing.T) {
+func TestStaleLinkClearsOnFinalizedTicksSave(t *testing.T) {
 	s, store, reader := linkedPostSetup(t)
 	slug := "story"
 	if _, err := s.UpdateProject(t.Context(), "alice", "clip", clip.ProjectPatch{LinkedPostSlug: &slug}); err != nil {
@@ -212,8 +212,8 @@ func TestStaleLinkClearsOnFinalizedChannelMove(t *testing.T) {
 	}
 	delete(reader.posts, "alice:story")
 	store.project.Finalized = &clip.Finalization{}
-	channel := clip.ChannelInstagram
-	if _, err := s.UpdateProject(t.Context(), "alice", "clip", clip.ProjectPatch{Channel: &channel}); err != nil || store.project.LinkedPostRef != nil {
-		t.Fatal("stale maintenance blocked an allowed directory move", err)
+	ticks := []string{"a"}
+	if _, err := s.UpdateProject(t.Context(), "alice", "clip", clip.ProjectPatch{ChecklistTicks: &ticks}); err != nil || store.project.LinkedPostRef != nil {
+		t.Fatal("stale maintenance blocked an allowed metadata save", err)
 	}
 }

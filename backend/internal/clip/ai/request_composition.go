@@ -22,7 +22,7 @@ func clipDescriptor(mode string) llm.RequestComposition {
 		c.Activation = "one explicitly approved text-only writing call; no correction, source read or render"
 		c.Composer = "clip/ai.Service.WriteUploadText/BuildUploadTextPrompt"
 		c.Parser = "clip/ai.WriteUploadText/clip.BoundGeneratedUploadText"
-		c.Consumer = "saved channel upload text; no media or edit-plan mutation"
+		c.Consumer = "saved upload text; no media or edit-plan mutation"
 		c.SourceFiles = append(c.SourceFiles, "internal/clip/ai/upload_text_prompt.go", "internal/clip/upload_text.go")
 		schema = uploadTextSchema
 	case "observe":
