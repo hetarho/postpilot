@@ -26,7 +26,7 @@
 | ARCH | 25 | 25 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 40 | 40 | - | 0 |
-| POST | 52 | 52 | - | 0 |
+| POST | 53 | 53 | - | 0 |
 | VOICE | 22 | 22 | - | 0 |
 | GEN | 33 | 33 | - | 0 |
 | MODEL | 38 | 38 | - | 0 |
@@ -97,6 +97,7 @@
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 | T880 | Keep writing-option popovers inside the viewport and above page docks | POST THEME ARCH | - | todo |
 | T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | todo |
+| T882 | Edit writing guidelines in place without leaving or minting the draft | POST GUIDE THEME ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |

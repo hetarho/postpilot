@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r52 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r53 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -101,7 +101,9 @@
 - POST-123 [o] ①'s 확인 summarizes what the run will be given, each row with one way to change it, and holds no second copy of any field:
   - 글 종류 · 사진 (up to four thumbnails with the photo and video counts) · 제목 · 템플릿 · 덧붙임, each with a 바꾸기 named by its row that opens that row's screen
   - 말투 as its labelled picker in place (→POST-101) with the voice warning under it (→POST-25)
-  - 지침, counting the owner's guidelines and the 기본 지침 switched on; its 바꾸기 flushes the draft and opens the guidelines page with this post as its explicit return (→THEME-58)
+  - 지침, counting the owner's guidelines and the 기본 지침 switched on; its 바꾸기 opens the account's post-guideline management list in a Sheet over the current writing screen, without navigation, draft minting or model work on open; closing it preserves the current guide step, fields and normal autosave (→!GUIDE-20 →!GUIDE-43 →!THEME-29)
+  - the embedded list retains the account-wide ownership, scope, injection order and explicit-save behavior of guideline management; it does not create post-only rules or duplicate the directory's logic
+  - existing standalone guidelines URLs carrying a validated post context retain their contextual return (→!THEME-58)
   - 글쓰기 옵션, whose 바꾸기 opens the writing brief (→POST-51)
   - the step bar holds 이전 and one big action: `관찰하기` while an attached photo or video has no observation, starting the observation job (→GEN-89) and carrying the owner to ②, otherwise `다음`, moving to ② without a call; on an unsaved draft nothing has been entered into, it stands disabled with the reason that there is nothing to write from yet and a 사진 넣기 shortcut to the photo screen ← the action stays where the owner expects it, with the shortest way to enable it
 - POST-125 [o] ② 관찰 shows every attached photo and video in the owner's order (→POST-116) as a contact-sheet card pairing it with its observation's fields (→GEN-24) — one horizontal snap carousel with a 현재/전체 indicator on a phone — so the owner reads and corrects what the observer recorded before any writing uses it ← the writer is given only what the observer recorded, so a wrong reading must be fixable before a run reads it
@@ -297,6 +299,7 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r53 261116 POST-123✎ 지침 바꾸기 flushes/mints and navigates to guidelines→opens the same account-owned management in a Sheet, keeping the draft route and step
 - r52 261116 POST-51✎ below-row anchored brief→portalled, viewport-bounded brief with an upward fallback above docks; POST-117✎ sponsored/self-paid visit labels→provided product/service and 내돈내산 labels
 - r51 261116 POST-43✎ /naver-blog list, /posts redirecting→/posts list, /naver-blog redirecting; POST-120✎ clip on 네이버 클립→clip with no channel
 - r50 261116 POST-120✎ owner picks 네이버 클립 or 인스타 클립→one confirm, 네이버 클립; POST-9✎ 저장됨 shown for 2000 ms→waiting/saving/saved silent, failure only; POST-45✎ save state in the precedence and live region→removed; POST-43✎ POST-109✎ 내 글's 블로그→내 콘텐츠's 글
