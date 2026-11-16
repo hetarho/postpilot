@@ -182,10 +182,11 @@
       "branch": "gusta-session-start-vcx-681766d5",
       "head": "37783c03cc0e2a8f9cde504490f06e0c84764e7f",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T14:36:58.786Z",
+      "status": "withdrawn",
+      "at": "2026-11-16T15:48:35.547Z",
       "agentChecks": [],
-      "verificationCommands": []
+      "verificationCommands": [],
+      "reason": "session-closed"
     },
     "f5a394dab36ea32f44a2de9a": {
       "id": "f5a394dab36ea32f44a2de9a",
