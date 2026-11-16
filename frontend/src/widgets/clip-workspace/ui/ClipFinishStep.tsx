@@ -70,12 +70,10 @@ export function ClipFinishStep({
   slots?: {
     /** The pre-submission checklist while 체험단 글 is on (CLIP-231). */
     checklist?: ReactNode
-    /** The 업로드 문구 for the clip's channel (CLIP-211). */
+    /** The 업로드 문구 (CLIP-211). */
     uploadText?: ReactNode
     /** The one 더 해 보기 card (CLIP-233). */
     more?: ReactNode
-    /** The clip channel the finalized project may still move to (CLIP-209). */
-    channel?: ReactNode
   }
 }) {
   const { t } = useTranslation('clips')
@@ -170,7 +168,6 @@ export function ClipFinishStep({
       {slots.checklist}
       {slots.uploadText}
       {slots.more}
-      {slots.channel}
       <ClipPublishedUrlField action={finalization} project={project} disabled={disabled} />
       {!finalized && (running || failed) && (
         <StepBar ariaLabel={t('finish.barAria')}>

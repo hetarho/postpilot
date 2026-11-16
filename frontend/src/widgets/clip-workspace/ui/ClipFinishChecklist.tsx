@@ -11,7 +11,7 @@ import { Typography } from '@/shared/ui'
 import { clipChecklistMaterial } from '../model/finishChecklist'
 
 /** ③'s pre-submission checklist while 체험단 글 is on (CLIP-231), read against the confirmed plan
- *  and the channel's saved 업로드 문구. A tick saves at once as its own option save, on a
+ *  and the saved 업로드 문구. A tick saves at once as its own option save, on a
  *  finalized clip too (CLIP-160); it gates nothing. */
 export function ClipFinishChecklist({
   ownerId,

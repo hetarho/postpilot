@@ -137,7 +137,7 @@ it('opens phone appearance details on a finalized clip while retaining disabled 
   )
 })
 
-it('offers upload text in the finished reading alone, the other channel from 더 해 보기, without reopening the video', async () => {
+it('offers upload text in the finished reading alone, without reopening the video', async () => {
   const calls: string[] = [],
     starts: unknown[] = []
   renderAppAt('/clips/clip', {
@@ -155,13 +155,8 @@ it('offers upload text in the finished reading alone, the other channel from 더
   await userEvent.click(screen.getByRole('tab', { name: '다듬기' }))
   expect(screen.queryByRole('button', { name: '업로드 문구 만들기' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('tab', { name: '완성' }))
-  await userEvent.click(await screen.findByRole('button', { name: '인스타 클립 업로드 문구 보기' }))
-  expect(screen.getByRole('button', { name: '인스타 클립' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
-  await userEvent.click(screen.getByRole('button', { name: '인스타 클립 문구도 만들기' }))
-  expect(await screen.findByRole('button', { name: '최대 4 크레딧 · 문구 작성' })).toBeEnabled()
+  expect(screen.queryByRole('button', { name: /인스타 클립/u })).not.toBeInTheDocument()
+  await userEvent.click(await screen.findByRole('button', { name: '업로드 문구 만들기' }))
   expect(calls).toContain('QuoteClipUploadText')
   expect(
     calls.some((call) =>

@@ -1,5 +1,5 @@
 import { ClipBrowserPreparationStatus } from '@/features/prepare-clip-browser'
-import { useId, useRef, useState, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from '@tanstack/react-router'
 import { isTerminal } from '@/entities/generation-job'
@@ -133,7 +133,6 @@ export function ClipWorkspace({
   ])
   const sourceReady = readyClipBatch(upload.readyBatch, project.id, now)
   const job = run.job
-  const uploadTextRef = useRef<HTMLDivElement>(null)
   // A project holding an instruction, a source or a running job opens on 확인, any other on 영상
   // 종류 (CLIP-225). Derived until the owner moves, so sources that load late still count.
   // The first save's address change keeps the screen the unminted guide was on (CLIP-225).
@@ -738,7 +737,7 @@ export function ClipWorkspace({
     project.latestJob?.kind === 'clip_upload_text' && !isTerminal(project.latestJob)
   const uploadText =
     project.editPlanRevision > 0 && (finishing || writingUploadText) ? (
-      <div ref={uploadTextRef} tabIndex={-1} className="mt-10 outline-none">
+      <div className="mt-10">
         <ClipUploadText
           ownerId={ownerId}
           project={project}
@@ -985,19 +984,7 @@ export function ClipWorkspace({
             <ClipFinishChecklist key={project.id} ownerId={ownerId} project={project} />
           ) : undefined,
         uploadText,
-        more: (
-          <ClipMoreCard
-            ownerId={ownerId}
-            project={project}
-            onOtherChannel={() => {
-              const panel = uploadTextRef.current
-              panel?.scrollIntoView?.({ block: 'start' })
-              panel?.focus({ preventScroll: true })
-            }}
-          />
-        ),
-        // No channel move: a video is one kind of work, whichever channel it goes to.
-        channel: undefined,
+        more: <ClipMoreCard ownerId={ownerId} project={project} />,
       }}
     />
   )

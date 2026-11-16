@@ -113,10 +113,6 @@ export const i18n = {
       template: '이 영상 형식으로 템플릿 만들기',
       post: '이 체험으로 글 쓰기',
       postFailed: '글을 만들지 못했어요. 다시 시도해 주세요.',
-      other: {
-        instagram_clip: '인스타 클립 업로드 문구 보기',
-        naver_clip: '네이버 클립 업로드 문구 보기',
-      },
     },
   },
   en: {
@@ -227,10 +223,6 @@ export const i18n = {
       template: 'Make a template from this video',
       post: 'Write a post from this visit',
       postFailed: 'The post was not created. Try again.',
-      other: {
-        instagram_clip: 'Open the Instagram clip upload text',
-        naver_clip: 'Open the Naver clip upload text',
-      },
     },
   },
 } as const satisfies I18nFragment

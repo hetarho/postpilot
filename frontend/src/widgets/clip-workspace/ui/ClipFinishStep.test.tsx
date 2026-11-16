@@ -304,7 +304,7 @@ it('holds every 더 해 보기 action until the plan is confirmed', async () => 
     within(card).getByRole('button', { name: '이 영상 형식으로 템플릿 만들기' }),
   ).toBeDisabled()
   expect(within(card).getByRole('button', { name: '이 체험으로 글 쓰기' })).toBeDisabled()
-  expect(within(card).getByRole('button', { name: '인스타 클립 업로드 문구 보기' })).toBeDisabled()
+  expect(within(card).queryByRole('button', { name: /업로드 문구 보기/u })).not.toBeInTheDocument()
   // Neither the checklist nor the 업로드 문구 stands before confirmation.
   expect(screen.queryByRole('heading', { name: '제출 전 체크리스트' })).not.toBeInTheDocument()
   expect(screen.queryByRole('region', { name: '업로드 문구' })).not.toBeInTheDocument()
@@ -321,7 +321,7 @@ it('links the wizard with the clip, saves a checklist tick alone and starts noth
   const link = within(card).getByRole('link', { name: '이 영상 형식으로 템플릿 만들기' })
   expect(link.getAttribute('href')).toMatch(/^\/video-templates\/new\?/)
   const search = new URLSearchParams(link.getAttribute('href')!.split('?')[1])
-  expect(search.get('channel')).toBe('naver_clip')
+  expect(search.has('channel')).toBe(false)
   expect(search.get('from')).toBe('clip')
   // The checklist reads the confirmed plan, and a tick is saved as its own option save.
   expect(screen.getByRole('heading', { name: '제출 전 체크리스트' })).toBeVisible()
