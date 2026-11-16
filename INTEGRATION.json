@@ -94,7 +94,35 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "a7e50a4e-0f4e-4310-8833-801c99b62abd",
+    "owner": "tidy",
+    "via": "merge",
+    "executor": {
+      "host": "DESKTOP-VKPLS8P",
+      "pid": 107145
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "885755b7ceb866eee9ea68a59ab28ee80f2000e2",
+    "cohort": [
+      {
+        "id": "6401e0e67c58beae207682f6",
+        "tag": "tidy",
+        "branch": "gusta-session-self-improve-tidy-9ff3f895",
+        "head": "4db887645151c35eb4b8ea307ad21ab1d090d80e",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-16T08:47:06.799Z",
+    "deadline": "2026-11-16T09:47:04.277Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "72fb66a4-740b-499b-8faf-11a2ff6e56e5",
