@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:41Z | T827 | gusta-session-start-vfid-2c92eccf | 5b6c1542cdef | 2c49cb3071a34ca1b4d9fe9c |
+| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:41Z | - | gusta-session-start-vfid-2c92eccf | 5b6c1542c | 2c49cb3071a34ca1b4d9fe9c |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -152,7 +152,13 @@
 - 261113 decided T817 T818 T819 T820: Owner requested repair and main integration → reset vdux once and rerun the same14 required checks before landing/publishing (alt: preserve paused local work). Original3/3 failure evidence remains archived; existing independent approvals and reviewed repairs are retained.
 - 261114 parked ARCH-31 ARCH-1: Gusta 0.17.2 installation verified; owner decision required for shared fixed-candidate verification and FORMAT alignment, primary browser/agent AC allocation, and explicit product-stage/support windows. Preserve current deterministic/media/human/hardware/live gates and existing support until approved. Evidence and concrete proposal: docs/qa/gusta-update-261114.md.
 
+## unlanded
+| id | tag | branch | commit | at |
+|---|---|---|---|---|
+| T827 | vfid | gusta-session-start-vfid-2c92eccf | 5b6c1542c | 2026-11-16T02:41Z |
+
 ## log
+- 261116 T827 done
 - 261116 ARCH r25 DUB r5 no-op (no code impact): ARCH-71 product stage/support, ARCH-31 shared integration owner
 - 261116 gusta-update-ssot ARCH start
 - 261116 sketch voice-fidelity: VOICE r21 POST r49 GEN r33 THEME r45, T827-T836 todo, style-guide/AI scoring deferred to ideation
@@ -172,4 +178,3 @@
 - 261113 fix authoring: remove duplicate return glyph found by route audit; 43 authoring tests passed
 - 261113 T818 done
 - 261113 T817 done
-- 261113 T822 done
