@@ -13,7 +13,7 @@ it('reads once for a burst of autosaves, a beat after the last', async () => {
   const transport = createRouterTransport(({ rpc }) => {
     rpc(VoiceService.method.getPostFingerprint, (request) => {
       reads.push(request.postSlug)
-      return { applicable: true, revision: BigInt(reads.length), items: [] }
+      return { applicable: true, revision: BigInt(reads.length), items: [], habits: [] }
     })
   })
   const view = renderHook(

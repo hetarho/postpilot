@@ -1,4 +1,5 @@
 import i18next from 'i18next'
+import type { OriginFieldLocator } from '@/entities/post/@x/voice'
 import type { VoiceExample, VoiceFingerprint } from './types'
 
 /** The eight counted items in VOICE-24's order. */
@@ -45,6 +46,29 @@ export interface PostFingerprint {
   applicable: boolean
   revision: bigint
   items: FingerprintComparisonItem[]
+  /** Located in the text of `revision`, and shown only against that revision. */
+  habits: VoiceHabitPhrase[]
+}
+
+/** The countable habit a found phrase shows (VOICE-77). */
+export const VOICE_HABIT_KINDS = ['ending', 'adverb', 'opening', 'closing', 'signature'] as const
+export type VoiceHabitKind = (typeof VOICE_HABIT_KINDS)[number]
+
+/** One phrase of a post that shows a counted habit of its voice; `start`/`end` are half-open
+ *  Unicode scalar offsets into the field's text, as an origin span's are (VOICE-77). */
+export interface VoiceHabitPhrase {
+  field: OriginFieldLocator
+  start: number
+  end: number
+  quote: string
+  kind: VoiceHabitKind
+  term: string
+  /** The voice's rate per 100 sentences; 0 where the habit has no rate. */
+  voicePerHundred: number
+  textCount: number
+  /** One 학습 글 sentence showing the habit, empty when none is left; fictional for an AI 말투. */
+  example: string
+  exampleFictional: boolean
 }
 
 /** One counted item as a reader sees it: its name, one plain sentence with its numbers — or

@@ -5,6 +5,7 @@ import {
   ProtoFingerprintItem,
   ProtoFingerprintVerdict,
   ProtoVoiceCheckStatus,
+  ProtoVoiceHabitKind,
   VoiceAiField as ProtoAiField,
   VoiceNoticeKind as ProtoNoticeKind,
   VoicePromptPart as ProtoPart,
@@ -15,6 +16,7 @@ import type {
   FingerprintFacetUnit,
   FingerprintItem,
   FingerprintVerdict,
+  VoiceHabitKind,
 } from '../model/fingerprint'
 import type { VoiceCheckStatus } from '../model/check'
 
@@ -141,4 +143,19 @@ export function requireVoiceOrigin(value: ProtoVoiceOrigin | undefined): Writing
   const origin = ORIGIN_FROM_PROTO.get(value ?? ProtoVoiceOrigin.UNSPECIFIED)
   if (!origin) throw new Error(`unsupported writing voice origin enum: ${String(value)}`)
   return origin
+}
+
+const HABIT_KIND_FROM_PROTO = new Map<ProtoVoiceHabitKind, VoiceHabitKind>([
+  [ProtoVoiceHabitKind.ENDING, 'ending'],
+  [ProtoVoiceHabitKind.ADVERB, 'adverb'],
+  [ProtoVoiceHabitKind.OPENING, 'opening'],
+  [ProtoVoiceHabitKind.CLOSING, 'closing'],
+  [ProtoVoiceHabitKind.SIGNATURE, 'signature'],
+])
+
+/** The habit a found phrase shows; a kind this build does not know fails the read (ARCH-3). */
+export function requireHabitKind(value: ProtoVoiceHabitKind): VoiceHabitKind {
+  const kind = HABIT_KIND_FROM_PROTO.get(value)
+  if (!kind) throw new Error(`unsupported voice habit kind enum: ${String(value)}`)
+  return kind
 }

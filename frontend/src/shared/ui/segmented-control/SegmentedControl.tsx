@@ -8,6 +8,8 @@ export interface SegmentedOption<T extends string> {
   value: T
   label: string
   preview?: ReactNode
+  /** Refuses this one option; the caller says why beside the control. */
+  disabled?: boolean
 }
 
 interface SegmentedControlProps<T extends string> {
@@ -69,7 +71,10 @@ export function SegmentedControl<T extends string>({
     event.preventDefault()
     const current = options.findIndex((option) => option.value === value)
     const delta = event.key === 'ArrowRight' ? 1 : -1
-    const next = (current + delta + options.length) % options.length
+    let next = current
+    do next = (next + delta + options.length) % options.length
+    while (options[next].disabled && next !== current)
+    if (next === current) return
     onChange(options[next].value)
     event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]')[next]?.focus()
   }
@@ -122,7 +127,7 @@ export function SegmentedControl<T extends string>({
             aria-current={steps && option.value === value ? 'step' : undefined}
             aria-label={option.preview ? option.label : undefined}
             aria-controls={controls}
-            disabled={disabled}
+            disabled={disabled || option.disabled}
             tabIndex={
               option.value === value || (!options.some((o) => o.value === value) && index === 0)
                 ? 0
@@ -151,7 +156,9 @@ export function SegmentedControl<T extends string>({
                       : 'text-label min-h-10 px-4 pointer-coarse:min-h-11',
                     option.value === value
                       ? 'text-content-primary'
-                      : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
+                      : option.disabled
+                        ? 'text-content-disabled'
+                        : 'text-content-secondary hover:bg-row-bg-hover active:bg-row-bg-active',
                   ),
             )}
           >

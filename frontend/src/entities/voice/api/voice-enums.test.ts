@@ -4,18 +4,20 @@ import {
   ProtoFingerprintItem,
   ProtoFingerprintVerdict,
   ProtoVoiceCheckStatus,
+  ProtoVoiceHabitKind,
   VoiceAiField,
   VoiceNoticeKind,
   VoicePromptPart,
   VoiceSampleKind,
 } from '@/shared/api'
-import { FINGERPRINT_ITEMS } from '../model/fingerprint'
+import { FINGERPRINT_ITEMS, VOICE_HABIT_KINDS } from '../model/fingerprint'
 import {
   requireAiField,
   requireCheckStatus,
   requireFacetUnit,
   requireFingerprintItem,
   requireFingerprintVerdict,
+  requireHabitKind,
   requireNoticeKind,
   requirePromptPart,
   requireSampleKind,
@@ -80,5 +82,13 @@ describe('the voice enum mirrors', () => {
       .map(requireCheckStatus)
     expect(statuses).toEqual(['queued', 'running', 'done', 'failed'])
     expect(() => requireCheckStatus(ProtoVoiceCheckStatus.UNSPECIFIED)).toThrow()
+  })
+
+  it('maps every habit kind the wire names', () => {
+    const kinds = wireValues<ProtoVoiceHabitKind>(ProtoVoiceHabitKind)
+      .filter((value) => value !== ProtoVoiceHabitKind.UNSPECIFIED)
+      .map(requireHabitKind)
+    expect(kinds).toEqual([...VOICE_HABIT_KINDS])
+    expect(() => requireHabitKind(ProtoVoiceHabitKind.UNSPECIFIED)).toThrow()
   })
 })

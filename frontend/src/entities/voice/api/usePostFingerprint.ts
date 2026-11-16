@@ -5,7 +5,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { VoiceService } from '@/shared/api'
 import { AUTOSAVE_DEBOUNCE_MS } from '@/shared/config'
 import type { PostFingerprint } from '../model/fingerprint'
-import { toComparisons } from './fingerprint-comparison'
+import { toComparisons, toHabits } from './fingerprint-comparison'
 import { postFingerprintQueryKey } from './voice-queries'
 
 /** The revision once it has stayed put for the autosave beat. Every ② block autosave moves the
@@ -46,6 +46,7 @@ export function usePostFingerprint(
           applicable: response.applicable,
           revision: response.revision,
           items: toComparisons(response.items),
+          habits: toHabits(response.habits),
         })),
     enabled: enabled && ownerId !== '' && slug !== '',
     placeholderData: keepPreviousData,

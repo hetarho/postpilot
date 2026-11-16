@@ -7,8 +7,15 @@ export type {
   FingerprintVerdict,
   FingerprintRow,
   PostFingerprint,
+  VoiceHabitKind,
+  VoiceHabitPhrase,
 } from './model/fingerprint'
-export { FINGERPRINT_ITEMS, fingerprintRows, fingerprintSentence } from './model/fingerprint'
+export {
+  FINGERPRINT_ITEMS,
+  VOICE_HABIT_KINDS,
+  fingerprintRows,
+  fingerprintSentence,
+} from './model/fingerprint'
 export type {
   WritingVoiceOrigin,
   Voice,

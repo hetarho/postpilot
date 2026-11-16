@@ -16,7 +16,9 @@ import {
 } from '@/entities/post'
 import { BlockType, type PostContent } from '@/shared/api'
 import { POST_CONTENT_FIXTURE, POST_IMAGES_FIXTURE } from '@/test/fixtures/postContent'
-import { WritingOriginReview } from './WritingOriginReview'
+import type { VoiceHabitPhrase } from '@/entities/voice'
+import { habitSegments } from '../lib/habit-segments'
+import { WritingOriginReview, type WritingOriginVoice } from './WritingOriginReview'
 
 afterEach(() => {
   cleanup()
@@ -159,14 +161,22 @@ function Review({
   value = post(),
   displayed = value.content!,
   pending = false,
+  voice,
 }: {
   ownerId?: string
   value?: PostDraft
   displayed?: PostContent
   pending?: boolean
+  voice?: WritingOriginVoice
 }) {
   return (
-    <WritingOriginReview ownerId={ownerId} post={value} content={displayed} pending={pending}>
+    <WritingOriginReview
+      ownerId={ownerId}
+      post={value}
+      content={displayed}
+      pending={pending}
+      voice={voice}
+    >
       {(renderers) => (
         <BlockList content={displayed} images={value.images} videos={value.videos} {...renderers} />
       )}
@@ -225,7 +235,7 @@ describe('WritingOriginReview', () => {
     expect(find).toBeEnabled()
   })
 
-  it('shows the named toggle by default and exactly four categories', () => {
+  it('shows the named toggle by default, the four categories and the unconfirmed state', () => {
     render(<Review />)
     expect(screen.getByRole('checkbox', { name: '출처 보기' })).toBeChecked()
     const legend = screen.getByRole('list', { name: '의미의 출처' })
@@ -233,7 +243,16 @@ describe('WritingOriginReview', () => {
       within(legend)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['직접 입력 기반', '사진에서 추론', '광고주 요청', 'AI가 보탠 내용'])
+    ).toEqual(['직접 입력 기반', '사진에서 추론', '광고주 요청', 'AI가 보탠 내용', '출처 미확인'])
+    // The unconfirmed state is named with its own style and its one-line meaning.
+    expect(within(legend).getByText('출처 미확인')).toHaveClass(
+      'text-origin-unconfirmed-foreground',
+      'decoration-wavy',
+    )
+    expect(within(legend).getByText('출처 미확인')).toHaveAttribute(
+      'title',
+      '연결된 출처를 확인할 수 없는 문구',
+    )
     // Each category is named, never told by colour alone, and the advertiser's has its own role.
     expect(within(legend).getByText('광고주 요청')).toHaveClass(
       'text-origin-advertiser-foreground',
@@ -455,5 +474,126 @@ describe('WritingOriginReview', () => {
     await user.click(phrase('AI 제안', 'AI가 보탠 내용'))
     expect(screen.getByText(/^제공된 입력, 광고주 가이드나 시각 관찰 외에/)).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+  })
+
+  describe('말투 view', () => {
+    function habit(patch: Partial<VoiceHabitPhrase> = {}): VoiceHabitPhrase {
+      return {
+        field: { kind: 'block_content', blockIndex: 2 },
+        start: 5,
+        end: 9,
+        quote: '않았다.',
+        kind: 'ending',
+        term: '~았다',
+        voicePerHundred: 12.5,
+        textCount: 3,
+        example: '그날은 조금 늦었다.',
+        exampleFictional: false,
+        ...patch,
+      }
+    }
+    const reading = <p>6개 중 5개 비슷해요</p>
+    const voice = (patch: Partial<WritingOriginVoice> = {}): WritingOriginVoice => ({
+      applicable: true,
+      revision: 7n,
+      habits: [
+        habit(),
+        habit({
+          field: { kind: 'title' },
+          start: 0,
+          end: 2,
+          quote: '제주',
+          kind: 'signature',
+          term: '제주',
+          voicePerHundred: 0,
+          textCount: 1,
+          example: '제주는 늘 좋아요.',
+          exampleFictional: true,
+        }),
+      ],
+      reading,
+      ...patch,
+    })
+
+    it('shows one view at a time with 의미 출처 first, and the reading with underlined habits in 말투', async () => {
+      const user = userEvent.setup()
+      render(<Review voice={voice()} />)
+      const tabs = screen.getAllByRole('tab')
+      expect(tabs.map((tab) => tab.textContent)).toEqual(['의미 출처', '말투'])
+      expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+      expect(screen.queryByText('6개 중 5개 비슷해요')).not.toBeInTheDocument()
+
+      await user.click(tabs[1])
+      expect(screen.getByText('6개 중 5개 비슷해요')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /출처 보기: 주인 말/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('list', { name: '의미의 출처' })).not.toBeInTheDocument()
+      const ending = screen.getByRole('button', { name: '끝맺음 말투 보기: 않았다.' })
+      expect(ending).toHaveClass('text-voice-habit-foreground', 'decoration-2', 'decoration-solid')
+      expect(ending.parentElement).toHaveTextContent('서두르지 않았다.')
+
+      await user.click(ending)
+      const sheet = screen.getByRole('dialog', { name: '말투 습관' })
+      expect(within(sheet).getByText('끝맺음 · ~았다')).toBeInTheDocument()
+      expect(within(sheet).getByText('내 말투 100문장에 12.5번 · 이 글 3번')).toBeInTheDocument()
+      expect(within(sheet).getByText('“그날은 조금 늦었다.”')).toBeInTheDocument()
+      expect(within(sheet).queryByText('AI가 만든 가상의 예문')).not.toBeInTheDocument()
+      await user.click(within(sheet).getByRole('button', { name: '닫기' }))
+
+      await user.click(screen.getByRole('button', { name: '이 사람만의 표현 말투 보기: 제주' }))
+      const fictional = screen.getByRole('dialog', { name: '말투 습관' })
+      expect(within(fictional).getByText('이 글 1번')).toBeInTheDocument()
+      expect(within(fictional).queryByText(/100문장/)).not.toBeInTheDocument()
+      expect(within(fictional).getByText('AI가 만든 가상의 예문')).toBeInTheDocument()
+      await user.click(within(fictional).getByRole('button', { name: '닫기' }))
+
+      // Turning 출처 보기 off hides both views.
+      await user.click(screen.getByRole('checkbox', { name: '출처 보기' }))
+      expect(screen.queryByRole('button', { name: /말투 보기/ })).not.toBeInTheDocument()
+      expect(screen.queryByText('6개 중 5개 비슷해요')).not.toBeInTheDocument()
+    })
+
+    it.each([
+      [{ applicable: false, reason: 'none' as const, habits: [] }, '말투 없음'],
+      [{ applicable: false, reason: 'deleted' as const, habits: [] }, '삭제된 말투'],
+      [{ applicable: false, reason: 'unmade' as const, habits: [] }, '아직 만들지 않은 말투'],
+    ])('disables 말투 with its reason when the reading is not applicable', (value, reason) => {
+      render(<Review voice={value} />)
+      expect(screen.getByRole('tab', { name: '말투' })).toBeDisabled()
+      expect(screen.getByText(reason)).toBeInTheDocument()
+    })
+
+    it('names the reason from the post itself when no reading is passed', () => {
+      render(<Review />)
+      expect(screen.getByRole('tab', { name: '말투' })).toBeDisabled()
+      expect(screen.getByText('말투 없음')).toBeInTheDocument()
+    })
+
+    it('draws no habit over another revision or over pending local edits', async () => {
+      const user = userEvent.setup()
+      const { rerender } = render(<Review voice={voice({ revision: 6n })} />)
+      await user.click(screen.getByRole('tab', { name: '말투' }))
+      expect(screen.queryByRole('button', { name: /말투 보기/ })).not.toBeInTheDocument()
+      expect(screen.getByText('서두르지 않았다.')).toBeInTheDocument()
+
+      rerender(<Review voice={voice()} pending />)
+      expect(screen.queryByRole('button', { name: /말투 보기/ })).not.toBeInTheDocument()
+      rerender(<Review voice={voice()} />)
+      expect(screen.getByRole('button', { name: '끝맺음 말투 보기: 않았다.' })).toBeInTheDocument()
+    })
+
+    it('splits by rune offsets and leaves a moved or overlapping quote plain', () => {
+      const field = { kind: 'summary' } as const
+      const text = '제주🌊 진짜 좋아요'
+      const found = habitSegments(text, field, [
+        habit({ field, start: 4, end: 6, quote: '진짜', kind: 'adverb' }),
+        habit({ field, start: 5, end: 7, quote: '짜 ', kind: 'adverb' }),
+        habit({ field, start: 7, end: 10, quote: '맛있다', kind: 'ending' }),
+      ])
+      expect(found.map((segment) => [segment.text, Boolean(segment.habit)])).toEqual([
+        ['제주🌊 ', false],
+        ['진짜', true],
+        [' 좋아요', false],
+      ])
+    })
   })
 })

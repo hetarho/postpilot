@@ -363,6 +363,7 @@ export {
   FingerprintItem as ProtoFingerprintItem,
   FingerprintFacetUnit as ProtoFingerprintFacetUnit,
   FingerprintVerdict as ProtoFingerprintVerdict,
+  VoiceHabitKind as ProtoVoiceHabitKind,
   FingerprintItemComparisonSchema,
   GetPostFingerprintResponseSchema,
   VoiceCheckStatus as ProtoVoiceCheckStatus,
@@ -385,6 +386,7 @@ export type {
   VoiceNotice as ProtoVoiceNotice,
   FingerprintItemComparison as ProtoFingerprintItemComparison,
   FingerprintFacetValue as ProtoFingerprintFacetValue,
+  VoiceHabitPhrase as ProtoVoiceHabitPhrase,
   GetPostFingerprintResponse,
   VoiceCheck as ProtoVoiceCheck,
 } from './gen/postpilot/v1/voice_pb'

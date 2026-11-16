@@ -16,9 +16,11 @@ import {
   type PostDraft,
   type SemanticOriginCategory,
 } from '@/entities/post'
+import type { VoiceHabitPhrase } from '@/entities/voice'
 import type { PostContent } from '@/shared/api'
-import { Button, Checkbox, SelectableText, Sheet, Typography } from '@/shared/ui'
+import { Button, Checkbox, SegmentedControl, SelectableText, Sheet, Typography } from '@/shared/ui'
 import { copyOriginSelection } from '../lib/copy-origin-selection'
+import { habitSegments } from '../lib/habit-segments'
 
 const CATEGORY_STYLES: Record<SemanticOriginCategory, string> = {
   owner_input: 'text-origin-owner-foreground bg-origin-owner-highlight decoration-solid',
@@ -38,12 +40,32 @@ const CATEGORY_MUTED: Record<SemanticOriginCategory, string> = {
   advertiser_request: 'text-content-tertiary decoration-double',
   ai_added: 'text-content-tertiary decoration-dotted',
 }
+const UNCONFIRMED_MUTED = 'text-content-tertiary decoration-wavy'
+/** The 말투 view's one colour: a thick solid line, so the habit never rests on colour alone. */
+const VOICE_HABIT_STYLE =
+  'text-voice-habit-foreground bg-voice-habit-highlight decoration-solid decoration-2'
+
+type OriginView = 'meaning' | 'voice'
+/** Why a post has no reading to show in 말투 (POST-128). */
+export type VoiceViewUnavailableReason = 'none' | 'deleted' | 'unmade'
+
+/** The post's voice reading as the page reads it (POST-102); `reading` is the widget-rendered
+ *  reading, passed in because a feature never imports a widget (ARCH-13). */
+export interface WritingOriginVoice {
+  applicable: boolean
+  reason?: VoiceViewUnavailableReason
+  /** The content revision the habits were found in. */
+  revision?: bigint
+  habits: VoiceHabitPhrase[]
+  reading?: ReactNode
+}
 
 interface WritingOriginReviewProps {
   ownerId: string
   post: PostDraft
   content: PostContent
   pending?: boolean
+  voice?: WritingOriginVoice
   children: (renderers: {
     renderTextField: OriginTextRenderer | undefined
     renderAltField: OriginTextRenderer | undefined
@@ -63,11 +85,16 @@ export function WritingOriginReview(props: WritingOriginReviewProps) {
   return <PostOriginReview key={JSON.stringify([props.ownerId, props.post.slug])} {...props} />
 }
 
-function PostOriginReview({ post, content, pending, children }: WritingOriginReviewProps) {
+function PostOriginReview({ post, content, pending, voice, children }: WritingOriginReviewProps) {
   const { t } = useTranslation(['posts', 'common'])
   const id = useId()
   const [visible, setVisible] = useState(true)
+  const [chosenView, setView] = useState<OriginView>('meaning')
   const [selection, setSelection] = useState<Selection | null>(null)
+  const [habitSelection, setHabitSelection] = useState<{
+    fence: string
+    habit: VoiceHabitPhrase
+  } | null>(null)
   const [pickerFence, setPickerFence] = useState<string | null>(null)
   const waiting = Boolean(pending) || !originContentMatches(content, post.content)
   const review = availableReview(post)
@@ -81,6 +108,18 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
   const pickerOpen = pickerFence === fence && visible
   if (selection && !selected) setSelection(null)
   if (pickerFence && !pickerOpen) setPickerFence(null)
+  const voiceAvailable = Boolean(voice?.applicable)
+  const view: OriginView = chosenView === 'voice' && voiceAvailable ? 'voice' : 'meaning'
+  const voiceReason = voiceAvailable ? undefined : (voice?.reason ?? postVoiceReason(post))
+  // Habits are found in one revision's text: drawn only over that very text, never over a newer
+  // revision or unsaved local edits whose offsets they no longer describe.
+  const habits =
+    voice && voiceAvailable && !waiting && voice.revision === post.contentRevision
+      ? voice.habits
+      : []
+  const selectedHabit =
+    habitSelection?.fence === fence && visible && view === 'voice' ? habitSelection.habit : null
+  if (habitSelection && !selectedHabit) setHabitSelection(null)
 
   useEffect(() => {
     if (pickerOpen && selected) document.getElementById(`${id}-title`)?.focus()
@@ -89,6 +128,7 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
   const close = () => {
     setSelection(null)
     setPickerFence(null)
+    setHabitSelection(null)
   }
 
   const fieldSegments = (field: OriginFieldLocator, text: string): OriginFieldSegment[] => {
@@ -157,6 +197,48 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
       </div>
     ) : null
 
+  const renderHabitField: OriginTextRenderer = (field, text) => {
+    if (!text) return text
+    return habitSegments(text, field, habits).map((segment) =>
+      segment.habit ? (
+        <SelectableText
+          key={`${segment.start}:${segment.end}`}
+          data-voice-habit-phrase
+          className={`duration-base underline underline-offset-4 transition-opacity starting:opacity-0 ${VOICE_HABIT_STYLE}`}
+          aria-label={t('originReview.voice.phrase', {
+            ns: 'posts',
+            kind: t(`originReview.voice.kind.${segment.habit.kind}`, { ns: 'posts' }),
+            phrase: segment.text,
+          })}
+          aria-haspopup="dialog"
+          aria-expanded={selectedHabit === segment.habit}
+          onActivate={() => setHabitSelection({ fence, habit: segment.habit! })}
+        >
+          {segment.text}
+        </SelectableText>
+      ) : (
+        segment.text
+      ),
+    )
+  }
+  // Captions are not searched for habits, so their alt text stays plain in 말투.
+  const renderPlainAltField: OriginTextRenderer = (_field, text) =>
+    text ? (
+      <div role="group" aria-label={t('originReview.voice.alt', { ns: 'posts' })} className="mt-2">
+        <Typography variant="label" as="p" data-writing-origin-review-ui>
+          {t('originReview.voice.alt', { ns: 'posts' })}
+        </Typography>
+        <Typography variant="body" as="p" className="mt-1 break-words whitespace-pre-wrap">
+          {text}
+        </Typography>
+      </div>
+    ) : null
+  const renderers = !visible
+    ? { renderTextField: undefined, renderAltField: undefined }
+    : view === 'voice'
+      ? { renderTextField: renderHabitField, renderAltField: renderPlainAltField }
+      : { renderTextField, renderAltField }
+
   return (
     <>
       {/* One steady bar: the toggle only shows or hides the colours. Nothing in it appears or
@@ -174,7 +256,7 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
           </label>
           <Button
             variant="ghost"
-            disabled={!visible}
+            disabled={!visible || view === 'voice'}
             aria-haspopup="dialog"
             aria-expanded={pickerOpen}
             onClick={() => {
@@ -185,28 +267,109 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
             {t('originReview.find', { ns: 'posts' })}
           </Button>
         </div>
-        <ul aria-label={t('originReview.legend', { ns: 'posts' })} className="flex flex-wrap gap-3">
-          {SEMANTIC_ORIGIN_CATEGORIES.map((category) => (
-            <Typography variant="body" as="li" key={category}>
+        {/* 의미 출처 first: two colour systems on one phrase cannot both be read, so one view
+            shows at a time (POST-128). */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <SegmentedControl<OriginView>
+            ariaLabel={t('originReview.voice.views', { ns: 'posts' })}
+            value={view}
+            disabled={!visible}
+            onChange={(next) => {
+              setSelection(null)
+              setPickerFence(null)
+              setHabitSelection(null)
+              setView(next)
+            }}
+            options={[
+              { value: 'meaning', label: t('originReview.voice.meaning', { ns: 'posts' }) },
+              {
+                value: 'voice',
+                label: t('originReview.voice.voice', { ns: 'posts' }),
+                disabled: !voiceAvailable,
+              },
+            ]}
+          />
+          {voiceReason && (
+            <Typography variant="meta" as="p" data-voice-view-reason>
+              {t(`originReview.voice.reason.${voiceReason}`, { ns: 'posts' })}
+            </Typography>
+          )}
+        </div>
+        {view === 'meaning' ? (
+          <ul
+            aria-label={t('originReview.legend', { ns: 'posts' })}
+            className="flex flex-wrap gap-3"
+          >
+            {SEMANTIC_ORIGIN_CATEGORIES.map((category) => (
+              <Typography variant="body" as="li" key={category}>
+                <span
+                  data-origin-legend={visible ? 'on' : 'off'}
+                  className={clsx(
+                    'duration-base rounded-sm underline underline-offset-4 transition-colors',
+                    visible ? CATEGORY_STYLES[category] : CATEGORY_MUTED[category],
+                  )}
+                >
+                  {t(`originReview.category.${category}`, { ns: 'posts' })}
+                </span>
+              </Typography>
+            ))}
+            {/* A coloured phrase the legend does not name reads as an unexplained category. */}
+            <Typography variant="body" as="li">
               <span
                 data-origin-legend={visible ? 'on' : 'off'}
+                title={t('originReview.unconfirmedLegend', { ns: 'posts' })}
                 className={clsx(
                   'duration-base rounded-sm underline underline-offset-4 transition-colors',
-                  visible ? CATEGORY_STYLES[category] : CATEGORY_MUTED[category],
+                  visible ? UNCONFIRMED_STYLE : UNCONFIRMED_MUTED,
                 )}
               >
-                {t(`originReview.category.${category}`, { ns: 'posts' })}
+                {t('originReview.unconfirmed', { ns: 'posts' })}
               </span>
             </Typography>
-          ))}
-        </ul>
+          </ul>
+        ) : (
+          <ul
+            aria-label={t('originReview.voice.legend', { ns: 'posts' })}
+            className="flex flex-wrap gap-3"
+          >
+            <Typography variant="body" as="li">
+              <span
+                className={clsx(
+                  'duration-base rounded-sm underline underline-offset-4 transition-colors',
+                  visible
+                    ? VOICE_HABIT_STYLE
+                    : 'text-content-tertiary decoration-solid decoration-2',
+                )}
+              >
+                {t('originReview.voice.habit', { ns: 'posts' })}
+              </span>
+            </Typography>
+          </ul>
+        )}
       </div>
+      {visible && view === 'voice' && voice?.reading}
       <div className="contents" onCopy={copyOriginSelection}>
-        {children({
-          renderTextField: visible ? renderTextField : undefined,
-          renderAltField: visible ? renderAltField : undefined,
-        })}
+        {children(renderers)}
       </div>
+      {selectedHabit && (
+        <Sheet
+          open
+          labelledBy={`${id}-habit-title`}
+          onClose={close}
+          header={
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <Typography variant="title" id={`${id}-habit-title`} className="min-w-0 flex-1">
+                {t('originReview.voice.detail', { ns: 'posts' })}
+              </Typography>
+              <Button variant="ghost" onClick={close}>
+                {t('action.close', { ns: 'common' })}
+              </Button>
+            </div>
+          }
+        >
+          <HabitDetail habit={selectedHabit} />
+        </Sheet>
+      )}
       {(selected || pickerOpen) && (
         <Sheet
           open
@@ -305,6 +468,44 @@ function PostOriginReview({ post, content, pending, children }: WritingOriginRev
         </Sheet>
       )}
     </>
+  )
+}
+
+/** The reason 말투 has nothing to read when the page did not name one: the post's own voice. */
+function postVoiceReason(post: PostDraft): VoiceViewUnavailableReason | undefined {
+  if (!post.voice) return 'none'
+  if (post.voice.deleted) return 'deleted'
+  if (!post.voice.made) return 'unmade'
+  return undefined
+}
+
+function HabitDetail({ habit }: { habit: VoiceHabitPhrase }) {
+  const { t } = useTranslation('posts')
+  const rate = Math.round(habit.voicePerHundred * 10) / 10
+  return (
+    <div className="space-y-4">
+      <Typography variant="body">
+        {t(`originReview.voice.kind.${habit.kind}`)}
+        {habit.term ? ` · ${habit.term}` : ''}
+      </Typography>
+      <Typography variant="body">
+        {rate > 0
+          ? t('originReview.voice.rate', { rate, times: habit.textCount })
+          : t('originReview.voice.count', { times: habit.textCount })}
+      </Typography>
+      {habit.example && (
+        <div className="space-y-1">
+          <Typography variant="body" className="break-words whitespace-pre-wrap">
+            {t('originReview.voice.example', { example: habit.example })}
+          </Typography>
+          {habit.exampleFictional && (
+            <Typography variant="meta" as="p">
+              {t('originReview.voice.fictional')}
+            </Typography>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 

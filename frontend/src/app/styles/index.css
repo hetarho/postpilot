@@ -266,6 +266,10 @@
   --evidence-advertiser-highlight: var(--palette-red-950);
   --evidence-unconfirmed-foreground: var(--palette-mauve-300);
   --evidence-unconfirmed-highlight: var(--palette-mauve-800);
+  /* The 말투 view's habit (POST-128) never shares the screen with the four origins, so it reuses
+     the blue ramp at steps of its own; its thick solid underline and the view's label carry it. */
+  --evidence-voice-habit-foreground: var(--palette-blue-200);
+  --evidence-voice-habit-highlight: var(--palette-blue-900);
 
   /* interaction + physical light */
   --interaction-focus: var(--palette-violet-300);
@@ -340,6 +344,8 @@
   --evidence-advertiser-highlight: var(--palette-red-50);
   --evidence-unconfirmed-foreground: var(--palette-mauve-700);
   --evidence-unconfirmed-highlight: var(--palette-mauve-100);
+  --evidence-voice-habit-foreground: var(--palette-blue-800);
+  --evidence-voice-habit-highlight: var(--palette-blue-100);
 
   --interaction-focus: var(--palette-violet-500);
   --physical-scrim: var(--palette-mauve-950);
@@ -439,6 +445,8 @@
   --origin-advertiser-highlight: var(--evidence-advertiser-highlight);
   --origin-unconfirmed-foreground: var(--evidence-unconfirmed-foreground);
   --origin-unconfirmed-highlight: var(--evidence-unconfirmed-highlight);
+  --voice-habit-foreground: var(--evidence-voice-habit-foreground);
+  --voice-habit-highlight: var(--evidence-voice-habit-highlight);
 
   --notice-info-bg: var(--intent-info-subtle);
   --notice-info-fg: var(--intent-info);
@@ -979,6 +987,8 @@
   --color-origin-advertiser-highlight: var(--origin-advertiser-highlight);
   --color-origin-unconfirmed-foreground: var(--origin-unconfirmed-foreground);
   --color-origin-unconfirmed-highlight: var(--origin-unconfirmed-highlight);
+  --color-voice-habit-foreground: var(--voice-habit-foreground);
+  --color-voice-habit-highlight: var(--voice-habit-highlight);
 
   /* system interaction */
   --color-focus-ring: var(--focus-ring);
