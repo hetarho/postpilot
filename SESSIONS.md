@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
 | tidy | DESKTOP-VKPLS8P | pair | 2026-11-16T08:40Z | 2026-11-16T08:46Z | - | gusta-session-self-improve-tidy-9ff3f895 | 6a90ecedf99d | 6401e0e67c58beae207682f6 |
-| onev | DESKTOP-VKPLS8P | autopilot | 2026-11-16T09:17Z | 2026-11-16T09:25Z | T856 | gusta-session-start-onev-54d284a9 | 92efa146b3d5 | 4097a1e4cadfc7f04c3cfe4d |
+| onev | DESKTOP-VKPLS8P | autopilot | 2026-11-16T09:17Z | 2026-11-16T09:25Z | - | gusta-session-start-onev-54d284a9 | 92efa146b | 4097a1e4cadfc7f04c3cfe4d |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -173,8 +173,10 @@
 | T835 | vfid | gusta-session-start-vfid-2c92eccf | beb882c47846 | 2026-11-16T03:10Z |
 | T836 | vfid | gusta-session-start-vfid-2c92eccf | b4048994578d | 2026-11-16T03:13Z |
 | T855 | tidy | gusta-session-self-improve-tidy-9ff3f895 | 6a90ecedf99d | 2026-11-16T08:46Z |
+| T856 | onev | gusta-session-start-onev-54d284a9 | 92efa146b | 2026-11-16T09:25Z |
 
 ## log
+- 261116 T856 done
 - 261116 T855 done
 - 261116 design ui (dsx): one-row returns via PageFrame, GuideProgress everywhere, 내 콘텐츠 with 글/영상 only, silent autosave, AI 고르기 sheet; merged ddbc5e9a6 (T854), not pushed
 - 261116 gusta-create-task review/tidy-261116 round two FE: T849-T853 (lanes fe-upload fe-render)
@@ -194,4 +196,3 @@
 - 261116 ARCH r25 DUB r5 no-op (no code impact): ARCH-71 product stage/support, ARCH-31 shared integration owner
 - 261116 gusta-update-ssot ARCH start
 - 261116 sketch voice-fidelity: VOICE r21 POST r49 GEN r33 THEME r45, T827-T836 todo, style-guide/AI scoring deferred to ideation
-- 261116 gusta-create-task VOICE POST GEN THEME start
