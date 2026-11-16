@@ -80,7 +80,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T833 | Add the 말투 view to 출처 보기 and name 출처 미확인 in the legend | POST THEME VOICE | T831 T832 | doing@261116.vfid |
 | T834 | Wire the post's voice reading into 출처 보기's 말투 view | POST | T833 | todo |
 | T835 | Give the writer visual evidence for observations without origin spans | GEN POST | - | todo |
 | T836 | Use the memo's names in every media caption and mark them owner input | GEN | T835 | todo |
@@ -91,4 +90,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T833 T835
+- gusta-implement-task T834 T835
