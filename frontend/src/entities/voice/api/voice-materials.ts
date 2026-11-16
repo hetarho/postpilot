@@ -124,7 +124,7 @@ export function useAnswerVoicePrompt(ownerId: string, voiceId: string) {
   return {
     ...mutation,
     failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
+    errorMessage: formatAppFailure(failure),
     answer: ({ promptKey, body, photo }: VoiceAnswerInput) =>
       mutation.mutateAsync({
         voiceId,
@@ -152,7 +152,7 @@ export function useAnalyzeVoice(ownerId: string, voiceId: string) {
   return {
     ...mutation,
     failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
+    errorMessage: formatAppFailure(failure),
     analyze: (model: { providerId: string; modelId: string }) =>
       mutation.mutateAsync({ voiceId, model: create(ModelRefSchema, model) }),
   }

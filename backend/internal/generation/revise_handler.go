@@ -44,7 +44,7 @@ func (s *Service) Revise(ctx context.Context, job RevisionJob, progress Progress
 			return fmt.Errorf("load voice profile: %w", err)
 		}
 	}
-	model, ok := parseModelRef(job.WriteModel)
+	model, ok := llm.ParseModelRef(job.WriteModel)
 	if !ok {
 		return ErrWriteModelRequired
 	}

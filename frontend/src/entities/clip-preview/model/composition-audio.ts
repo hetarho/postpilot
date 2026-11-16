@@ -7,6 +7,7 @@ import {
   createAudioRangeReader,
   type BrowserMediaSourceAccess,
   type OriginalAudioMetadata,
+  sha256Hex,
   type PcmChannels,
 } from '@/shared/lib'
 import { CLIP_AUDIO_PROCESSING } from '../config/audio-processing'
@@ -166,13 +167,9 @@ export async function loadVerifiedSpeechBuffer(
   signal.throwIfAborted()
   if (!bytes.byteLength || bytes.byteLength > CLIP_BROWSER_RENDER.speechEncodedBytes)
     throw new BrowserAudioCompositionError('audio')
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  const digest = await sha256Hex(bytes)
   signal.throwIfAborted()
-  if (
-    [...new Uint8Array(digest)].map((value) => value.toString(16).padStart(2, '0')).join('') !==
-    speech.audioHash
-  )
-    throw new BrowserAudioCompositionError('audio')
+  if (digest !== speech.audioHash) throw new BrowserAudioCompositionError('audio')
   const decoded = await context.decodeAudioData(bytes)
   signal.throwIfAborted()
   return canonicalSpeechBuffer(context, speech, decoded)

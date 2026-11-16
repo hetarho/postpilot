@@ -4,12 +4,11 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -24,7 +23,7 @@ func NewHandler(service *guideline.Service) *Handler { return &Handler{service: 
 // ListGuidelines answers one kind: its 기본 지침 with the account's switches, then the owner's
 // guidelines of that kind.
 func (h *Handler) ListGuidelines(ctx context.Context, req *connect.Request[postpilotv1.ListGuidelinesRequest]) (*connect.Response[postpilotv1.ListGuidelinesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +48,7 @@ func (h *Handler) ListGuidelines(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) SetDefaultGuidelineEnabled(ctx context.Context, req *connect.Request[postpilotv1.SetDefaultGuidelineEnabledRequest]) (*connect.Response[postpilotv1.SetDefaultGuidelineEnabledResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +85,7 @@ func toProtoDefault(state guideline.DefaultState) *postpilotv1.DefaultGuideline 
 }
 
 func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[postpilotv1.CreateGuidelineRequest]) (*connect.Response[postpilotv1.CreateGuidelineResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +107,7 @@ func (h *Handler) CreateGuideline(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) UpdateGuideline(ctx context.Context, req *connect.Request[postpilotv1.UpdateGuidelineRequest]) (*connect.Response[postpilotv1.UpdateGuidelineResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +139,7 @@ func (h *Handler) UpdateGuideline(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[postpilotv1.DeleteGuidelineRequest]) (*connect.Response[postpilotv1.DeleteGuidelineResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +153,7 @@ func (h *Handler) DeleteGuideline(ctx context.Context, req *connect.Request[post
 // the pending bound is server-side: the client relays it rather than predicting it, exactly
 // as it does for the account guideline cap.
 func (h *Handler) ListGuidelineCandidates(ctx context.Context, req *connect.Request[postpilotv1.ListGuidelineCandidatesRequest]) (*connect.Response[postpilotv1.ListGuidelineCandidatesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +169,7 @@ func (h *Handler) ListGuidelineCandidates(ctx context.Context, req *connect.Requ
 }
 
 func (h *Handler) DismissGuidelineCandidate(ctx context.Context, req *connect.Request[postpilotv1.DismissGuidelineCandidateRequest]) (*connect.Response[postpilotv1.DismissGuidelineCandidateResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -178,14 +177,6 @@ func (h *Handler) DismissGuidelineCandidate(ctx context.Context, req *connect.Re
 		return nil, toConnectError("dismiss guideline candidate", err)
 	}
 	return connect.NewResponse(&postpilotv1.DismissGuidelineCandidateResponse{}), nil
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 // fromProtoScope refuses UNSPECIFIED rather than defaulting to global: a client that forgot
@@ -286,8 +277,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, guideline.ErrCandidateNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline candidate not found", postpilotv1.FailureReason_GUIDELINE_CANDIDATE_NOT_FOUND, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

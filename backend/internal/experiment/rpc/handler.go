@@ -11,7 +11,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/experiment"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
@@ -64,7 +64,7 @@ func (h *Handler) full(ctx context.Context, found experiment.Experiment) *postpi
 }
 
 func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpilotv1.GetExperimentRequest]) (*connect.Response[postpilotv1.GetExperimentResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (h *Handler) GetExperiment(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) ListExperiments(ctx context.Context, req *connect.Request[postpilotv1.ListExperimentsRequest]) (*connect.Response[postpilotv1.ListExperimentsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +117,7 @@ func (h *Handler) CompleteExperimentReview(ctx context.Context, req *connect.Req
 }
 
 func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyCandidateOutputRequest]) (*connect.Response[postpilotv1.ApplyCandidateOutputResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (h *Handler) ApplyCandidateOutput(ctx context.Context, req *connect.Request
 }
 
 func (h *Handler) AdoptCandidateModel(ctx context.Context, req *connect.Request[postpilotv1.AdoptCandidateModelRequest]) (*connect.Response[postpilotv1.AdoptCandidateModelResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (h *Handler) AdoptCandidateModel(ctx context.Context, req *connect.Request[
 }
 
 func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[postpilotv1.ApplyWinnerOutputRequest]) (*connect.Response[postpilotv1.ApplyWinnerOutputResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (h *Handler) ApplyWinnerOutput(ctx context.Context, req *connect.Request[po
 }
 
 func (h *Handler) AdoptWinnerModel(ctx context.Context, req *connect.Request[postpilotv1.AdoptWinnerModelRequest]) (*connect.Response[postpilotv1.AdoptWinnerModelResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -200,14 +200,6 @@ func toProtoLeaderboardEntry(entry experiment.LeaderboardEntry) *postpilotv1.Lea
 		EvaluatedComparisons: int32(entry.EvaluatedComparisons), Draws: int32(entry.Draws),
 	}
 	return mapped
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 func toConnectError(op string, err error) error {
@@ -395,14 +387,10 @@ func toProtoCandidate(found experiment.Experiment, candidate experiment.Candidat
 }
 
 func failureToProto(found *experiment.Failure) *postpilotv1.Failure {
-	if found == nil || found.Reason == "" {
+	if found == nil {
 		return nil
 	}
-	params := make(map[string]string, len(found.Params))
-	for key, value := range found.Params {
-		params[key] = value
-	}
-	return &postpilotv1.Failure{Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail}
+	return rpcserver.FailureToProto(found.Reason, found.Params, found.TechnicalDetail)
 }
 
 type outputPost struct {

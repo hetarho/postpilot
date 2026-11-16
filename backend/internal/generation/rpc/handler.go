@@ -6,12 +6,11 @@ import (
 	"errors"
 	"log/slog"
 	"strconv"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
@@ -25,14 +24,14 @@ type Handler struct{ service *generation.Service }
 func NewHandler(service *generation.Service) *Handler { return &Handler{service: service} }
 
 func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[postpilotv1.StartGenerationRequest]) (*connect.Response[postpilotv1.StartGenerationResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 	id, err := h.service.Start(ctx, generation.StartRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
-		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
-		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
+		ObserveModel: rpcserver.ModelRefFromProto(req.Msg.GetObserveModel()),
+		WriteModel:   rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()),
 		TargetLength: optionalTargetLength(req.Msg.TargetLength),
 		// reobserve is accepted and ignored: a writing run observes only what is missing (GEN-89).
 		FromStoryline: req.Msg.GetFromStoryline(),
@@ -66,13 +65,13 @@ func optionalTargetLength(value *int32) *int {
 }
 
 func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpilotv1.StartRevisionRequest]) (*connect.Response[postpilotv1.StartRevisionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 	id, err := h.service.StartRevision(ctx, generation.StartRevisionRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Instruction: req.Msg.GetInstruction(),
-		WriteModel: modelRefValue(req.Msg.GetWriteModel()),
+		WriteModel: rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()),
 	})
 	if err != nil {
 		return nil, toConnectError("start revision", err)
@@ -83,14 +82,14 @@ func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpi
 // StartStoryline starts 스토리라인 먼저 or 다시 만들기 (GEN-68), answering the job id as
 // StartGeneration does.
 func (h *Handler) StartStoryline(ctx context.Context, req *connect.Request[postpilotv1.StartStorylineRequest]) (*connect.Response[postpilotv1.StartStorylineResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 	id, err := h.service.StartStoryline(ctx, generation.StartStorylineRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
-		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
-		WriteModel:   modelRefValue(req.Msg.GetWriteModel()),
+		ObserveModel: rpcserver.ModelRefFromProto(req.Msg.GetObserveModel()),
+		WriteModel:   rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()),
 	})
 	if err != nil {
 		return nil, toConnectError("start storyline", err)
@@ -101,13 +100,13 @@ func (h *Handler) StartStoryline(ctx context.Context, req *connect.Request[postp
 // StartObservation starts 관찰하기 or 다시 관찰하기 (GEN-89), answering the job id as
 // StartGeneration does; reobserve keeps its presence (GEN-9).
 func (h *Handler) StartObservation(ctx context.Context, req *connect.Request[postpilotv1.StartObservationRequest]) (*connect.Response[postpilotv1.StartObservationResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 	id, err := h.service.StartObservation(ctx, generation.StartObservationRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(),
-		ObserveModel: modelRefValue(req.Msg.GetObserveModel()),
+		ObserveModel: rpcserver.ModelRefFromProto(req.Msg.GetObserveModel()),
 		ObserveFiles: reobserveFiles(req.Msg.GetReobserve()),
 	})
 	if err != nil {
@@ -118,13 +117,13 @@ func (h *Handler) StartObservation(ctx context.Context, req *connect.Request[pos
 
 // StartStorylineRevision starts the storyline space's AI request (GEN-69).
 func (h *Handler) StartStorylineRevision(ctx context.Context, req *connect.Request[postpilotv1.StartStorylineRevisionRequest]) (*connect.Response[postpilotv1.StartStorylineRevisionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
 	id, err := h.service.StartStorylineRevision(ctx, generation.StartStorylineRevisionRequest{
 		UserID: userID, PostSlug: req.Msg.GetPostSlug(), Request: req.Msg.GetRequest(),
-		WriteModel: modelRefValue(req.Msg.GetWriteModel()),
+		WriteModel: rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()),
 	})
 	if err != nil {
 		return nil, toConnectError("start storyline revision", err)
@@ -133,7 +132,7 @@ func (h *Handler) StartStorylineRevision(ctx context.Context, req *connect.Reque
 }
 
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -142,14 +141,6 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 		return nil, toConnectError("get generation", err)
 	}
 	return connect.NewResponse(&postpilotv1.GetGenerationResponse{Job: toProtoJob(found)}), nil
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 func toConnectError(op string, err error) error {
@@ -246,13 +237,6 @@ func idParams(key, id string) map[string]string {
 	return map[string]string{key: id}
 }
 
-func modelRefValue(ref *postpilotv1.ModelRef) string {
-	if ref == nil || ref.GetProviderId() == "" || ref.GetModelId() == "" {
-		return ""
-	}
-	return ref.GetProviderId() + "/" + ref.GetModelId()
-}
-
 func toProtoJob(found *generation.JobSummary) *postpilotv1.GenerationJob {
 	if found == nil {
 		return nil
@@ -260,8 +244,8 @@ func toProtoJob(found *generation.JobSummary) *postpilotv1.GenerationJob {
 	return &postpilotv1.GenerationJob{
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		PostSlug: found.PostSlug, ObserveModel: splitModelRef(found.ObserveModel),
-		WriteModel: splitModelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
+		PostSlug: found.PostSlug, ObserveModel: rpcserver.ModelRefToProto(found.ObserveModel),
+		WriteModel: rpcserver.ModelRefToProto(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
 		CanCancel: found.CanCancel, CancellationPolicyVersion: int32(found.CancellationPolicyVersion),
 		CancelRequestedAt: optionalTime(found.CancelRequestedAt), WaitExpiresAt: optionalTime(found.WaitExpiresAt),
@@ -277,28 +261,14 @@ func optionalTime(at *time.Time) string {
 }
 
 func failureToProto(found *generation.Failure) *postpilotv1.Failure {
-	if found == nil || found.Reason == "" {
+	if found == nil {
 		return nil
 	}
-	params := make(map[string]string, len(found.Params))
-	for key, value := range found.Params {
-		params[key] = value
-	}
-	return &postpilotv1.Failure{
-		Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail,
-	}
+	return rpcserver.FailureToProto(found.Reason, found.Params, found.TechnicalDetail)
 }
 
 func languageToProto(value generation.Language) postpilotv1.ContentLanguage {
 	return rpcserver.ContentLanguageToProto(string(value))
-}
-
-func splitModelRef(value string) *postpilotv1.ModelRef {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
-		return nil
-	}
-	return &postpilotv1.ModelRef{ProviderId: providerID, ModelId: modelID}
 }
 
 var _ postpilotv1connect.GenerationServiceHandler = (*Handler)(nil)

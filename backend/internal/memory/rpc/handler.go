@@ -4,12 +4,11 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -23,7 +22,7 @@ type Handler struct{ service *memory.Service }
 func NewHandler(service *memory.Service) *Handler { return &Handler{service: service} }
 
 func (h *Handler) ListMemories(ctx context.Context, _ *connect.Request[postpilotv1.ListMemoriesRequest]) (*connect.Response[postpilotv1.ListMemoriesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +38,7 @@ func (h *Handler) ListMemories(ctx context.Context, _ *connect.Request[postpilot
 }
 
 func (h *Handler) CreateMemory(ctx context.Context, req *connect.Request[postpilotv1.CreateMemoryRequest]) (*connect.Response[postpilotv1.CreateMemoryResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +56,7 @@ func (h *Handler) CreateMemory(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) UpdateMemory(ctx context.Context, req *connect.Request[postpilotv1.UpdateMemoryRequest]) (*connect.Response[postpilotv1.UpdateMemoryResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +89,7 @@ func (h *Handler) UpdateMemory(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) DeleteMemory(ctx context.Context, req *connect.Request[postpilotv1.DeleteMemoryRequest]) (*connect.Response[postpilotv1.DeleteMemoryResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +104,7 @@ func (h *Handler) DeleteMemory(ctx context.Context, req *connect.Request[postpil
 // it reaches the client through the error it returns, unchanged — this handler adds no
 // refusal of its own for it.
 func (h *Handler) StartMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.StartMemoryExtractionRequest]) (*connect.Response[postpilotv1.StartMemoryExtractionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +116,7 @@ func (h *Handler) StartMemoryExtraction(ctx context.Context, req *connect.Reques
 }
 
 func (h *Handler) GetMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.GetMemoryExtractionRequest]) (*connect.Response[postpilotv1.GetMemoryExtractionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +134,7 @@ func (h *Handler) GetMemoryExtraction(ctx context.Context, req *connect.Request[
 }
 
 func (h *Handler) ResolveMemoryExtraction(ctx context.Context, req *connect.Request[postpilotv1.ResolveMemoryExtractionRequest]) (*connect.Response[postpilotv1.ResolveMemoryExtractionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,14 +169,6 @@ func failureOf(err error) *postpilotv1.Failure {
 		}
 	}
 	return &postpilotv1.Failure{Reason: postpilotv1.FailureReason_UNKNOWN_FAILURE.String()}
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 // fromProtoKind refuses UNSPECIFIED rather than defaulting to one of the five: the kind
@@ -259,8 +250,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, memory.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "memory not found", postpilotv1.FailureReason_MEMORY_NOT_FOUND, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

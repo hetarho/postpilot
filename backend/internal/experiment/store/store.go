@@ -12,9 +12,9 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/experiment/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbfailure"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -43,7 +43,7 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 		TemplateName: found.TemplateName, TargetLanguage: targetLanguage,
 		Stage: string(found.Stage), Origin: string(found.Origin), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
-		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
+		PromptVersion: found.PromptVersion, CreatedAt: dbtime.Format(found.CreatedAt),
 		Source: sourceOf(found.Source), VoicePromptKey: nullString(found.VoicePromptKey), VoiceMaterialID: nullString(found.VoiceMaterialID),
 		ReviewMode: reviewModeOf(found.ReviewMode),
 	})
@@ -487,7 +487,7 @@ func (s *Store) SetAdopted(ctx context.Context, id, userID string, now time.Time
 func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experiment.Stage, since time.Time, scope experiment.Scope) ([]experiment.Experiment, []experiment.Candidate, []experiment.BadgeTally, error) {
 	// Formatted through the same writer the column was filled by: the stored layout is
 	// fixed-width UTC, so `>=` on the text is `>=` on the instant.
-	from := formatTime(since)
+	from := dbtime.Format(since)
 	var experimentRows []sqlc.ModelExperiment
 	var err error
 	if scope == experiment.ScopeAll {
@@ -739,70 +739,17 @@ func toCandidate(row sqlc.ModelExperimentCandidate) (experiment.Candidate, error
 
 func failureColumns(failure *experiment.Failure) (sql.NullString, sql.NullString, sql.NullString, error) {
 	if failure == nil {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, nil
+		return dbfailure.Columns(nil)
 	}
-	if !validFailureReason(failure.Reason) {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("invalid reason %q", failure.Reason)
-	}
-	params := failure.Params
-	if params == nil {
-		params = map[string]string{}
-	}
-	raw, err := json.Marshal(params)
-	if err != nil {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("encode params: %w", err)
-	}
-	return nullString(failure.Reason), sql.NullString{String: string(raw), Valid: true}, nullString(failure.TechnicalDetail), nil
+	return dbfailure.Columns(&dbfailure.Failure{Reason: failure.Reason, Params: failure.Params, TechnicalDetail: failure.TechnicalDetail})
 }
 
 func failureFromRow(reason, params, detail, legacy sql.NullString) (*experiment.Failure, error) {
-	if !reason.Valid || strings.TrimSpace(reason.String) == "" {
-		if params.Valid || detail.Valid {
-			return nil, errors.New("failure params/detail present without reason")
-		}
-		technical := strings.TrimSpace(legacy.String)
-		if technical == "" {
-			return nil, nil
-		}
-		return &experiment.Failure{Reason: experiment.FailureReasonUnknown, TechnicalDetail: technical}, nil
+	f, err := dbfailure.FromRow(reason, params, detail, legacy, experiment.FailureReasonUnknown)
+	if f == nil || err != nil {
+		return nil, err
 	}
-	if !validFailureReason(reason.String) {
-		return nil, fmt.Errorf("invalid reason %q", reason.String)
-	}
-	if !params.Valid || !strings.HasPrefix(strings.TrimSpace(params.String), "{") {
-		return nil, errors.New("failure params must be a JSON object")
-	}
-	decoded := map[string]string{}
-	if err := json.Unmarshal([]byte(params.String), &decoded); err != nil {
-		return nil, fmt.Errorf("decode failure params: %w", err)
-	}
-	if len(decoded) == 0 {
-		decoded = nil
-	}
-	return &experiment.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
-}
-
-func validFailureReason(reason string) bool {
-	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
-		return false
-	}
-	previousUnderscore := false
-	for i, char := range reason {
-		if char >= 'A' && char <= 'Z' {
-			previousUnderscore = false
-			continue
-		}
-		if char == '_' && !previousUnderscore {
-			previousUnderscore = true
-			continue
-		}
-		if i > 0 && char >= '0' && char <= '9' {
-			previousUnderscore = false
-			continue
-		}
-		return false
-	}
-	return true
+	return &experiment.Failure{Reason: f.Reason, Params: f.Params, TechnicalDetail: f.TechnicalDetail}, nil
 }
 
 func nullString(value string) sql.NullString {
@@ -813,9 +760,8 @@ func nullTime(value *time.Time) sql.NullString {
 	if value == nil {
 		return sql.NullString{}
 	}
-	return sql.NullString{String: formatTime(*value), Valid: true}
+	return sql.NullString{String: dbtime.Format(*value), Valid: true}
 }
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
 func parseOptional(value sql.NullString) *time.Time {
 	if !value.Valid {
 		return nil

@@ -1,0 +1,2713 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-11-16T08:07:39.788Z",
+  "sourceCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+  "group": {
+    "id": "tidy-261116",
+    "branch": "gusta-session-self-improve-tidy-9ff3f895",
+    "status": "active",
+    "createdAt": "2026-11-16T06:18:00.548Z",
+    "limits": {
+      "workers": 3,
+      "reviewers": 1,
+      "maxPending": 8
+    },
+    "push": null,
+    "review": "all",
+    "taskScope": [
+      "T837",
+      "T838",
+      "T839",
+      "T840",
+      "T841",
+      "T842",
+      "T843",
+      "T844",
+      "T845",
+      "T846",
+      "T847",
+      "T848",
+      "T849",
+      "T850"
+    ]
+  },
+  "summary": {
+    "total": 14,
+    "completed": 14,
+    "remaining": 0,
+    "running": 0,
+    "review": 0,
+    "blocked": 0,
+    "unassigned": 0
+  },
+  "tasks": [],
+  "attempts": [
+    {
+      "id": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "group": "tidy-261116",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "lane": "be-tidy",
+      "owner": "worker-be",
+      "contributors": [
+        "worker-be"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T06:18:19.244Z",
+      "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+      "verifiedCommit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+      "submittedBase": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+      "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+      "submittedAt": "2026-11-16T06:23:31.059Z",
+      "integratedCommit": "d7284875b8790d4c506c399cbef473960b009425",
+      "integratedAt": "2026-11-16T06:32:53.452Z",
+      "risk": null,
+      "review": {
+        "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
+        "owner": "reviewer-be",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "Behavior-preserving clean-up confirmed for T837-T839. All ten removed actingUser copies and the four inline checks (auth/rpc x3, job/rpc x1) built the identical CodeUnauthenticated/'authentication required'/AUTH_REQUIRED/nil-params error that authrpc.ActingUser now returns; differing variants (auth/rpc admin.go CodeInternal path, billing, voucher, plan, authoring, voice/spoken, modelcatalog speech) are untouched. All eleven removed writeLayout consts equal dbtime.Layout byte-for-byte, every removed formatTime normalized to UTC, every bare parseTime used RFC3339Nano, provider's inline at.UTC().Format(writeLayout) maps to dbtime.Format(at), and auth/memory/post keep their wrappers with unchanged error text. T839's newID wrappers keep the exact panic values (ids.NewHex128 returns the rand error unwrapped). A normalized line-balance check of the out-of-touches sibling files (21 for T837, 22 for T838) shows only helper renames and import additions. Reviewer re-ran gofmt -l (empty) and go vet on all 27 changed packages (pass), plus go test -count=1 on platform/dbtime, platform/ids and auth/rpc (pass). The independent Codex read-only review (gpt-6.1-sol after gpt-5.5 was rejected for the account) found no P1/P2. Two optional follow-ups only.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "backend/internal/clip/app/speech.go:101 (T839)",
+            "message": "speechID() in the same clip/app package still hand-rolls the 128-bit hex id ([16]byte, rand.Read, panic(e), hex.EncodeToString), identical to what newID() just stopped doing. Outside T839's acceptance (which names newID in service.go only); a later tidy could route it through ids.NewHex128 with panic(err) kept. modelcatalog/speech_service.go:368 speechID and provider/types.go:468 NewRecommendationID are the same shape in other contexts. (Raised by Codex and confirmed by reviewer.)"
+          },
+          {
+            "priority": "P3",
+            "where": "backend/internal/experiment/store/store.go:652, :821; experiment/store/writing_test_store.go:58, :62, :169, :221; provider/store/store.go:78, :103 (T838)",
+            "message": "Inline time.Parse(time.RFC3339Nano, ...) calls remain in two of the eleven stores. They are equivalent to dbtime.Parse and acceptance only required removing the bare parseTime helpers, so not a defect; a follow-up could switch them to dbtime.Parse so the parse rule also has one owner. (Reviewer finding.)"
+          }
+        ],
+        "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+        "baseCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+        "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+        "createdAt": "2026-11-16T06:24:12.501Z",
+        "finishedAt": "2026-11-16T06:28:44.162Z"
+      },
+      "steps": [
+        {
+          "taskId": "T837",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "at": "2026-11-16T06:23:31.052Z",
+          "verification": [
+            {
+              "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+              "startedAt": "2026-11-16T06:23:03.039Z",
+              "finishedAt": "2026-11-16T06:23:30.954Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T838",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "at": "2026-11-16T06:23:31.052Z",
+          "verification": [
+            {
+              "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+              "startedAt": "2026-11-16T06:23:03.039Z",
+              "finishedAt": "2026-11-16T06:23:30.954Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T839",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "at": "2026-11-16T06:23:31.052Z",
+          "verification": [
+            {
+              "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+              "startedAt": "2026-11-16T06:23:03.039Z",
+              "finishedAt": "2026-11-16T06:23:30.954Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+          "startedAt": "2026-11-16T06:23:03.039Z",
+          "finishedAt": "2026-11-16T06:23:30.954Z"
+        }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/integrate-check.sh",
+          "startedAt": "2026-11-16T06:37:00Z",
+          "finishedAt": "2026-11-16T06:32:53.452Z"
+        }
+      ]
+    },
+    {
+      "id": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "group": "tidy-261116",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "lane": "fe-lib",
+      "owner": "worker-fe-lib",
+      "contributors": [
+        "worker-fe-lib"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T06:18:22.160Z",
+      "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+      "verifiedCommit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+      "submittedBase": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+      "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+      "submittedAt": "2026-11-16T07:46:33.628Z",
+      "integratedCommit": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+      "integratedAt": "2026-11-16T07:53:26.577Z",
+      "risk": null,
+      "review": {
+        "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+        "owner": "reviewer-fe-lib",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T840-T842 are behavior-preserving. connectFailureMessage keeps '' for falsy errors and the same composed text at all 13 sites plus the two private helpers; the formatAppFailure(failure) sites rely on its existing '' for undefined; useBillingInvalidation invalidates the same three keys in the same awaited Promise.all from onSuccess, and removePaymentMethod keeps its own keys. All 12 sha256Hex sites hash the same bytes with their original wrapping (bytes.slice().buffer, new Uint8Array(bytes), TextEncoder output), and manifest.ts keeps `return await` inside its try. ConfirmedAction keeps each button's semantics: the dialog closes on both paths, onDone runs only on success and synchronously after the close, voice's finally path is equivalent with no onDone, post still calls onDeleted before navigation outside the delete catch, buttonRef stays on the template and clip-template triggers, and the trigger, FieldMessage, Dialog order plus aria, i18n and classes are unchanged. The layering is clean, and shared/ui/index.ts gains exactly one line after the Dialog export. Codex (cross-provider, read-only) also reported no findings. Tests were not rerun because the review workspace has no node_modules. Only optional P3 notes remain.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "spec/tasks/T841.sha256-hex-helper.md:8 (T841)",
+            "message": "Acceptance is ticked [v] but names shared/lib/hash/sha256-hex.ts, while the helper lives at shared/lib/media/sha256-hex.ts. That path is outside the task's touches, and the reason (steiger fsd/shared-lib-grouping, 15 modules) is recorded only in result. When archiving, the coordinator should amend the acceptance path so the done record matches the code."
+          },
+          {
+            "priority": "P3",
+            "where": "frontend/src/shared/lib/index.ts:32 (T841)",
+            "message": "`export { sha256Hex } from './media/sha256-hex'` reaches past the media module's own index (shared/lib/media/index.ts does not export it), unlike every other media re-export, and it sits among the localization exports. Optional: export it from media/index.ts and re-export it next to the other './media' lines."
+          },
+          {
+            "priority": "P3",
+            "where": "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx:45 (T842)",
+            "message": "The `failure` element is now built on every render, so appFailureFromConnect(remove.error) runs (ConnectError.from(null) allocates an Error), as do the t() calls in the voice and post failures, even when isError is false. Before, these ran only when isError was true. The DOM and behavior are unchanged; this is optional extra work per row. A render-function `failure` prop would restore lazy evaluation."
+          }
+        ],
+        "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+        "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+        "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+        "createdAt": "2026-11-16T07:47:28.045Z",
+        "finishedAt": "2026-11-16T07:50:19.996Z",
+        "invalidatedAt": "2026-11-16T07:50:23.591Z",
+        "invalidationReason": "integration failed"
+      },
+      "reviewHistory": [
+        {
+          "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+          "owner": "reviewer-fe-lib",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T840-T842 are behavior-preserving. connectFailureMessage keeps '' for falsy errors and the same composed text at all 13 sites plus the two private helpers; the formatAppFailure(failure) sites rely on its existing '' for undefined; useBillingInvalidation invalidates the same three keys in the same awaited Promise.all from onSuccess, and removePaymentMethod keeps its own keys. All 12 sha256Hex sites hash the same bytes with their original wrapping (bytes.slice().buffer, new Uint8Array(bytes), TextEncoder output), and manifest.ts keeps `return await` inside its try. ConfirmedAction keeps each button's semantics: the dialog closes on both paths, onDone runs only on success and synchronously after the close, voice's finally path is equivalent with no onDone, post still calls onDeleted before navigation outside the delete catch, buttonRef stays on the template and clip-template triggers, and the trigger, FieldMessage, Dialog order plus aria, i18n and classes are unchanged. The layering is clean, and shared/ui/index.ts gains exactly one line after the Dialog export. Codex (cross-provider, read-only) also reported no findings. Tests were not rerun because the review workspace has no node_modules. Only optional P3 notes remain.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T841.sha256-hex-helper.md:8 (T841)",
+              "message": "Acceptance is ticked [v] but names shared/lib/hash/sha256-hex.ts, while the helper lives at shared/lib/media/sha256-hex.ts. That path is outside the task's touches, and the reason (steiger fsd/shared-lib-grouping, 15 modules) is recorded only in result. When archiving, the coordinator should amend the acceptance path so the done record matches the code."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/shared/lib/index.ts:32 (T841)",
+              "message": "`export { sha256Hex } from './media/sha256-hex'` reaches past the media module's own index (shared/lib/media/index.ts does not export it), unlike every other media re-export, and it sits among the localization exports. Optional: export it from media/index.ts and re-export it next to the other './media' lines."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx:45 (T842)",
+              "message": "The `failure` element is now built on every render, so appFailureFromConnect(remove.error) runs (ConnectError.from(null) allocates an Error), as do the t() calls in the voice and post failures, even when isError is false. Before, these ran only when isError was true. The DOM and behavior are unchanged; this is optional extra work per row. A render-function `failure` prop would restore lazy evaluation."
+            }
+          ],
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+          "createdAt": "2026-11-16T07:47:28.045Z",
+          "finishedAt": "2026-11-16T07:50:19.996Z",
+          "invalidatedAt": "2026-11-16T07:50:23.591Z",
+          "invalidationReason": "integration failed"
+        },
+        {
+          "id": "a0faf262-4003-4913-bf79-dfc23d0f0993",
+          "owner": "integration",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "Integration failed on the merged candidate.",
+          "findings": [
+            {
+              "priority": "P1",
+              "where": "integration",
+              "message": "Merge the group branch into this workspace, fix the failure, and resubmit: 통합 후보의 spec 검증에 실패했습니다.\nssot/AUTH.md chg에 불릿이 아닌 줄이 있습니다: \"-\"\nssot/GIFT.md chg에 불릿이 아닌 줄이 있습니다: \"-\"\n정본 위임이 순환합니다: ARCH-24 →= ARCH-31 →= ARCH-24 — 규칙을 가진 쪽 하나만 정본으로 두세요.\ntasks/done/T042.mutation-vocabulary-and-body-mutations.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\ntasks/done/T178.disclosure-badge-rounded-rectangle.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\ntasks/done/T234.clip-refine-draft-autosaves.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\nT539: base ARCH@15 < 현재 r25 — implement 전 신선도 확인 필요.\nT539: base DUB@3 < 현재 r5 — implement 전 신선도 확인 필요.\nT539: base MODEL@29 < 현재 r37 — implement 전 신선도 확인 필요.\nT539: base CDS@32 < 현재 r38 — implement 전 신선도 확인 필요.\nT539: base THEME@22 < 현재 r45 — implement 전 신선도 확인 필요.\nT550: base ARCH@15 < 현재 r25 — implement 전 신선도 확인 필요.\nT550: base DUB@3 < 현재 r5 — implement 전 신선도 확인 필요.\nT550: base CLIP@55 < 현재 r78 — implement 전 신선도 확인 필요.\nT550: base MODEL@29 < 현재 r37 — implement 전 신선도 확인 필요.\nT550: base QUOTA@34 < 현재 r40 — implement 전 신선도 확인 필요.\nT550: base CDS@32 < 현재 r38 — implement 전 신선도 확인 필요.\nT550: base THEME@22 < 현재 r45 — implement 전 신선도 확인 필요.\nT603: base ARCH@20 < 현재 r25 — implement 전 신선도 확인 필요.\nT603: base CLIP@56 < 현재 r78 — implement 전 신선도 확인 필요.\nT603: base CDS@33 < 현재 r38 — implement 전 신선도 확인 필요.\nT603: base QUOTA@35 < 현재 r40 — implement 전 신선도 확인 필요.\nT604: base ARCH@22 < 현재 r25 — implement 전 신선도 확인 필요.\nT604: base CLIP@73 < 현재 r78 — implement 전 신선도 확인 필요.\nT697: base ARCH@20 < 현재 r25 — implement 전 신선도 확인 필요.\nssot/ARCH.md chg에 r17 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/ARCH.md chg에 r18 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/AUTH.md chg에 r15 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r35 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r36 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r37 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r38 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r30 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r31 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r32 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r33 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r34 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r36 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r23 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r24 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r25 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r26 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r27 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r28 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r30 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r31 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r32 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r35 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r40 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r56 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r57 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r58 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r59 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r64 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r74 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r75 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CDS.md chg에 r33 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/GIFT.md chg에 r3 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다."
+            }
+          ],
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "finishedAt": "2026-11-16T07:50:23.591Z"
+        }
+      ],
+      "steps": [
+        {
+          "taskId": "T840",
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "at": "2026-11-16T07:46:33.615Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:33:50.829Z",
+              "finishedAt": "2026-11-16T07:46:33.325Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T841",
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "at": "2026-11-16T07:46:33.615Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:33:50.829Z",
+              "finishedAt": "2026-11-16T07:46:33.325Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T842",
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "at": "2026-11-16T07:46:33.615Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:33:50.829Z",
+              "finishedAt": "2026-11-16T07:46:33.325Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+          "startedAt": "2026-11-16T07:33:50.829Z",
+          "finishedAt": "2026-11-16T07:46:33.325Z"
+        }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+          "startedAt": "2026-11-16T07:51:15.825Z",
+          "finishedAt": "2026-11-16T07:53:26.577Z"
+        }
+      ]
+    },
+    {
+      "id": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "group": "tidy-261116",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "lane": "fe-clip",
+      "owner": "worker-fe-clip",
+      "contributors": [
+        "worker-fe-clip"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T06:18:25.531Z",
+      "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+      "verifiedCommit": "3f9c431f85c570a45e17642d46047ef28e519510",
+      "submittedBase": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+      "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+      "submittedAt": "2026-11-16T08:05:41.814Z",
+      "risk": null,
+      "review": {
+        "id": "766830dc-fe0c-4273-a219-b7bd46b5a298",
+        "owner": "reviewer-fe-clip",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "The P2 from review 9b3fa539 is resolved: ClipDubbingEditor.expiry.test.tsx now counts Profiler commits under fully fake, pinned timers (no shouldAdvanceTime), asserts no commit and an enabled button through expiresAt-1 ms, then exactly one commit and the invalid state at expiresAt. The count no longer goes through clipDraftKey, so it fails whether the 1 s interval returns with or without the key memo (each tick's setNow(Date.now()) is a new value, so at least one batched commit lands inside the first act window). The pinned clock also checks the exact `Date.parse(expiresAt) <= now` boundary. The record note and the T843 test name are corrected. The delta touches only the two test files and the T844 result; the base moved by fe-lib/fe-upload with no overlapping files. Remaining P3s are optional.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+            "message": "Carried over, optional: with the single timeout, a forward wall-clock jump or sleep keeps an expired quote approvable until the timeout fires, and a clock rollback that makes setNow a no-op leaves the timer un-re-armed. The server rejects expired quotes (CLIP_QUOTE_EXPIRED), so the cost is a refusal message rather than the pre-emptive invalid state. Hardening, if wanted later: re-arm inside the callback when Date.now() < expiresAt and re-check on visibilitychange."
+          },
+          {
+            "priority": "P3",
+            "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+            "message": "Carried over, optional: the `conflict` option is set only by the factory test, and the ProjectSaveQueueOptions type export is imported nowhere."
+          }
+        ],
+        "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+        "baseCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+        "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+        "createdAt": "2026-11-16T08:06:03.550Z",
+        "finishedAt": "2026-11-16T08:07:02.011Z"
+      },
+      "reviewHistory": [
+        {
+          "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+          "owner": "reviewer-fe-clip",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+          "findings": [
+            {
+              "priority": "P2",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.expiry.test.tsx:83-87 (T844)",
+              "message": "Acceptance 3 requires the test to prove an open quote causes no re-render between opening and expiry. The only probe is a spy on clipDraftKey, but the editor's sole render-time call is now useMemo(() => clipDraftKey(plan), [plan]) on an unchanged plan prop (children ClipVoiceChoice/ClipSpokenProperties never call it; estimate/approve call it only on click). So restoring the setInterval while keeping the useMemo still passes both assertions (no extra key call; invalid by 61 s) - Codex's in-memory probe saw 30 renders over the 30 s window with zero extra key calls. The test fails on base only because base lacked the memo. Fix: count renders/commits independently of the memo (e.g. a React <Profiler onRender> around the editor, or a spy on a non-memoized render-time call such as spokenScriptValid through the existing vi.mock) and assert none between opening and expiry and one at expiry. Optionally drop shouldAdvanceTime and assert the boundary exactly (still valid at expiresAt-1 ms, invalid at expiresAt), since the 61 s checkpoint would also pass the old 1 s-late interval."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+              "message": "Clock edge cases of the approved single-timeout design (Codex rated P2; downgraded because the server enforces expiry - internal/clip/store/quotes.go ConsumeClipQuote returns ErrQuoteExpired -> CLIP_QUOTE_EXPIRED - so the cost is a refusal message instead of the pre-emptive invalid state, with no billing risk). (a) A forward wall-clock jump, or system sleep where the browser timer clock pauses, keeps an expired quote approvable until the remaining timeout elapses; the base interval re-read Date.now() every second. (b) Re-arming depends on setNow changing state: if the callback's Date.now() equals the stored now (wall clock rolled back across the whole delay), [quote, now] does not change, the effect never re-arms and the quote stays valid in the UI until the next estimate. Optional hardening: re-arm inside the callback (or bump a tick counter) when Date.now() < expiresAt instead of relying on a state change, and re-check on visibilitychange/focus."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+              "message": "The `conflict` option is passed by no production wrapper (createAutosaveQueue defaults to never-conflict, so conflictAs is unreachable in production, as in base); it exists only so the factory test can reach the conflictAs mapping that the acceptance asks to test. It is a passthrough of an existing shared option, so harmless, but it is test-only public API; likewise the ProjectSaveQueueOptions type is exported from the slice index and imported nowhere. Consider testing the mapping by mocking createAutosaveQueue and keeping the type unexported. (Codex-sourced in part.)"
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.test.ts:28 (T843)",
+              "message": "The test 'sends the newest sender and drops it with the queue' never calls discard/discardAll, so the 'drops it' half (sender removed with the queue) is not exercised; rename it or add a discard assertion. (Codex-sourced.)"
+            },
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T844.dubbing-quote-expiry-timer.md result (T844)",
+              "message": "The result says the segment lists are not memoized because React Compiler 'already memoizes them', but frontend/vite.config.ts runs plain react() with no compiler plugin; only the eslint react-hooks compiler rules run. The lists are recomputed on every render (harmless now that renders are rare), so the note should not claim runtime memoization. Also the new ClipDubbingEditor.expiry.test.tsx lies outside T844's touches header, which only lists ClipDubbingEditor.tsx (implied by the acceptance; metadata only)."
+            }
+          ],
+          "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+          "createdAt": "2026-11-16T07:50:22.076Z",
+          "finishedAt": "2026-11-16T08:00:03.228Z",
+          "invalidatedAt": "2026-11-16T08:04:11.205Z",
+          "invalidationReason": "new submission"
+        }
+      ],
+      "steps": [
+        {
+          "taskId": "T843",
+          "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+          "at": "2026-11-16T07:46:27.861Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:33:51.976Z",
+              "finishedAt": "2026-11-16T07:46:27.435Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T844",
+          "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+          "at": "2026-11-16T08:05:41.806Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T08:04:11.290Z",
+              "finishedAt": "2026-11-16T08:05:41.716Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+          "startedAt": "2026-11-16T08:04:11.290Z",
+          "finishedAt": "2026-11-16T08:05:41.716Z"
+        }
+      ]
+    },
+    {
+      "id": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "group": "tidy-261116",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "lane": "be-shared",
+      "owner": "worker-be2",
+      "contributors": [
+        "worker-be2"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T06:40:43.341Z",
+      "startCommit": "5e73964ff8bf8d0f76c45fc425336f2944b01a6a",
+      "verifiedCommit": "95764f484087d4dc79486833173bebc09c9bbccb",
+      "submittedBase": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+      "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+      "submittedAt": "2026-11-16T07:38:15.666Z",
+      "integratedCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+      "integratedAt": "2026-11-16T07:46:12.879Z",
+      "risk": null,
+      "review": {
+        "id": "ac4e5ee8-21e2-49b5-bc4b-4bdec94a959d",
+        "owner": "reviewer-be2",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T845-T848 are mechanical, behavior-preserving extractions. Every removed copy was compared with its base version: dbfailure Columns/FromRow keep the job/experiment bytes, error strings, legacy branch and nil-on-empty params; voice ValidReason is equivalent (first byte already excludes a leading digit); rpcserver ModelRefToProto/FromProto/FailureToProto keep first-slash split, nil/empty handling and the non-nil params copy behind unchanged nil-check adapters; InternalFailure keeps op string, ERROR level, err attribute, CodeInternal, message and UNKNOWN_FAILURE at all 14 sites (clip/experiment/generation/billing/plan/voucher left alone as specified; no AddSource anywhere); llm.ParseModelRef matches all five strings.Cut splitters including p/m/x and keeps the voice/memory Korean errors and authoring ErrModel. Sibling generation/test edits are pure renames. No import cycles (dbfailure is stdlib-only). Reviewer re-ran gofmt -l, go build ./..., go vet and go test -count=1 on dbfailure, rpcserver, llm, job/experiment/voice store, job/post/template/experiment/generation/auth rpc, memory, authoring, template, voice and generation: all ok. Independent Codex review (read-only) also reported no findings.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "spec/tasks/T847.rpc-internal-failure.md result at (T847)",
+            "message": "The result `at: 49a7045d5` is a pre-rebase commit that is not an ancestor of the submitted commit 95764f484 (the landed T847 commit is fc6c40e9d). The diff is the same, so this is a record-keeping nit only; T845/T846 `at` (5e73964ff, the merge base the checks ran on) and T848 `at` (fc6c40e9d) are in history."
+          }
+        ],
+        "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+        "baseCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+        "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+        "createdAt": "2026-11-16T07:39:31.517Z",
+        "finishedAt": "2026-11-16T07:44:39.104Z"
+      },
+      "steps": [
+        {
+          "taskId": "T845",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T846",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T847",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T848",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+          "startedAt": "2026-11-16T07:36:01.047Z",
+          "finishedAt": "2026-11-16T07:38:14.827Z"
+        }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+          "startedAt": "2026-11-16T07:45:21.434Z",
+          "finishedAt": "2026-11-16T07:46:12.879Z"
+        }
+      ]
+    },
+    {
+      "id": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "group": "tidy-261116",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "lane": "fe-upload",
+      "owner": "worker-fe-upload",
+      "contributors": [
+        "worker-fe-upload"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T07:38:48.160Z",
+      "startCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+      "verifiedCommit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+      "submittedBase": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+      "submissionId": "31ac1d28-0eed-4b19-bd82-d2d9a14b5d38",
+      "submittedAt": "2026-11-16T07:54:10.331Z",
+      "integratedCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+      "integratedAt": "2026-11-16T08:04:58.956Z",
+      "risk": null,
+      "review": {
+        "id": "46d55a99-2838-4101-a852-32357abf4fa9",
+        "owner": "reviewer-fe-upload",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T849 and T850 remove only no-op progress notifications. Published contents, phases, confirm order, error handling and requests are unchanged. In T849 the per-source `reported` resets for every source and every select() call (retries included), the first event per source always publishes, and any publish between two events changes this.state's identity, which lets the next equal percent through. T850 compares against the current item's progress (0 after a retry reset), and every skipped patch would have left confirm-waiter results unchanged. Only P3 issues remain.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "frontend/src/features/upload-clip-sources/model/session.test.ts:179-189 (T849)",
+            "message": "The test asserts `seen` inside the fake put. On the base code that AssertionError rejects put, select() catches it as an upload failure (discard, clearFiles, publish('failed')), and the visible failure comes from the final `entries[0]` toMatchObject on undefined, not from the count. The test does fail on base, but only indirectly, and any put rejection would fail it the same way. Optional: keep the count in an outer variable and assert it after `await session.select(files)` (as the T850 test does), and add a case where a publish between two equal percents lets the second one through. (Codex agreed.)"
+          },
+          {
+            "priority": "P3",
+            "where": "spec/tasks/T849.clip-upload-progress-dedupe.md result verified line (T849)",
+            "message": "The record misstates the base failure. It says '1 failed, notifications 4 not 2', but the inner expect is swallowed by select()'s catch, so on base the failure is the final-entry assertion. T850's 'expected 4 to be 2' matches its test. (Codex agreed.)"
+          },
+          {
+            "priority": "P3",
+            "where": "frontend/src/features/upload-clip-sources/model/session.ts:550-553 (T849)",
+            "message": "Codex rated this P2; downgraded after checking. publish() notifies listeners synchronously, so if a listener published again during a progress publish, `reported.state` would record the nested snapshot and the next equal percent would be skipped. Read literally, that breaks the acceptance wording. It is not a defect in practice: the only production subscriber is useSyncExternalStore in useClipSourceUpload.ts:21, which never calls session methods synchronously. Even with a re-entrant publish, the base's suppressed publish would carry identical contents: acceptSoundBatch needs a batchId that an uploading entry does not have yet, acceptSourceOrder keeps entry objects, ensurePlayback returns early for a local file with a preview URL, refreshRetained is blocked by this.controller, and cancel/select/dispose change the epoch. No change needed. Could be hardened if listeners ever start publishing synchronously."
+          }
+        ],
+        "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+        "baseCommit": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+        "submissionId": "31ac1d28-0eed-4b19-bd82-d2d9a14b5d38",
+        "createdAt": "2026-11-16T08:00:05.191Z",
+        "finishedAt": "2026-11-16T08:02:47.217Z"
+      },
+      "steps": [
+        {
+          "taskId": "T849",
+          "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+          "at": "2026-11-16T07:54:10.319Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:51:27.004Z",
+              "finishedAt": "2026-11-16T07:54:10.152Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T850",
+          "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+          "at": "2026-11-16T07:54:10.319Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:51:27.004Z",
+              "finishedAt": "2026-11-16T07:54:10.152Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+          "startedAt": "2026-11-16T07:51:27.004Z",
+          "finishedAt": "2026-11-16T07:54:10.152Z"
+        }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+          "startedAt": "2026-11-16T08:03:35.355Z",
+          "finishedAt": "2026-11-16T08:04:58.956Z"
+        }
+      ]
+    }
+  ],
+  "history": [
+    {
+      "sequence": 1,
+      "at": "2026-11-16T06:18:00.584Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "tidy-261116",
+        "branch": "gusta-session-self-improve-tidy-9ff3f895",
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:00.548Z",
+        "limits": {
+          "workers": 3,
+          "reviewers": 1,
+          "maxPending": 8
+        },
+        "push": null,
+        "review": "all",
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844"
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "at": "2026-11-16T06:18:00.624Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "preparing",
+      "status": "active",
+      "changes": {
+        "status": "active"
+      }
+    },
+    {
+      "sequence": 3,
+      "at": "2026-11-16T06:18:19.244Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T837",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "40293f12-8083-45eb-8255-36edd7c422a1",
+        "group": "tidy-261116",
+        "taskId": "T837",
+        "tasks": [
+          "T837",
+          "T838",
+          "T839"
+        ],
+        "lane": "be-tidy",
+        "owner": "worker-be",
+        "contributors": [
+          "worker-be"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:19.244Z",
+        "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+      }
+    },
+    {
+      "sequence": 4,
+      "at": "2026-11-16T06:18:20.459Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T837",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 5,
+      "at": "2026-11-16T06:18:22.161Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "befc20f6-b132-49c4-87e2-89898f244bcf",
+        "group": "tidy-261116",
+        "taskId": "T840",
+        "tasks": [
+          "T840",
+          "T841",
+          "T842"
+        ],
+        "lane": "fe-lib",
+        "owner": "worker-fe-lib",
+        "contributors": [
+          "worker-fe-lib"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:22.160Z",
+        "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+      }
+    },
+    {
+      "sequence": 6,
+      "at": "2026-11-16T06:18:23.376Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 7,
+      "at": "2026-11-16T06:18:25.532Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "18477b54-ee62-4f55-8a11-2e829c40958a",
+        "group": "tidy-261116",
+        "taskId": "T843",
+        "tasks": [
+          "T843",
+          "T844"
+        ],
+        "lane": "fe-clip",
+        "owner": "worker-fe-clip",
+        "contributors": [
+          "worker-fe-clip"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:25.531Z",
+        "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+      }
+    },
+    {
+      "sequence": 8,
+      "at": "2026-11-16T06:18:27.221Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 9,
+      "at": "2026-11-16T06:23:02.952Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T837",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 10,
+      "at": "2026-11-16T06:23:31.059Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T839",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+        "submittedBase": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+        "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+        "submittedAt": "2026-11-16T06:23:31.059Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T837",
+            "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+            "at": "2026-11-16T06:23:31.052Z",
+            "verification": [
+              {
+                "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+                "startedAt": "2026-11-16T06:23:03.039Z",
+                "finishedAt": "2026-11-16T06:23:30.954Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T838",
+            "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+            "at": "2026-11-16T06:23:31.052Z",
+            "verification": [
+              {
+                "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+                "startedAt": "2026-11-16T06:23:03.039Z",
+                "finishedAt": "2026-11-16T06:23:30.954Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T839",
+            "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+            "at": "2026-11-16T06:23:31.052Z",
+            "verification": [
+              {
+                "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+                "startedAt": "2026-11-16T06:23:03.039Z",
+                "finishedAt": "2026-11-16T06:23:30.954Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+            "startedAt": "2026-11-16T06:23:03.039Z",
+            "finishedAt": "2026-11-16T06:23:30.954Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 11,
+      "at": "2026-11-16T06:24:12.501Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
+          "owner": "reviewer-be",
+          "status": "reviewing",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "baseCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+          "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+          "createdAt": "2026-11-16T06:24:12.501Z"
+        }
+      }
+    },
+    {
+      "sequence": 12,
+      "at": "2026-11-16T06:28:44.163Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
+          "owner": "reviewer-be",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "Behavior-preserving clean-up confirmed for T837-T839. All ten removed actingUser copies and the four inline checks (auth/rpc x3, job/rpc x1) built the identical CodeUnauthenticated/'authentication required'/AUTH_REQUIRED/nil-params error that authrpc.ActingUser now returns; differing variants (auth/rpc admin.go CodeInternal path, billing, voucher, plan, authoring, voice/spoken, modelcatalog speech) are untouched. All eleven removed writeLayout consts equal dbtime.Layout byte-for-byte, every removed formatTime normalized to UTC, every bare parseTime used RFC3339Nano, provider's inline at.UTC().Format(writeLayout) maps to dbtime.Format(at), and auth/memory/post keep their wrappers with unchanged error text. T839's newID wrappers keep the exact panic values (ids.NewHex128 returns the rand error unwrapped). A normalized line-balance check of the out-of-touches sibling files (21 for T837, 22 for T838) shows only helper renames and import additions. Reviewer re-ran gofmt -l (empty) and go vet on all 27 changed packages (pass), plus go test -count=1 on platform/dbtime, platform/ids and auth/rpc (pass). The independent Codex read-only review (gpt-6.1-sol after gpt-5.5 was rejected for the account) found no P1/P2. Two optional follow-ups only.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "backend/internal/clip/app/speech.go:101 (T839)",
+              "message": "speechID() in the same clip/app package still hand-rolls the 128-bit hex id ([16]byte, rand.Read, panic(e), hex.EncodeToString), identical to what newID() just stopped doing. Outside T839's acceptance (which names newID in service.go only); a later tidy could route it through ids.NewHex128 with panic(err) kept. modelcatalog/speech_service.go:368 speechID and provider/types.go:468 NewRecommendationID are the same shape in other contexts. (Raised by Codex and confirmed by reviewer.)"
+            },
+            {
+              "priority": "P3",
+              "where": "backend/internal/experiment/store/store.go:652, :821; experiment/store/writing_test_store.go:58, :62, :169, :221; provider/store/store.go:78, :103 (T838)",
+              "message": "Inline time.Parse(time.RFC3339Nano, ...) calls remain in two of the eleven stores. They are equivalent to dbtime.Parse and acceptance only required removing the bare parseTime helpers, so not a defect; a follow-up could switch them to dbtime.Parse so the parse rule also has one owner. (Reviewer finding.)"
+            }
+          ],
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "baseCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+          "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+          "createdAt": "2026-11-16T06:24:12.501Z",
+          "finishedAt": "2026-11-16T06:28:44.162Z"
+        }
+      }
+    },
+    {
+      "sequence": 13,
+      "at": "2026-11-16T06:29:06.345Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 14,
+      "at": "2026-11-16T06:29:07.733Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "통합 후보의 spec 검증에 실패했습니다."
+      }
+    },
+    {
+      "sequence": 15,
+      "at": "2026-11-16T06:29:32.463Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 16,
+      "at": "2026-11-16T06:32:53.452Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "approved",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "reason": null,
+        "integratedCommit": "d7284875b8790d4c506c399cbef473960b009425",
+        "integratedAt": "2026-11-16T06:32:53.452Z",
+        "integrationVerification": [
+          {
+            "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/integrate-check.sh",
+            "startedAt": "2026-11-16T06:37:00Z",
+            "finishedAt": "2026-11-16T06:32:53.452Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 17,
+      "at": "2026-11-16T06:40:33.262Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844",
+          "T845",
+          "T846",
+          "T847",
+          "T848"
+        ]
+      }
+    },
+    {
+      "sequence": 18,
+      "at": "2026-11-16T06:40:43.342Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T845",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+        "group": "tidy-261116",
+        "taskId": "T845",
+        "tasks": [
+          "T845",
+          "T846",
+          "T847",
+          "T848"
+        ],
+        "lane": "be-shared",
+        "owner": "worker-be2",
+        "contributors": [
+          "worker-be2"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:40:43.341Z",
+        "startCommit": "5e73964ff8bf8d0f76c45fc425336f2944b01a6a"
+      }
+    },
+    {
+      "sequence": 19,
+      "at": "2026-11-16T06:40:44.550Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T845",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 20,
+      "at": "2026-11-16T06:41:01.290Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "interrupted operation; inspect preserved workspace before resubmitting"
+      }
+    },
+    {
+      "sequence": 21,
+      "at": "2026-11-16T06:41:06.463Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 22,
+      "at": "2026-11-16T06:41:10.459Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 23,
+      "at": "2026-11-16T06:41:18.577Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 24,
+      "at": "2026-11-16T07:03:40.968Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844",
+          "T845",
+          "T846",
+          "T847",
+          "T848",
+          "T849",
+          "T850",
+          "T851",
+          "T852",
+          "T853"
+        ]
+      }
+    },
+    {
+      "sequence": 25,
+      "at": "2026-11-16T07:31:24.184Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "interrupted operation; inspect preserved workspace before resubmitting"
+      }
+    },
+    {
+      "sequence": 26,
+      "at": "2026-11-16T07:31:27.749Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 27,
+      "at": "2026-11-16T07:31:31.503Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "interrupted operation; inspect preserved workspace before resubmitting"
+      }
+    },
+    {
+      "sequence": 28,
+      "at": "2026-11-16T07:31:36.967Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 29,
+      "at": "2026-11-16T07:31:59.929Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 30,
+      "at": "2026-11-16T07:32:00.135Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 31,
+      "at": "2026-11-16T07:32:01.289Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "검증 실패: bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check-dirs.sh"
+      }
+    },
+    {
+      "sequence": 32,
+      "at": "2026-11-16T07:32:01.455Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "검증 실패: bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check-dirs.sh"
+      }
+    },
+    {
+      "sequence": 33,
+      "at": "2026-11-16T07:33:46.970Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "blocked",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 34,
+      "at": "2026-11-16T07:33:47.894Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "blocked",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 35,
+      "at": "2026-11-16T07:35:59.573Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T845",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 36,
+      "at": "2026-11-16T07:38:15.666Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T848",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "95764f484087d4dc79486833173bebc09c9bbccb",
+        "submittedBase": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+        "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+        "submittedAt": "2026-11-16T07:38:15.666Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T845",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T846",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T847",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T848",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T07:36:01.047Z",
+            "finishedAt": "2026-11-16T07:38:14.827Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 37,
+      "at": "2026-11-16T07:38:48.160Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+        "group": "tidy-261116",
+        "taskId": "T849",
+        "tasks": [
+          "T849",
+          "T850"
+        ],
+        "lane": "fe-upload",
+        "owner": "worker-fe-upload",
+        "contributors": [
+          "worker-fe-upload"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T07:38:48.160Z",
+        "startCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc"
+      }
+    },
+    {
+      "sequence": 38,
+      "at": "2026-11-16T07:38:54.150Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 39,
+      "at": "2026-11-16T07:39:31.518Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "ac4e5ee8-21e2-49b5-bc4b-4bdec94a959d",
+          "owner": "reviewer-be2",
+          "status": "reviewing",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "baseCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+          "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+          "createdAt": "2026-11-16T07:39:31.517Z"
+        }
+      }
+    },
+    {
+      "sequence": 40,
+      "at": "2026-11-16T07:39:31.715Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844",
+          "T845",
+          "T846",
+          "T847",
+          "T848",
+          "T849",
+          "T850"
+        ]
+      }
+    },
+    {
+      "sequence": 41,
+      "at": "2026-11-16T07:44:39.105Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "ac4e5ee8-21e2-49b5-bc4b-4bdec94a959d",
+          "owner": "reviewer-be2",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T845-T848 are mechanical, behavior-preserving extractions. Every removed copy was compared with its base version: dbfailure Columns/FromRow keep the job/experiment bytes, error strings, legacy branch and nil-on-empty params; voice ValidReason is equivalent (first byte already excludes a leading digit); rpcserver ModelRefToProto/FromProto/FailureToProto keep first-slash split, nil/empty handling and the non-nil params copy behind unchanged nil-check adapters; InternalFailure keeps op string, ERROR level, err attribute, CodeInternal, message and UNKNOWN_FAILURE at all 14 sites (clip/experiment/generation/billing/plan/voucher left alone as specified; no AddSource anywhere); llm.ParseModelRef matches all five strings.Cut splitters including p/m/x and keeps the voice/memory Korean errors and authoring ErrModel. Sibling generation/test edits are pure renames. No import cycles (dbfailure is stdlib-only). Reviewer re-ran gofmt -l, go build ./..., go vet and go test -count=1 on dbfailure, rpcserver, llm, job/experiment/voice store, job/post/template/experiment/generation/auth rpc, memory, authoring, template, voice and generation: all ok. Independent Codex review (read-only) also reported no findings.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T847.rpc-internal-failure.md result at (T847)",
+              "message": "The result `at: 49a7045d5` is a pre-rebase commit that is not an ancestor of the submitted commit 95764f484 (the landed T847 commit is fc6c40e9d). The diff is the same, so this is a record-keeping nit only; T845/T846 `at` (5e73964ff, the merge base the checks ran on) and T848 `at` (fc6c40e9d) are in history."
+            }
+          ],
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "baseCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+          "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+          "createdAt": "2026-11-16T07:39:31.517Z",
+          "finishedAt": "2026-11-16T07:44:39.104Z"
+        }
+      }
+    },
+    {
+      "sequence": 42,
+      "at": "2026-11-16T07:45:09.201Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 43,
+      "at": "2026-11-16T07:45:14.653Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "통합 후보의 spec 검증에 실패했습니다."
+      }
+    },
+    {
+      "sequence": 44,
+      "at": "2026-11-16T07:45:42.862Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 45,
+      "at": "2026-11-16T07:45:43.119Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "T849: 태스크 계약이 상위 브랜치와 다릅니다. 기획 변경을 확인하고 작업을 동기화하세요."
+      }
+    },
+    {
+      "sequence": 46,
+      "at": "2026-11-16T07:46:12.879Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "approved",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "reason": null,
+        "integratedCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+        "integratedAt": "2026-11-16T07:46:12.879Z",
+        "integrationVerification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+            "startedAt": "2026-11-16T07:45:21.434Z",
+            "finishedAt": "2026-11-16T07:46:12.879Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 47,
+      "at": "2026-11-16T07:46:22.074Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "blocked",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 48,
+      "at": "2026-11-16T07:46:27.879Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T844",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+        "submittedBase": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+        "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+        "submittedAt": "2026-11-16T07:46:27.879Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T843",
+            "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+            "at": "2026-11-16T07:46:27.861Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:51.976Z",
+                "finishedAt": "2026-11-16T07:46:27.435Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T844",
+            "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+            "at": "2026-11-16T07:46:27.861Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:51.976Z",
+                "finishedAt": "2026-11-16T07:46:27.435Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T07:33:51.976Z",
+            "finishedAt": "2026-11-16T07:46:27.435Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 49,
+      "at": "2026-11-16T07:46:33.629Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T842",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+        "submittedBase": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+        "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+        "submittedAt": "2026-11-16T07:46:33.628Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T840",
+            "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+            "at": "2026-11-16T07:46:33.615Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:50.829Z",
+                "finishedAt": "2026-11-16T07:46:33.325Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T841",
+            "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+            "at": "2026-11-16T07:46:33.615Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:50.829Z",
+                "finishedAt": "2026-11-16T07:46:33.325Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T842",
+            "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+            "at": "2026-11-16T07:46:33.615Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:50.829Z",
+                "finishedAt": "2026-11-16T07:46:33.325Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T07:33:50.829Z",
+            "finishedAt": "2026-11-16T07:46:33.325Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 50,
+      "at": "2026-11-16T07:47:28.045Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+          "owner": "reviewer-fe-lib",
+          "status": "reviewing",
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+          "createdAt": "2026-11-16T07:47:28.045Z"
+        }
+      }
+    },
+    {
+      "sequence": 51,
+      "at": "2026-11-16T07:48:01.860Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "검증 실패: bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh"
+      }
+    },
+    {
+      "sequence": 52,
+      "at": "2026-11-16T07:50:19.997Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+          "owner": "reviewer-fe-lib",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T840-T842 are behavior-preserving. connectFailureMessage keeps '' for falsy errors and the same composed text at all 13 sites plus the two private helpers; the formatAppFailure(failure) sites rely on its existing '' for undefined; useBillingInvalidation invalidates the same three keys in the same awaited Promise.all from onSuccess, and removePaymentMethod keeps its own keys. All 12 sha256Hex sites hash the same bytes with their original wrapping (bytes.slice().buffer, new Uint8Array(bytes), TextEncoder output), and manifest.ts keeps `return await` inside its try. ConfirmedAction keeps each button's semantics: the dialog closes on both paths, onDone runs only on success and synchronously after the close, voice's finally path is equivalent with no onDone, post still calls onDeleted before navigation outside the delete catch, buttonRef stays on the template and clip-template triggers, and the trigger, FieldMessage, Dialog order plus aria, i18n and classes are unchanged. The layering is clean, and shared/ui/index.ts gains exactly one line after the Dialog export. Codex (cross-provider, read-only) also reported no findings. Tests were not rerun because the review workspace has no node_modules. Only optional P3 notes remain.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T841.sha256-hex-helper.md:8 (T841)",
+              "message": "Acceptance is ticked [v] but names shared/lib/hash/sha256-hex.ts, while the helper lives at shared/lib/media/sha256-hex.ts. That path is outside the task's touches, and the reason (steiger fsd/shared-lib-grouping, 15 modules) is recorded only in result. When archiving, the coordinator should amend the acceptance path so the done record matches the code."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/shared/lib/index.ts:32 (T841)",
+              "message": "`export { sha256Hex } from './media/sha256-hex'` reaches past the media module's own index (shared/lib/media/index.ts does not export it), unlike every other media re-export, and it sits among the localization exports. Optional: export it from media/index.ts and re-export it next to the other './media' lines."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx:45 (T842)",
+              "message": "The `failure` element is now built on every render, so appFailureFromConnect(remove.error) runs (ConnectError.from(null) allocates an Error), as do the t() calls in the voice and post failures, even when isError is false. Before, these ran only when isError was true. The DOM and behavior are unchanged; this is optional extra work per row. A render-function `failure` prop would restore lazy evaluation."
+            }
+          ],
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+          "createdAt": "2026-11-16T07:47:28.045Z",
+          "finishedAt": "2026-11-16T07:50:19.996Z"
+        }
+      }
+    },
+    {
+      "sequence": 53,
+      "at": "2026-11-16T07:50:22.076Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+          "owner": "reviewer-fe-clip",
+          "status": "reviewing",
+          "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+          "createdAt": "2026-11-16T07:50:22.076Z"
+        }
+      }
+    },
+    {
+      "sequence": 54,
+      "at": "2026-11-16T07:50:22.202Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 55,
+      "at": "2026-11-16T07:50:23.591Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "integrating",
+      "status": "changes_requested",
+      "changes": {
+        "status": "changes_requested",
+        "reason": "integration failed",
+        "review": {
+          "id": "a0faf262-4003-4913-bf79-dfc23d0f0993",
+          "owner": "integration",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "Integration failed on the merged candidate.",
+          "findings": [
+            {
+              "priority": "P1",
+              "where": "integration",
+              "message": "Merge the group branch into this workspace, fix the failure, and resubmit: 통합 후보의 spec 검증에 실패했습니다.\nssot/AUTH.md chg에 불릿이 아닌 줄이 있습니다: \"-\"\nssot/GIFT.md chg에 불릿이 아닌 줄이 있습니다: \"-\"\n정본 위임이 순환합니다: ARCH-24 →= ARCH-31 →= ARCH-24 — 규칙을 가진 쪽 하나만 정본으로 두세요.\ntasks/done/T042.mutation-vocabulary-and-body-mutations.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\ntasks/done/T178.disclosure-badge-rounded-rectangle.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\ntasks/done/T234.clip-refine-draft-autosaves.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\nT539: base ARCH@15 < 현재 r25 — implement 전 신선도 확인 필요.\nT539: base DUB@3 < 현재 r5 — implement 전 신선도 확인 필요.\nT539: base MODEL@29 < 현재 r37 — implement 전 신선도 확인 필요.\nT539: base CDS@32 < 현재 r38 — implement 전 신선도 확인 필요.\nT539: base THEME@22 < 현재 r45 — implement 전 신선도 확인 필요.\nT550: base ARCH@15 < 현재 r25 — implement 전 신선도 확인 필요.\nT550: base DUB@3 < 현재 r5 — implement 전 신선도 확인 필요.\nT550: base CLIP@55 < 현재 r78 — implement 전 신선도 확인 필요.\nT550: base MODEL@29 < 현재 r37 — implement 전 신선도 확인 필요.\nT550: base QUOTA@34 < 현재 r40 — implement 전 신선도 확인 필요.\nT550: base CDS@32 < 현재 r38 — implement 전 신선도 확인 필요.\nT550: base THEME@22 < 현재 r45 — implement 전 신선도 확인 필요.\nT603: base ARCH@20 < 현재 r25 — implement 전 신선도 확인 필요.\nT603: base CLIP@56 < 현재 r78 — implement 전 신선도 확인 필요.\nT603: base CDS@33 < 현재 r38 — implement 전 신선도 확인 필요.\nT603: base QUOTA@35 < 현재 r40 — implement 전 신선도 확인 필요.\nT604: base ARCH@22 < 현재 r25 — implement 전 신선도 확인 필요.\nT604: base CLIP@73 < 현재 r78 — implement 전 신선도 확인 필요.\nT697: base ARCH@20 < 현재 r25 — implement 전 신선도 확인 필요.\nssot/ARCH.md chg에 r17 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/ARCH.md chg에 r18 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/AUTH.md chg에 r15 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r35 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r36 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r37 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r38 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r30 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r31 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r32 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r33 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r34 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r36 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r23 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r24 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r25 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r26 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r27 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r28 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r30 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r31 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r32 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r35 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r40 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r56 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r57 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r58 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r59 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r64 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r74 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r75 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CDS.md chg에 r33 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/GIFT.md chg에 r3 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다."
+            }
+          ],
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "finishedAt": "2026-11-16T07:50:23.591Z"
+        },
+        "reviewHistory": [
+          {
+            "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+            "owner": "reviewer-fe-lib",
+            "status": "approved",
+            "verdict": "approved",
+            "summary": "T840-T842 are behavior-preserving. connectFailureMessage keeps '' for falsy errors and the same composed text at all 13 sites plus the two private helpers; the formatAppFailure(failure) sites rely on its existing '' for undefined; useBillingInvalidation invalidates the same three keys in the same awaited Promise.all from onSuccess, and removePaymentMethod keeps its own keys. All 12 sha256Hex sites hash the same bytes with their original wrapping (bytes.slice().buffer, new Uint8Array(bytes), TextEncoder output), and manifest.ts keeps `return await` inside its try. ConfirmedAction keeps each button's semantics: the dialog closes on both paths, onDone runs only on success and synchronously after the close, voice's finally path is equivalent with no onDone, post still calls onDeleted before navigation outside the delete catch, buttonRef stays on the template and clip-template triggers, and the trigger, FieldMessage, Dialog order plus aria, i18n and classes are unchanged. The layering is clean, and shared/ui/index.ts gains exactly one line after the Dialog export. Codex (cross-provider, read-only) also reported no findings. Tests were not rerun because the review workspace has no node_modules. Only optional P3 notes remain.",
+            "findings": [
+              {
+                "priority": "P3",
+                "where": "spec/tasks/T841.sha256-hex-helper.md:8 (T841)",
+                "message": "Acceptance is ticked [v] but names shared/lib/hash/sha256-hex.ts, while the helper lives at shared/lib/media/sha256-hex.ts. That path is outside the task's touches, and the reason (steiger fsd/shared-lib-grouping, 15 modules) is recorded only in result. When archiving, the coordinator should amend the acceptance path so the done record matches the code."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/shared/lib/index.ts:32 (T841)",
+                "message": "`export { sha256Hex } from './media/sha256-hex'` reaches past the media module's own index (shared/lib/media/index.ts does not export it), unlike every other media re-export, and it sits among the localization exports. Optional: export it from media/index.ts and re-export it next to the other './media' lines."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx:45 (T842)",
+                "message": "The `failure` element is now built on every render, so appFailureFromConnect(remove.error) runs (ConnectError.from(null) allocates an Error), as do the t() calls in the voice and post failures, even when isError is false. Before, these ran only when isError was true. The DOM and behavior are unchanged; this is optional extra work per row. A render-function `failure` prop would restore lazy evaluation."
+              }
+            ],
+            "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+            "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+            "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+            "createdAt": "2026-11-16T07:47:28.045Z",
+            "finishedAt": "2026-11-16T07:50:19.996Z",
+            "invalidatedAt": "2026-11-16T07:50:23.591Z",
+            "invalidationReason": "integration failed"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 56,
+      "at": "2026-11-16T07:51:14.655Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "changes_requested",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": null,
+        "review": {
+          "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+          "owner": "reviewer-fe-lib",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T840-T842 are behavior-preserving. connectFailureMessage keeps '' for falsy errors and the same composed text at all 13 sites plus the two private helpers; the formatAppFailure(failure) sites rely on its existing '' for undefined; useBillingInvalidation invalidates the same three keys in the same awaited Promise.all from onSuccess, and removePaymentMethod keeps its own keys. All 12 sha256Hex sites hash the same bytes with their original wrapping (bytes.slice().buffer, new Uint8Array(bytes), TextEncoder output), and manifest.ts keeps `return await` inside its try. ConfirmedAction keeps each button's semantics: the dialog closes on both paths, onDone runs only on success and synchronously after the close, voice's finally path is equivalent with no onDone, post still calls onDeleted before navigation outside the delete catch, buttonRef stays on the template and clip-template triggers, and the trigger, FieldMessage, Dialog order plus aria, i18n and classes are unchanged. The layering is clean, and shared/ui/index.ts gains exactly one line after the Dialog export. Codex (cross-provider, read-only) also reported no findings. Tests were not rerun because the review workspace has no node_modules. Only optional P3 notes remain.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T841.sha256-hex-helper.md:8 (T841)",
+              "message": "Acceptance is ticked [v] but names shared/lib/hash/sha256-hex.ts, while the helper lives at shared/lib/media/sha256-hex.ts. That path is outside the task's touches, and the reason (steiger fsd/shared-lib-grouping, 15 modules) is recorded only in result. When archiving, the coordinator should amend the acceptance path so the done record matches the code."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/shared/lib/index.ts:32 (T841)",
+              "message": "`export { sha256Hex } from './media/sha256-hex'` reaches past the media module's own index (shared/lib/media/index.ts does not export it), unlike every other media re-export, and it sits among the localization exports. Optional: export it from media/index.ts and re-export it next to the other './media' lines."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx:45 (T842)",
+              "message": "The `failure` element is now built on every render, so appFailureFromConnect(remove.error) runs (ConnectError.from(null) allocates an Error), as do the t() calls in the voice and post failures, even when isError is false. Before, these ran only when isError was true. The DOM and behavior are unchanged; this is optional extra work per row. A render-function `failure` prop would restore lazy evaluation."
+            }
+          ],
+          "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+          "createdAt": "2026-11-16T07:47:28.045Z",
+          "finishedAt": "2026-11-16T07:50:19.996Z",
+          "invalidatedAt": "2026-11-16T07:50:23.591Z",
+          "invalidationReason": "integration failed"
+        },
+        "reviewHistory": [
+          {
+            "id": "c944a7a7-7416-49e0-bce6-e2fb3bf35e44",
+            "owner": "reviewer-fe-lib",
+            "status": "approved",
+            "verdict": "approved",
+            "summary": "T840-T842 are behavior-preserving. connectFailureMessage keeps '' for falsy errors and the same composed text at all 13 sites plus the two private helpers; the formatAppFailure(failure) sites rely on its existing '' for undefined; useBillingInvalidation invalidates the same three keys in the same awaited Promise.all from onSuccess, and removePaymentMethod keeps its own keys. All 12 sha256Hex sites hash the same bytes with their original wrapping (bytes.slice().buffer, new Uint8Array(bytes), TextEncoder output), and manifest.ts keeps `return await` inside its try. ConfirmedAction keeps each button's semantics: the dialog closes on both paths, onDone runs only on success and synchronously after the close, voice's finally path is equivalent with no onDone, post still calls onDeleted before navigation outside the delete catch, buttonRef stays on the template and clip-template triggers, and the trigger, FieldMessage, Dialog order plus aria, i18n and classes are unchanged. The layering is clean, and shared/ui/index.ts gains exactly one line after the Dialog export. Codex (cross-provider, read-only) also reported no findings. Tests were not rerun because the review workspace has no node_modules. Only optional P3 notes remain.",
+            "findings": [
+              {
+                "priority": "P3",
+                "where": "spec/tasks/T841.sha256-hex-helper.md:8 (T841)",
+                "message": "Acceptance is ticked [v] but names shared/lib/hash/sha256-hex.ts, while the helper lives at shared/lib/media/sha256-hex.ts. That path is outside the task's touches, and the reason (steiger fsd/shared-lib-grouping, 15 modules) is recorded only in result. When archiving, the coordinator should amend the acceptance path so the done record matches the code."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/shared/lib/index.ts:32 (T841)",
+                "message": "`export { sha256Hex } from './media/sha256-hex'` reaches past the media module's own index (shared/lib/media/index.ts does not export it), unlike every other media re-export, and it sits among the localization exports. Optional: export it from media/index.ts and re-export it next to the other './media' lines."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/features/delete-clip-template/ui/DeleteClipTemplateButton.tsx:45 (T842)",
+                "message": "The `failure` element is now built on every render, so appFailureFromConnect(remove.error) runs (ConnectError.from(null) allocates an Error), as do the t() calls in the voice and post failures, even when isError is false. Before, these ran only when isError was true. The DOM and behavior are unchanged; this is optional extra work per row. A render-function `failure` prop would restore lazy evaluation."
+              }
+            ],
+            "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+            "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+            "submissionId": "382376d7-bfb4-46a7-b4d1-1d730280c92a",
+            "createdAt": "2026-11-16T07:47:28.045Z",
+            "finishedAt": "2026-11-16T07:50:19.996Z",
+            "invalidatedAt": "2026-11-16T07:50:23.591Z",
+            "invalidationReason": "integration failed"
+          },
+          {
+            "id": "a0faf262-4003-4913-bf79-dfc23d0f0993",
+            "owner": "integration",
+            "status": "changes_requested",
+            "verdict": "changes_requested",
+            "summary": "Integration failed on the merged candidate.",
+            "findings": [
+              {
+                "priority": "P1",
+                "where": "integration",
+                "message": "Merge the group branch into this workspace, fix the failure, and resubmit: 통합 후보의 spec 검증에 실패했습니다.\nssot/AUTH.md chg에 불릿이 아닌 줄이 있습니다: \"-\"\nssot/GIFT.md chg에 불릿이 아닌 줄이 있습니다: \"-\"\n정본 위임이 순환합니다: ARCH-24 →= ARCH-31 →= ARCH-24 — 규칙을 가진 쪽 하나만 정본으로 두세요.\ntasks/done/T042.mutation-vocabulary-and-body-mutations.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\ntasks/done/T178.disclosure-badge-rounded-rectangle.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\ntasks/done/T234.clip-refine-draft-autosaves.md: ## result가 비어 있습니다 — outcome·at·verified·limits를 남기세요.\nT539: base ARCH@15 < 현재 r25 — implement 전 신선도 확인 필요.\nT539: base DUB@3 < 현재 r5 — implement 전 신선도 확인 필요.\nT539: base MODEL@29 < 현재 r37 — implement 전 신선도 확인 필요.\nT539: base CDS@32 < 현재 r38 — implement 전 신선도 확인 필요.\nT539: base THEME@22 < 현재 r45 — implement 전 신선도 확인 필요.\nT550: base ARCH@15 < 현재 r25 — implement 전 신선도 확인 필요.\nT550: base DUB@3 < 현재 r5 — implement 전 신선도 확인 필요.\nT550: base CLIP@55 < 현재 r78 — implement 전 신선도 확인 필요.\nT550: base MODEL@29 < 현재 r37 — implement 전 신선도 확인 필요.\nT550: base QUOTA@34 < 현재 r40 — implement 전 신선도 확인 필요.\nT550: base CDS@32 < 현재 r38 — implement 전 신선도 확인 필요.\nT550: base THEME@22 < 현재 r45 — implement 전 신선도 확인 필요.\nT603: base ARCH@20 < 현재 r25 — implement 전 신선도 확인 필요.\nT603: base CLIP@56 < 현재 r78 — implement 전 신선도 확인 필요.\nT603: base CDS@33 < 현재 r38 — implement 전 신선도 확인 필요.\nT603: base QUOTA@35 < 현재 r40 — implement 전 신선도 확인 필요.\nT604: base ARCH@22 < 현재 r25 — implement 전 신선도 확인 필요.\nT604: base CLIP@73 < 현재 r78 — implement 전 신선도 확인 필요.\nT697: base ARCH@20 < 현재 r25 — implement 전 신선도 확인 필요.\nssot/ARCH.md chg에 r17 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/ARCH.md chg에 r18 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/AUTH.md chg에 r15 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r35 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r36 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r37 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/QUOTA.md chg에 r38 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r30 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r31 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r32 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r33 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r34 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/MODEL.md chg에 r36 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r23 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r24 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r25 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r26 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r27 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r28 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r30 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r31 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r32 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r35 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/THEME.md chg에 r40 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r56 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r57 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r58 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r59 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r64 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r74 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CLIP.md chg에 r75 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/CDS.md chg에 r33 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다.\nssot/GIFT.md chg에 r3 항목이 없습니다 — 미소화 델타와 진행 중 태스크의 신선도 확인에 필요합니다."
+              }
+            ],
+            "commit": "f1aaf84b993c39a8f25ba70cf70d048f9a83e7d2",
+            "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+            "finishedAt": "2026-11-16T07:50:23.591Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 57,
+      "at": "2026-11-16T07:51:26.885Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "blocked",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 58,
+      "at": "2026-11-16T07:53:26.577Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T842",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "approved",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+        "integratedAt": "2026-11-16T07:53:26.577Z",
+        "integrationVerification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+            "startedAt": "2026-11-16T07:51:15.825Z",
+            "finishedAt": "2026-11-16T07:53:26.577Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 59,
+      "at": "2026-11-16T07:54:10.331Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T850",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+        "submittedBase": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+        "submissionId": "31ac1d28-0eed-4b19-bd82-d2d9a14b5d38",
+        "submittedAt": "2026-11-16T07:54:10.331Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T849",
+            "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+            "at": "2026-11-16T07:54:10.319Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:51:27.004Z",
+                "finishedAt": "2026-11-16T07:54:10.152Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T850",
+            "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+            "at": "2026-11-16T07:54:10.319Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:51:27.004Z",
+                "finishedAt": "2026-11-16T07:54:10.152Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T07:51:27.004Z",
+            "finishedAt": "2026-11-16T07:54:10.152Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 60,
+      "at": "2026-11-16T08:00:03.228Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "reviewing",
+      "status": "changes_requested",
+      "changes": {
+        "status": "changes_requested",
+        "reason": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+        "review": {
+          "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+          "owner": "reviewer-fe-clip",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+          "findings": [
+            {
+              "priority": "P2",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.expiry.test.tsx:83-87 (T844)",
+              "message": "Acceptance 3 requires the test to prove an open quote causes no re-render between opening and expiry. The only probe is a spy on clipDraftKey, but the editor's sole render-time call is now useMemo(() => clipDraftKey(plan), [plan]) on an unchanged plan prop (children ClipVoiceChoice/ClipSpokenProperties never call it; estimate/approve call it only on click). So restoring the setInterval while keeping the useMemo still passes both assertions (no extra key call; invalid by 61 s) - Codex's in-memory probe saw 30 renders over the 30 s window with zero extra key calls. The test fails on base only because base lacked the memo. Fix: count renders/commits independently of the memo (e.g. a React <Profiler onRender> around the editor, or a spy on a non-memoized render-time call such as spokenScriptValid through the existing vi.mock) and assert none between opening and expiry and one at expiry. Optionally drop shouldAdvanceTime and assert the boundary exactly (still valid at expiresAt-1 ms, invalid at expiresAt), since the 61 s checkpoint would also pass the old 1 s-late interval."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+              "message": "Clock edge cases of the approved single-timeout design (Codex rated P2; downgraded because the server enforces expiry - internal/clip/store/quotes.go ConsumeClipQuote returns ErrQuoteExpired -> CLIP_QUOTE_EXPIRED - so the cost is a refusal message instead of the pre-emptive invalid state, with no billing risk). (a) A forward wall-clock jump, or system sleep where the browser timer clock pauses, keeps an expired quote approvable until the remaining timeout elapses; the base interval re-read Date.now() every second. (b) Re-arming depends on setNow changing state: if the callback's Date.now() equals the stored now (wall clock rolled back across the whole delay), [quote, now] does not change, the effect never re-arms and the quote stays valid in the UI until the next estimate. Optional hardening: re-arm inside the callback (or bump a tick counter) when Date.now() < expiresAt instead of relying on a state change, and re-check on visibilitychange/focus."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+              "message": "The `conflict` option is passed by no production wrapper (createAutosaveQueue defaults to never-conflict, so conflictAs is unreachable in production, as in base); it exists only so the factory test can reach the conflictAs mapping that the acceptance asks to test. It is a passthrough of an existing shared option, so harmless, but it is test-only public API; likewise the ProjectSaveQueueOptions type is exported from the slice index and imported nowhere. Consider testing the mapping by mocking createAutosaveQueue and keeping the type unexported. (Codex-sourced in part.)"
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.test.ts:28 (T843)",
+              "message": "The test 'sends the newest sender and drops it with the queue' never calls discard/discardAll, so the 'drops it' half (sender removed with the queue) is not exercised; rename it or add a discard assertion. (Codex-sourced.)"
+            },
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T844.dubbing-quote-expiry-timer.md result (T844)",
+              "message": "The result says the segment lists are not memoized because React Compiler 'already memoizes them', but frontend/vite.config.ts runs plain react() with no compiler plugin; only the eslint react-hooks compiler rules run. The lists are recomputed on every render (harmless now that renders are rare), so the note should not claim runtime memoization. Also the new ClipDubbingEditor.expiry.test.tsx lies outside T844's touches header, which only lists ClipDubbingEditor.tsx (implied by the acceptance; metadata only)."
+            }
+          ],
+          "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+          "createdAt": "2026-11-16T07:50:22.076Z",
+          "finishedAt": "2026-11-16T08:00:03.228Z"
+        }
+      }
+    },
+    {
+      "sequence": 61,
+      "at": "2026-11-16T08:00:05.191Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "46d55a99-2838-4101-a852-32357abf4fa9",
+          "owner": "reviewer-fe-upload",
+          "status": "reviewing",
+          "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+          "baseCommit": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+          "submissionId": "31ac1d28-0eed-4b19-bd82-d2d9a14b5d38",
+          "createdAt": "2026-11-16T08:00:05.191Z"
+        }
+      }
+    },
+    {
+      "sequence": 62,
+      "at": "2026-11-16T08:02:47.218Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "46d55a99-2838-4101-a852-32357abf4fa9",
+          "owner": "reviewer-fe-upload",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T849 and T850 remove only no-op progress notifications. Published contents, phases, confirm order, error handling and requests are unchanged. In T849 the per-source `reported` resets for every source and every select() call (retries included), the first event per source always publishes, and any publish between two events changes this.state's identity, which lets the next equal percent through. T850 compares against the current item's progress (0 after a retry reset), and every skipped patch would have left confirm-waiter results unchanged. Only P3 issues remain.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/upload-clip-sources/model/session.test.ts:179-189 (T849)",
+              "message": "The test asserts `seen` inside the fake put. On the base code that AssertionError rejects put, select() catches it as an upload failure (discard, clearFiles, publish('failed')), and the visible failure comes from the final `entries[0]` toMatchObject on undefined, not from the count. The test does fail on base, but only indirectly, and any put rejection would fail it the same way. Optional: keep the count in an outer variable and assert it after `await session.select(files)` (as the T850 test does), and add a case where a publish between two equal percents lets the second one through. (Codex agreed.)"
+            },
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T849.clip-upload-progress-dedupe.md result verified line (T849)",
+              "message": "The record misstates the base failure. It says '1 failed, notifications 4 not 2', but the inner expect is swallowed by select()'s catch, so on base the failure is the final-entry assertion. T850's 'expected 4 to be 2' matches its test. (Codex agreed.)"
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/upload-clip-sources/model/session.ts:550-553 (T849)",
+              "message": "Codex rated this P2; downgraded after checking. publish() notifies listeners synchronously, so if a listener published again during a progress publish, `reported.state` would record the nested snapshot and the next equal percent would be skipped. Read literally, that breaks the acceptance wording. It is not a defect in practice: the only production subscriber is useSyncExternalStore in useClipSourceUpload.ts:21, which never calls session methods synchronously. Even with a re-entrant publish, the base's suppressed publish would carry identical contents: acceptSoundBatch needs a batchId that an uploading entry does not have yet, acceptSourceOrder keeps entry objects, ensurePlayback returns early for a local file with a preview URL, refreshRetained is blocked by this.controller, and cancel/select/dispose change the epoch. No change needed. Could be hardened if listeners ever start publishing synchronously."
+            }
+          ],
+          "commit": "a4312fd84e5ae8dd03d9dbf092b41bda2469d1a1",
+          "baseCommit": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+          "submissionId": "31ac1d28-0eed-4b19-bd82-d2d9a14b5d38",
+          "createdAt": "2026-11-16T08:00:05.191Z",
+          "finishedAt": "2026-11-16T08:02:47.217Z"
+        }
+      }
+    },
+    {
+      "sequence": 63,
+      "at": "2026-11-16T08:03:33.175Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 64,
+      "at": "2026-11-16T08:03:34.411Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "통합 후보의 spec 검증에 실패했습니다."
+      }
+    },
+    {
+      "sequence": 65,
+      "at": "2026-11-16T08:04:11.205Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "changes_requested",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying",
+        "verifiedCommit": null,
+        "review": null,
+        "reviewHistory": [
+          {
+            "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+            "owner": "reviewer-fe-clip",
+            "status": "changes_requested",
+            "verdict": "changes_requested",
+            "summary": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+            "findings": [
+              {
+                "priority": "P2",
+                "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.expiry.test.tsx:83-87 (T844)",
+                "message": "Acceptance 3 requires the test to prove an open quote causes no re-render between opening and expiry. The only probe is a spy on clipDraftKey, but the editor's sole render-time call is now useMemo(() => clipDraftKey(plan), [plan]) on an unchanged plan prop (children ClipVoiceChoice/ClipSpokenProperties never call it; estimate/approve call it only on click). So restoring the setInterval while keeping the useMemo still passes both assertions (no extra key call; invalid by 61 s) - Codex's in-memory probe saw 30 renders over the 30 s window with zero extra key calls. The test fails on base only because base lacked the memo. Fix: count renders/commits independently of the memo (e.g. a React <Profiler onRender> around the editor, or a spy on a non-memoized render-time call such as spokenScriptValid through the existing vi.mock) and assert none between opening and expiry and one at expiry. Optionally drop shouldAdvanceTime and assert the boundary exactly (still valid at expiresAt-1 ms, invalid at expiresAt), since the 61 s checkpoint would also pass the old 1 s-late interval."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+                "message": "Clock edge cases of the approved single-timeout design (Codex rated P2; downgraded because the server enforces expiry - internal/clip/store/quotes.go ConsumeClipQuote returns ErrQuoteExpired -> CLIP_QUOTE_EXPIRED - so the cost is a refusal message instead of the pre-emptive invalid state, with no billing risk). (a) A forward wall-clock jump, or system sleep where the browser timer clock pauses, keeps an expired quote approvable until the remaining timeout elapses; the base interval re-read Date.now() every second. (b) Re-arming depends on setNow changing state: if the callback's Date.now() equals the stored now (wall clock rolled back across the whole delay), [quote, now] does not change, the effect never re-arms and the quote stays valid in the UI until the next estimate. Optional hardening: re-arm inside the callback (or bump a tick counter) when Date.now() < expiresAt instead of relying on a state change, and re-check on visibilitychange/focus."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+                "message": "The `conflict` option is passed by no production wrapper (createAutosaveQueue defaults to never-conflict, so conflictAs is unreachable in production, as in base); it exists only so the factory test can reach the conflictAs mapping that the acceptance asks to test. It is a passthrough of an existing shared option, so harmless, but it is test-only public API; likewise the ProjectSaveQueueOptions type is exported from the slice index and imported nowhere. Consider testing the mapping by mocking createAutosaveQueue and keeping the type unexported. (Codex-sourced in part.)"
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/entities/clip-project/model/project-save-queue.test.ts:28 (T843)",
+                "message": "The test 'sends the newest sender and drops it with the queue' never calls discard/discardAll, so the 'drops it' half (sender removed with the queue) is not exercised; rename it or add a discard assertion. (Codex-sourced.)"
+              },
+              {
+                "priority": "P3",
+                "where": "spec/tasks/T844.dubbing-quote-expiry-timer.md result (T844)",
+                "message": "The result says the segment lists are not memoized because React Compiler 'already memoizes them', but frontend/vite.config.ts runs plain react() with no compiler plugin; only the eslint react-hooks compiler rules run. The lists are recomputed on every render (harmless now that renders are rare), so the note should not claim runtime memoization. Also the new ClipDubbingEditor.expiry.test.tsx lies outside T844's touches header, which only lists ClipDubbingEditor.tsx (implied by the acceptance; metadata only)."
+              }
+            ],
+            "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+            "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+            "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+            "createdAt": "2026-11-16T07:50:22.076Z",
+            "finishedAt": "2026-11-16T08:00:03.228Z",
+            "invalidatedAt": "2026-11-16T08:04:11.205Z",
+            "invalidationReason": "new submission"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 66,
+      "at": "2026-11-16T08:04:58.956Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "approved",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "reason": null,
+        "integratedCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+        "integratedAt": "2026-11-16T08:04:58.956Z",
+        "integrationVerification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+            "startedAt": "2026-11-16T08:03:35.355Z",
+            "finishedAt": "2026-11-16T08:04:58.956Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 67,
+      "at": "2026-11-16T08:05:41.814Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "reason": null,
+        "submittedBase": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+        "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+        "submittedAt": "2026-11-16T08:05:41.814Z",
+        "steps": [
+          {
+            "taskId": "T843",
+            "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+            "at": "2026-11-16T07:46:27.861Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:51.976Z",
+                "finishedAt": "2026-11-16T07:46:27.435Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T844",
+            "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+            "at": "2026-11-16T08:05:41.806Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T08:04:11.290Z",
+                "finishedAt": "2026-11-16T08:05:41.716Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T08:04:11.290Z",
+            "finishedAt": "2026-11-16T08:05:41.716Z"
+          }
+        ],
+        "verifiedCommit": "3f9c431f85c570a45e17642d46047ef28e519510"
+      }
+    },
+    {
+      "sequence": 68,
+      "at": "2026-11-16T08:06:03.550Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "766830dc-fe0c-4273-a219-b7bd46b5a298",
+          "owner": "reviewer-fe-clip",
+          "status": "reviewing",
+          "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+          "baseCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+          "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+          "createdAt": "2026-11-16T08:06:03.550Z"
+        }
+      }
+    },
+    {
+      "sequence": 69,
+      "at": "2026-11-16T08:07:02.011Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "766830dc-fe0c-4273-a219-b7bd46b5a298",
+          "owner": "reviewer-fe-clip",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "The P2 from review 9b3fa539 is resolved: ClipDubbingEditor.expiry.test.tsx now counts Profiler commits under fully fake, pinned timers (no shouldAdvanceTime), asserts no commit and an enabled button through expiresAt-1 ms, then exactly one commit and the invalid state at expiresAt. The count no longer goes through clipDraftKey, so it fails whether the 1 s interval returns with or without the key memo (each tick's setNow(Date.now()) is a new value, so at least one batched commit lands inside the first act window). The pinned clock also checks the exact `Date.parse(expiresAt) <= now` boundary. The record note and the T843 test name are corrected. The delta touches only the two test files and the T844 result; the base moved by fe-lib/fe-upload with no overlapping files. Remaining P3s are optional.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+              "message": "Carried over, optional: with the single timeout, a forward wall-clock jump or sleep keeps an expired quote approvable until the timeout fires, and a clock rollback that makes setNow a no-op leaves the timer un-re-armed. The server rejects expired quotes (CLIP_QUOTE_EXPIRED), so the cost is a refusal message rather than the pre-emptive invalid state. Hardening, if wanted later: re-arm inside the callback when Date.now() < expiresAt and re-check on visibilitychange."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+              "message": "Carried over, optional: the `conflict` option is set only by the factory test, and the ProjectSaveQueueOptions type export is imported nowhere."
+            }
+          ],
+          "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+          "baseCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+          "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+          "createdAt": "2026-11-16T08:06:03.550Z",
+          "finishedAt": "2026-11-16T08:07:02.011Z"
+        }
+      }
+    },
+    {
+      "sequence": 70,
+      "at": "2026-11-16T08:07:38.605Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/experiment/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func workForTest(ctx context.Context, q *sqlc.Queries, user, id string) (experiment.TestExecutionWork, error) {
@@ -195,7 +196,7 @@ func (s *Store) SaveTestCheckpoint(ctx context.Context, fence experiment.TestExe
 				}
 			}
 		}
-		return q.UpsertWritingTestCheckpoint(ctx, sqlc.UpsertWritingTestCheckpointParams{UserID: fence.UserID, TestID: fence.TestID, AttemptID: attempt.ID, SlotID: slot, Checkpoint: slices.Clone(checkpoint), UpdatedAt: formatTime(time.Now())})
+		return q.UpsertWritingTestCheckpoint(ctx, sqlc.UpsertWritingTestCheckpointParams{UserID: fence.UserID, TestID: fence.TestID, AttemptID: attempt.ID, SlotID: slot, Checkpoint: slices.Clone(checkpoint), UpdatedAt: dbtime.Format(time.Now())})
 	})
 }
 func (s *Store) CompleteTestCandidate(ctx context.Context, fence experiment.TestExecutionFence, id string, output, accounting []byte, failure *experiment.Failure) error {
@@ -510,7 +511,7 @@ func (s *Store) PurgeWritingTestPost(ctx context.Context, user, slug string) err
 func (s *Store) PurgeExpiredWritingTests(ctx context.Context, before time.Time) (int64, error) {
 	var count int64
 	err := s.withWritingTestTx(ctx, func(q *sqlc.Queries) error {
-		rows, err := q.ListWritingTestsForPurge(ctx, nullString(formatTime(before)))
+		rows, err := q.ListWritingTestsForPurge(ctx, nullString(dbtime.Format(before)))
 		if err != nil {
 			return err
 		}
@@ -524,7 +525,7 @@ func (s *Store) PurgeExpiredWritingTests(ctx context.Context, before time.Time) 
 			}
 			count++
 		}
-		return q.PurgeExpiredWritingTestQuotes(ctx, formatTime(before))
+		return q.PurgeExpiredWritingTestQuotes(ctx, dbtime.Format(before))
 	})
 	return count, err
 }

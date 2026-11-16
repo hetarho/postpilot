@@ -1,7 +1,7 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { appFailureFromConnect, VoiceService } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { VoiceService } from '@/shared/api'
+import { connectFailureMessage } from '@/shared/lib'
 import { invalidateVoiceMaterials } from './voice-directory-cache'
 
 /** Pastes a post as a 학습 글. It needs no model and enqueues nothing (VOICE-21); the profile's
@@ -14,7 +14,7 @@ export function useAddVoiceSample(ownerId: string, voiceId: string) {
   })
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     add: (label: string, body: string) => mutation.mutateAsync({ voiceId, label, body }),
   }
 }

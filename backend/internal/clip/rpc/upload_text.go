@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
@@ -27,7 +28,7 @@ func uploadTextError(err error, channel string) error {
 	return toConnectError(err)
 }
 func (h *Handler) GetClipUploadTexts(ctx context.Context, req *connect.Request[v1.GetClipUploadTextsRequest]) (*connect.Response[v1.GetClipUploadTextsResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +50,7 @@ func (h *Handler) GetClipUploadTexts(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(out), nil
 }
 func (h *Handler) SaveClipUploadText(ctx context.Context, req *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,7 @@ func (h *Handler) SaveClipUploadText(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(&v1.SaveClipUploadTextResponse{Text: uploadTextProto(text)}), nil
 }
 func (h *Handler) QuoteClipUploadText(ctx context.Context, req *connect.Request[v1.QuoteClipUploadTextRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func (h *Handler) QuoteClipUploadText(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&v1.QuoteClipGenerationResponse{QuoteId: quote.ID, MaxCredits: int32(quote.Pricing.MaxCredits), ExpiresAt: quote.ExpiresAt.UTC().Format(time.RFC3339Nano), CancellationPolicy: cancellationPolicyProto(quote.Pricing), PricedCalls: []*v1.ClipPricedCall{pricedCallProto(quote.Pricing.Plan, "upload_text", 1)}}), nil
 }
 func (h *Handler) StartClipUploadText(ctx context.Context, req *connect.Request[v1.StartClipUploadTextRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

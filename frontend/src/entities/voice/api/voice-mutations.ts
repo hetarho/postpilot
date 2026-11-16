@@ -3,7 +3,7 @@ import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidatePostsDependingOn } from '@/entities/post/@x/voice'
 import { appFailureFromConnect, GetVoiceProfileResponseSchema, VoiceService } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { connectFailureMessage, formatAppFailure } from '@/shared/lib'
 import {
   invalidateVoiceScope,
   replaceCachedVoices,
@@ -32,7 +32,7 @@ export function useCreateVoice(ownerId: string) {
   })
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     create: ({ name }: CreateVoiceInput) => mutation.mutateAsync({ name }),
   }
 }
@@ -54,7 +54,7 @@ export function useDeleteVoice(ownerId: string) {
   return {
     ...mutation,
     failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
+    errorMessage: formatAppFailure(failure),
     remove: (voiceId: string) => mutation.mutateAsync({ voiceId }),
   }
 }
@@ -73,7 +73,7 @@ export function useRenameVoice(ownerId: string) {
   })
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     rename: (voiceId: string, name: string) => mutation.mutateAsync({ voiceId, name }),
   }
 }
@@ -93,7 +93,7 @@ export function useRestoreVoice(ownerId: string) {
   return {
     ...mutation,
     failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
+    errorMessage: formatAppFailure(failure),
     restore: (voiceId: string) => mutation.mutateAsync({ voiceId }),
   }
 }
@@ -107,7 +107,7 @@ export function useSetDefaultVoice(ownerId: string) {
   })
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     setDefault: (voiceId: string) => mutation.mutateAsync({ voiceId }),
     /** Leaves the account with no 기본 (VOICE-12): an empty id is the clear. */
     clearDefault: () => mutation.mutateAsync({ voiceId: '' }),
@@ -132,7 +132,7 @@ export function useRestorePreviousVoiceAnalysis(ownerId: string, voiceId: string
   return {
     ...mutation,
     failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
+    errorMessage: formatAppFailure(failure),
     restore: () => mutation.mutateAsync({ voiceId }),
   }
 }

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/template/store/sqlc"
 )
@@ -47,7 +48,7 @@ func (s *Store) CommitTestPublication(ctx context.Context, in template.TestedPub
 	if receipt, found, err := testPublicationReceipt(ctx, q, in); err != nil || found {
 		return receipt, err
 	}
-	id, stamp := frozen.TargetID, formatTime(at)
+	id, stamp := frozen.TargetID, dbtime.Format(at)
 	if in.Action == "use_setting" {
 		current, err := s.get(ctx, q, in.UserID, id)
 		if err != nil {

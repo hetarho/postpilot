@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	pb "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -31,7 +32,7 @@ func analysisPreparationResponse(p clip.AnalysisPreparation) *connect.Response[p
 	return r
 }
 func (h *Handler) BeginClipAnalysisPreparation(ctx context.Context, r *connect.Request[pb.BeginClipAnalysisPreparationRequest]) (*connect.Response[pb.ClipAnalysisPreparationResponse], error) {
-	user, e := actingUser(ctx)
+	user, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -52,7 +53,7 @@ func (h *Handler) BeginClipAnalysisPreparation(ctx context.Context, r *connect.R
 	return analysisPreparationResponse(p), nil
 }
 func (h *Handler) ReserveClipAnalysisCopy(ctx context.Context, r *connect.Request[pb.ReserveClipAnalysisCopyRequest]) (*connect.Response[pb.ReserveClipAnalysisCopyResponse], error) {
-	user, e := actingUser(ctx)
+	user, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -68,7 +69,7 @@ func (h *Handler) ReserveClipAnalysisCopy(ctx context.Context, r *connect.Reques
 	return out, nil
 }
 func (h *Handler) CompleteClipAnalysisPreparation(ctx context.Context, r *connect.Request[pb.CompleteClipAnalysisPreparationRequest]) (*connect.Response[pb.ClipAnalysisPreparationResponse], error) {
-	user, e := actingUser(ctx)
+	user, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}
@@ -82,7 +83,7 @@ func (h *Handler) CompleteClipAnalysisPreparation(ctx context.Context, r *connec
 	return analysisPreparationResponse(p), nil
 }
 func (h *Handler) CancelClipAnalysisPreparation(ctx context.Context, r *connect.Request[pb.CancelClipAnalysisPreparationRequest]) (*connect.Response[pb.ClipAnalysisPreparationResponse], error) {
-	user, e := actingUser(ctx)
+	user, e := authactor.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}

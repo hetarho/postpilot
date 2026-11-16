@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/platform/capturetime"
@@ -27,7 +28,7 @@ func sourceBatchProto(b clip.SourceBatch) *v1.ClipSourceBatch {
 }
 
 func (h *Handler) GetClipSources(ctx context.Context, req *connect.Request[v1.GetClipSourcesRequest]) (*connect.Response[v1.GetClipSourcesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func (h *Handler) GetClipSources(ctx context.Context, req *connect.Request[v1.Ge
 	return response, nil
 }
 func (h *Handler) GetClipSourcePlayback(ctx context.Context, req *connect.Request[v1.GetClipSourcePlaybackRequest]) (*connect.Response[v1.GetClipSourcePlaybackResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,7 @@ func (h *Handler) GetClipSourcePlayback(ctx context.Context, req *connect.Reques
 	return response, nil
 }
 func (h *Handler) CreateClipSourceBatch(ctx context.Context, req *connect.Request[v1.CreateClipSourceBatchRequest]) (*connect.Response[v1.CreateClipSourceBatchResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func (h *Handler) CreateClipSourceBatch(ctx context.Context, req *connect.Reques
 	return connect.NewResponse(out), nil
 }
 func (h *Handler) ConfirmClipSource(ctx context.Context, req *connect.Request[v1.ConfirmClipSourceRequest]) (*connect.Response[v1.ConfirmClipSourceResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +112,7 @@ func (h *Handler) ConfirmClipSource(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1.ConfirmClipSourceResponse{Batch: sourceBatchProto(b)}), nil
 }
 func (h *Handler) DiscardClipSourceBatch(ctx context.Context, req *connect.Request[v1.DiscardClipSourceBatchRequest]) (*connect.Response[v1.DiscardClipSourceBatchResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +128,7 @@ func (h *Handler) DiscardClipSourceBatch(ctx context.Context, req *connect.Reque
 // ReorderClipSources records the order the owner arranged the footage in. The
 // actor comes from the session interceptor, never from the payload.
 func (h *Handler) ReorderClipSources(ctx context.Context, req *connect.Request[v1.ReorderClipSourcesRequest]) (*connect.Response[v1.ReorderClipSourcesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +147,7 @@ func (h *Handler) ReorderClipSources(ctx context.Context, req *connect.Request[v
 // SetClipSourceOriginalSound is the ONE owner action that changes source audio.
 // The actor comes from the session interceptor, never from the payload.
 func (h *Handler) SetClipSourceOriginalSound(ctx context.Context, req *connect.Request[v1.SetClipSourceOriginalSoundRequest]) (*connect.Response[v1.SetClipSourceOriginalSoundResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +171,7 @@ func (h *Handler) SetClipSourceOriginalSound(ctx context.Context, req *connect.R
 }
 
 func (h *Handler) CompleteClipSourceImport(ctx context.Context, req *connect.Request[v1.CompleteClipSourceImportRequest]) (*connect.Response[v1.CompleteClipSourceImportResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

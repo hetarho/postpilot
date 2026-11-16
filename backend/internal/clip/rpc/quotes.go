@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/clip"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -14,7 +15,7 @@ import (
 )
 
 func (h *Handler) QuoteClipGeneration(ctx context.Context, req *connect.Request[v1.QuoteClipGenerationRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +72,7 @@ func pricedCallsProto(pricing clip.GenerationPricing) []*v1.ClipPricedCall {
 // rewritten and the narration follows it, and two for an empty target, which is
 // auto (CLIP-131, CLIP-132).
 func (h *Handler) QuoteClipRevision(ctx context.Context, req *connect.Request[v1.QuoteClipRevisionRequest]) (*connect.Response[v1.QuoteClipRevisionResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +124,7 @@ func sequenceCostProto(ctx context.Context, h *Handler, user, project string) *v
 // StartClipRevision accepts one approved revision. The actor comes from the
 // session interceptor, never from the payload.
 func (h *Handler) StartClipRevision(ctx context.Context, req *connect.Request[v1.StartClipRevisionRequest]) (*connect.Response[v1.StartClipRevisionResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

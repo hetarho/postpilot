@@ -1,12 +1,11 @@
 import { appFailureFromConnect } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { connectFailureMessage } from '@/shared/lib'
 
 /** Shared by every memory mutation so stable reasons are translated consistently. The server's
  *  message is what the user reads — the client rephrases no refusal and predicts none, which is
  *  why the account cap is not mirrored here (MEM-11). */
 export function memoryErrorMessage(error: unknown): string {
-  if (!error) return ''
-  return formatAppFailure(appFailureFromConnect(error))
+  return connectFailureMessage(error)
 }
 
 /** True when the account is at its memory cap. Nothing is evicted to make room, so the surface

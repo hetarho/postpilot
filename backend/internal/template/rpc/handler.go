@@ -4,12 +4,11 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -38,7 +37,7 @@ func NewHandler(service *template.Service, headings HeadingSuggestions) *Handler
 }
 
 func (h *Handler) ListTemplates(ctx context.Context, _ *connect.Request[postpilotv1.ListTemplatesRequest]) (*connect.Response[postpilotv1.ListTemplatesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +53,7 @@ func (h *Handler) ListTemplates(ctx context.Context, _ *connect.Request[postpilo
 }
 
 func (h *Handler) CreateTemplate(ctx context.Context, req *connect.Request[postpilotv1.CreateTemplateRequest]) (*connect.Response[postpilotv1.CreateTemplateResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +68,7 @@ func (h *Handler) CreateTemplate(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) UpdateTemplate(ctx context.Context, req *connect.Request[postpilotv1.UpdateTemplateRequest]) (*connect.Response[postpilotv1.UpdateTemplateResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +92,7 @@ func (h *Handler) UpdateTemplate(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) DeleteTemplate(ctx context.Context, req *connect.Request[postpilotv1.DeleteTemplateRequest]) (*connect.Response[postpilotv1.DeleteTemplateResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +106,7 @@ func (h *Handler) DeleteTemplate(ctx context.Context, req *connect.Request[postp
 // GetFormatGuide serves the 형식 안내 in the reader's language (TMPL-41). It needs a session like
 // every template procedure, and it reads nothing but the process's own limits.
 func (h *Handler) GetFormatGuide(ctx context.Context, req *connect.Request[postpilotv1.GetFormatGuideRequest]) (*connect.Response[postpilotv1.GetFormatGuideResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	language, err := guideLanguage(req.Msg.GetLanguage())
@@ -124,7 +123,7 @@ func (h *Handler) GetFormatGuide(ctx context.Context, req *connect.Request[postp
 // New requests use the shared durable authoring flow. Historical jobs retain their
 // cancellation, execution and readable results without admitting another paid helper.
 func (h *Handler) StartTemplateRequest(ctx context.Context, _ *connect.Request[postpilotv1.StartTemplateRequestRequest]) (*connect.Response[postpilotv1.StartTemplateRequestResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	return nil, rpcserver.NewAppError(connect.CodeFailedPrecondition, "use template AI editing", postpilotv1.FailureReason_AUTHORING_FEATURE_UNAVAILABLE, map[string]string{"destination": "/templates/new"})
@@ -133,7 +132,7 @@ func (h *Handler) StartTemplateRequest(ctx context.Context, _ *connect.Request[p
 // CancelTemplateRequest stops the owner's queued or running request (TMPL-63); a finished one
 // answers OK and changes nothing, since the editor discards its result anyway.
 func (h *Handler) CancelTemplateRequest(ctx context.Context, req *connect.Request[postpilotv1.CancelTemplateRequestRequest]) (*connect.Response[postpilotv1.CancelTemplateRequestResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +144,7 @@ func (h *Handler) CancelTemplateRequest(ctx context.Context, req *connect.Reques
 
 // GetTemplateRequestResult reads a finished request's answer for its owner.
 func (h *Handler) GetTemplateRequestResult(ctx context.Context, req *connect.Request[postpilotv1.GetTemplateRequestResultRequest]) (*connect.Response[postpilotv1.GetTemplateRequestResultResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -164,10 +163,10 @@ func (h *Handler) GetTemplateRequestResult(ctx context.Context, req *connect.Req
 // EstimateTemplateRequest states 무료 or 약 n 크레딧 for one request on the named write model
 // (QUOTA-67). A model with no figure answers with neither, which the box shows as no figure.
 func (h *Handler) EstimateTemplateRequest(ctx context.Context, req *connect.Request[postpilotv1.EstimateTemplateRequestRequest]) (*connect.Response[postpilotv1.EstimateTemplateRequestResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
-	estimate, err := h.service.EstimateRequest(ctx, modelRefValue(req.Msg.GetWriteModel()))
+	estimate, err := h.service.EstimateRequest(ctx, rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()))
 	if err != nil {
 		return nil, toConnectError("estimate template request", err)
 	}
@@ -190,21 +189,6 @@ func guideLanguage(value postpilotv1.ContentLanguage) (template.Language, error)
 	default:
 		return "", rpcserver.NewAppError(connect.CodeInvalidArgument, "guide language is required", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
 	}
-}
-
-func modelRefValue(ref *postpilotv1.ModelRef) string {
-	if ref == nil || ref.GetProviderId() == "" || ref.GetModelId() == "" {
-		return ""
-	}
-	return ref.GetProviderId() + "/" + ref.GetModelId()
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign template is NotFound
@@ -270,8 +254,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, template.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_TEMPLATE_NOT_FOUND, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

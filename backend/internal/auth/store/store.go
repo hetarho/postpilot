@@ -14,16 +14,8 @@ import (
 	"github.com/postpilot/backend/internal/auth"
 	"github.com/postpilot/backend/internal/auth/store/sqlc"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-// writeLayout is how timestamps live in SQLite. SQLite has no date type; RFC3339 in
-// UTC sorts lexicographically, so `expires_at < ?` is an ordinary indexed string
-// comparison and needs no conversion in SQL.
-//
-// The fraction is written at FIXED width. time.RFC3339Nano trims trailing zeros, and
-// variable width breaks the ordering the queries depend on: "…08.5Z" compares greater
-// than "…08.513110616Z" byte-for-byte, so a sweep would judge the wrong row expired.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 // Store implements auth.Storage over SQLite.
 //
@@ -58,7 +50,7 @@ func (s *Store) CreateUser(ctx context.Context, u auth.User) error {
 		LockedUntil:        nullableTime(u.LockedUntil),
 		GoogleSubject:      nullableString(u.GoogleSubject),
 		Plan:               u.Plan.String(),
-		CreatedAt:          formatTime(u.CreatedAt),
+		CreatedAt:          dbtime.Format(u.CreatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -279,8 +271,8 @@ func (s *Store) CreateSession(ctx context.Context, sess auth.Session) error {
 	err := s.write.CreateSession(ctx, sqlc.CreateSessionParams{
 		Token:     sess.Token,
 		UserID:    sess.UserID,
-		ExpiresAt: formatTime(sess.ExpiresAt),
-		CreatedAt: formatTime(sess.CreatedAt),
+		ExpiresAt: dbtime.Format(sess.ExpiresAt),
+		CreatedAt: dbtime.Format(sess.CreatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("insert session: %w", err)
@@ -322,7 +314,7 @@ func (s *Store) DeleteSession(ctx context.Context, hashedToken string) error {
 }
 
 func (s *Store) DeleteExpiredSessions(ctx context.Context, before time.Time) (int64, error) {
-	n, err := s.write.DeleteExpiredSessions(ctx, formatTime(before))
+	n, err := s.write.DeleteExpiredSessions(ctx, dbtime.Format(before))
 	if err != nil {
 		return 0, fmt.Errorf("delete expired sessions: %w", err)
 	}
@@ -342,9 +334,9 @@ func (s *Store) CreateLink(ctx context.Context, link auth.Link) error {
 		UserID:    link.UserID,
 		Purpose:   string(link.Purpose),
 		Email:     link.Email,
-		ExpiresAt: formatTime(link.ExpiresAt),
+		ExpiresAt: dbtime.Format(link.ExpiresAt),
 		UsedAt:    nullableTime(link.UsedAt),
-		CreatedAt: formatTime(link.CreatedAt),
+		CreatedAt: dbtime.Format(link.CreatedAt),
 	}); err != nil {
 		return fmt.Errorf("insert auth link: %w", err)
 	}
@@ -353,7 +345,7 @@ func (s *Store) CreateLink(ctx context.Context, link auth.Link) error {
 
 func (s *Store) ConsumeLink(ctx context.Context, tokenHash string, purpose auth.LinkPurpose, now time.Time) (auth.Link, error) {
 	row, err := s.write.ConsumeLink(ctx, sqlc.ConsumeLinkParams{
-		UsedAt: nullableTime(&now), TokenHash: tokenHash, Purpose: string(purpose), ExpiresAt: formatTime(now),
+		UsedAt: nullableTime(&now), TokenHash: tokenHash, Purpose: string(purpose), ExpiresAt: dbtime.Format(now),
 	})
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -427,14 +419,10 @@ func mapLink(row sqlc.AuthLink) (auth.Link, error) {
 	}, nil
 }
 
-// formatTime normalizes to UTC before formatting so stored values sort against each
-// other regardless of the offset the caller's clock happened to carry.
-func formatTime(t time.Time) string { return t.UTC().Format(writeLayout) }
-
-// parseTime reads with RFC3339Nano rather than writeLayout: it accepts any RFC3339
+// parseTime reads with RFC3339Nano rather than dbtime.Layout: it accepts any RFC3339
 // fraction width, so a row written before the width was pinned still loads.
 func parseTime(v string) (time.Time, error) {
-	t, err := time.Parse(time.RFC3339Nano, v)
+	t, err := dbtime.Parse(v)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parse timestamp %q: %w", v, err)
 	}
@@ -449,7 +437,7 @@ func nullableTime(value *time.Time) sql.NullString {
 	if value == nil {
 		return sql.NullString{}
 	}
-	return sql.NullString{String: formatTime(*value), Valid: true}
+	return sql.NullString{String: dbtime.Format(*value), Valid: true}
 }
 
 func parseNullableTime(value sql.NullString) (*time.Time, error) {

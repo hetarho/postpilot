@@ -12,9 +12,9 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/job/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbfailure"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 // The subject dimensions this schema can address, and the column each one lives in. The
 // names are the owning contexts' words for their own subjects; this table is the only
@@ -111,7 +111,7 @@ func (s *Store) Insert(ctx context.Context, found job.Job) error {
 		ClipProjectID: nullString(found.Subject(dimensionProject)), DispatchReady: s.dispatchReady(found.Kind), Kind: found.Kind, ObserveModel: nullString(found.ObserveModel),
 		WriteModel: nullString(found.WriteModel), Payload: string(found.Payload),
 		TargetLanguage: nullString(found.TargetLanguage),
-		CreatedAt:      formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt),
+		CreatedAt:      dbtime.Format(found.CreatedAt), UpdatedAt: dbtime.Format(found.UpdatedAt),
 	})
 	if err != nil {
 		message := strings.ToLower(err.Error())
@@ -138,7 +138,7 @@ func (s *Store) PickNextQueued(ctx context.Context, now time.Time) (job.Job, err
 		return job.Job{}, err
 	}
 	return withWriter(ctx, s, func(q *sqlc.Queries) (job.Job, error) {
-		row, err := q.PickNextQueued(ctx, sqlc.PickNextQueuedParams{FirstStages: stages, StartedAt: nullString(formatTime(now)), UpdatedAt: formatTime(now)})
+		row, err := q.PickNextQueued(ctx, sqlc.PickNextQueuedParams{FirstStages: stages, StartedAt: nullString(dbtime.Format(now)), UpdatedAt: dbtime.Format(now)})
 		if err != nil {
 			return job.Job{}, mapNotFound(err, "pick runnable job")
 		}
@@ -153,7 +153,7 @@ func (s *Store) PickNextQueued(ctx context.Context, now time.Time) (job.Job, err
 		if err != nil {
 			return found, err
 		}
-		n, err := q.ClaimContinuation(ctx, sqlc.ClaimContinuationParams{Now: formatTime(now), JobID: found.ID})
+		n, err := q.ClaimContinuation(ctx, sqlc.ClaimContinuationParams{Now: dbtime.Format(now), JobID: found.ID})
 		if err != nil {
 			return found, err
 		}
@@ -168,7 +168,7 @@ func (s *Store) PickNextQueued(ctx context.Context, now time.Time) (job.Job, err
 func (s *Store) UpdateProgress(ctx context.Context, id, stage string, done, total int, now time.Time) error {
 	err := s.write.UpdateProgress(ctx, sqlc.UpdateProgressParams{
 		Stage: nullString(stage), ProgressDone: int64(done), ProgressTotal: int64(total),
-		UpdatedAt: formatTime(now), ID: id,
+		UpdatedAt: dbtime.Format(now), ID: id,
 	})
 	if err != nil {
 		return fmt.Errorf("update job progress: %w", err)
@@ -189,7 +189,7 @@ func (s *Store) Finish(ctx context.Context, id, status string, failure *job.Fail
 	}
 	changed, err := s.write.FinishJob(ctx, sqlc.FinishJobParams{
 		Status: status, ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
-		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now), ID: id,
+		FinishedAt: sql.NullString{String: dbtime.Format(now), Valid: true}, UpdatedAt: dbtime.Format(now), ID: id,
 	})
 	if err != nil {
 		return fmt.Errorf("finish job: %w", err)
@@ -213,7 +213,7 @@ func (s *Store) FailQueued(ctx context.Context, id, userID string, failure job.F
 	}
 	n, err := s.write.FailQueuedJob(ctx, sqlc.FailQueuedJobParams{
 		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail,
-		FinishedAt: sql.NullString{String: formatTime(now), Valid: true}, UpdatedAt: formatTime(now), ID: id, UserID: userID,
+		FinishedAt: sql.NullString{String: dbtime.Format(now), Valid: true}, UpdatedAt: dbtime.Format(now), ID: id, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("fail queued job: %w", err)
@@ -227,10 +227,10 @@ func (s *Store) SweepRunning(ctx context.Context, failure job.Failure, now time.
 		return 0, fmt.Errorf("sweep running job failure: %w", err)
 	}
 	n, err := withWriter(ctx, s, func(q *sqlc.Queries) (int64, error) {
-		if err := q.ReadyReplaySafeContinuations(ctx, nullString(formatTime(now))); err != nil {
+		if err := q.ReadyReplaySafeContinuations(ctx, nullString(dbtime.Format(now))); err != nil {
 			return 0, err
 		}
-		return q.SweepRunning(ctx, sqlc.SweepRunningParams{ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, FinishedAt: nullString(formatTime(now)), UpdatedAt: formatTime(now)})
+		return q.SweepRunning(ctx, sqlc.SweepRunningParams{ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, FinishedAt: nullString(dbtime.Format(now)), UpdatedAt: dbtime.Format(now)})
 	})
 	if err != nil {
 		return 0, fmt.Errorf("sweep running jobs: %w", err)
@@ -347,11 +347,11 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 	if err != nil {
 		return job.Job{}, fmt.Errorf("job %s cancel_requested_at: %w", row.ID, err)
 	}
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return job.Job{}, fmt.Errorf("job %s created_at: %w", row.ID, err)
 	}
-	updated, err := parseTime(row.UpdatedAt)
+	updated, err := dbtime.Parse(row.UpdatedAt)
 	if err != nil {
 		return job.Job{}, fmt.Errorf("job %s updated_at: %w", row.ID, err)
 	}
@@ -382,70 +382,17 @@ func toJob(row sqlc.GenerationJob) (job.Job, error) {
 
 func failureColumns(failure *job.Failure) (sql.NullString, sql.NullString, sql.NullString, error) {
 	if failure == nil {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, nil
+		return dbfailure.Columns(nil)
 	}
-	if !validFailureReason(failure.Reason) {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("invalid reason %q", failure.Reason)
-	}
-	params := failure.Params
-	if params == nil {
-		params = map[string]string{}
-	}
-	raw, err := json.Marshal(params)
-	if err != nil {
-		return sql.NullString{}, sql.NullString{}, sql.NullString{}, fmt.Errorf("encode params: %w", err)
-	}
-	return nullString(failure.Reason), sql.NullString{String: string(raw), Valid: true}, nullString(failure.TechnicalDetail), nil
+	return dbfailure.Columns(&dbfailure.Failure{Reason: failure.Reason, Params: failure.Params, TechnicalDetail: failure.TechnicalDetail})
 }
 
 func failureFromRow(reason, params, detail, legacy sql.NullString) (*job.Failure, error) {
-	if !reason.Valid || strings.TrimSpace(reason.String) == "" {
-		if params.Valid || detail.Valid {
-			return nil, errors.New("failure params/detail present without reason")
-		}
-		technical := strings.TrimSpace(legacy.String)
-		if technical == "" {
-			return nil, nil
-		}
-		return &job.Failure{Reason: job.FailureReasonUnknown, TechnicalDetail: technical}, nil
+	f, err := dbfailure.FromRow(reason, params, detail, legacy, job.FailureReasonUnknown)
+	if f == nil || err != nil {
+		return nil, err
 	}
-	if !validFailureReason(reason.String) {
-		return nil, fmt.Errorf("invalid reason %q", reason.String)
-	}
-	if !params.Valid || !strings.HasPrefix(strings.TrimSpace(params.String), "{") {
-		return nil, errors.New("failure params must be a JSON object")
-	}
-	decoded := map[string]string{}
-	if err := json.Unmarshal([]byte(params.String), &decoded); err != nil {
-		return nil, fmt.Errorf("decode failure params: %w", err)
-	}
-	if len(decoded) == 0 {
-		decoded = nil
-	}
-	return &job.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
-}
-
-func validFailureReason(reason string) bool {
-	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
-		return false
-	}
-	previousUnderscore := false
-	for i, char := range reason {
-		if char >= 'A' && char <= 'Z' {
-			previousUnderscore = false
-			continue
-		}
-		if char == '_' && !previousUnderscore {
-			previousUnderscore = true
-			continue
-		}
-		if i > 0 && char >= '0' && char <= '9' {
-			previousUnderscore = false
-			continue
-		}
-		return false
-	}
-	return true
+	return &job.Failure{Reason: f.Reason, Params: f.Params, TechnicalDetail: f.TechnicalDetail}, nil
 }
 
 func mapNotFound(err error, op string) error {
@@ -474,15 +421,11 @@ func stringPtr(value sql.NullString) *string {
 	return &copy
 }
 
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
-
-func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }
-
 func parseOptionalTime(value sql.NullString) (*time.Time, error) {
 	if !value.Valid {
 		return nil, nil
 	}
-	parsed, err := parseTime(value.String)
+	parsed, err := dbtime.Parse(value.String)
 	if err != nil {
 		return nil, err
 	}
@@ -536,14 +479,14 @@ func (s *Store) SweepUnactivated(ctx context.Context, f job.Failure) (int64, err
 	if err != nil {
 		return 0, err
 	}
-	now := formatTime(time.Now())
+	now := dbtime.Format(time.Now())
 	return s.write.SweepUnactivated(ctx, sqlc.SweepUnactivatedParams{ErrorReason: r, ErrorParams: p, TechnicalDetail: d, FinishedAt: nullString(now), UpdatedAt: now, Kinds: kinds})
 }
 
 // SavePayload replaces a running job's payload with its handler's result.
 // ClearFinishedPayload empties one owner's finished job of one kind, reporting whether it did.
 func (s *Store) ClearFinishedPayload(ctx context.Context, userID, id, kind string, at time.Time) (bool, error) {
-	n, err := s.write.ClearFinishedPayload(ctx, sqlc.ClearFinishedPayloadParams{UpdatedAt: formatTime(at), ID: id, UserID: userID, Kind: kind})
+	n, err := s.write.ClearFinishedPayload(ctx, sqlc.ClearFinishedPayloadParams{UpdatedAt: dbtime.Format(at), ID: id, UserID: userID, Kind: kind})
 	if err != nil {
 		return false, fmt.Errorf("clear finished job payload: %w", err)
 	}
@@ -552,7 +495,7 @@ func (s *Store) ClearFinishedPayload(ctx context.Context, userID, id, kind strin
 
 func (s *Store) SavePayload(ctx context.Context, id string, payload []byte, at time.Time) (bool, error) {
 	n, err := s.write.SaveJobPayload(ctx, sqlc.SaveJobPayloadParams{
-		Payload: string(payload), UpdatedAt: formatTime(at), ID: id,
+		Payload: string(payload), UpdatedAt: dbtime.Format(at), ID: id,
 	})
 	if err != nil {
 		return false, fmt.Errorf("save job payload: %w", err)

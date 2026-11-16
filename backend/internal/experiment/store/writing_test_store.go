@@ -14,6 +14,7 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/experiment/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 type writingTestContext struct {
@@ -126,7 +127,7 @@ func updateWritingTest(ctx context.Context, q *sqlc.Queries, found *experiment.W
 	if found.Failure != nil {
 		failure = found.Failure.Reason
 	}
-	changed, err := q.UpdateWritingTest(ctx, sqlc.UpdateWritingTestParams{Status: string(found.Status), Revision: int64(found.Revision), Context: string(encoded), PurgeFence: int64(found.PurgeFence), JobID: found.JobID, WinnerCandidateID: nullString(found.WinnerID), ConfirmedCredits: int64(found.ConfirmedCredits), ReservedCredits: int64(found.ReservedCredits), FailureReason: failure, UpdatedAt: formatTime(found.UpdatedAt), ContentExpiresAt: nullTime(found.ContentExpiresAt), CommonSnapshot: found.CommonSnapshot, SourcePostSlug: nullString(found.SourcePostSlug), UserID: found.UserID, ID: found.ID, Revision_2: int64(expected)})
+	changed, err := q.UpdateWritingTest(ctx, sqlc.UpdateWritingTestParams{Status: string(found.Status), Revision: int64(found.Revision), Context: string(encoded), PurgeFence: int64(found.PurgeFence), JobID: found.JobID, WinnerCandidateID: nullString(found.WinnerID), ConfirmedCredits: int64(found.ConfirmedCredits), ReservedCredits: int64(found.ReservedCredits), FailureReason: failure, UpdatedAt: dbtime.Format(found.UpdatedAt), ContentExpiresAt: nullTime(found.ContentExpiresAt), CommonSnapshot: found.CommonSnapshot, SourcePostSlug: nullString(found.SourcePostSlug), UserID: found.UserID, ID: found.ID, Revision_2: int64(expected)})
 	if err != nil {
 		return err
 	}
@@ -152,7 +153,7 @@ func (s *Store) PutTestQuote(ctx context.Context, quote experiment.TestQuote) er
 	if err != nil {
 		return err
 	}
-	return s.write.InsertWritingTestQuote(ctx, sqlc.InsertWritingTestQuoteParams{ID: quote.Key, UserID: quote.UserID, TestID: nullString(quote.TestID), SourcePostSlug: nullString(quote.Start.Input.SourcePostSlug), Fingerprint: quote.Fingerprint, Request: string(encoded), Plan: plan, EstimatedCredits: int64(quote.Credits), Free: boolValue(quote.Free), CreatedAt: formatTime(quote.CreatedAt), ExpiresAt: formatTime(quote.ExpiresAt)})
+	return s.write.InsertWritingTestQuote(ctx, sqlc.InsertWritingTestQuoteParams{ID: quote.Key, UserID: quote.UserID, TestID: nullString(quote.TestID), SourcePostSlug: nullString(quote.Start.Input.SourcePostSlug), Fingerprint: quote.Fingerprint, Request: string(encoded), Plan: plan, EstimatedCredits: int64(quote.Credits), Free: boolValue(quote.Free), CreatedAt: dbtime.Format(quote.CreatedAt), ExpiresAt: dbtime.Format(quote.ExpiresAt)})
 }
 func loadTestQuote(ctx context.Context, q *sqlc.Queries, user, id string) (experiment.TestQuote, error) {
 	row, err := q.GetWritingTestQuote(ctx, sqlc.GetWritingTestQuoteParams{UserID: user, ID: id})
@@ -282,7 +283,7 @@ func (s *Store) AdmitTest(ctx context.Context, request experiment.TestStart, pla
 		if err != nil {
 			return err
 		}
-		err = q.InsertWritingTest(ctx, sqlc.InsertWritingTestParams{ID: found.ID, UserID: found.UserID, OperationKey: request.RequestKey, Fingerprint: experiment.WritingTestStartFingerprint(request), Kind: found.Kind, Factor: string(found.Factor), ModelStage: string(found.ModelStage), Count: int64(found.Count), Status: string(found.Status), SourcePostSlug: nullString(found.SourcePostSlug), Context: string(encoded), CommonSnapshot: found.CommonSnapshot, CommonHash: found.CommonHash, PromptVersion: found.PromptVersion, ReservedCredits: int64(found.ReservedCredits), CreatedAt: formatTime(found.CreatedAt), UpdatedAt: formatTime(found.UpdatedAt)})
+		err = q.InsertWritingTest(ctx, sqlc.InsertWritingTestParams{ID: found.ID, UserID: found.UserID, OperationKey: request.RequestKey, Fingerprint: experiment.WritingTestStartFingerprint(request), Kind: found.Kind, Factor: string(found.Factor), ModelStage: string(found.ModelStage), Count: int64(found.Count), Status: string(found.Status), SourcePostSlug: nullString(found.SourcePostSlug), Context: string(encoded), CommonSnapshot: found.CommonSnapshot, CommonHash: found.CommonHash, PromptVersion: found.PromptVersion, ReservedCredits: int64(found.ReservedCredits), CreatedAt: dbtime.Format(found.CreatedAt), UpdatedAt: dbtime.Format(found.UpdatedAt)})
 		if err != nil {
 			return err
 		}
@@ -319,7 +320,7 @@ func insertTestAttempt(ctx context.Context, q *sqlc.Queries, found experiment.Wr
 	if err != nil {
 		return err
 	}
-	return q.InsertWritingTestAttempt(ctx, sqlc.InsertWritingTestAttemptParams{ID: attemptID(found.UserID, key), UserID: found.UserID, TestID: found.ID, RequestKey: key, Fingerprint: fingerprint, Epoch: int64(found.Revision), PurgeFence: int64(found.PurgeFence), QuoteID: quote, JobID: attemptID(found.UserID, "job\x00"+key), NonMetered: boolValue(nonMetered), Status: "prepared", CandidateIds: string(encoded), CreatedAt: formatTime(found.UpdatedAt), UpdatedAt: formatTime(found.UpdatedAt)})
+	return q.InsertWritingTestAttempt(ctx, sqlc.InsertWritingTestAttemptParams{ID: attemptID(found.UserID, key), UserID: found.UserID, TestID: found.ID, RequestKey: key, Fingerprint: fingerprint, Epoch: int64(found.Revision), PurgeFence: int64(found.PurgeFence), QuoteID: quote, JobID: attemptID(found.UserID, "job\x00"+key), NonMetered: boolValue(nonMetered), Status: "prepared", CandidateIds: string(encoded), CreatedAt: dbtime.Format(found.UpdatedAt), UpdatedAt: dbtime.Format(found.UpdatedAt)})
 }
 func (s *Store) ReserveTestRetry(ctx context.Context, r experiment.TestRetry, plan experiment.TestPlan) (experiment.WritingTest, bool, error) {
 	var found experiment.WritingTest
@@ -432,10 +433,10 @@ func updateTestCandidate(ctx context.Context, q *sqlc.Queries, c experiment.Test
 	finished := sql.NullString{}
 	started := sql.NullString{}
 	if c.Status == string(experiment.TestCandidateRunning) {
-		started = nullString(formatTime(time.Now()))
+		started = nullString(dbtime.Format(time.Now()))
 	}
 	if c.Status == string(experiment.TestCandidateSucceeded) || c.Status == string(experiment.TestCandidateFailed) || c.Status == string(experiment.TestCandidateCancelled) {
-		finished = nullString(formatTime(time.Now()))
+		finished = nullString(dbtime.Format(time.Now()))
 	}
 	changed, err := q.UpdateWritingTestCandidate(ctx, sqlc.UpdateWritingTestCandidateParams{Status: c.Status, Output: c.Output, Accounting: c.Accounting, FailureReason: failure, StartedAt: started, FinishedAt: finished, UserID: c.UserID, TestID: c.TestID, ID: c.ID})
 	if err != nil {
@@ -490,7 +491,7 @@ func (s *Store) DecideMatch(ctx context.Context, r experiment.MatchDecision) (ex
 		if r.WinnerCandidateID != match.LeftID && r.WinnerCandidateID != match.RightID {
 			return experiment.ErrTestMatchInvalid
 		}
-		changed, err := q.DecideWritingTestMatch(ctx, sqlc.DecideWritingTestMatchParams{WinnerCandidateID: nullString(r.WinnerCandidateID), DecisionKey: nullString(r.RequestKey), DecidedAt: nullString(formatTime(time.Now())), UserID: r.UserID, TestID: r.TestID, ID: r.MatchID})
+		changed, err := q.DecideWritingTestMatch(ctx, sqlc.DecideWritingTestMatchParams{WinnerCandidateID: nullString(r.WinnerCandidateID), DecisionKey: nullString(r.RequestKey), DecidedAt: nullString(dbtime.Format(time.Now())), UserID: r.UserID, TestID: r.TestID, ID: r.MatchID})
 		if err != nil {
 			return err
 		}
@@ -584,7 +585,7 @@ func (s *Store) CancelTest(ctx context.Context, r experiment.TestMutation) (expe
 		if err = updateWritingTest(ctx, q, &found, previous); err != nil {
 			return err
 		}
-		return q.InsertWritingTestOperation(ctx, sqlc.InsertWritingTestOperationParams{UserID: r.UserID, OperationKey: r.RequestKey, TestID: r.TestID, Action: "cancel", Fingerprint: fingerprint, CreatedAt: formatTime(found.UpdatedAt)})
+		return q.InsertWritingTestOperation(ctx, sqlc.InsertWritingTestOperationParams{UserID: r.UserID, OperationKey: r.RequestKey, TestID: r.TestID, Action: "cancel", Fingerprint: fingerprint, CreatedAt: dbtime.Format(found.UpdatedAt)})
 	})
 	return found, err
 }
@@ -603,7 +604,7 @@ func cancelOpenAttempts(ctx context.Context, q *sqlc.Queries, found experiment.W
 	return nil
 }
 func updateAttempt(ctx context.Context, q *sqlc.Queries, attempt sqlc.WritingTestAttempt, status, jobID string, credits, settled int64, failure string, at time.Time) error {
-	changed, err := q.UpdateWritingTestAttempt(ctx, sqlc.UpdateWritingTestAttemptParams{Status: status, JobID: jobID, ConfirmedCredits: credits, Settled: settled, FailureReason: failure, UpdatedAt: formatTime(at), UserID: attempt.UserID, TestID: attempt.TestID, ID: attempt.ID, Status_2: attempt.Status})
+	changed, err := q.UpdateWritingTestAttempt(ctx, sqlc.UpdateWritingTestAttemptParams{Status: status, JobID: jobID, ConfirmedCredits: credits, Settled: settled, FailureReason: failure, UpdatedAt: dbtime.Format(at), UserID: attempt.UserID, TestID: attempt.TestID, ID: attempt.ID, Status_2: attempt.Status})
 	if err != nil {
 		return err
 	}

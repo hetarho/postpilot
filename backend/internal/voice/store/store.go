@@ -11,11 +11,10 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
-
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -39,7 +38,7 @@ func (s *Store) InsertVoice(ctx context.Context, v voice.Voice) error {
 	}
 	if err := s.write.InsertVoice(ctx, sqlc.InsertVoiceParams{
 		ID: v.ID, UserID: v.UserID, Name: v.Name, IsDefault: isDefault,
-		CreatedAt: formatTime(v.CreatedAt), UpdatedAt: formatTime(v.UpdatedAt),
+		CreatedAt: dbtime.Format(v.CreatedAt), UpdatedAt: dbtime.Format(v.UpdatedAt),
 	}); err != nil {
 		if isUniqueViolation(err) {
 			return voice.ErrVoiceNameTaken
@@ -77,7 +76,7 @@ func (s *Store) GetVoice(ctx context.Context, userID, voiceID string) (voice.Voi
 }
 
 func (s *Store) RenameVoice(ctx context.Context, userID, voiceID, name string, now time.Time) error {
-	n, err := s.write.RenameVoice(ctx, sqlc.RenameVoiceParams{Name: name, UpdatedAt: formatTime(now), ID: voiceID, UserID: userID})
+	n, err := s.write.RenameVoice(ctx, sqlc.RenameVoiceParams{Name: name, UpdatedAt: dbtime.Format(now), ID: voiceID, UserID: userID})
 	if err != nil {
 		if isUniqueViolation(err) {
 			return voice.ErrVoiceNameTaken
@@ -99,7 +98,7 @@ func (s *Store) SetDefaultVoice(ctx context.Context, userID, voiceID string, now
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	stamp := formatTime(now)
+	stamp := dbtime.Format(now)
 	if err := q.ClearDefaultVoice(ctx, sqlc.ClearDefaultVoiceParams{UpdatedAt: stamp, UserID: userID}); err != nil {
 		return fmt.Errorf("clear default voice: %w", err)
 	}
@@ -118,14 +117,14 @@ func (s *Store) SetDefaultVoice(ctx context.Context, userID, voiceID string, now
 
 // ClearDefaultVoice leaves the account with no default (VOICE-2).
 func (s *Store) ClearDefaultVoice(ctx context.Context, userID string, now time.Time) error {
-	if err := s.write.ClearDefaultVoice(ctx, sqlc.ClearDefaultVoiceParams{UpdatedAt: formatTime(now), UserID: userID}); err != nil {
+	if err := s.write.ClearDefaultVoice(ctx, sqlc.ClearDefaultVoiceParams{UpdatedAt: dbtime.Format(now), UserID: userID}); err != nil {
 		return fmt.Errorf("clear default voice: %w", err)
 	}
 	return nil
 }
 
 func (s *Store) SoftDeleteVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error) {
-	stamp := formatTime(now)
+	stamp := dbtime.Format(now)
 	n, err := s.write.SoftDeleteVoice(ctx, sqlc.SoftDeleteVoiceParams{DeletedAt: nullableString(stamp), UpdatedAt: stamp, ID: voiceID, UserID: userID})
 	if err != nil {
 		if strings.Contains(err.Error(), "voice has publishable work") {
@@ -137,7 +136,7 @@ func (s *Store) SoftDeleteVoice(ctx context.Context, userID, voiceID string, now
 }
 
 func (s *Store) RestoreVoice(ctx context.Context, userID, voiceID string, now time.Time) (bool, error) {
-	n, err := s.write.RestoreVoice(ctx, sqlc.RestoreVoiceParams{UpdatedAt: formatTime(now), ID: voiceID, UserID: userID})
+	n, err := s.write.RestoreVoice(ctx, sqlc.RestoreVoiceParams{UpdatedAt: dbtime.Format(now), ID: voiceID, UserID: userID})
 	if err != nil {
 		if isUniqueViolation(err) {
 			return false, voice.ErrVoiceNameTaken
@@ -150,17 +149,17 @@ func (s *Store) RestoreVoice(ctx context.Context, userID, voiceID string, now ti
 // toVoice maps a directory row. The two directory reads select the same columns, so a
 // GetVoice row converts to this one.
 func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return voice.Voice{}, fmt.Errorf("voice %s created_at: %w", row.ID, err)
 	}
-	updated, err := parseTime(row.UpdatedAt)
+	updated, err := dbtime.Parse(row.UpdatedAt)
 	if err != nil {
 		return voice.Voice{}, fmt.Errorf("voice %s updated_at: %w", row.ID, err)
 	}
 	var deleted *time.Time
 	if row.DeletedAt.Valid {
-		value, err := parseTime(row.DeletedAt.String)
+		value, err := dbtime.Parse(row.DeletedAt.String)
 		if err != nil {
 			return voice.Voice{}, fmt.Errorf("voice %s deleted_at: %w", row.ID, err)
 		}
@@ -168,7 +167,7 @@ func toVoice(row sqlc.ListVoicesRow) (voice.Voice, error) {
 	}
 	var analyzed *time.Time
 	if row.AnalyzedAt != "" {
-		value, err := parseTime(row.AnalyzedAt)
+		value, err := dbtime.Parse(row.AnalyzedAt)
 		if err != nil {
 			return voice.Voice{}, fmt.Errorf("voice %s analyzed_at: %w", row.ID, err)
 		}
@@ -227,7 +226,7 @@ func sampleParams(sample voice.Sample) sqlc.InsertSampleParams {
 	params := sqlc.InsertSampleParams{
 		ID: sample.ID, VoiceID: sample.VoiceID, UserID: sample.UserID, Kind: string(sample.Kind),
 		PromptKey: nullableString(sample.PromptKey), Label: sample.Label, Body: sample.Body,
-		PhotoKey: nullableString(sample.PhotoKey), CreatedAt: formatTime(sample.CreatedAt),
+		PhotoKey: nullableString(sample.PhotoKey), CreatedAt: dbtime.Format(sample.CreatedAt),
 	}
 	if sample.HasPhoto() {
 		params.PhotoWidth = sql.NullInt64{Int64: int64(sample.PhotoWidth), Valid: true}
@@ -313,7 +312,7 @@ func (s *Store) GetSampleBody(ctx context.Context, userID, voiceID, sampleID str
 }
 
 func toSample(userID, voiceID string, row sqlc.GetSampleBodyRow) (voice.Sample, error) {
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return voice.Sample{}, fmt.Errorf("sample %s created_at: %w", row.ID, err)
 	}
@@ -350,7 +349,7 @@ func (s *Store) CountSamples(ctx context.Context, userID, voiceID string) (int, 
 func (s *Store) InsertPhotoUpload(ctx context.Context, upload voice.PhotoUpload) error {
 	if err := s.write.InsertPhotoUpload(ctx, sqlc.InsertPhotoUploadParams{
 		ID: upload.ID, UserID: upload.UserID, VoiceID: upload.VoiceID, PromptKey: upload.PromptKey, ObjectKey: upload.Key,
-		ExpiresAt: formatTime(upload.ExpiresAt), CreatedAt: formatTime(upload.CreatedAt),
+		ExpiresAt: dbtime.Format(upload.ExpiresAt), CreatedAt: dbtime.Format(upload.CreatedAt),
 	}); err != nil {
 		return fmt.Errorf("insert photo upload: %w", err)
 	}
@@ -376,7 +375,7 @@ func (s *Store) DeletePhotoUpload(ctx context.Context, id string) error {
 }
 
 func (s *Store) ListPhotoUploadsExpiredBefore(ctx context.Context, cutoff time.Time) ([]voice.PhotoUpload, error) {
-	rows, err := s.read.ListPhotoUploadsExpiredBefore(ctx, formatTime(cutoff))
+	rows, err := s.read.ListPhotoUploadsExpiredBefore(ctx, dbtime.Format(cutoff))
 	if err != nil {
 		return nil, fmt.Errorf("select expired photo uploads: %w", err)
 	}
@@ -430,11 +429,11 @@ func (s *Store) AllReferencedPhotoKeys(ctx context.Context) (map[string]struct{}
 }
 
 func toPhotoUpload(row sqlc.VoicePhotoUpload) (voice.PhotoUpload, error) {
-	expires, err := parseTime(row.ExpiresAt)
+	expires, err := dbtime.Parse(row.ExpiresAt)
 	if err != nil {
 		return voice.PhotoUpload{}, fmt.Errorf("photo upload %s expires_at: %w", row.ID, err)
 	}
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return voice.PhotoUpload{}, fmt.Errorf("photo upload %s created_at: %w", row.ID, err)
 	}
@@ -443,7 +442,3 @@ func toPhotoUpload(row sqlc.VoicePhotoUpload) (voice.PhotoUpload, error) {
 		ExpiresAt: expires, CreatedAt: created,
 	}, nil
 }
-
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
-
-func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }

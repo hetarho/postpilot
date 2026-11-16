@@ -10,12 +10,10 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/provider/store/sqlc"
 )
-
-// writeLayout matches the other contexts: fixed-width RFC3339 UTC.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 // Store implements provider.Store over SQLite.
 type Store struct {
@@ -41,7 +39,7 @@ func (s *Store) UpsertSelection(ctx context.Context, userID string, sel provider
 		Stage:      string(sel.Stage),
 		ProviderID: sel.Ref.ProviderID,
 		ModelID:    sel.Ref.ModelID,
-		UpdatedAt:  sel.UpdatedAt.UTC().Format(writeLayout),
+		UpdatedAt:  dbtime.Format(sel.UpdatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert selection: %w", err)
@@ -53,7 +51,7 @@ func (s *Store) upsertSlot(ctx context.Context, queries *sqlc.Queries, userID st
 	err := queries.UpsertSelectionSlot(ctx, sqlc.UpsertSelectionSlotParams{
 		UserID: userID, Stage: string(sel.Stage), Slot: string(sel.Slot),
 		ProviderID: sel.Ref.ProviderID, ModelID: sel.Ref.ModelID,
-		UpdatedAt: sel.UpdatedAt.UTC().Format(writeLayout),
+		UpdatedAt: dbtime.Format(sel.UpdatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert selection slot: %w", err)
@@ -152,7 +150,7 @@ func (s *Store) InsertDefaultSelections(ctx context.Context, userID string, sele
 		if err := queries.InsertDefaultSelection(ctx, sqlc.InsertDefaultSelectionParams{
 			UserID: userID, Stage: string(selection.Stage),
 			ProviderID: selection.Ref.ProviderID, ModelID: selection.Ref.ModelID,
-			UpdatedAt: selection.UpdatedAt.UTC().Format(writeLayout),
+			UpdatedAt: dbtime.Format(selection.UpdatedAt),
 		}); err != nil {
 			return fmt.Errorf("insert default selection: %w", err)
 		}

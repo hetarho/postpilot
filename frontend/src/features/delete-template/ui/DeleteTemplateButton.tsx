@@ -1,7 +1,7 @@
-import { useState, type Ref } from 'react'
+import { type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { detachWarning, useDeleteTemplate, type Template } from '@/entities/template'
-import { Button, Dialog, FieldMessage } from '@/shared/ui'
+import { Button, ConfirmedAction, FieldMessage } from '@/shared/ui'
 
 /** Deletes a template after the sheet says exactly how many posts lose their assignment. The
  *  count comes from the server's projection, so the sentence and the write agree. */
@@ -19,47 +19,33 @@ export function DeleteTemplateButton({
 }) {
   const { t } = useTranslation(['templates', 'common'])
   const remove = useDeleteTemplate(ownerId)
-  const [confirming, setConfirming] = useState(false)
-
-  const confirm = async () => {
-    try {
-      await remove.remove(template.id)
-    } catch {
-      // The mutation's message renders beside the button.
-      // Closed on failure too, so the message is not left behind the scrim.
-      setConfirming(false)
-      return
-    }
-    setConfirming(false)
-    onDeleted?.()
-  }
 
   return (
-    <>
-      <Button
-        ref={buttonRef}
-        variant="danger"
-        disabled={remove.isPending}
-        onClick={() => setConfirming(true)}
-        aria-label={t('delete.aria', { ns: 'templates', name: template.name })}
-      >
-        {t('action.delete', { ns: 'common' })}
-      </Button>
-      {remove.isError && <FieldMessage className="w-full">{remove.errorMessage}</FieldMessage>}
-      <Dialog
-        open={confirming}
-        title={t('delete.title', { ns: 'templates' })}
-        confirmLabel={t('action.delete', { ns: 'common' })}
-        pending={remove.isPending}
-        onClose={() => setConfirming(false)}
-        onConfirm={() => void confirm()}
-      >
-        {t('delete.description', {
-          ns: 'templates',
-          name: template.name,
-          detach: detachWarning(template.postCount),
-        })}
-      </Dialog>
-    </>
+    <ConfirmedAction
+      trigger={(open) => (
+        <Button
+          ref={buttonRef}
+          variant="danger"
+          disabled={remove.isPending}
+          onClick={open}
+          aria-label={t('delete.aria', { ns: 'templates', name: template.name })}
+        >
+          {t('action.delete', { ns: 'common' })}
+        </Button>
+      )}
+      failed={remove.isError}
+      failure={<FieldMessage className="w-full">{remove.errorMessage}</FieldMessage>}
+      title={t('delete.title', { ns: 'templates' })}
+      confirmLabel={t('action.delete', { ns: 'common' })}
+      pending={remove.isPending}
+      run={() => remove.remove(template.id)}
+      onDone={onDeleted}
+    >
+      {t('delete.description', {
+        ns: 'templates',
+        name: template.name,
+        detach: detachWarning(template.postCount),
+      })}
+    </ConfirmedAction>
   )
 }

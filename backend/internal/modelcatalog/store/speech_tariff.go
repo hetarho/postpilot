@@ -8,6 +8,7 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/modelcatalog/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func (s *Store) GetSpeechCombination(ctx context.Context, d, v llm.ModelRef) (string, error) {
@@ -26,7 +27,7 @@ func (s *Store) GetSpeechTariff(ctx context.Context) (modelcatalog.SpeechAccount
 	if err != nil {
 		return modelcatalog.SpeechAccountTariff{}, err
 	}
-	at, err := parseTime(r.CheckedAt)
+	at, err := dbtime.Parse(r.CheckedAt)
 	return modelcatalog.SpeechAccountTariff{Revision: r.Revision, ConnectionScope: r.ConnectionScope, DesignUSDPerUnit: r.DesignUsdPerUnit, SpeechUSDPerUnit: r.SpeechUsdPerUnit, ConfirmationUSD: r.ConfirmationUsd, Source: r.Source, Complete: r.Complete == 1, CheckedAt: at}, err
 }
 
@@ -70,7 +71,7 @@ func (s *Store) SaveSpeechTariff(ctx context.Context, t modelcatalog.SpeechAccou
 		}
 		delete(managed, p.ID)
 	}
-	if err := q.InsertSpeechTariff(ctx, sqlc.InsertSpeechTariffParams{Revision: t.Revision, ConnectionScope: t.ConnectionScope, DesignUsdPerUnit: t.DesignUSDPerUnit, SpeechUsdPerUnit: t.SpeechUSDPerUnit, ConfirmationUsd: t.ConfirmationUSD, Source: t.Source, Complete: boolToInt(t.Complete), CheckedAt: formatTime(t.CheckedAt)}); err != nil {
+	if err := q.InsertSpeechTariff(ctx, sqlc.InsertSpeechTariffParams{Revision: t.Revision, ConnectionScope: t.ConnectionScope, DesignUsdPerUnit: t.DesignUSDPerUnit, SpeechUsdPerUnit: t.SpeechUSDPerUnit, ConfirmationUsd: t.ConfirmationUSD, Source: t.Source, Complete: boolToInt(t.Complete), CheckedAt: dbtime.Format(t.CheckedAt)}); err != nil {
 		return err
 	}
 	if expected == 0 {

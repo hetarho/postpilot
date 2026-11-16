@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"errors"
+	"log/slog"
 	"maps"
 
 	"connectrpc.com/connect"
@@ -57,4 +58,12 @@ func NewAppError(code connect.Code, message string, reason postpilotv1.FailureRe
 		connectErr.AddDetail(detail)
 	}
 	return connectErr
+}
+
+// InternalFailure is the last resort of an rpc error mapper: it logs "<op> failed" with the
+// error and answers CodeInternal with the same message and UNKNOWN_FAILURE, so the detail
+// stays in the log and never reaches the client.
+func InternalFailure(op string, err error) error {
+	slog.Error(op+" failed", "err", err)
+	return NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
 }

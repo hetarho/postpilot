@@ -1,4 +1,5 @@
 import { CLIP_COMPOSITION_PLACEMENT } from '../config/composition-placement'
+import { sha256Hex } from '@/shared/lib'
 import {
   CLIP_BROWSER_COMPOSITION,
   CLIP_BROWSER_FONTS,
@@ -685,10 +686,7 @@ async function freezeComposition(
     frameCount: frameTimeline(plan, CLIP_BROWSER_RENDER.frameRate).total,
     ...(authoritativeFingerprint ? { authoritativeFingerprint } : {}),
   }
-  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(canonical(snapshot)))
-  const snapshotFingerprint = Array.from(new Uint8Array(hash), (v) =>
-    v.toString(16).padStart(2, '0'),
-  ).join('')
+  const snapshotFingerprint = await sha256Hex(new TextEncoder().encode(canonical(snapshot)))
   return freeze({ ...snapshot, snapshotFingerprint })
 }
 

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
@@ -32,7 +33,7 @@ func NewInspectionHandler(reader post.RequestInspectionReader, origins inspectio
 }
 
 func (h *InspectionHandler) GetPostOriginReview(ctx context.Context, req *connect.Request[postpilotv1.GetPostOriginReviewRequest]) (*connect.Response[postpilotv1.GetPostOriginReviewResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func (h *InspectionHandler) GetPostOriginReview(ctx context.Context, req *connec
 }
 
 func (h *InspectionHandler) GetPostRequestInspection(ctx context.Context, req *connect.Request[postpilotv1.GetPostRequestInspectionRequest]) (*connect.Response[postpilotv1.GetPostRequestInspectionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

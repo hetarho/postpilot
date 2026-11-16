@@ -6,11 +6,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log/slog"
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
@@ -31,7 +30,7 @@ func NewHandler(svc *provider.Service) *Handler {
 }
 
 func (h *Handler) ListModels(ctx context.Context, _ *connect.Request[postpilotv1.ListModelsRequest]) (*connect.Response[postpilotv1.ListModelsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +46,7 @@ func (h *Handler) ListModels(ctx context.Context, _ *connect.Request[postpilotv1
 }
 
 func (h *Handler) GetSelections(ctx context.Context, _ *connect.Request[postpilotv1.GetSelectionsRequest]) (*connect.Response[postpilotv1.GetSelectionsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +63,7 @@ func (h *Handler) GetSelections(ctx context.Context, _ *connect.Request[postpilo
 }
 
 func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpilotv1.SaveSelectionRequest]) (*connect.Response[postpilotv1.SaveSelectionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +84,7 @@ func (h *Handler) SaveSelection(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) InitializeDefaultSelections(ctx context.Context, _ *connect.Request[postpilotv1.InitializeDefaultSelectionsRequest]) (*connect.Response[postpilotv1.GetSelectionsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +100,7 @@ func (h *Handler) InitializeDefaultSelections(ctx context.Context, _ *connect.Re
 }
 
 func (h *Handler) GetComparisonPairs(ctx context.Context, _ *connect.Request[postpilotv1.GetComparisonPairsRequest]) (*connect.Response[postpilotv1.GetComparisonPairsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,7 +116,7 @@ func (h *Handler) GetComparisonPairs(ctx context.Context, _ *connect.Request[pos
 }
 
 func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[postpilotv1.SaveComparisonPairRequest]) (*connect.Response[postpilotv1.SaveComparisonPairResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +138,7 @@ func (h *Handler) SaveComparisonPair(ctx context.Context, req *connect.Request[p
 }
 
 func (h *Handler) SaveLabExtraCandidates(ctx context.Context, req *connect.Request[postpilotv1.SaveLabExtraCandidatesRequest]) (*connect.Response[postpilotv1.SaveLabExtraCandidatesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +158,7 @@ func (h *Handler) SaveLabExtraCandidates(ctx context.Context, req *connect.Reque
 }
 
 func (h *Handler) ListRecommendationSets(ctx context.Context, _ *connect.Request[postpilotv1.ListRecommendationSetsRequest]) (*connect.Response[postpilotv1.ListRecommendationSetsResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	sets, err := h.svc.RecommendationSets(ctx)
@@ -174,7 +173,7 @@ func (h *Handler) ListRecommendationSets(ctx context.Context, _ *connect.Request
 }
 
 func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.ApplyRecommendationSetRequest]) (*connect.Response[postpilotv1.ApplyRecommendationSetResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +197,7 @@ func (h *Handler) ApplyRecommendationSet(ctx context.Context, req *connect.Reque
 // SaveRecommendationSet is master-only by the interceptor's set (MODEL-69); this handler adds no
 // authorization of its own, the same posture as AdminHandler.
 func (h *Handler) SaveRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.SaveRecommendationSetRequest]) (*connect.Response[postpilotv1.SaveRecommendationSetResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	draft, err := fromProtoDraft(req.Msg)
@@ -213,7 +212,7 @@ func (h *Handler) SaveRecommendationSet(ctx context.Context, req *connect.Reques
 }
 
 func (h *Handler) DeleteRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.DeleteRecommendationSetRequest]) (*connect.Response[postpilotv1.DeleteRecommendationSetResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	if err := h.svc.DeleteRecommendationSet(ctx, req.Msg.GetId()); err != nil {
@@ -223,7 +222,7 @@ func (h *Handler) DeleteRecommendationSet(ctx context.Context, req *connect.Requ
 }
 
 func (h *Handler) MoveRecommendationSet(ctx context.Context, req *connect.Request[postpilotv1.MoveRecommendationSetRequest]) (*connect.Response[postpilotv1.MoveRecommendationSetResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authactor.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	if err := h.svc.MoveRecommendationSet(ctx, req.Msg.GetId(), req.Msg.GetEarlier()); err != nil {
@@ -255,17 +254,6 @@ func fromProtoDraft(msg *postpilotv1.SaveRecommendationSetRequest) (provider.Rec
 		draft.Selections = append(draft.Selections, selection)
 	}
 	return draft, nil
-}
-
-// actingUser resolves the caller. The tier is no longer part of it: what a model costs
-// and whether it is affordable is a property of the account's balance, which the service
-// reads for itself.
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 func toConnectError(op string, err error) error {
@@ -319,8 +307,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, provider.ErrTooManyLabCandidates):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "too many lab candidates", postpilotv1.FailureReason_MODEL_LAB_CANDIDATES_INVALID, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

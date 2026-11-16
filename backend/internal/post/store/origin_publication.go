@@ -11,6 +11,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
@@ -267,7 +268,7 @@ func (s *Store) PublishGeneratedResult(ctx context.Context, userID, slug string,
 	if in.ExpectedPlanFingerprint != nil && post.StorylineFingerprint(found.Storyline) != *in.ExpectedPlanFingerprint {
 		return post.OriginResultIdentity{}, post.ErrStaleContentRevision
 	}
-	n, err := q.PublishPostOriginContent(ctx, sqlc.PublishPostOriginContentParams{Storyline: storyline, Content: sql.NullString{String: content, Valid: true}, ContentLanguage: sql.NullString{String: string(in.Language), Valid: true}, ContentNouns: nouns, StorylineOrigins: marshalPlanOrigins(planOrigins), ContentOrigins: marshalOriginReview(origins), UpdatedAt: formatTime(now), Slug: slug, UserID: userID, ExpectedContentRevision: in.ExpectedContentRevision})
+	n, err := q.PublishPostOriginContent(ctx, sqlc.PublishPostOriginContentParams{Storyline: storyline, Content: sql.NullString{String: content, Valid: true}, ContentLanguage: sql.NullString{String: string(in.Language), Valid: true}, ContentNouns: nouns, StorylineOrigins: marshalPlanOrigins(planOrigins), ContentOrigins: marshalOriginReview(origins), UpdatedAt: dbtime.Format(now), Slug: slug, UserID: userID, ExpectedContentRevision: in.ExpectedContentRevision})
 	if err != nil {
 		return post.OriginResultIdentity{}, err
 	}
@@ -338,7 +339,7 @@ func (s *Store) PublishStorylineResult(ctx context.Context, userID, slug string,
 	// The validated plan fingerprint permits only this exact current transaction;
 	// SQL still carries an input revision guard against any intervening write.
 	expectedInput := found.InputRevision
-	changed, err := q.PublishPostOriginStoryline(ctx, sqlc.PublishPostOriginStorylineParams{Storyline: encoded, StorylineOrigins: marshalPlanOrigins(origins), UpdatedAt: formatTime(now), Slug: slug, UserID: userID, ExpectedContentRevision: in.ExpectedContentRevision, ExpectedInputRevision: expectedInput})
+	changed, err := q.PublishPostOriginStoryline(ctx, sqlc.PublishPostOriginStorylineParams{Storyline: encoded, StorylineOrigins: marshalPlanOrigins(origins), UpdatedAt: dbtime.Format(now), Slug: slug, UserID: userID, ExpectedContentRevision: in.ExpectedContentRevision, ExpectedInputRevision: expectedInput})
 	if err != nil {
 		return err
 	}

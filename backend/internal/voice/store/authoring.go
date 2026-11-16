@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 	"strconv"
@@ -59,7 +60,7 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in voice.Auth
 			return voice.Voice{}, voice.ErrVoiceNotMade
 		}
 	}
-	stamp := formatTime(v.CreatedAt)
+	stamp := dbtime.Format(v.CreatedAt)
 	inserted := false
 	for attempt := 1; attempt <= candidateNameAttempts; attempt++ {
 		name := v.Name

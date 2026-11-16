@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
@@ -196,7 +197,7 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	changed, err := q.ApplyPostTestOutput(ctx, sqlc.ApplyPostTestOutputParams{
 		Content: sql.NullString{String: content, Valid: true}, MachineBaseline: sql.NullString{String: baseline, Valid: true},
 		ContentLanguage: sql.NullString{String: string(in.ContentLanguage), Valid: true}, ContentNouns: nouns,
-		Storyline: storyline, StorylineOrigins: marshalPlanOrigins(planOrigins), ContentOrigins: marshalOriginReview(origins), UpdatedAt: formatTime(now), Slug: in.PostSlug, UserID: in.UserID,
+		Storyline: storyline, StorylineOrigins: marshalPlanOrigins(planOrigins), ContentOrigins: marshalOriginReview(origins), UpdatedAt: dbtime.Format(now), Slug: in.PostSlug, UserID: in.UserID,
 		ExpectedInputRevision: in.InputRevision, ExpectedContentRevision: in.ContentRevision,
 	})
 	if err != nil {
@@ -214,7 +215,7 @@ func (s *TestResultStore) ApplyTestResult(ctx context.Context, in post.TestOutpu
 	if err := q.CreatePostTestPublication(ctx, sqlc.CreatePostTestPublicationParams{
 		UserID: in.UserID, TestID: in.TestID, WinnerCandidateID: in.WinnerID, RequestKey: in.RequestKey,
 		Fingerprint: fingerprint, PostSlug: in.PostSlug, ResultingContentRevision: receipt.ResultingRevision,
-		Receipt: string(encoded), CreatedAt: formatTime(now),
+		Receipt: string(encoded), CreatedAt: dbtime.Format(now),
 	}); err != nil {
 		return empty, err
 	}

@@ -81,24 +81,9 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T837 | Share the acting-user lookup across rpc handlers | ARCH | - | todo |
-| T838 | One definition of the stored timestamp layout | ARCH | - | todo |
-| T839 | Route the remaining hand-rolled ids through platform/ids | ARCH | - | todo |
-| T840 | One connect-failure message helper and one billing invalidation | ARCH | - | todo |
-| T841 | One SHA-256 hex helper for fingerprint code | ARCH | T840 | todo |
-| T842 | One confirm-then-run control for the delete buttons | ARCH | T841 | todo |
-| T843 | One factory for the per-project clip autosave queues | ARCH | - | todo |
-| T844 | Stop the per-second re-render of the dubbing editor | ARCH | T843 | todo |
-| T845 | One stored failure encoding for job, experiment and voice stores | ARCH | - | todo |
-| T846 | Shared model-ref and failure mappers for rpc handlers | ARCH | - | todo |
-| T847 | One last-resort internal error helper for rpc handlers | ARCH | T846 | todo |
-| T848 | One parser for the provider/model reference | ARCH | - | todo |
-| T849 | Publish clip upload progress only when it changes | ARCH | - | todo |
-| T850 | Patch blog video upload progress only when it changes | ARCH | T849 | todo |
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
-| T855 | Keep the acting-user helper in a leaf package | ARCH | - | todo |
 | T856 | Show one upload text with no channel | CLIP | - | todo |
 | T857 | Accept a posted URL on 네이버 클립 hosts only | CLIP | - | todo |
 | T858 | Create and set up a clip without a channel | CLIP | - | todo |
@@ -117,6 +102,8 @@
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
+| tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T837
+- gusta-implement-task T851
+- inspect work board for remaining tasks

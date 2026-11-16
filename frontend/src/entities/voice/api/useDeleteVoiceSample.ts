@@ -1,7 +1,7 @@
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
-import { appFailureFromConnect, VoiceService } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { VoiceService } from '@/shared/api'
+import { connectFailureMessage } from '@/shared/lib'
 import { invalidateVoiceMaterials, withdrawCachedVoiceMaterial } from './voice-directory-cache'
 
 /** Deletes a 학습 글; it enqueues nothing (VOICE-21). */
@@ -17,7 +17,7 @@ export function useDeleteVoiceSample(ownerId: string, voiceId: string) {
   })
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     remove: (sampleId: string) => mutation.mutateAsync({ voiceId, sampleId }),
   }
 }

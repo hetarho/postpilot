@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
@@ -58,7 +59,7 @@ func analysisFromRow(row sqlc.GetAnalysisRow) (voice.Analysis, error) {
 	if err := json.Unmarshal([]byte(row.MaterialIds), &ids); err != nil {
 		return voice.Analysis{}, fmt.Errorf("decode analysis material ids: %w", err)
 	}
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return voice.Analysis{}, fmt.Errorf("analysis created_at: %w", err)
 	}
@@ -135,7 +136,7 @@ func (s *Store) PublishAnalysis(ctx context.Context, userID, voiceID string, ana
 	}
 	if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{
 		VoiceID: voiceID, UserID: userID, Snapshot: string(snapshot), MaterialIds: string(encodedIDs),
-		AnalyzeModel: analysis.AnalyzeModel, CreatedAt: formatTime(analysis.CreatedAt),
+		AnalyzeModel: analysis.AnalyzeModel, CreatedAt: dbtime.Format(analysis.CreatedAt),
 		AcceptedSources: string(encodedSources), AcceptedMaterialSnapshot: string(encodedMaterials), SourceVersionsKnown: boolInt(analysis.SourceVersionsKnown),
 	}); err != nil {
 		return fmt.Errorf("insert current analysis: %w", err)

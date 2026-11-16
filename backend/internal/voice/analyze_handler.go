@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/postpilot/backend/internal/llm"
 )
@@ -89,9 +88,9 @@ func voiceUnavailableError(err error) error {
 }
 
 func parseModelRef(value string) (llm.ModelRef, error) {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
+	ref, ok := llm.ParseModelRef(value)
+	if !ok {
 		return llm.ModelRef{}, fmt.Errorf("분석 모델 정보가 올바르지 않아요")
 	}
-	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}, nil
+	return ref, nil
 }

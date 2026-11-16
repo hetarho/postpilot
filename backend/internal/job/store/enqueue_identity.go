@@ -6,6 +6,7 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/job/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func (s *Store) GetEnqueueIdentity(ctx context.Context, id string) (job.EnqueueIdentity, error) {
@@ -37,7 +38,7 @@ func (s *Store) InsertWithIdentity(ctx context.Context, found job.Job, identity 
 
 func (s *Store) ClaimEnqueueIdentity(ctx context.Context, want job.EnqueueIdentity, at time.Time) error {
 	_, err := withWriter(ctx, s, func(q *sqlc.Queries) (struct{}, error) {
-		if err := q.InsertEnqueueReceipt(ctx, sqlc.InsertEnqueueReceiptParams{JobID: want.JobID, UserID: want.UserID, Fingerprint: want.Fingerprint, CreatedAt: formatTime(at)}); err != nil {
+		if err := q.InsertEnqueueReceipt(ctx, sqlc.InsertEnqueueReceiptParams{JobID: want.JobID, UserID: want.UserID, Fingerprint: want.Fingerprint, CreatedAt: dbtime.Format(at)}); err != nil {
 			return struct{}{}, err
 		}
 		got, err := q.GetEnqueueReceipt(ctx, want.JobID)

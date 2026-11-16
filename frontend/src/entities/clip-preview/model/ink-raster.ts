@@ -1,4 +1,5 @@
 import { Resvg, initWasm } from '@resvg/resvg-wasm'
+import { sha256Hex } from '@/shared/lib'
 import wasmURL from '@resvg/resvg-wasm/index_bg.wasm?url'
 import {
   CLIP_INK,
@@ -39,8 +40,7 @@ const initialize = () =>
     const response = await fetch(wasmURL)
     if (!response.ok) throw new ClipInkError('CLIP_INK_WASM_UNAVAILABLE')
     const bytes = await response.arrayBuffer()
-    const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))
-    const hash = [...digest].map((b) => b.toString(16).padStart(2, '0')).join('')
+    const hash = await sha256Hex(bytes)
     if (hash !== CLIP_INK.wasmSHA256) throw new ClipInkError('CLIP_INK_INCOMPATIBLE_WASM')
     await initWasm(bytes)
   })().catch((error) => {
@@ -79,8 +79,7 @@ export class ResvgBrowserInk implements BrowserInkRasterizer {
         .then(async (bytes) => {
           if (bytes.byteLength !== font.bytes || bytes.byteLength > CLIP_INK.maxFontBytes)
             throw new ClipInkError('CLIP_INK_FONT_CHANGED', font.file)
-          const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.slice().buffer))
-          const hash = [...digest].map((b) => b.toString(16).padStart(2, '0')).join('')
+          const hash = await sha256Hex(bytes.slice().buffer)
           if (hash !== font.sha256) throw new ClipInkError('CLIP_INK_FONT_CHANGED', font.file)
           return bytes
         })

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
+	authactor "github.com/postpilot/backend/internal/auth/rpc/actor"
 	"github.com/postpilot/backend/internal/experiment"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
@@ -25,7 +26,7 @@ func NewRequestInspectionHandler(reader experiment.TestRequestInspections) *Requ
 }
 
 func (h *RequestInspectionHandler) GetWritingTestRequestInspection(ctx context.Context, req *connect.Request[v1.GetWritingTestRequestInspectionRequest]) (*connect.Response[v1.GetWritingTestRequestInspectionResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authactor.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -6,15 +6,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/quality"
 	"github.com/postpilot/backend/internal/quality/store/sqlc"
 )
-
-// The fixed-width UTC layout every context writes timestamps in, so string comparison
-// and ORDER BY agree with chronological order.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -37,7 +33,7 @@ func (s *Store) Measurement(ctx context.Context, userID, slug string) (quality.S
 	if err != nil {
 		return quality.StoredMeasurement{}, false, fmt.Errorf("select post measurement: %w", err)
 	}
-	computed, err := parseTime(row.ComputedAt)
+	computed, err := dbtime.Parse(row.ComputedAt)
 	if err != nil {
 		return quality.StoredMeasurement{}, false, fmt.Errorf("parse post measurement computed_at: %w", err)
 	}
@@ -66,7 +62,7 @@ func (s *Store) SaveMeasurement(ctx context.Context, m quality.StoredMeasurement
 		AvgSentenceLength:  nullFloat(m.Self.Composition.AvgSentenceLength),
 		RepetitionShare:    nullFloat(m.Self.Repetition.Share),
 		TitleRelevance:     nullFloat(m.Self.Repetition.TitleRelevance),
-		ComputedAt:         formatTime(m.ComputedAt),
+		ComputedAt:         dbtime.Format(m.ComputedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert post measurement: %w", err)
@@ -90,7 +86,3 @@ func nullFloat(value *float64) sql.NullFloat64 {
 	}
 	return sql.NullFloat64{Float64: *value, Valid: true}
 }
-
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
-
-func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }

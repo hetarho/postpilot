@@ -1,12 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation } from '@connectrpc/connect-query'
-import {
-  appFailureFromConnect,
-  GenerationService,
-  ModelRefSchema,
-  ReobserveSelectionSchema,
-} from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { GenerationService, ModelRefSchema, ReobserveSelectionSchema } from '@/shared/api'
+import { connectFailureMessage } from '@/shared/lib'
 import type { ModelRef } from '../model/types'
 
 /** Starting a run is the job noun's own create (ARCH-14): the screens that choose the models and
@@ -16,7 +11,7 @@ export function useStartGeneration() {
 
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     /** `reobserveFiles` is still sent for an older server, but the server ignores it: a writing
      *  run observes only the attachments lacking an observation, and re-observing is
      *  `useStartObservation`'s (GEN-89). */

@@ -470,6 +470,23 @@ describe('a video in the batch', () => {
     })
   })
 
+  it('patches the batch only when the reported video percent changes', async () => {
+    const pipeline = fakePipeline()
+    let notified = -1
+    pipeline.putWithProgress = vi.fn(async (_u, _c, _b, onProgress: (percent: number) => void) => {
+      let count = 0
+      const stop = subscribeUploadBatch(slug, () => count++)
+      for (const percent of [10, 10, 10, 20]) onProgress(percent)
+      stop()
+      notified = count
+    })
+    const onVideoConfirmed = vi.fn()
+    const batch = uploadBatch(slug, { pipeline, onConfirmed: vi.fn(), onVideoConfirmed })
+    batch.add([file('clip.mp4')], [])
+    await vi.waitFor(() => expect(onVideoConfirmed).toHaveBeenCalledTimes(1))
+    expect(notified).toBe(2)
+  })
+
   // VIDEO-4: nothing converts a clip. The file that goes up is the file the user picked, and
   // its metadata is read only to bound it and to report it at confirm.
   it('uploads the original file with progress and confirms it with its duration', async () => {

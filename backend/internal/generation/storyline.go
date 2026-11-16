@@ -278,7 +278,7 @@ func (s *Service) ReviseStoryline(ctx context.Context, job StorylineRevisionJob,
 // schema and parsed against what was shown. A bad or cut-off answer fails as GEN-20 says
 // (MODEL_OUTPUT_INVALID, MODEL_OUTPUT_TRUNCATED).
 func (s *Service) storylineCall(ctx context.Context, writeModel string, nativeEffort bool, request llm.Request, shown []string, sources []postdomain.OriginSource, protocol int) (Storyline, error) {
-	model, ok := parseModelRef(writeModel)
+	model, ok := llm.ParseModelRef(writeModel)
 	if !ok {
 		return Storyline{}, ErrWriteModelRequired
 	}
