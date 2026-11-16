@@ -86,6 +86,10 @@
 | T842 | One confirm-then-run control for the delete buttons | ARCH | T841 | todo |
 | T843 | One factory for the per-project clip autosave queues | ARCH | - | todo |
 | T844 | Stop the per-second re-render of the dubbing editor | ARCH | T843 | todo |
+| T845 | One stored failure encoding for job, experiment and voice stores | ARCH | - | todo |
+| T846 | Shared model-ref and failure mappers for rpc handlers | ARCH | - | todo |
+| T847 | One last-resort internal error helper for rpc handlers | ARCH | T846 | todo |
+| T848 | One parser for the provider/model reference | ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
