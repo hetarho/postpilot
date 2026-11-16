@@ -218,9 +218,13 @@ describe('the 기본 지침', () => {
     const items = list.getAllByRole('listitem')
     // naming is out of use, so it is not a row at all.
     expect(items).toHaveLength(2 + GUIDELINES.length)
+    // A closed row is its sentence alone; 추천 and the scope show once it is open (GUIDE-47).
     expect(within(items[0]).getByRole('button', { expanded: false })).toHaveTextContent(
-      '재료에 있는 사실만추천',
+      /^재료에 있는 사실만$/,
     )
+    expect(list.queryByText('추천')).not.toBeInTheDocument()
+    expect(list.queryByText('전역')).not.toBeInTheDocument()
+    expect(list.queryByText('적용 대상 없음')).not.toBeInTheDocument()
     expect(within(items[1]).getByText('자연스러운 한국어 문체')).toBeInTheDocument()
     expect(within(items[2]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
     expect(list.queryByText('메모의 이름으로')).not.toBeInTheDocument()
@@ -236,11 +240,13 @@ describe('the 기본 지침', () => {
 
     const korean = await openRow(user, '자연스러운 한국어 문체')
     expect(korean.getByText('상투적인 대조를 줄이세요.')).toBeInTheDocument()
+    expect(korean.getByText('추천')).toBeInTheDocument()
     expect(korean.getByText('한국어 글에만 적용돼요')).toBeInTheDocument()
     expect(
       korean.getByRole('button', { name: '자연스러운 한국어 문체 적용 안함' }),
     ).toBeInTheDocument()
     const owner = await openRow(user, '없는 사실을 쓰지 않기')
+    expect(owner.getByText('전역')).toBeInTheDocument()
     expect(owner.getByRole('button', { name: /직접 편집하기$/ })).toBeInTheDocument()
     expect(owner.getByRole('button', { name: '지침 삭제' })).toBeInTheDocument()
     // Opening the second left the first open.
@@ -409,6 +415,15 @@ describe('the guideline candidate section', () => {
 
   // Guide: the candidates wait behind a banner, and the review shows ONE at a time.
   const review = () => within(screen.getByRole('dialog', { name: '새 지침 후보' }))
+  /** Where the review stands: the count beside its title, and the matching segment of its
+   *  progress marked current, one segment per candidate. */
+  const expectAt = (sheet: ReturnType<typeof review>, current: number, total: number) => {
+    const text = `${current} / ${total}`
+    const segments = sheet.getByRole('navigation', { name: '새 지침 후보' })
+    expect(within(segments).getAllByRole('listitem')).toHaveLength(total)
+    expect(within(segments).getByText(text).closest('[aria-current="step"]')).not.toBeNull()
+    expect(sheet.getAllByText(text).filter((node) => !segments.contains(node))).toHaveLength(1)
+  }
   const openReview = async (user: ReturnType<typeof userEvent.setup>) => {
     if (!screen.queryByRole('dialog', { name: '새 지침 후보' }))
       await user.click(await screen.findByRole('button', { name: '하나씩 보기' }))
@@ -450,7 +465,7 @@ describe('the guideline candidate section', () => {
     // Nothing is listed until the owner asks for the review.
     expect(screen.queryByRole('region', { name: '후보 지침' })).toBeNull()
     const sheet = await openReview(user)
-    expect(sheet.getByText('1 / 3')).toBeInTheDocument()
+    expectAt(sheet, 1, 3)
   })
 
   // GUIDE-27: everything that passes is saved 전역, in one go.
@@ -508,7 +523,7 @@ describe('the guideline candidate section', () => {
     ).toBeInTheDocument()
     // The two that saved left the queue; the refused one is the only one left to review, with
     // its reason on it.
-    await waitFor(() => expect(review().getByText('1 / 1')).toBeInTheDocument())
+    await waitFor(() => expectAt(review(), 1, 1))
     const refused = await candidateRow('없는 사실을 쓰지 않기')
     expect(refused.getByText('이미 같은 지침이 있어요.')).toBeInTheDocument()
   })
@@ -543,17 +558,17 @@ describe('the guideline candidate section', () => {
     const sheet = await openReview(user)
     const shown = async () => (await section('후보 지침')).getAllByRole('listitem')
     expect(await shown()).toHaveLength(1)
-    expect(sheet.getByText('1 / 3')).toBeInTheDocument()
+    expectAt(sheet, 1, 3)
     expect(within((await shown())[0]).getByText('여기 너무 광고 같아')).toBeInTheDocument()
     expect(within((await shown())[0]).getByText('5번 요청함')).toBeInTheDocument()
     await user.click(sheet.getByRole('button', { name: '넘기기' }))
-    expect(sheet.getByText('2 / 3')).toBeInTheDocument()
+    expectAt(sheet, 2, 3)
     expect(within((await shown())[0]).getByText('존댓말로 써줘')).toBeInTheDocument()
     // A single sighting shows no count: the count exists to mark a repeat.
     expect(within((await shown())[0]).queryByText('1번 요청함')).not.toBeInTheDocument()
     await user.click(sheet.getByRole('button', { name: '넘기기' }))
     await user.click(sheet.getByRole('button', { name: '넘기기' }))
-    expect(sheet.getByText('1 / 3')).toBeInTheDocument()
+    expectAt(sheet, 1, 3)
 
     // A12: reading the section calls no provider and enqueues nothing ([I5]).
     const allowed = [
@@ -619,7 +634,7 @@ describe('the guideline candidate section', () => {
     // The approved candidate leaves the review — the same place now shows the next of the two
     // left — and the rule appears in the saved list: one create invalidated both, because an
     // approval moves a row from one to the other.
-    await waitFor(() => expect(review().getByText('1 / 2')).toBeInTheDocument())
+    await waitFor(() => expectAt(review(), 1, 2))
     expect(review().queryByText('여기 너무 광고 같아')).toBeNull()
     const saved = await section('지침 목록')
     expect(saved.getAllByRole('listitem')).toHaveLength(4)
@@ -690,7 +705,7 @@ describe('the guideline candidate section', () => {
     await waitFor(() => expect(dialog.getByText(/100/)).toBeInTheDocument())
     expect(screen.getByRole('dialog', { name: '지침으로 승인' })).toBeInTheDocument()
     // Still three waiting, and still on the one that was refused.
-    expect(review().getByText('2 / 3')).toBeInTheDocument()
+    expectAt(review(), 2, 3)
     expect(await candidateRow('존댓말로 써줘')).toBeTruthy()
   })
 

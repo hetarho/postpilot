@@ -35,8 +35,23 @@ async function select(label: string, option: string) {
   await userEvent.click(screen.getByRole('combobox', { name: new RegExp(`^${label}(?:\\s|$)`) }))
   await userEvent.click(screen.getByRole('option', { name: option }))
 }
+const FACTOR = {
+  'AI 모델': 'model',
+  말투: 'voice',
+  '글 템플릿': 'template',
+  '글 지침': 'guideline',
+} as const
+/** A tile only chooses the factor and explains it in place; the step bar's 다음 moves on. */
+async function chooseFactor(label: keyof typeof FACTOR) {
+  await userEvent.click(await screen.findByRole('button', { name: label }))
+  expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeVisible()
+  expect(screen.getByText(writingTestI18n.ko.factorWhat[FACTOR[label]])).toBeVisible()
+  expect(screen.queryByRole('combobox', { name: /^후보 1(?:\s|$)/ })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: '다음' }))
+}
 async function modelCandidates(fixture: Fixture) {
-  await userEvent.click(await screen.findByRole('button', { name: 'AI 모델' }))
+  await chooseFactor('AI 모델')
   await waitFor(() => expect(fixture.calls).toContain('GetSelections'))
   // Picking independently in reverse order catches sparse or shifted slot representations.
   for (let index = fixture.plan.count - 1; index >= 0; index--)
@@ -102,7 +117,7 @@ it.each([1, 10])(
 it('requires every chosen slot and preserves unsent material through Back without implicit AI', async () => {
   const fixture = createWritingTestStudioFixture()
   mount(fixture)
-  await userEvent.click(await screen.findByRole('button', { name: 'AI 모델' }))
+  await chooseFactor('AI 모델')
   await select('후보 2', 'Model 2')
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
   expect(screen.getByText('서로 다른 후보 2개를 선택해 주세요.')).toBeVisible()
@@ -196,19 +211,19 @@ it('generates sixteen outputs once, sends fifteen human decisions, then adopts o
 it.each([
   {
     factor: 'voice' as const,
-    label: '말투',
+    label: '말투' as const,
     count: 16 as const,
     kind: ProtoConfigurationKind.WRITING_VOICE,
   },
   {
     factor: 'template' as const,
-    label: '글 템플릿',
+    label: '글 템플릿' as const,
     count: 8 as const,
     kind: ProtoConfigurationKind.POST_TEMPLATE,
   },
   {
     factor: 'guideline' as const,
-    label: '글 지침',
+    label: '글 지침' as const,
     count: 4 as const,
     kind: ProtoConfigurationKind.POST_GUIDELINE,
   },
@@ -217,7 +232,7 @@ it.each([
   async ({ factor, label, count, kind }) => {
     const fixture = createWritingTestStudioFixture({ count, factor })
     mount(fixture)
-    await userEvent.click(await screen.findByRole('button', { name: label }))
+    await chooseFactor(label)
     await userEvent.type(
       screen.getByRole('textbox', { name: '후보의 방향 (선택)' }),
       'Distinct approaches to the same shared scenario',
@@ -272,7 +287,7 @@ it('retains real source revisions for explicit compatible output application and
 it('saves a synthetic style only after an explicit valid name and default choice', async () => {
   const fixture = createWritingTestStudioFixture({ factor: 'voice' })
   mount(fixture)
-  await userEvent.click(await screen.findByRole('button', { name: '말투' }))
+  await chooseFactor('말투')
   await userEvent.type(
     screen.getByRole('textbox', { name: '후보의 방향 (선택)' }),
     'Two distinct reusable styles',

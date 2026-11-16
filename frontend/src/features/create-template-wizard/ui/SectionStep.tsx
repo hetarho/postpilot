@@ -33,11 +33,13 @@ export function SectionStep({
   section,
   send,
   suggestions,
+  onHelp,
 }: {
   state: WizardState
   section: SectionDraft
   send: Dispatch<WizardEvent>
   suggestions: readonly string[]
+  onHelp?: () => void
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -88,6 +90,7 @@ export function SectionStep({
       <ContentKindCard
         section={section}
         onChange={(content) => edit({ content })}
+        onHelp={onHelp}
         // Each choice's own inputs sit inside its card, where the choice was made (TMPL-74).
         inputs={{
           ask: (

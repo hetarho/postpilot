@@ -1,4 +1,4 @@
-import { createRoute, lazyRouteComponent } from '@tanstack/react-router'
+import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
 import { clipsSearchSchema } from '@/pages/clips'
 import { PostsPage, postsSearchSchema } from '@/pages/posts'
 import { authenticatedRoute } from './tree'
@@ -15,10 +15,13 @@ const naverClipRoute = createRoute({
   validateSearch: clipsSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/clips'), 'NaverClipHistoryPage'),
 })
+// Videos are one list now; an old Instagram address lands on it.
 const instaClipRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/insta-clip',
   validateSearch: clipsSearchSchema,
-  component: lazyRouteComponent(() => import('@/pages/clips'), 'InstaClipHistoryPage'),
+  beforeLoad: ({ search }) => {
+    throw redirect({ to: '/naver-clip', search, replace: true })
+  },
 })
 export const channelRoutes = [naverBlogRoute, naverClipRoute, instaClipRoute]

@@ -190,6 +190,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const jobView = useEditorJob(post)
   // ②'s run card has a bar of its own; while it is in view the page-top one fades out (POST-45).
   const [writingCardShown, setWritingCardShown] = useState(false)
+  const [inspectionSlot, setInspectionSlot] = useState<HTMLSpanElement | null>(null)
 
   // The step lives here, above the fields, because the bar that switches it is the first thing
   // on the screen — the post's lifecycle is what you navigate before you read anything else.
@@ -516,8 +517,9 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
                 /* The autosave's status region exposes the refusal. */
               }),
         }}
+        contextTitle={post ? undefined : copy.location}
         steps={
-          post ? (
+          post && (
             <SegmentedControl
               value={step}
               options={editorSteps()}
@@ -527,23 +529,32 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
               variant="steps"
               className="min-w-0 flex-1"
             />
-          ) : (
-            <Typography variant="label" as="span" className="text-content-primary">
-              {copy.location}
-            </Typography>
           )
         }
         actions={
-          post && (
-            <DeletePostButton
-              post={post}
-              returnTo={returnTo}
-              onDeleted={() => {
-                discardDraftQueue(post.slug)
-                discardContentQueue(post.slug)
-                markPostHistoryReturn(ownerId, post.slug)
-              }}
-            />
+          post ? (
+            <>
+              {/* 요청 기술 보기 is drawn here by the lifecycle that knows its target. */}
+              <span ref={setInspectionSlot} className="contents" />
+              <DeletePostButton
+                post={post}
+                returnTo={returnTo}
+                onDeleted={() => {
+                  discardDraftQueue(post.slug)
+                  discardContentQueue(post.slug)
+                  markPostHistoryReturn(ownerId, post.slug)
+                }}
+              />
+            </>
+          ) : (
+            // The saved post's entry stands on the top row from the start, so the first save does
+            // not push the guide down. There is no request to read until the draft is saved.
+            ownerId && (
+              <InspectWritingRequestAction
+                target={null}
+                blockedReason={t('unsavedSource', { ns: 'requestInspection' })}
+              />
+            )
           )
         }
         status={
@@ -590,22 +601,12 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
             onTicksChange: (ticks) => autosave.setCampaign({ ...autosave.campaign, ticks }),
           }}
           inspection={{ contextKey: inspectionContext, sourcePending: inspectionSourcePending }}
+          inspectionSlot={inspectionSlot}
         />
       ) : (
-        <>
-          {/* The saved post's entry stands here from the start, so the mint does not push ① down
-              by a button's height. There is no request to read until the draft is saved. */}
-          {ownerId && (
-            <InspectWritingRequestAction
-              target={null}
-              blockedReason={t('unsavedSource', { ns: 'requestInspection' })}
-              className="my-2 self-end"
-            />
-          )}
-          {/* No lifecycle yet: the same guided screens, with no 생성 until the first save has
-              made a post to start a run on. */}
-          <div className="flex flex-1 flex-col">{renderGuide()}</div>
-        </>
+        // No lifecycle yet: the same guided screens, with no 생성 until the first save has made a
+        // post to start a run on.
+        <div className="flex flex-1 flex-col">{renderGuide()}</div>
       )}
       {choices.sheet}
     </main>

@@ -7,6 +7,13 @@ import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
 beforeEach(() => sessionStorage.clear())
 
+/** A tile only chooses the factor; the step bar's 다음 moves on to the candidates. */
+async function chooseFactor(user: ReturnType<typeof userEvent.setup>, label: string) {
+  await user.click(screen.getByRole('button', { name: label }))
+  expect(screen.queryByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toBeNull()
+  await user.click(screen.getByRole('button', { name: '다음' }))
+}
+
 it.each([
   ['', 'model', 'write'],
   ['?stage=write', 'model', 'write'],
@@ -24,9 +31,14 @@ it.each([
     expect(router.state.location.search).toMatchObject({ factor, stage, count: 2 })
     if (factor === 'voice') expect(router.state.location.search.voiceId).toBe('voice-default')
     const main = within(screen.getByRole('main'))
-    expect(
-      main.getByRole('button', { name: factor === 'voice' ? '말투' : 'AI 모델' }),
-    ).toHaveAttribute('aria-pressed', 'true')
+    if (stage === 'observe') {
+      // Photo reading compares AIs only: it opens on its two candidates, with no factor question.
+      expect(main.queryByRole('button', { name: 'AI 모델' })).toBeNull()
+      expect(main.getAllByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toHaveLength(2)
+    } else
+      expect(
+        main.getByRole('button', { name: factor === 'voice' ? '말투' : 'AI 모델' }),
+      ).toHaveAttribute('aria-pressed', 'true')
     expect(main.getByRole('combobox', { name: /^비교 형식(?:\s|$)/ })).toHaveTextContent(
       'A/B 테스트',
     )
@@ -51,7 +63,7 @@ it('offers only two, four, eight and sixteen entrants and changes count without 
       .map((node) => node.textContent),
   ).toEqual(['A/B 테스트', '4강전', '8강전', '16강전'])
   await user.click(screen.getByRole('option', { name: '16강전' }))
-  await user.click(screen.getByRole('button', { name: 'AI 모델' }))
+  await chooseFactor(user, 'AI 모델')
   expect(
     within(screen.getByRole('main')).getAllByRole('combobox', { name: /^후보 \d+(?:\s|$)/ }),
   ).toHaveLength(16)
@@ -75,7 +87,7 @@ it('preserves an owned source through the alias and preloads its complete record
     stage: 'write',
     factor: 'model',
   })
-  await user.click(screen.getByRole('button', { name: 'AI 모델' }))
+  await chooseFactor(user, 'AI 모델')
   for (let index = 1; index <= 2; index++)
     await chooseOption(
       user,
@@ -118,7 +130,7 @@ it('does not import obsolete five-candidate rankings or auto-save a legacy compa
   expect(screen.getByRole('combobox', { name: /^비교 형식(?:\s|$)/ })).toHaveTextContent(
     'A/B 테스트',
   )
-  await user.click(screen.getByRole('button', { name: 'AI 모델' }))
+  await chooseFactor(user, 'AI 모델')
   expect(screen.getAllByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toHaveLength(2)
   expect(procedures).not.toContain('SaveComparisonPair')
   expect(paidActions(procedures)).toEqual([])

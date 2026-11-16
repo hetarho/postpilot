@@ -104,6 +104,11 @@ function mount(current = profile(), ownerId = 'alice', onAnalyze = vi.fn()) {
   }
   return { ...render(<VoiceLearningChat {...props} />), props, onAnalyze }
 }
+/** The chat's saved-answer count, read from its visible label (the segments under it mark
+ *  only the answer being asked now). */
+function expectSavedCount(saved: number) {
+  expect(screen.getByText(`${saved} / 10개 답변 저장`)).toBeInTheDocument()
+}
 async function answer(
   user: ReturnType<typeof userEvent.setup>,
   text = '친구에게 평소처럼 말했어요.',
@@ -147,7 +152,7 @@ describe('scripted voice learning chat', () => {
     rerender(<VoiceLearningChat {...props} active={false} />)
     rerender(<VoiceLearningChat {...props} active />)
     expect(screen.getByLabelText('답')).toHaveValue('돌아와서 이어 쓸 내 답변이에요.')
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expectSavedCount(0)
     expect(fake.answer).not.toHaveBeenCalled()
   })
 
@@ -163,7 +168,7 @@ describe('scripted voice learning chat', () => {
     expect(document.activeElement?.tagName).not.toBe('TEXTAREA')
     for (let index = 0; index < 10; index++) await answer(user)
     expect(await screen.findByText('열 개의 답변이 모였어요.')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '10')
+    expectSavedCount(10)
     expect(screen.queryByRole('textbox')).toBeNull()
     expect(fake.answer).toHaveBeenCalledTimes(10)
     expect(onAnalyze).not.toHaveBeenCalled()
@@ -175,12 +180,15 @@ describe('scripted voice learning chat', () => {
     mount(profile(['question-0', 'question-1', 'question-2']))
     const user = userEvent.setup()
     expect(await screen.findByText('4번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
+    expectSavedCount(3)
+    const segments = within(screen.getByRole('navigation', { name: '이번 대화의 저장한 답변 수' }))
+    expect(segments.getAllByRole('listitem')).toHaveLength(10)
+    expect(segments.getByText('4 / 10').closest('[aria-current="step"]')).not.toBeNull()
     for (let index = 0; index < 7; index++) await answer(user)
     await user.click(await screen.findByRole('button', { name: '답변을 더 보태거나 고치기' }))
     await user.click(screen.getByRole('button', { name: '질문 10개 더 답하기' }))
     expect(screen.getByText('11번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expectSavedCount(0)
     expect(fake.answer.mock.calls.map(([input]) => input.promptKey)).toEqual(
       Array.from({ length: 7 }, (_, index) => `question-${index + 3}`),
     )
@@ -213,7 +221,7 @@ describe('scripted voice learning chat', () => {
     await user.type(screen.getByLabelText('답'), ' 문장을 보탰어요.')
     await user.click(screen.getByRole('button', { name: '수정해서 보내기' }))
     expect(screen.getByLabelText('답')).toHaveValue('둘째 답변을 쓰는 중이에요.')
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
+    expectSavedCount(1)
   })
 
   it('saves once under double submit, blocks Back/skip while pending and preserves a refused answer', async () => {
@@ -237,7 +245,7 @@ describe('scripted voice learning chat', () => {
     reject(new Error('offline'))
     await waitFor(() => expect(screen.getByRole('button', { name: '보내기' })).toBeEnabled())
     expect(screen.getByLabelText('답')).toHaveValue('연결이 끊겨도 남아 있어요.')
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expectSavedCount(0)
     expect(transcript.queryByText('연결이 끊겨도 남아 있어요.')).toBeNull()
     await user.click(screen.getByRole('button', { name: '보내기' }))
     expect(await screen.findByText('2번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
@@ -252,7 +260,7 @@ describe('scripted voice learning chat', () => {
     await user.type(await screen.findByLabelText('답'), '아직 떠오르지 않아요.')
     await user.click(screen.getByRole('button', { name: '다른 얘기 할래요' }))
     expect(screen.getByText('4번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expectSavedCount(0)
     expect(fake.answer).not.toHaveBeenCalled()
   })
 
@@ -266,7 +274,7 @@ describe('scripted voice learning chat', () => {
     await user.click(screen.getByRole('button', { name: '보내기' }))
     expect(await screen.findByText(/답변이 저장됐는지 확인하지 못했어요/)).toBeInTheDocument()
     expect(screen.getByLabelText('답')).toHaveValue('저장 확인 전에는 남아 있어요.')
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0')
+    expectSavedCount(0)
     expect(screen.getByText('1번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
   })
 
@@ -285,9 +293,7 @@ describe('scripted voice learning chat', () => {
     rerender(<VoiceLearningChat {...props} ownerId="bob" />)
     await screen.findByLabelText('답')
     resolve()
-    await waitFor(() =>
-      expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0'),
-    )
+    await waitFor(() => expectSavedCount(0))
     expect(screen.getByLabelText('답')).toHaveValue('')
     expect(screen.getByText('1번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
   })

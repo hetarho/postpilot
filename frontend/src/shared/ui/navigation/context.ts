@@ -27,6 +27,11 @@ export interface NavigationValue {
   ancestors: readonly NavigationDestination[]
   returnTo?: NavigationDestination
   Link?: ComponentType<NavigationLinkProps>
+  /** Whether this route has a way back at all (a child route outside a focused flow). */
+  hasReturn?: boolean
+  /** A page that draws the way back in its own column (`PageFrame`) claims it, so the shell does
+   *  not draw a second one; the returned function releases the claim on unmount. */
+  claimReturn?: () => () => void
 }
 export const NavigationContext = createContext<NavigationValue | null>(null)
 export function useNavigationContext() {

@@ -4,8 +4,8 @@ export const i18n = {
   namespace: 'clips',
   ko: {
     history: {
-      naverClip: '네이버 클립',
-      instaClip: '인스타 클립',
+      naverClip: '영상',
+      instaClip: '영상',
       empty: '아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.',
       continue: '이어서 편집',
       open: '작업 확인',
@@ -15,8 +15,8 @@ export const i18n = {
   },
   en: {
     history: {
-      naverClip: 'Naver Clip',
-      instaClip: 'Instagram Clip',
+      naverClip: 'Videos',
+      instaClip: 'Videos',
       empty: 'There are no clips yet. Create one from + New clip below.',
       continue: 'Continue editing',
       open: 'View work',

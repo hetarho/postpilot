@@ -60,7 +60,7 @@ export const i18n = {
     },
     navigation: {
       returnCreation: '{{channel}}으로 돌아가기',
-      returnMine: '내 글로 돌아가기',
+      returnMine: '내 콘텐츠로 돌아가기',
     },
     observeStep: {
       back: '이전: 생성',

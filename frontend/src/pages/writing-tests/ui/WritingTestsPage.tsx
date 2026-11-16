@@ -12,7 +12,7 @@ import { POST_TARGET_LENGTH_DEFAULT, POST_TAG_COUNT_DEFAULT } from '@/entities/p
 import { WritingTestStudio, WritingTestHistory } from '@/widgets/writing-test'
 import { WRITING_TEST_NEW_GUIDELINE_SLOT } from '@/features/writing-test'
 import { activeLocale } from '@/shared/lib'
-import { Button, LoadingState, Typography, pageStyles } from '@/shared/ui'
+import { Button, LoadingState, Typography, PageFrame } from '@/shared/ui'
 import {
   writingTestSearchSchema,
   writingTestHistorySearchSchema,
@@ -68,7 +68,7 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
   }
   if (seed.source && (source.isPending || source.isError))
     return (
-      <main className={pageStyles({ width: 'workspace' })}>
+      <PageFrame width="workspace">
         {source.isError ? (
           <Typography variant="body" role="alert">
             {t('failed')}
@@ -81,7 +81,7 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
             {t('refresh')}
           </Button>
         )}
-      </main>
+      </PageFrame>
     )
   // Resolve this optional seed before the actor mounts. Its owner/entry recovery takes
   // precedence over initialPlan, so a later recommendation never replaces retained work.
@@ -90,23 +90,23 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
     (binaryModel && !pairs.isError && !models.isError && (pairs.isPending || models.isPending))
   )
     return (
-      <main className={pageStyles({ width: 'workspace' })}>
+      <PageFrame width="workspace">
         <LoadingState variant="form" label={t('loading')} />
-      </main>
+      </PageFrame>
     )
   return (
-    <main
-      className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-0 sm:pb-0' })}
-    >
-      <Typography variant="title" as="h1">
-        {t('title')}
-      </Typography>
+    <PageFrame width="workspace" className="flex flex-1 flex-col pb-0 sm:pb-0">
       <WritingTestStudio
+        heading={
+          <Typography variant="title" as="h1" className="truncate">
+            {t('title')}
+          </Typography>
+        }
         ownerId={ownerId}
         seedKey={JSON.stringify(seed)}
         initialPlan={initialPlan}
       />
-    </main>
+    </PageFrame>
   )
 }
 export function WritingTestPage() {
@@ -122,19 +122,19 @@ export function WritingTestPage() {
     context: initialContext({ factor: 'model', stage: 'write', count: 2 }),
   }
   return (
-    <main
-      className={pageStyles({ width: 'workspace', className: 'flex flex-1 flex-col pb-0 sm:pb-0' })}
-    >
-      <Typography variant="title" as="h1">
-        {t('title')}
-      </Typography>
+    <PageFrame width="workspace" className="flex flex-1 flex-col pb-0 sm:pb-0">
       <WritingTestStudio
+        heading={
+          <Typography variant="title" as="h1" className="truncate">
+            {t('title')}
+          </Typography>
+        }
         ownerId={user?.id ?? ''}
         seedKey={`test:${testId}`}
         testId={testId}
         initialPlan={initialPlan}
       />
-    </main>
+    </PageFrame>
   )
 }
 export function WritingTestHistoryPage() {
@@ -143,7 +143,7 @@ export function WritingTestHistoryPage() {
     raw = useSearch({ strict: false })
   const search = writingTestHistorySearchSchema(raw as Record<string, unknown>)
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col' })}>
+    <PageFrame width="wide" className="flex flex-1 flex-col">
       <Typography variant="display">{t('history')}</Typography>
       <Typography variant="body" className="max-w-measure mt-3">
         {t('historyHelp')}
@@ -164,6 +164,6 @@ export function WritingTestHistoryPage() {
         stage={search.stage}
         sourcePostSlug={search.source}
       />
-    </main>
+    </PageFrame>
   )
 }

@@ -8,7 +8,7 @@ import {
 } from '@/entities/model-experiment'
 import { useSession } from '@/entities/session'
 import { useVoices, voiceRefLabel } from '@/entities/voice'
-import { Badge, type BadgeTone, Typography, typographyStyles, pageStyles } from '@/shared/ui'
+import { Badge, type BadgeTone, Typography, typographyStyles, PageFrame } from '@/shared/ui'
 import { stageOfTab, useModelStage } from '../model/useModelStage'
 import { ModelPageHeader } from './ModelPageHeader'
 import { ModelStageTabs } from './ModelStageTabs'
@@ -34,7 +34,7 @@ export function ModelHistoryPage() {
     })
   }
   return (
-    <main className={pageStyles({ width: 'wide', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
+    <PageFrame width="wide" className="pt-0 sm:pt-0 lg:pt-8">
       <ModelPageHeader title="history" description="historyDescription" />
       <ModelStageTabs to="/ai-models/experiments" withVoice />
       <section className="mt-6" aria-labelledby="recent-heading">
@@ -75,7 +75,7 @@ export function ModelHistoryPage() {
           )}
         </ModelResultsState>
       </section>
-    </main>
+    </PageFrame>
   )
 }
 

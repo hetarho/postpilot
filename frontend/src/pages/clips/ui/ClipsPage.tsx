@@ -5,7 +5,6 @@ import {
   clipDisplayTitle,
   clipFinished,
   clipState,
-  clipChannel,
   clipChannelPath,
   clipHistoryStateLabel,
   clipHistoryStatus,
@@ -20,7 +19,7 @@ import { useClipTemplates } from '@/entities/clip-template'
 import { isTerminal, progressLabel } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { ClipListControls, narrowClips, type ClipNarrowing } from '@/features/filter-clips'
-import { Clapperboard, Film } from 'lucide-react'
+import { Clapperboard } from 'lucide-react'
 import { ChannelActions } from '@/widgets/channel-actions'
 import { clsx } from 'clsx'
 import {
@@ -101,7 +100,8 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
       },
       replace: true,
     })
-  const listed = (projects.data ?? []).filter((project) => clipChannel(project.channel) === channel)
+  // Every video, whichever channel it was made for: there is one 영상 list (owner 2026-11-16).
+  const listed = projects.data ?? []
   const narrowed = narrowClips(listed, narrowing)
   // 완성 holds a confirmed or finalized clip with no run going; everything else is 작성 중
   // (CLIP-41). The latest unfinished clip is emphasized inside that group unless a narrowing is on.
@@ -234,10 +234,7 @@ function ClipsPage({ channel }: { channel: ClipChannel }) {
                   onClick={() => remember(project.id)}
                   className={workCardLinkClass}
                 >
-                  <StatusTile
-                    tone={status.tone}
-                    icon={channel === 'instagram_clip' ? Film : Clapperboard}
-                  />
+                  <StatusTile tone={status.tone} icon={Clapperboard} />
                   <span className="flex min-w-0 flex-1 flex-col gap-2">
                     <Typography
                       variant="fieldTitle"

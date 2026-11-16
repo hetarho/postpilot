@@ -3,7 +3,7 @@ import { useSession } from '@/entities/session'
 import { postReturnDestination } from '@/entities/post'
 import { clipReturnDestination, useClipProject } from '@/entities/clip-project'
 import { useWritingTestSource } from '@/entities/writing-test'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
@@ -326,6 +326,13 @@ export function AuthenticatedLayout() {
     }
   }, [])
 
+  // A screen on a `PageFrame` draws its way back in its own column and claims it; the shell
+  // draws one here only for a screen that has not (THEME-75).
+  const [returnClaims, setReturnClaims] = useState(0)
+  const claimReturn = useCallback(() => {
+    setReturnClaims((count) => count + 1)
+    return () => setReturnClaims((count) => count - 1)
+  }, [])
   const navigationValue = {
     ancestors: metadata.ancestors.map((item) => ({
       href: item.href,
@@ -333,6 +340,7 @@ export function AuthenticatedLayout() {
     })),
     returnTo: returnHref && returnName ? { href: returnHref, label: returnName } : undefined,
     Link: NavigationLink,
+    claimReturn,
   }
   const section = currentSection(pathname)
   const backLink =
@@ -341,7 +349,9 @@ export function AuthenticatedLayout() {
       !ownReturn &&
       !isTopLevelDestination(pathname) &&
       (navigationValue.ancestors.length > 0 || !!navigationValue.returnTo))
-  const backNav = backLink && (
+  // A hub section's return heads the hub's title, above the page, so it stays the shell's.
+  const framedNavigation = { ...navigationValue, hasReturn: backLink && !section }
+  const backNav = backLink && returnClaims === 0 && (
     <nav
       aria-label={t('returnLabel')}
       className="mx-auto w-full max-w-5xl px-4 pt-2 sm:px-6 lg:px-8"
@@ -385,7 +395,7 @@ export function AuthenticatedLayout() {
         }))
       : []
   return (
-    <NavigationProvider value={navigationValue}>
+    <NavigationProvider value={framedNavigation}>
       <div
         data-plans-shell={immersive || undefined}
         data-tab-bar={tabBar ? 'shown' : undefined}

@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { stageLabel } from '@/entities/model-catalog'
 import { useLeaderboard } from '@/entities/model-experiment'
 import { ModelLeaderboard } from '@/widgets/model-leaderboard'
-import { Typography, pageStyles } from '@/shared/ui'
+import { Typography, PageFrame } from '@/shared/ui'
 import { stageOfTab, useLeaderboardFilters, useModelStage } from '../model/useModelStage'
 import { LeaderboardFilters } from './LeaderboardFilters'
 import { ModelPageHeader } from './ModelPageHeader'
@@ -16,7 +16,7 @@ export function ModelLeaderboardPage() {
   const { window, scope } = useLeaderboardFilters()
   const { entries, isPending, isError, refetch } = useLeaderboard(stage, window, scope)
   return (
-    <main className={pageStyles({ width: 'board', className: 'pt-0 sm:pt-0 lg:pt-8' })}>
+    <PageFrame width="board" className="pt-0 sm:pt-0 lg:pt-8">
       <ModelPageHeader title="leaderboardTitle" description="leaderboardDescription" />
       <ModelStageTabs to="/ai-models/leaderboard" />
       <LeaderboardFilters window={window} scope={scope} />
@@ -37,6 +37,6 @@ export function ModelLeaderboardPage() {
           </div>
         </ModelResultsState>
       </section>
-    </main>
+    </PageFrame>
   )
 }

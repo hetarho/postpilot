@@ -10,6 +10,7 @@ import type { FakeClipProject, FakeClipsOptions } from '@/test/clips'
 import { clipProjectsKey, type ClipProjectDraft } from '@/entities/clip-project'
 import { readSourceManifest } from '@/features/upload-clip-sources'
 import { discardClipDraftQueues } from '@/features/edit-clip-project'
+import { clipDraftState } from '@/features/edit-clip-project/model/clip-draft-queue'
 import { putBlobWithProgress } from '@/shared/lib/upload'
 
 vi.mock('@/features/upload-clip-sources/model/manifest', async (original) => ({
@@ -48,6 +49,10 @@ const mount = (path: string, clips: FakeClipsOptions = {}) =>
       ...clips,
     },
   })
+/** The settings autosave's answer has reached the form: the queue is dry and its last save
+ *  landed. The status line no longer says 저장됨 (owner 2026-11-16), so this reads the queue. */
+const saveLanded = (projectId = project.id) =>
+  waitFor(() => expect(clipDraftState(projectId)).toBe('saved'), { timeout: 4000 })
 afterEach(() => {
   vi.restoreAllMocks()
   // The settings autosave queue is module state that outlives its form on purpose (CLIP-39), so
@@ -272,31 +277,16 @@ describe('clip directory and setup', () => {
     )
     expect(router.state.location.pathname).toBe('/clips/new')
   })
-  it('moves a clip to the other channel', async () => {
-    const writes: ClipProjectDraft[] = []
-    const { router } = mount('/naver-clip', { projectWrites: writes })
+  // A video is one kind of work whichever channel it goes to: the settings no longer offer to
+  // move a clip to the other channel (owner 2026-11-16).
+  it('offers no channel move in the clip settings', async () => {
     const user = userEvent.setup()
+    mount('/naver-clip')
     await user.click(await screen.findByRole('link', { name: /제주 여행/ }))
-    await clipGuideTo('content')
-    await screen.findByLabelText('클립 제목')
     await clipGuideTo('sources')
-    await user.dblClick(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
-    await screen.findByRole('button', { name: '네이버 클립으로 옮기기' })
-    expect(writes).toHaveLength(1)
-    expect(writes[0]).toMatchObject({
-      channel: 'instagram_clip',
-      title: project.title,
-      ratio: 'vertical',
-      targetDurationMs: 30000,
-    })
-    const back = screen.getByRole('link', { name: '인스타 클립으로 돌아가기' })
-    expect(back).toHaveAttribute('href', '/insta-clip')
-    await user.click(back)
-    await waitFor(() => expect(router.state.location.pathname).toBe('/insta-clip'))
-    expect(await screen.findByRole('link', { name: /제주 여행/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /클립으로 옮기기/ })).not.toBeInTheDocument()
   })
-  it('moves a completed clip without reopening editing or changing its result', async () => {
-    const writes: ClipProjectDraft[] = []
+  it('offers no channel move on a completed clip', async () => {
     const delivered = {
       id: 'delivered',
       contentType: 'video/mp4',
@@ -308,7 +298,6 @@ describe('clip directory and setup', () => {
     }
     const final = { at: '2026-10-01T00:00:00Z', planRevision: 1, resultId: 'delivered' }
     mount('/clips/project', {
-      projectWrites: writes,
       projects: [
         {
           ...project,
@@ -319,26 +308,12 @@ describe('clip directory and setup', () => {
         },
       ],
     })
-    const user = userEvent.setup()
-    const download = await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
+    await screen.findByRole('link', { name: /렌더 \d+ 다운로드/ })
     await clipGuideTo('sources')
-    await user.dblClick(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
-    await screen.findByRole('button', { name: '네이버 클립으로 옮기기' })
-    expect(writes).toHaveLength(1)
-    expect(writes[0]).toMatchObject({
-      channel: 'instagram_clip',
-      finalized: final,
-      result: delivered,
-      editPlanRevision: 1,
-      renderedPlanRevision: 1,
-    })
-    expect(download).toHaveAttribute('href', delivered.downloadUrl)
-    await user.click(screen.getByRole('tab', { name: '생성' }))
-    await clipGuideTo('content')
-    expect(await screen.findByLabelText('클립 제목')).toBeDisabled()
-    expect(screen.queryByRole('button', { name: '네이버 클립으로 옮기기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /클립으로 옮기기/ })).not.toBeInTheDocument()
   })
-  it('keeps setup clean while typing during a channel move', async () => {
+  // Once held behind a channel move; with no move left, the save that is held is the typing's own.
+  it('keeps setup clean while typing during a held save, so a re-read lands', async () => {
     let release = () => {}
     const held = new Promise<void>((resolve) => {
       release = resolve
@@ -346,30 +321,29 @@ describe('clip directory and setup', () => {
     let first = true
     let canonicalTitle = ''
     const writes: ClipProjectDraft[] = []
+    const gate = vi.fn(async () => {
+      if (first) {
+        first = false
+        await held
+      }
+    })
     const view = mount('/clips/project', {
       projectWrites: writes,
-      projectSaveGate: async () => {
-        if (first) {
-          first = false
-          await held
-        }
-      },
+      projectSaveGate: gate,
       readProject: (p) => (canonicalTitle ? { ...p, title: canonicalTitle } : p),
     })
     const user = userEvent.setup()
     await clipGuideTo('content')
     const title = await screen.findByLabelText('클립 제목')
-    await clipGuideTo('sources')
-    await user.click(screen.getByRole('button', { name: '인스타 클립으로 옮기기' }))
-    await clipGuideTo('content')
     await user.type(title, ' 기록')
+    await waitFor(() => expect(gate).toHaveBeenCalled(), { timeout: 4000 })
+    await user.type(title, '들')
     release()
-    await waitFor(() =>
-      expect(writes).toContainEqual(
-        expect.objectContaining({ channel: 'instagram_clip', title: '제주 여행 기록' }),
-      ),
+    await waitFor(
+      () => expect(writes).toContainEqual(expect.objectContaining({ title: '제주 여행 기록들' })),
+      { timeout: 4000 },
     )
-    expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
+    await saveLanded()
     canonicalTitle = '서버에서 다시 읽은 제목'
     await view.queryClient.invalidateQueries({
       queryKey: [...clipProjectsKey(view.transport, 'alice'), 'detail', 'project'],
@@ -429,11 +403,10 @@ describe('clip directory and setup', () => {
     expect(screen.queryByRole('button', { name: '설정 저장' })).not.toBeInTheDocument()
     await clipGuideTo('sources')
     expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled()
-    expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
-    expect(projectWrites[0]).toMatchObject({
-      title: '제주 여행 기록',
-      ratio: 'vertical',
-    })
+    await waitFor(
+      () => expect(projectWrites[0]).toMatchObject({ title: '제주 여행 기록', ratio: 'vertical' }),
+      { timeout: 4000 },
+    )
     await clipGuideTo('sources')
     expect(screen.getByLabelText('원본 영상 선택')).toBeEnabled()
   })
@@ -442,7 +415,9 @@ describe('clip directory and setup', () => {
     const held = new Promise<void>((resolve) => {
       release = resolve
     })
-    mount('/clips/project', { projectSaveGate: () => held })
+    const gate = vi.fn(() => held)
+    const writes: ClipProjectDraft[] = []
+    mount('/clips/project', { projectSaveGate: gate, projectWrites: writes })
     const user = userEvent.setup()
     await clipGuideTo('content')
     const title = await screen.findByLabelText('클립 제목')
@@ -450,14 +425,16 @@ describe('clip directory and setup', () => {
     // The save is on the wire. Disabling the form here would disable the field the owner is
     // typing in, and a browser blurs a control it disables — so a beat after every pause the
     // typing landed nowhere (CLIP-39).
-    expect(
-      await screen.findByText('저장하는 중…', undefined, { timeout: 4000 }),
-    ).toBeInTheDocument()
+    await waitFor(() => expect(gate).toHaveBeenCalled(), { timeout: 4000 })
     expect(title).toBeEnabled()
     expect(title).toHaveFocus()
     await user.type(title, '들')
     release()
-    expect(await screen.findByText('저장됨', undefined, { timeout: 4000 })).toBeInTheDocument()
+    await waitFor(
+      () => expect(writes).toContainEqual(expect.objectContaining({ title: '제주 여행 기록들' })),
+      { timeout: 4000 },
+    )
+    await saveLanded()
     // The keystrokes made during the flight are kept and go out after it, not lost to a refresh
     // from the answer that was already on its way.
     expect(title).toHaveValue('제주 여행 기록들')

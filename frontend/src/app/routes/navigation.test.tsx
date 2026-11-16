@@ -26,7 +26,7 @@ afterEach(() => {
   sessionStorage.clear()
   initializeI18n('ko')
 })
-// Guide: five verb tabs. Every post and clip lives in 내 글, everything taught to the AI in
+// Guide: five verb tabs. Every post and clip lives in 내 콘텐츠, everything taught to the AI in
 // 내 스타일, model choice and comparison in AI 고르기, and the account in 나.
 it.each([
   ['/', undefined],
@@ -85,7 +85,7 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
   const links = within(nav).getAllByRole('link')
   expect(links.map((link) => link.textContent)).toEqual([
     '만들기',
-    '내 글',
+    '내 콘텐츠',
     '내 스타일',
     'AI 고르기',
     '나',
@@ -97,15 +97,21 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
     '/ai-models',
     '/settings',
   ])
-  // A channel's list is a page of 내 글: that tab is current, told by the accent ink and
-  // aria-current, never by colour alone.
-  const mine = within(nav).getByRole('link', { name: '내 글' })
+  // A channel's list is a page of 내 콘텐츠: that tab is current, told by the accent ink and
+  // aria-current, never by colour alone. Its highlight holds the icon and the name together as
+  // one block, not a pill around the glyph alone.
+  const mine = within(nav).getByRole('link', { name: '내 콘텐츠' })
   expect(mine).toHaveAttribute('aria-current', 'page')
   expect(mine).toHaveClass('text-tab-bar-fg-current')
+  const indicator = mine.querySelector('.bg-tab-bar-indicator')
+  expect(indicator).not.toBeNull()
+  expect(indicator).toContainElement(mine.querySelector('svg'))
+  expect(indicator).toHaveTextContent('내 콘텐츠')
   for (const name of ['만들기', '내 스타일', 'AI 고르기', '나']) {
     const link = within(nav).getByRole('link', { name })
     expect(link).not.toHaveAttribute('aria-current')
     expect(link).toHaveClass('text-tab-bar-fg')
+    expect(link.querySelector('.bg-tab-bar-indicator')).toBeNull()
   }
   // The top bar is one slim row: the brand and the account menu, no destinations.
   const banner = screen.getByRole('banner')
@@ -127,12 +133,11 @@ it.each([false, true])('keeps the five verbs one tap away, desktop=%s', async (d
   expect(within(nav).getByRole('link', { name: '나' })).toHaveAttribute('aria-current', 'page')
   await user.click(within(nav).getByRole('link', { name: '만들기' }))
   await screen.findByRole('heading', { name: '무엇을 만들까요?', level: 1 })
-  // 만들기 asks one question: three big tiles, each opening its guided flow.
+  // 만들기 asks one question: two big tiles, 글 and 영상, each opening its guided flow.
   const choices = within(screen.getByRole('navigation', { name: '만들 것' }))
   expect(choices.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
     '/posts/new',
     '/clips/new?channel=naver_clip',
-    '/clips/new?channel=instagram_clip',
   ])
   // The writing screen hides the bar; the account menu still reaches 나. A new draft opens on
   // the guided flow's first question, 글 종류.
@@ -154,13 +159,9 @@ it('opens hub pages on the hub title and their sibling chips, with no back link'
   viewport(false)
   const view = renderAppAt('/naver-clip', { user: { id: 'alice' } })
   const chips = within(await screen.findByRole('navigation', { name: '나누어 보기' }))
-  expect(chips.getAllByRole('link').map((link) => link.textContent)).toEqual([
-    '전체',
-    '블로그',
-    '네이버 클립',
-    '인스타 클립',
-  ])
-  expect(chips.getByRole('link', { name: '네이버 클립' })).toHaveAttribute('aria-current', 'page')
+  // One 영상 section holds every video, whichever channel it is posted to.
+  expect(chips.getAllByRole('link').map((link) => link.textContent)).toEqual(['전체', '글', '영상'])
+  expect(chips.getByRole('link', { name: '영상' })).toHaveAttribute('aria-current', 'page')
   expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
 
   await act(() => view.router.navigate({ to: '/templates' }))
@@ -189,9 +190,15 @@ it('gives a 나 child one way back to 나, and remembers where it was opened fro
   await screen.findByRole('heading', { name: '나', level: 1 })
   await act(() => router.navigate({ to: '/account' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/account'))
-  const back = within(screen.getByRole('navigation', { name: '돌아가기' })).getByRole('link')
-  expect(back).toHaveAccessibleName('나')
+  // The page's frame draws the way back in its own column, on the title's row, and the shell
+  // draws none of its own: one way back, not two.
+  const page = await screen.findByRole('main')
+  const back = within(page).getByRole('link', { name: '나' })
   expect(back).toHaveAttribute('href', '/settings')
+  expect(back.parentElement).toContainElement(
+    within(page).getByRole('heading', { level: 1, name: '계정 설정' }),
+  )
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
   expect(screen.queryByRole('navigation', { name: '현재 위치' })).toBeNull()
   await act(() => router.navigate({ to: '/settings' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/settings'))
@@ -224,36 +231,31 @@ it('retains a 나 origin through reload and restores its document position on ex
   })
   view.unmount()
   const reopened = renderAppAt('/account', { transport: view.transport })
-  await userEvent.click(
-    within(await screen.findByRole('navigation', { name: '돌아가기' })).getByRole('link', {
-      name: '나',
-    }),
-  )
+  await screen.findByRole('heading', { level: 1, name: '계정 설정' })
+  await userEvent.click(within(screen.getByRole('main')).getByRole('link', { name: '나' }))
   await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/settings'))
   await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 480))
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
+// One 영상 entry makes a video for any channel; there is no separate Instagram entry.
 it.each([
-  ['ko', '블로그 글', '네이버 클립', '인스타 클립'],
-  ['en', 'Blog post', 'Naver Clip', 'Instagram Clip'],
+  ['ko', '글', '영상'],
+  ['en', 'Post', 'Video'],
 ] as const)(
-  'keeps exactly three home channel entries in %s without object writes',
-  async (locale, post, naver, insta) => {
+  'keeps exactly two home creation entries in %s without object writes',
+  async (locale, post, video) => {
     viewport(true)
     initializeI18n(locale)
     const calls: string[] = []
     renderAppAt('/', { user: { id: 'alice' }, calls })
     const main = await screen.findByRole('main')
-    expect(within(main).getAllByRole('link')).toHaveLength(3)
+    expect(within(main).getAllByRole('link')).toHaveLength(2)
     expect(within(main).getByRole('link', { name: post })).toHaveAttribute('href', '/posts/new')
-    expect(within(main).getByRole('link', { name: naver })).toHaveAttribute(
+    expect(within(main).getByRole('link', { name: video })).toHaveAttribute(
       'href',
       '/clips/new?channel=naver_clip',
     )
-    expect(within(main).getByRole('link', { name: insta })).toHaveAttribute(
-      'href',
-      '/clips/new?channel=instagram_clip',
-    )
+    expect(main.querySelector('a[href*="instagram_clip"]')).toBeNull()
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )
@@ -280,10 +282,9 @@ it('keeps the My work hub nodes, chip scroll and selected section through every 
   const title = sections.previousElementSibling
   sections.scrollLeft = 24
   for (const [label, path, heading] of [
-    ['블로그', '/naver-blog', '네이버 블로그'],
-    ['네이버 클립', '/naver-clip', '네이버 클립'],
-    ['인스타 클립', '/insta-clip', '인스타 클립'],
-    ['전체', '/my', '내 글'],
+    ['글', '/naver-blog', '네이버 블로그'],
+    ['영상', '/naver-clip', '영상'],
+    ['전체', '/my', '내 콘텐츠'],
   ]) {
     await userEvent.click(within(sections).getByRole('link', { name: label }))
     await screen.findByRole('heading', { level: 1, name: heading })
@@ -298,6 +299,15 @@ it('keeps the My work hub nodes, chip scroll and selected section through every 
     expect(sections.querySelectorAll('[aria-current]')).toHaveLength(1)
     expect(readNavigationEntry('alice', path)).toBeUndefined()
   }
+  // The old Instagram list is no longer a section of its own: its address lands on 영상, inside
+  // the same hub.
+  await act(() => view.router.navigate({ to: '/insta-clip' }))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/naver-clip'))
+  expect(screen.getByRole('navigation', { name: '나누어 보기' })).toBe(sections)
+  expect(within(sections).getByRole('link', { name: '영상' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  )
 })
 
 it.each(['/video-templates/new', '/video-templates/saved'])(

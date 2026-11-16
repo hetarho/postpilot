@@ -10,7 +10,12 @@ import {
   type ClipComposition,
   type ClipRecipe,
 } from '@/entities/clip-template'
-import { templateTargetAt, useWizardHeadingSuggestions, type TargetNode } from '@/entities/template'
+import {
+  templateTargetAt,
+  templateTargetQuestionCount,
+  useWizardHeadingSuggestions,
+  type TargetNode,
+} from '@/entities/template'
 import { formatAppFailure } from '@/shared/lib'
 import {
   Button,
@@ -139,31 +144,41 @@ function OwnedClipTemplateWizard({
       : state.step === 'stage'
         ? `stage:${state.cursor}`
         : state.step
-  const total = 3 + selected.length + 2
-  const current =
-    state.step === 'stages'
-      ? 1
-      : state.step === 'order'
-        ? 2
-        : state.step === 'headings'
-          ? 3
-          : state.step === 'stage'
-            ? 4 + state.cursor
-            : state.step === 'design'
-              ? total - 1
-              : total
-  const progress =
-    state.step === 'target'
-      ? {
-          text: t('targetProgress', { ns: 'clipWizard' }),
-          label: t('progressLabel', { ns: 'clipWizard' }),
-        }
-      : {
-          text: t('progress', { ns: 'clipWizard', current, total }),
-          label: t('progressLabel', { ns: 'clipWizard' }),
-          current,
-          total,
-        }
+  // One segment per question the owner actually answers, the way the post template wizard and the
+  // writing guide count them: each "what is it" level is its own step, and the per-stage screens
+  // share 내용, where the position names the stage.
+  const stepValues = [
+    ...Array.from({ length: templateTargetQuestionCount(state.path) }, (_, at) => `target:${at}`),
+    'stages',
+    'order',
+    'headings',
+    'stage',
+    'design',
+    'finish',
+  ]
+  const currentStep = state.step === 'target' ? `target:${state.depth}` : state.step
+  const at = Math.max(0, stepValues.indexOf(currentStep)) + 1
+  const progress = {
+    steps: stepValues.map((value) => ({
+      value,
+      label: t(
+        `steps.${value.startsWith('target:') ? `target${value.slice(7)}` : value}` as 'steps.stages',
+        { ns: 'clipWizard' },
+      ),
+    })),
+    current: currentStep,
+    label: t('progressLabel', { ns: 'clipWizard' }),
+    position:
+      state.step === 'stage'
+        ? t('positionPart', {
+            ns: 'clipWizard',
+            current: at,
+            total: stepValues.length,
+            part: state.cursor + 1,
+            parts: selected.length,
+          })
+        : t('position', { ns: 'clipWizard', current: at, total: stepValues.length }),
+  }
   const edit = (stageId: string, patch: Extract<ClipWizardEvent, { type: 'edit' }>['patch']) =>
     send({ type: 'edit', id: stageId, patch })
   const error = (problem: ReturnType<typeof stageProblem> | ReturnType<typeof nameProblem>) =>
@@ -418,7 +433,15 @@ function OwnedClipTemplateWizard({
           title: t('headings', { ns: 'clipWizard' }),
           help: t('headingHelp', { ns: 'clipWizard' }),
           back,
-          next,
+          // Suggestions asked for are waited for here, so the owner picks them on this screen.
+          next: headings.pending
+            ? {
+                ...next,
+                disabled: true,
+                pending: true,
+                reason: t('headingWaiting', { ns: 'clipWizard' }),
+              }
+            : next,
           children: (
             <div className="space-y-6">
               <HeadingSuggestions operation={headings} count={selected.length} />

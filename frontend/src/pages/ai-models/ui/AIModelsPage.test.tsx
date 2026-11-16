@@ -19,6 +19,14 @@ async function pick(user: ReturnType<typeof userEvent.setup>, stage: string, mod
   return sheet
 }
 
+/** MODEL-71: the 추천 조합 open in one sheet from 추천으로 적용 beside 지금 쓰는 AI. */
+async function openRecommendations(user: ReturnType<typeof userEvent.setup>) {
+  const main = within(await screen.findByRole('main'))
+  const inUse = within(main.getByRole('region', { name: '지금 쓰는 AI' }))
+  await user.click(inUse.getByRole('button', { name: '추천으로 적용' }))
+  return within(await screen.findByRole('dialog', { name: '추천 조합' }))
+}
+
 const destinations = [
   ['/ai-models', '/ai-models', 'AI 고르기', 'Pick AI'],
   ['/ai-models/compare', '/tests', '글쓰기 테스트', 'Writing tests'],
@@ -43,6 +51,10 @@ it.each(['ko', 'en'] as const)(
         name: locale === 'ko' ? '바꾸기 · 말투 분석' : 'Change · Learning your style',
       }),
     ).toBeVisible()
+    // The 추천 조합 wait behind 추천으로 적용, in a sheet; none is listed at the page's foot.
+    expect(
+      main.queryByRole('heading', { name: locale === 'ko' ? '추천 조합' : 'Recommended sets' }),
+    ).toBeNull()
     expect(procedures).not.toContain('ListWritingTests')
     for (const [oldPath, canonical, ko, en] of destinations) {
       await act(() => router.navigate({ to: oldPath }))
@@ -52,8 +64,8 @@ it.each(['ko', 'en'] as const)(
         screen.queryByRole('button', { name: locale === 'ko' ? '비교 시작' : 'Start comparison' }),
       ).toBeNull()
       expect(
-        screen.queryByRole('heading', {
-          name: locale === 'ko' ? '추천 조합' : 'Recommended sets',
+        screen.queryByRole('button', {
+          name: locale === 'ko' ? '추천으로 적용' : 'Apply a recommendation',
         }) !== null,
       ).toBe(canonical === '/ai-models')
     }
@@ -124,11 +136,15 @@ it('offers named common test entries and optional A/B settings without changing 
     },
   })
   const main = within(await screen.findByRole('main'))
+  const compare = within(main.getByRole('region', { name: '비교해 보기' }))
+  // Two equal comparison cards, each with its own way in.
   for (const [name, stage] of [
-    ['비교해 보기', 'write'],
+    ['글 쓰는 AI 비교', 'write'],
     ['사진 보는 AI 비교', 'observe'],
   ] as const) {
-    const link = main.getByRole('link', { name })
+    const link = within(compare.getByRole('region', { name })).getByRole('link', {
+      name: '비교하기',
+    })
     const url = new URL(link.getAttribute('href')!, 'https://postpilot.test')
     expect(url.pathname).toBe('/tests')
     expect(Object.fromEntries(url.searchParams)).toMatchObject({
@@ -138,10 +154,16 @@ it('offers named common test entries and optional A/B settings without changing 
       entry: '/ai-models',
     })
   }
-  expect(main.getByRole('link', { name: '지난 비교' })).toHaveAttribute(
+  expect(compare.getAllByRole('link', { name: '비교하기' })).toHaveLength(2)
+  // 지난 비교 sits beside the comparisons' heading.
+  expect(compare.getByRole('link', { name: '지난 비교' })).toHaveAttribute(
     'href',
     '/tests/history?entry=%2Fai-models',
   )
+  // The default candidates are a setting of their own, outside either comparison.
+  expect(
+    compare.queryByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }),
+  ).not.toBeInTheDocument()
   expect(main.getAllByRole('button', { name: /^바꾸기 · / })).toHaveLength(3)
   await user.click(main.getByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }))
   const pair = within(await main.findByRole('region', { name: '글 작성 두 모델 후보' }))
@@ -513,6 +535,7 @@ it('keeps a voice-context leaderboard alias in voice-filtered paid history rathe
 // MODEL-71: every set the operator curated is offered, in their order, each with its own apply
 // control; the set id is the server's handle and is never shown.
 it('offers every recommended set in the operator order', async () => {
+  const user = userEvent.setup()
   renderAppAt('/ai-models', {
     user: { id: 'alice' },
     providers: {
@@ -534,10 +557,12 @@ it('offers every recommended set in the operator order', async () => {
       ],
     },
   })
-  const section = within(
-    (await screen.findByRole('heading', { name: '추천 조합' })).closest('section')!,
-  )
+  const section = await openRecommendations(user)
   const items = await section.findAllByRole('listitem')
+  // The sets live in the sheet alone; the page itself lists none.
+  const main = within(screen.getByRole('main'))
+  expect(main.queryByText('Free start')).not.toBeInTheDocument()
+  expect(main.queryByRole('button', { name: '추천 조합 적용' })).not.toBeInTheDocument()
   expect(
     items.map((item) => within(item).getByText(/Free start|Best quality/).textContent),
   ).toEqual(['Free start', 'Best quality'])
@@ -546,12 +571,17 @@ it('offers every recommended set in the operator order', async () => {
 })
 
 it('says there is no recommended set rather than loading forever', async () => {
+  const user = userEvent.setup()
   renderAppAt('/ai-models', { user: { id: 'alice' }, providers: { recommendationSets: [] } })
-  expect(await screen.findByText('아직 추천 조합이 없어요.')).toBeInTheDocument()
-  expect(screen.queryByText('추천 조합을 불러오는 중…')).not.toBeInTheDocument()
+  const sheet = await openRecommendations(user)
+  expect(await sheet.findByText('아직 추천 조합이 없어요.')).toBeInTheDocument()
+  expect(sheet.queryByText('추천 조합을 불러오는 중…')).not.toBeInTheDocument()
 })
 
 it('reports a failed recommendations read as a failure', async () => {
+  const user = userEvent.setup()
   renderAppAt('/ai-models', { user: { id: 'alice' }, providers: { recommendationsFail: true } })
-  expect(await screen.findByText('추천 조합을 불러오지 못했어요.')).toBeInTheDocument()
+  const sheet = await openRecommendations(user)
+  expect(await sheet.findByText('추천 조합을 불러오지 못했어요.')).toBeInTheDocument()
+  expect(sheet.queryByText('아직 추천 조합이 없어요.')).not.toBeInTheDocument()
 })

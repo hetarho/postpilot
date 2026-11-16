@@ -88,7 +88,8 @@ export function ModelSelect({
         role="status"
         className="text-content-tertiary mt-1 break-words empty:hidden"
       >
-        {status ?? (saving ? t('pair.saving') : null)}
+        {/* No "saving" line: a pick is saved as it is made (owner 2026-11-16). */}
+        {status ?? null}
       </Typography>
       {(error || notice) && (
         <Typography

@@ -25,7 +25,7 @@ import {
   SegmentedControl,
   Textarea,
   Typography,
-  pageStyles,
+  PageFrame,
   typographyStyles,
 } from '@/shared/ui'
 
@@ -69,11 +69,14 @@ export function ExperimentReview({
       />
     )
   return (
-    <main className={pageStyles({ width: 'board' })}>
-      {backLink(experiment)}
-      <Typography variant="display" className="mt-4">
-        {t('experiment.title', { ns: 'models' })}
-      </Typography>
+    <PageFrame width="board">
+      {/* ← and the record's name on one row, as every child screen's top row is. */}
+      <div className="flex min-h-11 flex-wrap items-center gap-2">
+        {backLink(experiment)}
+        <Typography variant="title" as="h1" className="min-w-0 flex-1 truncate">
+          {t('experiment.title', { ns: 'models' })}
+        </Typography>
+      </div>
       <div className="mt-4">
         <ExperimentActions experiment={experiment} activeCandidateId={activeId} />
       </div>
@@ -149,7 +152,7 @@ export function ExperimentReview({
           </div>
         </ActionBar>
       )}
-    </main>
+    </PageFrame>
   )
 }
 
@@ -187,7 +190,7 @@ function Placeholder({
   retryLabel: string
 }) {
   return (
-    <main className={pageStyles({ className: 'py-10' })}>
+    <PageFrame className="py-10">
       {backLink}
       <LoadingStatus
         label={message}
@@ -206,7 +209,7 @@ function Placeholder({
           {retryLabel}
         </Button>
       )}
-    </main>
+    </PageFrame>
   )
 }
 

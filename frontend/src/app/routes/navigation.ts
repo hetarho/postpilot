@@ -60,8 +60,8 @@ export function currentSection(pathname: string): HubSection | undefined {
 export const MINE_SECTIONS: readonly { key: MineSection; href: string }[] = [
   { key: 'all', href: '/my' },
   { key: 'blog', href: '/naver-blog' },
+  // One 영상 section: a video is a video, whichever channel it is posted to (owner 2026-11-16).
   { key: 'naverClip', href: '/naver-clip' },
-  { key: 'instaClip', href: '/insta-clip' },
 ]
 export const STYLE_SECTIONS: readonly { key: StyleSection; href: string }[] = [
   { key: 'voices', href: '/voices' },

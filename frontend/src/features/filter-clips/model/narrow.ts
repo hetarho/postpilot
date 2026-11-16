@@ -1,5 +1,4 @@
 import {
-  clipChannel,
   clipMatchesHistoryFilter,
   type ClipChannel,
   type ClipProject,
@@ -27,8 +26,9 @@ function normalize(value: string): string {
  *  under 초안 — the same rule the post list follows for its own badge — and 완료 holds 게시됨. */
 export function narrowClips(projects: ClipProject[], narrowing: ClipNarrowing): ClipProject[] {
   const query = normalize(narrowing.q ?? '')
+  // No channel narrowing: the one 영상 list holds every clip, whichever channel it was made for
+  // (CLIP-41). `narrowing.channel` only names where the list's creation starts.
   return projects.filter((project) => {
-    if (clipChannel(project.channel) !== clipChannel(narrowing.channel)) return false
     if (narrowing.status && !clipMatchesHistoryFilter(project, narrowing.status)) return false
     return query === '' || normalize(project.title).includes(query)
   })

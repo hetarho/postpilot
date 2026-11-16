@@ -19,12 +19,17 @@ export function resolveSaveStatus(state: SaveState, settled: boolean): SaveStatu
 
 /** The `common` namespace key each resolved state reads, `null` for silence. Keys rather than
  *  copy, so this file stays react- and i18next-free (ARCH-18), and `as const` so the caller's
- *  `t()` still sees the literal keys its own typing demands. */
+ *  `t()` still sees the literal keys its own typing demands.
+ *
+ *  A save that is waiting, running or done says nothing: saving is the product's job, not news
+ *  for the owner, and a 저장 대기 중 → 저장 중 → 저장됨 line flickering beside the work only drew the
+ *  eye away from it (owner 2026-11-16). Only a save that is failing speaks — that one can lose
+ *  the owner's words. */
 export const SAVE_STATUS_LABEL_KEYS = {
   quiet: null,
-  dirty: 'state.savePending',
-  saving: 'action.saving',
-  saved: 'state.saved',
+  dirty: null,
+  saving: null,
+  saved: null,
   error: 'state.saveRetrying',
   refused: 'state.saveRefused',
 } as const satisfies Record<SaveStatusState, string | null>

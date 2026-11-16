@@ -317,6 +317,27 @@ export function nodeAt(
   return node
 }
 
+/** How many "what is it" questions a path of choices runs through: the ones answered on it, plus
+ *  the fewest still below where it stops — so the wizard's progress counts each question as its
+ *  own step from the first screen, and grows by one when a deeper branch (제품 → 종류 → 형식) is
+ *  chosen. */
+export function targetQuestionCount(
+  path: readonly string[],
+  tree: TargetNode = TARGET_TREE,
+): number {
+  const below = (node: TargetNode): number =>
+    node.children?.length ? 1 + Math.min(...node.children.map(below)) : 0
+  let node: TargetNode = tree
+  let count = 0
+  for (const key of path) {
+    const next = node.children?.find((child) => child.key === key)
+    if (!next) break
+    count += 1
+    node = next
+  }
+  return count + below(node)
+}
+
 /** Every leaf with the path that reaches it, for the catalog's own checks. */
 export function leaves(tree: TargetNode = TARGET_TREE, path: readonly string[] = []) {
   const out: Array<{ path: string[]; roles: readonly RoleKey[] }> = []

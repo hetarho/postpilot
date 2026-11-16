@@ -14,7 +14,7 @@ import {
   FieldMessage,
   Listbox,
   LoadingState,
-  ProgressBar,
+  GuideProgress,
   Typography,
   type ChatMessage,
 } from '@/shared/ui'
@@ -268,10 +268,12 @@ function AccountLearningChat({
           {savedMessage ? t('prompts.saved') : ''}
         </Typography>
       </div>
-      <ProgressBar
-        label={t('prompts.progress')}
-        done={count}
-        total={QUESTIONNAIRE_BATCH_SIZE}
+      {/* One segment per answer the chat asks for, drawn like every other sequence in the app;
+          the one being answered now is the current segment. */}
+      <GuideProgress
+        steps={Array.from({ length: QUESTIONNAIRE_BATCH_SIZE }, (_, at) => ({ value: String(at) }))}
+        current={String(Math.min(count, QUESTIONNAIRE_BATCH_SIZE - 1))}
+        ariaLabel={t('prompts.progress')}
         className="mt-2 md:mt-3"
       />
       {state.phase === 'complete' && !profile.made && profile.readiness.percent < 100 && (

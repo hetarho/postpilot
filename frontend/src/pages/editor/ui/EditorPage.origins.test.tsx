@@ -140,7 +140,8 @@ it('keeps the same Korean/emoji input and caret through origin toggle, compositi
   fireEvent.change(input, { target: { value: '더 최신 입력 😀' } })
   input.setSelectionRange(3, 3)
   harness.finish()
-  await waitFor(() => expect(screen.getByText('저장 대기 중')).toBeInTheDocument())
+  // The queue sends the newer input only once the older save's answer has landed.
+  await waitFor(() => expect(harness.calls).toEqual(['save', 'save']), { timeout: 4000 })
   expect(screen.getByRole('textbox', { name: '1번째 블록 내용' })).toBe(input)
   expect(input.value).toBe('더 최신 입력 😀')
   expect(input.selectionStart).toBe(3)

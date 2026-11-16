@@ -9,6 +9,18 @@ export const i18n = {
     wizard: {
       progress: '{{current}} / {{total}}단계',
       progressLabel: '템플릿 만들기 진행',
+      position: '{{current}} / {{total}}',
+      positionPart: '{{current}} / {{total}} · 부분 {{part}}/{{parts}}',
+      steps: {
+        target0: '종류',
+        target1: '세부 종류',
+        target2: '형식',
+        sections: '구성',
+        order: '순서',
+        headings: '소제목',
+        section: '내용',
+        finish: '완성',
+      },
       targetProgress: '어떤 글인지 고르는 중',
       back: '이전',
       next: '다음',
@@ -38,6 +50,7 @@ export const i18n = {
       },
       headings: {
         title: '부분마다 소제목을 정해요',
+        waiting: '제목 제안을 받는 중이에요. 끝나면 골라 주세요.',
         help: '내 블로그에서 쓰는 말로 바꿔 보세요. 같은 구성이어도 소제목이 다르면 다른 글이 돼요.',
         field: '{{name}} 소제목',
         suggest: '제목 제안 받기',
@@ -60,6 +73,29 @@ export const i18n = {
         contentWriteHelp: '내가 남긴 메모와 사진으로 AI가 이 부분을 써요.',
         contentAskHelp: '글을 쓸 때 이 질문에 답하면, 그 답을 바탕으로 AI가 이 부분을 써요.',
         contentLiteralHelp: '여기 적은 문구가 매번 그대로 들어가요.',
+        helpOpen: '이 자리에 들어갈 것 설명 보기',
+        help: {
+          title: '이 자리에 들어갈 것, 이렇게 골라요',
+          intro:
+            '템플릿의 부분마다, 나중에 글을 쓸 때 그 자리를 어떻게 채울지 정해요. 부분마다 다르게 골라도 돼요.',
+          write: {
+            name: 'AI가 전부 자동으로 작성',
+            what: '글을 쓸 때 메모와 사진만 남기면, AI가 그걸 보고 이 부분을 통째로 써요.',
+            when: '이럴 때 좋아요: 분위기나 첫인상처럼 사진과 느낌만으로 충분한 부분',
+          },
+          ask: {
+            name: '질문을 바탕으로 작성',
+            what: '글을 쓸 때 여기 적은 질문이 나와요. 짧게 답하면 AI가 그 답을 살려 문장으로 풀어 써요. 예: “대표 메뉴와 가격은?”에 “돈가스 12,000원”이라고 답하면, 그 내용이 정확히 들어간 문단이 돼요.',
+            when: '이럴 때 좋아요: 가격, 메뉴 이름, 주차처럼 꼭 정확해야 하는 내용',
+          },
+          literal: {
+            name: '항상 적을 고정 문구',
+            what: '여기 적어 둔 문구가 글마다 그대로 들어가요. AI가 고치지 않아요.',
+            when: '이럴 때 좋아요: 협찬 안내, 영업시간·주소처럼 매번 같은 문장',
+          },
+          hide: '다음부터 보지 않기',
+          close: '확인',
+        },
         kinds: {
           writing: '글 쓸 때',
           result: '완성된 글',
@@ -109,6 +145,18 @@ export const i18n = {
     wizard: {
       progress: 'Step {{current}} of {{total}}',
       progressLabel: 'Template progress',
+      position: '{{current}} / {{total}}',
+      positionPart: '{{current}} / {{total}} · part {{part}}/{{parts}}',
+      steps: {
+        target0: 'Kind',
+        target1: 'Type',
+        target2: 'Form',
+        sections: 'Parts',
+        order: 'Order',
+        headings: 'Headings',
+        section: 'Content',
+        finish: 'Finish',
+      },
       targetProgress: 'Choosing what you write about',
       back: 'Back',
       next: 'Next',
@@ -138,6 +186,7 @@ export const i18n = {
       },
       headings: {
         title: 'A heading for each part',
+        waiting: 'Suggestions are on the way. Pick one when they arrive.',
         help: 'Use the words your blog uses. The same parts with your own headings make a post of your own.',
         field: 'Heading for {{name}}',
         suggest: 'Suggest headings',
@@ -161,6 +210,29 @@ export const i18n = {
         contentAskHelp:
           'Each post asks this question, and the AI writes this part from your answer.',
         contentLiteralHelp: 'This text goes in as it is every time.',
+        helpOpen: 'What goes in this place',
+        help: {
+          title: 'Choosing what goes in this place',
+          intro:
+            'For each part of the template, decide how it gets filled when a post is written. Each part can choose differently.',
+          write: {
+            name: 'AI writes all of it',
+            what: 'When writing, leave a memo and photos, and the AI writes this whole part from them.',
+            when: 'Good for: mood or first impressions, where photos and a feeling are enough',
+          },
+          ask: {
+            name: 'Written from a question',
+            what: 'When writing, this question appears. Answer briefly and the AI writes the answer into sentences. For example, answering “What is the signature dish and price?” with “Tonkatsu, 12,000 won” gives a paragraph that states exactly that.',
+            when: 'Good for: prices, menu names, parking — facts that must be exact',
+          },
+          literal: {
+            name: 'Fixed text every time',
+            what: 'The text written here goes into every post as it is. The AI does not change it.',
+            when: 'Good for: sponsorship notices, opening hours or an address — the same sentence every time',
+          },
+          hide: 'Do not show again',
+          close: 'Got it',
+        },
         kinds: {
           writing: 'While writing',
           result: 'In the post',

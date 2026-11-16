@@ -64,11 +64,8 @@ describe('session guard', () => {
 describe('the app home', () => {
   it('renders creation choices at the root', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
-    expect(await screen.findByRole('link', { name: /블로그 글/ })).toHaveAttribute(
-      'href',
-      '/posts/new',
-    )
-    expect(screen.getByRole('link', { name: '네이버 클립' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '글' })).toHaveAttribute('href', '/posts/new')
+    expect(screen.getByRole('link', { name: '영상' })).toHaveAttribute(
       'href',
       '/clips/new?channel=naver_clip',
     )
@@ -411,7 +408,7 @@ describe('lazily loaded routes', () => {
     ['/about', '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로'],
     ['/ai-models', 'AI 고르기'],
     ['/create', '무엇을 만들까요?'],
-    ['/my', '내 글'],
+    ['/my', '내 콘텐츠'],
     ['/style', '내 스타일'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
@@ -664,7 +661,7 @@ describe('theme preferences in the real route tree', () => {
       within(navigation)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['만들기', '내 글', '내 스타일', 'AI 고르기', '나'])
+    ).toEqual(['만들기', '내 콘텐츠', '내 스타일', 'AI 고르기', '나'])
     // The tab bar is the last thing in the shell, after the page.
     expect(
       screen.getByRole('main').compareDocumentPosition(navigation) &
@@ -743,7 +740,8 @@ describe('localized registered-route smoke', () => {
       materials: '학습 데이터',
       models: 'AI 고르기',
       create: '무엇을 만들까요?',
-      mine: '내 글',
+      mine: '내 콘텐츠',
+      clips: '영상',
       style: '내 스타일',
       retry: '다시 시도',
       kind: '어떤 글을 쓰시나요?',
@@ -760,7 +758,8 @@ describe('localized registered-route smoke', () => {
       materials: 'Training data',
       models: 'Pick AI',
       create: 'What shall we make?',
-      mine: 'My work',
+      mine: 'My content',
+      clips: 'Videos',
       style: 'My style',
       retry: 'Try again',
       kind: 'What kind of post is this?',
@@ -845,6 +844,14 @@ describe('localized registered-route smoke', () => {
         { path: '/my', role: 'heading', name: text.mine, signedIn: true },
         { path: '/style', role: 'heading', name: text.style, signedIn: true },
         { path: '/library', role: 'heading', name: text.mine, signedIn: true, expectedPath: '/my' },
+        // Videos are one list: the old Instagram address lands on it.
+        {
+          path: '/insta-clip',
+          role: 'heading',
+          name: text.clips,
+          signedIn: true,
+          expectedPath: '/naver-clip',
+        },
         {
           path: '/ai-models/experiments/smoke',
           role: 'button',
@@ -923,7 +930,7 @@ describe('localized registered-route smoke', () => {
       const shell = main.parentElement
       expect(shell).toHaveClass('flex', 'flex-1', 'flex-col')
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
-      // Guide: five verb tabs — 만들기 · 내 글 · 내 스타일 · AI 고르기 · 나.
+      // Guide: five verb tabs — 만들기 · 내 콘텐츠 · 내 스타일 · AI 고르기 · 나.
       expect(
         within(screen.getByRole('navigation', { name: '주요' })).getAllByRole('link'),
       ).toHaveLength(5)
