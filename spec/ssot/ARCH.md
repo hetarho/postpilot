@@ -1,8 +1,16 @@
 # ARCH postpilot architecture
-> r24 | Code placement, Gusta task/batch/CI verification and a browser-owned media pipeline.
+> r25 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
+- ARCH-71 [o] product stage and support scope (→~ARCH-38 →~THEME-14 →~THEME-20 →~CLIP-155)
+  - product-stage: alpha
+  - supported-browsers: latest stable desktop Chrome is the primary environment, including browser media; the phone UI supports latest stable iOS Safari and Android Chrome
+  - supported-platforms: web on Windows and macOS desktops and on iOS and Android phones, latest stable OS releases
+  - supported-app-versions: none (web only, no installed client)
+  - excluded-support: compatibility matrices for other browsers and older OS or browser versions; other browsers are guided by the runtime capability check in CLIP-155
+  - support-review: when closed beta opens
+  - validation-baseline: unresolved until a verification candidate records the observed browser and OS versions
 - ARCH-2 [o] shape:
   | directory | holds |
   |---|---|
@@ -68,7 +76,7 @@
 - ARCH-24 [o] implementation verification reuses existing regression coverage and adds or changes tests only for uncovered behavior; FE vitest (jsdom + Testing Library) and BE Go tests stay beside the code
   - task acceptance names affected unit tests and fast static checks; run them once just before commit through `vibe check --tier task`, reusing valid evidence
   - assess the complete task delta from its starting revision, including intermediate commits, deletions and uncommitted changes; include FE consumers/shared harnesses and BE reverse dependencies/wiring
-  - import-based selection is an aid, not proof of coverage; shared contracts, migrations, authentication, media behavior and test configuration require their matching consumer/integration regressions at the coordinator's batch gate (→!ARCH-31)
+  - import-based selection is an aid, not proof of coverage; shared contracts, migrations, authentication, media behavior and test configuration require their matching consumer/integration regressions at the shared batch gate (→!ARCH-31)
   - an impact that cannot be bounded expands the batch selection to the affected full suite; unit sessions maintain integration/e2e tests and hand off exact commands and test paths in result limits
   - task checks are affected unit tests plus applicable static checks expected under a minute; record commands, input revision, actual evidence and selection rationale; an empty selection is not behavioral verification
   - build, browser/integration/e2e and full-suite success belong to batch completion; task completion records implementation, affected-unit verification and the handoff without claiming unrun coverage
@@ -88,7 +96,7 @@
 - ARCH-30 [o] verify skills: `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check`
   - the skills gusta installs into `.claude/skills` and `.codex/skills`, as `.gusta-lock.json` lists them, are package-managed and never hand-edited; `recomend-models`, in both directories, is the project's own skill and is edited in place
   - gusta runs through npx at the version `.gusta-lock.json` records and is never a package dependency ← check compares the files with the running package's skills, so `@latest` fails CI whenever a release lands before the update
-- ARCH-31 [o] the initiating Gusta coordinator owns task/batch/CI completion, verification and publication under SETTINGS
+- ARCH-31 [o] the initiating Gusta coordinator owns task completion; the shared integration owner (the initiating coordinator when it is the only participant) owns batch/CI completion, verification and publication of the fixed candidate under SETTINGS
   - task: →=ARCH-24
   - batch:
     - `pnpm test:dev`
@@ -104,9 +112,9 @@
     - `python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v`
     - `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...`
   - CI: after each actual code push inspect `CI` and every triggered deployment/media workflow for the pushed revision; an unavailable remote result remains unchecked, with that revision recorded for follow-up
-  - the batch gate runs once on the final synchronized committed implementation candidate before landing or whole-work completion, including when committing only; retain ARCH-25–30 coverage and deployment Python unittests with deploy/requirements-test.txt installed
-  - the coordinator adds the production Compose validation, both deployed CPU image builds and all three media gates when the final diff can trigger `Deploy backend` or `Verify media`, or changes their definitions; exact commands, targets, CPU/memory budgets and disposable environment handling live in `docs/verification.md`
-  - apply the installed Gusta verification cache, process cleanup, ownership and cumulative failure limits; reuse each still-valid successful check and rerun failed, affected or unrun checks after a targeted repair
+  - the batch gate runs once on the fixed shared integration candidate after every participating session is ready, before landing or whole-work completion, including when committing only; retain ARCH-25–30 coverage and deployment Python unittests with deploy/requirements-test.txt installed
+  - the integration owner adds the production Compose validation, both deployed CPU image builds and all three media gates when the final diff can trigger `Deploy backend` or `Verify media`, or changes their definitions; exact commands, targets, CPU/memory budgets and disposable environment handling live in `docs/verification.md`
+  - apply the installed Gusta verification cache, process cleanup, shared integration ownership and deadline, closing-reserve and unit limits; reuse each still-valid successful check and rerun failed, affected or unrun checks after a targeted repair
   - reuse requires unchanged consumed source, configuration, dependencies, command, environment and scope; docs/progress changes alone do not prove validity, and source/input mutation during a check invalidates its evidence
   - implementation, review and delegated units hand off heavy checks; human/listening/hardware/live-deployment and qualification conditions remain explicit activation or delivery gates and are never closed by unit fixtures
   - a local pass does not certify GitHub runners, GHCR, SSH, production health or external CORS; record a failing workflow/job/step and first meaningful error, repair the observed boundary, and never represent an unrun or failed gate as passed
@@ -124,7 +132,7 @@
   | I7 | migrations are embedded and run at boot (ARCH-10) |
 - ARCH-35 [o] doc truth order: behavior → `ssot/<DOMAIN>.md`, placement and gates → this file, progress → STATE.md; root PRD.md and DEPLOY.md are reference docs and ssot/ wins on conflict
 - ARCH-36 [o] real-binary media and clip-input smokes run in the image that executes each supported media profile, including its fonts, filters and runtime libraries; CPU images keep the nonroot runtime and a GPU profile is additionally exercised on matching NVIDIA hardware; env gates keep these smokes outside ARCH-26
-- ARCH-37 [o] production media work follows the affected-unit task checks and coordinator-owned real-image/integration batch checks in →!ARCH-24 and →!ARCH-31; introducing or enabling a production GPU profile additionally requires a run on supported GPU hardware, with unavailable hardware recorded as an unmet activation gate; documentation, image packaging and isolated diagnostic tooling may complete with their scoped evidence while recording GPU execution as unverified, never as a passing GPU substitute; the media smokes remain separate from ARCH-26
+- ARCH-37 [o] production media work follows the affected-unit task checks and the shared real-image/integration batch checks in →!ARCH-24 and →!ARCH-31; introducing or enabling a production GPU profile additionally requires a run on supported GPU hardware, with unavailable hardware recorded as an unmet activation gate; documentation, image packaging and isolated diagnostic tooling may complete with their scoped evidence while recording GPU execution as unverified, never as a passing GPU substitute; the media smokes remain separate from ARCH-26
 - ARCH-38 [o] until closed beta opens, the smokes run beside the deploy instead of upstream of it: the pushed image does not depend on them, the rollout does not wait, and a failure is reported rather than withheld from production; the blocking gate returns when closed beta opens ← the smokes are ten of the deploy's twelve minutes while the owner is the only user, and ARCH-32's health gate and rollback still stand
 - ARCH-39 [o] each media image is checked at build time against every filter, decoder, encoder and muxer its declared execution profiles name; a hardware profile also passes the runtime capability check in ARCH-53 ← compiled-in encoder names alone do not prove that a device and driver can execute them
 - ARCH-40 [o] construction: a collaborator a service needs to do its job is a constructor argument; `Set*`/`With*` setters exist only for optional behaviour whose absence is a legal, tested mode; the API composition root is `loadPlatform → buildContexts → registerJobs → serve`; the media-worker root wires configuration, transport and execution adapters only, with no application rule bodies in either command and no database migrations in the worker ← a forgotten setter is a nil at runtime and only the slowest test package can catch it
@@ -211,6 +219,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r25 261116 ARCH-71+ product stage alpha with a Chrome-first support scope; ARCH-31✎ initiating coordinator owns batch/CI and publication under cumulative failure limits→shared integration owner (initiating coordinator when alone) under deadline/closing-reserve/unit limits; ARCH-24✎ ARCH-37✎ coordinator's/coordinator-owned batch gate→shared batch gate
 - r24 261114 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ task build/full-suite completion→unit/static task checks plus coordinator batch handoff; pre-push-only full CI→final implementation batch and CI; ARCH-70✎ serial direct-main orchestration→Gusta/SETTINGS
 - r23 261112 ARCH-30✎ skill check `pnpm exec haeram-spec-creator check` (devDependency, `.haeram-spec-creator-lock.json`)→gusta through npx at the `.gusta-lock.json` version, never a dependency
 - r22 261111 ARCH-20✎ cards are rare and never nested→a card is the lifted plane content sits on, never nested (→THEME-13)
