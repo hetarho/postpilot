@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
 | hdref | ihaelam-ui-MacBookPro | pair | 2026-11-16T14:31Z | 2026-11-16T14:40Z | - | gusta-session-start-hdref-c3df08ba | 64b47da1f13b | da8e3d345d9d016094ffa3ea |
-| vcx | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:38Z | 2026-11-16T15:03Z | T873 | gusta-session-start-vcx-4f46f7d4 | 64d05b912eef | f5a394dab36ea32f44a2de9a |
+| vcx | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:38Z | 2026-11-16T15:03Z | - | gusta-session-start-vcx-4f46f7d4 | 64d05b912eef | f5a394dab36ea32f44a2de9a |
 | wopts | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:39Z | 2026-11-16T15:01Z | - | gusta-session-start-wopts-7b887426 | 56a04801fff6 | c699e1db263037aca837d56d |
 
 ## inbox
@@ -192,8 +192,10 @@
 | T871 | vcx | gusta-session-start-vcx-4f46f7d4 | b1b5fbc8a7b7 | 2026-11-16T14:52Z |
 | T872 | vcx | gusta-session-start-vcx-4f46f7d4 | 0bad70e28 | 2026-11-16T14:55Z |
 | T882 | wopts | gusta-session-start-wopts-7b887426 | 56a04801fff6 | 2026-11-16T15:01Z |
+| T873 | vcx | gusta-session-start-vcx-4f46f7d4 | 64d05b912eef | 2026-11-16T15:03Z |
 
 ## log
+- 261116 T873 done
 - 261116 T882 done
 - 261116 T872 done
 - 261116 T871 done
@@ -213,4 +215,3 @@
 - 261116 gusta-update-ssot VOICE r22: VOICE-78+ VOICE-79+ VOICE-60✎ VOICE-65✎
 - 261116 gusta-update-ssot TMPL start
 - 261116 fix voice-navigation: keep the unmade voice redirect inside its own subtree; all five primary destinations work
-- 261116 sketch voice-chat-examples start
