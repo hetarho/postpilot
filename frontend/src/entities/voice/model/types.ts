@@ -31,6 +31,24 @@ export interface VoiceSampleDetail {
 /** Where in a post a prompt's answer belongs (VOICE-60). */
 export type VoicePromptPart = 'opening' | 'description' | 'closing'
 
+/** The six top-level experience kinds (VOICE-78, TMPL-72). */
+export type VoiceExperienceKindName = 'food' | 'cafe' | 'beauty' | 'stay' | 'leisure' | 'product'
+
+/** A kind as the chat offers it: its label and the plain word a nameless experience reads as. */
+export interface VoiceExperienceKindInfo {
+  kind: VoiceExperienceKindName
+  label: string
+  plain: string
+}
+
+/** One experience of the owner's a thread asks about; the name may be empty (VOICE-78). */
+export interface VoiceExperience {
+  id: string
+  kind: VoiceExperienceKindName
+  name: string
+  createdAt: string
+}
+
 export type VoiceRegisterName = 'haeyo' | 'da' | 'eumseum' | 'hamnida'
 
 /** One example reply to a question, labelled with its register (VOICE-79). */
@@ -50,6 +68,8 @@ export interface VoicePrompt {
   photo: boolean
   text: string
   examples: VoicePromptExample[]
+  /** Set on a thread question, which names an experience; absent on a situation. */
+  experienceKind?: VoiceExperienceKindName
 }
 
 /** How far the 학습 글 are from 말투 만들기 (VOICE-32): the sentence share, held below 100 while a

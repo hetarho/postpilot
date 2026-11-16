@@ -1,4 +1,6 @@
 import { create } from '@bufbuild/protobuf'
+import type { ListVoiceExperiencesResponse } from '@/shared/api'
+import { ListVoiceExperiencesResponseSchema } from '@/shared/api'
 import { useMutation, useTransport } from '@connectrpc/connect-query'
 import { useQueryClient } from '@tanstack/react-query'
 import { invalidatePostsDependingOn } from '@/entities/post/@x/voice'
@@ -9,7 +11,14 @@ import {
   replaceCachedVoices,
   upsertCachedVoice,
 } from './voice-directory-cache'
-import { voiceAnalysisQueryKey, voicesQueryKey } from './voice-queries'
+import { experienceKindToProto } from './voice-enums'
+import type { VoiceExperienceKindName } from '../model/types'
+import {
+  toVoiceExperience,
+  voiceAnalysisQueryKey,
+  voiceExperiencesQueryKey,
+  voicesQueryKey,
+} from './voice-queries'
 
 /** The voice noun's own writes (ARCH-14's verb line): each is a bare mutation nobody renders, and
  *  the buttons, sheets and confirmations that render around them stay in the verb features. The
@@ -134,5 +143,48 @@ export function useRestorePreviousVoiceAnalysis(ownerId: string, voiceId: string
     failure,
     errorMessage: formatAppFailure(failure),
     restore: () => mutation.mutateAsync({ voiceId }),
+  }
+}
+
+/** Starts one experience the learning chat will ask about and patches the cached list with it, so
+ *  a resumed chat asks about the same one (VOICE-78). */
+export function useStartVoiceExperience(ownerId: string, voiceId: string) {
+  const transport = useTransport()
+  const queryClient = useQueryClient()
+  const mutation = useMutation(VoiceService.method.startVoiceExperience, {
+    onSuccess: (data) => {
+      const key = voiceExperiencesQueryKey(transport, ownerId, voiceId)
+      const experience = data.experience
+      if (!experience) return
+      const current = queryClient.getQueryData<ListVoiceExperiencesResponse>(key)
+      if (!current) {
+        void queryClient.invalidateQueries({ queryKey: key })
+        return
+      }
+      queryClient.setQueryData(
+        key,
+        create(ListVoiceExperiencesResponseSchema, {
+          experiences: [
+            ...current.experiences.filter((cached) => cached.id !== experience.id),
+            experience,
+          ],
+        }),
+      )
+    },
+  })
+  const failure = mutation.error ? appFailureFromConnect(mutation.error) : undefined
+  return {
+    ...mutation,
+    failure,
+    errorMessage: formatAppFailure(failure),
+    start: async (kind: VoiceExperienceKindName, name: string) => {
+      const response = await mutation.mutateAsync({
+        voiceId,
+        kind: experienceKindToProto(kind),
+        name,
+      })
+      if (!response.experience) throw new Error('The experience was not confirmed')
+      return toVoiceExperience(response.experience)
+    },
   }
 }

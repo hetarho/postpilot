@@ -1,23 +1,28 @@
 import { VOICE_INITIAL_QUESTION_COUNT } from '../config'
 import { useMemo } from 'react'
+import { createClient } from '@connectrpc/connect'
+import { useQuery } from '@tanstack/react-query'
 import type { Transport } from '@connectrpc/connect'
 import { useTransport } from '@connectrpc/connect-query'
 import {
   type ProtoVoice,
   type ProtoVoiceAnalysis,
   type ProtoVoiceExample,
+  type ProtoVoiceExperience,
   type ProtoVoiceFingerprint,
   type ProtoVoiceNotice,
   type ProtoVoiceProfile,
   type ProtoVoiceRef,
   type ProtoVoiceReadiness,
   type ProtoVoiceSample,
+  VoiceService,
 } from '@/shared/api'
 import {
   emptyVoice,
   type Voice,
   type VoiceAnalysis,
   type VoiceExample,
+  type VoiceExperience,
   type VoiceFingerprint,
   type VoiceNotice,
   type VoiceProfile,
@@ -28,6 +33,7 @@ import {
 import {
   requireVoiceOrigin,
   requireAiField,
+  requireExperienceKind,
   requireNoticeKind,
   requirePromptPart,
   requireSampleKind,
@@ -232,6 +238,18 @@ export function postFingerprintQueryKey(
 ) {
   return ['voice-post-fingerprint', transport, ownerId, slug, String(revision)] as const
 }
+/** One voice's experiences, partitioned like every voice read (VOICE-56). */
+export function voiceExperiencesQueryKey(transport: Transport, ownerId: string, voiceId: string) {
+  return ['voice-experiences', transport, ownerId, voiceId] as const
+}
+export function toVoiceExperience(experience: ProtoVoiceExperience): VoiceExperience {
+  return {
+    id: experience.id,
+    kind: requireExperienceKind(experience.kind),
+    name: experience.name,
+    createdAt: experience.createdAt,
+  }
+}
 /** One opened 학습 글, partitioned like every voice read (VOICE-56). */
 export function voiceSampleQueryKey(
   transport: Transport,
@@ -254,4 +272,24 @@ export function useVoiceAnalysisQueryKey(ownerId: string, voiceId: string) {
     () => voiceAnalysisQueryKey(transport, ownerId, voiceId),
     [ownerId, transport, voiceId],
   )
+}
+
+/** A voice's experiences in the server's order (VOICE-78). */
+export function useVoiceExperiences(ownerId: string, voiceId: string) {
+  const transport = useTransport()
+  const query = useQuery({
+    queryKey: voiceExperiencesQueryKey(transport, ownerId, voiceId),
+    queryFn: () => createClient(VoiceService, transport).listVoiceExperiences({ voiceId }),
+    enabled: ownerId !== '' && voiceId !== '',
+  })
+  const experiences = useMemo<VoiceExperience[]>(
+    () => query.data?.experiences.map(toVoiceExperience) ?? [],
+    [query.data],
+  )
+  return {
+    experiences,
+    isPending: query.isPending,
+    isError: query.isError,
+    refetch: () => void query.refetch(),
+  }
 }

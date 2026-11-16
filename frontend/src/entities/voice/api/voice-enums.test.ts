@@ -6,6 +6,7 @@ import {
   ProtoVoiceCheckStatus,
   ProtoVoiceHabitKind,
   VoiceAiField,
+  VoiceExperienceKind,
   VoiceNoticeKind,
   VoicePromptPart,
   VoiceSampleKind,
@@ -13,6 +14,7 @@ import {
 import { FINGERPRINT_ITEMS, VOICE_HABIT_KINDS } from '../model/fingerprint'
 import {
   requireAiField,
+  requireExperienceKind,
   requireCheckStatus,
   requireFacetUnit,
   requireFingerprintItem,
@@ -34,6 +36,14 @@ describe('the voice enum mirrors', () => {
       .map(requirePromptPart)
     expect(parts).toEqual(['opening', 'description', 'closing'])
     expect(() => requirePromptPart(VoicePromptPart.UNSPECIFIED)).toThrow()
+  })
+
+  it('maps every experience kind the wire names', () => {
+    const kinds = wireValues<VoiceExperienceKind>(VoiceExperienceKind)
+      .filter((value) => value !== VoiceExperienceKind.UNSPECIFIED)
+      .map(requireExperienceKind)
+    expect(kinds).toEqual(['food', 'cafe', 'beauty', 'stay', 'leisure', 'product'])
+    expect(() => requireExperienceKind(VoiceExperienceKind.UNSPECIFIED)).toThrow()
   })
 
   it('maps every sample kind the wire names', () => {

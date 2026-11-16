@@ -23,6 +23,9 @@ export type {
   VoiceAiPart,
   VoiceAnalysis,
   VoiceExample,
+  VoiceExperience,
+  VoiceExperienceKindInfo,
+  VoiceExperienceKindName,
   VoiceFingerprint,
   VoiceNotice,
   VoiceProfile,
@@ -50,6 +53,8 @@ export {
   voiceAnalysisDate,
   voiceRefLabel,
 } from './model/types'
+export { promptText } from './model/prompt-text'
+export { useVoiceExperiences, voiceExperiencesQueryKey } from './api/voice-queries'
 export { loadVoices, useVoices, voiceDirectoryQuery } from './api/useVoices'
 export { useVoiceProfile } from './api/useVoiceProfile'
 export { usePostFingerprint } from './api/usePostFingerprint'
@@ -61,6 +66,7 @@ export type { CreateVoiceInput } from './api/voice-mutations'
 export {
   useCreateVoice,
   useDeleteVoice,
+  useStartVoiceExperience,
   useRenameVoice,
   useRestorePreviousVoiceAnalysis,
   useRestoreVoice,
