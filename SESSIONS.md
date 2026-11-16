@@ -152,6 +152,7 @@
 - 261113 decided T817 T818 T819 T820: Owner requested repair and main integration → reset vdux once and rerun the same14 required checks before landing/publishing (alt: preserve paused local work). Original3/3 failure evidence remains archived; existing independent approvals and reviewed repairs are retained.
 - 261114 parked ARCH-31 ARCH-1: Gusta 0.17.2 installation verified; owner decision required for shared fixed-candidate verification and FORMAT alignment, primary browser/agent AC allocation, and explicit product-stage/support windows. Preserve current deterministic/media/human/hardware/live gates and existing support until approved. Evidence and concrete proposal: docs/qa/gusta-update-261114.md.
 - 261116 decided T833 THEME-62: voice-habit colour role? -> the blue ramp at its own steps (night blue-200 on blue-900, day blue-800 on blue-100) with a thick solid underline, since THEME-15 closes the palette and the 말투 view never shares the screen with the origin colours (alt: a new palette ramp needing THEME-15 changes | the violet accent, which THEME-62 keeps apart from evidence roles)
+- 261116 decided CLIP-209 T868: how to fold stored channel data? → keep each project's own-channel upload text (body and tags as written) and posted URL as stored; remove upload texts and unconsumed quotes stored for the project's other channel (alt: keep other-channel texts in a side table | convert Instagram captions to Naver format)
 
 ## unlanded
 | id | tag | branch | commit | at |
