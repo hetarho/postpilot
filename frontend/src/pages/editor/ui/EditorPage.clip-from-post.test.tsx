@@ -124,7 +124,6 @@ describe('making a clip from a finished post', () => {
       linkedPostSlug: SLUG,
       title: '성수 카페',
       instruction: '친구와 나눈 이야기',
-      channel: 'naver_clip',
       ratio: 'vertical',
       campaign: false,
       advertiserGuide: {
@@ -142,7 +141,8 @@ describe('making a clip from a finished post', () => {
     expect(readClipReturnContext(USER.id, 'clip-1')).toMatchObject({
       targetId: 'clip-1',
       path: '/naver-clip',
-      filters: { channel: 'naver_clip' },
+      section: 'clips',
+      filters: {},
     })
     await waitFor(() => expect(view.router.state.location.state.clipImport).toBeUndefined())
   })

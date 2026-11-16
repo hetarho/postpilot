@@ -3,7 +3,6 @@ import {
   boundedFreeText,
   CLIP_PROJECT_LIMITS,
   emptyClipProject,
-  type ClipChannel,
   type ClipProject,
   type ClipProjectDraft,
   type ClipSourceCalls,
@@ -22,13 +21,11 @@ export interface CreatedPostClip {
 /** The page composes the clip entity's CRUD hook with the browser upload action. */
 export async function createClipFromPost({
   post,
-  channel,
   create,
   sources,
   signal,
 }: {
   post: PostDraft
-  channel: ClipChannel
   create: (draft: ClipProjectDraft) => Promise<ClipProject>
   sources: ClipSourceCalls
   signal: AbortSignal
@@ -39,7 +36,8 @@ export async function createClipFromPost({
   const project = await create({
     ...emptyClipProject(),
     linkedPostSlug: post.slug,
-    channel,
+    // The proto still carries a channel until T867: send none and let the server default it.
+    channel: undefined,
     title: post.title.trim() ? post.title : post.content.title,
     instruction: boundedFreeText(post.memo, CLIP_PROJECT_LIMITS.instruction),
     campaign: post.campaign,

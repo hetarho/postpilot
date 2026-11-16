@@ -31,8 +31,6 @@ export function CreateClipFromPostButton({
   const { save } = useClipProjectMutations(ownerId)
   const sources = useClipSourceCalls()
   const [open, setOpen] = useState(false)
-  // A video is one kind of work: it is made on the default channel, with no channel to choose.
-  const channel = DEFAULT_CLIP_CHANNEL
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<AppFailure>()
   const [created, setCreated] = useState<CreatedPostClip>()
@@ -54,18 +52,17 @@ export function CreateClipFromPostButton({
         created ??
         (await createClipFromPost({
           post,
-          channel,
           create: (draft) => save.mutateAsync({ draft }),
           sources,
           signal: controller.signal,
         }))
       controller.signal.throwIfAborted()
       setCreated(result)
-      const actualChannel = result.project.channel ?? channel
       rememberClipEntry(ownerId, {
-        path: clipChannelPath(actualChannel),
-        section: actualChannel,
-        filters: { channel: actualChannel },
+        // Until T862 renames the helper, the video list path is the default one, with no filters.
+        path: clipChannelPath(DEFAULT_CLIP_CHANNEL),
+        section: 'clips',
+        filters: {},
         scrollY: 0,
         targetId: result.project.id,
       })
