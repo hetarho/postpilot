@@ -4,7 +4,6 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| tonenav | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:03Z | 2026-11-16T14:07Z | - | gusta-session-start-tonenav-0b2ecee9 | e2ae1a22a4d6 | 9b28167ae9419c5622b0e2e3 |
 | hdref | ihaelam-ui-MacBookPro | pair | 2026-11-16T14:31Z | 2026-11-16T14:31Z | T869 | gusta-session-start-hdref-c3df08ba | 35df02f90e0e | da8e3d345d9d016094ffa3ea |
 
 ## inbox
