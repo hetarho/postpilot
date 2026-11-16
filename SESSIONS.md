@@ -161,17 +161,6 @@
 ## unlanded
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
-| T827 | vfid | gusta-session-start-vfid-2c92eccf | 5b6c1542c | 2026-11-16T02:41Z |
-| T828 | vfid | gusta-session-start-vfid-2c92eccf | ade22c182046 | 2026-11-16T02:46Z |
-| T829 | vfid | gusta-session-start-vfid-2c92eccf | 640e2b19d | 2026-11-16T02:47Z |
-| T830 | vfid | gusta-session-start-vfid-2c92eccf | b8a30720ade6 | 2026-11-16T02:50Z |
-| T831 | vfid | gusta-session-start-vfid-2c92eccf | 0d550ac71f81 | 2026-11-16T02:53Z |
-| T832 | vfid | gusta-session-start-vfid-2c92eccf | 565fe336940b | 2026-11-16T02:57Z |
-| T833 | vfid | gusta-session-start-vfid-2c92eccf | bcf5ac8b6 | 2026-11-16T03:05Z |
-| T834 | vfid | gusta-session-start-vfid-2c92eccf | c423adc78 | 2026-11-16T03:08Z |
-| T835 | vfid | gusta-session-start-vfid-2c92eccf | beb882c47846 | 2026-11-16T03:10Z |
-| T836 | vfid | gusta-session-start-vfid-2c92eccf | b4048994578d | 2026-11-16T03:13Z |
-| T855 | tidy | gusta-session-self-improve-tidy-9ff3f895 | 6a90ecedf99d | 2026-11-16T08:46Z |
 | T856 | onev | gusta-session-start-onev-54d284a9 | 92efa146b | 2026-11-16T09:25Z |
 | T857 | onev | gusta-session-start-onev-54d284a9 | 706cae531830 | 2026-11-16T09:27Z |
 
