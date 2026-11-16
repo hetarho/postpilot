@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:41Z | T828 | gusta-session-start-vfid-2c92eccf | 6bc51177df83 | 2c49cb3071a34ca1b4d9fe9c |
+| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:46Z | - | gusta-session-start-vfid-2c92eccf | ade22c182046 | 2c49cb3071a34ca1b4d9fe9c |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -156,8 +156,10 @@
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
 | T827 | vfid | gusta-session-start-vfid-2c92eccf | 5b6c1542c | 2026-11-16T02:41Z |
+| T828 | vfid | gusta-session-start-vfid-2c92eccf | ade22c182046 | 2026-11-16T02:46Z |
 
 ## log
+- 261116 T828 done
 - 261116 T827 done
 - 261116 ARCH r25 DUB r5 no-op (no code impact): ARCH-71 product stage/support, ARCH-31 shared integration owner
 - 261116 gusta-update-ssot ARCH start
@@ -177,4 +179,3 @@
 - 261113 T823 done
 - 261113 fix authoring: remove duplicate return glyph found by route audit; 43 authoring tests passed
 - 261113 T818 done
-- 261113 T817 done
