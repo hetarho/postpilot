@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/postpilot/backend/internal/llm"
 	postdomain "github.com/postpilot/backend/internal/post"
 )
 
@@ -50,7 +51,7 @@ func (s *Service) Generate(ctx context.Context, job GenerateJob, progress Progre
 		post.Images = heldAttachments(post.Images, post.FollowStoryline)
 		observations = heldObservations(post.Images, observations)
 	}
-	writeModel, ok := parseModelRef(job.WriteModel)
+	writeModel, ok := llm.ParseModelRef(job.WriteModel)
 	if !ok {
 		return ErrWriteModelRequired
 	}
@@ -130,7 +131,7 @@ func (s *Service) observeForRun(ctx context.Context, post PostInput, observeMode
 		}
 		return post, nil, nil
 	}
-	model, ok := parseModelRef(observeModel)
+	model, ok := llm.ParseModelRef(observeModel)
 	if !ok {
 		return post, nil, ErrObserveModelRequired
 	}

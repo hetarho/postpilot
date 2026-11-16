@@ -4,7 +4,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 
 	"connectrpc.com/connect"
 
@@ -161,6 +160,5 @@ func toConnectError(op string, err error) error {
 	if errors.Is(err, quality.ErrPostNotFound) {
 		return rpcserver.NewAppError(connect.CodeNotFound, "post not found", postpilotv1.FailureReason_POST_NOT_FOUND, nil)
 	}
-	slog.Error(op+" failed", "err", err)
-	return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+	return rpcserver.InternalFailure(op, err)
 }

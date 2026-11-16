@@ -4,8 +4,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -35,8 +33,7 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 		case errors.Is(err, job.ErrForbidden):
 			return nil, rpcserver.NewAppError(connect.CodePermissionDenied, "job belongs to another user", postpilotv1.FailureReason_JOB_FORBIDDEN, nil)
 		default:
-			slog.Error("get generation failed", "err", err)
-			return nil, rpcserver.NewAppError(connect.CodeInternal, "get generation failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+			return nil, rpcserver.InternalFailure("get generation", err)
 		}
 	}
 	return connect.NewResponse(&postpilotv1.GetGenerationResponse{Job: ToProto(found)}), nil
@@ -68,31 +65,19 @@ func ToProto(found *job.JobSummary) *postpilotv1.GenerationJob {
 		CancelRequestedAt: requested, CancellationPolicyVersion: int32(found.CancellationPolicyVersion), CanCancel: found.CanCancel,
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		PostSlug: postSlug, ClipProjectId: found.Subject(subjectProject), ObserveModel: modelRef(found.ObserveModel),
-		WriteModel: modelRef(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
+		PostSlug: postSlug, ClipProjectId: found.Subject(subjectProject), ObserveModel: rpcserver.ModelRefToProto(found.ObserveModel),
+		WriteModel: rpcserver.ModelRefToProto(found.WriteModel), TargetLanguage: languageToProto(found.TargetLanguage), CreatedAt: found.CreatedAt.UTC().Format(time.RFC3339),
 		UpdatedAt: found.UpdatedAt.UTC().Format(time.RFC3339), Failure: failureToProto(found.Failure),
 	}
 }
 
 func failureToProto(found *job.Failure) *postpilotv1.Failure {
-	if found == nil || found.Reason == "" {
+	if found == nil {
 		return nil
 	}
-	params := make(map[string]string, len(found.Params))
-	for key, value := range found.Params {
-		params[key] = value
-	}
-	return &postpilotv1.Failure{Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail}
+	return rpcserver.FailureToProto(found.Reason, found.Params, found.TechnicalDetail)
 }
 
 func languageToProto(value string) postpilotv1.ContentLanguage {
 	return rpcserver.ContentLanguageToProto(value)
-}
-
-func modelRef(value string) *postpilotv1.ModelRef {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
-		return nil
-	}
-	return &postpilotv1.ModelRef{ProviderId: providerID, ModelId: modelID}
 }

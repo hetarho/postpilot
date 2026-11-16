@@ -129,7 +129,7 @@ func (s *Service) PrepareWriteInput(ctx context.Context, raw []byte, progress Pr
 		}
 		snapshot.Observations = nil
 	} else {
-		model, ok := parseModelRef(snapshot.ObserveModel)
+		model, ok := llm.ParseModelRef(snapshot.ObserveModel)
 		if !ok {
 			return nil, ErrObserveModelRequired
 		}

@@ -146,7 +146,7 @@ func decodeWritingTestSnapshot(snapshot WritingTestSnapshot) (writingTestCommon,
 		if err := decodeWritingTestJSON(raw, &value); err != nil {
 			return writingTestCommon{}, nil, err
 		}
-		write, ok := parseModelRef(value.WriteModel)
+		write, ok := llm.ParseModelRef(value.WriteModel)
 		if !ok || value.WriteCompletionTokens <= 0 || value.WritePromptTokens <= 0 || value.Revision == "" || value.SemanticKey == "" {
 			return writingTestCommon{}, nil, ErrWritingTestMaterial
 		}
@@ -206,7 +206,7 @@ func testOptionalModel(value string) (llm.ModelRef, error) {
 	if value == "" {
 		return llm.ModelRef{}, nil
 	}
-	ref, ok := parseModelRef(value)
+	ref, ok := llm.ParseModelRef(value)
 	if !ok {
 		return llm.ModelRef{}, ErrWritingTestReference
 	}

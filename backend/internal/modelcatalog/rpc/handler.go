@@ -255,8 +255,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, modelcatalog.ErrPurposeNotRegistered):
 		return rpcserver.NewAppError(connect.CodeFailedPrecondition, "model is not registered to this purpose", postpilotv1.FailureReason_MODEL_PURPOSE_NOT_REGISTERED, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

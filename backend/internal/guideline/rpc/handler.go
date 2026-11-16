@@ -4,7 +4,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
 
 	"connectrpc.com/connect"
@@ -278,8 +277,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, guideline.ErrCandidateNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "guideline candidate not found", postpilotv1.FailureReason_GUIDELINE_CANDIDATE_NOT_FOUND, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

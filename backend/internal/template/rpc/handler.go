@@ -4,7 +4,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
 
 	"connectrpc.com/connect"
@@ -167,7 +166,7 @@ func (h *Handler) EstimateTemplateRequest(ctx context.Context, req *connect.Requ
 	if _, err := authrpc.ActingUser(ctx); err != nil {
 		return nil, err
 	}
-	estimate, err := h.service.EstimateRequest(ctx, modelRefValue(req.Msg.GetWriteModel()))
+	estimate, err := h.service.EstimateRequest(ctx, rpcserver.ModelRefFromProto(req.Msg.GetWriteModel()))
 	if err != nil {
 		return nil, toConnectError("estimate template request", err)
 	}
@@ -190,13 +189,6 @@ func guideLanguage(value postpilotv1.ContentLanguage) (template.Language, error)
 	default:
 		return "", rpcserver.NewAppError(connect.CodeInvalidArgument, "guide language is required", postpilotv1.FailureReason_CONTENT_LANGUAGE_REQUIRED, nil)
 	}
-}
-
-func modelRefValue(ref *postpilotv1.ModelRef) string {
-	if ref == nil || ref.GetProviderId() == "" || ref.GetModelId() == "" {
-		return ""
-	}
-	return ref.GetProviderId() + "/" + ref.GetModelId()
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign template is NotFound
@@ -262,8 +254,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, template.ErrNotFound):
 		return rpcserver.NewAppError(connect.CodeNotFound, "template not found", postpilotv1.FailureReason_TEMPLATE_NOT_FOUND, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 

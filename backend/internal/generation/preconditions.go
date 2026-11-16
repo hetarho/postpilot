@@ -146,7 +146,7 @@ func (s *Service) startPreconditions(ctx context.Context, userID, postSlug strin
 // write stage, which is the stage a storyline call runs on too. It answers the model's catalog
 // entry, whose native-effort flag the start freezes.
 func (s *Service) requireWriteModel(value string) (llm.ModelInfo, error) {
-	write, ok := parseModelRef(value)
+	write, ok := llm.ParseModelRef(value)
 	info, found := s.models.Resolve(write)
 	if !ok || !found || info.Disabled || !info.ServesStage(llm.StageNameWrite) {
 		return llm.ModelInfo{}, ErrWriteModelRequired
@@ -168,7 +168,7 @@ func (s *Service) planObserve(post PostInput, stage startStage, storyline []Stor
 		// for it: the run observes nothing and clears the snapshot, as it always has.
 		return observePlan{}, nil
 	}
-	observe, valid := parseModelRef(stage.observeModel)
+	observe, valid := llm.ParseModelRef(stage.observeModel)
 	if !valid || !modelEnabled(s.models, observe, llm.StageNameObserve) {
 		return observePlan{}, ErrObserveModelRequired
 	}

@@ -86,10 +86,6 @@
 | T842 | One confirm-then-run control for the delete buttons | ARCH | T841 | todo |
 | T843 | One factory for the per-project clip autosave queues | ARCH | - | todo |
 | T844 | Stop the per-second re-render of the dubbing editor | ARCH | T843 | todo |
-| T845 | One stored failure encoding for job, experiment and voice stores | ARCH | - | todo |
-| T846 | Shared model-ref and failure mappers for rpc handlers | ARCH | - | todo |
-| T847 | One last-resort internal error helper for rpc handlers | ARCH | T846 | todo |
-| T848 | One parser for the provider/model reference | ARCH | - | todo |
 | T849 | Publish clip upload progress only when it changes | ARCH | - | todo |
 | T850 | Patch blog video upload progress only when it changes | ARCH | T849 | todo |
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
@@ -100,7 +96,7 @@
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
-| tidy-261116 | 3 | 8 | 3 | 5 | 5 | 0 | 0 | 2026-11-16T06:29:07.473Z | [history](work/tidy-261116.json) |
+| tidy-261116 | 3 | 14 | 7 | 7 | 7 | 0 | 0 | 2026-11-16T07:45:14.097Z | [history](work/tidy-261116.json) |
 
 ## next
 - inspect work board for remaining tasks

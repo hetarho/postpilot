@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/postpilot/backend/internal/platform/dbfailure"
 	"github.com/postpilot/backend/internal/voice"
 )
 
@@ -52,22 +53,4 @@ func decodeFailure(reason, params, detail, legacyRaw sql.NullString) (*voice.Fai
 	return &voice.Failure{Reason: reason.String, Params: decoded, TechnicalDetail: detail.String}, nil
 }
 
-func validFailureReason(reason string) bool {
-	if reason == "" || reason[0] < 'A' || reason[0] > 'Z' || reason[len(reason)-1] == '_' {
-		return false
-	}
-	previousUnderscore := false
-	for _, char := range reason {
-		switch {
-		case char >= 'A' && char <= 'Z':
-			previousUnderscore = false
-		case char >= '0' && char <= '9':
-			previousUnderscore = false
-		case char == '_' && !previousUnderscore:
-			previousUnderscore = true
-		default:
-			return false
-		}
-	}
-	return true
-}
+func validFailureReason(reason string) bool { return dbfailure.ValidReason(reason) }

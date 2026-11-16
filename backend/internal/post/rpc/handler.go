@@ -5,9 +5,7 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"strconv"
-	"strings"
 	"time"
 
 	"connectrpc.com/connect"
@@ -452,8 +450,7 @@ func toConnectError(op string, err error) error {
 	case errors.Is(err, post.ErrQualityRuleInvalid):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "quality rule is invalid", postpilotv1.FailureReason_POST_QUALITY_RULE_INVALID, nil)
 	default:
-		slog.Error(op+" failed", "err", err)
-		return rpcserver.NewAppError(connect.CodeInternal, op+" failed", postpilotv1.FailureReason_UNKNOWN_FAILURE, nil)
+		return rpcserver.InternalFailure(op, err)
 	}
 }
 
@@ -803,32 +800,18 @@ func toProtoActiveJob(found *post.ActiveJob) *postpilotv1.GenerationJob {
 	return &postpilotv1.GenerationJob{
 		Id: found.ID, Kind: found.Kind, Status: found.Status, Stage: found.Stage,
 		ProgressDone: int32(found.ProgressDone), ProgressTotal: int32(found.ProgressTotal),
-		PostSlug: found.PostSlug, ObserveModel: toProtoModelRef(found.ObserveModel),
-		WriteModel: toProtoModelRef(found.WriteModel), CreatedAt: found.CreatedAt.UTC().Format(timeLayout),
+		PostSlug: found.PostSlug, ObserveModel: rpcserver.ModelRefToProto(found.ObserveModel),
+		WriteModel: rpcserver.ModelRefToProto(found.WriteModel), CreatedAt: found.CreatedAt.UTC().Format(timeLayout),
 		UpdatedAt: found.UpdatedAt.UTC().Format(timeLayout), TargetLanguage: languageToProto(found.TargetLanguage),
 		Failure: activeJobFailureToProto(found.Failure),
 	}
 }
 
 func activeJobFailureToProto(found *post.Failure) *postpilotv1.Failure {
-	if found == nil || found.Reason == "" {
+	if found == nil {
 		return nil
 	}
-	params := make(map[string]string, len(found.Params))
-	for key, value := range found.Params {
-		params[key] = value
-	}
-	return &postpilotv1.Failure{
-		Reason: found.Reason, Params: params, TechnicalDetail: found.TechnicalDetail,
-	}
-}
-
-func toProtoModelRef(value string) *postpilotv1.ModelRef {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
-		return nil
-	}
-	return &postpilotv1.ModelRef{ProviderId: providerID, ModelId: modelID}
+	return rpcserver.FailureToProto(found.Reason, found.Params, found.TechnicalDetail)
 }
 
 // toProtoImage deliberately omits r2_key: the client addresses a photo by id and reads

@@ -555,11 +555,3 @@ func modelEnabled(models LLM, ref llm.ModelRef, stage string) bool {
 	info, ok := models.Resolve(ref)
 	return ok && !info.Disabled && info.ServesStage(stage)
 }
-
-func parseModelRef(value string) (llm.ModelRef, bool) {
-	providerID, modelID, ok := strings.Cut(value, "/")
-	if !ok || providerID == "" || modelID == "" {
-		return llm.ModelRef{}, false
-	}
-	return llm.ModelRef{ProviderID: providerID, ModelID: modelID}, true
-}

@@ -301,11 +301,10 @@ func (s *Service) Run(ctx context.Context, run Run, progress func(string, int, i
 	if state.Kind != in.Kind || state.ActiveRequestID != in.OperationID || state.Revision != in.BaseRevision+1 {
 		return ErrStale
 	}
-	provider, model, ok := strings.Cut(run.WriteModel, "/")
-	if !ok || provider == "" || model == "" {
+	ref, ok := llm.ParseModelRef(run.WriteModel)
+	if !ok {
 		return ErrModel
 	}
-	ref := llm.ModelRef{ProviderID: provider, ModelID: model}
 	info, found := s.models.Resolve(ref)
 	if !found {
 		info.StructuredOutput = false

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-16T06:29:07.473Z",
-  "sourceCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+  "snapshotAt": "2026-11-16T07:45:14.097Z",
+  "sourceCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
   "group": {
     "id": "tidy-261116",
     "branch": "gusta-session-self-improve-tidy-9ff3f895",
@@ -22,14 +22,20 @@
       "T841",
       "T842",
       "T843",
-      "T844"
+      "T844",
+      "T845",
+      "T846",
+      "T847",
+      "T848",
+      "T849",
+      "T850"
     ]
   },
   "summary": {
-    "total": 8,
-    "completed": 3,
-    "remaining": 5,
-    "running": 5,
+    "total": 14,
+    "completed": 7,
+    "remaining": 7,
+    "running": 7,
     "review": 0,
     "blocked": 0,
     "unassigned": 0
@@ -40,7 +46,7 @@
       "title": "One connect-failure message helper and one billing invalidation",
       "dep": [],
       "lane": "fe-lib",
-      "status": "doing"
+      "status": "verifying"
     },
     {
       "id": "T841",
@@ -49,7 +55,7 @@
         "T840"
       ],
       "lane": "fe-lib",
-      "status": "doing"
+      "status": "verifying"
     },
     {
       "id": "T842",
@@ -58,14 +64,14 @@
         "T841"
       ],
       "lane": "fe-lib",
-      "status": "doing"
+      "status": "verifying"
     },
     {
       "id": "T843",
       "title": "One factory for the per-project clip autosave queues",
       "dep": [],
       "lane": "fe-clip",
-      "status": "doing"
+      "status": "verifying"
     },
     {
       "id": "T844",
@@ -74,6 +80,22 @@
         "T843"
       ],
       "lane": "fe-clip",
+      "status": "verifying"
+    },
+    {
+      "id": "T849",
+      "title": "Publish clip upload progress only when it changes",
+      "dep": [],
+      "lane": "fe-upload",
+      "status": "doing"
+    },
+    {
+      "id": "T850",
+      "title": "Patch blog video upload progress only when it changes",
+      "dep": [
+        "T849"
+      ],
+      "lane": "fe-upload",
       "status": "doing"
     }
   ],
@@ -100,6 +122,8 @@
       "submittedBase": "7bfa7320d86510089cc3df600a2567f3c397ec80",
       "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
       "submittedAt": "2026-11-16T06:23:31.059Z",
+      "integratedCommit": "d7284875b8790d4c506c399cbef473960b009425",
+      "integratedAt": "2026-11-16T06:32:53.452Z",
       "risk": null,
       "review": {
         "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
@@ -169,6 +193,13 @@
           "startedAt": "2026-11-16T06:23:03.039Z",
           "finishedAt": "2026-11-16T06:23:30.954Z"
         }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/integrate-check.sh",
+          "startedAt": "2026-11-16T06:37:00Z",
+          "finishedAt": "2026-11-16T06:32:53.452Z"
+        }
       ]
     },
     {
@@ -185,7 +216,8 @@
       "contributors": [
         "worker-fe-lib"
       ],
-      "status": "doing",
+      "status": "verifying",
+      "reason": "검증 실패: bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check-dirs.sh",
       "createdAt": "2026-11-16T06:18:22.160Z",
       "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
     },
@@ -202,9 +234,128 @@
       "contributors": [
         "worker-fe-clip"
       ],
-      "status": "doing",
+      "status": "verifying",
+      "reason": "검증 실패: bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check-dirs.sh",
       "createdAt": "2026-11-16T06:18:25.531Z",
       "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+    },
+    {
+      "id": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "group": "tidy-261116",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "lane": "be-shared",
+      "owner": "worker-be2",
+      "contributors": [
+        "worker-be2"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T06:40:43.341Z",
+      "startCommit": "5e73964ff8bf8d0f76c45fc425336f2944b01a6a",
+      "verifiedCommit": "95764f484087d4dc79486833173bebc09c9bbccb",
+      "submittedBase": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+      "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+      "submittedAt": "2026-11-16T07:38:15.666Z",
+      "risk": null,
+      "review": {
+        "id": "ac4e5ee8-21e2-49b5-bc4b-4bdec94a959d",
+        "owner": "reviewer-be2",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T845-T848 are mechanical, behavior-preserving extractions. Every removed copy was compared with its base version: dbfailure Columns/FromRow keep the job/experiment bytes, error strings, legacy branch and nil-on-empty params; voice ValidReason is equivalent (first byte already excludes a leading digit); rpcserver ModelRefToProto/FromProto/FailureToProto keep first-slash split, nil/empty handling and the non-nil params copy behind unchanged nil-check adapters; InternalFailure keeps op string, ERROR level, err attribute, CodeInternal, message and UNKNOWN_FAILURE at all 14 sites (clip/experiment/generation/billing/plan/voucher left alone as specified; no AddSource anywhere); llm.ParseModelRef matches all five strings.Cut splitters including p/m/x and keeps the voice/memory Korean errors and authoring ErrModel. Sibling generation/test edits are pure renames. No import cycles (dbfailure is stdlib-only). Reviewer re-ran gofmt -l, go build ./..., go vet and go test -count=1 on dbfailure, rpcserver, llm, job/experiment/voice store, job/post/template/experiment/generation/auth rpc, memory, authoring, template, voice and generation: all ok. Independent Codex review (read-only) also reported no findings.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "spec/tasks/T847.rpc-internal-failure.md result at (T847)",
+            "message": "The result `at: 49a7045d5` is a pre-rebase commit that is not an ancestor of the submitted commit 95764f484 (the landed T847 commit is fc6c40e9d). The diff is the same, so this is a record-keeping nit only; T845/T846 `at` (5e73964ff, the merge base the checks ran on) and T848 `at` (fc6c40e9d) are in history."
+          }
+        ],
+        "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+        "baseCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+        "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+        "createdAt": "2026-11-16T07:39:31.517Z",
+        "finishedAt": "2026-11-16T07:44:39.104Z"
+      },
+      "steps": [
+        {
+          "taskId": "T845",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T846",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T847",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T848",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "at": "2026-11-16T07:38:15.627Z",
+          "verification": [
+            {
+              "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+              "startedAt": "2026-11-16T07:36:01.047Z",
+              "finishedAt": "2026-11-16T07:38:14.827Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+          "startedAt": "2026-11-16T07:36:01.047Z",
+          "finishedAt": "2026-11-16T07:38:14.827Z"
+        }
+      ]
+    },
+    {
+      "id": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "group": "tidy-261116",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "lane": "fe-upload",
+      "owner": "worker-fe-upload",
+      "contributors": [
+        "worker-fe-upload"
+      ],
+      "status": "doing",
+      "createdAt": "2026-11-16T07:38:48.160Z",
+      "startCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc"
     }
   ],
   "history": [
@@ -568,6 +719,690 @@
         "T837",
         "T838",
         "T839"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 14,
+      "at": "2026-11-16T06:29:07.733Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "통합 후보의 spec 검증에 실패했습니다."
+      }
+    },
+    {
+      "sequence": 15,
+      "at": "2026-11-16T06:29:32.463Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 16,
+      "at": "2026-11-16T06:32:53.452Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "approved",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "reason": null,
+        "integratedCommit": "d7284875b8790d4c506c399cbef473960b009425",
+        "integratedAt": "2026-11-16T06:32:53.452Z",
+        "integrationVerification": [
+          {
+            "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/integrate-check.sh",
+            "startedAt": "2026-11-16T06:37:00Z",
+            "finishedAt": "2026-11-16T06:32:53.452Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 17,
+      "at": "2026-11-16T06:40:33.262Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844",
+          "T845",
+          "T846",
+          "T847",
+          "T848"
+        ]
+      }
+    },
+    {
+      "sequence": 18,
+      "at": "2026-11-16T06:40:43.342Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T845",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+        "group": "tidy-261116",
+        "taskId": "T845",
+        "tasks": [
+          "T845",
+          "T846",
+          "T847",
+          "T848"
+        ],
+        "lane": "be-shared",
+        "owner": "worker-be2",
+        "contributors": [
+          "worker-be2"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:40:43.341Z",
+        "startCommit": "5e73964ff8bf8d0f76c45fc425336f2944b01a6a"
+      }
+    },
+    {
+      "sequence": 19,
+      "at": "2026-11-16T06:40:44.550Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T845",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 20,
+      "at": "2026-11-16T06:41:01.290Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "interrupted operation; inspect preserved workspace before resubmitting"
+      }
+    },
+    {
+      "sequence": 21,
+      "at": "2026-11-16T06:41:06.463Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 22,
+      "at": "2026-11-16T06:41:10.459Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 23,
+      "at": "2026-11-16T06:41:18.577Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 24,
+      "at": "2026-11-16T07:03:40.968Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844",
+          "T845",
+          "T846",
+          "T847",
+          "T848",
+          "T849",
+          "T850",
+          "T851",
+          "T852",
+          "T853"
+        ]
+      }
+    },
+    {
+      "sequence": 25,
+      "at": "2026-11-16T07:31:24.184Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "interrupted operation; inspect preserved workspace before resubmitting"
+      }
+    },
+    {
+      "sequence": 26,
+      "at": "2026-11-16T07:31:27.749Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 27,
+      "at": "2026-11-16T07:31:31.503Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "interrupted operation; inspect preserved workspace before resubmitting"
+      }
+    },
+    {
+      "sequence": 28,
+      "at": "2026-11-16T07:31:36.967Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 29,
+      "at": "2026-11-16T07:31:59.929Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 30,
+      "at": "2026-11-16T07:32:00.135Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 31,
+      "at": "2026-11-16T07:32:01.289Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "검증 실패: bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check-dirs.sh"
+      }
+    },
+    {
+      "sequence": 32,
+      "at": "2026-11-16T07:32:01.455Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "verifying",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "검증 실패: bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check-dirs.sh"
+      }
+    },
+    {
+      "sequence": 33,
+      "at": "2026-11-16T07:33:46.970Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "blocked",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 34,
+      "at": "2026-11-16T07:33:47.894Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "blocked",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 35,
+      "at": "2026-11-16T07:35:59.573Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T845",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 36,
+      "at": "2026-11-16T07:38:15.666Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T848",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "95764f484087d4dc79486833173bebc09c9bbccb",
+        "submittedBase": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+        "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+        "submittedAt": "2026-11-16T07:38:15.666Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T845",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T846",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T847",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T848",
+            "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+            "at": "2026-11-16T07:38:15.627Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:36:01.047Z",
+                "finishedAt": "2026-11-16T07:38:14.827Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T07:36:01.047Z",
+            "finishedAt": "2026-11-16T07:38:14.827Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 37,
+      "at": "2026-11-16T07:38:48.160Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+        "group": "tidy-261116",
+        "taskId": "T849",
+        "tasks": [
+          "T849",
+          "T850"
+        ],
+        "lane": "fe-upload",
+        "owner": "worker-fe-upload",
+        "contributors": [
+          "worker-fe-upload"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T07:38:48.160Z",
+        "startCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc"
+      }
+    },
+    {
+      "sequence": 38,
+      "at": "2026-11-16T07:38:54.150Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T849",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 39,
+      "at": "2026-11-16T07:39:31.518Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "ac4e5ee8-21e2-49b5-bc4b-4bdec94a959d",
+          "owner": "reviewer-be2",
+          "status": "reviewing",
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "baseCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+          "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+          "createdAt": "2026-11-16T07:39:31.517Z"
+        }
+      }
+    },
+    {
+      "sequence": 40,
+      "at": "2026-11-16T07:39:31.715Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844",
+          "T845",
+          "T846",
+          "T847",
+          "T848",
+          "T849",
+          "T850"
+        ]
+      }
+    },
+    {
+      "sequence": 41,
+      "at": "2026-11-16T07:44:39.105Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "ac4e5ee8-21e2-49b5-bc4b-4bdec94a959d",
+          "owner": "reviewer-be2",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T845-T848 are mechanical, behavior-preserving extractions. Every removed copy was compared with its base version: dbfailure Columns/FromRow keep the job/experiment bytes, error strings, legacy branch and nil-on-empty params; voice ValidReason is equivalent (first byte already excludes a leading digit); rpcserver ModelRefToProto/FromProto/FailureToProto keep first-slash split, nil/empty handling and the non-nil params copy behind unchanged nil-check adapters; InternalFailure keeps op string, ERROR level, err attribute, CodeInternal, message and UNKNOWN_FAILURE at all 14 sites (clip/experiment/generation/billing/plan/voucher left alone as specified; no AddSource anywhere); llm.ParseModelRef matches all five strings.Cut splitters including p/m/x and keeps the voice/memory Korean errors and authoring ErrModel. Sibling generation/test edits are pure renames. No import cycles (dbfailure is stdlib-only). Reviewer re-ran gofmt -l, go build ./..., go vet and go test -count=1 on dbfailure, rpcserver, llm, job/experiment/voice store, job/post/template/experiment/generation/auth rpc, memory, authoring, template, voice and generation: all ok. Independent Codex review (read-only) also reported no findings.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T847.rpc-internal-failure.md result at (T847)",
+              "message": "The result `at: 49a7045d5` is a pre-rebase commit that is not an ancestor of the submitted commit 95764f484 (the landed T847 commit is fc6c40e9d). The diff is the same, so this is a record-keeping nit only; T845/T846 `at` (5e73964ff, the merge base the checks ran on) and T848 `at` (fc6c40e9d) are in history."
+            }
+          ],
+          "commit": "95764f484087d4dc79486833173bebc09c9bbccb",
+          "baseCommit": "00c37c1b43e83ca0822a069ace4c6deed6e449cc",
+          "submissionId": "e171d8c7-79d2-44e3-a0e6-e9d55551a8ff",
+          "createdAt": "2026-11-16T07:39:31.517Z",
+          "finishedAt": "2026-11-16T07:44:39.104Z"
+        }
+      }
+    },
+    {
+      "sequence": 42,
+      "at": "2026-11-16T07:45:09.201Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "acfbe690-b616-40d8-b9b6-379e3fb78f96",
+      "taskId": "T848",
+      "tasks": [
+        "T845",
+        "T846",
+        "T847",
+        "T848"
       ],
       "previousStatus": "approved",
       "status": "integrating",
