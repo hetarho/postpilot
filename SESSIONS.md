@@ -163,6 +163,7 @@
 | T836 | vfid | gusta-session-start-vfid-2c92eccf | b4048994578d | 2026-11-16T03:13Z |
 
 ## log
+- 261116 design ui (dsx): one-row returns via PageFrame, GuideProgress everywhere, 내 콘텐츠 with 글/영상 only, silent autosave, AI 고르기 sheet; merged ddbc5e9a6 (T854), not pushed
 - 261116 gusta-create-task review/tidy-261116 round two FE: T849-T853 (lanes fe-upload fe-render)
 - 261116 gusta-create-task review/tidy-261116 round two: T845-T848 (lane be-shared)
 - 261116 gusta-create-task review/tidy-261116: T837-T844 (lanes be-tidy fe-lib fe-clip)
@@ -182,4 +183,3 @@
 - 261116 sketch voice-fidelity: VOICE r21 POST r49 GEN r33 THEME r45, T827-T836 todo, style-guide/AI scoring deferred to ideation
 - 261116 gusta-create-task VOICE POST GEN THEME start
 - 261116 gusta-update-ssot VOICE POST GEN start
-- 261116 sketch voice-fidelity start
