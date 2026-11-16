@@ -44,6 +44,8 @@ export {
 } from './api/sources'
 export { boundedFreeText, boundedText, freeTextLength } from './lib/bounded-text'
 export { serialClipWrite } from './lib/write-lane'
+export { createProjectSaveQueue } from './model/project-save-queue'
+export type { ProjectSaveQueueOptions } from './model/project-save-queue'
 export type { ClipSourceAssociation } from './model/composition'
 export {
   emptyCompositionInputs,

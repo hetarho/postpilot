@@ -1,6 +1,5 @@
-import { appFailureFromConnect, retriableTransportFailure, type AppFailure } from '@/shared/api'
-import { createAutosaveQueue } from '@/shared/lib'
-import { serialClipWrite, type ClipObservationEdit } from '@/entities/clip-project'
+import { retriableTransportFailure, type AppFailure } from '@/shared/api'
+import { createProjectSaveQueue, type ClipObservationEdit } from '@/entities/clip-project'
 
 /** The owner's corrections to observed scenes, keyed by observation id `<sourceId>/<index>`. */
 export type ClipObservationEdits = Readonly<Record<string, ClipObservationEdit>>
@@ -10,9 +9,10 @@ export type SendClipObservationEdits = (edits: readonly ClipObservationEdit[]) =
  *  CLIP-235), one queue per project and outside React so a step change cannot drop the last
  *  words. Every queued value carries every correction still owed, so the latest one wins and a
  *  resend is idempotent; each send runs in the project's write lane. */
-const senders = new Map<string, SendClipObservationEdits>()
-const queue = createAutosaveQueue<ClipObservationEdits, void>({
-  send: (edits, { key }) => serialClipWrite(key, () => senders.get(key)!(Object.values(edits))),
+const queue = createProjectSaveQueue<ClipObservationEdits, SendClipObservationEdits>({
+  conflictAs: 'refused',
+  lane: true,
+  run: (send, edits) => send(Object.values(edits)),
   retry: retriableTransportFailure,
 })
 
@@ -22,18 +22,21 @@ export function queueClipObservationEdit(
   edit: ClipObservationEdit,
   send: SendClipObservationEdits,
 ): void {
-  senders.set(projectId, send)
   const owed = queue.peek(projectId) ?? {}
-  queue.queue(projectId, {
-    ...owed,
-    [edit.observationId]: { ...owed[edit.observationId], ...edit },
-  })
+  queue.queue(
+    projectId,
+    {
+      ...owed,
+      [edit.observationId]: { ...owed[edit.observationId], ...edit },
+    },
+    send,
+  )
 }
 
 /** Sends what is owed NOW and resolves once the queue is dry, or rejects with the failure — so
  *  no committing action runs on observations the server has not taken (CLIP-39). */
 export function flushClipObservationEdits(projectId: string, failFast = false): Promise<void> {
-  return queue.flush(projectId, failFast).then(() => undefined)
+  return queue.flush(projectId, failFast)
 }
 
 /** The corrections this project still owes the server: queued, in flight or failed. */
@@ -42,21 +45,11 @@ export function peekClipObservationEdits(projectId: string): ClipObservationEdit
 }
 
 export function clipObservationSaveState(projectId: string) {
-  const state = queue.state(projectId)
-  return state === 'conflict' ? 'refused' : state
+  return queue.state(projectId)
 }
 
-const failures = new WeakMap<object, AppFailure>()
 export function clipObservationEditFailure(projectId: string): AppFailure | undefined {
-  const error = queue.failure(projectId)
-  const state = queue.state(projectId)
-  if (!error || typeof error !== 'object' || (state !== 'refused' && state !== 'error'))
-    return undefined
-  const known = failures.get(error)
-  if (known) return known
-  const failure = appFailureFromConnect(error)
-  failures.set(error, failure)
-  return failure
+  return queue.failure(projectId)
 }
 
 export function subscribeClipObservationEdits(projectId: string, listener: () => void) {
@@ -65,10 +58,8 @@ export function subscribeClipObservationEdits(projectId: string, listener: () =>
 
 export function discardClipObservationQueue(projectId: string): void {
   queue.discard(projectId)
-  senders.delete(projectId)
 }
 
 export function discardClipObservationQueues(): void {
   queue.discardAll()
-  senders.clear()
 }

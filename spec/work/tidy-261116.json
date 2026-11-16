@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-16T08:03:34.177Z",
-  "sourceCommit": "18dfdf947e4685a56951105ade7d63273dcbb06b",
+  "snapshotAt": "2026-11-16T08:07:39.788Z",
+  "sourceCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
   "group": {
     "id": "tidy-261116",
     "branch": "gusta-session-self-improve-tidy-9ff3f895",
@@ -33,31 +33,14 @@
   },
   "summary": {
     "total": 14,
-    "completed": 12,
-    "remaining": 2,
+    "completed": 14,
+    "remaining": 0,
     "running": 0,
     "review": 0,
-    "blocked": 2,
+    "blocked": 0,
     "unassigned": 0
   },
-  "tasks": [
-    {
-      "id": "T843",
-      "title": "One factory for the per-project clip autosave queues",
-      "dep": [],
-      "lane": "fe-clip",
-      "status": "changes_requested"
-    },
-    {
-      "id": "T844",
-      "title": "Stop the per-second re-render of the dubbing editor",
-      "dep": [
-        "T843"
-      ],
-      "lane": "fe-clip",
-      "status": "changes_requested"
-    }
-  ],
+  "tasks": [],
   "attempts": [
     {
       "id": "40293f12-8083-45eb-8255-36edd7c422a1",
@@ -333,54 +316,82 @@
       "contributors": [
         "worker-fe-clip"
       ],
-      "status": "changes_requested",
-      "reason": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+      "status": "integrated",
+      "reason": null,
       "createdAt": "2026-11-16T06:18:25.531Z",
       "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
-      "verifiedCommit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
-      "submittedBase": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
-      "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
-      "submittedAt": "2026-11-16T07:46:27.879Z",
+      "verifiedCommit": "3f9c431f85c570a45e17642d46047ef28e519510",
+      "submittedBase": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+      "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+      "submittedAt": "2026-11-16T08:05:41.814Z",
       "risk": null,
       "review": {
-        "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+        "id": "766830dc-fe0c-4273-a219-b7bd46b5a298",
         "owner": "reviewer-fe-clip",
-        "status": "changes_requested",
-        "verdict": "changes_requested",
-        "summary": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "The P2 from review 9b3fa539 is resolved: ClipDubbingEditor.expiry.test.tsx now counts Profiler commits under fully fake, pinned timers (no shouldAdvanceTime), asserts no commit and an enabled button through expiresAt-1 ms, then exactly one commit and the invalid state at expiresAt. The count no longer goes through clipDraftKey, so it fails whether the 1 s interval returns with or without the key memo (each tick's setNow(Date.now()) is a new value, so at least one batched commit lands inside the first act window). The pinned clock also checks the exact `Date.parse(expiresAt) <= now` boundary. The record note and the T843 test name are corrected. The delta touches only the two test files and the T844 result; the base moved by fe-lib/fe-upload with no overlapping files. Remaining P3s are optional.",
         "findings": [
-          {
-            "priority": "P2",
-            "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.expiry.test.tsx:83-87 (T844)",
-            "message": "Acceptance 3 requires the test to prove an open quote causes no re-render between opening and expiry. The only probe is a spy on clipDraftKey, but the editor's sole render-time call is now useMemo(() => clipDraftKey(plan), [plan]) on an unchanged plan prop (children ClipVoiceChoice/ClipSpokenProperties never call it; estimate/approve call it only on click). So restoring the setInterval while keeping the useMemo still passes both assertions (no extra key call; invalid by 61 s) - Codex's in-memory probe saw 30 renders over the 30 s window with zero extra key calls. The test fails on base only because base lacked the memo. Fix: count renders/commits independently of the memo (e.g. a React <Profiler onRender> around the editor, or a spy on a non-memoized render-time call such as spokenScriptValid through the existing vi.mock) and assert none between opening and expiry and one at expiry. Optionally drop shouldAdvanceTime and assert the boundary exactly (still valid at expiresAt-1 ms, invalid at expiresAt), since the 61 s checkpoint would also pass the old 1 s-late interval."
-          },
           {
             "priority": "P3",
             "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
-            "message": "Clock edge cases of the approved single-timeout design (Codex rated P2; downgraded because the server enforces expiry - internal/clip/store/quotes.go ConsumeClipQuote returns ErrQuoteExpired -> CLIP_QUOTE_EXPIRED - so the cost is a refusal message instead of the pre-emptive invalid state, with no billing risk). (a) A forward wall-clock jump, or system sleep where the browser timer clock pauses, keeps an expired quote approvable until the remaining timeout elapses; the base interval re-read Date.now() every second. (b) Re-arming depends on setNow changing state: if the callback's Date.now() equals the stored now (wall clock rolled back across the whole delay), [quote, now] does not change, the effect never re-arms and the quote stays valid in the UI until the next estimate. Optional hardening: re-arm inside the callback (or bump a tick counter) when Date.now() < expiresAt instead of relying on a state change, and re-check on visibilitychange/focus."
+            "message": "Carried over, optional: with the single timeout, a forward wall-clock jump or sleep keeps an expired quote approvable until the timeout fires, and a clock rollback that makes setNow a no-op leaves the timer un-re-armed. The server rejects expired quotes (CLIP_QUOTE_EXPIRED), so the cost is a refusal message rather than the pre-emptive invalid state. Hardening, if wanted later: re-arm inside the callback when Date.now() < expiresAt and re-check on visibilitychange."
           },
           {
             "priority": "P3",
             "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
-            "message": "The `conflict` option is passed by no production wrapper (createAutosaveQueue defaults to never-conflict, so conflictAs is unreachable in production, as in base); it exists only so the factory test can reach the conflictAs mapping that the acceptance asks to test. It is a passthrough of an existing shared option, so harmless, but it is test-only public API; likewise the ProjectSaveQueueOptions type is exported from the slice index and imported nowhere. Consider testing the mapping by mocking createAutosaveQueue and keeping the type unexported. (Codex-sourced in part.)"
-          },
-          {
-            "priority": "P3",
-            "where": "frontend/src/entities/clip-project/model/project-save-queue.test.ts:28 (T843)",
-            "message": "The test 'sends the newest sender and drops it with the queue' never calls discard/discardAll, so the 'drops it' half (sender removed with the queue) is not exercised; rename it or add a discard assertion. (Codex-sourced.)"
-          },
-          {
-            "priority": "P3",
-            "where": "spec/tasks/T844.dubbing-quote-expiry-timer.md result (T844)",
-            "message": "The result says the segment lists are not memoized because React Compiler 'already memoizes them', but frontend/vite.config.ts runs plain react() with no compiler plugin; only the eslint react-hooks compiler rules run. The lists are recomputed on every render (harmless now that renders are rare), so the note should not claim runtime memoization. Also the new ClipDubbingEditor.expiry.test.tsx lies outside T844's touches header, which only lists ClipDubbingEditor.tsx (implied by the acceptance; metadata only)."
+            "message": "Carried over, optional: the `conflict` option is set only by the factory test, and the ProjectSaveQueueOptions type export is imported nowhere."
           }
         ],
-        "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
-        "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
-        "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
-        "createdAt": "2026-11-16T07:50:22.076Z",
-        "finishedAt": "2026-11-16T08:00:03.228Z"
+        "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+        "baseCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+        "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+        "createdAt": "2026-11-16T08:06:03.550Z",
+        "finishedAt": "2026-11-16T08:07:02.011Z"
       },
+      "reviewHistory": [
+        {
+          "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+          "owner": "reviewer-fe-clip",
+          "status": "changes_requested",
+          "verdict": "changes_requested",
+          "summary": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+          "findings": [
+            {
+              "priority": "P2",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.expiry.test.tsx:83-87 (T844)",
+              "message": "Acceptance 3 requires the test to prove an open quote causes no re-render between opening and expiry. The only probe is a spy on clipDraftKey, but the editor's sole render-time call is now useMemo(() => clipDraftKey(plan), [plan]) on an unchanged plan prop (children ClipVoiceChoice/ClipSpokenProperties never call it; estimate/approve call it only on click). So restoring the setInterval while keeping the useMemo still passes both assertions (no extra key call; invalid by 61 s) - Codex's in-memory probe saw 30 renders over the 30 s window with zero extra key calls. The test fails on base only because base lacked the memo. Fix: count renders/commits independently of the memo (e.g. a React <Profiler onRender> around the editor, or a spy on a non-memoized render-time call such as spokenScriptValid through the existing vi.mock) and assert none between opening and expiry and one at expiry. Optionally drop shouldAdvanceTime and assert the boundary exactly (still valid at expiresAt-1 ms, invalid at expiresAt), since the 61 s checkpoint would also pass the old 1 s-late interval."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+              "message": "Clock edge cases of the approved single-timeout design (Codex rated P2; downgraded because the server enforces expiry - internal/clip/store/quotes.go ConsumeClipQuote returns ErrQuoteExpired -> CLIP_QUOTE_EXPIRED - so the cost is a refusal message instead of the pre-emptive invalid state, with no billing risk). (a) A forward wall-clock jump, or system sleep where the browser timer clock pauses, keeps an expired quote approvable until the remaining timeout elapses; the base interval re-read Date.now() every second. (b) Re-arming depends on setNow changing state: if the callback's Date.now() equals the stored now (wall clock rolled back across the whole delay), [quote, now] does not change, the effect never re-arms and the quote stays valid in the UI until the next estimate. Optional hardening: re-arm inside the callback (or bump a tick counter) when Date.now() < expiresAt instead of relying on a state change, and re-check on visibilitychange/focus."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+              "message": "The `conflict` option is passed by no production wrapper (createAutosaveQueue defaults to never-conflict, so conflictAs is unreachable in production, as in base); it exists only so the factory test can reach the conflictAs mapping that the acceptance asks to test. It is a passthrough of an existing shared option, so harmless, but it is test-only public API; likewise the ProjectSaveQueueOptions type is exported from the slice index and imported nowhere. Consider testing the mapping by mocking createAutosaveQueue and keeping the type unexported. (Codex-sourced in part.)"
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.test.ts:28 (T843)",
+              "message": "The test 'sends the newest sender and drops it with the queue' never calls discard/discardAll, so the 'drops it' half (sender removed with the queue) is not exercised; rename it or add a discard assertion. (Codex-sourced.)"
+            },
+            {
+              "priority": "P3",
+              "where": "spec/tasks/T844.dubbing-quote-expiry-timer.md result (T844)",
+              "message": "The result says the segment lists are not memoized because React Compiler 'already memoizes them', but frontend/vite.config.ts runs plain react() with no compiler plugin; only the eslint react-hooks compiler rules run. The lists are recomputed on every render (harmless now that renders are rare), so the note should not claim runtime memoization. Also the new ClipDubbingEditor.expiry.test.tsx lies outside T844's touches header, which only lists ClipDubbingEditor.tsx (implied by the acceptance; metadata only)."
+            }
+          ],
+          "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+          "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+          "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+          "createdAt": "2026-11-16T07:50:22.076Z",
+          "finishedAt": "2026-11-16T08:00:03.228Z",
+          "invalidatedAt": "2026-11-16T08:04:11.205Z",
+          "invalidationReason": "new submission"
+        }
+      ],
       "steps": [
         {
           "taskId": "T843",
@@ -396,13 +407,13 @@
         },
         {
           "taskId": "T844",
-          "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
-          "at": "2026-11-16T07:46:27.861Z",
+          "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+          "at": "2026-11-16T08:05:41.806Z",
           "verification": [
             {
               "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
-              "startedAt": "2026-11-16T07:33:51.976Z",
-              "finishedAt": "2026-11-16T07:46:27.435Z"
+              "startedAt": "2026-11-16T08:04:11.290Z",
+              "finishedAt": "2026-11-16T08:05:41.716Z"
             }
           ]
         }
@@ -410,8 +421,8 @@
       "verification": [
         {
           "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
-          "startedAt": "2026-11-16T07:33:51.976Z",
-          "finishedAt": "2026-11-16T07:46:27.435Z"
+          "startedAt": "2026-11-16T08:04:11.290Z",
+          "finishedAt": "2026-11-16T08:05:41.716Z"
         }
       ]
     },
@@ -546,6 +557,8 @@
       "submittedBase": "18dfdf947e4685a56951105ade7d63273dcbb06b",
       "submissionId": "31ac1d28-0eed-4b19-bd82-d2d9a14b5d38",
       "submittedAt": "2026-11-16T07:54:10.331Z",
+      "integratedCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+      "integratedAt": "2026-11-16T08:04:58.956Z",
       "risk": null,
       "review": {
         "id": "46d55a99-2838-4101-a852-32357abf4fa9",
@@ -607,6 +620,13 @@
           "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
           "startedAt": "2026-11-16T07:51:27.004Z",
           "finishedAt": "2026-11-16T07:54:10.152Z"
+        }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+          "startedAt": "2026-11-16T08:03:35.355Z",
+          "finishedAt": "2026-11-16T08:04:58.956Z"
         }
       ]
     }
@@ -2436,6 +2456,252 @@
       "tasks": [
         "T849",
         "T850"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 64,
+      "at": "2026-11-16T08:03:34.411Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "통합 후보의 spec 검증에 실패했습니다."
+      }
+    },
+    {
+      "sequence": 65,
+      "at": "2026-11-16T08:04:11.205Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "changes_requested",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying",
+        "verifiedCommit": null,
+        "review": null,
+        "reviewHistory": [
+          {
+            "id": "9b3fa539-3f69-4c28-818a-982d499b4339",
+            "owner": "reviewer-fe-clip",
+            "status": "changes_requested",
+            "verdict": "changes_requested",
+            "summary": "T843 is a faithful, behavior-preserving extraction (conflict mappings, region retry/no lane, observation merge, storyline 600 ms + lane, lazy sender lookup in the lane, per-error failure identity, module singletons, discard semantics, export names and inferred types all unchanged; FSD clean). T844's timer change is correct under normal clocks, but its regression test does not prove the re-render fix it is required to prove: the useMemo hides re-renders from the clipDraftKey spy, so restoring the 1 s interval would still pass.",
+            "findings": [
+              {
+                "priority": "P2",
+                "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.expiry.test.tsx:83-87 (T844)",
+                "message": "Acceptance 3 requires the test to prove an open quote causes no re-render between opening and expiry. The only probe is a spy on clipDraftKey, but the editor's sole render-time call is now useMemo(() => clipDraftKey(plan), [plan]) on an unchanged plan prop (children ClipVoiceChoice/ClipSpokenProperties never call it; estimate/approve call it only on click). So restoring the setInterval while keeping the useMemo still passes both assertions (no extra key call; invalid by 61 s) - Codex's in-memory probe saw 30 renders over the 30 s window with zero extra key calls. The test fails on base only because base lacked the memo. Fix: count renders/commits independently of the memo (e.g. a React <Profiler onRender> around the editor, or a spy on a non-memoized render-time call such as spokenScriptValid through the existing vi.mock) and assert none between opening and expiry and one at expiry. Optionally drop shouldAdvanceTime and assert the boundary exactly (still valid at expiresAt-1 ms, invalid at expiresAt), since the 61 s checkpoint would also pass the old 1 s-late interval."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+                "message": "Clock edge cases of the approved single-timeout design (Codex rated P2; downgraded because the server enforces expiry - internal/clip/store/quotes.go ConsumeClipQuote returns ErrQuoteExpired -> CLIP_QUOTE_EXPIRED - so the cost is a refusal message instead of the pre-emptive invalid state, with no billing risk). (a) A forward wall-clock jump, or system sleep where the browser timer clock pauses, keeps an expired quote approvable until the remaining timeout elapses; the base interval re-read Date.now() every second. (b) Re-arming depends on setNow changing state: if the callback's Date.now() equals the stored now (wall clock rolled back across the whole delay), [quote, now] does not change, the effect never re-arms and the quote stays valid in the UI until the next estimate. Optional hardening: re-arm inside the callback (or bump a tick counter) when Date.now() < expiresAt instead of relying on a state change, and re-check on visibilitychange/focus."
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+                "message": "The `conflict` option is passed by no production wrapper (createAutosaveQueue defaults to never-conflict, so conflictAs is unreachable in production, as in base); it exists only so the factory test can reach the conflictAs mapping that the acceptance asks to test. It is a passthrough of an existing shared option, so harmless, but it is test-only public API; likewise the ProjectSaveQueueOptions type is exported from the slice index and imported nowhere. Consider testing the mapping by mocking createAutosaveQueue and keeping the type unexported. (Codex-sourced in part.)"
+              },
+              {
+                "priority": "P3",
+                "where": "frontend/src/entities/clip-project/model/project-save-queue.test.ts:28 (T843)",
+                "message": "The test 'sends the newest sender and drops it with the queue' never calls discard/discardAll, so the 'drops it' half (sender removed with the queue) is not exercised; rename it or add a discard assertion. (Codex-sourced.)"
+              },
+              {
+                "priority": "P3",
+                "where": "spec/tasks/T844.dubbing-quote-expiry-timer.md result (T844)",
+                "message": "The result says the segment lists are not memoized because React Compiler 'already memoizes them', but frontend/vite.config.ts runs plain react() with no compiler plugin; only the eslint react-hooks compiler rules run. The lists are recomputed on every render (harmless now that renders are rare), so the note should not claim runtime memoization. Also the new ClipDubbingEditor.expiry.test.tsx lies outside T844's touches header, which only lists ClipDubbingEditor.tsx (implied by the acceptance; metadata only)."
+              }
+            ],
+            "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+            "baseCommit": "f0ceedf29d5697b555a9beeb262af9f5b56d3b48",
+            "submissionId": "be6c5a21-fab9-4b64-a957-ecbd0b83e97b",
+            "createdAt": "2026-11-16T07:50:22.076Z",
+            "finishedAt": "2026-11-16T08:00:03.228Z",
+            "invalidatedAt": "2026-11-16T08:04:11.205Z",
+            "invalidationReason": "new submission"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 66,
+      "at": "2026-11-16T08:04:58.956Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "6f2905bd-0c7b-43a8-a94c-a985636032ee",
+      "taskId": "T850",
+      "tasks": [
+        "T849",
+        "T850"
+      ],
+      "previousStatus": "approved",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "reason": null,
+        "integratedCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+        "integratedAt": "2026-11-16T08:04:58.956Z",
+        "integrationVerification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/integrate-check.sh",
+            "startedAt": "2026-11-16T08:03:35.355Z",
+            "finishedAt": "2026-11-16T08:04:58.956Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 67,
+      "at": "2026-11-16T08:05:41.814Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "reason": null,
+        "submittedBase": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+        "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+        "submittedAt": "2026-11-16T08:05:41.814Z",
+        "steps": [
+          {
+            "taskId": "T843",
+            "commit": "757fa08c6e20ca14b821cf93add35f9d78cbaa8b",
+            "at": "2026-11-16T07:46:27.861Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T07:33:51.976Z",
+                "finishedAt": "2026-11-16T07:46:27.435Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T844",
+            "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+            "at": "2026-11-16T08:05:41.806Z",
+            "verification": [
+              {
+                "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+                "startedAt": "2026-11-16T08:04:11.290Z",
+                "finishedAt": "2026-11-16T08:05:41.716Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-tools/task-check.sh",
+            "startedAt": "2026-11-16T08:04:11.290Z",
+            "finishedAt": "2026-11-16T08:05:41.716Z"
+          }
+        ],
+        "verifiedCommit": "3f9c431f85c570a45e17642d46047ef28e519510"
+      }
+    },
+    {
+      "sequence": 68,
+      "at": "2026-11-16T08:06:03.550Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "766830dc-fe0c-4273-a219-b7bd46b5a298",
+          "owner": "reviewer-fe-clip",
+          "status": "reviewing",
+          "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+          "baseCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+          "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+          "createdAt": "2026-11-16T08:06:03.550Z"
+        }
+      }
+    },
+    {
+      "sequence": 69,
+      "at": "2026-11-16T08:07:02.011Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "766830dc-fe0c-4273-a219-b7bd46b5a298",
+          "owner": "reviewer-fe-clip",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "The P2 from review 9b3fa539 is resolved: ClipDubbingEditor.expiry.test.tsx now counts Profiler commits under fully fake, pinned timers (no shouldAdvanceTime), asserts no commit and an enabled button through expiresAt-1 ms, then exactly one commit and the invalid state at expiresAt. The count no longer goes through clipDraftKey, so it fails whether the 1 s interval returns with or without the key memo (each tick's setNow(Date.now()) is a new value, so at least one batched commit lands inside the first act window). The pinned clock also checks the exact `Date.parse(expiresAt) <= now` boundary. The record note and the T843 test name are corrected. The delta touches only the two test files and the T844 result; the base moved by fe-lib/fe-upload with no overlapping files. Remaining P3s are optional.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "frontend/src/features/regenerate-clip-speech/ui/ClipDubbingEditor.tsx:70-79 (T844)",
+              "message": "Carried over, optional: with the single timeout, a forward wall-clock jump or sleep keeps an expired quote approvable until the timeout fires, and a clock rollback that makes setNow a no-op leaves the timer un-re-armed. The server rejects expired quotes (CLIP_QUOTE_EXPIRED), so the cost is a refusal message rather than the pre-emptive invalid state. Hardening, if wanted later: re-arm inside the callback when Date.now() < expiresAt and re-check on visibilitychange."
+            },
+            {
+              "priority": "P3",
+              "where": "frontend/src/entities/clip-project/model/project-save-queue.ts:17-19, frontend/src/entities/clip-project/index.ts:48 (T843)",
+              "message": "Carried over, optional: the `conflict` option is set only by the factory test, and the ProjectSaveQueueOptions type export is imported nowhere."
+            }
+          ],
+          "commit": "3f9c431f85c570a45e17642d46047ef28e519510",
+          "baseCommit": "995ce4144ab58a1b8b9b2b2d2be4ed3f93655600",
+          "submissionId": "da125dc7-9f91-4026-a209-6c408794ffe6",
+          "createdAt": "2026-11-16T08:06:03.550Z",
+          "finishedAt": "2026-11-16T08:07:02.011Z"
+        }
+      }
+    },
+    {
+      "sequence": 70,
+      "at": "2026-11-16T08:07:38.605Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T844",
+      "tasks": [
+        "T843",
+        "T844"
       ],
       "previousStatus": "approved",
       "status": "integrating",

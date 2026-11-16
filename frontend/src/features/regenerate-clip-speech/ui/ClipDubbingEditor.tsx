@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useId, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useId, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   clipDraftKey,
@@ -19,6 +19,8 @@ import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, Sheet, Slider, Typography } from '@/shared/ui'
 import { ClipVoiceChoice } from './ClipVoiceChoice'
 import { ClipSpokenProperties } from './ClipSpokenProperties'
+/** The longest delay a browser timer accepts. */
+const MAX_TIMEOUT_MS = 2 ** 31 - 1
 interface Props {
   ownerId: string
   project: ClipProject
@@ -55,7 +57,7 @@ export function ClipDubbingEditor({
   useLayoutEffect(() => {
     current.current = { plan, revision }
   }, [plan, revision])
-  const key = clipDraftKey(plan),
+  const key = useMemo(() => clipDraftKey(plan), [plan]),
     n = plan.narration,
     segments = n?.segments ?? [],
     missing = segments.filter((s) =>
@@ -63,11 +65,18 @@ export function ClipDubbingEditor({
     ),
     conflict = segments.some((s) => spokenState(n!, s, plan.durationMs) === 'conflict'),
     valid = spokenScriptValid(n)
+  // One timeout at the quote's expiry instead of a tick per second: the editor re-renders once,
+  // when the quote turns invalid. Re-armed after a clamped wait, cleared with the quote.
   useEffect(() => {
     if (!quote) return
-    const timer = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(timer)
-  }, [quote])
+    const expiresAt = Date.parse(quote.quote.expiresAt)
+    if (!(now < expiresAt)) return
+    const timer = setTimeout(
+      () => setNow(Date.now()),
+      Math.min(Math.max(expiresAt - Date.now(), 0), MAX_TIMEOUT_MS),
+    )
+    return () => clearTimeout(timer)
+  }, [quote, now])
   const invalidQuote =
     !!quote &&
     (quote.draftKey !== key ||
