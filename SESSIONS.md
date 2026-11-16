@@ -163,6 +163,7 @@
 | T836 | vfid | gusta-session-start-vfid-2c92eccf | b4048994578d | 2026-11-16T03:13Z |
 
 ## log
+- 261116 gusta-create-task review/tidy-261116: T837-T844 (lanes be-tidy fe-lib fe-clip)
 - 261116 gusta-create-task review/tidy-261116 start
 - 261116 T836 done
 - 261116 T835 done
@@ -182,4 +183,3 @@
 - 261116 sketch voice-fidelity start
 - 261113 ldui: all 13 final ARCH checks passed at 02b42f965b7e (5118 frontend tests); published to origin/main e5dea5248300 with SETTINGS version auto 0.1.0; CI wait is attached to that exact commit.
 - 261113 Owner explicitly resumed video UI repair and main integration; archived prior3/3 gate history and reset vdux once without changing required checks.
-- 261113 dsui: preserve first gate failure 1/3 and 22-case recovery pass; defer the queued second gate while the active loading owner validates overlapping editor/template screens, then synchronize published changes before final verification
