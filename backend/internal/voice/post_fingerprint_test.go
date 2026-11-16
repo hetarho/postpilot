@@ -105,3 +105,61 @@ func TestPostFingerprintComparesThePostWithItsVoice(t *testing.T) {
 		t.Fatalf("the comparison called a model %d times", h.models.completeCalls)
 	}
 }
+
+// VOICE-77, VOICE-21: ② also returns every habit phrase located in the counted revision, and a
+// habit whose 학습 글 was deleted after the analysis carries no example.
+func TestPostFingerprintReturnsHabitPhrases(t *testing.T) {
+	h := newVoiceHarness(t)
+	ctx := context.Background()
+	alice := h.voice("alice")
+	body := strings.Repeat("국물이 끝내줘요! ", 20)
+	if err := h.store.InsertSample(ctx, voice.Sample{ID: "m1", UserID: "alice", VoiceID: alice, Kind: voice.SampleKindPost, Label: "첫 글", Body: body, CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
+	var analysis voice.Analysis
+	analysis.Counted = voice.FingerprintOf([]voice.Material{{ID: "m1", Kind: voice.SampleKindPost, CreatedAt: time.Now(), Text: body}})
+	analysis.AnalyzeModel = analyzeRef.String()
+	analysis.CreatedAt = time.Now()
+	analysis.AI.SignaturePhrases = []string{"국물이 끝내줘요"}
+	analysis.AI.Examples = []voice.AIExample{{Field: voice.AISignaturePhrases, Sentence: "국물이 끝내줘요!", MaterialID: "m1"}}
+	if err := h.store.PublishAnalysis(ctx, "alice", alice, analysis); err != nil {
+		t.Fatal(err)
+	}
+	h.svc.ConfigurePosts(fakePosts{"made": {owner: "alice", voiceID: alice, revision: 9, blocks: []voice.Block{
+		{Index: 1, Type: voice.BlockText, Content: "오늘도 국물이 끝내줘요 정말."},
+		{Index: 3, Type: voice.BlockList, Items: []string{"면", "국물이 끝내줘요"}},
+	}}})
+
+	habit := func() voice.HabitPhrase {
+		found, err := h.svc.PostFingerprint(ctx, "alice", "made")
+		if err != nil || !found.Applicable || found.Revision != 9 {
+			t.Fatalf("made = %+v err=%v", found, err)
+		}
+		for _, phrase := range found.Habits {
+			if phrase.Kind == voice.HabitSignature && phrase.BlockIndex == 3 {
+				return phrase
+			}
+		}
+		t.Fatalf("no signature phrase in the list item: %+v", found.Habits)
+		return voice.HabitPhrase{}
+	}
+	if got := habit(); got.ItemIndex != 1 || got.Quote != "국물이 끝내줘요" || got.TextCount != 2 || got.Example != "국물이 끝내줘요!" {
+		t.Fatalf("habit = %+v", got)
+	}
+	if err := h.svc.DeleteSample(ctx, "alice", alice, "m1"); err != nil {
+		t.Fatal(err)
+	}
+	if got := habit(); got.Example != "" || got.TextCount != 2 {
+		t.Fatalf("after the material was deleted = %+v", got)
+	}
+
+	h.svc.ConfigurePosts(fakePosts{
+		"no-voice": {owner: "alice", revision: 3, blocks: []voice.Block{{Type: voice.BlockText, Content: "국물이 끝내줘요"}}},
+		"empty":    {owner: "alice", voiceID: alice, revision: 0},
+	})
+	for _, slug := range []string{"no-voice", "empty"} {
+		if found, err := h.svc.PostFingerprint(ctx, "alice", slug); err != nil || found.Applicable || len(found.Habits) != 0 {
+			t.Fatalf("%s = %+v err=%v", slug, found, err)
+		}
+	}
+}

@@ -7,12 +7,14 @@ import (
 )
 
 // PostFingerprint is ②'s reading of a post against its voice (POST-102): the content revision
-// it counted and one comparison per item. Applicable is false, with no items, for a post with
-// 말투 없음, with no content yet, or whose voice is deleted or not made.
+// it counted, one comparison per item and every habit phrase found in the post's fields
+// (VOICE-77). Applicable is false, with no items and no habits, for a post with 말투 없음, with no
+// content yet, or whose voice is deleted or not made. Habits are located in that Revision's text.
 type PostFingerprint struct {
 	Applicable bool
 	Revision   int64
 	Items      []ItemComparison
+	Habits     []HabitPhrase
 }
 
 // ConfigurePosts wires the post reader PostFingerprint counts from.
@@ -56,5 +58,14 @@ func (s *Service) PostFingerprint(ctx context.Context, userID, slug string) (Pos
 	}
 	out.Applicable = true
 	out.Items = Compare(analysis.Counted, MeasureBlocks(blocks))
+	var present map[string]bool
+	if NormalizedOrigin(analysis.Origin) != OriginSynthetic {
+		samples, err := s.samples.ListSampleBodies(ctx, userID, voiceID)
+		if err != nil {
+			return PostFingerprint{}, fmt.Errorf("list samples: %w", err)
+		}
+		present = samplePresence(samples)
+	}
+	out.Habits = FindHabitPhrases(*analysis, blocks, present)
 	return out, nil
 }

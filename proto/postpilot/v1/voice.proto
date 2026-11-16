@@ -4,6 +4,7 @@ package postpilot.v1;
 
 import "postpilot/v1/error.proto";
 import "postpilot/v1/provider.proto";
+import "postpilot/v1/semantic_origin.proto";
 
 option go_package = "github.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1";
 
@@ -460,6 +461,34 @@ message FingerprintItemComparison {
 }
 
 message GetPostFingerprintRequest { string post_slug = 1; }
+
+// The countable habit a found phrase shows (VOICE-77).
+enum VoiceHabitKind {
+  VOICE_HABIT_KIND_UNSPECIFIED = 0;
+  VOICE_HABIT_KIND_ENDING = 1;
+  VOICE_HABIT_KIND_ADVERB = 2;
+  VOICE_HABIT_KIND_OPENING = 3;
+  VOICE_HABIT_KIND_CLOSING = 4;
+  VOICE_HABIT_KIND_SIGNATURE = 5;
+}
+
+// One phrase of the post that shows a counted habit of its voice. start and end are half-open
+// Unicode scalar offsets into the named field's current text, exactly like OriginSpan.
+message VoiceHabitPhrase {
+  OriginFieldLocator field = 1;
+  uint32 start = 2;
+  uint32 end = 3;
+  string quote = 4;
+  VoiceHabitKind kind = 5;
+  string term = 6;
+  // The voice's rate of the habit per 100 sentences; 0 where the habit has no rate.
+  double voice_per_hundred = 7;
+  // How many times the post holds the habit.
+  uint32 text_count = 8;
+  // One 학습 글 sentence showing the habit; empty when none is left. An AI 말투's is its fictional sample.
+  string example = 9;
+  bool example_fictional = 10;
+}
 // Items come 다름 first, then 비슷함, then those without a verdict, each group in item order.
 // applicable is false, with no items, for a post with 말투 없음, with no content, or whose voice is deleted or not made.
 message GetPostFingerprintResponse {
@@ -467,6 +496,8 @@ message GetPostFingerprintResponse {
   // The content revision that was counted.
   int64 revision = 2;
   repeated FingerprintItemComparison items = 3;
+  // Located in the text of `revision`; a client shows them only against that revision.
+  repeated VoiceHabitPhrase habits = 4;
 }
 
 enum VoiceCheckStatus {

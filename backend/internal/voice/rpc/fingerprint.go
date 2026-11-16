@@ -21,6 +21,7 @@ func (h *Handler) GetPostFingerprint(ctx context.Context, req *connect.Request[p
 	}
 	return connect.NewResponse(&postpilotv1.GetPostFingerprintResponse{
 		Applicable: found.Applicable, Revision: found.Revision, Items: ToProtoComparisons(found.Items),
+		Habits: toProtoHabits(found.Habits),
 	}), nil
 }
 
@@ -101,4 +102,41 @@ func toProtoFacetUnit(unit voice.FacetUnit) postpilotv1.FingerprintFacetUnit {
 		return postpilotv1.FingerprintFacetUnit_FINGERPRINT_FACET_UNIT_TEXT
 	}
 	return postpilotv1.FingerprintFacetUnit_FINGERPRINT_FACET_UNIT_UNSPECIFIED
+}
+
+// toProtoHabits locates each habit phrase by the field it sits in: a block's content, or one
+// item of a LIST (ItemIndex -1 means the block's own content).
+func toProtoHabits(habits []voice.HabitPhrase) []*postpilotv1.VoiceHabitPhrase {
+	out := make([]*postpilotv1.VoiceHabitPhrase, 0, len(habits))
+	for _, habit := range habits {
+		block := uint32(habit.BlockIndex)
+		field := &postpilotv1.OriginFieldLocator{Kind: postpilotv1.OriginFieldKind_ORIGIN_FIELD_KIND_BLOCK_CONTENT, BlockIndex: &block}
+		if habit.ItemIndex >= 0 {
+			item := uint32(habit.ItemIndex)
+			field.Kind = postpilotv1.OriginFieldKind_ORIGIN_FIELD_KIND_BLOCK_ITEM
+			field.ItemIndex = &item
+		}
+		out = append(out, &postpilotv1.VoiceHabitPhrase{
+			Field: field, Start: uint32(habit.Start), End: uint32(habit.End), Quote: habit.Quote,
+			Kind: toProtoHabitKind(habit.Kind), Term: habit.Term, VoicePerHundred: habit.VoicePerHundred,
+			TextCount: uint32(habit.TextCount), Example: habit.Example, ExampleFictional: habit.ExampleFictional,
+		})
+	}
+	return out
+}
+
+func toProtoHabitKind(kind voice.HabitKind) postpilotv1.VoiceHabitKind {
+	switch kind {
+	case voice.HabitEnding:
+		return postpilotv1.VoiceHabitKind_VOICE_HABIT_KIND_ENDING
+	case voice.HabitAdverb:
+		return postpilotv1.VoiceHabitKind_VOICE_HABIT_KIND_ADVERB
+	case voice.HabitOpening:
+		return postpilotv1.VoiceHabitKind_VOICE_HABIT_KIND_OPENING
+	case voice.HabitClosing:
+		return postpilotv1.VoiceHabitKind_VOICE_HABIT_KIND_CLOSING
+	case voice.HabitSignature:
+		return postpilotv1.VoiceHabitKind_VOICE_HABIT_KIND_SIGNATURE
+	}
+	return postpilotv1.VoiceHabitKind_VOICE_HABIT_KIND_UNSPECIFIED
 }
