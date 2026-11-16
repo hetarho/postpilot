@@ -152,8 +152,8 @@
       "branch": "gusta-session-start-hdref-c3df08ba",
       "head": "1649b4eb0e5396a04d93c9cf2a76c8dbca57aa93",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T14:41:25.451Z",
+      "status": "ready",
+      "at": "2026-11-16T14:41:34.185Z",
       "agentChecks": [],
       "verificationCommands": []
     },
