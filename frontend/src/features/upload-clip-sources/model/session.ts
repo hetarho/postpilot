@@ -538,14 +538,19 @@ export class ClipSourceSession {
         const entry = this.entries.get(source.metadata.fingerprint)
         const upload = reservation.uploads.find((v) => v.sourceId === source.id)
         if (!entry?.file || !upload) throw new Error('Missing reserved source')
+        // The last published `{ percent, state }`: an equal percent is a no-op only while
+        // nothing else published in between (state identity), so no published state changes.
+        let reported: { percent: number; state: ClipUploadState } | undefined
         await this.pipeline.put(
           upload.putUrl,
           upload.headers,
           entry.file,
           (percent) => {
             if (!this.current(token)) return
+            if (reported?.percent === percent && reported.state === this.state) return
             this.entries.set(source.metadata.fingerprint, { ...entry, percent })
             this.publish('uploading')
+            reported = { percent, state: this.state }
           },
           controller.signal,
         )
