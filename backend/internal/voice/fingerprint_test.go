@@ -125,7 +125,7 @@ func TestFingerprintShape(t *testing.T) {
 }
 
 // ⑤ openings and closings: a post's first and last lines, an opening answer's first sentence and
-// a closing answer's last, deduplicated and counted.
+// a closing answer's last, keeping only the lines that recur in two or more 학습 글.
 func TestFingerprintOpeningsAndClosings(t *testing.T) {
 	materials := []Material{
 		post("p1", "안녕하세요! 오늘은 국수예요.\n맛있었어요.\n다음에 또 만나요!", 1),
@@ -135,10 +135,10 @@ func TestFingerprintOpeningsAndClosings(t *testing.T) {
 		{ID: "d", Kind: SampleKindAnswer, Part: PartDescription, CreatedAt: fingerprintAt, Text: "설명하는 답이에요."},
 	}
 	f := FingerprintOf(materials)
-	if f.OpenClose.Unknown || !reflect.DeepEqual(f.OpenClose.Openings, []string{"안녕하세요! 오늘은 국수예요.", "여러분 반가워요."}) {
+	if f.OpenClose.Unknown || !reflect.DeepEqual(f.OpenClose.Openings, []string{"안녕하세요! 오늘은 국수예요."}) {
 		t.Fatalf("openings = %q", f.OpenClose.Openings)
 	}
-	if !reflect.DeepEqual(f.OpenClose.Closings, []string{"다음에 또 만나요!", "그럼 이만."}) {
+	if !reflect.DeepEqual(f.OpenClose.Closings, []string{"다음에 또 만나요!"}) {
 		t.Fatalf("closings = %q", f.OpenClose.Closings)
 	}
 	// Newest first: p2 is newer than p1, so the shared opening is first seen in p2.
@@ -265,8 +265,8 @@ func TestAPastedNaverPostCountsTheSameWithoutItsPlaceCard(t *testing.T) {
 
 // Examples come from the newest 학습 글 first and name it.
 func TestFingerprintExamplesNameTheNewestMaterial(t *testing.T) {
-	older := post("old", repeatLines(10, "예전 글이에요!"), 0)
-	newer := post("new", repeatLines(10, "새 글이에요!"), 10)
+	older := post("old", "안녕하세요! 예전 글이에요.\n"+repeatLines(10, "예전 글이에요!"), 0)
+	newer := post("new", "안녕하세요! 새 글이에요.\n"+repeatLines(10, "새 글이에요!"), 10)
 	f := FingerprintOf([]Material{older, newer})
 	for item, example := range map[Item]Example{ItemEndings: f.Endings.Example, ItemMarks: f.Marks.Example, ItemShape: f.Shape.Example, ItemOpenings: f.OpenClose.Example} {
 		if example.MaterialID != "new" {
@@ -336,5 +336,66 @@ func TestSegmentSentencesKeepsTheFinalRun(t *testing.T) {
 	want := []string{"좋아요!!😊", "다음에 또?!", "그래요~ 끝."}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("sentences = %q, want %q", got, want)
+	}
+}
+
+// VOICE-62: a post is counted as its prose; its HEADING blocks feed only ⑧.
+func TestMeasureBlocksCountsProseWithoutTemplateHeadings(t *testing.T) {
+	f := MeasureBlocks([]Block{
+		{Type: BlockHeading, Content: "📝 어쩌다 가게 됐냐면요..."},
+		{Type: BlockText, Content: "안녕하세요! 오늘은 국수 먹었어요.\n정말 맛있었어요."},
+		{Type: BlockHeading, Content: "🍜 오늘의 메뉴"},
+		{Type: BlockText, Content: "비빔국수를 시켰어요.\n다음에 또 갈게요!"},
+	})
+	if f.Sentences != 5 {
+		t.Fatalf("sentences = %d, a heading was counted as prose", f.Sentences)
+	}
+	if f.Emoji.Emoji != 0 || f.Emoji.Example.Sentence != "" {
+		t.Fatalf("emoji = %+v, a heading's emoji was counted", f.Emoji)
+	}
+	if f.Headings.Count != 2 || !near(f.Headings.EmojiShare, 1) {
+		t.Fatalf("headings = %+v", f.Headings)
+	}
+	if !near(f.Shape.LineBreakShare, 0.8) {
+		t.Fatalf("line-break share = %v, a heading added a line", f.Shape.LineBreakShare)
+	}
+	if got := f.OpenClose.Openings; !reflect.DeepEqual(got, []string{"안녕하세요! 오늘은 국수 먹었어요."}) {
+		t.Fatalf("openings = %q", got)
+	}
+	if got := f.OpenClose.Closings; !reflect.DeepEqual(got, []string{"다음에 또 갈게요!"}) {
+		t.Fatalf("closings = %q", got)
+	}
+	if only := MeasureBlocks([]Block{{Type: BlockHeading, Content: "🍜 오늘의 메뉴"}}); !only.OpenClose.Unknown {
+		t.Fatalf("a post of headings alone has opening and closing: %+v", only.OpenClose)
+	}
+}
+
+// VOICE-24: ⑤ keeps a first or last line only when it recurs in two or more 학습 글.
+func TestFingerprintKeepsOnlyRecurringOpeningsAndClosings(t *testing.T) {
+	distinct := FingerprintOf([]Material{
+		post("a", "안녕하세요~ 요즘 국수예요.\n끝.", 0),
+		post("b", "오늘은 비가 와요.\n끝.", 1),
+		post("c", "여러분 반가워요.\n끝.", 2),
+	})
+	if len(distinct.OpenClose.Openings) != 0 {
+		t.Fatalf("openings = %q", distinct.OpenClose.Openings)
+	}
+	recurring := FingerprintOf([]Material{
+		post("a", "안녕하세요~ 요즘 국수예요.\n맛있어요.", 0),
+		post("b", "안녕하세요! 오늘 비가 와요.\n별로예요.", 1),
+	})
+	if got := recurring.OpenClose.Openings; !reflect.DeepEqual(got, []string{"안녕하세요! 오늘 비가 와요."}) || recurring.OpenClose.Example.MaterialID != "b" {
+		t.Fatalf("openings = %q example = %+v", got, recurring.OpenClose.Example)
+	}
+	answers := FingerprintOf([]Material{
+		{ID: "x", Kind: SampleKindAnswer, Part: PartOpening, CreatedAt: fingerprintAt, Text: "안녕하세요 여러분. 시작해요."},
+		{ID: "y", Kind: SampleKindAnswer, Part: PartOpening, CreatedAt: fingerprintAt.Add(time.Minute), Text: "안녕하세요 친구들. 오늘은 달라요."},
+	})
+	if got := answers.OpenClose.Openings; !reflect.DeepEqual(got, []string{"안녕하세요 친구들."}) {
+		t.Fatalf("answer openings = %q", got)
+	}
+	// A text keeps its own first and last line unfiltered.
+	if text := MeasureText("처음 보는 줄이에요.\n마지막 줄이에요."); len(text.OpenClose.Openings) != 1 || len(text.OpenClose.Closings) != 1 {
+		t.Fatalf("a text's ⑤ = %+v", text.OpenClose)
 	}
 }

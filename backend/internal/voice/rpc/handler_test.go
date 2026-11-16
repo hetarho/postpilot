@@ -345,7 +345,7 @@ func TestTheAnalysisAndItsUndoAtTheEdge(t *testing.T) {
 	store := voicestore.New(handle.Writer, handle.Reader)
 	for _, impression := range []string{"첫 분석", "다시 분석"} {
 		if err := store.PublishAnalysis(ctx, "alice", created.ID, voice.Analysis{
-			Counted:      voice.FingerprintOf([]voice.Material{{ID: "m", Kind: voice.SampleKindPost, Text: "안녕하세요!\n좋았어요."}}),
+			Counted:      voice.FingerprintOf([]voice.Material{{ID: "m", Kind: voice.SampleKindPost, Text: "안녕하세요!\n좋았어요."}, {ID: "n", Kind: voice.SampleKindPost, Text: "안녕하세요!\n별로였어요."}}),
 			AI:           voice.AIPart{Impression: impression},
 			AnalyzeModel: "stub/analyze", CreatedAt: time.Now(),
 		}); err != nil {

@@ -196,6 +196,7 @@ const (
 	fingerprintNoneMinSentences = 30
 	openingMaxRunes             = 60
 	headingMaxRunes             = 30
+	recurringLineSources        = 2 // ⑤ keeps a line seen in at least this many 학습 글
 )
 
 // adverbLexicon is ⑥'s code-owned lexicon, in its tie-breaking order.
@@ -324,6 +325,12 @@ func measure(sources []source, text bool) Fingerprint {
 		for _, paragraph := range src.paragraphs {
 			size := 0
 			for _, ln := range paragraph {
+				if ln.heading {
+					// a post's HEADING block feeds only ⑧ (VOICE-62)
+					headings = append(headings, ln)
+					headingIDs = append(headingIDs, src.id)
+					continue
+				}
 				lines++
 				marker := ln.listMarker
 				if marker == "" && !src.blocks {
@@ -335,7 +342,7 @@ func measure(sources []source, text bool) Fingerprint {
 					if firstList == nil {
 						firstList = &sentence{text: ln.text, id: src.id}
 					}
-				} else if ln.heading || (!src.blocks && isPlainHeading(ln.text, len(paragraph))) {
+				} else if !src.blocks && isPlainHeading(ln.text, len(paragraph)) {
 					headings = append(headings, ln)
 					headingIDs = append(headingIDs, src.id)
 				}
@@ -676,10 +683,12 @@ func shapeOf(sentences []sentence, paragraphSizes []int, lines int) Shape {
 
 type lineCount struct {
 	text, id string
-	count    int
+	ids      map[string]bool
 	order    int
 }
 
+// openCloseOf keeps, for 학습 글, only a first or last line that recurs in two or more of them
+// (VOICE-24); a text keeps its own first and last line.
 func openCloseOf(sources []source, text bool) OpenClose {
 	openings := map[string]*lineCount{}
 	closings := map[string]*lineCount{}
@@ -689,13 +698,20 @@ func openCloseOf(sources []source, text bool) OpenClose {
 		if value == "" {
 			return
 		}
-		key := strings.Join(strings.Fields(value), " ")
+		display := strings.Join(strings.Fields(value), " ")
+		key := display
+		if !text {
+			if syllables := firstSyllables(display); utf8.RuneCountInString(syllables) == 3 {
+				key = syllables
+			}
+		}
 		if found, ok := into[key]; ok {
-			found.count++
+			found.ids[id] = true
 			return
 		}
 		order++
-		into[key] = &lineCount{text: key, id: id, count: 1, order: order}
+		// sources arrive newest first, so the first line of a group is its newest
+		into[key] = &lineCount{text: display, id: id, ids: map[string]bool{id: true}, order: order}
 	}
 	for _, src := range sources {
 		first, last := firstAndLast(src.paragraphs)
@@ -713,24 +729,37 @@ func openCloseOf(sources []source, text bool) OpenClose {
 			}
 		}
 	}
-	out := OpenClose{Openings: rankLines(openings), Closings: rankLines(closings)}
+	out := OpenClose{Openings: rankLines(openings, text), Closings: rankLines(closings, text)}
 	out.Unknown = len(out.Openings) == 0 && len(out.Closings) == 0
 	if len(out.Openings) > 0 {
-		out.Example = Example{Sentence: out.Openings[0], MaterialID: openings[out.Openings[0]].id}
+		out.Example = Example{Sentence: out.Openings[0], MaterialID: lineIDOf(openings, out.Openings[0])}
 	} else if len(out.Closings) > 0 {
-		out.Example = Example{Sentence: out.Closings[0], MaterialID: closings[out.Closings[0]].id}
+		out.Example = Example{Sentence: out.Closings[0], MaterialID: lineIDOf(closings, out.Closings[0])}
 	}
 	return out
 }
 
-func rankLines(counts map[string]*lineCount) []string {
+func lineIDOf(counts map[string]*lineCount, text string) string {
+	for _, found := range counts {
+		if found.text == text {
+			return found.id
+		}
+	}
+	return ""
+}
+
+// rankLines orders the surviving groups by how many 학습 글 they span, then by first sight, and
+// keeps the top three. Outside a text a group survives only when it spans two or more 학습 글.
+func rankLines(counts map[string]*lineCount, text bool) []string {
 	ranked := make([]*lineCount, 0, len(counts))
 	for _, found := range counts {
-		ranked = append(ranked, found)
+		if text || len(found.ids) >= recurringLineSources {
+			ranked = append(ranked, found)
+		}
 	}
 	sort.Slice(ranked, func(i, j int) bool {
-		if ranked[i].count != ranked[j].count {
-			return ranked[i].count > ranked[j].count
+		if len(ranked[i].ids) != len(ranked[j].ids) {
+			return len(ranked[i].ids) > len(ranked[j].ids)
 		}
 		return ranked[i].order < ranked[j].order
 	})
@@ -744,12 +773,21 @@ func rankLines(counts map[string]*lineCount) []string {
 	return out
 }
 
+// firstAndLast is a post's first and last prose line: a heading line is neither (VOICE-62).
 func firstAndLast(paragraphs [][]line) (string, string) {
-	if len(paragraphs) == 0 {
-		return "", ""
+	var first, last string
+	for _, paragraph := range paragraphs {
+		for _, ln := range paragraph {
+			if ln.heading {
+				continue
+			}
+			if first == "" {
+				first = ln.text
+			}
+			last = ln.text
+		}
 	}
-	lastParagraph := paragraphs[len(paragraphs)-1]
-	return paragraphs[0][0].text, lastParagraph[len(lastParagraph)-1].text
+	return first, last
 }
 
 func joinLines(paragraphs [][]line) string {
