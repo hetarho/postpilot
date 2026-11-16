@@ -566,10 +566,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     return create(GetClipUploadTextsResponseSchema, {
       texts: uploadTexts.filter((row) => row.projectId === req.projectId),
-      limits: [
-        { channel: 'naver_clip', maxChars: 300, maxTags: 5, tagsInCaption: false },
-        { channel: 'instagram_clip', maxChars: 2200, maxTags: 5, tagsInCaption: true },
-      ],
+      limits: [{ maxChars: 300, maxTags: 5, tagsInCaption: false }],
     })
   })
   router.rpc(ClipGenerationService.method.saveClipUploadText, (req) => {
@@ -581,7 +578,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       throw connectAppError('CLIP_PLAN_CONFLICT', Code.FailedPrecondition)
     const text = {
       projectId: req.projectId,
-      channel: 'naver_clip',
+      channel: '',
       body: req.body,
       tags: [...req.tags],
       edited: true,
@@ -765,7 +762,6 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       title: req.title,
       videoTemplateId: req.videoTemplateId,
       ratio: req.ratio as ClipProjectDraft['ratio'],
-      channel: (req.channel || 'naver_clip') as ClipProjectDraft['channel'],
       targetDurationMs: req.targetDurationMs,
       disclosure: req.disclosure as ClipProjectDraft['disclosure'],
       hideDisclosure: req.hideDisclosure,
@@ -841,7 +837,6 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       p.advertiserGuide = advertiserGuideFromProto(req.advertiserGuide)
       p.advertiserGuide.text = p.advertiserGuide.text.trim()
     }
-    if (req.channel !== undefined) p.channel = req.channel as ClipProjectDraft['channel']
     if (req.title !== undefined) p.title = req.title
     // Choosing a template takes its selection in the same write; 없음 moves nothing (CLIP-168).
     const switchedTo =

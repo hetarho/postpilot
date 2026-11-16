@@ -335,28 +335,28 @@ describe('clip directory', () => {
   })
 })
 
-// One 영상 list: a video is a video, whichever channel it was made for (owner 2026-11-16).
-it("lists both channels' videos on the one 영상 list", async () => {
+// One 영상 list: a video is a video (CLIP-209).
+it('lists every video on the one 영상 list', async () => {
   const user = userEvent.setup()
   const view = renderAppAt('/clips', {
     user: { id: 'alice' },
     clips: {
       projects: [
-        { ...base, id: 'n', title: 'Naver only' },
-        { ...base, id: 'i', title: 'Instagram only', channel: 'instagram_clip' },
+        { ...base, id: 'n', title: 'First only' },
+        { ...base, id: 'i', title: 'Second only' },
       ],
     },
   })
-  expect(await row(/Instagram only/)).toBeInTheDocument()
-  expect(await row(/Naver only/)).toBeInTheDocument()
+  expect(await row(/Second only/)).toBeInTheDocument()
+  expect(await row(/First only/)).toBeInTheDocument()
   await openFind(user)
   await user.type(screen.getByRole('searchbox'), 'missing')
   await screen.findByRole('button', { name: '전체 보기' })
   await user.click(screen.getByRole('button', { name: '전체 보기' }))
   expect(view.router.state.location.pathname).toBe('/clips')
   expect(view.router.state.location.search).toEqual({})
-  expect(await row(/Instagram only/)).toBeInTheDocument()
-  expect(await row(/Naver only/)).toBeInTheDocument()
+  expect(await row(/Second only/)).toBeInTheDocument()
+  expect(await row(/First only/)).toBeInTheDocument()
 })
 
 // THEME-38, CLIP-41: the 영상 list opens straight onto its history with its 새 영상 button, and the
@@ -366,15 +366,12 @@ it('opens the 영상 history with no visible heading and its creation button', a
   expect(await screen.findByRole('heading', { level: 1, name: '영상' })).toHaveClass('sr-only')
   expect(view.router.state.location.pathname).toBe('/clips')
   // The 영상 section's one creation opens the clip workspace (THEME-67).
-  expect(screen.getByRole('link', { name: '새 영상' })).toHaveAttribute(
-    'href',
-    '/clips/new?channel=naver_clip',
-  )
+  expect(screen.getByRole('link', { name: '새 영상' })).toHaveAttribute('href', '/clips/new')
   expect(screen.queryByRole('menu')).toBeNull()
 })
 
 it.each([
-  ['/insta-clip?channel=instagram_clip&q=바다', '/clips', { q: '바다' }],
+  ['/insta-clip?q=바다', '/clips', { q: '바다' }],
   ['/naver-clip?status=draft', '/clips', { status: 'draft' }],
   ['/naver-clip/?status=draft', '/clips', { status: 'draft' }],
   ['/insta-clip/?q=바다&status=refining', '/clips', { q: '바다', status: 'refining' }],
@@ -384,13 +381,10 @@ it.each([
   expect(view.router.state.location.search).toEqual(search)
 })
 
-// Either channel's video is on the one 영상 list, and its way back keeps the narrowing.
-it.each([
-  ['naver_clip', false, '네이버 클립', '/clips'],
-  ['instagram_clip', true, '인스타 클립', '/clips'],
-] as const)(
-  'shows a prepared %s story on the 영상 list and filters it without calling it a finished video',
-  async (channel, narrated, channelName, channelPath) => {
+// A video is on the one 영상 list, and its way back keeps the narrowing.
+it.each([false, true] as const)(
+  'shows a prepared story on the 영상 list and filters it without calling it a finished video (narrated=%s)',
+  async (narrated) => {
     const path = '/clips'
     const user = userEvent.setup()
     const storyline = {
@@ -405,7 +399,6 @@ it.each([
           ...base,
           id: 'ready',
           title: '이야기만 준비한 영상',
-          channel,
           storyline,
           ...(narrated ? { dubbing: { enabled: true, voiceId: 'confirmed' } } : {}),
         },
@@ -413,11 +406,10 @@ it.each([
           ...base,
           id: 'built',
           title: '편집안이 준비된 영상',
-          channel,
           storyline,
           editPlanRevision: 1,
         },
-        { ...base, id: 'draft', title: '시작한 초안', channel },
+        { ...base, id: 'draft', title: '시작한 초안' },
       ],
     })
     expect(await row(/이야기만 준비한 영상/)).toHaveTextContent('스토리라인 작성 완료')
@@ -436,9 +428,8 @@ it.each([
     await user.click(screen.getByRole('button', { name: '결과 보기' }))
     await user.click(await row(/이야기만 준비한 영상/))
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips/ready'))
-    const back = await screen.findByRole('link', { name: `${channelName}으로 돌아가기` })
-    // An Instagram video's way back names its channel's old address, which lands on 영상.
-    expect(back).toHaveAttribute('href', `${channelPath}?status=storyline_ready`)
+    const back = await screen.findByRole('link', { name: '영상으로 돌아가기' })
+    expect(back).toHaveAttribute('href', '/clips?status=storyline_ready')
     await user.click(back)
     await waitFor(() => expect(router.state.location.pathname).toBe(path))
     expect(router.state.location.search).toMatchObject({ status: 'storyline_ready' })

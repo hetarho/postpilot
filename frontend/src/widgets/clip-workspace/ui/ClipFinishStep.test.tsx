@@ -28,7 +28,6 @@ function clip(overrides: Record<string, unknown> = {}) {
     create(ClipProjectSchema, {
       id: 'clip',
       ratio: 'vertical',
-      channel: 'naver_clip',
       editPlanRevision: 2,
       confirmedPlanRevision: 2,
       canFinalize: true,

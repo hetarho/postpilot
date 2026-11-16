@@ -1,7 +1,7 @@
 import { useInitializeDefaultSelections } from '@/entities/model-catalog'
 import { useSession } from '@/entities/session'
 import { postReturnDestination } from '@/entities/post'
-import { clipReturnDestination, useClipProject } from '@/entities/clip-project'
+import { clipReturnDestination } from '@/entities/clip-project'
 import { useWritingTestSource } from '@/entities/writing-test'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
@@ -41,7 +41,6 @@ import {
   isTopLevelDestination,
   MINE_SECTIONS,
   navigationPathname,
-  navigationChannelFromHref,
   routeLocation,
   STYLE_SECTIONS,
   styleKinds,
@@ -102,14 +101,8 @@ export function AuthenticatedLayout() {
   const postReturn = postSlug
     ? postReturnDestination(ownerId, postSlug === 'new' ? undefined : postSlug)
     : undefined
-  const clipQuery = useClipProject(ownerId, clipId && clipId !== 'new' ? clipId : undefined)
   const clipReturn = clipId
-    ? clipReturnDestination(
-        ownerId,
-        clipId === 'new' ? undefined : clipId,
-        undefined,
-        clipQuery.data?.channel ?? navigationChannelFromHref(location.href),
-      )
+    ? clipReturnDestination(ownerId, clipId === 'new' ? undefined : clipId)
     : undefined
   const stored = readNavigationEntry(ownerId, location.href)
   const accessibleParent = (href: string) => {
@@ -126,25 +119,8 @@ export function AuthenticatedLayout() {
       : undefined
   const origin =
     explicit ?? (stored && accessibleParent(entryHref(stored)) ? entryHref(stored) : undefined)
-  const storedChannel = stored?.filters.channel
-  // 말투's list page belongs to the channel its own address names, and to 네이버 블로그 without
-  // one, so a reload or a shared link lands under the same channel (THEME-38).
-  const channel =
-    pathname === '/voices'
-      ? navigationChannelFromHref(location.href)
-      : (clipQuery.data?.channel ??
-        navigationChannelFromHref(location.href) ??
-        (storedChannel === 'instagram_clip' || storedChannel === 'naver_clip'
-          ? storedChannel
-          : undefined) ??
-        (origin ? navigationChannelFromHref(origin) : undefined) ??
-        clipReturn?.channel)
-  const channelRef = useRef(channel)
-  useLayoutEffect(() => {
-    channelRef.current = channel
-  }, [channel])
-  const current = currentDestination(pathname, channel)
-  const metadata = routeLocation(pathname, channel)
+  const current = currentDestination(pathname)
+  const metadata = routeLocation(pathname)
   const sourceSlug =
     pathname === '/tests' || pathname.startsWith('/tests/records/')
       ? typeof search.source === 'string'
@@ -189,7 +165,7 @@ export function AuthenticatedLayout() {
       : parent && returnHref === parent.href
         ? t(`location.${parent.key}`)
         : returnHref
-          ? t(`location.${routeLocation(returnHref, channel).current}`)
+          ? t(`location.${routeLocation(returnHref).current}`)
           : undefined
   const immersive = pathname === '/plans'
   const quiet = pathname === '/create' || pathname === '/setup'
@@ -261,33 +237,19 @@ export function AuthenticatedLayout() {
       const fromParent = navigationParent(from)
       const explicitFrom =
         targetParent && fromParent && entryHref(targetParent) === entryHref(fromParent)
-      const fromChannel =
-        navigationChannelFromHref(from) ??
-        (inherited ? navigationChannelFromHref(entryHref(inherited)) : undefined) ??
-        channelRef.current
-      const structural = isStructuralNavigationEntry(to, from, fromChannel)
+      const structural = isStructuralNavigationEntry(to, from)
       const entry =
         explicitFrom || (structural && navigationParent(from))
           ? from
-          : structural &&
-              inherited &&
-              isStructuralNavigationEntry(to, entryHref(inherited), fromChannel)
+          : structural && inherited && isStructuralNavigationEntry(to, entryHref(inherited))
             ? entryHref(inherited)
             : undefined
-      const parentEntry = entry ? navigationParent(entry) : undefined
-      const scopedEntry =
-        entry &&
-        parentEntry &&
-        fromChannel &&
-        /^\/video-(templates|guidelines)(?:\/|$)/.test(parentEntry.path)
-          ? entryHref({ ...parentEntry, filters: { ...parentEntry.filters, channel: fromChannel } })
-          : entry
-      if (scopedEntry)
+      if (entry)
         rememberNavigationEntry(
           ownerId,
           to,
-          scopedEntry,
-          currentDestination(event.fromLocation?.pathname ?? '/', fromChannel) ?? '/',
+          entry,
+          currentDestination(event.fromLocation?.pathname ?? '/') ?? '/',
           navigationParent(from) ? window.scrollY : (inherited?.scrollY ?? 0),
           undefined,
           !!explicitFrom,

@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { clipCreationSearchSchema } from './search'
 
 describe('clipCreationSearchSchema', () => {
-  it('keeps a handed template and the setup handoff, and ignores an old channel', () => {
-    expect(
-      clipCreationSearchSchema({ channel: 'instagram_clip', template: 'tpl-1', from: 'setup' }),
-    ).toEqual({ template: 'tpl-1', from: 'setup' })
+  it('keeps a handed template and the setup handoff, and ignores an old query parameter', () => {
+    expect(clipCreationSearchSchema({ channel: 'old', template: 'tpl-1', from: 'setup' })).toEqual({
+      template: 'tpl-1',
+      from: 'setup',
+    })
   })
 
   it('drops what it does not know rather than refusing it', () => {

@@ -4,7 +4,6 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   CLIP_PROJECT_LIMITS,
-  DEFAULT_CLIP_CHANNEL,
   ClipCompositionInputFields,
   boundedFreeText,
   emptyClipProject,
@@ -73,12 +72,8 @@ const INPUT = {
   autoCorrect: 'on',
   enterKeyHint: 'next',
 } as const
-// The entity still carries a channel until T864; it is no setting here, so it never makes a
-// successfully autosaved setup draft look dirty.
 function draftIdentity(value: ClipProjectDraft): string {
-  const comparable = normalizeClipProject(value)
-  delete comparable.channel
-  return JSON.stringify(comparable)
+  return JSON.stringify(normalizeClipProject(value))
 }
 
 export function ClipProjectForm({
@@ -226,7 +221,7 @@ export function ClipProjectForm({
       version: 1 as const,
       ownerKey: ownerId,
       path: CLIP_LIST_PATH,
-      section: DEFAULT_CLIP_CHANNEL,
+      section: 'video',
       filters: {},
       scrollY: 0,
       targetId: 'new',

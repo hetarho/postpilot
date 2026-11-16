@@ -3,7 +3,6 @@ import {
   copyGuide,
   type AdvertiserGuide,
 } from '@/entities/advertiser-guide/@x/clip-project'
-import { DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 import type { ClipNotice } from './notices'
 import type { ClipProjectRequest } from '@/entities/clip-plan/@x/clip-project'
 import type { GenerationJob } from '@/entities/generation-job/@x/clip-project'
@@ -38,8 +37,6 @@ export interface ClipProjectDraft {
   linkedPostSlug?: string
   campaign?: boolean
   advertiserGuide?: AdvertiserGuide
-  /** Older retained browser drafts omit this and take the Naver channel. */
-  channel?: ClipChannel
   dubbing?: { enabled: boolean; voiceId: string }
   compositionInputs?: ClipCompositionInputs
   title: string
@@ -261,7 +258,6 @@ export function emptyClipProject(): ClipProjectDraft {
   return {
     campaign: true,
     advertiserGuide: copyGuide(EMPTY_GUIDE),
-    channel: DEFAULT_CLIP_CHANNEL,
     title: '',
     videoTemplateId: '',
     ratio: 'vertical',
@@ -287,7 +283,6 @@ export function projectDraft(value: ClipProjectDraft): ClipProjectDraft {
       : {}),
     campaign: value.campaign ?? false,
     advertiserGuide: copyGuide(value.advertiserGuide ?? EMPTY_GUIDE),
-    channel: value.channel ?? DEFAULT_CLIP_CHANNEL,
     title: value.title,
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio,

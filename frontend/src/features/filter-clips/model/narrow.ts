@@ -1,13 +1,11 @@
 import {
   clipMatchesHistoryFilter,
-  type ClipChannel,
   type ClipProject,
   type ClipHistoryFilter,
 } from '@/entities/clip-project'
 
 /** The narrowing the clip directory holds, straight out of the URL (CLIP-41). */
 export interface ClipNarrowing {
-  channel?: ClipChannel
   q?: string
   status?: ClipHistoryFilter
 }

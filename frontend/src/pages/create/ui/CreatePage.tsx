@@ -8,8 +8,8 @@ import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
 import { ListRowIcon, Typography, cardStyles, pageStyles } from '@/shared/ui'
 
 const CHOICES = [
-  { key: 'post', channel: undefined, icon: PenLine },
-  { key: 'video', channel: 'naver_clip', icon: Clapperboard },
+  { key: 'post', clip: false, icon: PenLine },
+  { key: 'video', clip: true, icon: Clapperboard },
 ] as const
 
 /** Guide: 만들기 — the one tab that asks a question rather than showing a list. Two big tiles,
@@ -17,12 +17,12 @@ const CHOICES = [
 export function CreatePage() {
   const { t } = useTranslation('creation')
   const { user } = useSession()
-  const remember = (channel: (typeof CHOICES)[number]['channel']) =>
-    channel
+  const remember = (clip: boolean) =>
+    clip
       ? rememberClipEntry(user?.id ?? '', {
           path: CLIP_LIST_PATH,
-          section: channel,
-          filters: { channel },
+          section: 'video',
+          filters: {},
           scrollY: 0,
         })
       : rememberPostEntry(user?.id ?? '', {
@@ -41,16 +41,16 @@ export function CreatePage() {
         </Typography>
         <nav aria-label={t('guideCreate.choices')} className="mt-8">
           <ul className="grid gap-4">
-            {CHOICES.map(({ key, channel, icon }, index) => (
+            {CHOICES.map(({ key, clip, icon }, index) => (
               <li
                 key={key}
                 className="animate-step-in"
                 style={{ animationDelay: `${index * 60}ms` }}
               >
                 <Link
-                  to={channel ? '/clips/new' : '/posts/new'}
+                  to={clip ? '/clips/new' : '/posts/new'}
                   search={{}}
-                  onClick={() => remember(channel)}
+                  onClick={() => remember(clip)}
                   aria-labelledby={`create-${key}-label`}
                   aria-describedby={`create-${key}-outcome`}
                   className={cardStyles({

@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { twMerge } from '@/shared/lib'
 import { useSession } from '@/entities/session'
 import { POST_LIST_PATH, rememberPostEntry } from '@/entities/post'
-import { CLIP_LIST_PATH, rememberClipEntry, type ClipChannel } from '@/entities/clip-project'
+import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
 import {
   ActionBar,
   buttonStyles,
@@ -22,13 +22,10 @@ function NativeLink(props: NavigationLinkProps) {
  *  creation directly — the editor, the clip workspace, the template wizard or the section's own
  *  creation sheet (`?new=1`). The other sections' creations are one section tab away. */
 export function ChannelActions({
-  channel,
-  video = channel !== undefined,
+  video = false,
   section,
   className = 'mt-auto',
 }: {
-  /** Only a new clip's return origin still reads it (T862 removes it); no link carries it. */
-  channel?: ClipChannel
   /** The 영상 side of 템플릿 and 지침; 말투 is one section for 글 and 영상. */
   video?: boolean
   section: ChannelSection
@@ -40,19 +37,19 @@ export function ChannelActions({
   const { user } = useSession()
   const Link = useNavigationContext()?.Link ?? NativeLink
   const href = {
-    work: channel ? `/clips/new?channel=${channel}` : '/posts/new',
+    work: video ? '/clips/new' : '/posts/new',
     templates: video ? '/video-templates/new' : '/templates/new',
     voices: '/voices?new=1',
     guidelines: video ? '/video-guidelines?new=1' : '/guidelines?new=1',
   }[section]
-  // A new post or clip keeps the channel as its origin, so the editor and the clip workspace
+  // A new post or clip keeps this list as its origin, so the editor and the clip workspace
   // come back here.
   const rememberCreation = () => {
-    if (channel)
+    if (video)
       rememberClipEntry(user?.id ?? '', {
         path: CLIP_LIST_PATH,
-        section: channel,
-        filters: { channel },
+        section: 'video',
+        filters: {},
         scrollY: window.scrollY,
       })
     else
@@ -73,7 +70,7 @@ export function ChannelActions({
         className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full sm:w-auto' })}
       >
         <Plus aria-hidden="true" className="size-6 shrink-0" />
-        {t(`button.${section === 'work' && channel ? 'video' : section}`)}
+        {t(`button.${section === 'work' && video ? 'video' : section}`)}
       </Link>
     </ActionBar>
   )

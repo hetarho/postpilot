@@ -214,8 +214,8 @@ it('finds work by title, kind and status and names the chosen order', async () =
     },
     clips: {
       projects: [
-        { ...clip, id: 'naver', title: '부산 클립', channel: 'naver_clip' },
-        { ...clip, id: 'insta', title: '강릉 릴스', channel: 'instagram_clip' },
+        { ...clip, id: 'naver', title: '부산 클립' },
+        { ...clip, id: 'insta', title: '강릉 릴스' },
       ],
     },
   })
@@ -334,12 +334,11 @@ it('keeps both channels’ prepared stories unfinished and gives cancelled attem
     user: { id: 'alice' },
     clips: {
       projects: [
-        { ...clip, id: 'naver-story', title: '네이버 이야기', channel: 'naver_clip', storyline },
+        { ...clip, id: 'naver-story', title: '네이버 이야기', storyline },
         {
           ...clip,
           id: 'insta-story',
           title: '인스타 이야기',
-          channel: 'instagram_clip',
           storyline,
           dubbing: { enabled: true, voiceId: 'confirmed' },
         },
@@ -405,7 +404,6 @@ it('groups confirmed, completed and published clips under 완성 and names an un
           title: '올린 영상',
           finalized,
           publishedUrl: 'https://www.instagram.com/reel/x',
-          channel: 'instagram_clip',
         },
         {
           ...built,

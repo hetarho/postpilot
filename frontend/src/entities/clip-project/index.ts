@@ -130,13 +130,6 @@ export type {
   ClipAnalysisPreparationState,
 } from './model/analysis-preparation'
 
-export {
-  CLIP_CHANNELS,
-  DEFAULT_CLIP_CHANNEL,
-  clipChannel,
-  type ClipChannel,
-} from './config/channel'
-
 export { useClipUploadTexts, useClipUploadTextCalls } from './api/upload-text'
 export type { ClipUploadText, ClipUploadTextLimits } from './api/upload-text'
 export {

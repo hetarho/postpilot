@@ -10,7 +10,6 @@ import {
   type PostListItem,
 } from '@/entities/post'
 import {
-  clipChannel,
   clipDisplayTitle,
   clipFinished,
   clipState,
@@ -138,7 +137,6 @@ export function MyWorkPage() {
     }
   }
   const clipItem = (project: ClipProject): WorkItem => {
-    const channel = clipChannel(project.channel)
     const running = project.latestJob && !isTerminal(project.latestJob)
     return {
       key: `clip:${project.id}`,
@@ -157,7 +155,7 @@ export function MyWorkPage() {
           section: 'mine',
           scrollY: window.scrollY,
           targetId: project.id,
-          filters: { channel },
+          filters: {},
         }),
     }
   }

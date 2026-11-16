@@ -4,7 +4,6 @@ import {
   type NavigationStorage,
 } from '@/shared/lib/navigation'
 
-import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '../config/channel'
 import { clipHistoryFilter } from '../model/history-state'
 
 export interface ClipEntry {
@@ -20,7 +19,6 @@ export const CLIP_LIST_PATH = '/clips'
 /** Addresses the list answered to before CLIP-41; a context stored under one still returns here. */
 const LEGACY_CLIP_LIST_PATHS = ['/naver-clip', '/insta-clip', '/library', '/']
 export interface ClipReturnDestination {
-  channel: ClipChannel
   path: ClipEntry['path']
   href: string
   section: string
@@ -34,11 +32,6 @@ export function isClipHistoryEntry(entry: Pick<ReturnContext, 'path' | 'section'
 /** Work opened from 내 글 전체 returns there, with its scroll (THEME-58 →THEME-69). */
 function isMyWorkEntry(entry: Pick<ReturnContext, 'path'>): boolean {
   return entry.path === '/my'
-}
-function storedChannel(entry: ReturnContext | undefined): ClipChannel {
-  return CLIP_CHANNELS.includes(entry?.filters.channel as ClipChannel)
-    ? (entry!.filters.channel as ClipChannel)
-    : DEFAULT_CLIP_CHANNEL
 }
 function browserStorage(): NavigationStorage | undefined {
   try {
@@ -88,24 +81,16 @@ export function readClipReturnContext(
   const entry = store(ownerId, storage, clipId ?? 'new').read() ?? store(ownerId, storage).read()
   if (entry?.targetId !== (clipId ?? 'new')) return undefined
   if (!LEGACY_CLIP_LIST_PATHS.includes(entry.path)) return entry
-  // An Instagram list kept its channel in the address; the channel now rides in the filters.
-  const filters =
-    entry.path === '/insta-clip' && !entry.filters.channel
-      ? { ...entry.filters, channel: 'instagram_clip' }
-      : entry.filters
-  return { ...entry, path: CLIP_LIST_PATH, filters }
+  return { ...entry, path: CLIP_LIST_PATH }
 }
 export function clipReturnDestination(
   ownerId: string,
   clipId?: string,
   storage = browserStorage(),
-  channel?: ClipChannel,
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
-  const currentChannel = channel ?? storedChannel(entry)
   if (entry && isMyWorkEntry(entry))
     return {
-      channel: currentChannel,
       path: '/my',
       href: '/my',
       section: entry.section,
@@ -122,10 +107,9 @@ export function clipReturnDestination(
   }
   const query = new URLSearchParams(filters).toString()
   return {
-    channel: currentChannel,
     path,
     href: query ? `${path}?${query}` : path,
-    section: entry?.section ?? (history ? 'clips' : currentChannel),
+    section: entry?.section ?? (history ? 'clips' : 'video'),
     scrollY: entry?.scrollY ?? 0,
   }
 }
@@ -141,7 +125,7 @@ export function retainMintedClipEntry(
     ownerId,
     {
       path: CLIP_LIST_PATH,
-      section: entry?.section ?? 'naver_clip',
+      section: entry?.section ?? 'video',
       filters: entry?.filters ?? {},
       scrollY: entry?.scrollY ?? 0,
       targetId: clipId,

@@ -25,12 +25,8 @@ export interface ClipUploadTextLimits {
   maxTags: number
   tagsInCaption: boolean
 }
-// The proto still carries a channel until T867 removes it: the one text is the 네이버 클립 entry,
-// or the only entry, and no channel leaves this file.
-const NAVER_CLIP = 'naver_clip'
-function onlyOrNaver<T extends { channel: string }>(rows: T[]): T | undefined {
-  return rows.find((row) => row.channel === NAVER_CLIP) ?? (rows.length === 1 ? rows[0] : undefined)
-}
+// The proto still carries a channel until T867 removes it; a project has one upload text (CLIP-209),
+// so the first row is it and no channel is read.
 function textOf(row: ProtoClipUploadText): ClipUploadText {
   if (row.revision <= 0) throw new Error('Invalid upload text')
   return {
@@ -56,8 +52,8 @@ export function useClipUploadTexts(ownerId: string, projectId: string) {
         { projectId },
         { signal },
       )
-      const text = onlyOrNaver(response.texts)
-      const limits = onlyOrNaver(response.limits)
+      const text = response.texts[0]
+      const limits = response.limits[0]
       return { text: text && textOf(text), limits: limits && limitsOf(limits) }
     },
   })

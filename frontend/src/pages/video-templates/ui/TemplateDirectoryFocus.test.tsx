@@ -35,7 +35,7 @@ function mount({ rows = ROWS, holdReread = false, refuseDelete = false } = {}) {
       return response
     },
   }
-  return { ...renderAppAt('/video-templates?channel=instagram_clip', { transport }), releaseReread }
+  return { ...renderAppAt('/video-templates', { transport }), releaseReread }
 }
 
 async function openDelete(user: ReturnType<typeof userEvent.setup>, name: string) {

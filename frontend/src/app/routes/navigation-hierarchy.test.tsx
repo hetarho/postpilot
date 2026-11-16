@@ -287,7 +287,7 @@ it.each([
 
 it('retains the Instagram scope through shared templates, child navigation, reload and return', async () => {
   const calls: string[] = []
-  const view = renderAppAt('/video-templates?channel=instagram_clip', {
+  const view = renderAppAt('/video-templates', {
     user: { id: 'alice' },
     calls,
   })
@@ -325,7 +325,6 @@ it('keeps a directly opened Instagram project channel when visiting shared video
         {
           id: 'owned',
           title: '체험',
-          channel: 'instagram_clip',
           videoTemplateId: '',
           ratio: 'vertical',
           targetDurationMs: 15000,
@@ -334,7 +333,7 @@ it('keeps a directly opened Instagram project channel when visiting shared video
       ],
     },
   })
-  await screen.findByRole('link', { name: '인스타 클립으로 돌아가기' })
+  await screen.findByRole('link', { name: '영상으로 돌아가기' })
   await act(() => view.router.navigate({ to: '/video-guidelines' }))
   await screen.findByRole('heading', { name: '영상 지침', level: 1 })
   expect(backHref()).toBeUndefined()
@@ -346,7 +345,7 @@ it.each([
   ['지침', '/guidelines', '영상 지침'],
 ])('opens the %s 영상 side with no channel in its link', async (section, from, heading) => {
   const calls: string[] = []
-  const view = renderAppAt(`${from}?channel=instagram_clip`, { user: { id: 'alice' }, calls })
+  const view = renderAppAt(`${from}`, { user: { id: 'alice' }, calls })
   const kinds = await screen.findByRole('navigation', { name: '글 · 영상' })
   const href = within(kinds).getByRole('link', { name: '영상' }).getAttribute('href')!
   expect(href).not.toContain('channel=')
@@ -371,7 +370,7 @@ it.each([
 const STYLE_HREFS = ['/voices', '/templates', '/guidelines', '/memories', '/spoken-voices']
 it.each([
   ['/templates', '내 스타일', '템플릿', STYLE_HREFS],
-  ['/voices?channel=instagram_clip', '내 스타일', '말투', STYLE_HREFS],
+  ['/voices', '내 스타일', '말투', STYLE_HREFS],
   ['/memories', '내 스타일', '기억', STYLE_HREFS],
   ['/posts', '내 콘텐츠', '글', ['/my', '/posts', '/clips']],
 ] as const)(
@@ -401,14 +400,14 @@ it.each([
 )
 
 it('returns a voice page opened from an Instagram 말투 list to that list', async () => {
-  const view = renderAppAt('/voices?channel=instagram_clip', { user: { id: 'alice' } })
+  const view = renderAppAt('/voices', { user: { id: 'alice' } })
   await screen.findByRole('navigation', { name: '나누어 보기' })
   await act(() =>
     view.router.navigate({ to: '/voices/$voiceId', params: { voiceId: 'voice-default' } }),
   )
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices/voice-default'))
   // The voice screen's frame draws the one way back, beside the voice's name.
-  expect(await frameReturn('말투')).toHaveAttribute('href', '/voices?channel=instagram_clip')
+  expect(await frameReturn('말투')).toHaveAttribute('href', '/voices')
   expect(screen.queryByRole('navigation', { name: '나누어 보기' })).toBeNull()
   expect(
     within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {

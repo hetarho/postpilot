@@ -212,14 +212,9 @@ it('keeps the storyline on ③ and off ④ once there is a plan', async () => {
   expect(screen.getByRole('button', { name: '이전: 관찰' })).toBeVisible()
 })
 
-it.each([
-  ['naver_clip', false],
-  ['naver_clip', true],
-  ['instagram_clip', false],
-  ['instagram_clip', true],
-] as const)(
-  'retains the exact storyline request across tool and lifecycle navigation (%s, narrated=%s)',
-  async (channel, narrated) => {
+it.each([false, true] as const)(
+  'retains the exact storyline request across tool and lifecycle navigation (narrated=%s)',
+  async (narrated) => {
     const editing = clipTimelineFixture()
     if (narrated)
       editing.plan.narration = {
@@ -240,7 +235,7 @@ it.each([
       }
     const calls: string[] = []
     const view = await mount(
-      storylined({ channel, editPlanRevision: 1, renderedPlanRevision: 0, editing }),
+      storylined({ editPlanRevision: 1, renderedPlanRevision: 0, editing }),
       { calls },
     )
     const user = userEvent.setup()

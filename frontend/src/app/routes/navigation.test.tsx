@@ -34,7 +34,7 @@ it.each([
   ['/my', '/my'],
   ['/posts/new', '/my'],
   ['/clips/new', '/my'],
-  ['/clips/new?channel=instagram_clip', '/my'],
+  ['/clips/new', '/my'],
   ['/posts', '/my'],
   ['/clips', '/my'],
   ['/posts/example', '/my'],
@@ -43,7 +43,7 @@ it.each([
   ['/voices', '/style'],
   ['/voices/example/materials', '/style'],
   ['/templates/new', '/style'],
-  ['/video-templates?channel=naver_clip', '/style'],
+  ['/video-templates', '/style'],
   ['/guidelines', '/style'],
   ['/memories', '/style'],
   ['/spoken-voices/new', '/style'],
@@ -58,16 +58,12 @@ it.each([
 ] as const)('resolves %s to %s', (path, tab) => expect(currentDestination(path)).toBe(tab))
 it('places every post and clip under its channel list and exposes deterministic hierarchy', () => {
   expect(routeLocation('/posts/minted').ancestors.map((x) => x.href)).toEqual(['/posts'])
-  expect(routeLocation('/clips/minted', 'instagram_clip').ancestors.map((x) => x.href)).toEqual([
-    '/clips',
-  ])
+  expect(routeLocation('/clips/minted').ancestors.map((x) => x.href)).toEqual(['/clips'])
   expect(routeLocation('/voices/voice/materials').ancestors.map((x) => x.href)).toEqual([
     '/voices',
     '/voices/voice',
   ])
-  expect(routeLocation('/voices/voice', 'instagram_clip').ancestors.map((x) => x.href)).toEqual([
-    '/voices?channel=instagram_clip',
-  ])
+  expect(routeLocation('/voices/voice').ancestors.map((x) => x.href)).toEqual(['/voices'])
   expect(routeLocation('/tests/id').ancestors.map((x) => x.href)).toEqual(['/ai-models', '/tests'])
   expect(routeLocation('/tests/records/id').ancestors.map((x) => x.href)).toEqual([
     '/ai-models',
@@ -249,7 +245,6 @@ it.each([
     expect(within(main).getAllByRole('link')).toHaveLength(2)
     expect(within(main).getByRole('link', { name: post })).toHaveAttribute('href', '/posts/new')
     expect(within(main).getByRole('link', { name: video })).toHaveAttribute('href', '/clips/new')
-    expect(main.querySelector('a[href*="instagram_clip"]')).toBeNull()
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )
@@ -305,11 +300,8 @@ it('keeps the My work hub nodes, chip scroll and selected section through every 
 })
 
 it.each(['/video-templates/new', '/video-templates/saved'])(
-  'keeps a valid default or explicit channel in the return from %s',
+  'returns to the video template list from %s',
   (path) => {
-    expect(routeLocation(path).ancestors.at(-1)?.href).toBe('/video-templates?channel=naver_clip')
-    expect(routeLocation(path, 'instagram_clip').ancestors.at(-1)?.href).toBe(
-      '/video-templates?channel=instagram_clip',
-    )
+    expect(routeLocation(path).ancestors.at(-1)?.href).toBe('/video-templates')
   },
 )

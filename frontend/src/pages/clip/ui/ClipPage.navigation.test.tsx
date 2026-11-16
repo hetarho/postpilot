@@ -28,7 +28,7 @@ it('keeps home creation through minting on the first save and reload, then confi
   const calls: string[] = []
   const user = userEvent.setup()
   const view = renderAppAt('/clips/new', { user: { id: 'alice' }, clips: { calls } })
-  expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
+  expect(await screen.findByRole('link', { name: '영상으로 돌아가기' })).toHaveAttribute(
     'href',
     '/clips',
   )
@@ -39,10 +39,7 @@ it('keeps home creation through minting on the first save and reload, then confi
     timeout: 4000,
   })
   expect(readClipReturnContext('alice', 'clip-1')?.path).toBe('/clips')
-  expect(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
-    'href',
-    '/clips',
-  )
+  expect(screen.getByRole('link', { name: '영상으로 돌아가기' })).toHaveAttribute('href', '/clips')
   view.unmount()
   const reopened = renderAppAt('/clips/clip-1', { transport: view.transport })
   await clipGuideTo('content')
@@ -78,7 +75,7 @@ it('opens from filtered history and returns to the same filters and scroll after
   const reopened = renderAppAt('/clips/saved', { transport: view.transport })
   await clipGuideTo('content')
   await screen.findByLabelText('클립 제목')
-  const back = await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })
+  const back = await screen.findByRole('link', { name: '영상으로 돌아가기' })
   expect(back).toHaveAttribute('href', '/clips?q=%EC%A0%9C%EC%A3%BC&status=draft')
   await user.click(back)
   await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/clips'))
@@ -111,7 +108,7 @@ it.each(['ko', 'en'] as const)(
       clips: { projects: [{ ...project, latestJob: job }], calls },
       jobs: { jobs: [job], calls },
     })
-    const label = language === 'ko' ? '네이버 클립으로 돌아가기' : 'Back to Naver Clip'
+    const label = language === 'ko' ? '영상으로 돌아가기' : 'Back to videos'
     await screen.findByRole('link', { name: label })
     // ① behind the focused run is on 확인, whose hidden summary also names the title.
     const titles = await screen.findAllByText(project.title)
@@ -138,9 +135,9 @@ it('a direct or foreign-owner record uses named history without adopting another
     user: { id: 'bob' },
     clips: { projects: [{ ...project, ownerId: 'bob' }] },
   })
-  const back = await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })
+  const back = await screen.findByRole('link', { name: '영상으로 돌아가기' })
   expect(back).toHaveAttribute('href', '/clips')
-  expect(screen.getAllByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveLength(1)
+  expect(screen.getAllByRole('link', { name: '영상으로 돌아가기' })).toHaveLength(1)
 })
 it('freezes the creation origin and ignores late mint navigation after the owner workspace closes', async () => {
   rememberClipEntry('alice', {
@@ -197,7 +194,7 @@ it('freezes the creation origin and ignores late mint navigation after the owner
 it('ignores an old channel through minting and direct reload without creating another project', async () => {
   const user = userEvent.setup()
   const calls: string[] = []
-  const view = renderAppAt('/clips/new?channel=instagram_clip', {
+  const view = renderAppAt('/clips/new', {
     user: { id: 'alice' },
     clips: { calls },
   })
@@ -211,7 +208,7 @@ it('ignores an old channel through minting and direct reload without creating an
   })
   view.unmount()
   renderAppAt('/clips/clip-1', { transport: view.transport })
-  expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
+  expect(await screen.findByRole('link', { name: '영상으로 돌아가기' })).toHaveAttribute(
     'href',
     '/clips',
   )

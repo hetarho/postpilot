@@ -5,7 +5,7 @@ import { renderAppAt } from '@/test/app'
 // A video template's card reads like a post template's: its glyph, its name as the link, and one
 // line naming the stages it runs through — not a preview of the composition.
 it('describes a stored video template by its stages while keeping navigation and deletion separate', async () => {
-  renderAppAt('/video-templates?channel=instagram_clip', {
+  renderAppAt('/video-templates', {
     user: { id: 'alice' },
     clips: {
       templates: [

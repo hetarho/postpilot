@@ -91,13 +91,10 @@ export function ClipWorkspace({
 }) {
   const { t } = useTranslation('clips')
   const navigate = useNavigate()
-  const destination = clipReturnDestination(ownerId, project.id, undefined, project.channel)
+  const destination = clipReturnDestination(ownerId, project.id)
   const returnTo = {
     href: destination.href,
-    label:
-      destination.path === '/my'
-        ? t('navigation.returnMine')
-        : t('navigation.returnCreation', { channel: t(`channel.${destination.channel}`) }),
+    label: destination.path === '/my' ? t('navigation.returnMine') : t('navigation.returnCreation'),
     onReturn: async (replace = false) => {
       markClipHistoryReturn(ownerId, project.id)
       await navigate({ href: destination.href, replace })

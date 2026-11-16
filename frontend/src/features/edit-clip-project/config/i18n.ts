@@ -32,7 +32,6 @@ export const i18n = {
       retry: '다시 시도',
       loading: '불러오는 중…',
     },
-    channel: { naver_clip: '네이버 클립', instagram_clip: '인스타 클립' },
     project: {
       kindSponsored: '체험단으로 다녀왔어요',
       kindSponsoredHelp: '제공받은 경험이에요. 광고주가 부탁한 내용을 먼저 확인해요.',
@@ -174,7 +173,6 @@ export const i18n = {
       retry: 'Retry',
       loading: 'Loading…',
     },
-    channel: { naver_clip: 'Naver Clip', instagram_clip: 'Instagram Clip' },
     project: {
       kindSponsored: 'It was a sponsored visit',
       kindSponsoredHelp: 'A provided experience. Check what the sponsor asked for first.',

@@ -519,7 +519,7 @@
     },
     "return": {
       "href": "/clips",
-      "name": "네이버 클립으로 돌아가기"
+      "name": "영상으로 돌아가기"
     }
   },
   "/video-templates/new": {
@@ -932,7 +932,7 @@
     },
     "return": {
       "href": "/clips",
-      "name": "네이버 클립으로 돌아가기"
+      "name": "영상으로 돌아가기"
     }
   },
   "/naver-blog": {

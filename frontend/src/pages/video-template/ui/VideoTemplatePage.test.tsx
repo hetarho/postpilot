@@ -28,7 +28,7 @@ describe('video template workflow', () => {
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
   it('badges how many clips each template is used by, and docks its creation button', async () => {
-    mount('/video-templates?channel=instagram_clip')
+    mount('/video-templates')
     const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
     expect(region.getByText('클립 2개')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '새 영상 템플릿' })).toBeNull()
@@ -46,15 +46,15 @@ describe('video template workflow', () => {
   })
   it('keeps the structural back link when a new clip’s offer opened the wizard', async () => {
     // As the post wizard opened with `post=new` does (TMPL-32); 저장 is what returns to the clip.
-    mount('/video-templates/new?channel=instagram_clip&clip=new')
+    mount('/video-templates/new?clip=new')
     expect(await screen.findByRole('link', { name: '영상 템플릿' })).toHaveAttribute(
       'href',
-      '/video-templates?channel=instagram_clip',
+      '/video-templates',
     )
     expect(
       screen
         .getAllByRole('link')
-        .filter((link) => link.getAttribute('href') === '/video-templates?channel=instagram_clip'),
+        .filter((link) => link.getAttribute('href') === '/video-templates'),
     ).toHaveLength(1)
   })
   it('requires a session before requesting templates', async () => {

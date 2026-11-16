@@ -12,7 +12,6 @@ const project: ClipProject = {
   ...emptyClipProject(),
   id: 'clip',
   language: 'ko',
-  channel: 'naver_clip',
   campaign: true,
   createdAt: '2026-10-15T01:00:00Z',
   updatedAt: '2026-10-15T02:00:00Z',
@@ -21,7 +20,7 @@ const project: ClipProject = {
 }
 const stored = (extra = {}) => ({
   projectId: 'clip',
-  channel: 'naver_clip',
+  channel: '',
   body: '다시 찾고 싶은 곳',
   tags: ['광고주', '방문'],
   edited: false,

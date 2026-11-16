@@ -324,43 +324,39 @@ it('keeps the retained disclosure control on style and summarizes its latest loc
   )
 })
 
-it.each(['naver_clip', 'instagram_clip'] as const)(
-  'reviews current %s values without a second editor',
-  async (channel) => {
-    render(
-      <Form
-        stored={{
-          ...project,
-          channel,
-          videoTemplateId: 'template',
-          campaign: true,
-          advertiserGuide: { text: '광고주 원문', keywords: ['키워드'], hashtags: ['해시'] },
-          linkedPost: { title: '내 글', slug: 'post', updatedAt: '' },
-        }}
-      />,
-    )
-    fireEvent.change(screen.getByLabelText('장소'), { target: { value: '내가 입력한 장소' } })
-    await open('style')
-    fireEvent.change(screen.getByRole('spinbutton', { name: '목표 길이 (초)' }), {
-      target: { value: '42' },
-    })
-    await open('review')
-    expect(screen.queryByRole('textbox', { name: '장소' })).toBeNull()
-    expect(
-      within(screen.getByRole('region', { name: '템플릿 답변' })).getByText('내가 입력한 장소'),
-    ).toBeVisible()
-    expect(screen.getByText('목표 42초')).toBeVisible()
-    expect(
-      within(screen.getByRole('region', { name: '영상 템플릿' })).getByText('선택한 구성'),
-    ).toBeVisible()
-    expect(screen.getByText('내 글')).toBeVisible()
-    expect(screen.getByRole('region', { name: '광고주 가이드' })).toHaveTextContent('광고주 원문')
-    expect(screen.getByRole('region', { name: '광고주 가이드' })).toHaveTextContent(
-      '필수 키워드: 키워드',
-    )
-    expect(screen.getByRole('region', { name: '화면 비율' })).toHaveTextContent('세로 9:16')
-  },
-)
+it('reviews current values without a second editor', async () => {
+  render(
+    <Form
+      stored={{
+        ...project,
+        videoTemplateId: 'template',
+        campaign: true,
+        advertiserGuide: { text: '광고주 원문', keywords: ['키워드'], hashtags: ['해시'] },
+        linkedPost: { title: '내 글', slug: 'post', updatedAt: '' },
+      }}
+    />,
+  )
+  fireEvent.change(screen.getByLabelText('장소'), { target: { value: '내가 입력한 장소' } })
+  await open('style')
+  fireEvent.change(screen.getByRole('spinbutton', { name: '목표 길이 (초)' }), {
+    target: { value: '42' },
+  })
+  await open('review')
+  expect(screen.queryByRole('textbox', { name: '장소' })).toBeNull()
+  expect(
+    within(screen.getByRole('region', { name: '템플릿 답변' })).getByText('내가 입력한 장소'),
+  ).toBeVisible()
+  expect(screen.getByText('목표 42초')).toBeVisible()
+  expect(
+    within(screen.getByRole('region', { name: '영상 템플릿' })).getByText('선택한 구성'),
+  ).toBeVisible()
+  expect(screen.getByText('내 글')).toBeVisible()
+  expect(screen.getByRole('region', { name: '광고주 가이드' })).toHaveTextContent('광고주 원문')
+  expect(screen.getByRole('region', { name: '광고주 가이드' })).toHaveTextContent(
+    '필수 키워드: 키워드',
+  )
+  expect(screen.getByRole('region', { name: '화면 비율' })).toHaveTextContent('세로 9:16')
+})
 
 it.each(['missing', 'loading', 'failed', 'confirmed'] as const)(
   'states %s voice truthfully and keeps original sound independent',
@@ -409,7 +405,7 @@ it('mints an unminted clip with the whole queued draft once and updates it after
   expect(await screen.findByRole('status', { name: '발급된 영상' })).toHaveTextContent('minted')
   expect(ports.save).toHaveBeenCalledTimes(1)
   expect(ports.save).toHaveBeenCalledWith({
-    draft: expect.objectContaining({ title: '', campaign: false, channel: 'naver_clip' }),
+    draft: expect.objectContaining({ title: '', campaign: false }),
   })
   expect(minted).toHaveBeenCalledWith('minted')
   await user.type(screen.getByRole('textbox', { name: /클립 제목/ }), '라떼')

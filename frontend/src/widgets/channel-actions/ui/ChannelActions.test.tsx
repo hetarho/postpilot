@@ -17,10 +17,9 @@ afterEach(() => {
 // list: the old Instagram address lands on it, and a video started there returns to it.
 it.each([
   ['/posts', '새 글', '/posts/new', '네이버 블로그로 돌아가기', '/posts'],
-  ['/clips', '새 영상', '/clips/new', '네이버 클립으로 돌아가기', '/clips'],
-  ['/clips', '새 영상', '/clips/new', '네이버 클립으로 돌아가기', '/clips'],
+  ['/clips', '새 영상', '/clips/new', '영상으로 돌아가기', '/clips'],
 ] as const)(
-  'starts creation from %s at once and keeps the channel as its origin',
+  'starts creation from %s at once and keeps the list as its origin',
   async (path, label, creation, back, origin) => {
     const user = userEvent.setup()
     const calls: string[] = []
@@ -40,9 +39,9 @@ it.each([
   ['/templates', '새 템플릿', '/templates/new'],
   ['/voices', '새 말투', '/voices?new=1'],
   ['/guidelines', '새 지침', '/guidelines?new=1'],
-  ['/voices?channel=instagram_clip', '새 말투', '/voices?new=1'],
-  ['/video-guidelines?channel=naver_clip', '새 지침', '/video-guidelines?new=1'],
-  ['/video-templates?channel=instagram_clip', '새 템플릿', '/video-templates/new'],
+  ['/voices', '새 말투', '/voices?new=1'],
+  ['/video-guidelines', '새 지침', '/video-guidelines?new=1'],
+  ['/video-templates', '새 템플릿', '/video-templates/new'],
 ] as const)('offers %s its own creation only', async (path, label, href) => {
   renderAppAt(path, { user: { id: 'alice' } })
   expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
@@ -50,7 +49,7 @@ it.each([
   expect(document.querySelector('[data-action-bar="list"] [aria-haspopup]')).toBeNull()
 })
 
-it.each(['/posts/new', '/clips/new?channel=naver_clip'])(
+it.each(['/posts/new', '/clips/new'])(
   'keeps the creation button off the writing screen %s',
   async (path) => {
     renderAppAt(path, { user: { id: 'alice' } })

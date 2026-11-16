@@ -13,7 +13,6 @@ import {
   rememberClipEntry,
   readClipHistoryReturn,
   completeClipHistoryReturn,
-  type ClipChannel,
 } from '@/entities/clip-project'
 import { useClipTemplates } from '@/entities/clip-template'
 import { isTerminal, progressLabel } from '@/entities/generation-job'
@@ -48,15 +47,11 @@ import {
 import { pageStyles } from '@/shared/ui'
 import { i18n } from '../config/i18n'
 
-/** Only the new clip's creation origin still reads a channel (T862); the list itself has none. */
-const CREATION_CHANNEL: ClipChannel = 'naver_clip'
-
 /** The 영상 list: the way back to unfinished clips (CLIP-3, CLIP-41). The server
  *  returns only the acting user's projects (CLIP-2); the one list has no channel address, and the
  *  search and the status filter narrow that one answer here in the browser, reading and writing
  *  the URL so the narrowing survives opening a project, coming back, a reload and a shared link. */
 export function ClipHistoryPage() {
-  const channel = CREATION_CHANNEL
   const { t } = useTranslation(['clips', 'common'])
   // The app registers the fragment centrally. Slice defaults keep the
   // history usable before that wiring lands and still follow the selected UI language.
@@ -65,8 +60,8 @@ export function ClipHistoryPage() {
   const { user } = useSession()
   const projects = useClipProjects(user?.id ?? '')
   const templates = useClipTemplates(user?.id ?? '')
-  const search: Omit<ClipNarrowing, 'channel'> = useSearch({ strict: false })
-  const narrowing: ClipNarrowing = { q: search.q, status: search.status, channel }
+  const search: ClipNarrowing = useSearch({ strict: false })
+  const narrowing: ClipNarrowing = { q: search.q, status: search.status }
   const path = CLIP_LIST_PATH
   const navigate = useNavigate()
   useEffect(() => {
@@ -87,7 +82,6 @@ export function ClipHistoryPage() {
       scrollY: window.scrollY,
       targetId,
       filters: {
-        channel,
         ...(narrowing.q ? { q: narrowing.q } : {}),
         ...(narrowing.status ? { status: narrowing.status } : {}),
       },
@@ -148,7 +142,7 @@ export function ClipHistoryPage() {
       <WorkListToolbar className="px-4 sm:px-6 lg:px-8">
         <FindSheet
           active={(narrowing.q?.trim() ? 1 : 0) + (narrowing.status ? 1 : 0)}
-          onClear={() => narrow({ channel })}
+          onClear={() => narrow({})}
         >
           <ClipListControls narrowing={narrowing} onChange={narrow} />
         </FindSheet>
@@ -343,7 +337,7 @@ export function ClipHistoryPage() {
           )
         })()}
       </WorkListBody>
-      <ChannelActions channel={channel} section="work" className="action-list-inset mt-auto" />
+      <ChannelActions video section="work" className="action-list-inset mt-auto" />
     </main>
   )
 }

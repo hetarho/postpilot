@@ -1,4 +1,4 @@
-import { CLIP_LIST_PATH, type ClipChannel } from '@/entities/clip-project'
+import { CLIP_LIST_PATH } from '@/entities/clip-project'
 import type { navigationI18n } from './navigation-i18n'
 
 /** Guide: five VERBS, not five product areas — what a busy owner came to do. 만들기 asks what to
@@ -115,15 +115,7 @@ function tabOf(root: string): PrimaryDestination | undefined {
   return undefined
 }
 
-export function navigationChannelFromHref(href: string): ClipChannel | undefined {
-  const url = new URL(href, 'https://postpilot.invalid')
-  const channel = url.searchParams.get('channel')
-  return channel === 'instagram_clip' || channel === 'naver_clip' ? channel : undefined
-}
-function structuralLocation(
-  path: string,
-  channel: ClipChannel | undefined,
-): Omit<RouteLocation, 'destination'> {
+function structuralLocation(path: string): Omit<RouteLocation, 'destination'> {
   const clipHub: LocationAncestor = {
     href: CLIP_LIST_PATH,
     key: 'videos',
@@ -157,9 +149,7 @@ function structuralLocation(
   if (path === '/voices') return { current: 'voices', ancestors: [] }
   if (path.startsWith('/voices/')) {
     const root = path.split('/').slice(0, 3).join('/')
-    const parents: LocationAncestor[] = [
-      { href: channel ? `/voices?channel=${channel}` : '/voices', key: 'voices' },
-    ]
+    const parents: LocationAncestor[] = [{ href: '/voices', key: 'voices' }]
     const tail = path.split('/')[3]
     return tail
       ? {
@@ -179,8 +169,7 @@ function structuralLocation(
             current: path === root + '/new' ? add : item,
             ancestors: [
               {
-                href:
-                  root === '/video-templates' ? `${root}?channel=${channel ?? 'naver_clip'}` : root,
+                href: root,
                 key: directory,
               },
             ],
@@ -224,15 +213,15 @@ function structuralLocation(
   return { current: 'notFound', ancestors: [] }
 }
 /** One hierarchy supplies visible location and automatic entry eligibility. */
-export function routeLocation(pathname: string, channel?: ClipChannel): RouteLocation {
+export function routeLocation(pathname: string): RouteLocation {
   const path = navigationPathname(pathname)
   const canonicalPath = path === '/ai-models/compare' ? '/tests' : path
-  const location = structuralLocation(canonicalPath, channel ?? navigationChannelFromHref(pathname))
+  const location = structuralLocation(canonicalPath)
   const root = location.ancestors[0]?.href ?? canonicalPath
   return { ...location, destination: tabOf(root) }
 }
-export function currentDestination(pathname: string, channel?: ClipChannel) {
-  return routeLocation(pathname, channel).destination
+export function currentDestination(pathname: string) {
+  return routeLocation(pathname).destination
 }
 export function navigationPathname(href: string): string {
   return href.split(/[?#]/u, 1)[0].replace(/\/+$/u, '') || '/'
@@ -245,18 +234,11 @@ export function isTopLevelDestination(pathname: string): boolean {
     currentSection(pathname) !== undefined
   )
 }
-export function isStructuralNavigationEntry(
-  target: string,
-  entry: string,
-  channel?: ClipChannel,
-): boolean {
+export function isStructuralNavigationEntry(target: string, entry: string): boolean {
   const targetPath = navigationPathname(target)
   const entryPath = navigationPathname(entry)
   if (isTopLevelDestination(targetPath) || targetPath === entryPath) return false
-  const location = routeLocation(
-    targetPath,
-    channel ?? navigationChannelFromHref(target) ?? navigationChannelFromHref(entry),
-  )
+  const location = routeLocation(targetPath)
   return (
     location.ancestors.some((ancestor) => navigationPathname(ancestor.href) === entryPath) ||
     (location.current === 'test' && entryPath === '/tests/history')

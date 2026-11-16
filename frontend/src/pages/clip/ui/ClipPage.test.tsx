@@ -145,7 +145,7 @@ describe('clip directory and setup', () => {
   it('mints the clip on its first save with no channel, keeping the screen and caret', async () => {
     const calls: string[] = []
     const projectWrites: ClipProjectDraft[] = []
-    const { router } = mount('/clips/new?channel=instagram_clip', { calls, projectWrites })
+    const { router } = mount('/clips/new', { calls, projectWrites })
     // The same guide as a saved project, opening on 영상 종류, with nothing that creates it.
     const progress = await screen.findByRole('navigation', { name: '클립 만들기 단계' })
     expect(within(progress).getByRole('button', { name: '영상 종류' })).toHaveAttribute(
@@ -221,7 +221,7 @@ describe('clip directory and setup', () => {
     expect(screen.queryByRole('navigation', { name: '영상 메뉴' })).toBeNull()
     expect(document.querySelector('aside')).toBeNull()
     // One chrome group (CLIP-37); phone lifecycle navigation has its own row.
-    const back = screen.getByRole('link', { name: '네이버 클립으로 돌아가기' })
+    const back = screen.getByRole('link', { name: '영상으로 돌아가기' })
     expect(back).toHaveAttribute('href', '/clips')
     const steps = screen.getByRole('tablist', { name: '클립 단계' })
     const remove = screen.getByRole('button', { name: '삭제' })
@@ -232,7 +232,7 @@ describe('clip directory and setup', () => {
   })
   it('gives /clips/new the workspace top row and no lifecycle', async () => {
     mount('/clips/new')
-    expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '영상으로 돌아가기' })).toHaveAttribute(
       'href',
       '/clips',
     )
@@ -445,7 +445,7 @@ describe('clip directory and setup', () => {
     await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), ' 기록')
     // No dialog: there is nothing to lose by leaving a project that saves itself (CLIP-39).
-    await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
+    await user.click(screen.getByRole('link', { name: '영상으로 돌아가기' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     unmount()
@@ -454,7 +454,7 @@ describe('clip directory and setup', () => {
     const created = mount('/clips/new')
     await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '새 클립')
-    await user.click(screen.getByRole('link', { name: '네이버 클립으로 돌아가기' }))
+    await user.click(screen.getByRole('link', { name: '영상으로 돌아가기' }))
     await waitFor(() => expect(created.router.state.location.pathname).toBe('/clips'))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })

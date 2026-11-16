@@ -36,8 +36,6 @@ export async function createClipFromPost({
   const project = await create({
     ...emptyClipProject(),
     linkedPostSlug: post.slug,
-    // The proto still carries a channel until T867: send none and let the server default it.
-    channel: undefined,
     title: post.title.trim() ? post.title : post.content.title,
     instruction: boundedFreeText(post.memo, CLIP_PROJECT_LIMITS.instruction),
     campaign: post.campaign,

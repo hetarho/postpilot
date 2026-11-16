@@ -59,7 +59,7 @@ describe('the new-clip offer', () => {
   it('opens the wizard and comes back to a new clip with the template', async () => {
     const user = userEvent.setup()
     const writes: ClipProjectDraft[] = []
-    const { router } = renderAppAt('/clips/new?channel=instagram_clip', {
+    const { router } = renderAppAt('/clips/new', {
       user: ALICE,
       creationOffers: true,
       clips: { templates: [], projectWrites: writes },
@@ -161,7 +161,7 @@ describe('the new-clip offer', () => {
     await expectNoOffer()
 
     cleanup()
-    renderAppAt('/clips/new?channel=instagram_clip', { user: ALICE, creationOffers: true })
+    renderAppAt('/clips/new', { user: ALICE, creationOffers: true })
     await expectNoOffer()
 
     cleanup()

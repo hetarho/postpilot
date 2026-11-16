@@ -59,7 +59,7 @@ export const i18n = {
       busyRefusal: '진행 중인 작업이 끝나면 바로 만들기와 스토리라인 먼저를 시작할 수 있어요.',
     },
     navigation: {
-      returnCreation: '{{channel}}으로 돌아가기',
+      returnCreation: '영상으로 돌아가기',
       returnMine: '내 콘텐츠로 돌아가기',
     },
     observeStep: {
@@ -171,7 +171,7 @@ export const i18n = {
         'Make now and Storyline first become available when the work in progress finishes.',
     },
     navigation: {
-      returnCreation: 'Back to {{channel}}',
+      returnCreation: 'Back to videos',
       returnMine: 'Back to My work',
     },
     observeStep: {

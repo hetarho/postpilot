@@ -160,49 +160,42 @@ it('confirmed deletion forgets the record origin while retaining the pending fil
   expect(clipReturnDestination('alice', 'deleted').href).toBe('/clips')
 })
 
-it('returns to the current project channel history before the saved origin is updated', () => {
+it('returns to the saved history origin with its narrowing', () => {
   rememberClipEntry('alice', {
     path: '/clips',
     section: 'clips',
-    filters: { channel: 'naver_clip', q: '제주' },
+    filters: { q: '제주' },
     scrollY: 10,
     targetId: 'clip',
   })
-  expect(clipReturnDestination('alice', 'clip', undefined, 'instagram_clip').href).toBe(
-    '/clips?q=%EC%A0%9C%EC%A3%BC',
-  )
   expect(clipReturnDestination('alice', 'clip').href).toBe('/clips?q=%EC%A0%9C%EC%A3%BC')
   rememberClipEntry('alice', {
     path: '/clips',
     section: 'clips',
-    filters: { channel: 'instagram_clip' },
+    filters: {},
     scrollY: 10,
     targetId: 'clip',
   })
-  expect(clipReturnDestination('alice', 'clip', undefined, 'naver_clip').href).toBe('/clips')
+  expect(clipReturnDestination('alice', 'clip').href).toBe('/clips')
 })
 
-it.each(['/', '/library'])(
-  'maps the stored obsolete %s parent to the recorded clip channel',
-  (path) => {
-    sessionStorage.setItem(
-      'postpilot.return.alice.clip.saved',
-      JSON.stringify({
-        version: 1,
-        ownerKey: 'alice',
-        targetId: 'saved',
-        path,
-        section: 'creation',
-        filters: { channel: 'instagram_clip' },
-        scrollY: 0,
-      }),
-    )
-    expect(clipReturnDestination('alice', 'saved').href).toBe('/clips')
-    expect(clipReturnDestination('alice', 'saved', undefined, 'naver_clip').href).toBe('/clips')
-  },
-)
+it.each(['/', '/library'])('maps the stored obsolete %s parent to the 영상 list', (path) => {
+  sessionStorage.setItem(
+    'postpilot.return.alice.clip.saved',
+    JSON.stringify({
+      version: 1,
+      ownerKey: 'alice',
+      targetId: 'saved',
+      path,
+      section: 'creation',
+      filters: {},
+      scrollY: 0,
+    }),
+  )
+  expect(clipReturnDestination('alice', 'saved').href).toBe('/clips')
+})
 
-it('reads a stored /clips history entry as its channel history with the narrowing', () => {
+it('reads a stored /clips history entry as its history with the narrowing', () => {
   sessionStorage.setItem(
     'postpilot.return.alice.clip.saved',
     JSON.stringify({
@@ -211,7 +204,7 @@ it('reads a stored /clips history entry as its channel history with the narrowin
       targetId: 'saved',
       path: '/clips',
       section: 'clips',
-      filters: { channel: 'instagram_clip', status: 'draft' },
+      filters: { status: 'draft' },
       scrollY: 120,
     }),
   )
@@ -227,11 +220,11 @@ it('reads a stored /clips history entry as its channel history with the narrowin
   expect(readClipHistoryReturn('alice')).toMatchObject({ path: '/clips', scrollY: 120 })
 })
 
-it('does not treat a channel creation entry as a history return', () => {
+it('does not treat a creation entry as a history return', () => {
   rememberClipEntry('alice', {
     path: '/clips',
-    section: 'instagram_clip',
-    filters: { channel: 'instagram_clip' },
+    section: 'video',
+    filters: {},
     scrollY: 0,
     targetId: 'created',
   })

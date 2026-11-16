@@ -212,7 +212,7 @@ describe('the voice directory', () => {
   // ignores an old link's channel.
   it('opens the creation sheet from ?new=1 and drops the request on close', async () => {
     const user = userEvent.setup()
-    const { router } = renderAppAt('/voices?new=1&channel=instagram_clip', {
+    const { router } = renderAppAt('/voices?new=1', {
       user: USER,
       voice: { voices: VOICES },
     })

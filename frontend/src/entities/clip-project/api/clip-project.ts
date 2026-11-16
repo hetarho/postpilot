@@ -34,15 +34,12 @@ import {
   type ClipRegionEdit,
 } from '../model/types'
 
-import { CLIP_CHANNELS, clipChannel, type ClipChannel } from '../config/channel'
 import { serialClipWrite } from '../lib/write-lane'
 
 export const clipProjectsKey = (transport: Transport, ownerId: string) =>
   ['clip-projects', transport, ownerId] as const
 export function toClipProject(value: ProtoClipProject): ClipProject {
   if (!CLIP_RATIOS.includes(value.ratio as ClipRatio)) throw new Error('Invalid clip ratio')
-  if (value.channel && !CLIP_CHANNELS.includes(value.channel as ClipChannel))
-    throw new Error('Invalid clip channel')
   const composition = toProjectComposition(value.composition)
   if (
     (value.finalizedAt || value.finalizedPlanRevision || value.finalizedResultId) &&
@@ -97,7 +94,6 @@ export function toClipProject(value: ProtoClipProject): ClipProject {
     title: value.title,
     videoTemplateId: value.videoTemplateId,
     ratio: value.ratio as ClipRatio,
-    channel: clipChannel(value.channel),
     campaign: value.campaign,
     advertiserGuide: advertiserGuideFromProto(value.advertiserGuide),
     targetDurationMs: value.targetDurationMs,
@@ -366,7 +362,6 @@ export function useClipProjectMutations(ownerId: string) {
     mutationFn: async ({ id, draft }: { id?: string; draft: ClipProjectDraft }) => {
       const {
         ratio,
-        channel,
         campaign,
         advertiserGuide,
         compositionInputs,
@@ -400,7 +395,6 @@ export function useClipProjectMutations(ownerId: string) {
         : await client.createClipProject({
             ...fields,
             ratio,
-            channel,
             campaign: draft.campaign ?? true,
             ...(advertiserGuide
               ? { advertiserGuide: advertiserGuideToProto(advertiserGuide) }

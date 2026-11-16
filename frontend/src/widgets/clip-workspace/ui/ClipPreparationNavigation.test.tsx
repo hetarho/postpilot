@@ -8,7 +8,7 @@ function LoadingWorkspace({ ready }: { ready: boolean }) {
   const [current, select] = useState('소스')
   return (
     <>
-      <a href="/clips">네이버 클립으로 돌아가기</a>
+      <a href="/clips">영상으로 돌아가기</a>
       {ready && (
         <nav aria-label="클립 만들기 단계">
           {['소스', '이야기', '스타일', '확인'].map((name) => (

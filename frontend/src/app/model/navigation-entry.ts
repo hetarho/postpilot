@@ -40,17 +40,7 @@ const LEGACY_LIST_PATHS: Readonly<Record<string, string>> = {
   '/naver-clip': '/clips',
   '/insta-clip': '/clips',
 }
-const FILTER_KEYS = new Set([
-  'q',
-  'status',
-  'stage',
-  'source',
-  'voiceId',
-  'factor',
-  'count',
-  'tab',
-  'channel',
-])
+const FILTER_KEYS = new Set(['q', 'status', 'stage', 'source', 'voiceId', 'factor', 'count', 'tab'])
 function browserStorage(): NavigationStorage | undefined {
   try {
     return globalThis.sessionStorage
