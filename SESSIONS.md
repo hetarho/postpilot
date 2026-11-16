@@ -182,6 +182,7 @@
 | T868 | onev | gusta-session-start-onev-54d284a9 | 5cd9855fe | 2026-11-16T10:49Z |
 
 ## log
+- 261116 fix voice-navigation completed: main 012c6f776; all 12 batch checks passed, frontend 5176 tests passed; CI skipped because no run appeared
 - 261116 ideation voice-chat-examples converted
 - 261116 gusta-create-task VOICE T869-T877
 - 261116 gusta-update-ssot VOICE r22: VOICE-78+ VOICE-79+ VOICE-60✎ VOICE-65✎
@@ -201,4 +202,3 @@
 - 261116 T858 done
 - 261116 T857 done
 - 261116 T856 done
-- 261116 T855 done
