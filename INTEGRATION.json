@@ -68,9 +68,9 @@
     "via": "merge",
     "executor": {
       "host": "DESKTOP-VKPLS8P",
-      "pid": 1826564
+      "pid": 1894504
     },
-    "phase": "failed",
+    "phase": "checking",
     "land": "main",
     "base": "6ac3344dae6c6557021de9013d658b53877247ee",
     "cohort": [
@@ -131,7 +131,7 @@
     ],
     "at": "2026-11-16T03:14:23.442Z",
     "deadline": "2026-11-16T10:37:02.747Z",
-    "candidate": "9136f22c610207bbab2311fdc338d8e88465da53",
+    "candidate": "58856d3dab77c44e63fa0ff9b40e0e407fbe4fed",
     "checks": [
       {
         "ok": false,
