@@ -6,9 +6,12 @@ import { LoadingStatus, Skeleton, Typography, cardStyles, typographyStyles } fro
 /** Every My work section reserves the same toolbar, including the aggregate without filters. */
 export function WorkListToolbar({
   children,
+  summary,
   className,
 }: {
   children?: ReactNode
+  /** What order the list is in, when the list lets the owner choose it. */
+  summary?: string
   className?: string
 }) {
   const { t } = useTranslation('channel')
@@ -21,7 +24,7 @@ export function WorkListToolbar({
       )}
     >
       <Typography variant="meta" className="min-w-0 truncate">
-        {t('work.newestFirst')}
+        {summary ?? t('work.newestFirst')}
       </Typography>
       {children && <div className="shrink-0">{children}</div>}
     </div>

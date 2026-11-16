@@ -28,13 +28,22 @@ afterEach(() => {
   sessionStorage.clear()
 })
 
-/** The shell's one back link (THEME-58); a page with its own top-row return shows none. */
+/** The shell's one back link (THEME-58); a page with its own top-row return shows none, and a
+ *  screen on a `PageFrame` draws it in its own column instead (THEME-75). */
 function backLink() {
   const region = screen.queryByRole('navigation', { name: '돌아가기' })
   return region ? within(region).getByRole('link') : undefined
 }
 function backHref() {
   return backLink()?.getAttribute('href') ?? undefined
+}
+/** A framed screen's way back: the ← at the head of its own column, named by where it leads, and
+ *  the only one — the shell then draws none. */
+async function frameReturn(name: string) {
+  const back = await screen.findByRole('link', { name })
+  expect(back.querySelector('svg')).not.toBeNull()
+  expect(backLink()).toBeUndefined()
+  return back
 }
 /** A top-level destination: no location trail and no implicit way back. */
 function expectRoot() {
@@ -66,11 +75,11 @@ it('traverses the five tabs as sibling destinations without paid work', async ()
   // Guide: five verb tabs; the account panel still reaches 나.
   for (const [label, pathname, navLabel, viaAccount] of [
     ['무엇을 만들까요?', '/create', '만들기', false],
-    ['내 글', '/my', '내 글', false],
+    ['내 콘텐츠', '/my', '내 콘텐츠', false],
     ['내 스타일', '/style', '내 스타일', false],
     ['AI 고르기', '/ai-models', 'AI 고르기', false],
     ['나', '/settings', '나', true],
-    ['내 글', '/my', '내 글', false],
+    ['내 콘텐츠', '/my', '내 콘텐츠', false],
     ['나', '/settings', '나', false],
   ] as const) {
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
@@ -94,7 +103,7 @@ it('traverses the five tabs as sibling destinations without paid work', async ()
 })
 
 it.each([
-  ['/naver-clip', '네이버 클립'],
+  ['/naver-clip', '영상'],
   ['/settings', '나'],
   ['/naver-blog', '네이버 블로그'],
 ])(
@@ -260,13 +269,15 @@ it.each([
   expect(paidActions(calls)).toEqual([])
 })
 
+// The old Instagram list is one 영상 list now: its address lands there, still a root.
 it.each([
-  ['/naver-blog/', '네이버 블로그'],
-  ['/settings/', '나'],
-  ['/insta-clip/', '인스타 클립'],
-])('keeps trailing-slash root %s independent of explicit entry', async (path, label) => {
+  ['/naver-blog/', '네이버 블로그', undefined],
+  ['/settings/', '나', undefined],
+  ['/insta-clip/', '영상', '/naver-clip'],
+])('keeps trailing-slash root %s independent of explicit entry', async (path, label, landing) => {
   const view = renderLegacyModelRoute(`${path}?entry=%2Fposts`, { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: label, level: 1 })
+  if (landing) expect(view.router.state.location.pathname).toBe(landing)
   expectRoot()
   expect(paidActions(view.procedures)).toEqual([])
 })
@@ -287,16 +298,19 @@ it('retains the Instagram scope through shared templates, child navigation, relo
   expect(backHref()).toBeUndefined()
   await userEvent.click(await screen.findByRole('link', { name: '새 템플릿' }))
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
-  expect(backHref()).toBe('/video-templates?channel=instagram_clip')
+  expect(await frameReturn('영상 템플릿')).toHaveAttribute(
+    'href',
+    '/video-templates?channel=instagram_clip',
+  )
   const address = view.router.state.location.href
   expect(address).toContain('channel=instagram_clip')
   view.unmount()
   sessionStorage.clear()
   const reopened = renderAppAt(address, { transport: view.transport })
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
-  expect(backHref()).toBe('/video-templates?channel=instagram_clip')
-  expect(backLink()).toHaveAccessibleName('영상 템플릿')
-  await userEvent.click(backLink()!)
+  const back = await frameReturn('영상 템플릿')
+  expect(back).toHaveAttribute('href', '/video-templates?channel=instagram_clip')
+  await userEvent.click(back)
   // Back on a section list page: the section row marks it and there is no way back further.
   await waitFor(() =>
     expect(reopened.router.state.location.href).toBe('/video-templates?channel=instagram_clip'),
@@ -363,7 +377,7 @@ it.each([
   ['/templates', '내 스타일', '템플릿', STYLE_HREFS],
   ['/voices?channel=instagram_clip', '내 스타일', '말투', STYLE_HREFS],
   ['/memories', '내 스타일', '기억', STYLE_HREFS],
-  ['/naver-blog', '내 글', '블로그', ['/my', '/naver-blog', '/naver-clip', '/insta-clip']],
+  ['/naver-blog', '내 콘텐츠', '글', ['/my', '/naver-blog', '/naver-clip']],
 ] as const)(
   'places the %s section in its hub as a sibling with no way back',
   async (path, channel, section, hrefs) => {
@@ -396,7 +410,9 @@ it('returns a voice page opened from an Instagram 말투 list to that list', asy
   await act(() =>
     view.router.navigate({ to: '/voices/$voiceId', params: { voiceId: 'voice-default' } }),
   )
-  await waitFor(() => expect(backHref()).toBe('/voices?channel=instagram_clip'))
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/voices/voice-default'))
+  // The voice screen's frame draws the one way back, beside the voice's name.
+  expect(await frameReturn('말투')).toHaveAttribute('href', '/voices?channel=instagram_clip')
   expect(screen.queryByRole('navigation', { name: '나누어 보기' })).toBeNull()
   expect(
     within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {

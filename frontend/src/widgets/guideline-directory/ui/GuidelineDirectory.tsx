@@ -2,11 +2,9 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
-import { clsx } from 'clsx'
 import { Check, FileText, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
-  GuidelineScopeBadge,
   GuidelineScopeBadges,
   useGuidelineCandidates,
   useGuidelines,
@@ -36,6 +34,7 @@ import {
 } from '@/features/toggle-default-guideline'
 import {
   Badge,
+  GuideProgress,
   Button,
   Disclosure,
   DirectoryItem,
@@ -363,7 +362,7 @@ function SentenceTitle({
 }: {
   sentence: string
   name?: string
-  badge: ReactNode
+  badge?: ReactNode
 }) {
   return (
     <span className="flex min-w-0 items-start gap-3 py-1">
@@ -387,14 +386,14 @@ function SentenceTitle({
         >
           {sentence}
         </span>
-        <span className="flex min-w-0 flex-wrap items-center gap-2">{badge}</span>
+        {badge && <span className="flex min-w-0 flex-wrap items-center gap-2">{badge}</span>}
       </span>
     </span>
   )
 }
 
 /** The card a rule row sits on. */
-const ruleCard = cardStyles({ padding: 'none', className: 'px-4 sm:px-5' })
+const ruleCard = cardStyles({ padding: 'none', className: 'px-4 py-2 sm:px-5 sm:py-3' })
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
@@ -456,13 +455,14 @@ function DefaultGuidelineItem({
         size="row"
         headingLevel={3}
         title={
-          <SentenceTitle
-            sentence={guideline.name}
-            badge={<Badge tone="accent">{t('defaults.badge')}</Badge>}
-          />
+          // A closed rule is its sentence alone; what kind of rule it is shows once it is open.
+          <SentenceTitle sentence={guideline.name} />
         }
       >
         <div className="pb-3 pl-6">
+          <div className="mb-2">
+            <Badge tone="accent">{t('defaults.badge')}</Badge>
+          </div>
           <DefaultGuidelineDetail
             guideline={guideline}
             action={
@@ -517,11 +517,8 @@ function GuidelineRow({
         size="row"
         headingLevel={3}
         title={
-          <SentenceTitle
-            name={guideline.title}
-            sentence={guideline.text}
-            badge={<GuidelineScopeBadge guideline={guideline} />}
-          />
+          // The scope is stated in full once the row is open (GuidelineScopeBadges below).
+          <SentenceTitle name={guideline.title} sentence={guideline.text} />
         }
       >
         <div className="pb-3 pl-6">
@@ -765,7 +762,7 @@ function CandidateReview({
       onClose={onClose}
       size="wide"
       header={
-        <div className="flex flex-col gap-3 px-5 pt-5 sm:px-6">
+        <div className="flex flex-col gap-3 px-5 pt-5 pb-5 sm:px-6">
           <span className="flex items-baseline justify-between gap-3">
             <Typography variant="title" as="h2" id={headingId}>
               {t(kind === 'clip' ? 'candidate.reviewTitleClip' : 'candidate.reviewTitle')}
@@ -777,17 +774,11 @@ function CandidateReview({
             )}
           </span>
           {total > 0 && (
-            <span aria-hidden="true" className="flex gap-1">
-              {candidates.map((row, at) => (
-                <span
-                  key={row.id}
-                  className={clsx(
-                    'h-1.5 flex-1 rounded-full',
-                    at <= index ? 'bg-progress-step-done' : 'bg-progress-step-todo',
-                  )}
-                />
-              ))}
-            </span>
+            <GuideProgress
+              steps={candidates.map((row) => ({ value: row.id }))}
+              current={candidate?.id ?? ''}
+              ariaLabel={t(kind === 'clip' ? 'candidate.reviewTitleClip' : 'candidate.reviewTitle')}
+            />
           )}
         </div>
       }

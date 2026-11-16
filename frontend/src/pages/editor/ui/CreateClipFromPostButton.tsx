@@ -3,7 +3,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import type { PostDraft } from '@/entities/post'
 import {
-  CLIP_CHANNELS,
   CLIP_PROJECT_LIMITS,
   DEFAULT_CLIP_CHANNEL,
   freeTextLength,
@@ -11,17 +10,9 @@ import {
   clipChannelPath,
   useClipProjectMutations,
   useClipSourceCalls,
-  type ClipChannel,
 } from '@/entities/clip-project'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
-import {
-  AppFailureMessage,
-  Button,
-  Dialog,
-  Notice,
-  SegmentedControl,
-  Typography,
-} from '@/shared/ui'
+import { AppFailureMessage, Button, Dialog, Notice, Typography } from '@/shared/ui'
 import { clipFromPostCopy } from '../config/i18n'
 import { createClipFromPost, type CreatedPostClip } from '../model/createClipFromPost'
 
@@ -34,13 +25,14 @@ export function CreateClipFromPostButton({
   post: PostDraft
   beforeCreate?: () => Promise<void>
 }) {
-  const { t, i18n } = useTranslation('clips')
+  const { i18n } = useTranslation('clips')
   const copy = clipFromPostCopy[i18n.resolvedLanguage?.startsWith('ko') ? 'ko' : 'en']
   const navigate = useNavigate()
   const { save } = useClipProjectMutations(ownerId)
   const sources = useClipSourceCalls()
   const [open, setOpen] = useState(false)
-  const [channel, setChannel] = useState<ClipChannel>(DEFAULT_CLIP_CHANNEL)
+  // A video is one kind of work: it is made on the default channel, with no channel to choose.
+  const channel = DEFAULT_CLIP_CHANNEL
   const [pending, setPending] = useState(false)
   const [failure, setFailure] = useState<AppFailure>()
   const [created, setCreated] = useState<CreatedPostClip>()
@@ -123,13 +115,6 @@ export function CreateClipFromPostButton({
           <Typography variant="body" as="p">
             {copy.description}
           </Typography>
-          <SegmentedControl
-            value={channel}
-            options={CLIP_CHANNELS.map((value) => ({ value, label: t(`channel.${value}`) }))}
-            onChange={setChannel}
-            ariaLabel={copy.channel}
-            disabled={pending || Boolean(created)}
-          />
           {freeTextLength(post.memo) > CLIP_PROJECT_LIMITS.instruction && (
             <Notice tone="info">{copy.memoCut(CLIP_PROJECT_LIMITS.instruction)}</Notice>
           )}

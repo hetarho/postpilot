@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r26 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r27 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -125,6 +125,7 @@
   - every surface that creates a guideline offers the title field empty — `새 지침` and `새 영상 지침`, a candidate's 저장 (→!GUIDE-23), `지침으로 저장` (→!GUIDE-21) and `영상 지침으로 저장` (→!GUIDE-45) — and 전부 수락 creates without one (→!GUIDE-27)
   - the title never enters the generation prompt; tests may snapshot it as reveal/history metadata while only rule text is injected (→GUIDE-17)
 - GUIDE-47 [o] closed guideline rows open independently to readable text and explicit scope.
+  - a closed row shows its name and sentence only; 추천 and the scope appear once it is open
   - 기본 지침 expose their target note and on/off action, not editing
   - owned rules offer named AI editing/direct editing of one shared draft and explicit deletion; Save changes title/text/scope atomically under domain bounds and preserves failed input
   - confirm deletion explains that already-admitted work keeps its frozen text
@@ -176,6 +177,7 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r27 261116 GUIDE-47✎ closed row with 추천/scope badge→sentence only, badges when open
 - r26 261111 GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ Naver Blog channel / clip-channel destinations, rows→내 스타일's 지침 section with a 글/영상 switch, cards; GUIDE-22✎ closed counted disclosure below the list→banner above it opening a one-at-a-time review sheet with 넘기기; GUIDE-23✎ 승인→저장, bulk actions at the disclosure head→in the review sheet below the candidate; GUIDE-46✎ untitled row text cut to one line→whole text with the title as a label above; GUIDE-48✎ dock's 기본 지침→the page's, above the list
 - r25 261030 GUIDE-44✎ 새 지침 from the channel creation menu→from the 지침 section's own 새 지침 button
 - r24 261030 GUIDE-44✎ dock with 기본 지침 + 새 영상 지침→새 지침 from the channel creation menu (`?new=1`), 기본 지침 and direct writing in the page

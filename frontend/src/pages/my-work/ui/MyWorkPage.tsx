@@ -1,7 +1,7 @@
-import type { ComponentType, ReactNode } from 'react'
+import { useState, type ComponentType, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Clapperboard, Film, PenLine, Plus } from 'lucide-react'
+import { ArrowRight, Clapperboard, PenLine, Plus } from 'lucide-react'
 import {
   displayTitle,
   postRowState,
@@ -26,7 +26,9 @@ import {
   ActionBar,
   Badge,
   Button,
+  ListControls,
   Notice,
+  SegmentedControl,
   Typography,
   buttonStyles,
   pageStyles,
@@ -34,6 +36,7 @@ import {
   type BadgeTone,
 } from '@/shared/ui'
 import {
+  FindSheet,
   StatusTile,
   WorkGroup,
   WorkListToolbar,
@@ -45,6 +48,17 @@ import {
 import { useMyWorkScrollReturn } from '../model/useMyWorkScrollReturn'
 
 type Kind = 'post' | 'naverClip' | 'instaClip'
+type Sort = 'updated' | 'oldest' | 'title'
+type StatusFilter = 'all' | 'inProgress' | 'done'
+interface Narrowing {
+  q: string
+  kind: Kind | 'all'
+  status: StatusFilter
+  sort: Sort
+}
+const NO_NARROWING: Narrowing = { q: '', kind: 'all', status: 'all', sort: 'updated' }
+const KINDS: readonly (Kind | 'all')[] = ['all', 'post', 'naverClip']
+const SORTS: readonly Sort[] = ['updated', 'oldest', 'title']
 interface WorkItem {
   key: string
   kind: Kind
@@ -95,6 +109,9 @@ export function MyWorkPage() {
   const ownerId = user?.id ?? ''
   const posts = usePostList({})
   const clips = useClipProjects(ownerId)
+  const [narrowing, setNarrowing] = useState<Narrowing>(NO_NARROWING)
+  const narrow = (patch: Partial<Narrowing>) =>
+    setNarrowing((current) => ({ ...current, ...patch }))
 
   const postItem = (post: PostListItem): WorkItem => {
     const running = post.activeJob && !isTerminal(post.activeJob)
@@ -125,13 +142,14 @@ export function MyWorkPage() {
     const running = project.latestJob && !isTerminal(project.latestJob)
     return {
       key: `clip:${project.id}`,
-      kind: channel === 'instagram_clip' ? 'instaClip' : 'naverClip',
+      // One 영상 kind, whichever channel the video was made for.
+      kind: 'naverClip',
       title: clipDisplayTitle(project),
       updatedAt: project.updatedAt,
       status: clipHistoryStatus(project),
       // 완성 holds a confirmed or finalized clip with no run going (CLIP-41).
       finished: clipFinished(clipState(project)) && !running,
-      icon: channel === 'instagram_clip' ? Film : Clapperboard,
+      icon: Clapperboard,
       id: project.id,
       remember: () =>
         rememberClipEntry(ownerId, {
@@ -143,9 +161,26 @@ export function MyWorkPage() {
         }),
     }
   }
-  const items = [...posts.posts.map(postItem), ...(clips.data ?? []).map(clipItem)].sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt),
-  )
+  const all = [...posts.posts.map(postItem), ...(clips.data ?? []).map(clipItem)]
+  // 찾기: a title search, the kind and the status narrow the one loaded answer; the order is the
+  // owner's choice, newest change first by default.
+  const query = narrowing.q.trim().toLocaleLowerCase()
+  const items = all
+    .filter(
+      (item) =>
+        (!query || item.title.toLocaleLowerCase().includes(query)) &&
+        (narrowing.kind === 'all' || item.kind === narrowing.kind) &&
+        (narrowing.status === 'all' || item.finished === (narrowing.status === 'done')),
+    )
+    .sort((a, b) =>
+      narrowing.sort === 'title'
+        ? a.title.localeCompare(b.title)
+        : narrowing.sort === 'oldest'
+          ? a.updatedAt.localeCompare(b.updatedAt)
+          : b.updatedAt.localeCompare(a.updatedAt),
+    )
+  const active =
+    (query ? 1 : 0) + (narrowing.kind !== 'all' ? 1 : 0) + (narrowing.status !== 'all' ? 1 : 0)
   const latest = items.find((item) => !item.finished)
   const inProgress = items.filter((item) => !item.finished)
   const done = items.filter((item) => item.finished)
@@ -185,7 +220,57 @@ export function MyWorkPage() {
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
       <h1 className="sr-only">{t('location.mine', { ns: 'nav' })}</h1>
-      <WorkListToolbar />
+      <WorkListToolbar summary={t(`work.sort.${narrowing.sort}`)}>
+        <FindSheet
+          active={active}
+          onClear={() => setNarrowing((current) => ({ ...NO_NARROWING, sort: current.sort }))}
+        >
+          <div className="space-y-5">
+            <ListControls<Kind | 'all'>
+              searchLabel={t('work.search')}
+              searchPlaceholder={t('work.searchPlaceholder')}
+              query={narrowing.q}
+              onQueryChange={(q) => narrow({ q })}
+              filter={{
+                value: narrowing.kind,
+                options: KINDS.map((value) => ({
+                  value,
+                  label: value === 'all' ? t('work.kindFilter.all') : t(`work.kind.${value}`),
+                })),
+                onChange: (kind) => narrow({ kind }),
+                label: t('work.kindFilter.label'),
+              }}
+            />
+            <div>
+              <Typography variant="label" as="p">
+                {t('work.statusFilter.label')}
+              </Typography>
+              <SegmentedControl<StatusFilter>
+                value={narrowing.status}
+                ariaLabel={t('work.statusFilter.label')}
+                options={(['all', 'inProgress', 'done'] as const).map((value) => ({
+                  value,
+                  label: t(`work.statusFilter.${value}`),
+                }))}
+                onChange={(status) => narrow({ status })}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Typography variant="label" as="p">
+                {t('work.sort.label')}
+              </Typography>
+              <SegmentedControl<Sort>
+                value={narrowing.sort}
+                ariaLabel={t('work.sort.label')}
+                options={SORTS.map((value) => ({ value, label: t(`work.sort.${value}`) }))}
+                onChange={(sort) => narrow({ sort })}
+                className="mt-1"
+              />
+            </div>
+          </div>
+        </FindSheet>
+      </WorkListToolbar>
       {failed && (
         <Notice tone="danger" role="alert" className="mt-4">
           <span>{t('list.loadFailed', { ns: 'posts' })}</span>
@@ -203,7 +288,7 @@ export function MyWorkPage() {
       )}
       {!failed && !pending && items.length === 0 && (
         <Typography variant="body" role="status" className="text-content-tertiary mt-6">
-          {t('work.empty')}
+          {t(all.length ? 'work.noMatch' : 'work.empty')}
         </Typography>
       )}
       <WorkListBody>

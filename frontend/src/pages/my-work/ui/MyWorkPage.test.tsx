@@ -38,7 +38,7 @@ it('counts and emphasizes the latest unfinished work inside its single group', a
     clips: { projects: [{ ...clip, id: 'clip-draft', title: '부산 클립' }] },
   })
 
-  expect(await screen.findByRole('heading', { level: 1, name: '내 글' })).toBeInTheDocument()
+  expect(await screen.findByRole('heading', { level: 1, name: '내 콘텐츠' })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
   const inProgress = (await screen.findByRole('heading', { name: /^작성 중/ })).closest('section')!
   const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
@@ -47,11 +47,16 @@ it('counts and emphasizes the latest unfinished work inside its single group', a
     'href',
     '/clips/clip-draft',
   )
-  expect(within(inProgress).getByText('네이버 클립')).toBeInTheDocument()
+  expect(
+    within(within(inProgress).getByRole('link', { name: /부산 클립/ })).getByText('영상'),
+  ).toBeInTheDocument()
   expect(within(inProgress).getByRole('link', { name: /제주 초안/ })).toHaveAttribute(
     'href',
     '/posts/draft-post',
   )
+  expect(
+    within(within(inProgress).getByRole('link', { name: /제주 초안/ })).getByText('글'),
+  ).toBeInTheDocument()
   expect(within(done).getByRole('link', { name: /서울 산책/ })).toBeInTheDocument()
   expect(screen.getAllByRole('link', { name: /부산 클립/ })).toHaveLength(1)
   // The page's one big creation leads to 만들기 (as the tab does), and reading starts nothing.
@@ -72,7 +77,7 @@ it('counts and emphasizes the latest unfinished work inside its single group', a
   expect(calls.filter((call) => /^(Start|Create|Generate|Save)/.test(call))).toEqual([])
 })
 
-// POST-127: aggregate 내 글 shows a post's chip exactly as the blog list does, so one stage of a
+// POST-127: aggregate 내 콘텐츠 shows a post's chip exactly as the blog list does, so one stage of a
 // post and of a clip reads 스토리라인 작성 완료 here too, below a running job and a failure.
 it('labels a storyline-only draft as the blog list does, with the same precedence', async () => {
   const story = { paragraphs: [{ text: '도착해서 바다를 봤다', files: ['sea.jpg'] }] }
@@ -137,9 +142,9 @@ it('labels a storyline-only draft as the blog list does, with the same precedenc
   expect(screen.getAllByText('스토리라인 작성 완료')).toHaveLength(1)
 })
 
-// THEME-58 →THEME-69: work opened from 내 글 전체 returns to it — its way back names 내 글 and
-// lands where the owner left the list — not to the channel's own list.
-describe('returning to 내 글', () => {
+// THEME-58 →THEME-69: work opened from 내 콘텐츠 전체 returns to it — its way back names 내 콘텐츠
+// and lands where the owner left the list — not to the channel's own list.
+describe('returning to 내 콘텐츠', () => {
   let scrollY: PropertyDescriptor | undefined
   beforeEach(() => {
     scrollY = Object.getOwnPropertyDescriptor(window, 'scrollY')
@@ -168,19 +173,117 @@ describe('returning to 내 글', () => {
   it.each([
     ['a post', /제주 초안/, '/posts/draft-post'],
     ['a clip', /부산 클립/, '/clips/clip-draft'],
-  ])('brings %s back to 내 글 at the scroll it left', async (_, name, href) => {
+  ])('brings %s back to 내 콘텐츠 at the scroll it left', async (_, name, href) => {
     const user = userEvent.setup()
     const scroll = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     const { router } = renderAppAt('/my', fixtures)
     await user.click(await screen.findByRole('link', { name }))
     await waitFor(() => expect(router.state.location.pathname).toBe(href))
-    const back = await screen.findByRole('link', { name: '내 글로 돌아가기' })
+    const back = await screen.findByRole('link', { name: '내 콘텐츠로 돌아가기' })
     expect(back).toHaveAttribute('href', '/my')
     scroll.mockClear()
     await user.click(back)
     await waitFor(() => expect(router.state.location.pathname).toBe('/my'))
     await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 640))
   })
+})
+
+// 찾기 narrows 내 콘텐츠 by title, 종류 (글 · 영상 — a video of either channel is one 영상) and 상태,
+// and orders it; the toolbar names the order the list is in.
+it('finds work by title, kind and status and names the chosen order', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  renderAppAt('/my', {
+    user: { id: 'alice' },
+    calls,
+    posts: {
+      posts: [
+        {
+          slug: 'draft-post',
+          title: '제주 초안',
+          status: 'draft',
+          updatedAt: '2026-11-09T00:00:00Z',
+        },
+        {
+          slug: 'done-post',
+          title: '서울 산책',
+          status: 'finalized',
+          updatedAt: '2026-11-01T00:00:00Z',
+        },
+      ],
+    },
+    clips: {
+      projects: [
+        { ...clip, id: 'naver', title: '부산 클립', channel: 'naver_clip' },
+        { ...clip, id: 'insta', title: '강릉 릴스', channel: 'instagram_clip' },
+      ],
+    },
+  })
+  const main = await screen.findByRole('main')
+  await screen.findByRole('link', { name: /강릉 릴스/ })
+  expect(within(main).getByText('최근 수정 순')).toBeInTheDocument()
+  for (const name of [/부산 클립/, /강릉 릴스/])
+    expect(within(screen.getByRole('link', { name })).getByText('영상')).toBeInTheDocument()
+  const openFind = async () => user.click(screen.getByRole('button', { name: /^찾기( · \d+)?$/ }))
+  const showResults = async () => user.click(screen.getByRole('button', { name: '결과 보기' }))
+  const listed = () =>
+    ['제주 초안', '서울 산책', '부산 클립', '강릉 릴스'].filter(
+      (title) => screen.queryByRole('link', { name: new RegExp(title) }) !== null,
+    )
+
+  // 종류: 전체 · 글 · 영상, and 영상 holds both channels' videos.
+  await openFind()
+  const sheet = screen.getByRole('dialog', { name: '찾기' })
+  await user.click(within(sheet).getByRole('combobox', { name: /^종류/ }))
+  expect(
+    (await screen.findAllByRole('option')).map((option) => option.textContent?.trim()),
+  ).toEqual(['전체', '글', '영상'])
+  await user.click(screen.getByRole('option', { name: '영상' }))
+  await showResults()
+  await waitFor(() => expect(listed()).toEqual(['부산 클립', '강릉 릴스']))
+  expect(screen.getByRole('button', { name: '찾기 · 1' })).not.toHaveClass('ui-button-cta')
+
+  // A title search narrows within the kind.
+  await openFind()
+  await user.type(screen.getByLabelText('제목'), '강릉')
+  await showResults()
+  await waitFor(() => expect(listed()).toEqual(['강릉 릴스']))
+  expect(screen.getByRole('button', { name: '찾기 · 2' })).toBeInTheDocument()
+
+  // 찾기 지우기 brings every item back; 상태 then keeps 완성 alone.
+  await user.click(screen.getByRole('button', { name: '찾기 지우기' }))
+  await waitFor(() => expect(listed()).toHaveLength(4))
+  await openFind()
+  await user.click(
+    within(screen.getByRole('tablist', { name: '상태' })).getByRole('tab', { name: '완성' }),
+  )
+  await showResults()
+  await waitFor(() => expect(listed()).toEqual(['서울 산책']))
+  expect(screen.queryByRole('heading', { name: /^작성 중/ })).toBeNull()
+
+  // 정렬: the toolbar names the order, and the groups follow it.
+  await user.click(screen.getByRole('button', { name: '찾기 지우기' }))
+  await openFind()
+  await user.click(
+    within(screen.getByRole('tablist', { name: '정렬' })).getByRole('tab', { name: '제목 순' }),
+  )
+  await showResults()
+  expect(within(main).getByText('제목 순')).toBeInTheDocument()
+  expect(within(main).queryByText('최근 수정 순')).toBeNull()
+  const inProgress = screen.getByRole('heading', { name: /^작성 중/ }).closest('section')!
+  expect(
+    within(inProgress)
+      .getAllByRole('link', { name: /제주 초안|부산 클립|강릉 릴스/ })
+      .map((link) => link.textContent?.match(/제주 초안|부산 클립|강릉 릴스/)?.[0]),
+  ).toEqual(['강릉 릴스', '부산 클립', '제주 초안'])
+
+  // A search that matches nothing says so, not that the account is empty.
+  await openFind()
+  await user.type(screen.getByLabelText('제목'), '없는말')
+  await showResults()
+  expect(await screen.findByText('조건에 맞는 콘텐츠가 없어요.')).toBeInTheDocument()
+  expect(screen.queryByText(/아직 만든 글이나 영상이 없어요/)).toBeNull()
+  expect(calls.filter((call) => /^(Start|Create|Generate|Save)/.test(call))).toEqual([])
 })
 
 it('waits for both histories without exposing a partial latest item or replaying the body', async () => {

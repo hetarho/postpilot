@@ -46,7 +46,6 @@ import {
   recordMintedClip,
 } from '../model/clip-draft-queue'
 import { restoreClipCaret } from '../model/mint-handoff'
-import { MoveClipChannel } from './MoveClipChannel'
 import { ClipLinkedPost } from './ClipLinkedPost'
 import { ClipDesignSelection, type ClipRegionSwitches } from './ClipDesignSelection'
 import {
@@ -567,14 +566,7 @@ export function ClipProjectForm({
           readOnly={readOnly}
         />
       )}
-      {stored && (
-        <MoveClipChannel
-          ownerId={ownerId}
-          project={stored}
-          disabled={disabled}
-          readOnly={readOnly}
-        />
-      )}
+      {/* No channel move: a video is one kind of work, whichever channel it goes to. */}
     </fieldset>
   )
   const styleFields = (

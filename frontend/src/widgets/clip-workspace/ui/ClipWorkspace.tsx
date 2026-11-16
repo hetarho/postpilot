@@ -23,7 +23,6 @@ import { ClipDraftPreviewPanel } from '@/features/preview-clip-draft'
 import { CancelClipAction } from '@/features/cancel-clip'
 import {
   ClipProjectForm,
-  MoveClipChannel,
   peekClipMintHandoff,
   type ClipPreparationScreen,
 } from '@/features/edit-clip-project'
@@ -1006,9 +1005,8 @@ export function ClipWorkspace({
             }}
           />
         ),
-        channel: reading ? (
-          <MoveClipChannel ownerId={ownerId} project={project} disabled={pending} />
-        ) : undefined,
+        // No channel move: a video is one kind of work, whichever channel it goes to.
+        channel: undefined,
       }}
     />
   )

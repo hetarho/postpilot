@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ChevronRight, Clapperboard, Film, PenLine } from 'lucide-react'
+import { ChevronRight, Clapperboard, PenLine } from 'lucide-react'
 import { FirstUseSetupGate } from '@/widgets/creation-setup'
 import { useSession } from '@/entities/session'
 import { rememberPostEntry } from '@/entities/post'
@@ -10,11 +10,10 @@ import { ListRowIcon, Typography, cardStyles, pageStyles } from '@/shared/ui'
 const CHOICES = [
   { key: 'blog', channel: undefined, icon: PenLine },
   { key: 'naverClip', channel: 'naver_clip', icon: Clapperboard },
-  { key: 'instaClip', channel: 'instagram_clip', icon: Film },
 ] as const
 
-/** Guide: 만들기 — the one tab that asks a question rather than showing a list. Three big tiles,
- *  each the start of its guided flow; the new work comes back to 내 글 under its own channel. */
+/** Guide: 만들기 — the one tab that asks a question rather than showing a list. Two big tiles,
+ *  each the start of its guided flow; the new work comes back to 내 콘텐츠 under 글 or 영상. */
 export function CreatePage() {
   const { t } = useTranslation('creation')
   const { user } = useSession()

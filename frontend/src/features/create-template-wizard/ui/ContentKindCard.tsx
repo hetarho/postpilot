@@ -1,8 +1,8 @@
 import { useId, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Image as ImageIcon, NotebookPen, Sparkles } from 'lucide-react'
+import { Image as ImageIcon, Info, NotebookPen, Sparkles } from 'lucide-react'
 import { AnswerChip, PreviewLines, type SectionContent } from '@/entities/template'
-import { RadioTile, Typography, cardStyles, radioTiles } from '@/shared/ui'
+import { Button, RadioTile, Typography, cardStyles, radioTiles } from '@/shared/ui'
 import type { SectionDraft } from '../model/wizard-machine'
 
 const KINDS = ['write', 'ask', 'literal'] as const satisfies readonly SectionContent[]
@@ -27,10 +27,13 @@ const KIND_HELP = {
 export function ContentKindCard({
   section,
   onChange,
+  onHelp,
   inputs = {},
 }: {
   section: SectionDraft
   onChange: (content: SectionContent) => void
+  /** Opens the longer explanation of the three choices (ⓘ beside the legend). */
+  onHelp?: () => void
   /** What a kind asks the owner for, shown inside the card while that kind is chosen. */
   inputs?: Partial<Record<SectionContent, ReactNode>>
 }) {
@@ -40,10 +43,22 @@ export function ContentKindCard({
   const choices = radioTiles(KINDS.length, KINDS.indexOf(kind), (index) => onChange(KINDS[index]))
   return (
     <fieldset className="min-w-0" aria-describedby={`${id}-help`}>
-      <legend>
+      <legend className="flex items-center gap-1">
         <Typography variant="label" as="span">
           {t('wizard.section.content')}
         </Typography>
+        {onHelp && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={t('wizard.section.helpOpen')}
+            title={t('wizard.section.helpOpen')}
+            className="text-content-secondary -my-2"
+            onClick={onHelp}
+          >
+            <Info aria-hidden className="size-5" />
+          </Button>
+        )}
       </legend>
       <div className={cardStyles({ padding: 'sm', className: 'mt-2 min-w-0' })}>
         <div

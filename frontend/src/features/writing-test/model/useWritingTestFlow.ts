@@ -33,7 +33,8 @@ export interface WritingTestFlowOptions {
   testId?: string
   prepareCandidates?: () => void
   /** Browser session storage holds only this owner/entry's resumable work, never an actor snapshot. */
-  recoveryStorage?: Pick<Storage, 'getItem' | 'setItem'> | null
+  recoveryStorage?:
+    (Pick<Storage, 'getItem' | 'setItem'> & Partial<Pick<Storage, 'removeItem'>>) | null
 }
 interface PublicActorRef<C, E> {
   send(event: E): void
@@ -245,6 +246,21 @@ export function useWritingTestFlow(options: WritingTestFlowOptions): WritingTest
       presentationSubscription.unsubscribe()
     }
   }, [actorRef, presentationActorRef, storage, key, scopeKey])
+  // Leaving the setup (no test made, nothing running) by any way out — the top return, a tab — is
+  // starting over: the next 비교하기 opens on its first question, not on the screen left behind
+  // (owner 2026-11-16). A reload never unmounts, so it still resumes where it was.
+  useEffect(
+    () => () => {
+      const context = actorRef.getSnapshot().context
+      if (context.scopeKey !== scopeKey || context.testId || context.command) return
+      try {
+        storage?.removeItem?.(key)
+      } catch {
+        /* Nothing kept, nothing to forget. */
+      }
+    },
+    [actorRef, storage, key, scopeKey],
+  )
   useEffect(() => {
     if (phase !== 'running' || snapshot.context.scopeKey !== scopeKey) return
     const interval = window.setInterval(() => send({ type: 'RELOAD' }), POLL_INTERVAL_MS)

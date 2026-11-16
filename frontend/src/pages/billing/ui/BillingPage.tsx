@@ -16,7 +16,7 @@ import {
   Typography,
   buttonStyles,
   cardStyles,
-  pageStyles,
+  PageFrame,
   typographyStyles,
 } from '@/shared/ui'
 
@@ -67,9 +67,13 @@ export function BillingPage() {
   }, [hash, myBilling])
 
   return (
-    <main className={pageStyles()}>
-      <Typography variant="display">{t('title', { ns: 'billing' })}</Typography>
-
+    <PageFrame
+      title={
+        <Typography variant="title" as="h1" className="truncate">
+          {t('title', { ns: 'billing' })}
+        </Typography>
+      }
+    >
       {/* Guide: the hero — what is left to spend, as one big figure, and ONE 충전 that takes the
           owner straight to the packs. Everything else on this page is a card below it. */}
       {myPlan && (
@@ -246,7 +250,7 @@ export function BillingPage() {
           <RefundRequestSection charges={myBilling.history} />
         </div>
       )}
-    </main>
+    </PageFrame>
   )
 }
 

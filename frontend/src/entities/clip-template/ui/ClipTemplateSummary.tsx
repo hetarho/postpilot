@@ -131,3 +131,29 @@ export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
     </span>
   )
 }
+
+/** The one-line description a directory card shows under a video template's name, as a post
+ *  template shows its own: the stages it runs through, in order (인트로 · 첫인상 · 대표 메뉴 ·
+ *  아웃트로). A template has no written description, so its stages are what tells it apart. */
+export function ClipTemplateDescription({
+  template,
+  className,
+}: {
+  template: ClipRecipe
+  className?: string
+}) {
+  const { t } = useTranslation('clips')
+  let stages: string[] = []
+  try {
+    stages = readStoredClipComposition(template.compositionBody)
+      .stages.map((stage) => stage.name.trim())
+      .filter(Boolean)
+  } catch {
+    // An unreadable body still has its name; the card then says it has no outline.
+  }
+  return (
+    <Typography variant="body" as="span" className={className}>
+      {stages.length ? stages.join(' · ') : t('composition.summary.noOutline')}
+    </Typography>
+  )
+}

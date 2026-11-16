@@ -12,10 +12,9 @@ import {
   Notice,
   LoadingState,
   TabLinks,
+  PageFrame,
   Typography,
-  typographyStyles,
   type TabLink,
-  pageStyles,
   buttonStyles,
 } from '@/shared/ui'
 
@@ -45,27 +44,33 @@ export function VoiceLayout() {
   const made = profile?.made ?? voice?.made ?? false
   const learningPath = `/voices/${voiceId}/materials`
 
+  const ready = !!voice && !isPending && !profilePending
   return (
-    <div className={pageStyles({ width: 'wide', className: 'py-3 sm:py-8' })}>
-      <div className="flex items-start gap-3">
-        <Link
-          to="/voices"
-          className={typographyStyles({
-            variant: 'label',
-            className:
-              'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 shrink-0 items-center underline',
-          })}
-        >
-          {t('voice.backToList', { ns: 'nav' })}
-        </Link>
-        {voice && !isPending && !profilePending && (
-          <RenameVoiceField ownerId={ownerId} voice={voice} className="min-w-0 flex-1">
-            <Typography variant="title" as="h1" className="min-w-0 break-words">
+    <PageFrame
+      as="div"
+      width="wide"
+      className="py-3 sm:py-8"
+      // Managing the voice sits at the far end of the return row, the way a directory card keeps
+      // its secondary actions, rather than at the foot of the learning screen.
+      actions={
+        ready &&
+        !voice.deleted && (
+          <>
+            <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
+            <DeleteVoiceButton ownerId={ownerId} voice={voice} />
+          </>
+        )
+      }
+      title={
+        ready && (
+          <RenameVoiceField ownerId={ownerId} voice={voice}>
+            <Typography variant="title" as="h1" className="min-w-0 truncate">
               {voice.name}
             </Typography>
           </RenameVoiceField>
-        )}
-      </div>
+        )
+      }
+    >
       {isError ? (
         <Notice tone="danger" role="alert" className="mt-4">
           <span>{t('voiceLoadFailed', { ns: 'voices' })}</span>
@@ -122,13 +127,6 @@ export function VoiceLayout() {
             />
           )}
           <Outlet />
-          {/* Management and test actions remain named, after the current reading/learning task. */}
-          {!voice.deleted && (
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
-              <DeleteVoiceButton ownerId={ownerId} voice={voice} />
-            </div>
-          )}
           {made && (
             <div className="mt-4 flex flex-wrap gap-2">
               {!voice.deleted && (
@@ -151,6 +149,6 @@ export function VoiceLayout() {
           )}
         </>
       )}
-    </div>
+    </PageFrame>
   )
 }

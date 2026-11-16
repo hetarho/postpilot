@@ -41,23 +41,26 @@ export function TabBar({ items, ariaLabel }: { items: readonly TabBarItem[]; ari
               href={href}
               aria-current={current ? 'page' : undefined}
               className={clsx(
-                'group duration-fast ease-standard text-meta flex h-16 min-w-0 flex-col items-center justify-center gap-1 rounded-xl leading-none font-semibold transition-colors',
-                'lg:h-12 lg:flex-row lg:gap-2 lg:rounded-full lg:px-5',
+                'group duration-fast ease-standard text-meta flex h-18 min-w-0 items-center justify-center px-1 leading-none font-semibold transition-colors',
+                'lg:h-12 lg:rounded-full lg:px-5',
                 current
                   ? 'text-tab-bar-fg-current lg:bg-tab-bar-indicator'
                   : 'text-tab-bar-fg hover:text-content-primary active:text-content-primary lg:hover:bg-card-bg-hover',
               )}
             >
+              {/* The current tab's indicator holds its icon AND its name as one block, so the
+                  selection reads as the whole tab rather than a pill around the glyph alone
+                  (owner 2026-11-16). On the desk the link itself is the pill. */}
               <span
-                aria-hidden="true"
                 className={clsx(
-                  'flex h-8 w-full max-w-14 items-center justify-center rounded-full transition-colors lg:h-auto lg:w-auto',
-                  current && 'bg-tab-bar-indicator lg:bg-transparent',
+                  'flex w-full max-w-20 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-colors',
+                  'lg:max-w-none lg:flex-row lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0',
+                  current && 'bg-tab-bar-indicator',
                 )}
               >
-                <Icon className="size-5.5 lg:size-5" />
+                <Icon aria-hidden="true" className="size-5.5 shrink-0 lg:size-5" />
+                <span className="max-w-full truncate">{label}</span>
               </span>
-              <span className="max-w-full truncate">{label}</span>
             </Link>
           </li>
         ))}

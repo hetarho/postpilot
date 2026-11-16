@@ -54,4 +54,4 @@ export type {
   CompositionLimits,
 } from './model/composition'
 
-export { ClipTemplateSummary } from './ui/ClipTemplateSummary'
+export { ClipTemplateDescription, ClipTemplateSummary } from './ui/ClipTemplateSummary'

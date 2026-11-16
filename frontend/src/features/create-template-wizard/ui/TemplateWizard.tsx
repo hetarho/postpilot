@@ -5,18 +5,19 @@ import { useBlocker } from '@tanstack/react-router'
 import { useCreateTemplate } from '@/entities/template'
 import { formatAppFailure } from '@/shared/lib'
 import { Dialog, Typography, WizardFrame, WizardPreviewDock } from '@/shared/ui'
-import { templateTargetAt } from '@/entities/template'
+import { templateTargetAt, templateTargetQuestionCount } from '@/entities/template'
 import { toWizardBody } from '../lib/to-body'
 import {
   checkedSections,
   finishProblem,
   pickedTarget,
   wizardHasAnswers,
-  wizardProgress,
   wizardMachine,
   wizardStateOf,
   type WizardState,
 } from '../model/wizard-machine'
+import { contentKindHelpHidden } from '../lib/content-kind-help'
+import { ContentKindHelp } from './ContentKindHelp'
 import { FinishStep } from './FinishStep'
 import { HeadingsStep } from './HeadingsStep'
 import { OrderStep } from './OrderStep'
@@ -111,6 +112,17 @@ function OwnedTemplateWizard({
     })
   }
 
+  // 이 자리에 들어갈 것's explanation opens by itself the first time the owner reaches a part's
+  // screen, unless they asked not to see it again; ⓘ beside the choice opens it any time.
+  // Adjusted during render — React's pattern for state that follows another — so the sheet is
+  // open on the very frame the first part arrives, with no effect cascading a second render.
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [helpOffered, setHelpOffered] = useState(false)
+  if (!helpOffered && state.step === 'section' && state.cursor === 0) {
+    setHelpOffered(true)
+    if (!contentKindHelpHidden()) setHelpOpen(true)
+  }
+
   const back = { label: t('wizard.back'), onClick: () => send({ type: 'back' }) }
   const next = { label: t('wizard.next'), forward: true, onClick: () => send({ type: 'next' }) }
   // The preview stands beside every step from sections on (TMPL-75). Counting the body's changes
@@ -122,15 +134,38 @@ function OwnedTemplateWizard({
   const previewing = state.step !== 'target'
   const currentId = state.step === 'section' ? checkedSections(state)[state.cursor]?.id : undefined
 
-  const known = wizardProgress(state)
-  const progress = known
-    ? {
-        text: t('wizard.progress', known),
-        label: t('wizard.progressLabel'),
-        current: known.current,
-        total: known.total,
-      }
-    : { text: t('wizard.targetProgress'), label: t('wizard.progressLabel') }
+  // One segment per question the owner actually answers: each "what is it" level is its own step
+  // (종류, then 세부 종류 — and 형식 for a product), and the per-part screens share 내용, where
+  // the position names the part.
+  const stepValues = [
+    ...Array.from({ length: templateTargetQuestionCount(state.path) }, (_, at) => `target:${at}`),
+    'sections',
+    'order',
+    'headings',
+    'section',
+    'finish',
+  ]
+  const currentStep = state.step === 'target' ? `target:${state.depth}` : state.step
+  const at = Math.max(0, stepValues.indexOf(currentStep)) + 1
+  const progress = {
+    steps: stepValues.map((value) => ({
+      value,
+      label: t(
+        `wizard.steps.${value.startsWith('target:') ? `target${value.slice(7)}` : value}` as 'wizard.steps.sections',
+      ),
+    })),
+    current: currentStep,
+    label: t('wizard.progressLabel'),
+    position:
+      state.step === 'section'
+        ? t('wizard.positionPart', {
+            current: at,
+            total: stepValues.length,
+            part: state.cursor + 1,
+            parts: checkedSections(state).length,
+          })
+        : t('wizard.position', { current: at, total: stepValues.length }),
+  }
 
   return (
     <>
@@ -174,6 +209,7 @@ function OwnedTemplateWizard({
           barFooter={host?.footer}
         />
       )}
+      <ContentKindHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       <Dialog
         open={blocker.status === 'blocked'}
         title={t('wizard.leaveTitle')}
@@ -238,7 +274,11 @@ function OwnedTemplateWizard({
           title: t('wizard.headings.title'),
           help: t('wizard.headings.help'),
           back,
-          next,
+          // Suggestions asked for are waited for here, so the owner picks them on this screen
+          // instead of meeting them a step later (owner 2026-11-16).
+          next: headings.pending
+            ? { ...next, disabled: true, pending: true, reason: t('wizard.headings.waiting') }
+            : next,
           children: <HeadingsStep state={current} send={send} operation={headings} />,
         }
       case 'section': {
@@ -254,6 +294,7 @@ function OwnedTemplateWizard({
               section={section}
               send={send}
               suggestions={headings.suggestions(section.id)}
+              onHelp={() => setHelpOpen(true)}
             />
           ),
         }

@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r32 | Owner-scoped post forms made through a guided, visually previewed target wizard with owner-named sections, explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
+> r33 | Owner-scoped post forms made through a guided, visually previewed target wizard with owner-named sections, explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -183,7 +183,7 @@
 - TMPL-71 [o] 새 템플릿 is a guided wizard with one question or decision per screen, progress, and Back that keeps every answer beside one emphasized next action in the shared step bar (→!THEME-71 →!THEME-52 →~THEME-55) ← a first-time owner learns what a post of their kind usually holds instead of assembling blocks
   - Back, 다음 and the last screen's 저장 stand in the shared step bar, never in the page
   - each target question's choices are peer cards: a tap only selects (round check, accent ring) and the bar's 다음 moves on
-  - while the target is narrowed the step count is unknown: progress names the stage in words over a still, empty track, never a moving sweep, and counts steps once a leaf is chosen ← a moving bar reads as loading while the screen only waits on the owner
+  - progress is one `GuideProgress` segment per question the owner answers (→THEME-56): each target level its own — 종류, 세부 종류, and 형식 for a product, the count growing when a choice adds a level — then 구성, 순서, 소제목, 내용, which every section screen shares with its position naming the part (`부분 2/5`), and 완성; the position stands over each question, and no sweep moves while the screen waits on the owner
   - steps in order: target, narrowing one question at a time to a leaf of the catalog (→TMPL-72) → sections → order → headings → one step per section (→TMPL-74) → name and description, then 저장, with the live preview beside every step from sections on (→!TMPL-75)
   - sections: the leaf's recommended roles as a checklist, each with its one-line explanation, every role starting checked, plus 직접 추가 for a custom section named with one line saying what it covers
   - order: drag and move buttons over the checked sections (→TMPL-28)
@@ -206,7 +206,7 @@
   - the request decides how the headings are worded and outranks the account's 기본 voice; without one the 기본 voice decides, or plain style for an account with none
   - the request is quoted owner material about wording only: it is never a fact about a visit, price or experience and cannot lift the heading length or one-line rules (→TMPL-70)
   - it travels in the frozen job alone and is never stored on the template or the account
-  - the sheet closes once the request is admitted, and the step shows its progress and then each section's suggestions under its field
+  - the sheet closes once the request is admitted, and the step shows its progress and then each section's suggestions under its field; while it runs the step's 다음 waits, pending, so the suggestions are picked on this screen
   - it shows its estimate and follows the admission and settlement of other authoring work (→EDIT-2); navigation never starts it
   - a suggestion becomes the heading only when the owner picks or edits it; a failure or a skip leaves own-words input ready
 - TMPL-74 [o] each section's step asks, each answer starting at the catalog default so 다음 always works:
@@ -214,6 +214,7 @@
   - what stands there: `AI가 전부 자동으로 작성` about the role (default), `질문을 바탕으로 작성` — a 데이터 받기 field of the AI가 쓰는 글 flavor: the post's author answers the section's question on ① and the writer writes the section about the role from that answer as its facts, with an optional 필수 (→TMPL-43 →TMPL-44 →TMPL-45) — or `항상 적을 고정 문구` typed by the owner ← a typed answer is material the section is written from, not a line pasted into the post; each name says what happens rather than which control the owner fills
   - the three kinds share one card: horizontal radios at its top choose the kind, and the card below them changes with the choice — it draws this section in two small panels instead of a help paragraph: 글 쓸 때, what the post's author meets on ① (nothing to fill, the question's field, nothing to fill), and 완성된 글, what the post shows (AI-written line bars, AI-written line bars from the typed answer, the fixed text) — and holds the chosen kind's inputs: the question and 필수 for 질문을 바탕으로 작성, the text for 항상 적을 고정 문구 ← an owner who does not know the workflow learns a kind faster from both moments drawn than from prose, and what a choice asks for appears where it was chosen
   - photos: 없음 or 1 … `TEMPLATE_PHOTO_ROW_MAX` together (→TMPL-38), and for a role marked 반복 whether it repeats per photo group (→TMPL-18)
+  - an ⓘ beside 이 자리에 들어갈 것 opens a `Sheet` explaining the three kinds in plain words — what the author does when writing, what the post shows, when each fits; it opens by itself the first time a wizard reaches a section step unless the owner ticked its 다음부터 보지 않기, kept per browser
 - TMPL-75 [o] from the sections step to 저장 the wizard shows the live preview of the template its answers make (→!TMPL-65 →!TMPL-66), redrawn on every answer; the target questions show none ← nothing is built before a leaf is chosen
   - at `lg` and wider it stands to the right of the step and stays in view while the step scrolls, and the step keeps a readable measure instead of the full width
   - below `lg` a `미리보기` button sits in the step bar's row between 이전 and 다음 as its one secondary action (→!THEME-71) and opens the preview in a bottom `Sheet` ← a 360 px screen has no room beside the step, and a preview reached only after the last step is never seen with the choice that shaped it
@@ -239,6 +240,7 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
+- r33 261116 TMPL-71✎ words over a still track until a leaf→one segment per question (target levels, 구성, 순서, 소제목, 내용, 완성); TMPL-73✎ 다음 free while suggesting→waits; TMPL-74✎ +ⓘ kind explanation sheet, auto first time
 - r32 261111 TMPL-24✎ Naver Blog rows→내 스타일 템플릿(글) cards; TMPL-32✎ ①'s dock-row picker→post guide 템플릿 screen of choice cards + 확인 row, back to the post→the `글 작성` back link to the 템플릿 screen; TMPL-71✎ in-page Back/next, tap moves on, setup's own bar→shared step bar, tap then 다음, unknown count over a still track; TMPL-75✎ floating 미리보기→in the step bar row
 - r31 261029 TMPL-74✎ kind names AI가 쓰는 글/직접 입력/고정 문구→AI가 전부 자동으로 작성/질문을 바탕으로 작성/항상 적을 고정 문구; three cards with inputs below them→one card whose horizontal radios switch its drawings and inputs
 - r30 261029 TMPL-74✎ 직접 입력 typed answer placed verbatim→a field the AI writes the section from as its facts

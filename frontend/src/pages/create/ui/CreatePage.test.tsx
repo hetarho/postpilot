@@ -14,23 +14,25 @@ afterEach(() => {
   initializeI18n('ko')
 })
 describe('canonical creation launch', () => {
+  // Two entries, 글 and 영상: a video is one kind whichever channel it is posted to.
   it.each(['light', 'dark'] as const)(
-    'offers one entry per channel in the %s theme without creating work',
+    'offers one 글 and one 영상 entry in the %s theme without creating work',
     async (storedPreference) => {
       const calls: string[] = []
       const theme = createThemeTestEnvironment({ storedPreference })
       renderAppAt('/', { user: { id: 'home-alice' }, calls, theme: theme.ports })
       const choices = await screen.findByRole('navigation', { name: '만들 것' })
       const links = within(choices).getAllByRole('link')
-      expect(links).toHaveLength(3)
+      expect(links).toHaveLength(2)
       expect(links.map((link) => link.getAttribute('href'))).toEqual([
         '/posts/new',
         '/clips/new?channel=naver_clip',
-        '/clips/new?channel=instagram_clip',
       ])
-      expect(links[0]).toHaveAccessibleName(/블로그 글/)
-      expect(links[1]).toHaveAccessibleName(/네이버 클립/)
-      expect(links[2]).toHaveAccessibleName(/인스타 클립/)
+      expect(links[0]).toHaveAccessibleName('글')
+      expect(links[0]).toHaveAccessibleDescription('사진과 메모로 블로그 글 한 편')
+      expect(links[1]).toHaveAccessibleName('영상')
+      expect(links[1]).toHaveAccessibleDescription('세로 영상, 자막과 목소리까지')
+      expect(screen.queryByRole('link', { name: /인스타/ })).toBeNull()
       expect(screen.getByRole('link', { name: 'Postpilot 홈' })).toHaveAttribute('href', '/create')
       expect(
         within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {
@@ -47,12 +49,10 @@ describe('canonical creation launch', () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/', { user: { id: 'home-alice' }, calls })
     const choices = await screen.findByRole('navigation', { name: '만들 것' })
-    const [post, naver, insta] = within(choices).getAllByRole('link')
+    const [post, video] = within(choices).getAllByRole('link')
     post!.focus()
     await user.tab()
-    expect(naver).toHaveFocus()
-    await user.tab()
-    expect(insta).toHaveFocus()
+    expect(video).toHaveFocus()
     await user.keyboard('{Enter}')
     // An unminted clip opens on ①'s guide at 영상 종류 (CLIP-130).
     const progress = await screen.findByRole('navigation', { name: '클립 만들기 단계' })
@@ -60,10 +60,10 @@ describe('canonical creation launch', () => {
       'aria-current',
       'step',
     )
-    expect(router.state.location.href).toBe('/clips/new?channel=instagram_clip')
+    expect(router.state.location.href).toBe('/clips/new?channel=naver_clip')
     expect(readClipReturnContext('home-alice')).toMatchObject({
-      path: '/insta-clip',
-      filters: { channel: 'instagram_clip' },
+      path: '/naver-clip',
+      filters: { channel: 'naver_clip' },
     })
     expect(calls.filter((call) => /^(Create|Start|Analyze|SavePostDraft)/.test(call))).toEqual([])
   })

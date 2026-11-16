@@ -66,14 +66,17 @@ describe('/video-guidelines', () => {
     // The clip 기본 지침 in use first, then the owner's, as one list (GUIDE-44).
     expect(items).toHaveLength(4)
     expect(within(items[0]).getByText('과장 금지')).toBeInTheDocument()
-    expect(within(items[0]).getByText('추천')).toBeInTheDocument()
     expect(list.queryByText('글 기본')).not.toBeInTheDocument()
     expect(within(items[1]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
+    // A closed row is its sentence alone; 추천 and the scope show once it is open (GUIDE-47).
+    for (const badge of ['추천', '전역', '영상 템플릿', '가게 소개', '적용 대상 없음'])
+      expect(list.queryByText(badge)).not.toBeInTheDocument()
+    for (const item of items)
+      await user.click(within(item).getByRole('button', { expanded: false }))
+    expect(within(items[0]).getByText('추천')).toBeInTheDocument()
     expect(within(items[1]).getByText('전역')).toBeInTheDocument()
-    expect(within(items[2]).getByText('영상 템플릿')).toBeInTheDocument()
-    expect(within(items[3]).getByText('적용 대상 없음')).toBeInTheDocument()
-    await user.click(within(items[2]).getByRole('button', { expanded: false }))
     expect(within(items[2]).getByText('가게 소개')).toBeInTheDocument()
+    expect(within(items[3]).getByText('적용 대상 없음')).toBeInTheDocument()
     expect(screen.queryByText('없는 사실을 쓰지 않기')).not.toBeInTheDocument()
 
     const allowed = [
@@ -216,6 +219,15 @@ describe('the 영상 지침 후보 section', () => {
 
   // Guide: a banner opens a one-at-a-time review.
   const review = () => within(screen.getByRole('dialog', { name: '새 영상 지침 후보' }))
+  /** Where the review stands: the count beside its title, and the matching segment of its
+   *  progress marked current, one segment per clip candidate. */
+  const expectAt = (sheet: ReturnType<typeof review>, current: number, total: number) => {
+    const text = `${current} / ${total}`
+    const segments = sheet.getByRole('navigation', { name: '새 영상 지침 후보' })
+    expect(within(segments).getAllByRole('listitem')).toHaveLength(total)
+    expect(within(segments).getByText(text).closest('[aria-current="step"]')).not.toBeNull()
+    expect(sheet.getAllByText(text).filter((node) => !segments.contains(node))).toHaveLength(1)
+  }
   const reviewTo = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
     if (!screen.queryByRole('dialog', { name: '새 영상 지침 후보' }))
       await user.click(await screen.findByRole('button', { name: '하나씩 보기' }))
@@ -241,7 +253,7 @@ describe('the 영상 지침 후보 section', () => {
       await screen.findByRole('heading', { name: '새 영상 지침 후보 2개' }),
     ).toBeInTheDocument()
     const sheet = await reviewTo(user, '자막 더 짧게')
-    expect(sheet.getByText('1 / 2')).toBeInTheDocument()
+    expectAt(sheet, 1, 2)
     expect(sheet.queryByText('존댓말로 써줘')).not.toBeInTheDocument()
     const repeated = await candidateRow('자막 더 짧게')
     expect(repeated.getByText('3번 요청함')).toBeInTheDocument()
@@ -278,7 +290,7 @@ describe('the 영상 지침 후보 section', () => {
     })
     const saved = await section('영상 지침 목록')
     await waitFor(() => expect(saved.getByText('자막 더 짧게')).toBeInTheDocument())
-    await waitFor(() => expect(review().getByText('1 / 1')).toBeInTheDocument())
+    await waitFor(() => expectAt(review(), 1, 1))
     expect(await candidateRow('음악은 조용하게')).toBeTruthy()
   })
 
