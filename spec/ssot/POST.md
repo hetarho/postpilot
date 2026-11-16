@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r51 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r54 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, safe first-save handoffs, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -81,7 +81,7 @@
   - it holds 관찰 모델 · 작성 모델 · 목표 언어 · 목표 분량 · 태그 수 (→POST-63) · the offered quality rules (→POST-81) · 분야 (→POST-82) · `기억 사용` (→POST-71)
   - 말투 is a labelled picker row on 확인 reading its value (→POST-101), and 템플릿 is ①'s own screen of choice cards read back by a 확인 row (→=TMPL-32) ← both are chosen per draft and silently change a run, so they must be readable without opening anything
   - 목표 언어 stays behind the trigger ← set once and followed by every run
-  - the brief is a bottom sheet on a phone, a right-aligned popover below its row bounded by the measured room from `sm:`
+  - the brief is a bottom sheet on a phone; from `sm:` it is a right-aligned popover portalled above page docks, preferring below its row and flipping above when the room below cannot hold it and the room above is larger, bounded by the viewport gutters and measured available height (→!THEME-30)
 - POST-52 [o] when the only thing between ① and a run is that the models were never chosen, the bar drops ①'s actions and renders the per-action reason plus ONE route — the brief; any other blocker (a job running, a deleted voice, a selection loading) keeps ordinary disabled buttons ← waiting is the answer to those
 - POST-53 [o] ② 관찰 offers Storyline first and Write now as its two ordinary actions; a lower-emphasis named entry opens unified writing tests with the material/context retained, rather than a separate model-comparison menu. The two stand in ②'s step bar as one row at every width — 이전, 스토리라인 먼저 at its natural width, then 바로 글 쓰기 as the big action filling the rest — with no label wrapping at 360 px (→!THEME-71).
 - POST-108 [o] ordinary generation actions on a post with no photo or video show one explicit photo-free confirmation after required-input/model checks and before start; cancel starts nothing. Unified tests explain their selected material and cost at their own start under MODEL-31.
@@ -101,7 +101,10 @@
 - POST-123 [o] ①'s 확인 summarizes what the run will be given, each row with one way to change it, and holds no second copy of any field:
   - 글 종류 · 사진 (up to four thumbnails with the photo and video counts) · 제목 · 템플릿 · 덧붙임, each with a 바꾸기 named by its row that opens that row's screen
   - 말투 as its labelled picker in place (→POST-101) with the voice warning under it (→POST-25)
-  - 지침, counting the owner's guidelines and the 기본 지침 switched on; its 바꾸기 flushes the draft and opens the guidelines page with this post as its explicit return (→THEME-58)
+  - 지침, counting the owner's guidelines and the 기본 지침 switched on; its 바꾸기 opens the account's post-guideline management list in a Sheet over the current writing screen, without leaving the writing workflow, minting an empty draft or starting model work; closing it preserves the current guide step, fields and normal autosave (→!GUIDE-20 →!GUIDE-43 →!THEME-29)
+  - when queued writing edits already require the first save, their normal canonical-address handoff completes before guideline management opens; the new editor opens the requested Sheet from its own guideline button so close restores focus, and links/history retain the saved draft address
+  - the embedded list retains the account-wide ownership, scope, injection order and explicit-save behavior of guideline management; it does not create post-only rules or duplicate the directory's logic
+  - existing standalone guidelines URLs carrying a validated post context retain their contextual return (→!THEME-58)
   - 글쓰기 옵션, whose 바꾸기 opens the writing brief (→POST-51)
   - the step bar holds 이전 and one big action: `관찰하기` while an attached photo or video has no observation, starting the observation job (→GEN-89) and carrying the owner to ②, otherwise `다음`, moving to ② without a call; on an unsaved draft nothing has been entered into, it stands disabled with the reason that there is nothing to write from yet and a 사진 넣기 shortcut to the photo screen ← the action stays where the owner expects it, with the shortest way to enable it
 - POST-125 [o] ② 관찰 shows every attached photo and video in the owner's order (→POST-116) as a contact-sheet card pairing it with its observation's fields (→GEN-24) — one horizontal snap carousel with a 현재/전체 indicator on a phone — so the owner reads and corrects what the observer recorded before any writing uses it ← the writer is given only what the observer recorded, so a wrong reading must be fixable before a run reads it
@@ -238,7 +241,8 @@
   - distinguish current configuration, a prepared preview and an actually issued captured request; absent old records are unavailable, never reconstructed as actual execution
   - opening/reading inspection changes no content, setting, revision or job and costs no credit
 
-- POST-117 [o] a post's kind is ①'s first question (→POST-122), two explicit choices — 체험단으로 다녀왔어요 (sponsored, stored as `체험단 글` on) or 내 돈으로 다녀왔어요 (`체험단 글` off) — saved through the draft queue as an option save that changes no status, revision or baseline (→POST-13) ← paying for it myself is as real an answer as being sponsored, which a switch's off state hid
+- POST-117 [o] a post's kind is ①'s first question (→POST-122), two explicit choices — 제품이나 서비스를 제공받았어요 (sponsored, stored as `체험단 글` on) or 내돈내산이에요 (`체험단 글` off) — saved through the draft queue as an option save that changes no status, revision or baseline (→POST-13)
+  - the labels and help cover received products, provided services and hosted visits as well as self-funded purchases, services and visits; no choice presumes a trip to a venue
   - a new post starts sponsored and a post that existed before it reads as paid myself ← the product's posts are 체험단 posts, while an earlier post was written without one
   - sponsored adds the 요청 screen with the advertiser guide (→POST-118) and the requirements tracker (→POST-124), feeds generation (→GEN-88), opens the pre-submission checklist (→POST-119) and puts the disclosure placeholder at the top of the Naver output (→EXPORT-28)
   - paid myself hides the guide but keeps it, and it enters no prompt, checklist or output ← a 내돈내산 post needs none of them, and choosing sponsored again must not lose a pasted guide
@@ -296,6 +300,9 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r54 261116 POST-123✎ deferred first-save address replacement until Sheet close→ordinary queued-save/address handoff before Sheet open, preserving focus and saved-draft history
+- r53 261116 POST-123✎ 지침 바꾸기 flushes/mints and navigates to guidelines→opens the same account-owned management in a Sheet, keeping the draft route and step
+- r52 261116 POST-51✎ below-row anchored brief→portalled, viewport-bounded brief with an upward fallback above docks; POST-117✎ sponsored/self-paid visit labels→provided product/service and 내돈내산 labels
 - r51 261116 POST-43✎ /naver-blog list, /posts redirecting→/posts list, /naver-blog redirecting; POST-120✎ clip on 네이버 클립→clip with no channel
 - r50 261116 POST-120✎ owner picks 네이버 클립 or 인스타 클립→one confirm, 네이버 클립; POST-9✎ 저장됨 shown for 2000 ms→waiting/saving/saved silent, failure only; POST-45✎ save state in the precedence and live region→removed; POST-43✎ POST-109✎ 내 글's 블로그→내 콘텐츠's 글
 - r49 261116 POST-102✎ fingerprint beside the voice's with the measurements→the post's reading at the head of 출처 보기's 말투 view, none for a deleted/unmade voice; POST-112✎ legend of four categories→also names 출처 미확인; POST-128+ 출처 보기 의미 출처/말투 views

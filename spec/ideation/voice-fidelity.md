@@ -31,3 +31,4 @@
 - measure with real posts after the 말투 view ships: which habits appear, which do not, and whether chat-only voices yield blog-length rhythm
 - whether a grounded style guide should replace or sit beside the counted lines in the projection
 - whether excerpts should prefer pasted posts over short chat answers when both exist
+- whether the learning chat's examples (→VOICE-79) pull replies toward the examples' registers: compare the ending mix of chat replies with pasted posts of the same owners once the examples ship

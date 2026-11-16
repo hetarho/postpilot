@@ -26,8 +26,8 @@
 | ARCH | 25 | 25 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 40 | 40 | - | 0 |
-| POST | 51 | 51 | - | 0 |
-| VOICE | 21 | 21 | - | 0 |
+| POST | 54 | 54 | - | 0 |
+| VOICE | 22 | 22 | - | 0 |
 | GEN | 33 | 33 | - | 0 |
 | MODEL | 38 | 38 | - | 0 |
 | TMPL | 34 | 34 | - | 0 |
@@ -37,7 +37,7 @@
 | THEME | 47 | 47 | - | 2 |
 | MKT | 13 | 13 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 80 | 80 | - | 2 |
+| CLIP | 81 | 81 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -84,6 +84,19 @@
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
+| T871 | Attach three register-labelled example replies to every learning-chat question | VOICE | - | todo |
+| T872 | Show a question's three examples collapsed under the chat bubble | VOICE THEME | T871 | todo |
+| T873 | Add the six experience threads to the prompt catalog | VOICE TMPL | T871 | todo |
+| T874 | Store experiences and thread answers keyed by experience | VOICE | T873 | todo |
+| T875 | Start experiences, answer by experience and count readiness per experience | VOICE | T874 | todo |
+| T876 | Expose experiences and experience answers over the voice API | VOICE | T875 | todo |
+| T877 | Give the voice entity experiences and experience-named question text | VOICE | T872 T876 | todo |
+| T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
+| T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
+| T880 | Keep writing-option popovers inside the viewport and above page docks | POST THEME ARCH | - | todo |
+| T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | todo |
+| T882 | Edit writing guidelines in place without leaving or minting the draft | POST GUIDE THEME ARCH | - | todo |
+| T883 | Preserve first-save guideline history and return focus | POST THEME ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -94,3 +107,6 @@
 ## next
 - gusta-implement-task T851
 - inspect work board for remaining tasks
+- gusta-implement-task T880
+- gusta-implement-task T881
+- gusta-implement-task T871
