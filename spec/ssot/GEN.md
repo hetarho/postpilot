@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r33 | Semantic-origin-aware writing and revision under always-applied principles, with an advertiser guide woven in as the advertiser's material, grounded tags filling a minimum, input-drawn sensory description and durable bounded jobs.
+> r34 | Semantic-origin-aware writing and revision under always-applied principles, with an advertiser guide woven in as the advertiser's material, grounded tags filling a minimum, input-drawn sensory description and durable bounded jobs.
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `GALLERY` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`GALLERY` is a photo group carrying its photos' filenames in order, a layout, one `alt` and one `caption` →GEN-77; `VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -31,7 +31,7 @@
   - material interpretation and honest semantic origins are stable contracts (→GEN-80–84); grounding, honesty, naming, altitude, title, tag and naturalness rules are always-applied 원칙 and writing preferences remain switchable 기본 지침 (→GUIDE-16) ← interpreting evidence and the product's honesty must stay reliable while owners retain control of writing direction
 
 - GEN-15 [o] the template brief, the guideline texts — the 원칙 and the enabled 기본 지침 in the product's order, then the applicable 지침 (→GUIDE-14) — and the selected memories are resolved once at enqueue from the post's template id through the template and guideline contexts' published lookups and written into the payload as text
-  - the brief carrying the post's answers to the template's data fields already substituted and every field switched off or left blank already dropped (→TMPL-45), so an off field leaves the payload byte-identical to a template that never carried it and no separate answer field rides along
+  - the brief carrying the post's answers to the template's data fields already substituted and every field switched off or left blank already dropped (→TMPL-45), so an off field leaves the payload byte-identical to a template that never carried it or its lead and no separate answer field rides along
   - handlers build the prompt from the payload and never re-read the rows, so editing or deleting them later — across a restart-resume or an explicit retry — cannot change queued work
   - a template deleted before the start is simply absent
   - the 원칙 always give a post's writing stages a section; a stage none of them applies to has no section (→GUIDE-50)
@@ -247,5 +247,6 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 원칙 always present, each 기본 지침 present only while switched on, the `[광고주 가이드]` section only while 체험단 글 is on with a non-empty guide, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
+- r34 261117 GEN-15✎ wording: an off field's payload equals a template without the field→without the field or its lead (→TMPL-45)
 - r33 261116 GEN-44✎ memo name in IMAGE alt/caption→in every IMAGE, GALLERY and VIDEO alt/caption, name owner-input and frame photo-derived within the caption; GEN-86✎ fixed checks +memo names in media captions; GEN-91+ observation fields as visual evidence when the observation holds no origin spans
 - r32 261113 GEN-8✎ picker opened before a run with reusable observations→only from ②'s 다시 관찰하기, runs freeze attachments lacking an observation; GEN-24✎ contact sheet read-only→on ② 관찰 with editable fields; GEN-89+ separate observation job; GEN-90+ owner-edited observation reused as owner material; GEN-30✎ +observation job payload; GEN-43✎ GEN-67✎ GEN-69✎ GEN-71✎ ②→④/③ step references
