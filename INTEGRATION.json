@@ -204,7 +204,53 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "a15b98d3-675b-4085-9904-6b652ef895ff",
+    "owner": "hdref",
+    "via": "merge",
+    "executor": {
+      "host": "ihaelam-ui-MacBookPro.local",
+      "pid": 18316
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+    "cohort": [
+      {
+        "id": "da8e3d345d9d016094ffa3ea",
+        "tag": "hdref",
+        "branch": "gusta-session-start-hdref-c3df08ba",
+        "head": "f9874abfcee14df403b03f8b3b56d3dc0adfb657",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      },
+      {
+        "id": "c699e1db263037aca837d56d",
+        "tag": "wopts",
+        "branch": "gusta-session-start-wopts-7b887426",
+        "head": "7641f90be245d577578bd7470d3f233f7d7dded8",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      },
+      {
+        "id": "f5a394dab36ea32f44a2de9a",
+        "tag": "vcx",
+        "branch": "gusta-session-start-vcx-4f46f7d4",
+        "head": "9d1e18a9f023203e87aa093a718069c2432476e7",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-16T16:04:38.455Z",
+    "deadline": "2026-11-16T17:04:36.013Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "b5394707-79a4-4451-abff-b38559ff9b61",
