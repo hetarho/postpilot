@@ -6,7 +6,6 @@ export {
   discardClipDraftQueues,
   newClipDraftKey,
 } from './model/clip-draft-queue'
-export { MoveClipChannel } from './ui/MoveClipChannel'
 
 export type {
   ClipPreparationContent,

@@ -22,7 +22,6 @@ export {
   useClipProject,
   useClipProjectMutations,
   useClipProjects,
-  useMoveClipChannel,
   useLinkClipPost,
   useSaveClipStoryline,
   useSaveClipRegions,

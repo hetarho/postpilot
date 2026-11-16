@@ -44,12 +44,10 @@ export const i18n = {
       titlePlaceholder: '예: 성수동 감성 카페 브이로그',
       titleHint: '비워 두어도 괜찮아요. 제목이 없으면 제목 없는 영상으로 불러요.',
       noAnswers: '채울 빈칸이 없어요. 더 전하고 싶은 말은 다음에서 적어 주세요.',
-      channel: '클립 채널',
       campaign: '체험단 글',
       campaignHelp:
         '광고주 가이드를 영상 글쓰기에 반영해요. 끄면 가이드는 보관하고 사용하지 않아요.',
-      verticalOnly: '두 클립 채널 모두 세로 9:16으로 만들어요.',
-      move: { naver_clip: '네이버 클립으로 옮기기', instagram_clip: '인스타 클립으로 옮기기' },
+      verticalOnly: '세로 9:16으로 만들어요.',
       designChoices: '디자인과 자막 스타일',
       designSummary:
         '{{pace}} · 강조색 {{accent}} · 인트로 {{intro}} · 아웃트로 {{outro}} · 자막 스타일 {{count}}종',
@@ -188,12 +186,10 @@ export const i18n = {
       titlePlaceholder: 'e.g. A cozy café vlog in Seongsu',
       titleHint: 'You can leave this empty. An untitled clip is called Untitled video.',
       noAnswers: 'Nothing to fill in. Add anything else on the next screen.',
-      channel: 'Clip channel',
       campaign: 'Campaign content',
       campaignHelp:
         'Use the advertiser guide when writing this clip. Turning this off keeps the guide without using it.',
-      verticalOnly: 'Both clip channels use vertical 9:16.',
-      move: { naver_clip: 'Move to Naver Clip', instagram_clip: 'Move to Instagram Clip' },
+      verticalOnly: 'Made in vertical 9:16.',
       designChoices: 'Design and caption styles',
       designSummary:
         '{{pace}} · Accent {{accent}} · Intro {{intro}} · Outro {{outro}} · {{count}} caption styles',

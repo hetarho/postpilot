@@ -50,7 +50,6 @@ vi.mock('@/entities/spoken-voice', () => ({
   }),
 }))
 vi.mock('./ClipLinkedPost', () => ({ ClipLinkedPost: () => <p>연결 입력</p> }))
-vi.mock('./MoveClipChannel', () => ({ MoveClipChannel: () => null }))
 vi.mock('./ClipDesignSelection', () => ({ ClipDesignSelection: () => <p>디자인 입력</p> }))
 
 const project: ClipProject = {

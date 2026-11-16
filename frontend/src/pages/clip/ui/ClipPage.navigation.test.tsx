@@ -194,7 +194,7 @@ it('freezes the creation origin and ignores late mint navigation after the owner
   expect(readClipReturnContext('alice')?.path).toBe('/naver-clip')
 })
 
-it('keeps Instagram creation through minting and direct reload without creating another project', async () => {
+it('ignores an old channel through minting and direct reload without creating another project', async () => {
   const user = userEvent.setup()
   const calls: string[] = []
   const view = renderAppAt('/clips/new?channel=instagram_clip', {
@@ -207,14 +207,13 @@ it('keeps Instagram creation through minting and direct reload without creating 
     timeout: 4000,
   })
   expect(readClipReturnContext('alice', 'clip-1')).toMatchObject({
-    path: '/insta-clip',
-    filters: { channel: 'instagram_clip' },
+    path: '/naver-clip',
   })
   view.unmount()
   renderAppAt('/clips/clip-1', { transport: view.transport })
-  expect(await screen.findByRole('link', { name: '인스타 클립으로 돌아가기' })).toHaveAttribute(
+  expect(await screen.findByRole('link', { name: '네이버 클립으로 돌아가기' })).toHaveAttribute(
     'href',
-    '/insta-clip',
+    '/naver-clip',
   )
   expect(calls.filter((call) => call === 'CreateClipProject')).toHaveLength(1)
   expect(calls.filter((call) => /Start|Cancel/.test(call))).toEqual([])

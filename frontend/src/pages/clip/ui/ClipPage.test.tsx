@@ -142,7 +142,7 @@ describe('clip directory and setup', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
-  it('mints the clip on its first save in the requested channel, keeping the screen and caret', async () => {
+  it('mints the clip on its first save with no channel, keeping the screen and caret', async () => {
     const calls: string[] = []
     const projectWrites: ClipProjectDraft[] = []
     const { router } = mount('/clips/new?channel=instagram_clip', { calls, projectWrites })
@@ -165,7 +165,6 @@ describe('clip directory and setup', () => {
     expect(projectWrites[0]).toMatchObject({
       title: '새 경험',
       ratio: 'vertical',
-      channel: 'instagram_clip',
       targetDurationMs: 0,
     })
     // The address change keeps the guide screen in use and the caret where it was (CLIP-130).

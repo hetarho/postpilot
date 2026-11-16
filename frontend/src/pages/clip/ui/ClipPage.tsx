@@ -2,8 +2,6 @@ import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   clipReturnDestination,
-  clipChannel,
-  type ClipChannel,
   markClipHistoryReturn,
   useClipProject,
 } from '@/entities/clip-project'
@@ -21,13 +19,11 @@ import { ClipImportFeedback } from './ClipImportFeedback'
  *  waits for that directory: the sheet has to stand before anything is typed. */
 function NewClip({
   ownerId,
-  channel,
   handedTemplate,
   fromSetup,
   returnTo,
 }: {
   ownerId: string
-  channel: ClipChannel
   /** The template the offer's wizard just saved. */
   handedTemplate?: string
   fromSetup: boolean
@@ -46,7 +42,6 @@ function NewClip({
       {offer.settled ? (
         <NewClipWorkspace
           ownerId={ownerId}
-          channel={channel}
           initialTemplateId={handedTemplate}
           // Back from the wizard with its template: ① opens on 템플릿 (CLIP-223, CLIP-225).
           initialGuide={handedTemplate ? 'template' : undefined}
@@ -64,8 +59,8 @@ function NewClip({
         missing={offer.missing}
         onCreateTemplate={() => {
           offer.close()
-          // 저장 comes back to a new clip in this channel starting from it (CLIP-223).
-          void navigate({ to: '/video-templates/new', search: { channel, clip: 'new' } })
+          // 저장 comes back to a new clip in a new clip starting from it (CLIP-223).
+          void navigate({ to: '/video-templates/new', search: { clip: 'new' } })
         }}
         onClose={offer.close}
         onDismiss={offer.dismiss}
@@ -80,15 +75,9 @@ export function ClipPage() {
   const { clipId } = useParams({ strict: false })
   const navigate = useNavigate()
   const search = useSearch({ strict: false })
-  const channel = clipChannel(search.channel)
   const ownerId = user?.id ?? ''
   const query = useClipProject(ownerId, clipId)
-  const destination = clipReturnDestination(
-    ownerId,
-    clipId,
-    undefined,
-    query.data?.channel ?? channel,
-  )
+  const destination = clipReturnDestination(ownerId, clipId)
   const returnTo = {
     href: destination.href,
     label:
@@ -116,9 +105,8 @@ export function ClipPage() {
     >
       {!clipId ? (
         <NewClip
-          key={`${ownerId}-${channel}-${search.template ?? ''}`}
+          key={`${ownerId}-${search.template ?? ''}`}
           ownerId={ownerId}
-          channel={channel}
           handedTemplate={search.template}
           fromSetup={search.from === 'setup'}
           returnTo={returnTo}

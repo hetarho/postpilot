@@ -15,7 +15,6 @@ import {
   useClipProject,
   useClipProjectMutations,
   useClipProjects,
-  useMoveClipChannel,
 } from './clip-project'
 
 function project(kind: string, status: string, accounting?: Partial<ClipAccounting>): ClipProject {
@@ -268,107 +267,4 @@ describe('a settings save', () => {
     expect(detail.latestJob?.id).toBe('job')
     server.releaseList()
   })
-})
-
-it('moves only the channel and a retained settings draft cannot move it back', async () => {
-  const cached = project('generate_clip', 'done')
-  cached.requests = [
-    { kind: 'instruction', body: 'Keep this request history', createdAt: '2026-10-01T00:00:00Z' },
-  ]
-  cached.editing = {
-    plan: { durationMs: 15000, cuts: [] },
-    sources: [],
-    fadeMs: 120,
-    maxCuts: 30,
-    maxCopyRunes: 20,
-    minDurationMs: 15000,
-    maxDurationMs: 60000,
-  }
-  cached.editPlanRevision = 3
-  const stored = {
-    id: 'clip',
-    title: '제주',
-    ratio: 'horizontal',
-    channel: 'naver_clip',
-    editPlanRevision: 3,
-  }
-  const channels: (string | undefined)[] = []
-  const transport = createRouterTransport(({ rpc }) => {
-    rpc(ClipGenerationService.method.updateClipProject, (request) => {
-      channels.push(request.channel)
-      if (request.channel) {
-        expect(request.id).toBe('clip')
-        for (const field of [
-          'title',
-          'videoTemplateId',
-          'targetDurationMs',
-          'compositionInputs',
-          'introRegion',
-          'outroRegion',
-          'storyline',
-          'dubbing',
-        ] as const)
-          expect(request[field]).toBeUndefined()
-        stored.channel = request.channel
-      }
-      return { project: stored }
-    })
-  })
-  const client = createTestQueryClient()
-  const key = [...clipProjectsKey(transport, 'alice'), 'detail', 'clip']
-  client.setQueryData(key, cached)
-  const view = renderHook(
-    () => ({ move: useMoveClipChannel('alice'), mutations: useClipProjectMutations('alice') }),
-    { wrapper: withProviders(transport, client) },
-  )
-  await act(() => view.result.current.move.mutateAsync({ id: 'clip', channel: 'instagram_clip' }))
-  expect(client.getQueryData<ClipProject>(key)?.editing).toEqual(cached.editing)
-  expect(client.getQueryData<ClipProject>(key)?.latestJob).toEqual(cached.latestJob)
-  expect(client.getQueryData<ClipProject>(key)?.requests).toEqual(cached.requests)
-  await act(() =>
-    view.result.current.mutations.save.mutateAsync({
-      id: 'clip',
-      draft: { ...cached, channel: 'naver_clip' },
-    }),
-  )
-  expect(channels).toEqual(['instagram_clip', undefined])
-  expect(client.getQueryData<ClipProject>(key)?.channel).toBe('instagram_clip')
-  expect(client.getQueryData<ClipProject>(key)?.requests).toEqual(cached.requests)
-  view.unmount()
-})
-
-it('refreshes detail after a channel move when the server has a newer revision', async () => {
-  const oldRequest = { kind: 'instruction', body: 'old request', createdAt: '2026-10-01T00:00:00Z' }
-  const newRequest = { ...oldRequest, body: 'new revision request' }
-  let stored = {
-    id: 'clip',
-    title: '제주',
-    ratio: 'vertical',
-    channel: 'naver_clip',
-    editPlanRevision: 3,
-    requests: [oldRequest],
-  }
-  let reads = 0
-  const transport = createRouterTransport(({ rpc }) => {
-    rpc(ClipGenerationService.method.getClipProject, () => {
-      reads += 1
-      return { project: stored }
-    })
-    rpc(ClipGenerationService.method.updateClipProject, (request) => {
-      stored = { ...stored, channel: request.channel!, editPlanRevision: 4, requests: [newRequest] }
-      return { project: { ...stored, requests: [] } }
-    })
-  })
-  const view = renderHook(
-    () => ({ detail: useClipProject('alice', 'clip'), move: useMoveClipChannel('alice') }),
-    { wrapper: withProviders(transport, createTestQueryClient()) },
-  )
-  await waitFor(() => expect(view.result.current.detail.data?.editPlanRevision).toBe(3))
-  await act(() => view.result.current.move.mutateAsync({ id: 'clip', channel: 'instagram_clip' }))
-  expect(reads).toBeGreaterThanOrEqual(2)
-  await waitFor(() =>
-    expect(view.result.current.detail.data?.requests?.[0]?.body).toBe(newRequest.body),
-  )
-  expect(view.result.current.detail.data?.editPlanRevision).toBe(4)
-  view.unmount()
 })

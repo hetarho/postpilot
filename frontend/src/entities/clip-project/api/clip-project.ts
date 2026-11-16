@@ -459,36 +459,6 @@ export function useSaveClipRegions(ownerId: string) {
   })
 }
 
-/** Moving directories writes only the channel; a stale autosave cannot move it back. */
-export function useMoveClipChannel(ownerId: string) {
-  const transport = useTransport()
-  const cache = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ id, channel }: { id: string; channel: ClipChannel }) => {
-      const response = await createClient(ClipGenerationService, transport).updateClipProject({
-        id,
-        channel,
-      })
-      if (!response.project) throw new Error('Missing moved clip')
-      return toClipProject(response.project)
-    },
-    onSuccess: async (project) => {
-      const key = [...clipProjectsKey(transport, ownerId), 'detail', project.id]
-      const cached = cache.getQueryData<ClipProject>(key)
-      cache.setQueryData(
-        key,
-        cached && cached.editPlanRevision === project.editPlanRevision
-          ? withDetailReadings(project, cached)
-          : project,
-      )
-      void cache.invalidateQueries({ queryKey: [...clipProjectsKey(transport, ownerId), 'list'] })
-      // A move is explicit, so read the current detail before the next queued write.
-      // Another client may have finished a revision since this page last read it.
-      await cache.invalidateQueries({ queryKey: key })
-    },
-  })
-}
-
 /** A checklist tick is an option save (CLIP-231): it writes the ticked lines alone, in the
  *  project's write lane, and keeps the detail readings the answer does not carry. */
 export function useSaveClipChecklistTicks(ownerId: string) {

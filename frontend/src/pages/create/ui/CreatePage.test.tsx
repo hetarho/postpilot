@@ -24,10 +24,7 @@ describe('canonical creation launch', () => {
       const choices = await screen.findByRole('navigation', { name: '만들 것' })
       const links = within(choices).getAllByRole('link')
       expect(links).toHaveLength(2)
-      expect(links.map((link) => link.getAttribute('href'))).toEqual([
-        '/posts/new',
-        '/clips/new?channel=naver_clip',
-      ])
+      expect(links.map((link) => link.getAttribute('href'))).toEqual(['/posts/new', '/clips/new'])
       expect(links[0]).toHaveAccessibleName('글')
       expect(links[0]).toHaveAccessibleDescription('사진과 메모로 블로그 글 한 편')
       expect(links[1]).toHaveAccessibleName('영상')
@@ -60,7 +57,7 @@ describe('canonical creation launch', () => {
       'aria-current',
       'step',
     )
-    expect(router.state.location.href).toBe('/clips/new?channel=naver_clip')
+    expect(router.state.location.href).toBe('/clips/new')
     expect(readClipReturnContext('home-alice')).toMatchObject({
       path: '/naver-clip',
       filters: { channel: 'naver_clip' },

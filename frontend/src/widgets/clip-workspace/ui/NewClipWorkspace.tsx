@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { DEFAULT_CLIP_CHANNEL, type ClipChannel } from '@/entities/clip-project'
 import {
   ClipProjectForm,
   focusedClipField,
@@ -19,17 +18,15 @@ import { ClipTopRow } from './ClipTopRow'
 /** `/clips/new`: an unminted project running ①'s guide (CLIP-130, CLIP-225). It has no lifecycle
  *  yet, so it shows no step bar and no delete (CLIP-36), and no action creates it: its first saved
  *  change — a choice, an answer, typed text or a picked source — mints the 9:16 project in the
- *  channel the page was opened from, and the address becomes `/clips/<id>` with the guide screen
+ *  project, and the address becomes `/clips/<id>` with the guide screen
  *  in use and the caret handed to the workspace that address mounts (CLIP-37, POST-11). */
 export function NewClipWorkspace({
   ownerId,
-  channel = DEFAULT_CLIP_CHANNEL,
   initialTemplateId,
   initialGuide,
   returnTo,
 }: {
   ownerId: string
-  channel?: ClipChannel
   /** The video template the new-clip offer's wizard just saved (CLIP-223). */
   initialTemplateId?: string
   /** Back from the template wizard: 템플릿 (CLIP-225). */
@@ -72,7 +69,6 @@ export function NewClipWorkspace({
     void navigate({
       to: '/clips/$clipId',
       params: { clipId: id },
-      search: { channel },
       replace: true,
     })
   }
@@ -103,7 +99,6 @@ export function NewClipWorkspace({
       />
       <ClipProjectForm
         ownerId={ownerId}
-        channel={channel}
         initialTemplateId={initialTemplateId}
         unmintedKey={draftKey}
         onMinted={onMinted}

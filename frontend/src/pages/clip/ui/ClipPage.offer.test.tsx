@@ -56,7 +56,7 @@ describe('the new-clip offer', () => {
     expect(within(dialog).queryByRole('button', { name: /말투/ })).not.toBeInTheDocument()
   })
 
-  it('opens the wizard in the clip’s channel and comes back to a new clip with the template', async () => {
+  it('opens the wizard and comes back to a new clip with the template', async () => {
     const user = userEvent.setup()
     const writes: ClipProjectDraft[] = []
     const { router } = renderAppAt('/clips/new?channel=instagram_clip', {
@@ -68,7 +68,7 @@ describe('the new-clip offer', () => {
       within(await offerDialog()).getByRole('button', { name: '새 영상 템플릿 만들기' }),
     )
     await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates/new'))
-    expect(router.state.location.search).toMatchObject({ channel: 'instagram_clip', clip: 'new' })
+    expect(router.state.location.search).toMatchObject({ clip: 'new' })
 
     await user.click(await screen.findByRole('button', { name: /^카페/ }))
     await user.click(screen.getByRole('button', { name: '다음' }))
@@ -86,7 +86,7 @@ describe('the new-clip offer', () => {
     await user.dblClick(screen.getByRole('button', { name: '저장' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/clips/new'))
-    expect(router.state.location.search).toMatchObject({ channel: 'instagram_clip' })
+    expect(router.state.location.search).not.toHaveProperty('channel')
     const templateId = (router.state.location.search as { template?: string }).template
     expect(templateId).toBeTruthy()
     // The unminted guide opens on 템플릿 with the new template selected (CLIP-223, CLIP-225).
@@ -102,7 +102,7 @@ describe('the new-clip offer', () => {
     await clipGuideTo('content')
     await user.type(screen.getByLabelText('클립 제목'), '디저트 투어')
     await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
-    expect(writes[0]).toMatchObject({ videoTemplateId: templateId, channel: 'instagram_clip' })
+    expect(writes[0]).toMatchObject({ videoTemplateId: templateId })
   })
 
   it('starts from a handed template with its design, and leaves 없음 for an unknown one', async () => {

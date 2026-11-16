@@ -5,7 +5,6 @@ import { useTranslation } from 'react-i18next'
 import {
   CLIP_PROJECT_LIMITS,
   DEFAULT_CLIP_CHANNEL,
-  type ClipChannel,
   ClipCompositionInputFields,
   boundedFreeText,
   emptyClipProject,
@@ -74,8 +73,8 @@ const INPUT = {
   autoCorrect: 'on',
   enterKeyHint: 'next',
 } as const
-// Channel moves use their own write. They must not make a successfully autosaved
-// setup draft look dirty or prevent a later canonical settings read from landing.
+// The entity still carries a channel until T864; it is no setting here, so it never makes a
+// successfully autosaved setup draft look dirty.
 function draftIdentity(value: ClipProjectDraft): string {
   const comparable = normalizeClipProject(value)
   delete comparable.channel
@@ -85,7 +84,6 @@ function draftIdentity(value: ClipProjectDraft): string {
 export function ClipProjectForm({
   ownerId,
   stored,
-  channel = DEFAULT_CLIP_CHANNEL,
   onUploadAllowed,
   children,
   disabled = false,
@@ -112,7 +110,6 @@ export function ClipProjectForm({
     change: (value: NonNullable<ClipProjectDraft['dubbing']>) => void,
   ) => ReactNode
   stored?: ClipProject
-  channel?: ClipChannel
   /** Whether each region is used, and its switch — held by the workspace, which saves region
    *  edits for ① and ② alike (CLIP-111). */
   regions?: ClipRegionSwitches
@@ -138,7 +135,7 @@ export function ClipProjectForm({
   // (CLIP-39). Read, not consumed — a component body may run more than once per mount.
   const queued = stored ? peekPendingClipDraft(stored.id) : undefined
   const [draft, setDraft] = useState<ClipProjectDraft>(
-    () => queued ?? (stored ? projectDraft(stored) : { ...emptyClipProject(), channel }),
+    () => queued ?? (stored ? projectDraft(stored) : emptyClipProject()),
   )
   const [seconds, setSeconds] = useState(
     draft.targetDurationMs ? String(draft.targetDurationMs / 1000) : '',
@@ -217,8 +214,7 @@ export function ClipProjectForm({
     setBaseline(draftIdentity(value))
     setSeen((current) => ({ ...current, superseded: true }))
   }
-  /** `/clips/new`'s sender: the first send creates the project in the channel the page was opened
-   *  from with the whole queued draft, an empty title included; every later one — an edit made
+  /** `/clips/new`'s sender: the first send creates the project with the whole queued draft, an empty title included; every later one — an edit made
    *  while the create was in flight among them — updates what it minted (CLIP-130, POST-4). */
   const sendUnminted = async (next: ClipProjectDraft) => {
     const minted = mintedClipId(unmintedKey)
@@ -229,13 +225,13 @@ export function ClipProjectForm({
     const origin = readClipReturnContext(ownerId) ?? {
       version: 1 as const,
       ownerKey: ownerId,
-      path: clipChannelPath(channel),
-      section: channel,
-      filters: { channel },
+      path: clipChannelPath(DEFAULT_CLIP_CHANNEL),
+      section: DEFAULT_CLIP_CHANNEL,
+      filters: {},
       scrollY: 0,
       targetId: 'new',
     }
-    const value = await save.mutateAsync({ draft: { ...next, channel: next.channel ?? channel } })
+    const value = await save.mutateAsync({ draft: next })
     recordMintedClip(unmintedKey, value.id)
     retainMintedClipEntry(ownerId, value.id, undefined, origin)
     onMinted?.(value.id)
@@ -517,7 +513,7 @@ export function ClipProjectForm({
       {/* The wizard's 저장 comes back to this screen (CLIP-225). */}
       <Link
         to="/video-templates/new"
-        search={{ channel: draft.channel ?? channel, clip: stored?.id ?? 'new' }}
+        search={{ clip: stored?.id ?? 'new' }}
         className={buttonStyles({ variant: 'ghost' })}
       >
         {t('directory.create')}
@@ -566,7 +562,6 @@ export function ClipProjectForm({
           readOnly={readOnly}
         />
       )}
-      {/* No channel move: a video is one kind of work, whichever channel it goes to. */}
     </fieldset>
   )
   const styleFields = (

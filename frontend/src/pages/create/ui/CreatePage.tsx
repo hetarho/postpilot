@@ -49,7 +49,7 @@ export function CreatePage() {
               >
                 <Link
                   to={channel ? '/clips/new' : '/posts/new'}
-                  search={channel ? { channel } : {}}
+                  search={{}}
                   onClick={() => remember(channel)}
                   aria-labelledby={`create-${key}-label`}
                   aria-describedby={`create-${key}-outcome`}
