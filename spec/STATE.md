@@ -84,7 +84,7 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
-| T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | todo |
+| T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
