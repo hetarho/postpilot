@@ -8,21 +8,21 @@ Reuse existing behavioral coverage and add or change tests only for a real gap. 
 
 Assess the complete task delta against its recorded starting revision, including intermediate commits, deleted files and working-tree changes. Include FE consumers and shared harnesses, and BE reverse dependencies, adapters and composition wiring. Import-based selection is an aid; it does not prove complete impact coverage.
 
-Vitest can select related unit tests with `--changed` against the task-start SHA or `related --run` against source paths relative to `frontend/`. Select Go packages and test cases for the changed isolated behavior. Inspect actual dependencies before classifying tests: SQLite/process/transport/browser integration tests stay at the coordinator's batch gate, regardless of their filename.
+Vitest can select related unit tests with `--changed` against the task-start SHA or `related --run` against source paths relative to `frontend/`. Select Go packages and test cases for the changed isolated behavior. Inspect actual dependencies before classifying tests: SQLite/process/transport/browser integration tests stay at the shared batch gate, regardless of their filename.
 
 Use applicable static checks expected under a minute. Frontend commands are `pnpm --filter ./frontend lint`, `pnpm --filter ./frontend format:check` and `pnpm --filter ./frontend exec tsc --noEmit -p tsconfig.app.json`; select the affected fast formatter/type checks for other paths. The batch gate still runs the complete checks listed below.
 
-Maintain the matching integration/e2e tests in the implementation, and hand their exact commands, test paths, input revision and any extra consumer coverage to the coordinator in result limits. An unbounded impact expands the batch selection to the affected full suite. Record the unit/static commands, actual evidence, selection rationale and unrun coverage in the task result. Task completion covers implementation, affected-unit verification and the handoff; it does not certify the later batch gate.
+Maintain the matching integration/e2e tests in the implementation, and hand their exact commands, test paths, input revision and any extra consumer coverage to the shared batch gate in result limits. An unbounded impact expands the batch selection to the affected full suite. Record the unit/static commands, actual evidence, selection rationale and unrun coverage in the task result. Task completion covers implementation, affected-unit verification and the handoff; it does not certify the later batch gate.
 
-## Coordinator-owned final gate
+## Shared integration final gate
 
-The initiating Gusta coordinator runs builds, integration/e2e and full suites once on the synchronized committed implementation candidate before landing or whole-work completion, including when committing only. Implementation/review units hand off these checks; a unit or session ending does not start another full gate. Real supplier, human, hardware and live-deployment qualification remains an explicit activation or delivery condition.
+The shared integration owner (the initiating Gusta coordinator when it is the only participant) runs builds, integration/e2e and full suites once on the fixed integration candidate after every participating session is ready, before landing or whole-work completion, including when committing only. Implementation/review units hand off these checks; a unit or session ending does not start another full gate. Real supplier, human, hardware and live-deployment qualification remains an explicit activation or delivery condition.
 
-Apply Gusta's cache, process cleanup and cumulative gate limits. Reuse each still-valid successful check; after a targeted repair run failed, affected or unrun checks. Reuse depends on actual consumed inputs, command, environment and scope, including transitive scripts/configuration/dependencies. A docs-only merge is not sufficient proof by itself. Optional named verification plans may store separate check receipts; do not infer a narrower input set from a script name. Stop writes to the candidate while checking, and invalidate evidence when its inputs change.
+Apply Gusta's cache, process cleanup and its deadline, closing-reserve and unit limits. Reuse each still-valid successful check; after a targeted repair run failed, affected or unrun checks. Reuse depends on actual consumed inputs, command, environment and scope, including transitive scripts/configuration/dependencies. A docs-only merge is not sufficient proof by itself. Optional named verification plans may store separate check receipts; do not infer a narrower input set from a script name. Stop writes to the candidate while checking, and invalidate evidence when its inputs change.
 
 ## Batch: full CI-equivalent coverage
 
-The coordinator runs this coverage for the final implementation candidate, from the repository root, with the Node version in `.node-version`, Go from `backend/go.mod`, installed lockfile dependencies and Docker available. These are the checks in `.github/workflows/ci.yml`; changes to that workflow require updating this list.
+The integration owner runs this coverage for the fixed integration candidate, from the repository root, with the Node version in `.node-version`, Go from `backend/go.mod`, installed lockfile dependencies and Docker available. These are the checks in `.github/workflows/ci.yml`; changes to that workflow require updating this list.
 
 ```sh
 (
