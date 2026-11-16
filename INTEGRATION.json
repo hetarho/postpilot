@@ -125,7 +125,44 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "3987a69a-1c88-430c-81f0-b4df4835f23c",
+    "owner": "onev",
+    "via": "merge",
+    "executor": {
+      "host": "DESKTOP-VKPLS8P",
+      "pid": 276578
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "4125dde62876b95524969bc0937c056b49c3885e",
+    "cohort": [
+      {
+        "id": "4f9bac47878ea861069ade68",
+        "tag": "onev",
+        "branch": "gusta-session-start-onev-8f9a46f3",
+        "head": "885755b7ceb866eee9ea68a59ab28ee80f2000e2",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      },
+      {
+        "id": "4097a1e4cadfc7f04c3cfe4d",
+        "tag": "onev",
+        "branch": "gusta-session-start-onev-54d284a9",
+        "head": "7e43e6f7de4dbfcccc596b61525d86208107fcce",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-16T11:11:59.886Z",
+    "deadline": "2026-11-16T12:11:57.493Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "a7e50a4e-0f4e-4310-8833-801c99b62abd",
