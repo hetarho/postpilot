@@ -80,7 +80,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T829 | Carry comparison verdicts through the writing-test reading | VOICE | T828 | todo |
 | T830 | Find a voice's countable habits inside a post | VOICE | T827 | todo |
 | T831 | Return habit phrases with a post's voice reading | VOICE POST | T828 T830 | todo |
 | T832 | Show verdicts and the n-of-m summary in the fingerprint reading | VOICE POST THEME | T828 T829 | todo |
@@ -95,4 +94,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T829 T830 T835
+- gusta-implement-task T830 T832 T835
