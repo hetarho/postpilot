@@ -1,10 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import {
-  useClipUploadTextCalls,
-  type ClipChannel,
-  type ClipProject,
-  type ClipQuote,
-} from '@/entities/clip-project'
+import { useClipUploadTextCalls, type ClipProject, type ClipQuote } from '@/entities/clip-project'
 import { useJob, isTerminal, type ModelRef } from '@/entities/generation-job'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 import { POLL_INTERVAL_MS } from '@/shared/config'
@@ -13,14 +8,12 @@ import { useMyPlanQueryKey } from '@/entities/plan'
 export function useUploadTextAction({
   ownerId,
   project,
-  channel,
   writeModel,
   revision,
   beforeWrite,
 }: {
   ownerId: string
   project: ClipProject
-  channel: ClipChannel
   writeModel: ModelRef | null
   revision: number
   beforeWrite?: () => Promise<unknown>
@@ -30,7 +23,6 @@ export function useUploadTextAction({
   const binding = JSON.stringify([
     ownerId,
     project.id,
-    channel,
     revision,
     project.updatedAt,
     project.editPlanRevision,
@@ -105,7 +97,7 @@ export function useUploadTextAction({
       await beforeWrite?.()
       if (!current()) return
       const next = await calls.quote(
-        { projectId: project.id, channel, writeModel, confirmEdited },
+        { projectId: project.id, writeModel, confirmEdited },
         binding,
         controller.signal,
       )
@@ -140,7 +132,7 @@ export function useUploadTextAction({
       await beforeWrite?.()
       if (!current()) return
       const id = await calls.start(
-        { projectId: project.id, channel, writeModel, confirmEdited: confirmed },
+        { projectId: project.id, writeModel, confirmEdited: confirmed },
         approved,
       )
       if (current()) {
@@ -163,7 +155,7 @@ export function useUploadTextAction({
     setPhase('saving')
     setFailure(undefined)
     try {
-      await calls.save({ projectId: project.id, channel, body, tags, expectedRevision })
+      await calls.save({ projectId: project.id, body, tags, expectedRevision })
       return true
     } catch (error) {
       if (current()) setFailure(appFailureFromConnect(error))

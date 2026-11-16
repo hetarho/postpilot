@@ -80,26 +80,11 @@ afterEach(() => {
 })
 
 describe('clip upload text', () => {
-  it('stands on the channel its host chooses and reports a switch, so ③ can open the other one', async () => {
-    const { rerender, props, user } = mount({ uploadTexts: [stored()] })
-    const onChannelChange = vi.fn()
-    rerender(
-      <ClipUploadText {...props} channel="instagram_clip" onChannelChange={onChannelChange} />,
-    )
-    expect(screen.getByRole('button', { name: '인스타 클립' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
-    expect(
-      await screen.findByRole('button', { name: '인스타 클립 문구도 만들기' }),
-    ).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '네이버 클립' }))
-    expect(onChannelChange).toHaveBeenCalledWith('naver_clip')
-    // The host still decides: nothing switches until it does.
-    expect(screen.getByRole('button', { name: '인스타 클립' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+  it('shows one upload text with no channel name, switch or other-channel action', async () => {
+    mount({ uploadTexts: [stored()] })
+    expect(await screen.findByRole('button', { name: '본문 복사' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /인스타|네이버 클립/u })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '채널' })).not.toBeInTheDocument()
   })
 
   it('only writes after explicit quote approval, with one write call and no video work', async () => {
@@ -121,7 +106,7 @@ describe('clip upload text', () => {
     expect(view.quotes).toHaveLength(1)
     expect(view.quotes[0]).toMatchObject({
       projectId: 'clip',
-      channel: 'naver_clip',
+      channel: '',
       writeModel: model,
       confirmEdited: false,
     })
@@ -148,7 +133,6 @@ describe('clip upload text', () => {
     await view.user.click(screen.getByRole('button', { name: '태그 복사' }))
     expect(clipboard).toHaveBeenLastCalledWith('#광고주 #방문')
     await view.user.click(screen.getByRole('button', { name: '문구 수정' }))
-    expect(screen.getByRole('button', { name: '인스타 클립' })).toBeDisabled()
     const body = screen.getByRole('textbox', { name: '본문' })
     expect(body).toHaveValue('다시 찾고 싶은 곳')
     await view.user.clear(body)
@@ -166,7 +150,7 @@ describe('clip upload text', () => {
     expect(view.starts).toEqual([])
   })
 
-  it('confirms edited replacement before even quoting and lets the other channel use the same finished video', async () => {
+  it('confirms edited replacement before even quoting and asks for no channel', async () => {
     const finished = {
       ...project,
       finalized: { at: project.updatedAt, resultId: 'video', planRevision: 1 },
@@ -178,21 +162,15 @@ describe('clip upload text', () => {
     await view.user.click(within(dialog).getByRole('button', { name: '예상 크레딧 확인' }))
     await screen.findByRole('button', { name: '최대 4 크레딧 · 문구 작성' })
     expect(view.quotes[0]).toMatchObject({ confirmEdited: true })
-    await view.user.click(screen.getByRole('button', { name: '인스타 클립' }))
-    expect(
-      screen.queryByRole('button', { name: '최대 4 크레딧 · 문구 작성' }),
-    ).not.toBeInTheDocument()
-    await view.user.click(screen.getByRole('button', { name: '인스타 클립 문구도 만들기' }))
     await view.user.click(await screen.findByRole('button', { name: '최대 4 크레딧 · 문구 작성' }))
     await waitFor(() => expect(view.starts).toHaveLength(1))
-    expect(view.starts[0]).toMatchObject({ channel: 'instagram_clip', confirmEdited: false })
+    expect(view.starts[0]).toMatchObject({ confirmEdited: true })
+    expect(view.starts[0]).toMatchObject({ channel: '' })
     expect(view.calls.some((call) => /Render|Source|StartClipGeneration/u.test(call))).toBe(false)
   })
 
-  it('selects a manual copy field after refusal and never revives stale feedback across channel switches', async () => {
-    const view = mount({
-      uploadTexts: [stored(), stored({ channel: 'instagram_clip', body: '인스타 문장' })],
-    })
+  it('selects a manual copy field after refusal and never revives stale feedback after a content change', async () => {
+    const view = mount({ uploadTexts: [stored()] })
     const clipboard = vi
       .spyOn(navigator.clipboard, 'writeText')
       .mockRejectedValue(new Error('denied'))
@@ -210,14 +188,15 @@ describe('clip upload text', () => {
         }),
     )
     await view.user.click(screen.getByRole('button', { name: '본문 복사' }))
-    await view.user.click(screen.getByRole('button', { name: '인스타 클립' }))
+    view.rerender(
+      <ClipUploadText {...view.props} project={{ ...view.props.project, campaign: false }} />,
+    )
     await act(async () => release())
-    await view.user.click(screen.getByRole('button', { name: '네이버 클립' }))
     expect(screen.queryByText('복사됨')).not.toBeInTheDocument()
     expect(screen.queryByRole('textbox', { name: '직접 복사할 문구' })).not.toBeInTheDocument()
   })
 
-  it('discards a quote that returns after its channel was left', async () => {
+  it('discards a quote that returns after the project changed', async () => {
     let release!: () => void
     const gate = new Promise<void>((resolve) => {
       release = resolve
@@ -225,7 +204,9 @@ describe('clip upload text', () => {
     const view = mount({ uploadTextQuoteGate: gate })
     await view.user.click(await screen.findByRole('button', { name: '업로드 문구 만들기' }))
     await waitFor(() => expect(view.quotes).toHaveLength(1))
-    await view.user.click(screen.getByRole('button', { name: '인스타 클립' }))
+    view.rerender(
+      <ClipUploadText {...view.props} project={{ ...view.props.project, campaign: false }} />,
+    )
     await act(async () => release())
     expect(
       screen.queryByRole('button', { name: '최대 4 크레딧 · 문구 작성' }),
@@ -236,7 +217,7 @@ describe('clip upload text', () => {
   it('refuses copying an older body that no longer fits after campaign is enabled', async () => {
     mount({ uploadTexts: [stored({ body: '가'.repeat(300) })] })
     expect(await screen.findByRole('button', { name: '본문 복사' })).toBeDisabled()
-    expect(screen.getByRole('alert')).toHaveTextContent('채널 한도')
+    expect(screen.getByRole('alert')).toHaveTextContent('글자 수 한도')
     expect(screen.getByRole('button', { name: '문구 수정' })).toBeEnabled()
   })
   it('serializes copies so a late body cannot overwrite newer tags, with one bounded confirmation', async () => {
@@ -277,28 +258,20 @@ describe('clip upload text', () => {
     }
   })
 
-  it('copies English disclosure with Instagram hashtags within one caption and omits it while off', async () => {
-    const instagram = { ...project, language: 'en' as const, channel: 'instagram_clip' as const }
-    const view = mount(
-      { uploadTexts: [stored({ channel: 'instagram_clip', body: 'My visit' })] },
-      instagram,
-    )
+  it('copies English disclosure above the body and omits it while off', async () => {
+    const english = { ...project, language: 'en' as const }
+    const view = mount({ uploadTexts: [stored({ body: 'My visit' })] }, english)
     const clipboard = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue(undefined)
-    await view.user.click(await screen.findByRole('button', { name: '본문과 해시태그 함께 복사' }))
-    expect(clipboard).toHaveBeenLastCalledWith(
-      'disclosure_banner_or_text_disclosure\n\nMy visit\n\n#광고주 #방문',
-    )
-    view.rerender(<ClipUploadText {...view.props} project={{ ...instagram, campaign: false }} />)
+    await view.user.click(await screen.findByRole('button', { name: '본문 복사' }))
+    expect(clipboard).toHaveBeenLastCalledWith('disclosure_banner_or_text_disclosure\n\nMy visit')
+    view.rerender(<ClipUploadText {...view.props} project={{ ...english, campaign: false }} />)
     await view.user.click(screen.getByRole('button', { name: '본문 복사' }))
     expect(clipboard).toHaveBeenLastCalledWith('My visit')
   })
-  it.each(['본문 복사', '본문과 해시태그 함께 복사'])(
+  it.each(['본문 복사'])(
     'dismisses a focused fallback and returns focus to %s on a content change',
     async (button) => {
-      const view = mount(
-        { uploadTexts: [stored({ channel: 'instagram_clip' })] },
-        { ...project, channel: 'instagram_clip' },
-      )
+      const view = mount({ uploadTexts: [stored()] })
       vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('denied'))
       await view.user.click(await screen.findByRole('button', { name: button }))
       expect(await screen.findByRole('textbox', { name: '직접 복사할 문구' })).toHaveFocus()

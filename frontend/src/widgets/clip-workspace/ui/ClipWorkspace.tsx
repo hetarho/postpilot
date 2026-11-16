@@ -7,12 +7,10 @@ import { useTranslation } from 'react-i18next'
 import {
   ClipFailureNotice,
   ClipRequestRecord,
-  clipChannel,
   clipConfirmed,
   clipDisplayTitle,
   clipReturnDestination,
   markClipHistoryReturn,
-  type ClipChannel,
   type ClipProject,
   type ClipQuote,
 } from '@/entities/clip-project'
@@ -135,10 +133,6 @@ export function ClipWorkspace({
   ])
   const sourceReady = readyClipBatch(upload.readyBatch, project.id, now)
   const job = run.job
-  // The 업로드 문구 on screen in ③, which 더 해 보기 can turn to the other channel (CLIP-233).
-  const [uploadChannel, setUploadChannel] = useState<ClipChannel>(() =>
-    clipChannel(project.channel),
-  )
   const uploadTextRef = useRef<HTMLDivElement>(null)
   // A project holding an instruction, a source or a running job opens on 확인, any other on 영상
   // 종류 (CLIP-225). Derived until the owner moves, so sources that load late still count.
@@ -752,8 +746,6 @@ export function ClipWorkspace({
           modelSelect={<StageModelSelect stage="write" disabled={pending} />}
           disabled={pending}
           beforeWrite={() => flushAll(true)}
-          channel={uploadChannel}
-          onChannelChange={setUploadChannel}
         />
       </div>
     ) : null
@@ -997,8 +989,7 @@ export function ClipWorkspace({
           <ClipMoreCard
             ownerId={ownerId}
             project={project}
-            onOtherChannel={(other) => {
-              setUploadChannel(other)
+            onOtherChannel={() => {
               const panel = uploadTextRef.current
               panel?.scrollIntoView?.({ block: 'start' })
               panel?.focus({ preventScroll: true })

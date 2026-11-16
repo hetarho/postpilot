@@ -7,7 +7,6 @@ import {
   type ProtoClipUploadText,
   type ProtoClipUploadTextLimits,
 } from '@/shared/api'
-import { CLIP_CHANNELS, type ClipChannel } from '../config/channel'
 import type { ClipQuote } from '../model/types'
 import { clipProjectsKey } from './clip-project'
 import { toClipQuote } from './credits'
@@ -15,7 +14,6 @@ import { toClipQuote } from './credits'
 type ModelRef = { providerId: string; modelId: string }
 
 export interface ClipUploadText {
-  channel: ClipChannel
   body: string
   tags: string[]
   edited: boolean
@@ -23,20 +21,29 @@ export interface ClipUploadText {
   updatedAt: string
 }
 export interface ClipUploadTextLimits {
-  channel: ClipChannel
   maxChars: number
   maxTags: number
   tagsInCaption: boolean
 }
+// The proto still carries a channel until T867 removes it: the one text is the 네이버 클립 entry,
+// or the only entry, and no channel leaves this file.
+const NAVER_CLIP = 'naver_clip'
+function onlyOrNaver<T extends { channel: string }>(rows: T[]): T | undefined {
+  return rows.find((row) => row.channel === NAVER_CLIP) ?? (rows.length === 1 ? rows[0] : undefined)
+}
 function textOf(row: ProtoClipUploadText): ClipUploadText {
-  if (!CLIP_CHANNELS.includes(row.channel as ClipChannel) || row.revision <= 0)
-    throw new Error('Invalid upload text')
-  return { ...row, channel: row.channel as ClipChannel, tags: [...row.tags] }
+  if (row.revision <= 0) throw new Error('Invalid upload text')
+  return {
+    body: row.body,
+    tags: [...row.tags],
+    edited: row.edited,
+    revision: row.revision,
+    updatedAt: row.updatedAt,
+  }
 }
 function limitsOf(row: ProtoClipUploadTextLimits): ClipUploadTextLimits {
-  if (!CLIP_CHANNELS.includes(row.channel as ClipChannel) || row.maxChars <= 0 || row.maxTags <= 0)
-    throw new Error('Invalid upload text limits')
-  return { ...row, channel: row.channel as ClipChannel }
+  if (row.maxChars <= 0 || row.maxTags <= 0) throw new Error('Invalid upload text limits')
+  return { maxChars: row.maxChars, maxTags: row.maxTags, tagsInCaption: row.tagsInCaption }
 }
 export function useClipUploadTexts(ownerId: string, projectId: string) {
   const transport = useTransport()
@@ -49,7 +56,9 @@ export function useClipUploadTexts(ownerId: string, projectId: string) {
         { projectId },
         { signal },
       )
-      return { texts: response.texts.map(textOf), limits: response.limits.map(limitsOf) }
+      const text = onlyOrNaver(response.texts)
+      const limits = onlyOrNaver(response.limits)
+      return { text: text && textOf(text), limits: limits && limitsOf(limits) }
     },
   })
 }
@@ -63,7 +72,6 @@ export function useClipUploadTextCalls(ownerId: string) {
       async quote(
         input: {
           projectId: string
-          channel: ClipChannel
           writeModel: ModelRef
           confirmEdited: boolean
         },
@@ -75,7 +83,6 @@ export function useClipUploadTextCalls(ownerId: string) {
       async start(
         input: {
           projectId: string
-          channel: ClipChannel
           writeModel: ModelRef
           confirmEdited: boolean
         },
@@ -93,7 +100,6 @@ export function useClipUploadTextCalls(ownerId: string) {
       },
       async save(input: {
         projectId: string
-        channel: ClipChannel
         body: string
         tags: string[]
         expectedRevision: number

@@ -1,12 +1,9 @@
 import { useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  clipChannel,
-  CLIP_CHANNELS,
   ClipFailureNotice,
   ClipQuoteApproval,
   useClipUploadTexts,
-  type ClipChannel,
   type ClipProject,
   type ClipUploadText as UploadText,
   type ClipUploadTextLimits,
@@ -26,10 +23,6 @@ export interface ClipUploadTextProps {
   modelSelect?: ReactNode
   disabled?: boolean
   beforeWrite?: () => Promise<unknown>
-  /** The channel on screen when the host chooses it — ③'s 더 해 보기 opens the other channel's
-   *  text (CLIP-233); absent, the panel keeps its own choice, starting at the clip's channel. */
-  channel?: ClipChannel
-  onChannelChange?: (channel: ClipChannel) => void
 }
 export function ClipUploadText(props: ClipUploadTextProps) {
   return <UploadTextPanel key={`${props.ownerId}/${props.project.id}`} {...props} />
@@ -37,33 +30,16 @@ export function ClipUploadText(props: ClipUploadTextProps) {
 function UploadTextPanel(props: ClipUploadTextProps) {
   const { t } = useTranslation('clips')
   const { ownerId, project } = props
-  const [editing, setEditing] = useState(false)
-  const [ownChannel, setOwnChannel] = useState<ClipChannel>(clipChannel(project.channel))
-  const channel = props.channel ?? ownChannel
-  const setChannel = props.onChannelChange ?? setOwnChannel
   const query = useClipUploadTexts(ownerId, project.id)
   const queue = useRef<Promise<void>>(Promise.resolve())
-  const row = query.data?.texts.find((text) => text.channel === channel)
-  const limits = query.data?.limits.find((item) => item.channel === channel)
+  const row = query.data?.text
+  const limits = query.data?.limits
   return (
     <section aria-label={t('uploadText.title')} className="min-w-0 space-y-3">
       <Typography variant="title" as="h2">
         {t('uploadText.title')}
       </Typography>
       <Typography variant="body">{t('uploadText.help')}</Typography>
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('project.channel')}>
-        {CLIP_CHANNELS.map((value) => (
-          <Button
-            key={value}
-            variant={value === channel ? 'secondary' : 'ghost'}
-            aria-pressed={value === channel}
-            disabled={editing && value !== channel}
-            onClick={() => setChannel(value)}
-          >
-            {t(`channel.${value}`)}
-          </Button>
-        ))}
-      </div>
       {query.isPending && (
         <Typography role="status" variant="meta">
           {t('uploadText.checking')}
@@ -77,24 +53,13 @@ function UploadTextPanel(props: ClipUploadTextProps) {
           </Button>
         </>
       )}
-      {limits && (
-        <ChannelText
-          key={channel}
-          {...props}
-          channel={channel}
-          row={row}
-          limits={limits}
-          queue={queue}
-          onEditingChange={setEditing}
-        />
-      )}
+      {limits && <UploadTextBody {...props} row={row} limits={limits} queue={queue} />}
     </section>
   )
 }
-function ChannelText({
+function UploadTextBody({
   ownerId,
   project,
-  channel,
   row,
   limits,
   queue,
@@ -102,20 +67,16 @@ function ChannelText({
   modelSelect,
   disabled,
   beforeWrite,
-  onEditingChange,
 }: ClipUploadTextProps & {
-  channel: ClipChannel
   row?: UploadText
   limits: ClipUploadTextLimits
   queue: RefObject<Promise<void>>
-  onEditingChange: (editing: boolean) => void
 }) {
   const { t } = useTranslation('clips')
   const { myPlan } = useMyPlan()
   const action = useUploadTextAction({
     ownerId,
     project,
-    channel,
     writeModel,
     revision: row?.revision ?? 0,
     beforeWrite,
@@ -183,7 +144,6 @@ function ChannelText({
                   void action.save(draft.body, tags, draft.revision).then((saved) => {
                     if (saved) {
                       setDraft(undefined)
-                      onEditingChange(false)
                     }
                   })
                 }}
@@ -195,7 +155,6 @@ function ChannelText({
                 disabled={busy}
                 onClick={() => {
                   setDraft(undefined)
-                  onEditingChange(false)
                 }}
               >
                 {t('uploadText.cancelEdit')}
@@ -216,7 +175,6 @@ function ChannelText({
               disabled={busy}
               onClick={() => {
                 action.dismiss()
-                onEditingChange(true)
                 setDraft({ body: row.body, tags: uploadTagText(row.tags), revision: row.revision })
               }}
             >
@@ -250,11 +208,7 @@ function ChannelText({
             pending={action.phase === 'quoting' || action.phase === 'starting'}
             onClick={request}
           >
-            {row
-              ? t('uploadText.rewrite')
-              : channel === project.channel
-                ? t('uploadText.make')
-                : t(`uploadText.other.${channel}`)}
+            {row ? t('uploadText.rewrite') : t('uploadText.make')}
           </Button>
         </>
       )}

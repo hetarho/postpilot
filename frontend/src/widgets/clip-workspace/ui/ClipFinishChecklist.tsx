@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { EMPTY_GUIDE } from '@/entities/advertiser-guide'
 import {
-  clipChannel,
   useClipUploadTexts,
   useSaveClipChecklistTicks,
   type ClipProject,
@@ -25,8 +24,7 @@ export function ClipFinishChecklist({
   const texts = useClipUploadTexts(ownerId, project.id)
   const save = useSaveClipChecklistTicks(ownerId)
   const [ticks, setTicks] = useState<readonly string[]>(project.checklistTicks ?? [])
-  const channel = clipChannel(project.channel)
-  const upload = texts.data?.texts.find((text) => text.channel === channel)
+  const upload = texts.data?.text
   return (
     <>
       <ClipAdvertiserChecklist

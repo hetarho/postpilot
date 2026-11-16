@@ -5,14 +5,10 @@ export const i18n = {
   ko: {
     uploadText: {
       title: '업로드 문구',
-      help: '영상은 그대로 두고, 선택한 채널에 올릴 문구만 만들어요.',
+      help: '영상은 그대로 두고, 올릴 때 쓸 설명과 태그만 만들어요.',
       make: '업로드 문구 만들기',
       rewrite: '다시 쓰기',
-      other: {
-        instagram_clip: '인스타 클립 문구도 만들기',
-        naver_clip: '네이버 클립 문구도 만들기',
-      },
-      empty: '아직 이 채널의 업로드 문구가 없어요.',
+      empty: '아직 업로드 문구가 없어요.',
       approve: '최대 {{amount}} 크레딧 · 문구 작성',
       confirmTitle: '직접 수정한 문구를 다시 쓸까요?',
       confirmHelp: '저장한 문구가 새 문구로 바뀌어요. 계속하면 예상 크레딧을 확인해요.',
@@ -30,7 +26,7 @@ export const i18n = {
       manual: '자동 복사가 허용되지 않았어요. 선택된 문구를 직접 복사해 주세요.',
       manualField: '직접 복사할 문구',
       count: '{{used}} / {{max}}자 · 태그 {{tags}} / {{maxTags}}개',
-      limit: '대가 표시와 해시태그를 포함한 채널 한도를 넘었어요. 문구를 수정해 주세요.',
+      limit: '대가 표시와 해시태그를 포함한 글자 수 한도를 넘었어요. 문구를 수정해 주세요.',
       checking: '저장된 문구를 확인하는 중이에요.',
       retry: '다시 확인',
       unsaved: '수정한 문구를 먼저 저장하거나 취소해 주세요.',
@@ -40,14 +36,10 @@ export const i18n = {
   en: {
     uploadText: {
       title: 'Upload text',
-      help: 'Write text for this channel using the same video.',
+      help: 'Write the description and tags to post with this video.',
       make: 'Write upload text',
       rewrite: 'Write again',
-      other: {
-        instagram_clip: 'Write Instagram clip text too',
-        naver_clip: 'Write Naver clip text too',
-      },
-      empty: 'No upload text for this channel yet.',
+      empty: 'No upload text yet.',
       approve: 'Up to {{amount}} credits · write text',
       confirmTitle: 'Replace your edited text?',
       confirmHelp: 'New text replaces your saved edit. Continue to see the estimated credits.',
@@ -65,7 +57,7 @@ export const i18n = {
       manual: 'Automatic copying was refused. Copy the selected text manually.',
       manualField: 'Text to copy manually',
       count: '{{used}} / {{max}} characters · {{tags}} / {{maxTags}} tags',
-      limit: 'The disclosure and hashtags exceed this channel’s limit. Edit the text first.',
+      limit: 'The disclosure and hashtags exceed the length limit. Edit the text first.',
       checking: 'Checking saved text.',
       retry: 'Check again',
       unsaved: 'Save or cancel your edit first.',

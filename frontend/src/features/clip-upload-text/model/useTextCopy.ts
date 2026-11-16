@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 import { COPY_FEEDBACK_MS } from '@/shared/config'
 import { copyText } from '@/shared/lib'
 
-/** A shared queue survives channel changes. Feedback and manual selection belong to the
+/** A shared queue survives re-renders. Feedback and manual selection belong to the
  * exact content on screen, with a new authority even when an earlier value returns. */
 export function useTextCopy(queueRef: RefObject<Promise<void>>, identity: string) {
   const mounted = useRef(false)

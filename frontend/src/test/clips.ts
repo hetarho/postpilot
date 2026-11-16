@@ -576,14 +576,12 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('SaveClipUploadText')
     options.uploadTextSaves?.push(req)
     if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
-    const index = uploadTexts.findIndex(
-      (row) => row.projectId === req.projectId && row.channel === req.channel,
-    )
+    const index = uploadTexts.findIndex((row) => row.projectId === req.projectId)
     if ((uploadTexts[index]?.revision ?? 0) !== req.expectedRevision)
       throw connectAppError('CLIP_PLAN_CONFLICT', Code.FailedPrecondition)
     const text = {
       projectId: req.projectId,
-      channel: req.channel,
+      channel: 'naver_clip',
       body: req.body,
       tags: [...req.tags],
       edited: true,
@@ -599,9 +597,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.uploadTextQuotes?.push(req)
     const p = projects.get(req.projectId)
     if (!p?.editPlanRevision) throw connectAppError('CLIP_PLAN_CONFLICT', Code.FailedPrecondition)
-    const text = uploadTexts.find(
-      (row) => row.projectId === req.projectId && row.channel === req.channel,
-    )
+    const text = uploadTexts.find((row) => row.projectId === req.projectId)
     if (text?.edited && !req.confirmEdited)
       throw connectAppError('CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED', Code.FailedPrecondition)
     await options.uploadTextQuoteGate
