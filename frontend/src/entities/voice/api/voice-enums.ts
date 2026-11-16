@@ -9,9 +9,16 @@ import {
   VoiceAiField as ProtoAiField,
   VoiceNoticeKind as ProtoNoticeKind,
   VoicePromptPart as ProtoPart,
+  VoiceRegister as ProtoRegister,
   VoiceSampleKind as ProtoKind,
 } from '@/shared/api'
-import type { VoiceAiField, VoiceNotice, VoicePromptPart, VoiceSampleKind } from '../model/types'
+import type {
+  VoiceAiField,
+  VoiceRegisterName,
+  VoiceNotice,
+  VoicePromptPart,
+  VoiceSampleKind,
+} from '../model/types'
 import type {
   FingerprintFacetUnit,
   FingerprintItem,
@@ -25,6 +32,18 @@ const PART_FROM_PROTO = new Map<ProtoPart, VoicePromptPart>([
   [ProtoPart.DESCRIPTION, 'description'],
   [ProtoPart.CLOSING, 'closing'],
 ])
+
+const REGISTER_FROM_PROTO = new Map<ProtoRegister, VoiceRegisterName>([
+  [ProtoRegister.HAEYO, 'haeyo'],
+  [ProtoRegister.DA, 'da'],
+  [ProtoRegister.EUMSEUM, 'eumseum'],
+  [ProtoRegister.HAMNIDA, 'hamnida'],
+])
+
+/** An unspecified register is a data error: the caller skips that example (VOICE-79). */
+export function voiceRegisterOrUndefined(value: ProtoRegister): VoiceRegisterName | undefined {
+  return REGISTER_FROM_PROTO.get(value)
+}
 
 const KIND_FROM_PROTO = new Map<ProtoKind, VoiceSampleKind>([
   [ProtoKind.POST, 'post'],

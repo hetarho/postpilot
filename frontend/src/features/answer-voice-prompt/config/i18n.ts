@@ -53,6 +53,10 @@ export const i18n = {
         send: '보내기',
         resend: '수정해서 보내기',
         photoSaved: '사진을 함께 보냈어요.',
+        examples: {
+          title: '다른 사람들은 이렇게 말했어요',
+          register: { haeyo: '해요체', da: '~다', eumseum: '음슴체', hamnida: '합니다체' },
+        },
         reactions: {
           thanks: '이야기해 줘서 고마워요. 다음 이야기도 나눠 볼까요?',
           noted: '그 표현도 잘 담아뒀어요. 이번에는 다른 얘기를 해봐요.',
@@ -113,6 +117,15 @@ export const i18n = {
         send: 'Send',
         resend: 'Send edited reply',
         photoSaved: 'Photo attached.',
+        examples: {
+          title: 'Here is how others put it',
+          register: {
+            haeyo: 'Polite · 해요체',
+            da: 'Plain · ~다',
+            eumseum: 'Clipped · 음슴체',
+            hamnida: 'Formal · 합니다체',
+          },
+        },
         reactions: {
           thanks: 'Thanks for sharing. Shall we try another story?',
           noted: 'Those expressions are saved. Let’s talk about something else.',

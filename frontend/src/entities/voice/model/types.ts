@@ -31,6 +31,14 @@ export interface VoiceSampleDetail {
 /** Where in a post a prompt's answer belongs (VOICE-60). */
 export type VoicePromptPart = 'opening' | 'description' | 'closing'
 
+export type VoiceRegisterName = 'haeyo' | 'da' | 'eumseum' | 'hamnida'
+
+/** One example reply to a question, labelled with its register (VOICE-79). */
+export interface VoicePromptExample {
+  register: VoiceRegisterName
+  text: string
+}
+
 /** One of the shared prompts every voice answers. The text is product copy, Korean in both
  *  locales (LANG-14). */
 export interface VoicePrompt {
@@ -41,6 +49,7 @@ export interface VoicePrompt {
   part: VoicePromptPart
   photo: boolean
   text: string
+  examples: VoicePromptExample[]
 }
 
 /** How far the 학습 글 are from 말투 만들기 (VOICE-32): the sentence share, held below 100 while a

@@ -6,7 +6,7 @@ import { create } from '@bufbuild/protobuf'
 import { appFailureFromConnect, ModelRefSchema, VoiceService } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 import type { VoicePrompt, VoiceSampleDetail } from '../model/types'
-import { requirePromptPart } from './voice-enums'
+import { requirePromptPart, voiceRegisterOrUndefined } from './voice-enums'
 import { invalidateVoiceMaterials } from './voice-directory-cache'
 import {
   toVoiceSample,
@@ -38,6 +38,10 @@ export function useVoicePrompts(): {
         part: requirePromptPart(prompt.part),
         photo: prompt.photo,
         text: prompt.text,
+        examples: prompt.examples.flatMap((example) => {
+          const register = voiceRegisterOrUndefined(example.register)
+          return register ? [{ register, text: example.text }] : []
+        }),
       })) ?? [],
     [query.data],
   )

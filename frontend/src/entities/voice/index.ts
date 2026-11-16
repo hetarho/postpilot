@@ -28,6 +28,8 @@ export type {
   VoiceProfile,
   VoicePrompt,
   VoicePromptPart,
+  VoicePromptExample,
+  VoiceRegisterName,
   VoiceReadiness,
   VoiceRef,
   VoiceSample,

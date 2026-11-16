@@ -347,6 +347,7 @@ export {
   RestoreVoiceResponseSchema,
   VoiceSampleKind,
   VoicePromptPart,
+  VoiceRegister,
   VoicePromptSchema,
   VoiceReadinessSchema,
   ListVoicePromptsResponseSchema,

@@ -16,6 +16,7 @@ export function toVoiceCheck(check: ProtoVoiceCheck): VoiceCheck {
       part: requirePromptPart(check.prompt.part),
       photo: check.prompt.photo,
       text: check.prompt.text,
+      examples: [],
     },
     answer: check.answer,
     answerDeleted: check.answerDeleted,

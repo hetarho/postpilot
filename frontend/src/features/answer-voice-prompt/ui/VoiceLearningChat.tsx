@@ -8,8 +8,10 @@ import {
   type VoiceSample,
 } from '@/entities/voice'
 import {
+  Badge,
   Button,
   Chat,
+  Disclosure,
   FieldLabel,
   FieldMessage,
   Listbox,
@@ -219,6 +221,25 @@ function AccountLearningChat({
           {question.scene && <p>{question.scene}</p>}
           <p>{question.text}</p>
           {question.hint && <p className="text-content-secondary">{question.hint}</p>}
+          {state.phase !== 'complete' && turnKey === key && question.examples.length > 0 && (
+            <Disclosure
+              key={turnKey}
+              size="row"
+              headingLevel={3}
+              title={t('prompts.chat.examples.title')}
+            >
+              <ul className="mt-2 space-y-2">
+                {question.examples.map((example) => (
+                  <li key={example.register} className="bg-card-well rounded-md px-3 py-2">
+                    <Badge tone="neutral">
+                      {t(`prompts.chat.examples.register.${example.register}`)}
+                    </Badge>
+                    <p className="mt-1">{example.text}</p>
+                  </li>
+                ))}
+              </ul>
+            </Disclosure>
+          )}
         </div>
       ),
     })
