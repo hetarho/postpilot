@@ -30,7 +30,7 @@ export function useDeletePost() {
   return {
     ...mutation,
     failure,
-    errorMessage: failure ? formatAppFailure(failure) : '',
+    errorMessage: formatAppFailure(failure),
     remove: (slug: string) => mutation.mutateAsync({ slug }),
   }
 }

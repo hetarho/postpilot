@@ -1,7 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation } from '@connectrpc/connect-query'
-import { appFailureFromConnect, GenerationService, ModelRefSchema } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { GenerationService, ModelRefSchema } from '@/shared/api'
+import { connectFailureMessage } from '@/shared/lib'
 import type { ModelRef } from '../model/types'
 
 /** ②'s AI revision: one durable `revise` job over the post's canonical content. It changes the post
@@ -11,7 +11,7 @@ export function useStartRevision() {
 
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     start: (postSlug: string, instruction: string, writeModel: ModelRef) =>
       mutation.mutateAsync({
         postSlug,
