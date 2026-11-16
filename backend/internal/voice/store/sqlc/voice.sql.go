@@ -164,7 +164,7 @@ func (q *Queries) GetExperience(ctx context.Context, arg GetExperienceParams) (V
 }
 
 const getExperienceAnswer = `-- name: GetExperienceAnswer :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE experience_id = ? AND voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer'
 `
@@ -187,6 +187,7 @@ type GetExperienceAnswerRow struct {
 	PhotoHeight     sql.NullInt64
 	CreatedAt       string
 	ContentRevision int64
+	ExperienceID    sql.NullString
 }
 
 // The one answer a question holds in an experience (voice_samples_experience_prompt).
@@ -209,6 +210,7 @@ func (q *Queries) GetExperienceAnswer(ctx context.Context, arg GetExperienceAnsw
 		&i.PhotoHeight,
 		&i.CreatedAt,
 		&i.ContentRevision,
+		&i.ExperienceID,
 	)
 	return i, err
 }
@@ -241,7 +243,7 @@ func (q *Queries) GetPhotoUpload(ctx context.Context, arg GetPhotoUploadParams) 
 }
 
 const getPromptAnswer = `-- name: GetPromptAnswer :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer' AND experience_id IS NULL
 `
@@ -263,6 +265,7 @@ type GetPromptAnswerRow struct {
 	PhotoHeight     sql.NullInt64
 	CreatedAt       string
 	ContentRevision int64
+	ExperienceID    sql.NullString
 }
 
 // The one situation answer a prompt holds in a voice (voice_samples_voice_prompt); a thread
@@ -281,12 +284,13 @@ func (q *Queries) GetPromptAnswer(ctx context.Context, arg GetPromptAnswerParams
 		&i.PhotoHeight,
 		&i.CreatedAt,
 		&i.ContentRevision,
+		&i.ExperienceID,
 	)
 	return i, err
 }
 
 const getSampleBody = `-- name: GetSampleBody :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?
 `
@@ -308,6 +312,7 @@ type GetSampleBodyRow struct {
 	PhotoHeight     sql.NullInt64
 	CreatedAt       string
 	ContentRevision int64
+	ExperienceID    sql.NullString
 }
 
 func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (GetSampleBodyRow, error) {
@@ -324,6 +329,7 @@ func (q *Queries) GetSampleBody(ctx context.Context, arg GetSampleBodyParams) (G
 		&i.PhotoHeight,
 		&i.CreatedAt,
 		&i.ContentRevision,
+		&i.ExperienceID,
 	)
 	return i, err
 }
@@ -704,7 +710,7 @@ func (q *Queries) ListPhotoUploadsExpiredBefore(ctx context.Context, expiresAt s
 }
 
 const listSampleBodies = `-- name: ListSampleBodies :many
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC
@@ -726,6 +732,7 @@ type ListSampleBodiesRow struct {
 	PhotoHeight     sql.NullInt64
 	CreatedAt       string
 	ContentRevision int64
+	ExperienceID    sql.NullString
 }
 
 func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesParams) ([]ListSampleBodiesRow, error) {
@@ -748,6 +755,7 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 			&i.PhotoHeight,
 			&i.CreatedAt,
 			&i.ContentRevision,
+			&i.ExperienceID,
 		); err != nil {
 			return nil, err
 		}
@@ -763,7 +771,7 @@ func (q *Queries) ListSampleBodies(ctx context.Context, arg ListSampleBodiesPara
 }
 
 const listSampleBodiesForVoices = `-- name: ListSampleBodiesForVoices :many
-SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE user_id = ?1 AND voice_id IN (SELECT value FROM json_each(?2))
 ORDER BY voice_id, created_at DESC, id DESC
@@ -786,6 +794,7 @@ type ListSampleBodiesForVoicesRow struct {
 	PhotoHeight     sql.NullInt64
 	CreatedAt       string
 	ContentRevision int64
+	ExperienceID    sql.NullString
 }
 
 // Every listed voice's samples with their bodies in one read, for the directory's readiness.
@@ -811,6 +820,7 @@ func (q *Queries) ListSampleBodiesForVoices(ctx context.Context, arg ListSampleB
 			&i.PhotoHeight,
 			&i.CreatedAt,
 			&i.ContentRevision,
+			&i.ExperienceID,
 		); err != nil {
 			return nil, err
 		}

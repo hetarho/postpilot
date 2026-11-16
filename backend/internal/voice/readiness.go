@@ -7,6 +7,11 @@ const ReadySentences = 60
 // InitialQuestionCount is the first personal voice session, independently of sentence count.
 const InitialQuestionCount = 10
 
+// ExperienceReplies is VOICE_EXPERIENCE_REPLIES: the replies one experience asks — one opening,
+// three description and one closing — so two experiences make the first ten (VOICE-78). The
+// frontend reads the thread's shape from the prompts, not from this constant.
+const ExperienceReplies = 5
+
 // Readiness is how far a voice's 학습 글 are from what an analysis needs (VOICE-32).
 type Readiness struct {
 	// Percent is the larger question/sentence share, held below 100 while a part is missing.
@@ -23,7 +28,9 @@ type Readiness struct {
 func (r Readiness) Ready() bool { return r.Percent >= 100 }
 
 // ReadinessOf counts the voice's 학습 글 by the fingerprint's own segmentation: a pasted post
-// counts as all three parts, an answer as its prompt's part (VOICE-32, VOICE-60).
+// counts as all three parts, an answer as its prompt's part (VOICE-32, VOICE-60). An answer
+// counts once per (experience, prompt): two experiences answering the same question count twice,
+// and an experience's name is never read, only the answer body (VOICE-78, VOICE-58).
 func ReadinessOf(samples []Sample) Readiness {
 	sentences := 0
 	covered := map[PromptPart]bool{}
@@ -37,7 +44,7 @@ func ReadinessOf(samples []Sample) Readiness {
 		if sample.Kind == SampleKindAnswer {
 			if prompt, ok := PromptByKey(sample.PromptKey); ok {
 				covered[prompt.Part] = true
-				answered[prompt.Key] = true
+				answered[sample.ExperienceID+"\x00"+prompt.Key] = true
 			}
 			continue
 		}

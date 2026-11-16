@@ -71,7 +71,7 @@ INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body,
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListSampleBodies :many
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC;
@@ -79,26 +79,26 @@ ORDER BY created_at DESC, id DESC;
 -- name: ListSampleBodiesForVoices :many
 -- Every listed voice's samples with their bodies in one read, for the directory's readiness.
 -- voice_ids is a JSON array of voice ids.
-SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE user_id = sqlc.arg(user_id) AND voice_id IN (SELECT value FROM json_each(sqlc.arg(voice_ids)))
 ORDER BY voice_id, created_at DESC, id DESC;
 
 -- name: GetSampleBody :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?;
 
 -- name: GetPromptAnswer :one
 -- The one situation answer a prompt holds in a voice (voice_samples_voice_prompt); a thread
 -- answer belongs to its experience and is read by GetExperienceAnswer.
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer' AND experience_id IS NULL;
 
 -- name: GetExperienceAnswer :one
 -- The one answer a question holds in an experience (voice_samples_experience_prompt).
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE experience_id = ? AND voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer';
 

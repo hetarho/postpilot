@@ -366,7 +366,7 @@ func (s *Store) ListSampleBodiesForVoices(ctx context.Context, userID string, vo
 		sample, err := toSample(userID, row.VoiceID, sqlc.GetSampleBodyRow{
 			ID: row.ID, Kind: row.Kind, PromptKey: row.PromptKey, Label: row.Label, Body: row.Body,
 			PhotoKey: row.PhotoKey, PhotoWidth: row.PhotoWidth, PhotoHeight: row.PhotoHeight, CreatedAt: row.CreatedAt,
-			ContentRevision: row.ContentRevision,
+			ContentRevision: row.ContentRevision, ExperienceID: row.ExperienceID,
 		})
 		if err != nil {
 			return nil, err
@@ -417,7 +417,8 @@ func toSample(userID, voiceID string, row sqlc.GetSampleBodyRow) (voice.Sample, 
 		ContentRevision: row.ContentRevision,
 		Label:           row.Label, Body: row.Body, Chars: utf8.RuneCountInString(row.Body),
 		PhotoKey: row.PhotoKey.String, PhotoWidth: int(row.PhotoWidth.Int64), PhotoHeight: int(row.PhotoHeight.Int64),
-		CreatedAt: created,
+		CreatedAt:    created,
+		ExperienceID: row.ExperienceID.String,
 	}, nil
 }
 
