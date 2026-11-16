@@ -12,9 +12,8 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/experiment/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -43,7 +42,7 @@ func (s *Store) Create(ctx context.Context, found experiment.Experiment) error {
 		TemplateName: found.TemplateName, TargetLanguage: targetLanguage,
 		Stage: string(found.Stage), Origin: string(found.Origin), Status: string(found.Status), JobID: nullString(found.JobID),
 		InputSnapshot: nullBytes(found.InputSnapshot), InputHash: found.InputHash,
-		PromptVersion: found.PromptVersion, CreatedAt: formatTime(found.CreatedAt),
+		PromptVersion: found.PromptVersion, CreatedAt: dbtime.Format(found.CreatedAt),
 		Source: sourceOf(found.Source), VoicePromptKey: nullString(found.VoicePromptKey), VoiceMaterialID: nullString(found.VoiceMaterialID),
 		ReviewMode: reviewModeOf(found.ReviewMode),
 	})
@@ -487,7 +486,7 @@ func (s *Store) SetAdopted(ctx context.Context, id, userID string, now time.Time
 func (s *Store) LeaderboardData(ctx context.Context, userID string, stage experiment.Stage, since time.Time, scope experiment.Scope) ([]experiment.Experiment, []experiment.Candidate, []experiment.BadgeTally, error) {
 	// Formatted through the same writer the column was filled by: the stored layout is
 	// fixed-width UTC, so `>=` on the text is `>=` on the instant.
-	from := formatTime(since)
+	from := dbtime.Format(since)
 	var experimentRows []sqlc.ModelExperiment
 	var err error
 	if scope == experiment.ScopeAll {
@@ -813,9 +812,8 @@ func nullTime(value *time.Time) sql.NullString {
 	if value == nil {
 		return sql.NullString{}
 	}
-	return sql.NullString{String: formatTime(*value), Valid: true}
+	return sql.NullString{String: dbtime.Format(*value), Valid: true}
 }
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
 func parseOptional(value sql.NullString) *time.Time {
 	if !value.Valid {
 		return nil

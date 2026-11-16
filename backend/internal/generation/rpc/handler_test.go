@@ -11,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/generation"
 	"github.com/postpilot/backend/internal/llm"
@@ -74,7 +75,7 @@ func TestGenerationUnknownAndAuthenticationFailuresAreTypedAndPrivate(t *testing
 		t.Fatalf("unknown detail = %#v", detail)
 	}
 
-	_, authErr := actingUser(context.Background())
+	_, authErr := authrpc.ActingUser(context.Background())
 	if connect.CodeOf(authErr) != connect.CodeUnauthenticated {
 		t.Fatalf("authentication code = %v", connect.CodeOf(authErr))
 	}

@@ -12,7 +12,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/campaign"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
@@ -36,7 +36,7 @@ func NewHandler(svc *post.Service) *Handler {
 }
 
 func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpilotv1.SavePostDraftRequest]) (*connect.Response[postpilotv1.SavePostDraftResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[postpilotv1.SavePostContentRequest]) (*connect.Response[postpilotv1.SavePostContentResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (h *Handler) SavePostContent(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Request[postpilotv1.SavePostGenerationOptionsRequest]) (*connect.Response[postpilotv1.SavePostGenerationOptionsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +127,7 @@ func (h *Handler) SavePostGenerationOptions(ctx context.Context, req *connect.Re
 }
 
 func (h *Handler) FinalizePost(ctx context.Context, req *connect.Request[postpilotv1.FinalizePostRequest]) (*connect.Response[postpilotv1.FinalizePostResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -141,7 +141,7 @@ func (h *Handler) FinalizePost(ctx context.Context, req *connect.Request[postpil
 // SavePostPublishedUrl records, replaces or clears the post's Naver Blog address (POST-73,
 // POST-75); a trimmed empty url clears it.
 func (h *Handler) SavePostPublishedUrl(ctx context.Context, req *connect.Request[postpilotv1.SavePostPublishedUrlRequest]) (*connect.Response[postpilotv1.SavePostPublishedUrlResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +153,7 @@ func (h *Handler) SavePostPublishedUrl(ctx context.Context, req *connect.Request
 }
 
 func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.GetPostRequest]) (*connect.Response[postpilotv1.GetPostResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +166,7 @@ func (h *Handler) GetPost(ctx context.Context, req *connect.Request[postpilotv1.
 }
 
 func (h *Handler) ListPosts(ctx context.Context, req *connect.Request[postpilotv1.ListPostsRequest]) (*connect.Response[postpilotv1.ListPostsResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +211,7 @@ func toProtoSummary(s post.Summary) *postpilotv1.PostSummary {
 }
 
 func (h *Handler) DeletePost(ctx context.Context, req *connect.Request[postpilotv1.DeletePostRequest]) (*connect.Response[postpilotv1.DeletePostResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +222,7 @@ func (h *Handler) DeletePost(ctx context.Context, req *connect.Request[postpilot
 }
 
 func (h *Handler) CreateUpload(ctx context.Context, req *connect.Request[postpilotv1.CreateUploadRequest]) (*connect.Response[postpilotv1.CreateUploadResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +240,7 @@ func (h *Handler) CreateUpload(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) ConfirmUpload(ctx context.Context, req *connect.Request[postpilotv1.ConfirmUploadRequest]) (*connect.Response[postpilotv1.ConfirmUploadResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +277,7 @@ func attachmentKindFromProto(value postpilotv1.AttachmentKind) post.AttachmentKi
 }
 
 func (h *Handler) DeleteImage(ctx context.Context, req *connect.Request[postpilotv1.DeleteImageRequest]) (*connect.Response[postpilotv1.DeleteImageResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -291,7 +291,7 @@ func (h *Handler) DeleteImage(ctx context.Context, req *connect.Request[postpilo
 // RotateImage records the owner's turn of a photo (POST-107) and answers the photo as it now
 // stands, view URL minted, so the strip can show it without refetching the post.
 func (h *Handler) RotateImage(ctx context.Context, req *connect.Request[postpilotv1.RotateImageRequest]) (*connect.Response[postpilotv1.RotateImageResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -305,7 +305,7 @@ func (h *Handler) RotateImage(ctx context.Context, req *connect.Request[postpilo
 // ReorderImages saves the owner's photo order (POST-116). The answer is empty: the order the
 // client sent is the one the post now holds, and a refusal tells the client to read it again.
 func (h *Handler) ReorderImages(ctx context.Context, req *connect.Request[postpilotv1.ReorderImagesRequest]) (*connect.Response[postpilotv1.ReorderImagesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -316,7 +316,7 @@ func (h *Handler) ReorderImages(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) DeleteVideo(ctx context.Context, req *connect.Request[postpilotv1.DeleteVideoRequest]) (*connect.Response[postpilotv1.DeleteVideoResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -325,17 +325,6 @@ func (h *Handler) DeleteVideo(ctx context.Context, req *connect.Request[postpilo
 		return nil, toConnectError("delete video", err)
 	}
 	return connect.NewResponse(&postpilotv1.DeleteVideoResponse{}), nil
-}
-
-// actingUser reads the user the interceptor authenticated. Reaching a handler without
-// one would mean the procedure was mounted outside the interceptor — a wiring bug, not
-// a client error, so it fails closed and loudly.
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 // toConnectError maps a domain error to a wire code. Anything unrecognized is Internal

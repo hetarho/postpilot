@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/experiment"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
@@ -41,7 +42,7 @@ func NewWritingTestHandler(tests writingTestActions, publication writingTestPubl
 	return &WritingTestHandler{tests: tests, publication: publication}
 }
 func (h *WritingTestHandler) EstimateWritingTest(ctx context.Context, req *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (h *WritingTestHandler) EstimateWritingTest(ctx context.Context, req *conne
 	return writingQuoteResponse(quote)
 }
 func (h *WritingTestHandler) EstimateFailedTestCandidates(ctx context.Context, req *connect.Request[v1.EstimateFailedTestCandidatesRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func writingQuoteResponse(quote experiment.TestQuote) (*connect.Response[v1.Esti
 	return connect.NewResponse(&v1.EstimateWritingTestResponse{Credits: &credits, Free: quote.Free, QuoteKey: quote.Key, ExpiresAt: formatTime(quote.ExpiresAt)}), nil
 }
 func (h *WritingTestHandler) StartWritingTest(ctx context.Context, req *connect.Request[v1.StartWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +88,7 @@ func (h *WritingTestHandler) StartWritingTest(ctx context.Context, req *connect.
 	return writingResponse(found, err)
 }
 func (h *WritingTestHandler) GetWritingTest(ctx context.Context, req *connect.Request[v1.GetWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +96,7 @@ func (h *WritingTestHandler) GetWritingTest(ctx context.Context, req *connect.Re
 	return writingResponse(found, err)
 }
 func (h *WritingTestHandler) ListWritingTests(ctx context.Context, req *connect.Request[v1.ListWritingTestsRequest]) (*connect.Response[v1.ListWritingTestsResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,7 @@ func (h *WritingTestHandler) ListWritingTests(ctx context.Context, req *connect.
 	return connect.NewResponse(result), nil
 }
 func (h *WritingTestHandler) RetryFailedTestCandidates(ctx context.Context, req *connect.Request[v1.RetryFailedTestCandidatesRequest]) (*connect.Response[v1.WritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +123,7 @@ func (h *WritingTestHandler) RetryFailedTestCandidates(ctx context.Context, req 
 	return writingResponse(found, err)
 }
 func (h *WritingTestHandler) DecideTestMatch(ctx context.Context, req *connect.Request[v1.DecideTestMatchRequest]) (*connect.Response[v1.WritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (h *WritingTestHandler) DecideTestMatch(ctx context.Context, req *connect.R
 	return writingResponse(found, err)
 }
 func (h *WritingTestHandler) CancelWritingTest(ctx context.Context, req *connect.Request[v1.CancelWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +139,7 @@ func (h *WritingTestHandler) CancelWritingTest(ctx context.Context, req *connect
 	return writingResponse(found, err)
 }
 func (h *WritingTestHandler) SaveWritingTestWinner(ctx context.Context, req *connect.Request[v1.SaveWritingTestWinnerRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +151,7 @@ func (h *WritingTestHandler) SaveWritingTestWinner(ctx context.Context, req *con
 	return writingPublicationResponse(publication, test, err)
 }
 func (h *WritingTestHandler) ApplyWritingTestOutput(ctx context.Context, req *connect.Request[v1.ApplyWritingTestOutputRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

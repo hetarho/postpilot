@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
@@ -64,7 +65,7 @@ func listFinalizationState(out *v1.ClipProject, p clip.Project) {
 }
 
 func (h *Handler) FinalizeClipProject(ctx context.Context, req *connect.Request[v1.FinalizeClipProjectRequest]) (*connect.Response[v1.FinalizeClipProjectResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +94,7 @@ func (h *Handler) FinalizeClipProject(ctx context.Context, req *connect.Request[
 // ConfirmClipProject is 확정하기 (CLIP-75): it records the plan revision, renders nothing and
 // answers the project as the detail reads it.
 func (h *Handler) ConfirmClipProject(ctx context.Context, req *connect.Request[v1.ConfirmClipProjectRequest]) (*connect.Response[v1.ConfirmClipProjectResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (h *Handler) ConfirmClipProject(ctx context.Context, req *connect.Request[v
 
 // SaveClipPublishedUrl saves or replaces a finalized clip's posted URL (CLIP-232).
 func (h *Handler) SaveClipPublishedUrl(ctx context.Context, req *connect.Request[v1.SaveClipPublishedUrlRequest]) (*connect.Response[v1.SaveClipPublishedUrlResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

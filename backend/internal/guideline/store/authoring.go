@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/guideline/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"strings"
 	"time"
 )
@@ -42,7 +43,7 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in guideline.
 	if !errors.Is(err, sql.ErrNoRows) {
 		return guideline.Guideline{}, err
 	}
-	stamp := formatTime(at)
+	stamp := dbtime.Format(at)
 	id := in.TargetID
 	if id == "" {
 		count, err := q.CountGuidelines(ctx, sqlc.CountGuidelinesParams{UserID: user, Kind: string(in.Kind)})

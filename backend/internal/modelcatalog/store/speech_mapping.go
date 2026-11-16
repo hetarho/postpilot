@@ -6,6 +6,7 @@ import (
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/modelcatalog"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func encodeSpeech(p modelcatalog.SpeechProfile) (string, string, error) {
@@ -17,7 +18,7 @@ func encodeSpeech(p modelcatalog.SpeechProfile) (string, string, error) {
 	}
 	prices := speechPricesRecord{Version: 1}
 	for _, price := range p.Prices {
-		r := speechPriceRecord{Operation: string(price.Operation), Source: price.Source, BoundsSource: price.BoundsSource, CheckedAt: formatTime(price.CheckedAt), Complete: price.Complete}
+		r := speechPriceRecord{Operation: string(price.Operation), Source: price.Source, BoundsSource: price.BoundsSource, CheckedAt: dbtime.Format(price.CheckedAt), Complete: price.Complete}
 		for _, c := range price.Charges {
 			r.Charges = append(r.Charges, speechChargeRecord{string(c.Unit), c.USDPerUnit, c.Multiplier, c.MaximumUnits, c.UnitsPerInputCharacter})
 		}
@@ -51,7 +52,7 @@ func decodeSpeech(bindingJSON, pricesJSON string) (modelcatalog.SpeechBinding, [
 	bound := modelcatalog.SpeechBinding{ConnectionScope: b.ConnectionScope, Design: design, Synthesis: speech, Settings: llm.SpeechSettings{Stability: v.Stability, SimilarityBoost: v.Similarity, Style: v.Style, SpeakerBoost: v.SpeakerBoost, Speed: v.Speed}, OutputFormat: b.Format, DescriptionMax: b.DescriptionMax, PreviewMax: b.PreviewMax, SpeechMax: b.SpeechMax, DesignModel: decodeSpeechModel(b.DesignModel, design), SpeechModel: decodeSpeechModel(b.SpeechModel, speech)}
 	out := make([]modelcatalog.SpeechPrice, 0, len(prices.Prices))
 	for _, price := range prices.Prices {
-		at, err := parseTime(price.CheckedAt)
+		at, err := dbtime.Parse(price.CheckedAt)
 		if err != nil {
 			return modelcatalog.SpeechBinding{}, nil, err
 		}

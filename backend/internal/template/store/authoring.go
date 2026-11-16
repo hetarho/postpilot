@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/template/store/sqlc"
 )
@@ -44,7 +45,7 @@ func (s *Store) PublishAuthoring(ctx context.Context, user string, in template.A
 	if !errors.Is(err, sql.ErrNoRows) {
 		return template.Template{}, err
 	}
-	stamp := formatTime(at)
+	stamp := dbtime.Format(at)
 	id := in.TargetID
 	if id == "" {
 		count, err := q.CountTemplates(ctx, user)

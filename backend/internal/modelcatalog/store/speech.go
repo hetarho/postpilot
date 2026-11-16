@@ -8,6 +8,7 @@ import (
 
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/modelcatalog/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func (s *Store) ListSpeechProfiles(ctx context.Context) ([]modelcatalog.SpeechProfile, error) {
@@ -67,7 +68,7 @@ func saveSpeechRevision(ctx context.Context, q *sqlc.Queries, p modelcatalog.Spe
 	if err != nil {
 		return err
 	}
-	stamp := formatTime(p.CreatedAt)
+	stamp := dbtime.Format(p.CreatedAt)
 	if expected == 0 {
 		if err := q.CreateSpeechProfile(ctx, sqlc.CreateSpeechProfileParams{ID: p.ID, CurrentRevision: p.Revision, CreatedAt: stamp, UpdatedAt: stamp}); err != nil {
 			return err
@@ -124,7 +125,7 @@ func (s *Store) RecordSpeechReadiness(ctx context.Context, id string, rev int64,
 }
 
 func (s *Store) CreateSpeechQualification(ctx context.Context, q modelcatalog.SpeechQualificationSession) error {
-	return s.write.CreateSpeechQualification(ctx, sqlc.CreateSpeechQualificationParams{ID: q.ID, OwnerID: q.OwnerID, ProfileID: q.ProfileID, Revision: q.Revision, MaximumUsd: q.MaximumUSD, ExpiresAt: formatTime(q.ExpiresAt)})
+	return s.write.CreateSpeechQualification(ctx, sqlc.CreateSpeechQualificationParams{ID: q.ID, OwnerID: q.OwnerID, ProfileID: q.ProfileID, Revision: q.Revision, MaximumUsd: q.MaximumUSD, ExpiresAt: dbtime.Format(q.ExpiresAt)})
 }
 
 func (s *Store) GetSpeechQualification(ctx context.Context, owner, id string) (modelcatalog.SpeechQualificationSession, error) {
@@ -135,7 +136,7 @@ func (s *Store) GetSpeechQualification(ctx context.Context, owner, id string) (m
 	if err != nil {
 		return modelcatalog.SpeechQualificationSession{}, err
 	}
-	at, err := parseTime(row.ExpiresAt)
+	at, err := dbtime.Parse(row.ExpiresAt)
 	if err != nil {
 		return modelcatalog.SpeechQualificationSession{}, err
 	}
@@ -158,7 +159,7 @@ func speechFromRow(row sqlc.SpeechProfileRevision) (modelcatalog.SpeechProfile, 
 	if err != nil {
 		return modelcatalog.SpeechProfile{}, err
 	}
-	at, err := parseTime(row.CreatedAt)
+	at, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return modelcatalog.SpeechProfile{}, err
 	}

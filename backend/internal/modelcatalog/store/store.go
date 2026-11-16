@@ -14,11 +14,8 @@ import (
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/modelcatalog"
 	"github.com/postpilot/backend/internal/modelcatalog/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-// The fixed-width UTC layout every context writes timestamps in, so string comparison
-// and ORDER BY agree with chronological order.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -146,8 +143,8 @@ func upsert(ctx context.Context, q *sqlc.Queries, m modelcatalog.Model) error {
 		PricingCheckedAt:       nullString(m.PricingCheckedAt),
 		Listed:                 boolToInt(m.Listed),
 		LastSeenAt:             nullTime(m.LastSeenAt),
-		CreatedAt:              formatTime(m.CreatedAt),
-		UpdatedAt:              formatTime(m.UpdatedAt),
+		CreatedAt:              dbtime.Format(m.CreatedAt),
+		UpdatedAt:              dbtime.Format(m.UpdatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("upsert catalog model: %w", err)
@@ -222,7 +219,7 @@ func (s *Store) Patch(ctx context.Context, modelID string, patch modelcatalog.Pa
 	}
 	// A curation edit stamps the row, the same way a (de)registration does.
 	if err := q.TouchCatalogModelCuration(ctx, sqlc.TouchCatalogModelCurationParams{
-		UpdatedAt: formatTime(current.UpdatedAt), ModelID: modelID,
+		UpdatedAt: dbtime.Format(current.UpdatedAt), ModelID: modelID,
 	}); err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("touch catalog model: %w", err)
 	}
@@ -247,7 +244,7 @@ func (s *Store) RegisterPurpose(ctx context.Context, m modelcatalog.Model, purpo
 		return err
 	}
 	err = q.AddCatalogModelPurpose(ctx, sqlc.AddCatalogModelPurposeParams{
-		ModelID: m.ModelID, Purpose: string(purpose), CreatedAt: formatTime(m.UpdatedAt),
+		ModelID: m.ModelID, Purpose: string(purpose), CreatedAt: dbtime.Format(m.UpdatedAt),
 	})
 	if err != nil {
 		return fmt.Errorf("add catalog model purpose: %w", err)
@@ -276,7 +273,7 @@ func (s *Store) DeregisterPurpose(ctx context.Context, modelID string, purpose m
 		return fmt.Errorf("remove catalog model purpose: %w", err)
 	}
 	if err := q.TouchCatalogModelCuration(ctx, sqlc.TouchCatalogModelCurationParams{
-		UpdatedAt: formatTime(at), ModelID: modelID,
+		UpdatedAt: dbtime.Format(at), ModelID: modelID,
 	}); err != nil {
 		return fmt.Errorf("stamp catalog model curation: %w", err)
 	}
@@ -308,7 +305,7 @@ func (s *Store) SyncDocument(ctx context.Context, writes []modelcatalog.PurposeW
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	stamp := formatTime(at)
+	stamp := dbtime.Format(at)
 	for _, write := range writes {
 		// The purpose CHECK the schema carries cannot catch this one: the registration
 		// insert is OR IGNORE, so an unknown purpose would be silently skipped rather than
@@ -382,7 +379,7 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 	if err := q.UnlistAllCatalogModels(ctx); err != nil {
 		return fmt.Errorf("unlist catalog models: %w", err)
 	}
-	stamp := formatTime(at)
+	stamp := dbtime.Format(at)
 	pricingDate := at.UTC().Format(time.DateOnly)
 	for _, candidate := range seen {
 		err := q.MarkCatalogModelSeen(ctx, sqlc.MarkCatalogModelSeenParams{
@@ -424,17 +421,17 @@ func (s *Store) RefreshAvailability(ctx context.Context, seen []modelcatalog.Can
 }
 
 func toModel(row sqlc.GetCatalogModelRow, registrations []registration) (modelcatalog.Model, error) {
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("parse catalog model created_at: %w", err)
 	}
-	updated, err := parseTime(row.UpdatedAt)
+	updated, err := dbtime.Parse(row.UpdatedAt)
 	if err != nil {
 		return modelcatalog.Model{}, fmt.Errorf("parse catalog model updated_at: %w", err)
 	}
 	var lastSeen time.Time
 	if row.LastSeenAt.Valid {
-		lastSeen, err = parseTime(row.LastSeenAt.String)
+		lastSeen, err = dbtime.Parse(row.LastSeenAt.String)
 		if err != nil {
 			return modelcatalog.Model{}, fmt.Errorf("parse catalog model last_seen_at: %w", err)
 		}
@@ -537,12 +534,8 @@ func nullTime(value time.Time) sql.NullString {
 	if value.IsZero() {
 		return sql.NullString{}
 	}
-	return sql.NullString{String: formatTime(value), Valid: true}
+	return sql.NullString{String: dbtime.Format(value), Valid: true}
 }
-
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
-
-func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }
 
 var _ modelcatalog.Store = (*Store)(nil)
 
@@ -606,7 +599,7 @@ func (s *Store) AssignCombo(ctx context.Context, a modelcatalog.ComboAssignment,
 		Combo:          string(a.Combo),
 		ObserveModelID: a.ObserveModelID,
 		WriteModelID:   a.WriteModelID,
-		UpdatedAt:      formatTime(at),
+		UpdatedAt:      dbtime.Format(at),
 	})
 	if err != nil {
 		return fmt.Errorf("assign estimator combo: %w", err)

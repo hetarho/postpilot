@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -18,7 +19,7 @@ func NewCandidateHandler(service *voice.CandidateService) *CandidateHandler {
 }
 
 func (h *CandidateHandler) EstimateWritingVoiceCandidates(ctx context.Context, req *connect.Request[postpilotv1.EstimateWritingVoiceCandidatesRequest]) (*connect.Response[postpilotv1.EstimateWritingVoiceCandidatesResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authrpc.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	count, countErr := voice.NormalizeCandidateCount(int(req.Msg.GetCandidateCount()))
@@ -37,7 +38,7 @@ func (h *CandidateHandler) EstimateWritingVoiceCandidates(ctx context.Context, r
 	return connect.NewResponse(out), nil
 }
 func (h *CandidateHandler) StartWritingVoiceCandidates(ctx context.Context, req *connect.Request[postpilotv1.StartWritingVoiceCandidatesRequest]) (*connect.Response[postpilotv1.StartWritingVoiceCandidatesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +53,7 @@ func (h *CandidateHandler) StartWritingVoiceCandidates(ctx context.Context, req 
 	return connect.NewResponse(&postpilotv1.StartWritingVoiceCandidatesResponse{JobId: id}), nil
 }
 func (h *CandidateHandler) GetWritingVoiceCandidates(ctx context.Context, req *connect.Request[postpilotv1.GetWritingVoiceCandidatesRequest]) (*connect.Response[postpilotv1.GetWritingVoiceCandidatesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +64,7 @@ func (h *CandidateHandler) GetWritingVoiceCandidates(ctx context.Context, req *c
 	return connect.NewResponse(&postpilotv1.GetWritingVoiceCandidatesResponse{JobId: batch.JobID, Candidates: protoWritingCandidates(batch.Candidates)}), nil
 }
 func (h *CandidateHandler) GetLatestWritingVoiceCandidates(ctx context.Context, _ *connect.Request[postpilotv1.GetLatestWritingVoiceCandidatesRequest]) (*connect.Response[postpilotv1.GetLatestWritingVoiceCandidatesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +75,7 @@ func (h *CandidateHandler) GetLatestWritingVoiceCandidates(ctx context.Context, 
 	return connect.NewResponse(&postpilotv1.GetLatestWritingVoiceCandidatesResponse{JobId: latest.JobID, ResultJobId: latest.ResultJobID, Candidates: protoWritingCandidates(latest.Candidates)}), nil
 }
 func (h *CandidateHandler) CancelWritingVoiceCandidates(ctx context.Context, req *connect.Request[postpilotv1.CancelWritingVoiceCandidatesRequest]) (*connect.Response[postpilotv1.CancelWritingVoiceCandidatesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func (h *CandidateHandler) CancelWritingVoiceCandidates(ctx context.Context, req
 	return connect.NewResponse(&postpilotv1.CancelWritingVoiceCandidatesResponse{}), nil
 }
 func (h *CandidateHandler) AdoptWritingVoiceCandidate(ctx context.Context, req *connect.Request[postpilotv1.AdoptWritingVoiceCandidateRequest]) (*connect.Response[postpilotv1.AdoptWritingVoiceCandidateResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

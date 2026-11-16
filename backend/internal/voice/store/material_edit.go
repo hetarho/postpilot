@@ -10,6 +10,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
@@ -111,7 +112,7 @@ func (s *Store) UpdateVoiceSample(ctx context.Context, in voice.SampleMutation) 
 		if err != nil {
 			return voice.Sample{}, err
 		}
-		expires, err := parseTime(upload.ExpiresAt)
+		expires, err := dbtime.Parse(upload.ExpiresAt)
 		if err != nil || !expires.After(time.Now()) || upload.PromptKey != current.PromptKey || upload.ObjectKey != updated.PhotoKey {
 			return voice.Sample{}, voice.ErrPhotoRequired
 		}
@@ -134,7 +135,7 @@ func (s *Store) UpdateVoiceSample(ctx context.Context, in voice.SampleMutation) 
 	if err != nil {
 		return voice.Sample{}, err
 	}
-	err = q.InsertVoiceSampleMutation(ctx, sqlc.InsertVoiceSampleMutationParams{UserID: in.UserID, VoiceID: in.VoiceID, SampleID: in.SampleID, OperationKey: in.OperationKey, ExpectedContentRevision: in.ExpectedContentRevision, ResultingContentRevision: updated.ContentRevision, Fingerprint: materialFingerprint(in), Response: string(encoded), CreatedAt: formatTime(time.Now())})
+	err = q.InsertVoiceSampleMutation(ctx, sqlc.InsertVoiceSampleMutationParams{UserID: in.UserID, VoiceID: in.VoiceID, SampleID: in.SampleID, OperationKey: in.OperationKey, ExpectedContentRevision: in.ExpectedContentRevision, ResultingContentRevision: updated.ContentRevision, Fingerprint: materialFingerprint(in), Response: string(encoded), CreatedAt: dbtime.Format(time.Now())})
 	if err != nil {
 		return voice.Sample{}, err
 	}

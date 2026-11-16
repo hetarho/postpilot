@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
@@ -16,8 +17,8 @@ import (
 func (s *Store) InsertCheck(ctx context.Context, check voice.Check) error {
 	if err := s.write.InsertVoiceCheck(ctx, sqlc.InsertVoiceCheckParams{
 		ID: check.ID, UserID: check.UserID, VoiceID: check.VoiceID, PromptKey: check.PromptKey, MaterialID: check.MaterialID,
-		AnalysisCreatedAt: formatTime(check.AnalysisCreatedAt), Projection: check.Projection, WriteModel: check.WriteModel,
-		CreatedAt: formatTime(check.CreatedAt), UpdatedAt: formatTime(check.UpdatedAt),
+		AnalysisCreatedAt: dbtime.Format(check.AnalysisCreatedAt), Projection: check.Projection, WriteModel: check.WriteModel,
+		CreatedAt: dbtime.Format(check.CreatedAt), UpdatedAt: dbtime.Format(check.UpdatedAt),
 	}); err != nil {
 		return fmt.Errorf("insert voice check: %w", err)
 	}
@@ -59,7 +60,7 @@ func (s *Store) ListChecks(ctx context.Context, userID, voiceID string) ([]voice
 }
 
 func (s *Store) MarkCheckRunning(ctx context.Context, userID, checkID string, now time.Time) (bool, error) {
-	n, err := s.write.MarkVoiceCheckRunning(ctx, sqlc.MarkVoiceCheckRunningParams{UpdatedAt: formatTime(now), ID: checkID, UserID: userID})
+	n, err := s.write.MarkVoiceCheckRunning(ctx, sqlc.MarkVoiceCheckRunningParams{UpdatedAt: dbtime.Format(now), ID: checkID, UserID: userID})
 	if err != nil {
 		return false, fmt.Errorf("mark voice check running: %w", err)
 	}
@@ -68,7 +69,7 @@ func (s *Store) MarkCheckRunning(ctx context.Context, userID, checkID string, no
 
 func (s *Store) FinishCheck(ctx context.Context, userID, checkID, piece string, now time.Time) (bool, error) {
 	n, err := s.write.FinishVoiceCheck(ctx, sqlc.FinishVoiceCheckParams{
-		Piece: sql.NullString{String: piece, Valid: true}, UpdatedAt: formatTime(now), ID: checkID, UserID: userID,
+		Piece: sql.NullString{String: piece, Valid: true}, UpdatedAt: dbtime.Format(now), ID: checkID, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("finish voice check: %w", err)
@@ -85,7 +86,7 @@ func (s *Store) FailCheck(ctx context.Context, userID, checkID string, failure v
 		reason, params = sql.NullString{String: voice.FailureReasonUnknown, Valid: true}, sql.NullString{String: "{}", Valid: true}
 	}
 	n, err := s.write.FailVoiceCheck(ctx, sqlc.FailVoiceCheckParams{
-		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, UpdatedAt: formatTime(now), ID: checkID, UserID: userID,
+		ErrorReason: reason, ErrorParams: params, TechnicalDetail: detail, UpdatedAt: dbtime.Format(now), ID: checkID, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("fail voice check: %w", err)
@@ -96,7 +97,7 @@ func (s *Store) FailCheck(ctx context.Context, userID, checkID string, failure v
 func toCheck(userID string, row sqlc.GetVoiceCheckRow) (voice.Check, error) {
 	times := make([]time.Time, 3)
 	for i, value := range []string{row.AnalysisCreatedAt, row.CreatedAt, row.UpdatedAt} {
-		parsed, err := parseTime(value)
+		parsed, err := dbtime.Parse(value)
 		if err != nil {
 			return voice.Check{}, fmt.Errorf("voice check %s time: %w", row.ID, err)
 		}

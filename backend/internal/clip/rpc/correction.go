@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"connectrpc.com/connect"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -203,7 +204,7 @@ func editingProto(s *clip.CorrectionState) *v1.ClipEditingState {
 	return out
 }
 func (h *Handler) SaveClipEditPlan(ctx context.Context, req *connect.Request[v1.SaveClipEditPlanRequest]) (*connect.Response[v1.SaveClipEditPlanResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +223,7 @@ func (h *Handler) SaveClipEditPlan(ctx context.Context, req *connect.Request[v1.
 	return connect.NewResponse(&v1.SaveClipEditPlanResponse{Project: response.Msg.Project}), nil
 }
 func (h *Handler) StartClipRender(ctx context.Context, req *connect.Request[v1.StartClipRenderRequest]) (*connect.Response[v1.StartClipRenderResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +256,7 @@ func (h *Handler) StartClipRender(ctx context.Context, req *connect.Request[v1.S
 }
 
 func (h *Handler) ReportClipRenderVerdict(ctx context.Context, req *connect.Request[v1.ReportClipRenderVerdictRequest]) (*connect.Response[v1.ReportClipRenderVerdictResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

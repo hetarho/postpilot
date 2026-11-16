@@ -4,6 +4,7 @@ import (
 	"connectrpc.com/connect"
 	"context"
 	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -54,7 +55,7 @@ func NewSpeechAudioHandler(svc *clipapp.SpeechService, sessions SpeechAudioSessi
 	})
 }
 func (h *Handler) GetClipSpeechAccess(ctx context.Context, r *connect.Request[v1.GetClipSpeechAccessRequest]) (*connect.Response[v1.ClipSpeechAccess], error) {
-	owner, e := actingUser(ctx)
+	owner, e := authrpc.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}

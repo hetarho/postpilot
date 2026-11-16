@@ -2,8 +2,6 @@ package usage
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math"
@@ -13,6 +11,7 @@ import (
 
 	"github.com/postpilot/backend/internal/llm"
 	"github.com/postpilot/backend/internal/plan"
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 // holdInputTokens is the prompt size one call is priced at when its hold is computed.
@@ -158,11 +157,11 @@ func (s *Service) Select(ctx context.Context, at time.Time) (plan.RateSnapshot, 
 }
 
 func newID() string {
-	buf := make([]byte, 16)
-	if _, err := rand.Read(buf); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic("usage: cannot read random bytes for an id: " + err.Error())
 	}
-	return hex.EncodeToString(buf)
+	return id
 }
 
 func (s *Service) OpenPurchasedLot(ctx context.Context, userID string, credits int) (string, error) {

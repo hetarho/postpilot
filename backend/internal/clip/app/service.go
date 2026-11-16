@@ -2,14 +2,13 @@ package app
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/postpilot/backend/internal/clip"
 	"github.com/postpilot/backend/internal/clip/composition"
+	"github.com/postpilot/backend/internal/platform/ids"
 )
 
 type Service struct {
@@ -47,11 +46,11 @@ func NewService(store clip.Store, limits clip.Limits, sources *SourceService, fi
 }
 
 func newID() string {
-	var b [16]byte
-	if _, err := rand.Read(b[:]); err != nil {
+	id, err := ids.NewHex128()
+	if err != nil {
 		panic(err)
 	}
-	return hex.EncodeToString(b[:])
+	return id
 }
 
 func (s *Service) ListTemplates(ctx context.Context, user string) ([]clip.VideoTemplate, error) {

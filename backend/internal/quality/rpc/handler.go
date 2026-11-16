@@ -8,7 +8,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -25,7 +25,7 @@ var _ postpilotv1connect.QualityServiceHandler = (*Handler)(nil)
 // the published count mean something on M2 only: it is the one per-post metric that reads the
 // published window, and its count is the account's published count, as the brief's is.
 func (h *Handler) GetPostMeasurement(ctx context.Context, req *connect.Request[postpilotv1.GetPostMeasurementRequest]) (*connect.Response[postpilotv1.GetPostMeasurementResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (h *Handler) GetPostMeasurement(ctx context.Context, req *connect.Request[p
 // GetAccountQuality answers all four metrics in enum order (POST-81). Only an over-band metric
 // carries its rule text, rendered in the target language of the post the brief belongs to.
 func (h *Handler) GetAccountQuality(ctx context.Context, req *connect.Request[postpilotv1.GetAccountQualityRequest]) (*connect.Response[postpilotv1.GetAccountQualityResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -153,14 +153,6 @@ func toProtoVerdict(v quality.Verdict) postpilotv1.QualityVerdict {
 		return postpilotv1.QualityVerdict_QUALITY_VERDICT_ABSENT
 	}
 	return postpilotv1.QualityVerdict_QUALITY_VERDICT_UNSPECIFIED
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 // toConnectError maps the context's one sentinel. A foreign post is NotFound like an unknown

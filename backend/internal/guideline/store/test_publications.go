@@ -10,6 +10,7 @@ import (
 
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/guideline/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func (s *Store) TestPublicationReceipt(ctx context.Context, in guideline.TestedPublication) (guideline.TestedPublicationReceipt, bool, error) {
@@ -47,7 +48,7 @@ func (s *Store) CommitTestPublication(ctx context.Context, in guideline.TestedPu
 	if receipt, found, err := testPublicationReceipt(ctx, q, in); err != nil || found {
 		return receipt, err
 	}
-	id, stamp := frozen.TargetID, formatTime(at)
+	id, stamp := frozen.TargetID, dbtime.Format(at)
 	if in.Action == "use_setting" {
 		current, err := s.get(ctx, q, in.UserID, id)
 		if err != nil {

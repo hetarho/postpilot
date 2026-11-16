@@ -5,6 +5,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
@@ -12,7 +13,7 @@ import (
 // SaveClipObservationEdits saves the owner's corrections to observed scenes (CLIP-235) and
 // answers the observations as they now stand.
 func (h *Handler) SaveClipObservationEdits(ctx context.Context, req *connect.Request[v1.SaveClipObservationEditsRequest]) (*connect.Response[v1.SaveClipObservationEditsResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

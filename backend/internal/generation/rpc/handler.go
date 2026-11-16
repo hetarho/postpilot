@@ -11,7 +11,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/generation"
@@ -25,7 +25,7 @@ type Handler struct{ service *generation.Service }
 func NewHandler(service *generation.Service) *Handler { return &Handler{service: service} }
 
 func (h *Handler) StartGeneration(ctx context.Context, req *connect.Request[postpilotv1.StartGenerationRequest]) (*connect.Response[postpilotv1.StartGenerationResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func optionalTargetLength(value *int32) *int {
 }
 
 func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpilotv1.StartRevisionRequest]) (*connect.Response[postpilotv1.StartRevisionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (h *Handler) StartRevision(ctx context.Context, req *connect.Request[postpi
 // StartStoryline starts 스토리라인 먼저 or 다시 만들기 (GEN-68), answering the job id as
 // StartGeneration does.
 func (h *Handler) StartStoryline(ctx context.Context, req *connect.Request[postpilotv1.StartStorylineRequest]) (*connect.Response[postpilotv1.StartStorylineResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (h *Handler) StartStoryline(ctx context.Context, req *connect.Request[postp
 // StartObservation starts 관찰하기 or 다시 관찰하기 (GEN-89), answering the job id as
 // StartGeneration does; reobserve keeps its presence (GEN-9).
 func (h *Handler) StartObservation(ctx context.Context, req *connect.Request[postpilotv1.StartObservationRequest]) (*connect.Response[postpilotv1.StartObservationResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +118,7 @@ func (h *Handler) StartObservation(ctx context.Context, req *connect.Request[pos
 
 // StartStorylineRevision starts the storyline space's AI request (GEN-69).
 func (h *Handler) StartStorylineRevision(ctx context.Context, req *connect.Request[postpilotv1.StartStorylineRevisionRequest]) (*connect.Response[postpilotv1.StartStorylineRevisionResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func (h *Handler) StartStorylineRevision(ctx context.Context, req *connect.Reque
 }
 
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -142,14 +142,6 @@ func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpi
 		return nil, toConnectError("get generation", err)
 	}
 	return connect.NewResponse(&postpilotv1.GetGenerationResponse{Job: toProtoJob(found)}), nil
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 func toConnectError(op string, err error) error {

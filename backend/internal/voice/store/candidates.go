@@ -10,6 +10,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
@@ -47,7 +48,7 @@ func (s *Store) AdoptCandidate(ctx context.Context, adoption voice.CandidateAdop
 		return voice.Voice{}, err
 	}
 	v := adoption.Voice
-	stamp := formatTime(v.CreatedAt)
+	stamp := dbtime.Format(v.CreatedAt)
 	inserted := false
 	for attempt := 1; attempt <= candidateNameAttempts; attempt++ {
 		name := v.Name

@@ -9,13 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/template"
 	"github.com/postpilot/backend/internal/template/store/sqlc"
 )
-
-// The fixed-width UTC layout every context writes timestamps in, so string comparison
-// and ORDER BY agree with chronological order.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -48,7 +45,7 @@ func (s *Store) Insert(ctx context.Context, t template.Template, maxPerAccount i
 	err = q.InsertTemplate(ctx, sqlc.InsertTemplateParams{
 		ID: t.ID, UserID: t.UserID, Name: t.Name, Description: t.Description,
 		Body: t.Body, TitleArea: t.TitleArea, TargetLength: nullNumber(t.TargetLength), TagCount: nullNumber(t.TagCount),
-		CreatedAt: formatTime(t.CreatedAt), UpdatedAt: formatTime(t.UpdatedAt),
+		CreatedAt: dbtime.Format(t.CreatedAt), UpdatedAt: dbtime.Format(t.UpdatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -108,7 +105,7 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch template.Pa
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	stamp := formatTime(updatedAt)
+	stamp := dbtime.Format(updatedAt)
 
 	if check != nil {
 		current, err := s.get(ctx, q, userID, id)
@@ -228,11 +225,11 @@ func (s *Store) Delete(ctx context.Context, userID, id string) (int, error) {
 
 func toTemplate(id, userID, name, description, body, titleArea string, targetLength, tagCount sql.NullInt64,
 	createdAt, updatedAt string, postCount int64) (template.Template, error) {
-	created, err := parseTime(createdAt)
+	created, err := dbtime.Parse(createdAt)
 	if err != nil {
 		return template.Template{}, fmt.Errorf("parse template created_at: %w", err)
 	}
-	updated, err := parseTime(updatedAt)
+	updated, err := dbtime.Parse(updatedAt)
 	if err != nil {
 		return template.Template{}, fmt.Errorf("parse template updated_at: %w", err)
 	}
@@ -259,10 +256,6 @@ func numberOf(value sql.NullInt64) *int {
 	number := int(value.Int64)
 	return &number
 }
-
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
-
-func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }
 
 func isUniqueViolation(err error) bool {
 	return err != nil && strings.Contains(strings.ToUpper(err.Error()), "UNIQUE CONSTRAINT FAILED")

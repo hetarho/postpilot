@@ -1,0 +1,579 @@
+{
+  "schemaVersion": 1,
+  "snapshotAt": "2026-11-16T06:29:07.473Z",
+  "sourceCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+  "group": {
+    "id": "tidy-261116",
+    "branch": "gusta-session-self-improve-tidy-9ff3f895",
+    "status": "active",
+    "createdAt": "2026-11-16T06:18:00.548Z",
+    "limits": {
+      "workers": 3,
+      "reviewers": 1,
+      "maxPending": 8
+    },
+    "push": null,
+    "review": "all",
+    "taskScope": [
+      "T837",
+      "T838",
+      "T839",
+      "T840",
+      "T841",
+      "T842",
+      "T843",
+      "T844"
+    ]
+  },
+  "summary": {
+    "total": 8,
+    "completed": 3,
+    "remaining": 5,
+    "running": 5,
+    "review": 0,
+    "blocked": 0,
+    "unassigned": 0
+  },
+  "tasks": [
+    {
+      "id": "T840",
+      "title": "One connect-failure message helper and one billing invalidation",
+      "dep": [],
+      "lane": "fe-lib",
+      "status": "doing"
+    },
+    {
+      "id": "T841",
+      "title": "One SHA-256 hex helper for fingerprint code",
+      "dep": [
+        "T840"
+      ],
+      "lane": "fe-lib",
+      "status": "doing"
+    },
+    {
+      "id": "T842",
+      "title": "One confirm-then-run control for the delete buttons",
+      "dep": [
+        "T841"
+      ],
+      "lane": "fe-lib",
+      "status": "doing"
+    },
+    {
+      "id": "T843",
+      "title": "One factory for the per-project clip autosave queues",
+      "dep": [],
+      "lane": "fe-clip",
+      "status": "doing"
+    },
+    {
+      "id": "T844",
+      "title": "Stop the per-second re-render of the dubbing editor",
+      "dep": [
+        "T843"
+      ],
+      "lane": "fe-clip",
+      "status": "doing"
+    }
+  ],
+  "attempts": [
+    {
+      "id": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "group": "tidy-261116",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "lane": "be-tidy",
+      "owner": "worker-be",
+      "contributors": [
+        "worker-be"
+      ],
+      "status": "integrated",
+      "reason": null,
+      "createdAt": "2026-11-16T06:18:19.244Z",
+      "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+      "verifiedCommit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+      "submittedBase": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+      "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+      "submittedAt": "2026-11-16T06:23:31.059Z",
+      "risk": null,
+      "review": {
+        "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
+        "owner": "reviewer-be",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "Behavior-preserving clean-up confirmed for T837-T839. All ten removed actingUser copies and the four inline checks (auth/rpc x3, job/rpc x1) built the identical CodeUnauthenticated/'authentication required'/AUTH_REQUIRED/nil-params error that authrpc.ActingUser now returns; differing variants (auth/rpc admin.go CodeInternal path, billing, voucher, plan, authoring, voice/spoken, modelcatalog speech) are untouched. All eleven removed writeLayout consts equal dbtime.Layout byte-for-byte, every removed formatTime normalized to UTC, every bare parseTime used RFC3339Nano, provider's inline at.UTC().Format(writeLayout) maps to dbtime.Format(at), and auth/memory/post keep their wrappers with unchanged error text. T839's newID wrappers keep the exact panic values (ids.NewHex128 returns the rand error unwrapped). A normalized line-balance check of the out-of-touches sibling files (21 for T837, 22 for T838) shows only helper renames and import additions. Reviewer re-ran gofmt -l (empty) and go vet on all 27 changed packages (pass), plus go test -count=1 on platform/dbtime, platform/ids and auth/rpc (pass). The independent Codex read-only review (gpt-6.1-sol after gpt-5.5 was rejected for the account) found no P1/P2. Two optional follow-ups only.",
+        "findings": [
+          {
+            "priority": "P3",
+            "where": "backend/internal/clip/app/speech.go:101 (T839)",
+            "message": "speechID() in the same clip/app package still hand-rolls the 128-bit hex id ([16]byte, rand.Read, panic(e), hex.EncodeToString), identical to what newID() just stopped doing. Outside T839's acceptance (which names newID in service.go only); a later tidy could route it through ids.NewHex128 with panic(err) kept. modelcatalog/speech_service.go:368 speechID and provider/types.go:468 NewRecommendationID are the same shape in other contexts. (Raised by Codex and confirmed by reviewer.)"
+          },
+          {
+            "priority": "P3",
+            "where": "backend/internal/experiment/store/store.go:652, :821; experiment/store/writing_test_store.go:58, :62, :169, :221; provider/store/store.go:78, :103 (T838)",
+            "message": "Inline time.Parse(time.RFC3339Nano, ...) calls remain in two of the eleven stores. They are equivalent to dbtime.Parse and acceptance only required removing the bare parseTime helpers, so not a defect; a follow-up could switch them to dbtime.Parse so the parse rule also has one owner. (Reviewer finding.)"
+          }
+        ],
+        "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+        "baseCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+        "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+        "createdAt": "2026-11-16T06:24:12.501Z",
+        "finishedAt": "2026-11-16T06:28:44.162Z"
+      },
+      "steps": [
+        {
+          "taskId": "T837",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "at": "2026-11-16T06:23:31.052Z",
+          "verification": [
+            {
+              "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+              "startedAt": "2026-11-16T06:23:03.039Z",
+              "finishedAt": "2026-11-16T06:23:30.954Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T838",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "at": "2026-11-16T06:23:31.052Z",
+          "verification": [
+            {
+              "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+              "startedAt": "2026-11-16T06:23:03.039Z",
+              "finishedAt": "2026-11-16T06:23:30.954Z"
+            }
+          ]
+        },
+        {
+          "taskId": "T839",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "at": "2026-11-16T06:23:31.052Z",
+          "verification": [
+            {
+              "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+              "startedAt": "2026-11-16T06:23:03.039Z",
+              "finishedAt": "2026-11-16T06:23:30.954Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+          "startedAt": "2026-11-16T06:23:03.039Z",
+          "finishedAt": "2026-11-16T06:23:30.954Z"
+        }
+      ]
+    },
+    {
+      "id": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "group": "tidy-261116",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "lane": "fe-lib",
+      "owner": "worker-fe-lib",
+      "contributors": [
+        "worker-fe-lib"
+      ],
+      "status": "doing",
+      "createdAt": "2026-11-16T06:18:22.160Z",
+      "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+    },
+    {
+      "id": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "group": "tidy-261116",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "lane": "fe-clip",
+      "owner": "worker-fe-clip",
+      "contributors": [
+        "worker-fe-clip"
+      ],
+      "status": "doing",
+      "createdAt": "2026-11-16T06:18:25.531Z",
+      "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+    }
+  ],
+  "history": [
+    {
+      "sequence": 1,
+      "at": "2026-11-16T06:18:00.584Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "tidy-261116",
+        "branch": "gusta-session-self-improve-tidy-9ff3f895",
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:00.548Z",
+        "limits": {
+          "workers": 3,
+          "reviewers": 1,
+          "maxPending": 8
+        },
+        "push": null,
+        "review": "all",
+        "taskScope": [
+          "T837",
+          "T838",
+          "T839",
+          "T840",
+          "T841",
+          "T842",
+          "T843",
+          "T844"
+        ]
+      }
+    },
+    {
+      "sequence": 2,
+      "at": "2026-11-16T06:18:00.624Z",
+      "type": "group",
+      "group": "tidy-261116",
+      "previousStatus": "preparing",
+      "status": "active",
+      "changes": {
+        "status": "active"
+      }
+    },
+    {
+      "sequence": 3,
+      "at": "2026-11-16T06:18:19.244Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T837",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "40293f12-8083-45eb-8255-36edd7c422a1",
+        "group": "tidy-261116",
+        "taskId": "T837",
+        "tasks": [
+          "T837",
+          "T838",
+          "T839"
+        ],
+        "lane": "be-tidy",
+        "owner": "worker-be",
+        "contributors": [
+          "worker-be"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:19.244Z",
+        "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+      }
+    },
+    {
+      "sequence": 4,
+      "at": "2026-11-16T06:18:20.459Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T837",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 5,
+      "at": "2026-11-16T06:18:22.161Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "befc20f6-b132-49c4-87e2-89898f244bcf",
+        "group": "tidy-261116",
+        "taskId": "T840",
+        "tasks": [
+          "T840",
+          "T841",
+          "T842"
+        ],
+        "lane": "fe-lib",
+        "owner": "worker-fe-lib",
+        "contributors": [
+          "worker-fe-lib"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:22.160Z",
+        "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+      }
+    },
+    {
+      "sequence": 6,
+      "at": "2026-11-16T06:18:23.376Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "befc20f6-b132-49c4-87e2-89898f244bcf",
+      "taskId": "T840",
+      "tasks": [
+        "T840",
+        "T841",
+        "T842"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 7,
+      "at": "2026-11-16T06:18:25.532Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": null,
+      "status": "preparing",
+      "changes": {
+        "id": "18477b54-ee62-4f55-8a11-2e829c40958a",
+        "group": "tidy-261116",
+        "taskId": "T843",
+        "tasks": [
+          "T843",
+          "T844"
+        ],
+        "lane": "fe-clip",
+        "owner": "worker-fe-clip",
+        "contributors": [
+          "worker-fe-clip"
+        ],
+        "status": "preparing",
+        "createdAt": "2026-11-16T06:18:25.531Z",
+        "startCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80"
+      }
+    },
+    {
+      "sequence": 8,
+      "at": "2026-11-16T06:18:27.221Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "18477b54-ee62-4f55-8a11-2e829c40958a",
+      "taskId": "T843",
+      "tasks": [
+        "T843",
+        "T844"
+      ],
+      "previousStatus": "preparing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 9,
+      "at": "2026-11-16T06:23:02.952Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T837",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 10,
+      "at": "2026-11-16T06:23:31.059Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "taskId": "T839",
+        "status": "ready",
+        "reason": null,
+        "verifiedCommit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+        "submittedBase": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+        "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+        "submittedAt": "2026-11-16T06:23:31.059Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T837",
+            "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+            "at": "2026-11-16T06:23:31.052Z",
+            "verification": [
+              {
+                "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+                "startedAt": "2026-11-16T06:23:03.039Z",
+                "finishedAt": "2026-11-16T06:23:30.954Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T838",
+            "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+            "at": "2026-11-16T06:23:31.052Z",
+            "verification": [
+              {
+                "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+                "startedAt": "2026-11-16T06:23:03.039Z",
+                "finishedAt": "2026-11-16T06:23:30.954Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T839",
+            "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+            "at": "2026-11-16T06:23:31.052Z",
+            "verification": [
+              {
+                "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+                "startedAt": "2026-11-16T06:23:03.039Z",
+                "finishedAt": "2026-11-16T06:23:30.954Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /tmp/claude-1000/-home-hrlee-project-postpilot/13c66c26-8b86-4102-a629-080606ee16f6/scratchpad/task-check.sh",
+            "startedAt": "2026-11-16T06:23:03.039Z",
+            "finishedAt": "2026-11-16T06:23:30.954Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 11,
+      "at": "2026-11-16T06:24:12.501Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
+          "owner": "reviewer-be",
+          "status": "reviewing",
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "baseCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+          "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+          "createdAt": "2026-11-16T06:24:12.501Z"
+        }
+      }
+    },
+    {
+      "sequence": 12,
+      "at": "2026-11-16T06:28:44.163Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "cba3effe-6f48-4a5d-991b-19ac2fc1d603",
+          "owner": "reviewer-be",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "Behavior-preserving clean-up confirmed for T837-T839. All ten removed actingUser copies and the four inline checks (auth/rpc x3, job/rpc x1) built the identical CodeUnauthenticated/'authentication required'/AUTH_REQUIRED/nil-params error that authrpc.ActingUser now returns; differing variants (auth/rpc admin.go CodeInternal path, billing, voucher, plan, authoring, voice/spoken, modelcatalog speech) are untouched. All eleven removed writeLayout consts equal dbtime.Layout byte-for-byte, every removed formatTime normalized to UTC, every bare parseTime used RFC3339Nano, provider's inline at.UTC().Format(writeLayout) maps to dbtime.Format(at), and auth/memory/post keep their wrappers with unchanged error text. T839's newID wrappers keep the exact panic values (ids.NewHex128 returns the rand error unwrapped). A normalized line-balance check of the out-of-touches sibling files (21 for T837, 22 for T838) shows only helper renames and import additions. Reviewer re-ran gofmt -l (empty) and go vet on all 27 changed packages (pass), plus go test -count=1 on platform/dbtime, platform/ids and auth/rpc (pass). The independent Codex read-only review (gpt-6.1-sol after gpt-5.5 was rejected for the account) found no P1/P2. Two optional follow-ups only.",
+          "findings": [
+            {
+              "priority": "P3",
+              "where": "backend/internal/clip/app/speech.go:101 (T839)",
+              "message": "speechID() in the same clip/app package still hand-rolls the 128-bit hex id ([16]byte, rand.Read, panic(e), hex.EncodeToString), identical to what newID() just stopped doing. Outside T839's acceptance (which names newID in service.go only); a later tidy could route it through ids.NewHex128 with panic(err) kept. modelcatalog/speech_service.go:368 speechID and provider/types.go:468 NewRecommendationID are the same shape in other contexts. (Raised by Codex and confirmed by reviewer.)"
+            },
+            {
+              "priority": "P3",
+              "where": "backend/internal/experiment/store/store.go:652, :821; experiment/store/writing_test_store.go:58, :62, :169, :221; provider/store/store.go:78, :103 (T838)",
+              "message": "Inline time.Parse(time.RFC3339Nano, ...) calls remain in two of the eleven stores. They are equivalent to dbtime.Parse and acceptance only required removing the bare parseTime helpers, so not a defect; a follow-up could switch them to dbtime.Parse so the parse rule also has one owner. (Reviewer finding.)"
+            }
+          ],
+          "commit": "fa2ee1c6216746d90432ce948bd6ea4d3db57550",
+          "baseCommit": "7bfa7320d86510089cc3df600a2567f3c397ec80",
+          "submissionId": "50ca914e-1c9b-4411-9097-74c3d6f0b076",
+          "createdAt": "2026-11-16T06:24:12.501Z",
+          "finishedAt": "2026-11-16T06:28:44.162Z"
+        }
+      }
+    },
+    {
+      "sequence": 13,
+      "at": "2026-11-16T06:29:06.345Z",
+      "type": "attempt",
+      "group": "tidy-261116",
+      "attemptId": "40293f12-8083-45eb-8255-36edd7c422a1",
+      "taskId": "T839",
+      "tasks": [
+        "T837",
+        "T838",
+        "T839"
+      ],
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    }
+  ]
+}

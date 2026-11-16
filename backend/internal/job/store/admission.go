@@ -6,6 +6,7 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/job/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 // These primitives compose with the caller's reservations on NewTx. The caller
@@ -19,7 +20,7 @@ func (s *Store) ActiveCount(ctx context.Context, f job.Filter) (int, error) {
 	return int(n), err
 }
 func (s *Store) SetWaitExpiry(ctx context.Context, id, stage string, expires time.Time) error {
-	n, err := s.write.SetWaitExpiry(ctx, sqlc.SetWaitExpiryParams{ID: id, Stage: nullString(stage), ExpiresAt: nullString(formatTime(expires))})
+	n, err := s.write.SetWaitExpiry(ctx, sqlc.SetWaitExpiryParams{ID: id, Stage: nullString(stage), ExpiresAt: nullString(dbtime.Format(expires))})
 	if err != nil {
 		return err
 	}

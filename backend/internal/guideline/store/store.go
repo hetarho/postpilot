@@ -11,11 +11,8 @@ import (
 
 	"github.com/postpilot/backend/internal/guideline"
 	"github.com/postpilot/backend/internal/guideline/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-// The fixed-width UTC layout every context writes timestamps in, so string comparison
-// and ORDER BY agree with chronological order.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -49,7 +46,7 @@ func (s *Store) Insert(ctx context.Context, g guideline.Guideline, maxPerAccount
 	}
 	err = q.InsertGuideline(ctx, sqlc.InsertGuidelineParams{
 		ID: g.ID, UserID: g.UserID, Kind: string(g.Kind), Title: g.Title, Text: g.Text, Scope: string(g.Scope),
-		CreatedAt: formatTime(g.CreatedAt), UpdatedAt: formatTime(g.UpdatedAt),
+		CreatedAt: dbtime.Format(g.CreatedAt), UpdatedAt: dbtime.Format(g.UpdatedAt),
 	})
 	if err != nil {
 		if isDuplicateText(err) {
@@ -143,7 +140,7 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 	switch guideline.DecideRecording(status, savedGuideline, int(pending), maxPending) {
 	case guideline.RecordCandidateCount:
 		if _, err := q.BumpCandidate(ctx, sqlc.BumpCandidateParams{
-			LastSeenAt: formatTime(c.LastSeenAt), ID: existing.ID, UserID: c.UserID,
+			LastSeenAt: dbtime.Format(c.LastSeenAt), ID: existing.ID, UserID: c.UserID,
 		}); err != nil {
 			return false, fmt.Errorf("bump guideline candidate: %w", err)
 		}
@@ -152,7 +149,7 @@ func (s *Store) RecordCandidate(ctx context.Context, c guideline.Candidate, maxP
 			ID: c.ID, UserID: c.UserID, Kind: kind, Text: c.Text, PostSlug: nullString(c.PostSlug),
 			ClipID:      nullString(c.ClipID),
 			Status:      string(guideline.CandidateStatusPending),
-			FirstSeenAt: formatTime(c.FirstSeenAt), LastSeenAt: formatTime(c.LastSeenAt),
+			FirstSeenAt: dbtime.Format(c.FirstSeenAt), LastSeenAt: dbtime.Format(c.LastSeenAt),
 		})
 		if err != nil {
 			return false, fmt.Errorf("insert guideline candidate: %w", err)
@@ -312,7 +309,7 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch guideline.P
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	stamp := formatTime(updatedAt)
+	stamp := dbtime.Format(updatedAt)
 
 	// The first statement that runs also answers "does this guideline exist and is it mine":
 	// zero rows means the id is unknown or belongs to another account, which read the same.
@@ -424,7 +421,7 @@ func (s *Store) SetDefaultOff(ctx context.Context, userID string, kind guideline
 	var err error
 	if off {
 		err = s.write.InsertDefaultOff(ctx, sqlc.InsertDefaultOffParams{
-			UserID: userID, Kind: string(kind), DefaultKey: key, CreatedAt: at.UTC().Format(writeLayout),
+			UserID: userID, Kind: string(kind), DefaultKey: key, CreatedAt: dbtime.Format(at),
 		})
 	} else {
 		err = s.write.DeleteDefaultOff(ctx, sqlc.DeleteDefaultOffParams{UserID: userID, Kind: string(kind), DefaultKey: key})
@@ -494,11 +491,11 @@ func insertFields(ctx context.Context, q *sqlc.Queries, userID, guidelineID stri
 }
 
 func toGuideline(row sqlc.Guideline) (guideline.Guideline, error) {
-	created, err := parseTime(row.CreatedAt)
+	created, err := dbtime.Parse(row.CreatedAt)
 	if err != nil {
 		return guideline.Guideline{}, fmt.Errorf("parse guideline created_at: %w", err)
 	}
-	updated, err := parseTime(row.UpdatedAt)
+	updated, err := dbtime.Parse(row.UpdatedAt)
 	if err != nil {
 		return guideline.Guideline{}, fmt.Errorf("parse guideline updated_at: %w", err)
 	}
@@ -517,11 +514,11 @@ func toGuideline(row sqlc.Guideline) (guideline.Guideline, error) {
 }
 
 func toCandidate(row sqlc.GuidelineCandidate) (guideline.Candidate, error) {
-	first, err := parseTime(row.FirstSeenAt)
+	first, err := dbtime.Parse(row.FirstSeenAt)
 	if err != nil {
 		return guideline.Candidate{}, fmt.Errorf("parse guideline candidate first_seen_at: %w", err)
 	}
-	last, err := parseTime(row.LastSeenAt)
+	last, err := dbtime.Parse(row.LastSeenAt)
 	if err != nil {
 		return guideline.Candidate{}, fmt.Errorf("parse guideline candidate last_seen_at: %w", err)
 	}
@@ -546,16 +543,12 @@ func nullString(value string) sql.NullString {
 	return sql.NullString{String: value, Valid: value != ""}
 }
 
-func formatTime(value time.Time) string { return value.UTC().Format(writeLayout) }
-
 func kindOrPost(kind guideline.Kind) guideline.Kind {
 	if kind.Valid() {
 		return kind
 	}
 	return guideline.KindPost
 }
-
-func parseTime(value string) (time.Time, error) { return time.Parse(time.RFC3339Nano, value) }
 
 // isDuplicateText names the constraint rather than accepting any UNIQUE failure: an id
 // collision is a bug in id generation, not a rule the user broke, and must not be reported to

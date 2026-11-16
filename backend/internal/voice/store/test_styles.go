@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/voice"
 	"github.com/postpilot/backend/internal/voice/store/sqlc"
 )
@@ -120,7 +121,7 @@ func (s *Store) PublishTestStyle(ctx context.Context, in voice.TestStylePublicat
 				suffix := " (" + strconv.Itoa(attempt) + ")"
 				name = strings.TrimSpace(truncateRunes(name, voice.VoiceNameMaxChars-utf8.RuneCountInString(suffix))) + suffix
 			}
-			err := q.InsertVoice(ctx, sqlc.InsertVoiceParams{ID: created.ID, UserID: in.UserID, Name: name, CreatedAt: formatTime(created.CreatedAt), UpdatedAt: formatTime(created.UpdatedAt)})
+			err := q.InsertVoice(ctx, sqlc.InsertVoiceParams{ID: created.ID, UserID: in.UserID, Name: name, CreatedAt: dbtime.Format(created.CreatedAt), UpdatedAt: dbtime.Format(created.UpdatedAt)})
 			if err == nil {
 				inserted = true
 				break
@@ -140,11 +141,11 @@ func (s *Store) PublishTestStyle(ctx context.Context, in voice.TestStylePublicat
 		if in.Analysis.SourceVersionsKnown {
 			known = 1
 		}
-		if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{VoiceID: target, UserID: in.UserID, Snapshot: string(snapshot), MaterialIds: "[]", AnalyzeModel: in.Analysis.AnalyzeModel, CreatedAt: formatTime(in.Analysis.CreatedAt), SourceVersionsKnown: known, AcceptedSources: "[]", AcceptedMaterialSnapshot: "[]"}); err != nil {
+		if err := q.InsertCurrentAnalysis(ctx, sqlc.InsertCurrentAnalysisParams{VoiceID: target, UserID: in.UserID, Snapshot: string(snapshot), MaterialIds: "[]", AnalyzeModel: in.Analysis.AnalyzeModel, CreatedAt: dbtime.Format(in.Analysis.CreatedAt), SourceVersionsKnown: known, AcceptedSources: "[]", AcceptedMaterialSnapshot: "[]"}); err != nil {
 			return voice.TestStyleReceipt{}, err
 		}
 	}
-	stamp := formatTime(created.CreatedAt)
+	stamp := dbtime.Format(created.CreatedAt)
 	if in.MakeDefault {
 		if err := q.ClearDefaultVoice(ctx, sqlc.ClearDefaultVoiceParams{UserID: in.UserID, UpdatedAt: stamp}); err != nil {
 			return voice.TestStyleReceipt{}, err
