@@ -465,10 +465,9 @@ describe('the post measurement row', () => {
   })
 })
 
-// POST-102: under the measurements, ② shows this post's fingerprint beside its voice's, read at the
-// revision on screen; a post with 말투 없음 shows none and asks for none.
-describe('the fingerprint row', () => {
-  const HEADING = '말투 지문'
+// POST-102, POST-128: ④ has no fingerprint row of its own; the reading heads 출처 보기's 말투 view,
+// read at the revision on screen. A post with 말투 없음 shows 말투 disabled and asks for nothing.
+describe('the voice reading in 출처 보기', () => {
   const POST = {
     slug: '20260929-fingerprint',
     status: 'review',
@@ -508,27 +507,34 @@ describe('the fingerprint row', () => {
     },
   }
 
-  it('sits under the measurements for a post with a made voice', async () => {
+  it('heads the 말투 view and leaves no standalone row', async () => {
+    const user = userEvent.setup()
     renderAppAt(`/posts/${POST.slug}`, {
       user: USER,
       posts: { posts: [POST] },
       voice: { postFingerprints: FINGERPRINT },
     })
 
-    const region = await screen.findByRole('region', { name: HEADING })
-    expect(screen.getByRole('region', { name: '이 글의 측정값' }).nextElementSibling).toBe(region)
+    const measurements = await screen.findByRole('region', { name: '이 글의 측정값' })
+    expect(screen.queryByRole('region', { name: '말투 지문' })).toBeNull()
+    const tab = screen.getByRole('tab', { name: '말투' })
+    await waitFor(() => expect(tab).toBeEnabled())
+    await user.click(tab)
+
+    const rows = await screen.findAllByRole('listitem')
+    const ending = rows.find((row) => row.textContent?.includes("문장 끝'~해요'"))
+    expect(ending).toHaveTextContent('내 말투 92% · 이 글 0%')
+    expect(screen.getByText('알 수 없음', { exact: false })).toBeInTheDocument()
+    // The post's own reading: nothing about its template.
+    expect(screen.queryByText(/템플릿/)).toBeNull()
+    // The measurements stay where they were, above the article.
     expect(
-      region.compareDocumentPosition(screen.getByRole('article', { name: '생성된 글' })) &
+      measurements.compareDocumentPosition(screen.getByRole('article', { name: '생성된 글' })) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy()
-    const rows = within(region).getAllByRole('listitem')
-    expect(rows[0]).toHaveTextContent("문장 끝'~해요' 내 말투 92% · 이 글 0%")
-    expect(rows[1]).toHaveTextContent('이모지와 자모알 수 없음')
-    // The post's own reading: nothing about its template.
-    expect(within(region).queryByText(/템플릿/)).toBeNull()
   })
 
-  it('is absent for a post with 말투 없음', async () => {
+  it('disables 말투 for a post with 말투 없음 and reads nothing', async () => {
     const reads: string[] = []
     renderAppAt(`/posts/${POST.slug}`, {
       user: USER,
@@ -537,7 +543,8 @@ describe('the fingerprint row', () => {
     })
 
     await screen.findByRole('region', { name: '이 글의 측정값' })
-    expect(screen.queryByRole('region', { name: HEADING })).toBeNull()
+    expect(screen.getByRole('tab', { name: '말투' })).toBeDisabled()
+    expect(screen.getByText('말투 없음')).toBeInTheDocument()
     expect(reads).toEqual([])
   })
 
@@ -551,10 +558,9 @@ describe('the fingerprint row', () => {
       posts: { calls, posts: [POST] },
       voice: { postFingerprints: FINGERPRINT, postFingerprintReads: reads },
     })
-    const region = await screen.findByRole('region', { name: HEADING })
-    expect(reads).toHaveLength(1)
+    await waitFor(() => expect(reads).toHaveLength(1))
 
-    await user.click(screen.getByRole('button', { name: '1번째 블록 수정' }))
+    await user.click(await screen.findByRole('button', { name: '1번째 블록 수정' }))
     const field = screen.getByLabelText('1번째 블록 내용')
     await user.clear(field)
     await user.type(field, '지문을 다시 세는 문단')
@@ -562,8 +568,6 @@ describe('the fingerprint row', () => {
 
     await waitFor(() => expect(calls).toContain('SavePostContent'), { timeout: 4_000 })
     await waitFor(() => expect(reads).toHaveLength(2))
-    // The previous reading stays while the next one is counted.
-    expect(region).toBeInTheDocument()
   })
 })
 
