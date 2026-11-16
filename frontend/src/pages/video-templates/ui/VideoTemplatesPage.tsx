@@ -1,8 +1,7 @@
 import { Clapperboard } from 'lucide-react'
-import { Link, useSearch } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRef, type Ref } from 'react'
-import { CLIP_CHANNELS, DEFAULT_CLIP_CHANNEL, type ClipChannel } from '@/entities/clip-project'
 import {
   ClipTemplateDescription,
   useClipTemplates,
@@ -31,18 +30,13 @@ export function VideoTemplatesPage() {
   const ownerId = user?.id ?? ''
   const { templates, isPending, isFetching, isError, refetch } = useClipTemplates(ownerId)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
-  // Both clip channels share this directory; the address names the one it was opened from.
-  const search = useSearch({ strict: false }) as { channel?: unknown }
-  const channel = CLIP_CHANNELS.includes(search.channel as ClipChannel)
-    ? (search.channel as ClipChannel)
-    : DEFAULT_CLIP_CHANNEL
   const page = useRef<HTMLElement>(null)
   const deleteButtons = useRef(new Map<string, HTMLButtonElement>())
   const requestRemoval = useListRemovalFocus({
     keys: templates.map((template) => template.id),
     getTarget: (id) => deleteButtons.current.get(id),
     getFallback: () =>
-      page.current?.querySelector<HTMLAnchorElement>('a[href^="/video-templates/new?"]'),
+      page.current?.querySelector<HTMLAnchorElement>('a[href="/video-templates/new"]'),
   })
 
   return (
@@ -166,7 +160,7 @@ export function VideoTemplatesPage() {
         </>
       )}
       {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions channel={channel} section="templates" />
+      <ChannelActions video section="templates" />
     </main>
   )
 }
@@ -212,7 +206,6 @@ function TemplateRow({
         <Link
           to="/video-templates/$templateId"
           params={{ templateId: template.id }}
-          search={({ channel }) => ({ channel })}
           className={typographyStyles({
             variant: 'fieldTitle',
             className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',

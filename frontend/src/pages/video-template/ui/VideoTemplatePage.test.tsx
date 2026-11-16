@@ -34,7 +34,7 @@ describe('video template workflow', () => {
     expect(screen.queryByRole('link', { name: '새 영상 템플릿' })).toBeNull()
     expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
       'href',
-      '/video-templates/new?channel=instagram_clip',
+      '/video-templates/new',
     )
   })
   it("heads the detail with the template's own name, and the create screen with its own", async () => {

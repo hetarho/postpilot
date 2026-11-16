@@ -35,18 +35,14 @@ it.each([
   },
 )
 
-// Each section's button opens that section's creation directly, keeping a clip channel.
+// Each section's button opens that section's creation directly, carrying no channel (an old link's is ignored).
 it.each([
   ['/templates', '새 템플릿', '/templates/new'],
   ['/voices', '새 말투', '/voices?new=1'],
   ['/guidelines', '새 지침', '/guidelines?new=1'],
-  ['/voices?channel=instagram_clip', '새 말투', '/voices?new=1&channel=instagram_clip'],
-  ['/video-guidelines?channel=naver_clip', '새 지침', '/video-guidelines?new=1&channel=naver_clip'],
-  [
-    '/video-templates?channel=instagram_clip',
-    '새 템플릿',
-    '/video-templates/new?channel=instagram_clip',
-  ],
+  ['/voices?channel=instagram_clip', '새 말투', '/voices?new=1'],
+  ['/video-guidelines?channel=naver_clip', '새 지침', '/video-guidelines?new=1'],
+  ['/video-templates?channel=instagram_clip', '새 템플릿', '/video-templates/new'],
 ] as const)('offers %s its own creation only', async (path, label, href) => {
   renderAppAt(path, { user: { id: 'alice' } })
   expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)

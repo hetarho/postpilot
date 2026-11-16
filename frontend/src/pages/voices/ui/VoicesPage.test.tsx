@@ -208,8 +208,8 @@ describe('the voice directory', () => {
     expect(screen.getByRole('link', { name: '새 말투' })).toBeInTheDocument()
   })
 
-  // THEME-67: `?new=1` — the channel menu's 새 말투 — opens the sheet at once, and closing it
-  // keeps the channel the section was opened under.
+  // THEME-67: `?new=1` — the section's 새 말투 — opens the sheet at once, and closing it
+  // ignores an old link's channel.
   it('opens the creation sheet from ?new=1 and drops the request on close', async () => {
     const user = userEvent.setup()
     const { router } = renderAppAt('/voices?new=1&channel=instagram_clip', {
@@ -219,7 +219,7 @@ describe('the voice directory', () => {
     const sheet = within(await screen.findByRole('dialog'))
     expect(sheet.getByLabelText('말투 이름')).toBeInTheDocument()
     await user.keyboard('{Escape}')
-    await waitFor(() => expect(router.state.location.search).toEqual({ channel: 'instagram_clip' }))
+    await waitFor(() => expect(router.state.location.search).toEqual({}))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 

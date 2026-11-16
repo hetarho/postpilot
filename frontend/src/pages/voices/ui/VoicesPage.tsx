@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { CLIP_CHANNELS, type ClipChannel } from '@/entities/clip-project'
 import { useSession } from '@/entities/session'
 import {
   useVoices,
@@ -38,10 +37,7 @@ export function VoicesPage() {
   const ownerId = user?.id ?? ''
   const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
   const [authoringOpen, setAuthoringOpen] = useState(false)
-  const search = useSearch({ strict: false }) as { new?: unknown; channel?: unknown }
-  const channel = CLIP_CHANNELS.includes(search.channel as ClipChannel)
-    ? (search.channel as ClipChannel)
-    : undefined
+  const search = useSearch({ strict: false }) as { new?: unknown }
   const navigate = useNavigate()
   // `?new=1` is the section's 새 말투 button (THEME-67): it opens the sheet and is dropped from the
   // address at once, so closing the sheet, or the sheet's own move to the new voice, needs no
@@ -54,9 +50,8 @@ export function VoicesPage() {
     if (requested) setCreateOpen(true)
   }
   useEffect(() => {
-    if (requested)
-      void navigate({ to: '/voices', search: channel ? { channel } : {}, replace: true })
-  }, [requested, channel, navigate])
+    if (requested) void navigate({ to: '/voices', search: {}, replace: true })
+  }, [requested, navigate])
   const { t: authoringText } = useTranslation('authoring')
 
   return (
@@ -186,7 +181,7 @@ export function VoicesPage() {
         </>
       )}
       {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions channel={channel} section="voices" className="action-list-inset mt-auto" />
+      <ChannelActions section="voices" className="action-list-inset mt-auto" />
     </main>
   )
 }

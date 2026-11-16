@@ -23,10 +23,14 @@ function NativeLink(props: NavigationLinkProps) {
  *  creation sheet (`?new=1`). The other sections' creations are one section tab away. */
 export function ChannelActions({
   channel,
+  video = channel !== undefined,
   section,
   className = 'mt-auto',
 }: {
+  /** Only a new clip's return origin still reads it (T862 removes it); no link carries it. */
   channel?: ClipChannel
+  /** The 영상 side of 템플릿 and 지침; 말투 is one section for 글 and 영상. */
+  video?: boolean
   section: ChannelSection
   /** The dock's placement; `mt-auto` holds it at the bottom of a short list (THEME-24). A list
    *  whose rows run edge to edge adds `action-list-inset` so the dock keeps the page gutter. */
@@ -35,12 +39,11 @@ export function ChannelActions({
   const { t } = useTranslation('channel')
   const { user } = useSession()
   const Link = useNavigationContext()?.Link ?? NativeLink
-  const clip = channel ? `channel=${channel}` : ''
   const href = {
-    work: channel ? `/clips/new?${clip}` : '/posts/new',
-    templates: channel ? `/video-templates/new?${clip}` : '/templates/new',
-    voices: channel ? `/voices?new=1&${clip}` : '/voices?new=1',
-    guidelines: channel ? `/video-guidelines?new=1&${clip}` : '/guidelines?new=1',
+    work: channel ? `/clips/new?channel=${channel}` : '/posts/new',
+    templates: video ? '/video-templates/new' : '/templates/new',
+    voices: '/voices?new=1',
+    guidelines: video ? '/video-guidelines?new=1' : '/guidelines?new=1',
   }[section]
   // A new post or clip keeps the channel as its origin, so the editor and the clip workspace
   // come back here.

@@ -24,7 +24,7 @@ it('describes a stored video template by its stages while keeping navigation and
   })
   const directory = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
   const link = directory.getByRole('link', { name: '나만의 영상 구성' })
-  expect(link).toHaveAttribute('href', '/video-templates/visual?channel=instagram_clip')
+  expect(link).toHaveAttribute('href', '/video-templates/visual')
   expect(link).toHaveTextContent(/^나만의 영상 구성$/)
   const card = link.closest('li')!
   expect(card.querySelector('svg.lucide-clapperboard')).not.toBeNull()

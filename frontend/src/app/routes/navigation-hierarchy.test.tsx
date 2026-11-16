@@ -298,23 +298,16 @@ it('retains the Instagram scope through shared templates, child navigation, relo
   expect(backHref()).toBeUndefined()
   await userEvent.click(await screen.findByRole('link', { name: '새 템플릿' }))
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
-  expect(await frameReturn('영상 템플릿')).toHaveAttribute(
-    'href',
-    '/video-templates?channel=instagram_clip',
-  )
+  // The wizard's address carries no channel, and its way back is the video template list.
   const address = view.router.state.location.href
-  expect(address).toContain('channel=instagram_clip')
+  expect(address).toBe('/video-templates/new')
   view.unmount()
   sessionStorage.clear()
   const reopened = renderAppAt(address, { transport: view.transport })
   await screen.findByRole('heading', { name: '새 영상 템플릿', level: 1 })
-  const back = await frameReturn('영상 템플릿')
-  expect(back).toHaveAttribute('href', '/video-templates?channel=instagram_clip')
-  await userEvent.click(back)
+  await userEvent.click(await frameReturn('영상 템플릿'))
   // Back on a section list page: the section row marks it and there is no way back further.
-  await waitFor(() =>
-    expect(reopened.router.state.location.href).toBe('/video-templates?channel=instagram_clip'),
-  )
+  await waitFor(() => expect(reopened.router.state.location.pathname).toBe('/video-templates'))
   expect(backHref()).toBeUndefined()
   expect(paidActions(calls)).toEqual([])
 })
@@ -364,10 +357,10 @@ it.each([
     'aria-current',
     'page',
   )
-  // The section's creation button keeps the channel (THEME-67).
+  // The section's creation button carries no channel (THEME-67).
   expect(
     await screen.findByRole('link', { name: section === '템플릿' ? '새 템플릿' : '새 지침' }),
-  ).toHaveAttribute('href', expect.stringContaining('channel=instagram_clip'))
+  ).not.toHaveAttribute('href', expect.stringContaining('channel='))
   expect(paidActions(calls)).toEqual([])
 })
 
