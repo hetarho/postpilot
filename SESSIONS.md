@@ -154,6 +154,7 @@
 - 261116 decided T833 THEME-62: voice-habit colour role? -> the blue ramp at its own steps (night blue-200 on blue-900, day blue-800 on blue-100) with a thick solid underline, since THEME-15 closes the palette and the 말투 view never shares the screen with the origin colours (alt: a new palette ramp needing THEME-15 changes | the violet accent, which THEME-62 keeps apart from evidence roles)
 - 261116 decided CLIP-209 T868: how to fold stored channel data? → keep each project's own-channel upload text (body and tags as written) and posted URL as stored; remove upload texts and unconsumed quotes stored for the project's other channel (alt: keep other-channel texts in a side table | convert Instagram captions to Naver format)
 - 261116 decided THEME-38 POST-43 CLIP-41 T862: list addresses? → /posts and /clips, with /naver-blog, /naver-clip and /insta-clip redirecting (alt: /my/posts and /my/videos | keep /naver-blog and /naver-clip)
+- 261116 decided CLIP-209 T863: identifier scope? → rename channel and section names only; generic clip names and Naver platform rules (ParseNaverBlogURL, Naver Blog export, Naver Clip upload rules) keep their names (alt: rename clip to video everywhere)
 
 ## unlanded
 | id | tag | branch | commit | at |
