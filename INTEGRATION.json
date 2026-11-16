@@ -210,9 +210,9 @@
     "via": "merge",
     "executor": {
       "host": "ihaelam-ui-MacBookPro.local",
-      "pid": 18316
+      "pid": 23774
     },
-    "phase": "failed",
+    "phase": "checking",
     "land": "main",
     "base": "e9becca53376079187f488473c8ceb0d9dc5fa39",
     "cohort": [
@@ -246,7 +246,7 @@
     ],
     "at": "2026-11-16T16:04:38.455Z",
     "deadline": "2026-11-16T17:04:36.013Z",
-    "candidate": "d73a6d6a0c56cae2bd848caafd2667247ec7e914",
+    "candidate": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
     "checks": [
       {
         "ok": false,
