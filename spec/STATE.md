@@ -90,6 +90,11 @@
 | T846 | Shared model-ref and failure mappers for rpc handlers | ARCH | - | todo |
 | T847 | One last-resort internal error helper for rpc handlers | ARCH | T846 | todo |
 | T848 | One parser for the provider/model reference | ARCH | - | todo |
+| T849 | Publish clip upload progress only when it changes | ARCH | - | todo |
+| T850 | Patch blog video upload progress only when it changes | ARCH | T849 | todo |
+| T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
+| T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
+| T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
