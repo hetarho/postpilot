@@ -157,6 +157,7 @@
 - 261116 decided CLIP-209 T863: identifier scope? → rename channel and section names only; generic clip names and Naver platform rules (ParseNaverBlogURL, Naver Blog export, Naver Clip upload rules) keep their names (alt: rename clip to video everywhere)
 - 261116 decided CLIP-211 T867: upload-text read shape? → one optional text and one limit set, old repeated fields reserved (alt: keep repeated fields holding at most one)
 - 261116 decided CLIP-209: historical evidence? → docs/handoff, docs/qa, docs/audits, docs/research and earlier SSOT chg lines keep their Instagram and channel wording as history (alt: scrub them)
+- 261116 decided TMPL-76 T870: 참고 생성을 어디에 둘까 → 제목 제안 시트의 제안 받기 옆 보조 버튼 "내 템플릿 소제목 참고해서 제안 받기", 입력한 스타일 요청도 함께 보냄 (alt: 시트 안 체크박스 토글 / 예시 칩 / 소제목 화면의 별도 버튼)
 
 ## unlanded
 | id | tag | branch | commit | at |
