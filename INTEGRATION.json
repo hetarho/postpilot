@@ -130,9 +130,9 @@
     "via": "merge",
     "executor": {
       "host": "DESKTOP-VKPLS8P",
-      "pid": 107145
+      "pid": 139564
     },
-    "phase": "failed",
+    "phase": "checking",
     "land": "main",
     "base": "885755b7ceb866eee9ea68a59ab28ee80f2000e2",
     "cohort": [
@@ -148,7 +148,7 @@
     ],
     "at": "2026-11-16T08:47:06.799Z",
     "deadline": "2026-11-16T09:47:04.277Z",
-    "candidate": "342621a5ff0851149c57bffdd30ffbe2cc353f2a",
+    "candidate": "8fa8754ae57eac0c8f0760a2f6429e872a04521d",
     "checks": [
       {
         "command": "pnpm test:dev",
@@ -1010,8 +1010,8 @@
         "at": "2026-11-16T08:57:54.253Z"
       }
     ],
-    "path": "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/a7e50a4e-0f4e-4310-8833-801c99b62abd",
-    "branch": "integration/a7e50a4e-0f4e-4310-8833-801c99b62abd",
+    "path": "/home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/tidy-gate-repair",
+    "branch": "integration/a7e50a4e-outside-git",
     "version": {
       "level": "patch",
       "from": "0.2.0",
