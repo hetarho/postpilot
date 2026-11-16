@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| hdref | ihaelam-ui-MacBookPro | pair | 2026-11-16T14:31Z | 2026-11-16T15:35Z | T884 | gusta-session-start-hdref-c3df08ba | b2a5313c964f | da8e3d345d9d016094ffa3ea |
+| hdref | ihaelam-ui-MacBookPro | pair | 2026-11-16T14:31Z | 2026-11-16T15:38Z | - | gusta-session-start-hdref-c3df08ba | b2a5313c964f | da8e3d345d9d016094ffa3ea |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -199,8 +199,10 @@
 | T876 | vcx | gusta-session-start-vcx-4f46f7d4 | 631d35e1f | 2026-11-16T15:17Z |
 | T877 | vcx | gusta-session-start-vcx-4f46f7d4 | 1892f0fcc215 | 2026-11-16T15:20Z |
 | T883 | wopts | gusta-session-start-wopts-7b887426 | e7c56321a26c | 2026-11-16T15:26Z |
+| T884 | hdref | gusta-session-start-hdref-c3df08ba | b2a5313c964f | 2026-11-16T15:38Z |
 
 ## log
+- 261116 T884 done
 - 261116 gusta-update-ssot TMPL GEN start (field lead, 별점 part)
 - 261116 wopts ready at 7641f90be; T880-T883 complete and reviewed. Shared gate awaits both registered vcx working participants. Preserve peer ownership. Cohort integration owner must include conditional ARCH-31 deployment/media checks for backend changes. No full candidate or main publication claimed.
 - 261116 fix creation: align remaining clip and clip-from-post self-paid choice expectations; affected tests and scoped static checks passed
@@ -220,4 +222,3 @@
 - 261116 gusta-update-ssot POST r52 CLIP r81; gusta-create-task T880 T881: viewport-safe writing options and inclusive campaign labels
 - 261116 T870 done
 - 261116 T851 done
-- 261116 T869 done
