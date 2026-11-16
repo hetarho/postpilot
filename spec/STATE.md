@@ -30,7 +30,7 @@
 | VOICE | 21 | 21 | - | 0 |
 | GEN | 33 | 33 | - | 0 |
 | MODEL | 38 | 38 | - | 0 |
-| TMPL | 33 | 33 | - | 0 |
+| TMPL | 34 | 34 | - | 0 |
 | GUIDE | 28 | 28 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
@@ -84,6 +84,8 @@
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
+| T869 | Carry saved heading references through heading suggestions | TMPL | - | todo |
+| T870 | Offer 내 템플릿 소제목 참고해서 제안 받기 in the heading sheet | TMPL | T869 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -92,5 +94,6 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
+- gusta-implement-task T869
 - gusta-implement-task T851
 - inspect work board for remaining tasks
