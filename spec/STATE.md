@@ -83,7 +83,6 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T869 | Carry saved heading references through heading suggestions | TMPL | - | todo |
 | T870 | Offer 내 템플릿 소제목 참고해서 제안 받기 in the heading sheet | TMPL | T869 | todo |
-| T876 | Expose experiences and experience answers over the voice API | VOICE | T875 | todo |
 | T877 | Give the voice entity experiences and experience-named question text | VOICE | T872 T876 | todo |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
@@ -95,5 +94,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T869 T876
+- gusta-implement-task T869 T877
 - inspect work board for remaining tasks
