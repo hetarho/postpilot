@@ -24,8 +24,10 @@ type Material struct {
 	Text      string
 }
 
-// Block is one piece of a post's content as the fingerprint reads it.
+// Block is one piece of a post's content as the fingerprint reads it. Index is the block's
+// position in the post's content, kept so a found phrase can be located there (VOICE-77).
 type Block struct {
+	Index   int
 	Type    string
 	Content string
 	Items   []string

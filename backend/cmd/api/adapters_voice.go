@@ -149,19 +149,20 @@ func (a voicePosts) PostForFingerprint(ctx context.Context, userID, slug string)
 }
 
 // fingerprintBlocks keeps the prose blocks the fingerprint reads — TEXT, HEADING, LIST (its
-// items) and QUOTE — and skips IMAGE and VIDEO, captions included (VOICE-62).
+// items) and QUOTE — and skips IMAGE and VIDEO, captions included (VOICE-62). Each kept block
+// carries its position in the post's content, counted before media is skipped (VOICE-77).
 func fingerprintBlocks(blocks []post.Block) []voice.Block {
 	out := make([]voice.Block, 0, len(blocks))
-	for _, block := range blocks {
+	for index, block := range blocks {
 		switch block.Type {
 		case post.BlockText:
-			out = append(out, voice.Block{Type: voice.BlockText, Content: block.Content})
+			out = append(out, voice.Block{Index: index, Type: voice.BlockText, Content: block.Content})
 		case post.BlockHeading:
-			out = append(out, voice.Block{Type: voice.BlockHeading, Content: block.Content})
+			out = append(out, voice.Block{Index: index, Type: voice.BlockHeading, Content: block.Content})
 		case post.BlockQuote:
-			out = append(out, voice.Block{Type: voice.BlockQuote, Content: block.Content})
+			out = append(out, voice.Block{Index: index, Type: voice.BlockQuote, Content: block.Content})
 		case post.BlockList:
-			out = append(out, voice.Block{Type: voice.BlockList, Items: append([]string(nil), block.Items...)})
+			out = append(out, voice.Block{Index: index, Type: voice.BlockList, Items: append([]string(nil), block.Items...)})
 		}
 	}
 	return out

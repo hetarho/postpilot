@@ -54,6 +54,25 @@ func TestFingerprintBlocksKeepProseAndSkipMedia(t *testing.T) {
 	}
 }
 
+// VOICE-77: each kept block carries its position in the post's content, counted over the media
+// blocks that are skipped, so a found phrase can be located in the post.
+func TestFingerprintBlocksKeepTheirContentIndex(t *testing.T) {
+	got := fingerprintBlocks([]post.Block{
+		{Type: post.BlockImage, Caption: "캡션"},
+		{Type: post.BlockText, Content: "첫 문단"},
+		{Type: post.BlockVideo},
+		{Type: post.BlockList, Items: []string{"하나"}},
+		{Type: post.BlockHeading, Content: "제목"},
+	})
+	var indexes []int
+	for _, block := range got {
+		indexes = append(indexes, block.Index)
+	}
+	if len(indexes) != 3 || indexes[0] != 1 || indexes[1] != 3 || indexes[2] != 4 {
+		t.Fatalf("indexes = %v, want [1 3 4]", indexes)
+	}
+}
+
 // POST-102: the adapter hands the voice context an owned post's voice, revision and prose blocks
 // through post.CurrentContent, "" for 말투 없음 and no blocks before the first write; another
 // account's post and an unknown one become the voice context's own sentinels.
