@@ -95,7 +95,6 @@
 | T877 | Give the voice entity experiences and experience-named question text | VOICE | T872 T876 | todo |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
-| T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | doing@261116.wopts |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
