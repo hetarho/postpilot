@@ -72,10 +72,11 @@
       "branch": "gusta-session-self-improve-tidy-59bacbb6",
       "head": "8c2e5f6b8d0e95d3645abdd3fade03a1c60e353b",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T06:01:59.139Z",
+      "status": "withdrawn",
+      "at": "2026-11-16T06:20:19.265Z",
       "agentChecks": [],
-      "verificationCommands": []
+      "verificationCommands": [],
+      "reason": "duplicate-open"
     },
     "6401e0e67c58beae207682f6": {
       "id": "6401e0e67c58beae207682f6",
