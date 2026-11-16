@@ -168,6 +168,7 @@
 - 261116 decided TMPL-72 T885: 별점 칸을 어디에 둘까 → 모든 세부 종류의 마지막 파트 "별점"(질문을 바탕으로 작성, 사진 없음, 필수 아님) (alt: 4번째 내용 종류 "별점" / 1~5 별 선택 입력 UI)
 - 261116 decided TMPL-74 T885 T886: 별점 위 고정 문구(평가 기준)를 어떻게 받을까 → 질문을 바탕으로 작성에 선택 입력 고정 문구를 두고 칸 바로 위에 붙여 씀, 기본값은 비움(제품이 완성 문구를 내놓지 않음) (alt: 기본 평가 기준 문구 제공 / 별점 전용 카드)
 - 261116 decided -: Direct self-improve delegation: one behavior-preserving performance/refactor cycle, maximum 60 minutes from 2026-11-16T16:14Z and user deadline 2026-11-16T21:00Z (06:00 KST); prioritize Codex implementation and Claude independent review with both available for fallback. Existing hdref frozen cohort remains owned by hdref; perf6 joins the next gate.
+- 261116 decided review/audio-true-peak-261117 T887: F1 exact true-peak tap reuse adopted over F2 capture-neighbor preprocessing: one whole-track numeric hot path, two allowed files, exact-output invariant, fixed >=15% median improvement above range/median spread, Node24.18.0, seven alternating pairs. F2 deferred for low call frequency and unmeasured user benefit. Shared full verification remains at integration; task brief exceeds40k solely because global ARCH coverage is mandatory, while scope is already one production function.
 
 ## unlanded
 | id | tag | branch | commit | at |
