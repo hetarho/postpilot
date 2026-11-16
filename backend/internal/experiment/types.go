@@ -375,7 +375,9 @@ type ItemComparison struct {
 	Unknown  bool
 	Distance float64
 	Headline string
-	Facets   []ComparisonFacet
+	// Verdict is "", "similar" or "different"; the voice context judges it (VOICE-62).
+	Verdict string
+	Facets  []ComparisonFacet
 }
 
 // ComparisonFacet is one value of an item on both sides, in its unit: numbers, or terms.

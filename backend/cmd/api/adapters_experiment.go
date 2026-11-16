@@ -112,7 +112,7 @@ func experimentComparison(items []voice.ItemComparison) []experiment.ItemCompari
 			})
 		}
 		out = append(out, experiment.ItemComparison{
-			Item: string(item.Item), Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Facets: facets,
+			Item: string(item.Item), Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Verdict: string(item.Verdict), Facets: facets,
 		})
 	}
 	return out

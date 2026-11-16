@@ -15,6 +15,7 @@ import (
 	jobstore "github.com/postpilot/backend/internal/job/store"
 	"github.com/postpilot/backend/internal/plan"
 	"github.com/postpilot/backend/internal/platform/db/dbtest"
+	"github.com/postpilot/backend/internal/voice"
 )
 
 // attachedPost is generation's post port answering one post's attachments and nothing else.
@@ -95,5 +96,20 @@ func TestAnObserveComparisonHoldsEveryObserveCall(t *testing.T) {
 		if call.Stage != "observe" || call.Count != calls {
 			t.Fatalf("planned call %+v, want observe %d times", call, calls)
 		}
+	}
+}
+
+// VOICE-62: the experiment reading carries each item's verdict and lead key, and an item the
+// voice does not know stays out because voice.Compare left it out.
+func TestExperimentComparisonCarriesVerdictAndLead(t *testing.T) {
+	got := experimentComparison([]voice.ItemComparison{
+		{Item: voice.ItemEndings, Headline: "haeyo", Verdict: voice.VerdictDifferent},
+		{Item: voice.ItemMarks, Unknown: true},
+	})
+	if len(got) != 2 || got[0].Verdict != "different" || got[0].Headline != "haeyo" || got[1].Verdict != "" {
+		t.Fatalf("got %+v", got)
+	}
+	if len(experimentComparison(nil)) != 0 {
+		t.Fatal("an absent item must stay absent")
 	}
 }

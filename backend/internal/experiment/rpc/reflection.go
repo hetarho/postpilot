@@ -36,6 +36,12 @@ var protoItems = map[string]postpilotv1.FingerprintItem{
 	"headings": postpilotv1.FingerprintItem_FINGERPRINT_ITEM_HEADINGS,
 }
 
+// The verdict strings the voice context judges with; none stays UNSPECIFIED.
+var protoVerdicts = map[string]postpilotv1.FingerprintVerdict{
+	"similar":   postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_SIMILAR,
+	"different": postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_DIFFERENT,
+}
+
 var protoUnits = map[string]postpilotv1.FingerprintFacetUnit{
 	"share":       postpilotv1.FingerprintFacetUnit_FINGERPRINT_FACET_UNIT_SHARE,
 	"per_hundred": postpilotv1.FingerprintFacetUnit_FINGERPRINT_FACET_UNIT_PER_HUNDRED,
@@ -56,7 +62,7 @@ func toProtoComparisons(items []experiment.ItemComparison) []*postpilotv1.Finger
 			})
 		}
 		out = append(out, &postpilotv1.FingerprintItemComparison{
-			Item: protoItems[item.Item], Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Facets: facets,
+			Item: protoItems[item.Item], Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Verdict: protoVerdicts[item.Verdict], Facets: facets,
 		})
 	}
 	return out

@@ -85,3 +85,26 @@ func TestTheReflectionEdgeKnowsEveryItemAndUnit(t *testing.T) {
 		t.Fatalf("mapped %d of %d units", len(units), len(postpilotv1.FingerprintFacetUnit_name)-1)
 	}
 }
+
+// ARCH-3: every verdict the voice context has maps to its own generated value.
+func TestTheReflectionEdgeKnowsEveryVerdict(t *testing.T) {
+	seen := map[postpilotv1.FingerprintVerdict]bool{}
+	for _, verdict := range voice.Verdicts() {
+		mapped, ok := protoVerdicts[string(verdict)]
+		if !ok || seen[mapped] {
+			t.Fatalf("%q maps to %v", verdict, mapped)
+		}
+		seen[mapped] = true
+	}
+	if len(seen) != len(postpilotv1.FingerprintVerdict_name)-1 {
+		t.Fatalf("mapped %d of %d verdicts", len(seen), len(postpilotv1.FingerprintVerdict_name)-1)
+	}
+	got := toProtoComparisons([]experiment.ItemComparison{
+		{Item: "endings", Headline: "haeyo", Verdict: "different"},
+		{Item: "marks"},
+	})
+	if got[0].Verdict != postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_DIFFERENT || got[0].Headline != "haeyo" ||
+		got[1].Verdict != postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_UNSPECIFIED {
+		t.Fatalf("verdict/headline not carried: %v", got)
+	}
+}
