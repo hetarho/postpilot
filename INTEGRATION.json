@@ -117,10 +117,10 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-onev-54d284a9",
-      "head": "0229c872b9c25e759dcab6dd2e0d2709ec116782",
+      "head": "7e43e6f7de4dbfcccc596b61525d86208107fcce",
       "land": "main",
-      "status": "ready",
-      "at": "2026-11-16T10:51:19.640Z",
+      "status": "working",
+      "at": "2026-11-16T11:11:46.275Z",
       "agentChecks": [],
       "verificationCommands": []
     }
