@@ -29,6 +29,10 @@ service VoiceService {
   rpc ListVoicePrompts(ListVoicePromptsRequest) returns (ListVoicePromptsResponse) {}
   rpc CreateVoicePhotoUpload(CreateVoicePhotoUploadRequest) returns (CreateVoicePhotoUploadResponse) {}
   rpc AnswerVoicePrompt(AnswerVoicePromptRequest) returns (AnswerVoicePromptResponse) {}
+  // The learning chat's own experiences (VOICE-78): start one (a kind and an optional name) and
+  // list a voice's, newest first. Neither calls a model.
+  rpc StartVoiceExperience(StartVoiceExperienceRequest) returns (StartVoiceExperienceResponse) {}
+  rpc ListVoiceExperiences(ListVoiceExperiencesRequest) returns (ListVoiceExperiencesResponse) {}
   // 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
   rpc EstimateVoiceAnalysis(EstimateVoiceAnalysisRequest) returns (EstimateVoiceAnalysisResponse) {}
   rpc AnalyzeVoice(AnalyzeVoiceRequest) returns (AnalyzeVoiceResponse) {}
@@ -264,6 +268,8 @@ message VoiceSample {
   string prompt_key = 6;
   bool has_photo = 7;
   int64 content_revision = 8;
+  // The experience a thread answer belongs to (VOICE-78); empty for a post and a situation.
+  string experience_id = 9;
 }
 
 // One of the shared prompts every voice answers (VOICE-60). Its text is product copy, Korean in
@@ -300,6 +306,15 @@ message VoiceExperienceKindInfo {
   VoiceExperienceKind kind = 1;
   string label = 2;
   string plain = 3;
+}
+
+// One experience of the owner's the chat asks about: a kind and an optional name, private owner
+// data that feeds no fingerprint item and no readiness (VOICE-78).
+message VoiceExperience {
+  string id = 1;
+  VoiceExperienceKind kind = 2;
+  string name = 3;
+  string created_at = 4;
 }
 
 // The sentence-ending register an example reply is written in (VOICE-79).
@@ -429,8 +444,15 @@ message AnswerVoicePromptRequest {
   string upload_id = 4;
   int32 photo_width = 5;
   int32 photo_height = 6;
+  // Names the experience a thread question is answered about; a situation takes none.
+  string experience_id = 7;
 }
 message AnswerVoicePromptResponse { VoiceSample sample = 1; }
+
+message StartVoiceExperienceRequest { string voice_id = 1; VoiceExperienceKind kind = 2; string name = 3; }
+message StartVoiceExperienceResponse { VoiceExperience experience = 1; }
+message ListVoiceExperiencesRequest { string voice_id = 1; }
+message ListVoiceExperiencesResponse { repeated VoiceExperience experiences = 1; }
 
 // The model is named explicitly, like every start RPC (MODEL-23).
 message EstimateVoiceAnalysisRequest { string voice_id = 1; ModelRef model = 2; }

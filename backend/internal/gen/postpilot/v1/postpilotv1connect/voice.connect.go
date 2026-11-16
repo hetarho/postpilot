@@ -74,6 +74,12 @@ const (
 	// VoiceServiceAnswerVoicePromptProcedure is the fully-qualified name of the VoiceService's
 	// AnswerVoicePrompt RPC.
 	VoiceServiceAnswerVoicePromptProcedure = "/postpilot.v1.VoiceService/AnswerVoicePrompt"
+	// VoiceServiceStartVoiceExperienceProcedure is the fully-qualified name of the VoiceService's
+	// StartVoiceExperience RPC.
+	VoiceServiceStartVoiceExperienceProcedure = "/postpilot.v1.VoiceService/StartVoiceExperience"
+	// VoiceServiceListVoiceExperiencesProcedure is the fully-qualified name of the VoiceService's
+	// ListVoiceExperiences RPC.
+	VoiceServiceListVoiceExperiencesProcedure = "/postpilot.v1.VoiceService/ListVoiceExperiences"
 	// VoiceServiceEstimateVoiceAnalysisProcedure is the fully-qualified name of the VoiceService's
 	// EstimateVoiceAnalysis RPC.
 	VoiceServiceEstimateVoiceAnalysisProcedure = "/postpilot.v1.VoiceService/EstimateVoiceAnalysis"
@@ -117,6 +123,10 @@ type VoiceServiceClient interface {
 	ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error)
 	CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error)
 	AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error)
+	// The learning chat's own experiences (VOICE-78): start one (a kind and an optional name) and
+	// list a voice's, newest first. Neither calls a model.
+	StartVoiceExperience(context.Context, *connect.Request[v1.StartVoiceExperienceRequest]) (*connect.Response[v1.StartVoiceExperienceResponse], error)
+	ListVoiceExperiences(context.Context, *connect.Request[v1.ListVoiceExperiencesRequest]) (*connect.Response[v1.ListVoiceExperiencesResponse], error)
 	// 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
 	EstimateVoiceAnalysis(context.Context, *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error)
 	AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error)
@@ -228,6 +238,18 @@ func NewVoiceServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(voiceServiceMethods.ByName("AnswerVoicePrompt")),
 			connect.WithClientOptions(opts...),
 		),
+		startVoiceExperience: connect.NewClient[v1.StartVoiceExperienceRequest, v1.StartVoiceExperienceResponse](
+			httpClient,
+			baseURL+VoiceServiceStartVoiceExperienceProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("StartVoiceExperience")),
+			connect.WithClientOptions(opts...),
+		),
+		listVoiceExperiences: connect.NewClient[v1.ListVoiceExperiencesRequest, v1.ListVoiceExperiencesResponse](
+			httpClient,
+			baseURL+VoiceServiceListVoiceExperiencesProcedure,
+			connect.WithSchema(voiceServiceMethods.ByName("ListVoiceExperiences")),
+			connect.WithClientOptions(opts...),
+		),
 		estimateVoiceAnalysis: connect.NewClient[v1.EstimateVoiceAnalysisRequest, v1.EstimateVoiceAnalysisResponse](
 			httpClient,
 			baseURL+VoiceServiceEstimateVoiceAnalysisProcedure,
@@ -289,6 +311,8 @@ type voiceServiceClient struct {
 	listVoicePrompts             *connect.Client[v1.ListVoicePromptsRequest, v1.ListVoicePromptsResponse]
 	createVoicePhotoUpload       *connect.Client[v1.CreateVoicePhotoUploadRequest, v1.CreateVoicePhotoUploadResponse]
 	answerVoicePrompt            *connect.Client[v1.AnswerVoicePromptRequest, v1.AnswerVoicePromptResponse]
+	startVoiceExperience         *connect.Client[v1.StartVoiceExperienceRequest, v1.StartVoiceExperienceResponse]
+	listVoiceExperiences         *connect.Client[v1.ListVoiceExperiencesRequest, v1.ListVoiceExperiencesResponse]
 	estimateVoiceAnalysis        *connect.Client[v1.EstimateVoiceAnalysisRequest, v1.EstimateVoiceAnalysisResponse]
 	analyzeVoice                 *connect.Client[v1.AnalyzeVoiceRequest, v1.AnalyzeVoiceResponse]
 	restorePreviousVoiceAnalysis *connect.Client[v1.RestorePreviousVoiceAnalysisRequest, v1.RestorePreviousVoiceAnalysisResponse]
@@ -368,6 +392,16 @@ func (c *voiceServiceClient) AnswerVoicePrompt(ctx context.Context, req *connect
 	return c.answerVoicePrompt.CallUnary(ctx, req)
 }
 
+// StartVoiceExperience calls postpilot.v1.VoiceService.StartVoiceExperience.
+func (c *voiceServiceClient) StartVoiceExperience(ctx context.Context, req *connect.Request[v1.StartVoiceExperienceRequest]) (*connect.Response[v1.StartVoiceExperienceResponse], error) {
+	return c.startVoiceExperience.CallUnary(ctx, req)
+}
+
+// ListVoiceExperiences calls postpilot.v1.VoiceService.ListVoiceExperiences.
+func (c *voiceServiceClient) ListVoiceExperiences(ctx context.Context, req *connect.Request[v1.ListVoiceExperiencesRequest]) (*connect.Response[v1.ListVoiceExperiencesResponse], error) {
+	return c.listVoiceExperiences.CallUnary(ctx, req)
+}
+
 // EstimateVoiceAnalysis calls postpilot.v1.VoiceService.EstimateVoiceAnalysis.
 func (c *voiceServiceClient) EstimateVoiceAnalysis(ctx context.Context, req *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error) {
 	return c.estimateVoiceAnalysis.CallUnary(ctx, req)
@@ -423,6 +457,10 @@ type VoiceServiceHandler interface {
 	ListVoicePrompts(context.Context, *connect.Request[v1.ListVoicePromptsRequest]) (*connect.Response[v1.ListVoicePromptsResponse], error)
 	CreateVoicePhotoUpload(context.Context, *connect.Request[v1.CreateVoicePhotoUploadRequest]) (*connect.Response[v1.CreateVoicePhotoUploadResponse], error)
 	AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error)
+	// The learning chat's own experiences (VOICE-78): start one (a kind and an optional name) and
+	// list a voice's, newest first. Neither calls a model.
+	StartVoiceExperience(context.Context, *connect.Request[v1.StartVoiceExperienceRequest]) (*connect.Response[v1.StartVoiceExperienceResponse], error)
+	ListVoiceExperiences(context.Context, *connect.Request[v1.ListVoiceExperiencesRequest]) (*connect.Response[v1.ListVoiceExperiencesResponse], error)
 	// 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
 	EstimateVoiceAnalysis(context.Context, *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error)
 	AnalyzeVoice(context.Context, *connect.Request[v1.AnalyzeVoiceRequest]) (*connect.Response[v1.AnalyzeVoiceResponse], error)
@@ -530,6 +568,18 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(voiceServiceMethods.ByName("AnswerVoicePrompt")),
 		connect.WithHandlerOptions(opts...),
 	)
+	voiceServiceStartVoiceExperienceHandler := connect.NewUnaryHandler(
+		VoiceServiceStartVoiceExperienceProcedure,
+		svc.StartVoiceExperience,
+		connect.WithSchema(voiceServiceMethods.ByName("StartVoiceExperience")),
+		connect.WithHandlerOptions(opts...),
+	)
+	voiceServiceListVoiceExperiencesHandler := connect.NewUnaryHandler(
+		VoiceServiceListVoiceExperiencesProcedure,
+		svc.ListVoiceExperiences,
+		connect.WithSchema(voiceServiceMethods.ByName("ListVoiceExperiences")),
+		connect.WithHandlerOptions(opts...),
+	)
 	voiceServiceEstimateVoiceAnalysisHandler := connect.NewUnaryHandler(
 		VoiceServiceEstimateVoiceAnalysisProcedure,
 		svc.EstimateVoiceAnalysis,
@@ -602,6 +652,10 @@ func NewVoiceServiceHandler(svc VoiceServiceHandler, opts ...connect.HandlerOpti
 			voiceServiceCreateVoicePhotoUploadHandler.ServeHTTP(w, r)
 		case VoiceServiceAnswerVoicePromptProcedure:
 			voiceServiceAnswerVoicePromptHandler.ServeHTTP(w, r)
+		case VoiceServiceStartVoiceExperienceProcedure:
+			voiceServiceStartVoiceExperienceHandler.ServeHTTP(w, r)
+		case VoiceServiceListVoiceExperiencesProcedure:
+			voiceServiceListVoiceExperiencesHandler.ServeHTTP(w, r)
 		case VoiceServiceEstimateVoiceAnalysisProcedure:
 			voiceServiceEstimateVoiceAnalysisHandler.ServeHTTP(w, r)
 		case VoiceServiceAnalyzeVoiceProcedure:
@@ -679,6 +733,14 @@ func (UnimplementedVoiceServiceHandler) CreateVoicePhotoUpload(context.Context, 
 
 func (UnimplementedVoiceServiceHandler) AnswerVoicePrompt(context.Context, *connect.Request[v1.AnswerVoicePromptRequest]) (*connect.Response[v1.AnswerVoicePromptResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.AnswerVoicePrompt is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) StartVoiceExperience(context.Context, *connect.Request[v1.StartVoiceExperienceRequest]) (*connect.Response[v1.StartVoiceExperienceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.StartVoiceExperience is not implemented"))
+}
+
+func (UnimplementedVoiceServiceHandler) ListVoiceExperiences(context.Context, *connect.Request[v1.ListVoiceExperiencesRequest]) (*connect.Response[v1.ListVoiceExperiencesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.VoiceService.ListVoiceExperiences is not implemented"))
 }
 
 func (UnimplementedVoiceServiceHandler) EstimateVoiceAnalysis(context.Context, *connect.Request[v1.EstimateVoiceAnalysisRequest]) (*connect.Response[v1.EstimateVoiceAnalysisResponse], error) {
