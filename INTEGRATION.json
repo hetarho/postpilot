@@ -133,7 +133,7 @@
       "host": "DESKTOP-VKPLS8P",
       "pid": 305593
     },
-    "phase": "checking",
+    "phase": "verified",
     "land": "main",
     "base": "4125dde62876b95524969bc0937c056b49c3885e",
     "cohort": [
@@ -163,31 +163,31 @@
       {
         "command": "pnpm test:dev",
         "schemaVersion": 1,
-        "ok": false,
-        "exitCode": 1,
+        "ok": true,
+        "exitCode": 0,
         "cached": false,
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 1534,
+        "ms": 1454,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-68027ad2-ded3-41d1-9d94-ba9a722b50f6.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-6e2be242-c694-4d10-81a7-4f15a91dd6d8.log",
         "tail": [
-          "    code: 'ERR_ASSERTION',",
-          "    actual: false,",
-          "    expected: true,",
-          "    operator: '==',",
-          "    diff: 'simple'",
-          "  }",
-          " ELIFECYCLE  Command failed with exit code 1.",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+          "ℹ tests 26",
+          "ℹ suites 0",
+          "ℹ pass 26",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1090.240479"
         ],
         "failedTests": [],
         "cleanup": {
@@ -205,19 +205,19 @@
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 2554,
+        "ms": 2699,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-511b6a95-66b6-4319-9607-45e00c099bc4.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-ebcf2223-b48d-4870-92ac-3a1589af61bd.log",
         "tail": [
           "",
-          "> postpilot@0.2.2 gen:proto /home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c",
+          "> postpilot@0.2.2 gen:proto /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
           "> node scripts/gen.mjs proto",
           "",
           "",
@@ -241,19 +241,19 @@
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 26870,
+        "ms": 27577,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-e0fbfe5f-6b1b-4b6b-b927-a618cca2de75.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-985cb258-1285-4ec3-b75b-ec67e63eaddc.log",
         "tail": [
           "",
-          "> postpilot@0.2.2 gen:sql /home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c",
+          "> postpilot@0.2.2 gen:sql /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
           "> node scripts/gen.mjs sql",
           "",
           "",
@@ -271,31 +271,31 @@
       {
         "command": "pnpm lint",
         "schemaVersion": 1,
-        "ok": false,
-        "exitCode": 1,
+        "ok": true,
+        "exitCode": 0,
         "cached": false,
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 691,
+        "ms": 74933,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-513d3261-63fa-4b03-a0e4-356061068056.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-17001ac9-024a-418c-85fc-bea5a60524b1.log",
         "tail": [
+          "> pnpm --filter ./frontend format:check",
           "",
-          "sh: 1: eslint: not found",
-          "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c/frontend:",
-          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 lint: `eslint .`",
-          "spawn ENOENT",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
-          " ELIFECYCLE  Command failed with exit code 1.",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+          "",
+          "> frontend@0.0.0 format:check /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand/frontend",
+          "> prettier --check .",
+          "",
+          "Checking formatting...",
+          "All matched files use Prettier code style!"
         ],
         "failedTests": [],
         "cleanup": {
@@ -307,31 +307,31 @@
       {
         "command": "pnpm lint:fsd",
         "schemaVersion": 1,
-        "ok": false,
-        "exitCode": 1,
+        "ok": true,
+        "exitCode": 0,
         "cached": false,
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 696,
+        "ms": 7986,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-1caf45f8-0820-4ab6-befb-d0e0bef4b911.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-189b5e93-47cd-49d4-8aef-3d19935ca849.log",
         "tail": [
+          "> postpilot@0.2.2 lint:fsd /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
+          "> pnpm --filter ./frontend lint:fsd",
           "",
-          "sh: 1: steiger: not found",
-          "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c/frontend:",
-          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 lint:fsd: `steiger ./src`",
-          "spawn ENOENT",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
-          " ELIFECYCLE  Command failed with exit code 1.",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+          "",
+          "> frontend@0.0.0 lint:fsd /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand/frontend",
+          "> steiger ./src",
+          "",
+          "✔ No problems found!"
         ],
         "failedTests": [],
         "cleanup": {
@@ -349,16 +349,16 @@
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 1339,
+        "ms": 707,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-3aee52a4-bac4-451d-8938-419f5246fec9.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-3cb5d840-f941-400e-9c42-e38425243484.log",
         "tail": [
           "ℹ suites 0",
           "ℹ pass 2",
@@ -366,7 +366,7 @@
           "ℹ cancelled 0",
           "ℹ skipped 0",
           "ℹ todo 0",
-          "ℹ duration_ms 119.797883",
+          "ℹ duration_ms 128.172025",
           "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
         ],
         "failedTests": [],
@@ -379,31 +379,31 @@
       {
         "command": "pnpm lint:style:probe && pnpm lint:style",
         "schemaVersion": 1,
-        "ok": false,
-        "exitCode": 1,
+        "ok": true,
+        "exitCode": 0,
         "cached": false,
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 391,
+        "ms": 2832,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-7ec90dcf-0e1e-45ef-bc33-1ab7374bf67c.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-2b3ecf72-95ae-4ace-9ee3-4cfff3d0f92f.log",
         "tail": [
-          "  requireStack: [",
-          "    '/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c/frontend/package.json'",
-          "  ]",
-          "}",
+          "> node scripts/lint-style-escapes.mjs --probe",
           "",
-          "Node.js v24.22.1",
-          " ELIFECYCLE  Command failed with exit code 1.",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+          "lint:style:probe — ok (84 scanner cases)",
+          "",
+          "> postpilot@0.2.2 lint:style /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
+          "> node scripts/lint-style-escapes.mjs",
+          "",
+          "lint:style — ok (no colour, type or native control escapes)"
         ],
         "failedTests": [],
         "cleanup": {
@@ -421,16 +421,16 @@
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 1006,
+        "ms": 1494,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-29837bf5-4f5d-4efc-9090-e54abe0160b1.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-b83cdf65-1a93-49e7-85fe-c6ebf76fbf9c.log",
         "tail": [
           "스킬 동기화 상태 정상: 20개 (claude, codex)"
         ],
@@ -444,31 +444,31 @@
       {
         "command": "pnpm --filter ./frontend test",
         "schemaVersion": 1,
-        "ok": false,
-        "exitCode": 1,
+        "ok": true,
+        "exitCode": 0,
         "cached": false,
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 395,
+        "ms": 290023,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-347f9824-7b88-4226-9bf1-1ed90f582ea6.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-2e5fbe83-47d0-48fe-befd-9d8333133c51.log",
         "tail": [
-          "> frontend@0.0.0 test /home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c/frontend",
-          "> vitest run",
+          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
           "",
-          "sh: 1: vitest: not found",
-          "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c/frontend:",
-          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 test: `vitest run`",
-          "spawn ENOENT",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+          " Test Files  641 passed (641)",
+          "      Tests  5171 passed (5171)",
+          "   Start at  20:23:25",
+          "   Duration  277.17s (transform 99.62s, setup 693.69s, import 963.24s, tests 1432.19s, environment 820.68s)"
         ],
         "failedTests": [],
         "cleanup": {
@@ -480,31 +480,31 @@
       {
         "command": "pnpm build:web",
         "schemaVersion": 1,
-        "ok": false,
-        "exitCode": 1,
+        "ok": true,
+        "exitCode": 0,
         "cached": false,
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 704,
+        "ms": 57114,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-4409fa4e-2607-4469-9dac-fb57942434dd.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-9529e9b3-e382-486d-9da0-4d02f39be373.log",
         "tail": [
+          "[plugin builtin:vite-reporter] ",
+          "(!) Some chunks are larger than 500 kB after minification. Consider:",
+          "- Using dynamic import() to code-split the application",
+          "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
+          "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+          "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
           "",
-          "sh: 1: tsc: not found",
-          "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/3987a69a-1c88-430c-81f0-b4df4835f23c/frontend:",
-          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 build: `tsc -b && vite build`",
-          "spawn ENOENT",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
-          " ELIFECYCLE  Command failed with exit code 1.",
-          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+          "✓ built in 3.10s"
         ],
         "failedTests": [],
         "cleanup": {
@@ -522,23 +522,23 @@
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 56882,
+        "ms": 65250,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-d1e2ac90-674d-4a66-9b49-2f1f15bfa2fc.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-53c78e3f-786c-4e27-ae1b-892abcb2128f.log",
         "tail": [
           "test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure (media_release_test.ReleaseBudget.test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure) ... ok",
           "test_storage_failure_precedes_application_builds_and_resources (media_release_test.ReleaseBudget.test_storage_failure_precedes_application_builds_and_resources) ... ok",
           "test_storage_precedes_both_layouts_even_when_application_builds_are_skipped (media_release_test.ReleaseBudget.test_storage_precedes_both_layouts_even_when_application_builds_are_skipped) ... ok",
           "",
           "----------------------------------------------------------------------",
-          "Ran 69 tests in 51.658s",
+          "Ran 69 tests in 60.230s",
           "",
           "OK"
         ],
@@ -558,24 +558,24 @@
         "timedOut": false,
         "cancelled": false,
         "stale": false,
-        "ms": 376446,
+        "ms": 378088,
         "scope": {
           "TIER": "batch",
           "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
           "TASK": "",
           "TASKS": ""
         },
-        "commit": "8618fa1ac6c23585ff09a8ec585beaf6ce8aa4ee",
-        "tree": "e7341ab2bb015799410a23053298480ab44f4e45",
-        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-f6c1c03e-e005-4afd-a242-a07eb18c6b07.log",
+        "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-29d9bca2-96ae-4c52-a3a5-696ba4c14788.log",
         "tail": [
-          "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t10.560s",
+          "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t8.650s",
           "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
           "ok  \tgithub.com/postpilot/backend/internal/voice/store\t0.005s",
           "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
           "ok  \tgithub.com/postpilot/backend/internal/voucher\t0.003s",
-          "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t7.493s",
-          "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t8.650s",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t6.334s",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t6.837s",
           "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
         ],
         "failedTests": [],
@@ -1018,6 +1018,437 @@
           }
         ],
         "at": "2026-11-16T11:20:14.614Z"
+      },
+      {
+        "candidate": "0715db3bba661f48f62e5bdd57527c348774d814",
+        "checks": [
+          {
+            "command": "pnpm test:dev",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 1454,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-6e2be242-c694-4d10-81a7-4f15a91dd6d8.log",
+            "tail": [
+              "ℹ tests 26",
+              "ℹ suites 0",
+              "ℹ pass 26",
+              "ℹ fail 0",
+              "ℹ cancelled 0",
+              "ℹ skipped 0",
+              "ℹ todo 0",
+              "ℹ duration_ms 1090.240479"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 2699,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-ebcf2223-b48d-4870-92ac-3a1589af61bd.log",
+            "tail": [
+              "",
+              "> postpilot@0.2.2 gen:proto /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
+              "> node scripts/gen.mjs proto",
+              "",
+              "",
+              "▶ codegen",
+              "  · buf generate (proto → Go·TS)",
+              "  ✓ buf 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:sql && git diff --exit-code -- backend",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 27577,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-985cb258-1285-4ec3-b75b-ec67e63eaddc.log",
+            "tail": [
+              "",
+              "> postpilot@0.2.2 gen:sql /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
+              "> node scripts/gen.mjs sql",
+              "",
+              "",
+              "▶ codegen",
+              "  · sqlc generate (SQL → Go)",
+              "  ✓ sqlc 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 74933,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-17001ac9-024a-418c-85fc-bea5a60524b1.log",
+            "tail": [
+              "> pnpm --filter ./frontend format:check",
+              "",
+              "",
+              "> frontend@0.0.0 format:check /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand/frontend",
+              "> prettier --check .",
+              "",
+              "Checking formatting...",
+              "All matched files use Prettier code style!"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:fsd",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 7986,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-189b5e93-47cd-49d4-8aef-3d19935ca849.log",
+            "tail": [
+              "> postpilot@0.2.2 lint:fsd /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
+              "> pnpm --filter ./frontend lint:fsd",
+              "",
+              "",
+              "> frontend@0.0.0 lint:fsd /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand/frontend",
+              "> steiger ./src",
+              "",
+              "✔ No problems found!"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:retirement",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 707,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-3cb5d840-f941-400e-9c42-e38425243484.log",
+            "tail": [
+              "ℹ suites 0",
+              "ℹ pass 2",
+              "ℹ fail 0",
+              "ℹ cancelled 0",
+              "ℹ skipped 0",
+              "ℹ todo 0",
+              "ℹ duration_ms 128.172025",
+              "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:style:probe && pnpm lint:style",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 2832,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-2b3ecf72-95ae-4ace-9ee3-4cfff3d0f92f.log",
+            "tail": [
+              "> node scripts/lint-style-escapes.mjs --probe",
+              "",
+              "lint:style:probe — ok (84 scanner cases)",
+              "",
+              "> postpilot@0.2.2 lint:style /tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
+              "> node scripts/lint-style-escapes.mjs",
+              "",
+              "lint:style — ok (no colour, type or native control escapes)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 1494,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-b83cdf65-1a93-49e7-85fe-c6ebf76fbf9c.log",
+            "tail": [
+              "스킬 동기화 상태 정상: 20개 (claude, codex)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm --filter ./frontend test",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 290023,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-2e5fbe83-47d0-48fe-befd-9d8333133c51.log",
+            "tail": [
+              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+              "",
+              " Test Files  641 passed (641)",
+              "      Tests  5171 passed (5171)",
+              "   Start at  20:23:25",
+              "   Duration  277.17s (transform 99.62s, setup 693.69s, import 963.24s, tests 1432.19s, environment 820.68s)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm build:web",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 57114,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-9529e9b3-e382-486d-9da0-4d02f39be373.log",
+            "tail": [
+              "[plugin builtin:vite-reporter] ",
+              "(!) Some chunks are larger than 500 kB after minification. Consider:",
+              "- Using dynamic import() to code-split the application",
+              "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
+              "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+              "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
+              "",
+              "✓ built in 3.10s"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 65250,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-53c78e3f-786c-4e27-ae1b-892abcb2128f.log",
+            "tail": [
+              "test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure (media_release_test.ReleaseBudget.test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure) ... ok",
+              "test_storage_failure_precedes_application_builds_and_resources (media_release_test.ReleaseBudget.test_storage_failure_precedes_application_builds_and_resources) ... ok",
+              "test_storage_precedes_both_layouts_even_when_application_builds_are_skipped (media_release_test.ReleaseBudget.test_storage_precedes_both_layouts_even_when_application_builds_are_skipped) ... ok",
+              "",
+              "----------------------------------------------------------------------",
+              "Ran 69 tests in 60.230s",
+              "",
+              "OK"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 378088,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "4125dde62876b95524969bc0937c056b49c3885e",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "0715db3bba661f48f62e5bdd57527c348774d814",
+            "tree": "6c199a38c84bbe23e2a108b1a19ad0d889ac293e",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-29d9bca2-96ae-4c52-a3a5-696ba4c14788.log",
+            "tail": [
+              "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t8.650s",
+              "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+              "ok  \tgithub.com/postpilot/backend/internal/voice/store\t0.005s",
+              "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher\t0.003s",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t6.334s",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t6.837s",
+              "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          }
+        ],
+        "at": "2026-11-16T11:36:39.407Z"
       }
     ],
     "path": "/tmp/claude-1000/-home-hrlee-project-postpilot/f3c2b79d-f2ae-4e90-986b-561c6ac931b7/scratchpad/cand",
