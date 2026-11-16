@@ -1,6 +1,22 @@
 {
   "schemaVersion": 1,
-  "participants": {},
+  "participants": {
+    "2c49cb3071a34ca1b4d9fe9c": {
+      "id": "2c49cb3071a34ca1b4d9fe9c",
+      "owner": "20e1d1bd-df2c-4321-a18e-54413e963889",
+      "tag": "vfid",
+      "kind": "start",
+      "publication": "merge",
+      "host": "DESKTOP-VKPLS8P",
+      "branch": "gusta-session-start-vfid-2c92eccf",
+      "head": "b8e401743d06a39920f7db5eb00a25059d2c9573",
+      "land": "main",
+      "status": "working",
+      "at": "2026-11-16T02:35:58.583Z",
+      "agentChecks": [],
+      "verificationCommands": []
+    }
+  },
   "gate": null,
   "history": [],
   "lastPlanning": {
