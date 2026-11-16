@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
 | hdref | ihaelam-ui-MacBookPro | pair | 2026-11-16T14:31Z | 2026-11-16T14:40Z | - | gusta-session-start-hdref-c3df08ba | 64b47da1f13b | da8e3d345d9d016094ffa3ea |
-| vcx | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:38Z | 2026-11-16T14:44Z | T871 | gusta-session-start-vcx-4f46f7d4 | ea509603cd4a | f5a394dab36ea32f44a2de9a |
+| vcx | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:38Z | 2026-11-16T14:52Z | - | gusta-session-start-vcx-4f46f7d4 | b1b5fbc8a7b7 | f5a394dab36ea32f44a2de9a |
 | wopts | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:39Z | 2026-11-16T14:50Z | - | gusta-session-start-wopts-7b887426 | 129d2a5374a1 | c699e1db263037aca837d56d |
 
 ## inbox
@@ -188,8 +188,10 @@
 | T853 | vcx | gusta-session-start-vcx-4f46f7d4 | fc23e2a81bc3 | 2026-11-16T14:44Z |
 | T880 | wopts | gusta-session-start-wopts-7b887426 | 7bb96d876aec | 2026-11-16T14:49Z |
 | T881 | wopts | gusta-session-start-wopts-7b887426 | 129d2a5374a1 | 2026-11-16T14:50Z |
+| T871 | vcx | gusta-session-start-vcx-4f46f7d4 | b1b5fbc8a7b7 | 2026-11-16T14:52Z |
 
 ## log
+- 261116 T871 done
 - 261116 T881 done
 - 261116 T880 done
 - 261116 T853 done
@@ -209,4 +211,3 @@
 - 261116 sketch voice-chat-examples start
 - 261116 T868 done
 - 261116 T867 done
-- 261116 T866 done
