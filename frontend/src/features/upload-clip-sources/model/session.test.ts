@@ -175,6 +175,20 @@ describe('page-owned clip source session', () => {
       summaries: files.map((file) => ({ filename: file.name, status: 'done' })),
     })
   })
+  it('publishes upload progress only when the percent changes', async () => {
+    const { session, pipeline } = fixture()
+    pipeline.put.mockImplementationOnce(async (_u, _h, _f, progress) => {
+      let seen = 0
+      const stop = session.subscribe(() => seen++)
+      for (const percent of [10, 10, 10, 11]) progress(percent)
+      stop()
+      expect(seen).toBe(2)
+      expect(session.getSnapshot().entries[0]?.percent).toBe(11)
+    })
+    await session.select(files)
+    expect(session.getSnapshot().entries[0]).toMatchObject({ percent: 100, confirmed: true })
+    expect(pipeline.put).toHaveBeenCalledTimes(2)
+  })
   it('rejects a client gate before reservation or previews', async () => {
     const { session, pipeline } = fixture()
     pipeline.read.mockRejectedValueOnce(new Error('limit'))

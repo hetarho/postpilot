@@ -83,8 +83,6 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T843 | One factory for the per-project clip autosave queues | ARCH | - | todo |
 | T844 | Stop the per-second re-render of the dubbing editor | ARCH | T843 | todo |
-| T849 | Publish clip upload progress only when it changes | ARCH | - | todo |
-| T850 | Patch blog video upload progress only when it changes | ARCH | T849 | todo |
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
@@ -93,7 +91,7 @@
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
-| tidy-261116 | 3 | 14 | 10 | 4 | 0 | 2 | 2 | 2026-11-16T07:50:23.384Z | [history](work/tidy-261116.json) |
+| tidy-261116 | 3 | 14 | 12 | 2 | 0 | 0 | 2 | 2026-11-16T08:03:34.177Z | [history](work/tidy-261116.json) |
 
 ## next
 - inspect work board for remaining tasks

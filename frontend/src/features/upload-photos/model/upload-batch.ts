@@ -298,7 +298,9 @@ async function upload(batch: Batch, id: string): Promise<void> {
           presigned.contentType,
           body,
           (percent) => {
-            if (!batch.discarded) patch(batch, id, { progress: percent })
+            // An equal percent changes nothing: skip the patch so the strip does not re-render.
+            if (!batch.discarded && itemOf(batch, id)?.progress !== percent)
+              patch(batch, id, { progress: percent })
           },
         )
       } else {
