@@ -142,7 +142,35 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "b5394707-79a4-4451-abff-b38559ff9b61",
+    "owner": "tonenav",
+    "via": "merge",
+    "executor": {
+      "host": "ihaelam-ui-MacBookPro.local",
+      "pid": 97509
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "0715db3bba661f48f62e5bdd57527c348774d814",
+    "cohort": [
+      {
+        "id": "9b28167ae9419c5622b0e2e3",
+        "tag": "tonenav",
+        "branch": "gusta-session-start-tonenav-0b2ecee9",
+        "head": "e2ae1a22a4d636ffd89c2318ad0aab8029a046cd",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-16T14:08:35.792Z",
+    "deadline": "2026-11-16T15:08:32.315Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "3987a69a-1c88-430c-81f0-b4df4835f23c",
