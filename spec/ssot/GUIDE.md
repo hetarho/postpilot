@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r27 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r28 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -81,7 +81,7 @@
   - a create invalidates both lists, a dismissal only the candidate list
 - GUIDE-24 [o] server refusal messages are rendered through the shared failure catalogue; the client predicts none of them and mirrors neither the per-account cap nor the pending-candidate bound
 - GUIDE-25 [o] the scope control lives in `entities/guideline/ui` ← the create form and the whole-scope edit need the identical control and a feature may not import a sibling feature; it reads the template directory through `entities/template/@x/guideline.ts`; the write callers live in `entities/guideline/api` because the revision capture needs the create one
-- GUIDE-26 [o] 지침 is a section of 내 스타일 whose 글 / 영상 switch opens 지침 or 영상 지침, one list for both clip channels (→=THEME-38), each control retaining the 44 px pointer floor at 320 px.
+- GUIDE-26 [o] 지침 is a section of 내 스타일 whose 글 / 영상 switch opens 지침 or 영상 지침, one list for every video (→=THEME-38), each control retaining the 44 px pointer floor at 320 px.
 - GUIDE-27 [o] 전부 수락 runs the standard create once per listed pending candidate with 전역 scope and `from_candidate_id`, keeping every one that passes and leaving each refusal (over 300 characters, a duplicate, the account cap) in the queue with its catalogue reason for a single 승인 to fix ← one over-long candidate must not hold back the rest, and a rule that needs a scope other than 전역 is exactly the one worth opening
   - 전부 거절 dismisses every listed candidate behind one `Dialog` naming the count ← there is no undo and a single 무시 stays dialog-free (→GUIDE-12)
   - neither action is offered while the list is empty and both re-read the candidate list, a create additionally invalidating the saved list
@@ -114,7 +114,7 @@
   - out of use it leaves the list and stays offered in the sheet, and it leaves every run started afterwards, while work already enqueued keeps the texts it froze (→GUIDE-17)
   - a new account starts with every 기본 지침 in use, and no other surface changes one
   - a 원칙 has no in-use state and appears in no sheet
-- GUIDE-44 [o] `/video-guidelines` (the 영상 side of 내 스타일's 지침 section, location 영상 지침, lazily split; its link keeps the clip channel it was opened under, 네이버 클립 without one →=THEME-38) is `/guidelines` for the 영상 지침 kind:
+- GUIDE-44 [o] `/video-guidelines` (the 영상 side of 내 스타일's 지침 section, location 영상 지침, lazily split, →=THEME-38) is `/guidelines` for the 영상 지침 kind:
   - the same one list of closed rows (→GUIDE-20), open rows (→GUIDE-47) and 기본 지침 sheet (→GUIDE-48), an owner row's scope badge reading `전역`, `영상 템플릿` or `적용 대상 없음` and its open row carrying the video-template-name chips
   - the section's 새 지침 button opens its new-guideline Sheet (`?new=1`), whose scope control offers 전역 / 특정 영상 템플릿; `기본 지침` and the direct-writing choice sit in the page above the list, not in a dock (→THEME-67)
   - above the list the `새 영상 지침 후보` banner and its one-at-a-time review (→!GUIDE-22/23/27), each candidate linking the clip it came from (plain text once that clip is gone)
@@ -177,6 +177,7 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r28 261116 GUIDE-26✎ GUIDE-44✎ clip channel in the 영상 지침 link→no channel
 - r27 261116 GUIDE-47✎ closed row with 추천/scope badge→sentence only, badges when open
 - r26 261111 GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ Naver Blog channel / clip-channel destinations, rows→내 스타일's 지침 section with a 글/영상 switch, cards; GUIDE-22✎ closed counted disclosure below the list→banner above it opening a one-at-a-time review sheet with 넘기기; GUIDE-23✎ 승인→저장, bulk actions at the disclosure head→in the review sheet below the candidate; GUIDE-46✎ untitled row text cut to one line→whole text with the title as a label above; GUIDE-48✎ dock's 기본 지침→the page's, above the list
 - r25 261030 GUIDE-44✎ 새 지침 from the channel creation menu→from the 지침 section's own 새 지침 button
