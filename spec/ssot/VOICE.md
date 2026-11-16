@@ -1,5 +1,5 @@
 # VOICE voices
-> r21 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
+> r22 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -78,8 +78,10 @@
 - VOICE-60 [o] the learning chat's situations form an extensible code-owned catalog of at least 200 stable keys with natural, casual Korean wording, a concrete scene, optional writing hint, part and starter designation.
   - preserve all existing prompt keys and saved-answer/photo semantics; improve their wording without invalidating answers
   - each situation frames a scene the owner would write up for others (이웃에게 소개하듯 말해 주세요) so a reply comes out in the owner's posting voice rather than raw chat shorthand ← one voice serves the blog, and 'ㅋㅋ 맛있었음' would make posts too light
+  - situations are the imagined path: they open behind `생각나는 게 없어요` and after the owner's experiences (→!VOICE-78)
   - the starter set has ten different ordinary-life situations covering opening/description/closing, requires no photo upload and asks for one to three natural sentences in the owner's usual style
   - further situations cover varied everyday feelings, recommendations, surprises, frustrations, decisions, places and objects; no situation requires an invented personal history or specialist knowledge
+  - unanswered situations offer review moments — a place, food or drink, a thing bought, a recommendation — before other everyday scenes ← the posts the voice writes are reviews
   - optional photo situations still use only owner-picked private photos; replies are nonempty Korean prose, and replying again to a situation replaces only that key
   - reads and browsing create no provider work; text and catalog keys are code, not generated at runtime
 - VOICE-61 [o] a line that is not the owner's prose counts toward no sentence and feeds no item: a hashtag-only line, a `[출처]` line, an info line (one that opens with 주소 · 영업시간 · 운영시간 · 전화 · 휴무 · 주차 · 가격 · 위치 followed by `:` or a space, or with 📍 ⏰ ☎️), a Korean address line, and a line holding no Hangul ← a voice is learned only from prose the owner wrote, and a pasted Naver post carries its place card and hashtags
@@ -98,8 +100,9 @@
   - the partner's lines — situations and a short reaction to the previous reply — come from the code-owned catalog and call no model; nothing in the chat is ever post material
   - `다른 얘기 할래요` replaces the current situation without counting it, and Back reopens the previous situation's saved reply for editing
   - saved answers and stable keys are the resume authority; a failed save retains the reply and the same situation, and duplicate/stale submits cannot advance another owner or situation
-  - the first chat uses the starter situations and, after ten valid saved replies covering every part, offers the explicit analysis action; it never requires exhausting the catalog or padding a reply to many sentences
-  - later chats choose unanswered situations, preserving every earlier answer; the catalog can keep growing into hundreds without changing the saved format
+  - the first chat starts with the owner's own experience (→!VOICE-78) and, after ten valid saved replies covering every part, offers the explicit analysis action; it never requires exhausting the catalog or padding a reply to many sentences
+  - later chats offer another experience first and unanswered situations after it, preserving every earlier answer; the catalog can keep growing into hundreds without changing the saved format
+  - every partner question carries example replies (→!VOICE-79)
   - editing a saved reply is explicit; catalog exhaustion offers review/completion instead of silently rewriting earlier replies
   - the chat is reusable inline during setup and in settings; pasted material and explicit saved-reply editing retain their source validation/photo contracts
 - VOICE-66 [o] writing-voice setup starts with three understandable peer methods: 대화하기 (the learning chat →VOICE-65), 내 글 붙여넣기, or choosing from eight explicitly AI-generated styles (AI 말투).
@@ -141,22 +144,37 @@
   - each found phrase names its habit, the voice's rate, the text's count and one 학습 글 example sentence; an AI 말투's example is its fictional sample, labelled so (→!VOICE-69)
   - rhythm, impression and other uncountable traits are never highlighted
 
+- VOICE-78 [o] the learning chat asks first about one experience of the owner's own: the partner offers the six top-level kinds of TMPL-72 and an optional name, then asks about that one experience in the kind's review order ← recalling a real visit is easier than imagining a scene, and the replies come out in the voice of the reviews the owner will write
+  - kinds: 맛집, 카페, 뷰티, 숙소, 체험·여가, 제품 (→=TMPL-72)
+  - each kind has a code-owned thread of at least two opening, five description and two closing questions; an experience asks one opening, three description and one closing question, so two experiences make the first ten and cover every part (→!VOICE-32)
+  - a question names the experience only before a comma or at a sentence end, never with an attached particle; an empty name reads as the kind's plain word (그곳 · 그 제품)
+  - `다른 얘기 할래요` swaps in another question of the same part without counting; `생각나는 게 없어요` leaves for the imagined situations (→VOICE-60)
+  - the same kind may be chosen again; each experience keeps its own replies, and replying again replaces only that experience's answer to that question
+  - an experience's kind and name are not 학습 글: they feed no fingerprint item and no readiness, and are kept only so a resumed chat asks about the same experience; they are private owner data (→!VOICE-58)
+  - thread questions, like situations, are code and call no model (→VOICE-65)
+
+- VOICE-79 [o] every learning-chat question offers three example replies in visibly different registers (해요체 · ~다 · 음슴체, or 합니다체 for one of them), collapsed under `다른 사람들은 이렇게 말했어요` and each labelled with its register ← one visible register gets copied and becomes the learned voice
+  - an example keeps the sentence frame, endings and mark habits of a published Korean review and replaces its content with the question's; no source sentence is reused ← examples should sound like real reviewers, not product copy
+  - one to three sentences each, the length the chat asks for
+  - examples are code; no action inserts one into the composer, and an example is never saved, never 학습 글 and never fingerprint or readiness input (→!VOICE-59)
+
 ## flow
 - personal start: choose 대화하기 | paste own writing → explicitly create/resume one personal voice → reply in the learning chat → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
 - further learning: another chat over unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
 - generated styles: explicit generation with visible estimate → bounded durable one-call batch → requested2/4/8/16 labelled styles (eight by default) → explicit selection/adoption → atomic made synthetic voice/default choice → creation
-- chat: starter/unanswered situations → partner's line → owner's reply → guarded save → partner's reaction + next situation | failure retains reply → ten replies → explicit analysis or completion; saved-key resume after navigation/reload
+- chat: experience (kind + optional name) → its thread questions | 생각나는 게 없어요 → starter/unanswered situations → partner's line with collapsed examples → owner's reply → guarded save → partner's reaction + next situation | failure retains reply → ten replies → explicit analysis or completion; saved-key resume after navigation/reload
 - test: select one variable and2/4/8/16 entrants → common real-writing material → explicit generation → human knockout decisions → optional champion adoption
 - delete: guarded soft delete → retained historical refs → explicit restore/reassignment
 
 ## constraints
-- constants BE `internal/voice`: `VoiceNameMaxChars` 50 · `SampleMinChars` 200 · `LabelFallbackChars` 20 · `VOICE_READY_SENTENCES` 60 · `VOICE_INITIAL_QUESTION_COUNT` 10 · code-owned prompt catalog ≥200 · `VOICE_CANDIDATE_COUNT` default8, allowed2/4/8/16 · `VOICE_FEW_SHOT_MAX` 3 · `VOICE_FEW_SHOT_EXCERPT_TARGET_CHARS` / `MAX_CHARS` 500 / 800 · `VOICE_COMPARE_MIN_EXPECTED` 2 occurrences; FE constants live in their owning slices — `entities/voice/config` mirrors `VOICE_NAME_MAX_CHARS` 50 and the paste feature mirrors `VOICE_SAMPLE_MIN_CHARS` 200; the prompt set and the non-prose patterns are code; no env var, no schedule, no interval
-- schema: `voices(id PK, user_id FK cascade, name, is_default, deleted_at, created_at, updated_at, UNIQUE(id, user_id))` with `voices_one_default` and `voices_active_name`, plus tables for 학습 글 (a pasted post or a prompt answer with its photo key), analyses (current and previous) and read-only paid check history, each keyed by `(user_id, voice_id)`
+- constants BE `internal/voice`: `VoiceNameMaxChars` 50 · `SampleMinChars` 200 · `LabelFallbackChars` 20 · `VOICE_READY_SENTENCES` 60 · `VOICE_INITIAL_QUESTION_COUNT` 10 · code-owned prompt catalog ≥200 · `VOICE_EXPERIENCE_REPLIES` 5 (1 opening · 3 description · 1 closing) · experience threads per kind ≥2/≥5/≥2 · `VOICE_PROMPT_EXAMPLES` 3 · `VOICE_CANDIDATE_COUNT` default8, allowed2/4/8/16 · `VOICE_FEW_SHOT_MAX` 3 · `VOICE_FEW_SHOT_EXCERPT_TARGET_CHARS` / `MAX_CHARS` 500 / 800 · `VOICE_COMPARE_MIN_EXPECTED` 2 occurrences; FE constants live in their owning slices — `entities/voice/config` mirrors `VOICE_NAME_MAX_CHARS` 50 and the paste feature mirrors `VOICE_SAMPLE_MIN_CHARS` 200; the prompt set and the non-prose patterns are code; no env var, no schedule, no interval
+- schema: `voices(id PK, user_id FK cascade, name, is_default, deleted_at, created_at, updated_at, UNIQUE(id, user_id))` with `voices_one_default` and `voices_active_name`, plus tables for 학습 글 (a pasted post or a prompt answer with its photo key, a thread answer naming its experience), experiences (kind, optional name), analyses (current and previous) and read-only paid check history, each keyed by `(user_id, voice_id)`
 - placement BE: `backend/internal/voice` (domain, service, fingerprint counting, store, rpc, `schemas/`); it publishes ports consumed by post (`VoiceDirectory`), generation (`Profiles`) and experiment (`VoiceDirectory`, the fingerprint comparison), and asks `Jobs` before a delete; all adapted only in `cmd/api`; a boundary test forbids sibling `store`/`sqlc` imports inside `internal/`
 - placement FE: `entities/voice` (model, api, ui, config) · `features/create-voice` `rename-voice` `set-default-voice` `delete-voice` `restore-voice` `select-post-voice` and the other verb slices taking `voiceId` · the pure fingerprint diagnostic shared by writing/tests and retained paid history · `pages/voices` `pages/voice` · `widgets/voice-warning` · `app/routes` (voice layout, `/voice` redirect)
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
+- r22 261116 VOICE-78+ the learning chat asks first about one owner experience by kind; VOICE-79+ three-register example replies under every chat question; VOICE-60✎ starter/unanswered situations first→the imagined path behind 생각나는 게 없어요, review moments before other scenes; VOICE-65✎ first chat starter situations→an experience, later chats unanswered situations→another experience first
 - r21 261116 VOICE-24✎ ⑤ top three first/last lines→only lines recurring in two or more 학습 글; VOICE-62✎ values beside each other, largest-relative-gap headline→prose-only post counting, dominant-value lead, 비슷함/다름 verdict and n-of-m summary, shown in the post's 말투 view; VOICE-77+ habit phrases found in a text
 - r20 261111 VOICE-52✎ the 말투 section every channel shares, settings rows→내 스타일's 말투 section, cards showing how a style sounds (quoted sentence, AI impression, up to three signature phrases); VOICE-66✎ a method opens its flow on tap→a tap selects, 다음 opens it
 - r19 261102 VOICE-53✎ 새 말투 만들기 on the list and the post picker→also in a new post's offer (→POST-121)
