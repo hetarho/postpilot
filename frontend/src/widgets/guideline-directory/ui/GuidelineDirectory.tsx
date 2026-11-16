@@ -66,6 +66,7 @@ export function GuidelineDirectory({
   createOpen = false,
   onCreateClosed,
   dock,
+  embedded = false,
 }: {
   kind: GuidelineKind
   /** Open an empty new guideline — as the screen mounts (TMPL-61's 지침 만들기) or when the
@@ -74,6 +75,8 @@ export function GuidelineDirectory({
   onCreateClosed?: () => void
   /** The page's one dock: the section's creation button (THEME-67). */
   dock?: ReactNode
+  /** The editor's guideline Sheet shares the same rules without another page frame. */
+  embedded?: boolean
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
@@ -133,12 +136,24 @@ export function GuidelineDirectory({
     }
   }
 
+  const Frame = embedded ? 'div' : 'main'
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
+    <Frame
+      className={
+        embedded
+          ? 'flex min-w-0 flex-col'
+          : pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })
+      }
+    >
       {/* Guide: the hub's large title and the 지침 chip say where this is; the page leads with
           what the list IS — the plain sentences the AI always keeps to. */}
-      <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>
-      <Typography variant="display" as="p" aria-hidden="true" className="text-balance">
+      {!embedded && <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>}
+      <Typography
+        variant={embedded ? 'body' : 'display'}
+        as="p"
+        aria-hidden={embedded ? undefined : true}
+        className="text-balance"
+      >
         {t(`${page}.always`, { ns: 'guidelines' })}
       </Typography>
 
@@ -337,7 +352,7 @@ export function GuidelineDirectory({
         </>
       )}
       {dock}
-    </main>
+    </Frame>
   )
 }
 

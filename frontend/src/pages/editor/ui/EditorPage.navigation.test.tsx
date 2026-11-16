@@ -150,35 +150,83 @@ it('returns from the template wizard to the template question of the post', asyn
   expect(await screen.findByRole('heading', { name: '어떤 틀로 써 볼까요?' })).toBeVisible()
 })
 
-// POST-123 →THEME-58: 확인's 지침 row opens the guidelines page with the post as its one way back,
-// and coming back — by that link or the browser's Back — lands on 확인 again. The post holds
-// nothing that would otherwise open it on 확인.
-it('returns from the guidelines page to the post, on 확인', async () => {
+it('changes account guidelines over the saved writing review without leaving the draft', async () => {
   const user = userEvent.setup()
+  const calls: string[] = []
   const { router } = renderAppAt('/posts/saved', {
+    user: USER,
+    calls,
+    posts: { posts: [{ slug: 'saved', title: '작성 중인 글', memo: '남겨 둔 경험' }] },
+    guidelines: {
+      defaults: [{ key: 'gentle', name: '반복 줄이기', text: '같은 문장을 반복하지 않아요.' }],
+    },
+  })
+  await guideTo(user, GUIDE.review)
+  const opener = await screen.findByRole('button', { name: '지침 바꾸기' })
+  await user.click(opener)
+  const sheet = await screen.findByRole('dialog', { name: '지침' })
+  expect(router.state.location.pathname).toBe('/posts/saved')
+  await user.click(await within(sheet).findByRole('button', { name: /반복 줄이기/ }))
+  await user.click(within(sheet).getByRole('button', { name: '반복 줄이기 적용 안함' }))
+  await waitFor(() => expect(calls).toContain('SetDefaultGuidelineEnabled'))
+  expect(router.state.location.pathname).toBe('/posts/saved')
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: '지침' })).toBeNull()
+  expect(opener).toHaveFocus()
+  expect(screen.getByLabelText('제목')).toHaveValue('작성 중인 글')
+  expect(screen.getByLabelText('메모')).toHaveValue('남겨 둔 경험')
+  expect(screen.getByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+})
+
+it('opens guidelines for an empty unsaved draft without creating a post or starting AI', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  const { router } = renderAppAt('/posts/new', { user: USER, calls })
+  await guideTo(user, GUIDE.review)
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  const sheet = await screen.findByRole('dialog', { name: '지침' })
+  await within(sheet).findByRole('button', { name: '기본 지침' })
+  expect(router.state.location.pathname).toBe('/posts/new')
+  await user.click(within(sheet).getByRole('button', { name: '닫기' }))
+  expect(screen.queryByRole('dialog', { name: '지침' })).toBeNull()
+  expect(router.state.location.pathname).toBe('/posts/new')
+  expect(screen.getByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+  expect(calls).not.toContain('SavePostDraft')
+  expect(calls.filter((call) => /^(Start|Analyze|Generate|Create)/.test(call))).toEqual([])
+})
+
+it('keeps guideline editing mounted when an ordinary autosave first mints the post', async () => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  const { router } = renderAppAt('/posts/new', { user: USER, calls })
+  fireEvent.change(await screen.findByLabelText('제목'), {
+    target: { value: '지침을 고치는 동안' },
+  })
+  await guideTo(user, GUIDE.review)
+  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
+  const sheet = await screen.findByRole('dialog', { name: '지침' })
+  await waitFor(() => expect(calls).toContain('SavePostDraft'))
+  expect(sheet).toBeVisible()
+  expect(router.state.location.pathname).toBe('/posts/new')
+  await user.click(within(sheet).getByRole('button', { name: '닫기' }))
+  await waitFor(() =>
+    expect(router.state.location.pathname).toBe('/posts/20260828-지침을-고치는-동안'),
+  )
+  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
+  expect(screen.getByLabelText('제목')).toHaveValue('지침을 고치는 동안')
+})
+
+it('preserves the post return of a standalone guidelines URL', async () => {
+  const user = userEvent.setup()
+  const { router } = renderAppAt('/guidelines?post=saved', {
     user: USER,
     posts: { posts: [{ slug: 'saved' }] },
   })
-  expect(await screen.findByRole('heading', { name: '어떤 글을 쓰시나요?' })).toBeVisible()
-  await guideTo(user, GUIDE.review)
-  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
-  await waitFor(() => expect(router.state.location.href).toBe('/guidelines?post=saved'))
-
-  const main = await screen.findByRole('main')
   const back = await screen.findByRole('link', { name: '글 작성' })
   expect(back).toHaveAttribute('href', '/posts/saved')
-  // It heads the page, over the hub's title and chips, and it is the page's only way back.
-  expect(back.compareDocumentPosition(main) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(screen.getAllByRole('navigation', { name: '돌아가기' })).toHaveLength(1)
   await user.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
-  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
-
-  await user.click(await screen.findByRole('button', { name: '지침 바꾸기' }))
-  await waitFor(() => expect(router.state.location.pathname).toBe('/guidelines'))
-  router.history.back()
-  await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
-  expect(await screen.findByRole('heading', { name: '이대로 써 볼까요?' })).toBeVisible()
 })
 
 // The guidelines page reached from its own tab is a hub section with no way back (THEME-58).

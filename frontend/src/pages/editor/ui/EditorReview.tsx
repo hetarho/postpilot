@@ -8,7 +8,7 @@ import type { GuideStep } from '../model/guide'
 
 /** Guide: 확인 — the short summary 글 생성 ends on. Each part of what the run will be given is one
  *  row: its name, what it holds now, and one way to change it. The story, photos and details jump
- *  back to their own screen; 말투 is its own picker in place; 지침 opens its page; the writing
+ *  back to their own screen; 말투 is its own picker in place; 지침 opens its Sheet; the writing
  *  options open the brief. Nothing here is a second copy of a field. */
 export function EditorReview({
   post,

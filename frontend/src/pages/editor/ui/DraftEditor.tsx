@@ -9,6 +9,8 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
+import { X } from 'lucide-react'
+import { GuidelineDirectory } from '@/widgets/guideline-directory'
 import {
   isPublished,
   postReturnDestination,
@@ -42,6 +44,8 @@ import {
 } from '@/features/fill-template-answers'
 import {
   SegmentedControl,
+  Button,
+  Sheet,
   WorkspaceHeader,
   ChoiceButton,
   type PopoverHandle,
@@ -127,6 +131,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     () =>
       takeGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
   )
+  const [guidelinesOpen, setGuidelinesOpen] = useState(false)
+  const deferredMint = useRef<string | undefined>(undefined)
   const guideRef = useRef(guide)
   useEffect(() => {
     guideRef.current = guide
@@ -154,7 +160,10 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       // Replace the unminted address without changing its creation/history context. The scroll
       // stays: the mint is an edit’s side effect, and a router reset would move the input
       // away from the owner.
-      void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
+      // Keep the open guideline editor mounted while the post's ordinary autosave settles.
+      if (guidelinesOpen) deferredMint.current = slug
+      else
+        void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
   // A template the wizard handed back is assigned once, through the same assignment the picker
@@ -354,22 +363,12 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     },
   })
 
-  // 확인's 지침 row: the guidelines page with this post as its explicit way back (POST-123
-  // →THEME-58). A draft not yet saved is saved first, as the template wizard's is, so there is a
-  // post to come back to; and coming back — by the page's 글 작성 or the browser's Back — lands on
-  // 확인, the screen the owner left, not the screen a returning draft would otherwise open on.
-  const openGuidelines = () => {
-    void autosave
-      .flush()
-      .then(async () => {
-        const slug = post?.slug ?? (await autosave.ensureSlug())
-        await flushContentQueue(slug)
-        stashGuideStep(slug, 'review')
-        await navigate({ to: '/guidelines', search: { post: slug } })
-      })
-      .catch(() => {
-        /* The draft/content save status retains and explains a refusal. */
-      })
+  const closeGuidelines = () => {
+    setGuidelinesOpen(false)
+    const slug = deferredMint.current
+    deferredMint.current = undefined
+    if (slug)
+      void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
   }
 
   // Each writing screen holds one task; the summary links back to every input.
@@ -455,7 +454,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         }
         brief={choices.brief}
         onGo={setGuide}
-        onOpenGuidelines={openGuidelines}
+        onOpenGuidelines={() => setGuidelinesOpen(true)}
       />
     ),
   }
@@ -610,6 +609,29 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         <div className="flex flex-1 flex-col">{renderGuide()}</div>
       )}
       {choices.sheet}
+      <Sheet
+        open={guidelinesOpen}
+        label={t('guide.summary.guidelines')}
+        onClose={closeGuidelines}
+        size="wide"
+        header={
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Typography as="h2" variant="title">
+              {t('guide.summary.guidelines')}
+            </Typography>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('action.close', { ns: 'common' })}
+              onClick={closeGuidelines}
+            >
+              <X aria-hidden="true" className="size-5" />
+            </Button>
+          </div>
+        }
+      >
+        <GuidelineDirectory kind="post" embedded />
+      </Sheet>
     </main>
   )
 }
