@@ -94,3 +94,73 @@ func TestOwnerEditedObservationFieldsAreOwnerMaterial(t *testing.T) {
 		}
 	}
 }
+
+// GEN-91: an unedited observation holding no stored spans still supplies its scene, objects and
+// visible text (and a video its events and speech) as that attachment's visual observation, and
+// never its mood.
+func TestObservationWithoutSpansSuppliesVisualFieldSources(t *testing.T) {
+	input := WritePromptInput{Photos: []string{"a.jpg"}, Videos: []string{"v.mp4"}, Observations: []Observation{
+		{File: "a.jpg", Scene: "가게 입구", Mood: "밝음", VisibleText: "OPEN", Objects: []string{"간판", "화분"}, Events: []string{"사진엔 없는 사건"}, Speech: "사진엔 없는 말"},
+		{File: "v.mp4", Scene: "주방", Mood: "분주함", Objects: []string{"냄비"}, Events: []string{"국물을 붓는다"}, Speech: "주문 나왔습니다"},
+	}}
+	sources := WritingOriginSources(input, false, map[string]string{"a.jpg": "img-1", "v.mp4": "vid-1"})
+	byFile := map[string]map[string]post.OriginSource{"a.jpg": {}, "v.mp4": {}}
+	for _, source := range sources {
+		if source.Kind != post.OriginSourceVisualObservation || !source.Available {
+			t.Fatalf("source %+v is not available visual observation", source)
+		}
+		want := map[string]string{"a.jpg": "img-1", "v.mp4": "vid-1"}[source.AttachmentFilename]
+		if want == "" || source.AttachmentID != want {
+			t.Fatalf("source %+v is not bound to its attachment", source)
+		}
+		byFile[source.AttachmentFilename][source.Text] = source
+	}
+	for file, want := range map[string][]string{
+		"a.jpg": {"가게 입구", "OPEN", "간판", "화분"},
+		"v.mp4": {"주방", "냄비", "국물을 붓는다", "주문 나왔습니다"},
+	} {
+		if len(byFile[file]) != len(want) {
+			t.Fatalf("%s sources = %+v, want %v", file, byFile[file], want)
+		}
+		for _, text := range want {
+			if _, ok := byFile[file][text]; !ok {
+				t.Fatalf("%s lacks %q: %+v", file, text, byFile[file])
+			}
+		}
+	}
+	if got := byFile["a.jpg"]["간판"].ID; got != "current.observation.0.objects.0" {
+		t.Fatalf("id scheme changed: %q", got)
+	}
+}
+
+// GEN-91, GEN-84: an observation with stored spans keeps its span-derived sources and gains no
+// field sources.
+func TestObservationWithSpansKeepsSpanSources(t *testing.T) {
+	observation := Observation{File: "a.jpg", Scene: "visible cup", Mood: "따뜻함", Objects: []string{"cup"}}
+	observation.OriginCandidates = []ObservationOriginCandidate{{Field: "scene", Quote: "visible cup", Category: post.OriginPhotoInterpretation, SourceRefs: []string{"photo"}}}
+	observation.Origins = ValidateObservationOrigins(observation, originSources(), AttachmentPhoto)
+	if len(ValidateStoredObservationOrigins(observation, observation.Origins, AttachmentPhoto).Spans) != 1 {
+		t.Fatal("fixture capture did not validate")
+	}
+	sources := WritingOriginSources(WritePromptInput{Photos: []string{"a.jpg"}, Observations: []Observation{observation}}, false)
+	if len(sources) != 1 || sources[0].ID != "current.visual.0.0" || sources[0].Text != "visible cup" {
+		t.Fatalf("sources = %+v, want only the span-derived one", sources)
+	}
+}
+
+// GEN-91, GEN-84: a caption quoting the scene of an observation with no stored spans resolves as
+// photo_interpretation against the fallback source.
+func TestCaptionOfSpanlessObservationResolvesAsPhotoInterpretation(t *testing.T) {
+	input := WritePromptInput{Photos: []string{"a.jpg"}, Observations: []Observation{{File: "a.jpg", Scene: "푸른 벽 앞의 카페 입구", Mood: "따뜻함"}}}
+	sources := WritingOriginSources(input, false, map[string]string{"a.jpg": "img-1"})
+	content := PostContent{Title: "카페", Blocks: []Block{{Type: BlockImage, File: "a.jpg", Alt: "입구", Caption: "푸른 벽 앞의 카페 입구"}}}
+	candidates := []post.OriginCandidate{originCandidate(post.OriginFieldLocator{Kind: post.OriginFieldBlockCaption, BlockIndex: originInt(0)}, "푸른 벽 앞의 카페 입구", post.OriginPhotoInterpretation, "current.observation.0.scene")}
+	got := FinalizeWriteOrigins(WriteAnswer{Content: content, OriginCandidates: candidates}, []string{"a.jpg"}, nil, nil, sources)
+	if got.Origins == nil || len(got.Origins.Spans) != 1 || got.Origins.Spans[0].Category != post.OriginPhotoInterpretation {
+		t.Fatalf("caption origin = %+v", got.Origins)
+	}
+	mood := originCandidate(post.OriginFieldLocator{Kind: post.OriginFieldBlockAlt, BlockIndex: originInt(0)}, "입구", post.OriginPhotoInterpretation, "current.observation.0.mood")
+	if len(ResolveWriteOriginCandidates(got.Content, sources, []post.OriginCandidate{mood}).Review.Spans) != 0 {
+		t.Fatal("mood supported a photo interpretation")
+	}
+}

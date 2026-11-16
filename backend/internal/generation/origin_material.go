@@ -102,10 +102,17 @@ func WritingOriginSources(input WritePromptInput, fictional bool, attachmentIDs 
 			}
 		}
 		if observation.OwnerEdited {
-			ownerObservationSources(&catalog, i, observation, currentIDs[observation.File])
+			// The owner's list keeps GEN-90's field list, mood included (GEN-91).
+			observationFieldSources(&catalog, i, observation, currentIDs[observation.File], observation.OwnerFields, true, true)
 			continue
 		}
 		validated := ValidateStoredObservationOrigins(observation, observation.Origins, kind)
+		if len(validated.Spans) == 0 {
+			// An observation without stored spans must still give the writer its photo
+			// evidence (GEN-91); mood is the observer's interpretation, never evidence.
+			observationFieldSources(&catalog, i, observation, currentIDs[observation.File], nil, false, kind == AttachmentVideo)
+			continue
+		}
 		byID := map[string]post.OriginSource{}
 		for _, source := range validated.Sources {
 			byID[source.ID] = source
@@ -126,15 +133,16 @@ func WritingOriginSources(input WritePromptInput, fictional bool, attachmentIDs 
 	return catalog.sources
 }
 
-// ownerObservationSources describes an entry the owner corrected by hand field by field: each
-// field the owner changed is the owner's own statement about the attachment and supports
-// owner_input, while every field the owner left stands as the observer's reading (GEN-80,
-// GEN-90). The observer's stored spans no longer match the corrected entry, so the fields
-// themselves are the material.
-func ownerObservationSources(catalog *originCatalog, index int, observation Observation, attachmentID string) {
+// observationFieldSources offers an observation's fields as attachment-bound material: each
+// field named in ownerFields is the owner's own statement about the attachment and supports
+// owner_input, while every other field stands as the observer's visual reading (GEN-80, GEN-90).
+// The observer's stored spans do not describe such an entry, so the fields themselves are the
+// material. withMood keeps `mood` in the list (GEN-90's owner-edited entry does, GEN-91's
+// fallback never does) and video adds the events and speech a still frame cannot carry.
+func observationFieldSources(catalog *originCatalog, index int, observation Observation, attachmentID string, ownerFields []string, withMood, video bool) {
 	add := func(field, text string, item int) {
 		kind := post.OriginSourceVisualObservation
-		if slices.Contains(observation.OwnerFields, field) {
+		if slices.Contains(ownerFields, field) {
 			kind = post.OriginSourceOwnerObservation
 		}
 		id := fmt.Sprintf("current.observation.%d.%s", index, field)
@@ -144,10 +152,15 @@ func ownerObservationSources(catalog *originCatalog, index int, observation Obse
 		catalog.add(id, kind, text, observation.File, true, attachmentID)
 	}
 	add(post.ObservationFieldScene, observation.Scene, -1)
-	add(post.ObservationFieldMood, observation.Mood, -1)
+	if withMood {
+		add(post.ObservationFieldMood, observation.Mood, -1)
+	}
 	add(post.ObservationFieldVisibleText, observation.VisibleText, -1)
 	for i, object := range observation.Objects {
 		add(post.ObservationFieldObjects, object, i)
+	}
+	if !video {
+		return
 	}
 	for i, event := range observation.Events {
 		add(post.ObservationFieldEvents, event, i)
