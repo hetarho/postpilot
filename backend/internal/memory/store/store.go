@@ -11,11 +11,8 @@ import (
 
 	"github.com/postpilot/backend/internal/memory"
 	"github.com/postpilot/backend/internal/memory/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
-
-// The fixed-width UTC layout every context writes timestamps in, so string comparison
-// and ORDER BY agree with chronological order.
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 type Store struct {
 	writer *sql.DB
@@ -46,7 +43,7 @@ func (s *Store) Insert(ctx context.Context, m memory.Memory, sourcePostSlug stri
 		// is already there are left alone: a re-approval is a second sighting of a fact,
 		// not an edit of one, and overwriting them would discard what the user authored.
 		if _, err := q.TouchMemory(ctx, sqlc.TouchMemoryParams{
-			LastSeenAt: formatTime(m.LastSeenAt), ID: existing.ID, UserID: m.UserID,
+			LastSeenAt: dbtime.Format(m.LastSeenAt), ID: existing.ID, UserID: m.UserID,
 		}); err != nil {
 			return memory.Memory{}, false, fmt.Errorf("touch memory: %w", err)
 		}
@@ -77,8 +74,8 @@ func (s *Store) Insert(ctx context.Context, m memory.Memory, sourcePostSlug stri
 	}
 	if err := q.InsertMemory(ctx, sqlc.InsertMemoryParams{
 		ID: m.ID, UserID: m.UserID, Text: m.Text, Kind: string(m.Kind),
-		CreatedAt: formatTime(m.CreatedAt), UpdatedAt: formatTime(m.UpdatedAt),
-		LastSeenAt: formatTime(m.LastSeenAt),
+		CreatedAt: dbtime.Format(m.CreatedAt), UpdatedAt: dbtime.Format(m.UpdatedAt),
+		LastSeenAt: dbtime.Format(m.LastSeenAt),
 	}); err != nil {
 		return memory.Memory{}, false, fmt.Errorf("insert memory: %w", err)
 	}
@@ -148,7 +145,7 @@ func (s *Store) Update(ctx context.Context, userID, id string, patch memory.Patc
 	}
 	defer tx.Rollback()
 	q := s.write.WithTx(tx)
-	stamp := formatTime(updatedAt)
+	stamp := dbtime.Format(updatedAt)
 
 	if patch.Text != nil {
 		n, err := q.UpdateMemoryText(ctx, sqlc.UpdateMemoryTextParams{
@@ -266,7 +263,7 @@ func linkSource(ctx context.Context, q *sqlc.Queries, userID, memoryID, postSlug
 		return nil
 	}
 	if err := q.InsertMemorySource(ctx, sqlc.InsertMemorySourceParams{
-		MemoryID: memoryID, UserID: userID, PostSlug: postSlug, CreatedAt: formatTime(at),
+		MemoryID: memoryID, UserID: userID, PostSlug: postSlug, CreatedAt: dbtime.Format(at),
 	}); err != nil {
 		return fmt.Errorf("link memory source: %w", err)
 	}
@@ -320,10 +317,8 @@ func toMemory(row sqlc.Memory) (memory.Memory, error) {
 	}, nil
 }
 
-func formatTime(t time.Time) string { return t.UTC().Format(writeLayout) }
-
 func parseTime(value string) (time.Time, error) {
-	parsed, err := time.Parse(time.RFC3339Nano, value)
+	parsed, err := dbtime.Parse(value)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parse memory timestamp %q: %w", value, err)
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/llm"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/provider/store/sqlc"
 )
@@ -79,7 +80,7 @@ func (s *Store) CreateRecommendationSet(ctx context.Context, set provider.Recomm
 		if err != nil {
 			return fmt.Errorf("next recommendation set position: %w", err)
 		}
-		stamp := at.UTC().Format(writeLayout)
+		stamp := dbtime.Format(at)
 		if err := queries.InsertRecommendationSet(ctx, sqlc.InsertRecommendationSetParams{
 			ID: set.ID, Label: set.Label, Position: position, CreatedAt: stamp, UpdatedAt: stamp,
 		}); err != nil {
@@ -92,7 +93,7 @@ func (s *Store) CreateRecommendationSet(ctx context.Context, set provider.Recomm
 func (s *Store) ReplaceRecommendationSet(ctx context.Context, set provider.RecommendationSet, at time.Time) error {
 	return s.inTx(ctx, func(queries *sqlc.Queries) error {
 		updated, err := queries.UpdateRecommendationSetLabel(ctx, sqlc.UpdateRecommendationSetLabelParams{
-			Label: set.Label, UpdatedAt: at.UTC().Format(writeLayout), ID: set.ID,
+			Label: set.Label, UpdatedAt: dbtime.Format(at), ID: set.ID,
 		})
 		if err != nil {
 			return fmt.Errorf("update recommendation set: %w", err)
@@ -208,7 +209,7 @@ func (s *TxStore) ReplaceRecommendationSets(ctx context.Context, sets []provider
 			return fmt.Errorf("delete recommendation set: %w", err)
 		}
 	}
-	stamp := at.UTC().Format(writeLayout)
+	stamp := dbtime.Format(at)
 	for index, set := range sets {
 		position := int64(index + 1)
 		if stored[set.ID] {

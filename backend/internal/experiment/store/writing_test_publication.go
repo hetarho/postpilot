@@ -13,6 +13,7 @@ import (
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/experiment/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func testPublicationFingerprint(in experiment.WinnerPublication) (string, error) {
@@ -83,7 +84,7 @@ func (s *Store) BeginPublication(ctx context.Context, in experiment.WinnerPublic
 		}
 		now := time.Now().UTC()
 		id := uuid.NewString()
-		if err := q.InsertWritingTestPublication(ctx, sqlc.InsertWritingTestPublicationParams{ID: id, UserID: in.UserID, TestID: in.TestID, WinnerCandidateID: in.WinnerID, Action: in.Action, RequestKey: in.RequestKey, Fingerprint: fingerprint, CreatedAt: formatTime(now)}); err != nil {
+		if err := q.InsertWritingTestPublication(ctx, sqlc.InsertWritingTestPublicationParams{ID: id, UserID: in.UserID, TestID: in.TestID, WinnerCandidateID: in.WinnerID, Action: in.Action, RequestKey: in.RequestKey, Fingerprint: fingerprint, CreatedAt: dbtime.Format(now)}); err != nil {
 			return err
 		}
 		out = experiment.TestPublication{ID: id, UserID: in.UserID, TestID: in.TestID, WinnerID: in.WinnerID, Action: in.Action, RequestKey: in.RequestKey, Fingerprint: fingerprint, Status: string(experiment.TestPublicationPending)}

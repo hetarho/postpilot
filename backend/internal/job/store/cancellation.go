@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/job/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"time"
 )
 
@@ -12,7 +13,7 @@ func (s *Store) RequestCancellation(ctx context.Context, user, subject, id strin
 	if err != nil {
 		return err
 	}
-	_, err = s.write.RequestCancellation(ctx, sqlc.RequestCancellationParams{ID: id, UserID: user, ProjectID: nullString(subject), Now: nullString(formatTime(at)), Kinds: kinds})
+	_, err = s.write.RequestCancellation(ctx, sqlc.RequestCancellationParams{ID: id, UserID: user, ProjectID: nullString(subject), Now: nullString(dbtime.Format(at)), Kinds: kinds})
 	return err
 }
 
@@ -22,7 +23,7 @@ func (s *Store) RequestOwnedCancellation(ctx context.Context, user, id string, a
 	if err != nil {
 		return err
 	}
-	_, err = s.write.RequestOwnedCancellation(ctx, sqlc.RequestOwnedCancellationParams{ID: id, UserID: user, Now: nullString(formatTime(at)), Kinds: kinds})
+	_, err = s.write.RequestOwnedCancellation(ctx, sqlc.RequestOwnedCancellationParams{ID: id, UserID: user, Now: nullString(dbtime.Format(at)), Kinds: kinds})
 	return err
 }
 
@@ -31,7 +32,7 @@ func (s *Store) RecoverCancellations(ctx context.Context, at time.Time) (int64, 
 	if err != nil {
 		return 0, err
 	}
-	return s.write.RecoverCancellations(ctx, sqlc.RecoverCancellationsParams{Now: nullString(formatTime(at)), Kinds: kinds})
+	return s.write.RecoverCancellations(ctx, sqlc.RecoverCancellationsParams{Now: nullString(dbtime.Format(at)), Kinds: kinds})
 }
 
 // AuthorizeDispatch is the conditional writer statement that serializes one model

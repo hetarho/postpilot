@@ -9,6 +9,7 @@ import (
 
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/job/store/sqlc"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 )
 
 func withWriter[T any](ctx context.Context, s *Store, fn func(*sqlc.Queries) (T, error)) (T, error) {
@@ -56,7 +57,7 @@ func (s *Store) Park(ctx context.Context, id, key string, policy job.ResumePolic
 			}
 			return struct{}{}, job.ErrInvalidWait
 		}
-		n, err := q.ParkJob(ctx, sqlc.ParkJobParams{WaitKey: key, ResumePolicy: string(policy), Now: formatTime(now), JobID: id})
+		n, err := q.ParkJob(ctx, sqlc.ParkJobParams{WaitKey: key, ResumePolicy: string(policy), Now: dbtime.Format(now), JobID: id})
 		if err == nil && n != 1 {
 			err = job.ErrInvalidWait
 		}
@@ -66,7 +67,7 @@ func (s *Store) Park(ctx context.Context, id, key string, policy job.ResumePolic
 }
 
 func (s *Store) Wake(ctx context.Context, id, key string, now time.Time) (bool, error) {
-	n, err := s.write.WakeContinuation(ctx, sqlc.WakeContinuationParams{Now: nullString(formatTime(now)), JobID: id, WaitKey: key})
+	n, err := s.write.WakeContinuation(ctx, sqlc.WakeContinuationParams{Now: nullString(dbtime.Format(now)), JobID: id, WaitKey: key})
 	return n == 1, err
 }
 func (s *Store) HasPendingWait(ctx context.Context, id string) (bool, error) {
@@ -74,7 +75,7 @@ func (s *Store) HasPendingWait(ctx context.Context, id string) (bool, error) {
 	return n, err
 }
 func (s *Store) AcknowledgeWaitCancellation(ctx context.Context, id, key string, now time.Time) (bool, error) {
-	n, err := s.write.AcknowledgeWaitCancellation(ctx, sqlc.AcknowledgeWaitCancellationParams{Now: nullString(formatTime(now)), JobID: id, WaitKey: key})
+	n, err := s.write.AcknowledgeWaitCancellation(ctx, sqlc.AcknowledgeWaitCancellationParams{Now: nullString(dbtime.Format(now)), JobID: id, WaitKey: key})
 	return n == 1, err
 }
 
@@ -107,6 +108,6 @@ func (s *Store) FailWaitingContinuation(ctx context.Context, id, key string, fai
 	if err != nil {
 		return false, err
 	}
-	n, err := s.write.FailWaitingContinuation(ctx, sqlc.FailWaitingContinuationParams{JobID: id, WaitKey: key, Reason: reason, Params: params, Now: nullString(formatTime(now))})
+	n, err := s.write.FailWaitingContinuation(ctx, sqlc.FailWaitingContinuationParams{JobID: id, WaitKey: key, Reason: reason, Params: params, Now: nullString(dbtime.Format(now))})
 	return n == 1, err
 }

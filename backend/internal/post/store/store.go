@@ -13,14 +13,10 @@ import (
 	"time"
 
 	"github.com/postpilot/backend/internal/campaign"
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/post"
 	"github.com/postpilot/backend/internal/post/store/sqlc"
 )
-
-// writeLayout is how timestamps live in SQLite: fixed-width RFC3339 in UTC. The width
-// matters because ORDER BY and `expires_at < ?` are plain string comparisons —
-// time.RFC3339Nano trims trailing zeros and would sort "…08.5Z" after "…08.51Z".
-const writeLayout = "2006-01-02T15:04:05.000000000Z07:00"
 
 // Store implements post.Storage over SQLite. Writes go through the single serialized
 // writer connection, reads through the pool (ARCHITECTURE §2.4).
@@ -60,8 +56,8 @@ func (s *Store) CreatePost(ctx context.Context, p post.Post) error {
 		// count is "nobody named one" here, never a post asking for no tags.
 		TargetLength: optionalInt64(p.TargetLength),
 		TagCount:     createTagCount(p.TagCount),
-		CreatedAt:    formatTime(p.CreatedAt),
-		UpdatedAt:    formatTime(p.UpdatedAt),
+		CreatedAt:    dbtime.Format(p.CreatedAt),
+		UpdatedAt:    dbtime.Format(p.UpdatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -86,7 +82,7 @@ func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo strin
 		Title:          title,
 		Memo:           memo,
 		TargetLanguage: optionalLanguage(targetLanguage),
-		UpdatedAt:      formatTime(updatedAt),
+		UpdatedAt:      dbtime.Format(updatedAt),
 		Slug:           slug,
 		UserID:         userID,
 	})
@@ -98,7 +94,7 @@ func (s *Store) UpdateDraft(ctx context.Context, slug, userID, title, memo strin
 
 func (s *Store) ReassignVoice(ctx context.Context, slug, userID, voiceID string, updatedAt time.Time) (bool, error) {
 	n, err := s.write.ReassignPostVoice(ctx, sqlc.ReassignPostVoiceParams{
-		VoiceID: optionalText(voiceID), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		VoiceID: optionalText(voiceID), UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		if isVoiceOwnershipViolation(err) {
@@ -121,7 +117,7 @@ func (s *Store) AssignTemplate(ctx context.Context, slug, userID string, templat
 		TemplateID:       value,
 		SeedTargetLength: optionalInt64(seed.TargetLength),
 		SeedTagCount:     optionalInt64(seed.TagCount),
-		UpdatedAt:        formatTime(updatedAt), Slug: slug, UserID: userID,
+		UpdatedAt:        dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		if isTemplateOwnershipViolation(err) {
@@ -140,7 +136,7 @@ func (s *Store) AssignField(ctx context.Context, slug, userID string, field *str
 		value = *field
 	}
 	n, err := s.write.AssignPostField(ctx, sqlc.AssignPostFieldParams{
-		Field: optionalText(value), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		Field: optionalText(value), UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("assign post field: %w", err)
@@ -154,7 +150,7 @@ func (s *Store) SetCampaign(ctx context.Context, slug, userID string, on bool, u
 	if on {
 		value = 1
 	}
-	n, err := s.write.SetPostCampaign(ctx, sqlc.SetPostCampaignParams{Campaign: value, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	n, err := s.write.SetPostCampaign(ctx, sqlc.SetPostCampaignParams{Campaign: value, UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID})
 	if err != nil {
 		return false, fmt.Errorf("set post campaign: %w", err)
 	}
@@ -175,7 +171,7 @@ func (s *Store) SetAdvertiserGuide(ctx context.Context, slug, userID string, gui
 	n, err := s.write.SetPostAdvertiserGuide(ctx, sqlc.SetPostAdvertiserGuideParams{
 		AdvertiserGuide: guide.Text, AdvertiserKeywords: keywords,
 		AdvertiserMinChars: optionalInt64(guide.MinChars), AdvertiserMinPhotos: optionalInt64(guide.MinPhotos),
-		AdvertiserHashtags: hashtags, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		AdvertiserHashtags: hashtags, UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("set post advertiser guide: %w", err)
@@ -189,7 +185,7 @@ func (s *Store) SetChecklistTicks(ctx context.Context, slug, userID string, tick
 	if err != nil {
 		return false, err
 	}
-	n, err := s.write.SetPostChecklistTicks(ctx, sqlc.SetPostChecklistTicksParams{ChecklistTicks: encoded, UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	n, err := s.write.SetPostChecklistTicks(ctx, sqlc.SetPostChecklistTicksParams{ChecklistTicks: encoded, UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID})
 	if err != nil {
 		return false, fmt.Errorf("set post checklist ticks: %w", err)
 	}
@@ -244,7 +240,7 @@ func (s *Store) UpsertTemplateAnswers(ctx context.Context, slug string, answers 
 	if err := refusePublished(ctx, q, slug); err != nil {
 		return err
 	}
-	stamp := formatTime(updatedAt)
+	stamp := dbtime.Format(updatedAt)
 	changed := false
 	for _, answer := range answers {
 		enabled := int64(0)
@@ -321,7 +317,7 @@ func (s *Store) EditObservations(ctx context.Context, slug, userID string, obser
 	defer tx.Rollback() //nolint:errcheck // no-op once committed
 	q := s.write.WithTx(tx)
 	n, err := q.UpdatePostObservations(ctx, sqlc.UpdatePostObservationsParams{
-		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: dbtime.Format(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -330,7 +326,7 @@ func (s *Store) EditObservations(ctx context.Context, slug, userID string, obser
 	if n == 0 {
 		return false, nil
 	}
-	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: formatTime(updatedAt)}); err != nil {
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: dbtime.Format(updatedAt)}); err != nil {
 		return false, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -351,7 +347,7 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 	defer tx.Rollback() //nolint:errcheck // no-op once committed
 	q := s.write.WithTx(tx)
 	n, err := q.UpdatePostObservations(ctx, sqlc.UpdatePostObservationsParams{
-		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: formatTime(updatedAt),
+		Observations: sql.NullString{String: encoded, Valid: true}, UpdatedAt: dbtime.Format(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -373,7 +369,7 @@ func (s *Store) UpdateObservations(ctx context.Context, slug, userID string, obs
 		turned = turned || n > 0
 	}
 	if turned {
-		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: formatTime(updatedAt)}); err != nil {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: slug, UpdatedAt: dbtime.Format(updatedAt)}); err != nil {
 			return false, err
 		}
 	}
@@ -419,7 +415,7 @@ func (s *Store) UpdateStoryline(ctx context.Context, slug, userID string, storyl
 		}
 		origins = post.AlignManualPlanOrigins(before, storyline.Paragraphs, prior, post.PlanOriginIdentity(before), post.PlanOriginIdentity(storyline.Paragraphs), fmt.Sprintf("manual-plan-%d", found.InputRevision+1), names)
 	}
-	n, err := q.UpdatePostStoryline(ctx, sqlc.UpdatePostStorylineParams{Storyline: encoded, StorylineOrigins: marshalPlanOrigins(origins), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	n, err := q.UpdatePostStoryline(ctx, sqlc.UpdatePostStorylineParams{Storyline: encoded, StorylineOrigins: marshalPlanOrigins(origins), UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID})
 	if err != nil {
 		return false, err
 	}
@@ -507,7 +503,7 @@ func (s *Store) UpdateAttachmentTraces(ctx context.Context, slug, userID, remove
 	}
 	n, err := q.UpdatePostAttachmentTraces(ctx, sqlc.UpdatePostAttachmentTracesParams{
 		Observations: sql.NullString{String: encoded, Valid: true}, Storyline: story, ContentOrigins: marshalOriginReview(contentOrigins), StorylineOrigins: marshalPlanOrigins(planOrigins),
-		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("update attachment traces: %w", err)
@@ -542,7 +538,7 @@ func (s *Store) UpdateGeneratedContent(ctx context.Context, slug, userID string,
 				return annotations.Storyline.Origins
 			}
 			return nil
-		}()), UpdatedAt: formatTime(updatedAt),
+		}()), UpdatedAt: dbtime.Format(updatedAt),
 		Slug: slug, UserID: userID,
 	})
 	if err != nil {
@@ -594,7 +590,7 @@ func (s *Store) SaveContent(ctx context.Context, slug, userID string, content po
 	if len(aligned.Review.Sources) > 0 || len(aligned.Review.Spans) > 0 {
 		origins = &aligned.Review
 	}
-	n, err := q.SavePostContent(ctx, sqlc.SavePostContentParams{Content: sql.NullString{String: encoded, Valid: true}, ContentOrigins: marshalOriginReview(origins), UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID, ContentRevision: expectedRevision})
+	n, err := q.SavePostContent(ctx, sqlc.SavePostContentParams{Content: sql.NullString{String: encoded, Valid: true}, ContentOrigins: marshalOriginReview(origins), UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID, ContentRevision: expectedRevision})
 	if err != nil {
 		return false, fmt.Errorf("save content: %w", err)
 	}
@@ -619,7 +615,7 @@ func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, 
 	n, err := s.write.SavePostGenerationOptions(ctx, sqlc.SavePostGenerationOptionsParams{
 		TargetLength: optionalInt64(set.TargetLength), TagCount: sql.NullInt64{Int64: int64(set.TagCount), Valid: true},
 		UseMemory: memory, QualityRules: rules, Field: optionalText(set.Field),
-		UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID,
+		UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("save post generation options: %w", err)
@@ -628,7 +624,7 @@ func (s *Store) SaveGenerationOptions(ctx context.Context, slug, userID string, 
 }
 
 func (s *Store) Finalize(ctx context.Context, slug, userID, title string, expectedRevision int64, finalizedAt time.Time) (bool, error) {
-	stamp := formatTime(finalizedAt)
+	stamp := dbtime.Format(finalizedAt)
 	n, err := s.write.FinalizePost(ctx, sqlc.FinalizePostParams{
 		Title:       title,
 		FinalizedAt: sql.NullString{String: stamp, Valid: true}, UpdatedAt: stamp,
@@ -643,7 +639,7 @@ func (s *Store) Finalize(ctx context.Context, slug, userID, title string, expect
 // --- publication ---
 
 func (s *Store) PublishPost(ctx context.Context, slug, userID, url string, publishedAt time.Time) (bool, error) {
-	stamp := formatTime(publishedAt)
+	stamp := dbtime.Format(publishedAt)
 	n, err := s.write.PublishPost(ctx, sqlc.PublishPostParams{
 		PublishedUrl: sql.NullString{String: url, Valid: true},
 		PublishedAt:  sql.NullString{String: stamp, Valid: true},
@@ -656,7 +652,7 @@ func (s *Store) PublishPost(ctx context.Context, slug, userID, url string, publi
 }
 
 func (s *Store) UnpublishPost(ctx context.Context, slug, userID string, updatedAt time.Time) (bool, error) {
-	n, err := s.write.UnpublishPost(ctx, sqlc.UnpublishPostParams{UpdatedAt: formatTime(updatedAt), Slug: slug, UserID: userID})
+	n, err := s.write.UnpublishPost(ctx, sqlc.UnpublishPostParams{UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID})
 	if err != nil {
 		return false, fmt.Errorf("unpublish post: %w", err)
 	}
@@ -840,7 +836,7 @@ func (s *Store) CreateImage(ctx context.Context, img post.Image) error {
 		Width:      int64(img.Width),
 		Height:     int64(img.Height),
 		Bytes:      img.Bytes,
-		CreatedAt:  formatTime(img.CreatedAt),
+		CreatedAt:  dbtime.Format(img.CreatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -925,7 +921,7 @@ func (s *Store) ReorderImages(ctx context.Context, postSlug string, ids []string
 			return false, nil
 		}
 	}
-	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: postSlug, UpdatedAt: formatTime(updatedAt)}); err != nil {
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: postSlug, UpdatedAt: dbtime.Format(updatedAt)}); err != nil {
 		return false, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -981,7 +977,7 @@ func (s *Store) changeImage(ctx context.Context, id string, change func(*sqlc.Qu
 		return false, err
 	}
 	if changed {
-		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: image.PostSlug, UpdatedAt: formatTime(time.Now())}); err != nil {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: image.PostSlug, UpdatedAt: dbtime.Format(time.Now())}); err != nil {
 			return false, err
 		}
 	}
@@ -1079,7 +1075,7 @@ func (s *Store) DeleteVideo(ctx context.Context, id string) (bool, error) {
 		if err := withdrawOriginIncarnation(ctx, q, video.PostSlug, video.ID); err != nil {
 			return false, err
 		}
-		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: formatTime(time.Now())}); err != nil {
+		if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: dbtime.Format(time.Now())}); err != nil {
 			return false, err
 		}
 	}
@@ -1141,8 +1137,8 @@ func (s *Store) CreateUpload(ctx context.Context, u post.Upload) error {
 		R2Key:       u.Key,
 		Kind:        string(u.Kind),
 		ContentType: u.ContentType,
-		ExpiresAt:   formatTime(u.ExpiresAt),
-		CreatedAt:   formatTime(u.CreatedAt),
+		ExpiresAt:   dbtime.Format(u.ExpiresAt),
+		CreatedAt:   dbtime.Format(u.CreatedAt),
 	})
 	if err != nil {
 		// The UNIQUE(post_slug, filename) constraint is what actually closes the race
@@ -1192,7 +1188,7 @@ func (s *Store) DeleteUpload(ctx context.Context, id string) error {
 }
 
 func (s *Store) ListUploadsExpiredBefore(ctx context.Context, t time.Time) ([]post.Upload, error) {
-	rows, err := s.read.ListUploadsExpiredBefore(ctx, formatTime(t))
+	rows, err := s.read.ListUploadsExpiredBefore(ctx, dbtime.Format(t))
 	if err != nil {
 		return nil, fmt.Errorf("select expired uploads: %w", err)
 	}
@@ -1234,7 +1230,7 @@ func (s *Store) ConfirmUpload(ctx context.Context, img post.Image, uploadID stri
 		Width:      int64(img.Width),
 		Height:     int64(img.Height),
 		Bytes:      img.Bytes,
-		CreatedAt:  formatTime(img.CreatedAt),
+		CreatedAt:  dbtime.Format(img.CreatedAt),
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -1245,7 +1241,7 @@ func (s *Store) ConfirmUpload(ctx context.Context, img post.Image, uploadID stri
 	if err := q.DeleteUpload(ctx, uploadID); err != nil {
 		return fmt.Errorf("delete upload: %w", err)
 	}
-	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: img.PostSlug, UpdatedAt: formatTime(img.CreatedAt)}); err != nil {
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: img.PostSlug, UpdatedAt: dbtime.Format(img.CreatedAt)}); err != nil {
 		return err
 	}
 
@@ -1278,7 +1274,7 @@ func (s *Store) ConfirmVideoUpload(ctx context.Context, video post.Video, upload
 	if err := q.DeleteUpload(ctx, uploadID); err != nil {
 		return fmt.Errorf("delete upload: %w", err)
 	}
-	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: formatTime(video.CreatedAt)}); err != nil {
+	if _, err := q.AdvancePostInputRevision(ctx, sqlc.AdvancePostInputRevisionParams{Slug: video.PostSlug, UpdatedAt: dbtime.Format(video.CreatedAt)}); err != nil {
 		return err
 	}
 
@@ -1578,7 +1574,7 @@ func createVideoParams(video post.Video) sqlc.CreateVideoParams {
 		DurationMs:  video.DurationMs,
 		Width:       int64(video.Width),
 		Height:      int64(video.Height),
-		CreatedAt:   formatTime(video.CreatedAt),
+		CreatedAt:   dbtime.Format(video.CreatedAt),
 	}
 }
 
@@ -1628,14 +1624,10 @@ func toUpload(row sqlc.Upload) (post.Upload, error) {
 	}, nil
 }
 
-// formatTime normalizes to UTC so stored values sort against each other regardless of
-// the offset the caller's clock carried.
-func formatTime(t time.Time) string { return t.UTC().Format(writeLayout) }
-
-// parseTime reads with RFC3339Nano rather than writeLayout: it accepts any fraction
+// parseTime reads with RFC3339Nano rather than dbtime.Layout: it accepts any fraction
 // width, so a row written before the width was pinned still loads.
 func parseTime(v string) (time.Time, error) {
-	t, err := time.Parse(time.RFC3339Nano, v)
+	t, err := dbtime.Parse(v)
 	if err != nil {
 		return time.Time{}, fmt.Errorf("parse timestamp %q: %w", v, err)
 	}

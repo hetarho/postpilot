@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/postpilot/backend/internal/platform/dbtime"
 	"github.com/postpilot/backend/internal/provider"
 	"github.com/postpilot/backend/internal/provider/store/sqlc"
 )
@@ -47,7 +48,7 @@ func (s *Store) CommitTestModelAdoption(ctx context.Context, in provider.TestMod
 	if receipt, found, err := testModelReceipt(ctx, q, in); err != nil || found {
 		return receipt, err
 	}
-	stamp := at.UTC().Format(writeLayout)
+	stamp := dbtime.Format(at)
 	if err := q.UpsertSelection(ctx, sqlc.UpsertSelectionParams{UserID: in.UserID, Stage: string(in.Stage), ProviderID: in.Ref.ProviderID, ModelID: in.Ref.ModelID, UpdatedAt: stamp}); err != nil {
 		return provider.TestModelReceipt{}, err
 	}
