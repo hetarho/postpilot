@@ -70,7 +70,7 @@
       "host": "DESKTOP-VKPLS8P",
       "pid": 1826564
     },
-    "phase": "checking",
+    "phase": "failed",
     "land": "main",
     "base": "6ac3344dae6c6557021de9013d658b53877247ee",
     "cohort": [
@@ -132,16 +132,88 @@
     "at": "2026-11-16T03:14:23.442Z",
     "deadline": "2026-11-16T10:37:02.747Z",
     "candidate": "9136f22c610207bbab2311fdc338d8e88465da53",
-    "checks": [],
-    "agentChecks": [],
-    "rounds": [],
+    "checks": [
+      {
+        "ok": false,
+        "command": "spec close",
+        "errors": [
+          "reports/261116-vfid.md: FORMAT 골격 밖 섹션이 있습니다: ## checks## next",
+          "reports/261116-vfid.md에 ## checks 섹션이 없습니다.",
+          "reports/261116-vfid.md에 ## next 섹션이 없습니다."
+        ]
+      }
+    ],
+    "agentChecks": [
+      {
+        "id": "T828-backend-contract",
+        "scenario": "T828 changes only the backend contract (VOICE-62 verdicts, the lead key and the additive proto field), so no screen exists for an agent to observe",
+        "steps": [
+          "no computer-use step applies: the change has no UI surface; the FE consumers come in later tasks"
+        ],
+        "expected": "Go unit and rpc tests cover every acceptance item",
+        "observed": "not run by an agent; Go tests in backend/internal/voice and backend/internal/voice/rpc passed at ade22c182",
+        "evidence": [
+          "go test ./internal/voice/... ./internal/experiment/... ok",
+          "vibe check --tier task (gusta lint) ok"
+        ],
+        "status": "not-run",
+        "reason": "backend-only contract change with no user-facing screen in this task; the batch gate covers the cmd/api and FE suites",
+        "replaces": [],
+        "stage": "integration",
+        "required": false,
+        "owner": "host batch gate",
+        "candidate": null,
+        "duplicationReason": "no existing e2e is replaced"
+      },
+      {
+        "id": "T833-voice-view-browser",
+        "scenario": "In ④ refine, 출처 보기 switches between 의미 출처 and 말투; 말투 underlines habit phrases and opens their sheet; the legend names 출처 미확인",
+        "steps": [
+          "open a post with a made voice on ④",
+          "choose 말투 in 출처 보기's switch",
+          "activate an underlined habit and read its sheet",
+          "switch back to 의미 출처 and read the legend"
+        ],
+        "expected": "one view at a time with 의미 출처 first, habits underlined in the voice-habit role with thick solid line, sheet shows habit name, rate line and example, legend lists four categories plus 출처 미확인",
+        "observed": "not observed in a browser; covered only by the jsdom unit tests in WritingOriginReview.test.tsx",
+        "evidence": [
+          "vibe check --tier task tree 02e7c859 (vitest, tsc, eslint, lint:style)"
+        ],
+        "status": "not-run",
+        "reason": "unit has no browser/computer-use tool, and the page does not yet pass the voice reading (wiring is T834)",
+        "replaces": [],
+        "stage": "integration",
+        "required": false,
+        "owner": "host",
+        "candidate": null,
+        "duplicationReason": ""
+      }
+    ],
+    "rounds": [
+      {
+        "candidate": "9136f22c610207bbab2311fdc338d8e88465da53",
+        "checks": [
+          {
+            "ok": false,
+            "command": "spec close",
+            "errors": [
+              "reports/261116-vfid.md: FORMAT 골격 밖 섹션이 있습니다: ## checks## next",
+              "reports/261116-vfid.md에 ## checks 섹션이 없습니다.",
+              "reports/261116-vfid.md에 ## next 섹션이 없습니다."
+            ]
+          }
+        ],
+        "at": "2026-11-16T03:14:37.016Z"
+      }
+    ],
     "path": "/home/hrlee/project/postpilot/.git/gusta/integration-worktrees/72fb66a4-740b-499b-8faf-11a2ff6e56e5",
     "branch": "integration/72fb66a4-740b-499b-8faf-11a2ff6e56e5",
     "version": {
       "level": "minor",
       "from": "0.1.2",
       "to": "0.2.0"
-    }
+    },
+    "ciCommands": []
   },
   "history": [],
   "lastPlanning": {
