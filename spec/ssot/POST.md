@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r48 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r49 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -185,7 +185,7 @@
   - the large view only shows: moving, taking out and putting back stay on the tile (→POST-96), and opening or closing it changes nothing
 
 - POST-101 [o] ①'s 말투 picker offers 말투 없음, then the account's made voices, then `새 말투 만들기` (→VOICE-53); a voice not yet made is listed disabled with `만드는 중 N%`; a new post starts on the 기본 voice, or on 말투 없음 when there is none ← the owner's own default, and no voice is ever forced
-- POST-102 [o] ④ shows, with this post's measurements (→POST-83), its fingerprint beside its voice's (→VOICE-62) after each generation and AI 수정, counted from the post's blocks with no call; a post with 말투 없음 shows none; it is the post's own reading, shown whether or not an item differs, with no note about the template ← a voice is tied to no template, and whether the voice held should read on every post
+- POST-102 [o] ④ reads the post against its voice (→!VOICE-62) after each generation and AI 수정, counted from the post's blocks with no call, at the head of 출처 보기's 말투 view (→POST-128); a post with 말투 없음, or whose voice is deleted or not made, has none; it is the post's own reading, shown whether or not an item differs, with no note about the template ← a voice is tied to no template, and whether the voice held should read on every post
 - POST-104 [o] entering ⑤ 글 완성 from another editor step scrolls the page to its top after the step changes, whether the owner selects the step or uses the action in ④; opening a post already on ⑤ does not force a scroll ← the finish panel begins at the editor's top while the action in ④ can be docked below a long post
 - POST-105 [o] the reading view (`BlockList`, wherever it renders →EXPORT-9) shows a photo group as one place with its one caption under it (→GEN-77):
   - 콜라주 lays the photos side by side in one row
@@ -214,7 +214,13 @@
 - POST-112 [o] ④ makes semantic origins inspectable by meaningful phrase, including mixed origins within one sentence (→GEN-80).
   - cover title, summary, tags and all human-readable block text, headings, list items, quotes and media alt/captions; exclude filenames, JSON keys and format enums
   - name the four categories directly: 직접 입력 기반, 사진에서 추론, 광고주 요청, AI가 보탠 내용, each with its own color (→THEME-62); selection shows relevant supplied text, visual observation, advertiser guide text or AI proposal basis
+  - the legend also names 출처 미확인, the unconfirmed state (→POST-114), with its one-line meaning ← a colored phrase the legend does not name reads as an unexplained category
   - origin means source of meaning, not author identity, factual certification, quality score or the machine-edit baseline
+
+- POST-128 [o] ④'s 출처 보기 has two views, 의미 출처 (→POST-112) and 말투, one at a time behind a segmented control with 의미 출처 first ← two color systems on one phrase cannot both be read
+  - 말투 underlines every phrase VOICE-77 finds in the voice-habit role (→THEME-62); selecting one shows its habit, the voice's rate, this post's count and the 학습 글 example
+  - the view opens with POST-102's reading
+  - a post with 말투 없음, or whose voice is deleted or not made, shows 말투 disabled with its reason; the view calls no model and changes no text, origin or baseline
 
 - POST-113 [o] manual edits, AI revision, regeneration and compatible test application keep current text and its origin review information aligned.
   - unchanged meaning retains its original basis; new explicit owner facts may reference their new input
@@ -290,4 +296,5 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r49 261116 POST-102✎ fingerprint beside the voice's with the measurements→the post's reading at the head of 출처 보기's 말투 view, none for a deleted/unmade voice; POST-112✎ legend of four categories→also names 출처 미확인; POST-128+ 출처 보기 의미 출처/말투 views
 - r48 261113 POST-44✎ steps 생성·다듬기·완성→생성·관찰·스토리라인·다듬기·완성; POST-53✎ POST-123✎ generation actions on ① 확인→② bar, 확인→관찰하기|다음; POST-54✎ POST-95✎ POST-96✎ POST-99✎ storyline space in ②→③ step; POST-97✎ space controls→③ step bar; POST-98✎ ①'s actions→②'s; POST-56✎ 이전 to 글 생성→to ③; POST-45✎ run card on 확인→on ②; POST-122✎ POST-100✎ contact sheet on 사진→on ②; POST-86✎ published ②→②③④ read-only; POST-66✎ +스토리라인 작성 완료 row state; POST-125+ ② 관찰; POST-126+ observation edits; POST-127+ storyline list badge

@@ -18,6 +18,7 @@
 | related-post-links | open@261111 |
 | unmeasured-search-exposure | open@261111 |
 | job-content-retention | open@261111 |
+| voice-fidelity | open@261116 |
 
 ## ssot
 | id | rev | tasked | pending | [?] |
@@ -25,15 +26,15 @@
 | ARCH | 24 | 24 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 40 | 40 | - | 0 |
-| POST | 48 | 48 | - | 0 |
-| VOICE | 20 | 20 | - | 0 |
-| GEN | 32 | 32 | - | 0 |
+| POST | 49 | 49 | - | 0 |
+| VOICE | 21 | 21 | - | 0 |
+| GEN | 33 | 33 | - | 0 |
 | MODEL | 37 | 37 | - | 0 |
 | TMPL | 32 | 32 | - | 0 |
 | GUIDE | 26 | 26 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 44 | 44 | - | 2 |
+| THEME | 45 | 45 | - | 2 |
 | MKT | 12 | 12 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
 | CLIP | 78 | 78 | - | 2 |
@@ -79,6 +80,16 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T827 | Count posts as prose and keep only recurring opening and closing lines | VOICE | - | todo |
+| T828 | Judge each compared item and lead with the voice's dominant value | VOICE POST | T827 | todo |
+| T829 | Carry comparison verdicts through the writing-test reading | VOICE | T828 | todo |
+| T830 | Find a voice's countable habits inside a post | VOICE | T827 | todo |
+| T831 | Return habit phrases with a post's voice reading | VOICE POST | T828 T830 | todo |
+| T832 | Show verdicts and the n-of-m summary in the fingerprint reading | VOICE POST THEME | T828 T829 | todo |
+| T833 | Add the 말투 view to 출처 보기 and name 출처 미확인 in the legend | POST THEME VOICE | T831 T832 | todo |
+| T834 | Wire the post's voice reading into 출처 보기's 말투 view | POST | T833 | todo |
+| T835 | Give the writer visual evidence for observations without origin spans | GEN POST | - | todo |
+| T836 | Use the memo's names in every media caption and mark them owner input | GEN | T835 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -86,4 +97,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- No runnable tasks; blocked qualification work remains outside this design-system run.
+- gusta-implement-task T827

@@ -1,5 +1,5 @@
 # VOICE voices
-> r20 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
+> r21 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -35,6 +35,7 @@
   | ⑥ adverbs and phrases | the frequent adverbs and short phrases (진짜 · 완전 · 근데) |
   | ⑦ first person | 저 · 제가 · 나 · 우리 · none |
   | ⑧ headings and lists | how headings and lists are written (emoji, question form, numbering) |
+  - ⑤ keeps only a first or last line that recurs in at least two 학습 글; a line seen once is no habit and enters neither the analysis nor the projection ← a once-seen first line usually carries that post's facts
   - the AI writes only what cannot be counted: an overall impression in one or two sentences, when each verbal tic appears, and signature phrases with the topic words (보리밥, 양꼬치) filtered out
   - the handler fails a result missing any AI field
 - VOICE-25 [o] a successful analysis becomes the voice's current analysis and the one it replaced becomes the previous (→VOICE-30); the first one makes the voice made, so it can be picked for a post (→POST-23)
@@ -82,7 +83,11 @@
   - optional photo situations still use only owner-picked private photos; replies are nonempty Korean prose, and replying again to a situation replaces only that key
   - reads and browsing create no provider work; text and catalog keys are code, not generated at runtime
 - VOICE-61 [o] a line that is not the owner's prose counts toward no sentence and feeds no item: a hashtag-only line, a `[출처]` line, an info line (one that opens with 주소 · 영업시간 · 운영시간 · 전화 · 휴무 · 주차 · 가격 · 위치 followed by `:` or a space, or with 📍 ⏰ ☎️), a Korean address line, and a line holding no Hangul ← a voice is learned only from prose the owner wrote, and a pasted Naver post carries its place card and hashtags
-- VOICE-62 [o] pure local fingerprint comparison remains an optional diagnostic beside actual test writings or POST-102 editing: show measurable profile/text values in their units and unknown when unavailable. It makes no AI call and is not a separate verification product or an automatic judge.
+- VOICE-62 [o] the local fingerprint comparison reads a text against its voice with no AI call, beside actual test writings and in a post's 말투 view (→POST-102); it is a deterministic reading, not a separate verification product or an AI judge.
+  - a post is counted as its prose: HEADING blocks feed only ⑧, never the sentences, endings, marks, emoji, shape or opening/closing lines, which are the post's first and last prose lines ← a template decides the headings, not the voice
+  - each item leads with the voice's dominant value beside the text's (해요 61% · 이 글 58%), never with the facet of largest relative gap
+  - each item carries a verdict, 비슷함 or 다름, by code-owned tolerances; an item unknown on the voice side is left out, an item unknown on the text side shows 알 수 없음 without a verdict, and a habit too rare to expect in a text of this length (`VOICE_COMPARE_MIN_EXPECTED`) is shown without a verdict
+  - the reading opens with how many judged items are 비슷함 (`6개 중 5개 비슷해요`); values stay in their measured units
 - VOICE-63 [o] the 말투 분석 tab shows the current analysis read-only: each counted item as one plain sentence with its number (e.g. `문장의 32%를 느낌표로 끝내요`) without a `숫자로 본 습관` group title, followed by `AI가 읽은 인상`; each item has its example sentence, with no provenance badge or per-item edit
   - VOICE-21's notice and `이전 분석으로 되돌리기` sit above the groups
 - VOICE-64 [o] learning materials list newest first and open to their full text/photo with explicit Edit, Save/Cancel and Delete.
@@ -132,6 +137,10 @@
 - VOICE-76 [o] an adopted AI 말투 is a starting point the product grows toward the owner's own voice: its detail and the voice picker offer `대화로 내 말투 키우기`, which opens the learning chat on that style, and successful explicit reanalysis then makes its origin personal (→VOICE-69) ← a new 체험단 creator needs a start, while posts in the owner's own voice are the product's point
   - the offer starts no analysis or AI work, and an owner may keep the AI 말투 as it is
 
+- VOICE-77 [o] the product finds in a text the phrases that show its voice's counted habits — the frequent sentence-final strings (①), the lexicon adverbs (⑥), the recurring opening and closing lines (⑤) and the AI part's signature phrases — by matching in code with no AI call (→!VOICE-51) ← whether the voice held is seen best in the post itself, and only countable habits can be pointed at honestly
+  - each found phrase names its habit, the voice's rate, the text's count and one 학습 글 example sentence; an AI 말투's example is its fictional sample, labelled so (→!VOICE-69)
+  - rhythm, impression and other uncountable traits are never highlighted
+
 ## flow
 - personal start: choose 대화하기 | paste own writing → explicitly create/resume one personal voice → reply in the learning chat → ten valid answers with every part or sixty owner sentences → explicit analysis → made personal voice → optional default → creation
 - further learning: another chat over unanswered situations | paste → save private materials → keep existing analysis → explicit reanalysis → current personal snapshot with previous retained
@@ -141,13 +150,14 @@
 - delete: guarded soft delete → retained historical refs → explicit restore/reassignment
 
 ## constraints
-- constants BE `internal/voice`: `VoiceNameMaxChars` 50 · `SampleMinChars` 200 · `LabelFallbackChars` 20 · `VOICE_READY_SENTENCES` 60 · `VOICE_INITIAL_QUESTION_COUNT` 10 · code-owned prompt catalog ≥200 · `VOICE_CANDIDATE_COUNT` default8, allowed2/4/8/16 · `VOICE_FEW_SHOT_MAX` 3 · `VOICE_FEW_SHOT_EXCERPT_TARGET_CHARS` / `MAX_CHARS` 500 / 800; FE constants live in their owning slices — `entities/voice/config` mirrors `VOICE_NAME_MAX_CHARS` 50 and the paste feature mirrors `VOICE_SAMPLE_MIN_CHARS` 200; the prompt set and the non-prose patterns are code; no env var, no schedule, no interval
+- constants BE `internal/voice`: `VoiceNameMaxChars` 50 · `SampleMinChars` 200 · `LabelFallbackChars` 20 · `VOICE_READY_SENTENCES` 60 · `VOICE_INITIAL_QUESTION_COUNT` 10 · code-owned prompt catalog ≥200 · `VOICE_CANDIDATE_COUNT` default8, allowed2/4/8/16 · `VOICE_FEW_SHOT_MAX` 3 · `VOICE_FEW_SHOT_EXCERPT_TARGET_CHARS` / `MAX_CHARS` 500 / 800 · `VOICE_COMPARE_MIN_EXPECTED` 2 occurrences; FE constants live in their owning slices — `entities/voice/config` mirrors `VOICE_NAME_MAX_CHARS` 50 and the paste feature mirrors `VOICE_SAMPLE_MIN_CHARS` 200; the prompt set and the non-prose patterns are code; no env var, no schedule, no interval
 - schema: `voices(id PK, user_id FK cascade, name, is_default, deleted_at, created_at, updated_at, UNIQUE(id, user_id))` with `voices_one_default` and `voices_active_name`, plus tables for 학습 글 (a pasted post or a prompt answer with its photo key), analyses (current and previous) and read-only paid check history, each keyed by `(user_id, voice_id)`
 - placement BE: `backend/internal/voice` (domain, service, fingerprint counting, store, rpc, `schemas/`); it publishes ports consumed by post (`VoiceDirectory`), generation (`Profiles`) and experiment (`VoiceDirectory`, the fingerprint comparison), and asks `Jobs` before a delete; all adapted only in `cmd/api`; a boundary test forbids sibling `store`/`sqlc` imports inside `internal/`
 - placement FE: `entities/voice` (model, api, ui, config) · `features/create-voice` `rename-voice` `set-default-voice` `delete-voice` `restore-voice` `select-post-voice` and the other verb slices taking `voiceId` · the pure fingerprint diagnostic shared by writing/tests and retained paid history · `pages/voices` `pages/voice` · `widgets/voice-warning` · `app/routes` (voice layout, `/voice` redirect)
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
+- r21 261116 VOICE-24✎ ⑤ top three first/last lines→only lines recurring in two or more 학습 글; VOICE-62✎ values beside each other, largest-relative-gap headline→prose-only post counting, dominant-value lead, 비슷함/다름 verdict and n-of-m summary, shown in the post's 말투 view; VOICE-77+ habit phrases found in a text
 - r20 261111 VOICE-52✎ the 말투 section every channel shares, settings rows→내 스타일's 말투 section, cards showing how a style sounds (quoted sentence, AI impression, up to three signature phrases); VOICE-66✎ a method opens its flow on tap→a tap selects, 다음 opens it
 - r19 261102 VOICE-53✎ 새 말투 만들기 on the list and the post picker→also in a new post's offer (→POST-121)
 - r18 261030 VOICE-52✎ /voices in 내 설정→the 말투 section shared by every channel; its creation comes from the channel creation menu (`?new=1` opens 새 말투 만들기)

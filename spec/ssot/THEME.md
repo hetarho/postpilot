@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r44 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r45 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -294,8 +294,8 @@
 - THEME-60 [o] saved reusable settings visibly distinguish usability, unpublished editing, active AI work, uncertain publication and conflicts using EDIT-18 summaries. Current actions and named completion feedback remain in the current reading/working flow rather than appearing without an identified trigger.
 - THEME-61 [?] operational-history presentation/name and exact visual dimensions remain open; functional location/return/workspace contracts and route-specific acceptance apply independently of a final visual design.
 
-- THEME-62 [o] origin review is visible by default in post refinement, with a named 출처 보기 toggle, four-category legend and selectable phrase/source explanation (→POST-112).
-  - register dedicated semantic foreground/highlight roles for the four origins — 광고주 요청 with a role of its own — and the unconfirmed state in both themes; color never supplies meaning alone
+- THEME-62 [o] origin review is visible by default in post refinement, with a named 출처 보기 toggle, a legend of the four categories and the unconfirmed state, and selectable phrase/source explanation (→POST-112).
+  - register dedicated semantic foreground/highlight roles for the four origins — 광고주 요청 with a role of its own — the unconfirmed state and the 말투 view's voice habit (→POST-128) in both themes; color never supplies meaning alone
   - touch and keyboard can reach source details without hover; use labels, visible focus and body-sized explanations
   - preserve prose readability, selection/copy, caret/autosave, one document scroller,320px reflow and200% zoom; a highlight is not a separate committing action
   - origin colors are functional evidence roles, distinct from action accent and promotional roles (→THEME-15/18)
@@ -381,6 +381,7 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
+- r45 261116 THEME-62✎ four-category legend→also the unconfirmed state; roles +voice habit for 출처 보기's 말투 view
 - r44 261114 THEME-71✎ post/template step bars→all clip steps included; THEME-75+ shared icon return; THEME-76+ consistent resource catalogs; THEME-77+ complete clip/writing visual parity; THEME-78+ exhaustive route/control audit and regression enforcement
 - r43 261114 THEME-29✎ loading page text→shared contextual feedback; THEME-69✎ loading page text→work-group geometry; THEME-74+ page-specific skeletons, inline spinner, delayed decoration, retained content and accessible reduced-motion feedback
 - r42 261113 THEME-39✎ instances named only→same five stations 생성·관찰·스토리라인·다듬기·완성 under short names; THEME-71✎ post steps 글 생성 guide, 글 다듬기, 글 완성→글 생성 guide, 관찰, 스토리라인, 다듬기, 완성; THEME-18✎ writing card ref POST-123→POST-125
