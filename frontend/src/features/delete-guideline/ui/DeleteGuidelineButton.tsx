@@ -1,8 +1,7 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 import { useDeleteGuidelineCall, type GuidelineKind } from '@/entities/guideline'
-import { Button, Dialog, FieldMessage } from '@/shared/ui'
+import { Button, ConfirmedAction, FieldMessage } from '@/shared/ui'
 
 /** Deletes a guideline after the sheet states what is and is not affected: work already enqueued
  *  keeps its frozen text, and nothing else changes. There is no count to name — nothing references
@@ -23,44 +22,30 @@ export function DeleteGuidelineButton({
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const remove = useDeleteGuidelineCall(ownerId, kind)
-  const [confirming, setConfirming] = useState(false)
-
-  const confirm = async () => {
-    try {
-      await remove.remove(guidelineId)
-    } catch {
-      // The mutation's message renders beside the button.
-      // Closed on failure too, so the message is not left behind the scrim.
-      setConfirming(false)
-      return
-    }
-    setConfirming(false)
-    onDeleted?.()
-  }
 
   return (
-    <>
-      <Button
-        variant="ghost"
-        size="icon"
-        disabled={remove.isPending}
-        onClick={() => setConfirming(true)}
-        aria-label={t('delete.aria', { ns: 'guidelines' })}
-        className="shrink-0"
-      >
-        <Trash2 className="size-4" aria-hidden />
-      </Button>
-      {remove.isError && <FieldMessage className="w-full">{remove.errorMessage}</FieldMessage>}
-      <Dialog
-        open={confirming}
-        title={t('delete.title', { ns: 'guidelines' })}
-        confirmLabel={t('action.delete', { ns: 'common' })}
-        pending={remove.isPending}
-        onClose={() => setConfirming(false)}
-        onConfirm={() => void confirm()}
-      >
-        {t('delete.description', { ns: 'guidelines' })}
-      </Dialog>
-    </>
+    <ConfirmedAction
+      trigger={(open) => (
+        <Button
+          variant="ghost"
+          size="icon"
+          disabled={remove.isPending}
+          onClick={open}
+          aria-label={t('delete.aria', { ns: 'guidelines' })}
+          className="shrink-0"
+        >
+          <Trash2 className="size-4" aria-hidden />
+        </Button>
+      )}
+      failed={remove.isError}
+      failure={<FieldMessage className="w-full">{remove.errorMessage}</FieldMessage>}
+      title={t('delete.title', { ns: 'guidelines' })}
+      confirmLabel={t('action.delete', { ns: 'common' })}
+      pending={remove.isPending}
+      run={() => remove.remove(guidelineId)}
+      onDone={onDeleted}
+    >
+      {t('delete.description', { ns: 'guidelines' })}
+    </ConfirmedAction>
   )
 }

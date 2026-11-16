@@ -1,8 +1,8 @@
-import { useState, type Ref } from 'react'
+import { type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useClipTemplateMutations, type ClipTemplate } from '@/entities/clip-template'
 import { appFailureFromConnect } from '@/shared/api'
-import { AppFailureMessage, Button, Dialog, FieldMessage } from '@/shared/ui'
+import { AppFailureMessage, Button, ConfirmedAction, FieldMessage } from '@/shared/ui'
 
 /** Deletes a video template after the sheet says exactly how many clip projects lose their
  *  recipe. The count comes from the server's own projection, so the sentence and the write agree.
@@ -25,47 +25,33 @@ export function DeleteClipTemplateButton({
 }) {
   const { t } = useTranslation(['clips', 'common'])
   const { remove } = useClipTemplateMutations(ownerId)
-  const [confirming, setConfirming] = useState(false)
-
-  const confirm = async () => {
-    try {
-      await remove.mutateAsync(template.id)
-    } catch {
-      // The refusal renders beside the button.
-      // Closed on failure too, so the message is not left behind the scrim.
-      setConfirming(false)
-      return
-    }
-    setConfirming(false)
-    onDeleted?.()
-  }
 
   return (
-    <>
-      <Button
-        ref={buttonRef}
-        variant="danger"
-        disabled={remove.isPending}
-        onClick={() => setConfirming(true)}
-        aria-label={t('delete.aria', { ns: 'clips', name: template.name })}
-      >
-        {t('action.delete', { ns: 'common' })}
-      </Button>
-      {remove.isError && (
+    <ConfirmedAction
+      trigger={(open) => (
+        <Button
+          ref={buttonRef}
+          variant="danger"
+          disabled={remove.isPending}
+          onClick={open}
+          aria-label={t('delete.aria', { ns: 'clips', name: template.name })}
+        >
+          {t('action.delete', { ns: 'common' })}
+        </Button>
+      )}
+      failed={remove.isError}
+      failure={
         <FieldMessage className="w-full">
           <AppFailureMessage failure={appFailureFromConnect(remove.error)} />
         </FieldMessage>
-      )}
-      <Dialog
-        open={confirming}
-        title={t('delete.title', { ns: 'clips' })}
-        confirmLabel={t('action.delete', { ns: 'common' })}
-        pending={remove.isPending}
-        onClose={() => setConfirming(false)}
-        onConfirm={() => void confirm()}
-      >
-        {t('delete.description', { ns: 'clips', count: template.projectCount })}
-      </Dialog>
-    </>
+      }
+      title={t('delete.title', { ns: 'clips' })}
+      confirmLabel={t('action.delete', { ns: 'common' })}
+      pending={remove.isPending}
+      run={() => remove.mutateAsync(template.id)}
+      onDone={onDeleted}
+    >
+      {t('delete.description', { ns: 'clips', count: template.projectCount })}
+    </ConfirmedAction>
   )
 }
