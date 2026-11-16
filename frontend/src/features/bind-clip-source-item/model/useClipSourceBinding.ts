@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   emptyCompositionInputs,
@@ -28,7 +29,8 @@ export function useClipSourceBinding(
 ) {
   const { t } = useTranslation('clips')
   const { save } = useClipProjectMutations(ownerId)
-  const document = projectCompositionDocument(project.composition?.snapshot.body)
+  const body = project.composition?.snapshot.body
+  const document = useMemo(() => projectCompositionDocument(body), [body])
   const inputs = project.compositionInputs ?? emptyCompositionInputs()
   const items = (document?.groups ?? []).flatMap((group) =>
     (inputs.items[group.id] ?? []).map((item, index) => ({

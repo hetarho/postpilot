@@ -24,7 +24,16 @@ type Prompt struct {
 	Scene   string
 	Hint    string
 	Starter bool
+	// Kind is empty for a situation and names the experience kind for a thread question
+	// (VOICE-78).
+	Kind ExperienceKind
+	// Examples are the question's example replies (VOICE-79), attached from prompt_examples.go.
+	Examples []PromptExample
 }
+
+// PromptExamples (VOICE_PROMPT_EXAMPLES) is how many example replies every question carries, each in a
+// different register (VOICE-79).
+const PromptExamples = 3
 
 // VOICE_PROMPT_COUNT (20): 4 openings, 12 descriptions (6 on a photo, 6 on a situation) and 4
 // closings, each asking for 2~5 sentences.
@@ -52,13 +61,19 @@ var legacyPrompts = []Prompt{
 }
 
 // Prompts returns the shared prompt set in its display order: openings, descriptions, closings.
-func Prompts() []Prompt { return append([]Prompt(nil), prompts...) }
+func Prompts() []Prompt {
+	out := make([]Prompt, len(prompts))
+	for i, prompt := range prompts {
+		out[i] = withExamples(prompt)
+	}
+	return out
+}
 
 // PromptByKey resolves a stable key; false for a key the set does not hold.
 func PromptByKey(key string) (Prompt, bool) {
 	for _, prompt := range prompts {
 		if prompt.Key == key {
-			return prompt, true
+			return withExamples(prompt), true
 		}
 	}
 	return Prompt{}, false

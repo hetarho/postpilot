@@ -227,12 +227,108 @@ func sampleParams(sample voice.Sample) sqlc.InsertSampleParams {
 		ID: sample.ID, VoiceID: sample.VoiceID, UserID: sample.UserID, Kind: string(sample.Kind),
 		PromptKey: nullableString(sample.PromptKey), Label: sample.Label, Body: sample.Body,
 		PhotoKey: nullableString(sample.PhotoKey), CreatedAt: dbtime.Format(sample.CreatedAt),
+		ExperienceID: nullableString(sample.ExperienceID),
 	}
 	if sample.HasPhoto() {
 		params.PhotoWidth = sql.NullInt64{Int64: int64(sample.PhotoWidth), Valid: true}
 		params.PhotoHeight = sql.NullInt64{Int64: int64(sample.PhotoHeight), Valid: true}
 	}
 	return params
+}
+
+// --- experiences (VOICE-78) ---
+
+// InsertExperience writes one experience of the voice. The composite foreign key keeps it on
+// an owned voice; a foreign voice id is refused by the database.
+func (s *Store) InsertExperience(ctx context.Context, e voice.Experience) error {
+	err := s.write.InsertExperience(ctx, sqlc.InsertExperienceParams{
+		ID: e.ID, UserID: e.UserID, VoiceID: e.VoiceID, Kind: string(e.Kind), Name: e.Name,
+		CreatedAt: dbtime.Format(e.CreatedAt),
+	})
+	if err != nil {
+		return fmt.Errorf("insert experience: %w", err)
+	}
+	return nil
+}
+
+// ListExperiences is the voice's experiences, newest first.
+func (s *Store) ListExperiences(ctx context.Context, userID, voiceID string) ([]voice.Experience, error) {
+	rows, err := s.read.ListExperiences(ctx, sqlc.ListExperiencesParams{VoiceID: voiceID, UserID: userID})
+	if err != nil {
+		return nil, fmt.Errorf("list experiences: %w", err)
+	}
+	out := make([]voice.Experience, 0, len(rows))
+	for _, row := range rows {
+		e, err := toExperience(row)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}
+
+// GetExperience is one experience of this owner's voice, or nil for an unknown or foreign id.
+func (s *Store) GetExperience(ctx context.Context, userID, voiceID, experienceID string) (*voice.Experience, error) {
+	row, err := s.read.GetExperience(ctx, sqlc.GetExperienceParams{ID: experienceID, VoiceID: voiceID, UserID: userID})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select experience: %w", err)
+	}
+	e, err := toExperience(row)
+	if err != nil {
+		return nil, err
+	}
+	return &e, nil
+}
+
+func toExperience(row sqlc.VoiceExperience) (voice.Experience, error) {
+	created, err := dbtime.Parse(row.CreatedAt)
+	if err != nil {
+		return voice.Experience{}, fmt.Errorf("experience %s created_at: %w", row.ID, err)
+	}
+	return voice.Experience{
+		ID: row.ID, UserID: row.UserID, VoiceID: row.VoiceID, Kind: voice.ExperienceKind(row.Kind),
+		Name: row.Name, CreatedAt: created,
+	}, nil
+}
+
+// AnswerExperiencePrompt saves the answer to one thread question of an experience, replacing
+// the one it held (VOICE-78): the first reply inserts a row under sample.ID, a later one
+// rewrites that row's text and bumps its revision. It reports false, writing nothing, when the
+// experience is not this owner's on this voice.
+func (s *Store) AnswerExperiencePrompt(ctx context.Context, sample voice.Sample) (bool, error) {
+	n, err := s.write.UpsertExperienceAnswer(ctx, sqlc.UpsertExperienceAnswerParams{
+		ID: sample.ID, PromptKey: nullableString(sample.PromptKey), Label: sample.Label, Body: sample.Body,
+		CreatedAt: dbtime.Format(sample.CreatedAt), ExperienceID: sample.ExperienceID,
+		VoiceID: sample.VoiceID, UserID: sample.UserID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("upsert experience answer: %w", err)
+	}
+	return n > 0, nil
+}
+
+// GetExperienceAnswer is the answer a thread question holds in an experience, or nil.
+func (s *Store) GetExperienceAnswer(ctx context.Context, userID, voiceID, experienceID, promptKey string) (*voice.Sample, error) {
+	row, err := s.read.GetExperienceAnswer(ctx, sqlc.GetExperienceAnswerParams{
+		ExperienceID: sql.NullString{String: experienceID, Valid: true}, VoiceID: voiceID, UserID: userID,
+		PromptKey: sql.NullString{String: promptKey, Valid: true},
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("select experience answer: %w", err)
+	}
+	sample, err := toSample(userID, voiceID, sqlc.GetSampleBodyRow(row))
+	if err != nil {
+		return nil, err
+	}
+	sample.ExperienceID = experienceID
+	return &sample, nil
 }
 
 func (s *Store) ListSampleBodies(ctx context.Context, userID, voiceID string) ([]voice.Sample, error) {
@@ -270,7 +366,7 @@ func (s *Store) ListSampleBodiesForVoices(ctx context.Context, userID string, vo
 		sample, err := toSample(userID, row.VoiceID, sqlc.GetSampleBodyRow{
 			ID: row.ID, Kind: row.Kind, PromptKey: row.PromptKey, Label: row.Label, Body: row.Body,
 			PhotoKey: row.PhotoKey, PhotoWidth: row.PhotoWidth, PhotoHeight: row.PhotoHeight, CreatedAt: row.CreatedAt,
-			ContentRevision: row.ContentRevision,
+			ContentRevision: row.ContentRevision, ExperienceID: row.ExperienceID,
 		})
 		if err != nil {
 			return nil, err
@@ -321,7 +417,8 @@ func toSample(userID, voiceID string, row sqlc.GetSampleBodyRow) (voice.Sample, 
 		ContentRevision: row.ContentRevision,
 		Label:           row.Label, Body: row.Body, Chars: utf8.RuneCountInString(row.Body),
 		PhotoKey: row.PhotoKey.String, PhotoWidth: int(row.PhotoWidth.Int64), PhotoHeight: int(row.PhotoHeight.Int64),
-		CreatedAt: created,
+		CreatedAt:    created,
+		ExperienceID: row.ExperienceID.String,
 	}, nil
 }
 

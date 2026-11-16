@@ -5,8 +5,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { create } from '@bufbuild/protobuf'
 import { appFailureFromConnect, ModelRefSchema, VoiceService } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
-import type { VoicePrompt, VoiceSampleDetail } from '../model/types'
-import { requirePromptPart } from './voice-enums'
+import type { VoiceExperienceKindInfo, VoicePrompt, VoiceSampleDetail } from '../model/types'
+import {
+  experienceKindOrUndefined,
+  requireExperienceKind,
+  requirePromptPart,
+  voiceRegisterOrUndefined,
+} from './voice-enums'
 import { invalidateVoiceMaterials } from './voice-directory-cache'
 import {
   toVoiceSample,
@@ -18,6 +23,7 @@ import {
 /** The shared prompt set (VOICE-60). It is product copy and never changes within a build. */
 export function useVoicePrompts(): {
   prompts: VoicePrompt[]
+  kinds: VoiceExperienceKindInfo[]
   isPending: boolean
   isError: boolean
   refetch: () => void
@@ -38,11 +44,28 @@ export function useVoicePrompts(): {
         part: requirePromptPart(prompt.part),
         photo: prompt.photo,
         text: prompt.text,
+        examples: prompt.examples.flatMap((example) => {
+          const register = voiceRegisterOrUndefined(example.register)
+          return register ? [{ register, text: example.text }] : []
+        }),
+        ...(experienceKindOrUndefined(prompt.experienceKind)
+          ? { experienceKind: experienceKindOrUndefined(prompt.experienceKind) }
+          : {}),
+      })) ?? [],
+    [query.data],
+  )
+  const kinds = useMemo(
+    () =>
+      query.data?.kinds.map((info) => ({
+        kind: requireExperienceKind(info.kind),
+        label: info.label,
+        plain: info.plain,
       })) ?? [],
     [query.data],
   )
   return {
     prompts,
+    kinds,
     isPending: query.isPending,
     isError: query.isError,
     refetch: () => {
@@ -110,6 +133,8 @@ export function useVoicePhotoUpload(voiceId: string) {
 export interface VoiceAnswerInput {
   promptKey: string
   body: string
+  /** The experience a thread question is answered about; a situation takes none. */
+  experienceId?: string
   photo?: { uploadId: string; width: number; height: number }
 }
 
@@ -125,11 +150,12 @@ export function useAnswerVoicePrompt(ownerId: string, voiceId: string) {
     ...mutation,
     failure,
     errorMessage: formatAppFailure(failure),
-    answer: ({ promptKey, body, photo }: VoiceAnswerInput) =>
+    answer: ({ promptKey, body, experienceId, photo }: VoiceAnswerInput) =>
       mutation.mutateAsync({
         voiceId,
         promptKey,
         body,
+        experienceId: experienceId ?? '',
         uploadId: photo?.uploadId ?? '',
         photoWidth: photo?.width ?? 0,
         photoHeight: photo?.height ?? 0,

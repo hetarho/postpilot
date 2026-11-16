@@ -67,11 +67,11 @@ UPDATE voices SET deleted_at = NULL, updated_at = ?
 WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL;
 
 -- name: InsertSample :exec
-INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, experience_id)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 -- name: ListSampleBodies :many
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE voice_id = ? AND user_id = ?
 ORDER BY created_at DESC, id DESC;
@@ -79,21 +79,55 @@ ORDER BY created_at DESC, id DESC;
 -- name: ListSampleBodiesForVoices :many
 -- Every listed voice's samples with their bodies in one read, for the directory's readiness.
 -- voice_ids is a JSON array of voice ids.
-SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT voice_id, id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE user_id = sqlc.arg(user_id) AND voice_id IN (SELECT value FROM json_each(sqlc.arg(voice_ids)))
 ORDER BY voice_id, created_at DESC, id DESC;
 
 -- name: GetSampleBody :one
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
 WHERE id = ? AND voice_id = ? AND user_id = ?;
 
 -- name: GetPromptAnswer :one
--- The one answer a prompt holds in a voice (voice_samples_voice_prompt).
-SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision
+-- The one situation answer a prompt holds in a voice (voice_samples_voice_prompt); a thread
+-- answer belongs to its experience and is read by GetExperienceAnswer.
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
 FROM voice_samples
-WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer';
+WHERE voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer' AND experience_id IS NULL;
+
+-- name: GetExperienceAnswer :one
+-- The one answer a question holds in an experience (voice_samples_experience_prompt).
+SELECT id, kind, prompt_key, label, body, photo_key, photo_width, photo_height, created_at, content_revision, experience_id
+FROM voice_samples
+WHERE experience_id = ? AND voice_id = ? AND user_id = ? AND prompt_key = ? AND kind = 'answer';
+
+-- name: InsertExperience :exec
+INSERT INTO voice_experiences (id, user_id, voice_id, kind, name, created_at)
+VALUES (?, ?, ?, ?, ?, ?);
+
+-- name: ListExperiences :many
+SELECT id, user_id, voice_id, kind, name, created_at
+FROM voice_experiences
+WHERE voice_id = ? AND user_id = ?
+ORDER BY created_at DESC, id DESC;
+
+-- name: GetExperience :one
+SELECT id, user_id, voice_id, kind, name, created_at
+FROM voice_experiences
+WHERE id = ? AND voice_id = ? AND user_id = ?;
+
+-- name: UpsertExperienceAnswer :execrows
+-- Writes the answer an experience's question holds, replacing the previous one in place (a
+-- revision bump), and only when the experience belongs to this voice and owner: a foreign id
+-- inserts nothing (VOICE-3).
+INSERT INTO voice_samples (id, voice_id, user_id, kind, prompt_key, label, body, created_at, experience_id)
+SELECT sqlc.arg(id), e.voice_id, e.user_id, 'answer', sqlc.arg(prompt_key), sqlc.arg(label), sqlc.arg(body), sqlc.arg(created_at), e.id
+FROM voice_experiences e
+WHERE e.id = sqlc.arg(experience_id) AND e.voice_id = sqlc.arg(voice_id) AND e.user_id = sqlc.arg(user_id)
+ON CONFLICT (experience_id, prompt_key) WHERE experience_id IS NOT NULL
+DO UPDATE SET label = excluded.label, body = excluded.body, created_at = excluded.created_at,
+              content_revision = voice_samples.content_revision + 1;
 
 -- name: DeleteSample :one
 -- The row goes first and names the photo key, so the object can follow it (POST-39).

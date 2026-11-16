@@ -18,6 +18,7 @@ type Service struct {
 	directory               VoiceDirectoryStore
 	analyses                AnalysisStore
 	samples                 SampleStore
+	experiences             ExperienceStore
 	photoUploads            PhotoUploadStore
 	checks                  CheckStore
 	models                  Models
@@ -35,7 +36,7 @@ type Service struct {
 }
 
 func NewService(store Storage, models Models, jobs Jobs) *Service {
-	return &Service{directory: store, analyses: recurringAnalyses{store}, samples: store, photoUploads: store, checks: store, edits: store, materialReceipts: store, models: models, jobs: jobs, now: time.Now, newID: newID}
+	return &Service{directory: store, analyses: recurringAnalyses{store}, samples: store, experiences: store, photoUploads: store, checks: store, edits: store, materialReceipts: store, models: models, jobs: jobs, now: time.Now, newID: newID}
 }
 
 // ConfigurePhotos wires the private bucket a photo prompt's photo is stored in (VOICE-60).
@@ -442,7 +443,10 @@ func (s *Service) CreatePhotoUpload(ctx context.Context, userID, voiceID, prompt
 // prompt.
 type Answer struct {
 	PromptKey, Body, UploadID string
-	PhotoWidth, PhotoHeight   int
+	// ExperienceID is the experience a thread question is answered about; a situation takes
+	// none (VOICE-78).
+	ExperienceID            string
+	PhotoWidth, PhotoHeight int
 }
 
 // AnswerPrompt stores an answer as a 학습 글 (VOICE-60): trimmed and non-empty, one per prompt,
@@ -461,6 +465,12 @@ func (s *Service) AnswerPrompt(ctx context.Context, userID, voiceID string, answ
 	body := strings.TrimSpace(answer.Body)
 	if body == "" || !containsKoreanProse(ProseSentences(body)) {
 		return Sample{}, ErrAnswerRequired
+	}
+	if prompt.Kind != "" || answer.ExperienceID != "" {
+		if prompt.Photo || answer.UploadID != "" {
+			return Sample{}, ErrExperienceMismatch
+		}
+		return s.answerThread(ctx, userID, voiceID, prompt, answer.ExperienceID, body)
 	}
 	previous, err := s.answerTo(ctx, userID, voiceID, prompt.Key)
 	if err != nil {

@@ -9,9 +9,18 @@ import {
   VoiceAiField as ProtoAiField,
   VoiceNoticeKind as ProtoNoticeKind,
   VoicePromptPart as ProtoPart,
+  VoiceExperienceKind as ProtoExperienceKind,
+  VoiceRegister as ProtoRegister,
   VoiceSampleKind as ProtoKind,
 } from '@/shared/api'
-import type { VoiceAiField, VoiceNotice, VoicePromptPart, VoiceSampleKind } from '../model/types'
+import type {
+  VoiceExperienceKindName,
+  VoiceAiField,
+  VoiceRegisterName,
+  VoiceNotice,
+  VoicePromptPart,
+  VoiceSampleKind,
+} from '../model/types'
 import type {
   FingerprintFacetUnit,
   FingerprintItem,
@@ -25,6 +34,18 @@ const PART_FROM_PROTO = new Map<ProtoPart, VoicePromptPart>([
   [ProtoPart.DESCRIPTION, 'description'],
   [ProtoPart.CLOSING, 'closing'],
 ])
+
+const REGISTER_FROM_PROTO = new Map<ProtoRegister, VoiceRegisterName>([
+  [ProtoRegister.HAEYO, 'haeyo'],
+  [ProtoRegister.DA, 'da'],
+  [ProtoRegister.EUMSEUM, 'eumseum'],
+  [ProtoRegister.HAMNIDA, 'hamnida'],
+])
+
+/** An unspecified register is a data error: the caller skips that example (VOICE-79). */
+export function voiceRegisterOrUndefined(value: ProtoRegister): VoiceRegisterName | undefined {
+  return REGISTER_FROM_PROTO.get(value)
+}
 
 const KIND_FROM_PROTO = new Map<ProtoKind, VoiceSampleKind>([
   [ProtoKind.POST, 'post'],
@@ -158,4 +179,32 @@ export function requireHabitKind(value: ProtoVoiceHabitKind): VoiceHabitKind {
   const kind = HABIT_KIND_FROM_PROTO.get(value)
   if (!kind) throw new Error(`unsupported voice habit kind enum: ${String(value)}`)
   return kind
+}
+
+const EXPERIENCE_KIND_FROM_PROTO = new Map<ProtoExperienceKind, VoiceExperienceKindName>([
+  [ProtoExperienceKind.FOOD, 'food'],
+  [ProtoExperienceKind.CAFE, 'cafe'],
+  [ProtoExperienceKind.BEAUTY, 'beauty'],
+  [ProtoExperienceKind.STAY, 'stay'],
+  [ProtoExperienceKind.LEISURE, 'leisure'],
+  [ProtoExperienceKind.PRODUCT, 'product'],
+])
+
+/** An experience kind this build does not know fails the read (ARCH-3). */
+export function requireExperienceKind(value: ProtoExperienceKind): VoiceExperienceKindName {
+  const kind = EXPERIENCE_KIND_FROM_PROTO.get(value)
+  if (!kind) throw new Error(`unsupported voice experience kind enum: ${String(value)}`)
+  return kind
+}
+
+/** A thread question's kind; a situation carries none (UNSPECIFIED). */
+export function experienceKindOrUndefined(
+  value: ProtoExperienceKind,
+): VoiceExperienceKindName | undefined {
+  return value === ProtoExperienceKind.UNSPECIFIED ? undefined : requireExperienceKind(value)
+}
+
+export function experienceKindToProto(kind: VoiceExperienceKindName): ProtoExperienceKind {
+  for (const [proto, name] of EXPERIENCE_KIND_FROM_PROTO) if (name === kind) return proto
+  throw new Error(`unsupported voice experience kind: ${kind}`)
 }

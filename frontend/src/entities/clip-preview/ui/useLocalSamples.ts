@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { ClipRatioId } from '@/entities/clip-design/@x/clip-preview'
 import { CLIP_BROWSER_COMPOSITION } from '@/entities/clip-design/@x/clip-preview'
@@ -43,21 +43,88 @@ export function useClipLocalPresetSamples(ratio: ClipRatioId, slotLabel: string,
     queryFn: ({ signal }) => localComponentSamples.presets(ratio, slotLabel, signal),
   })
 }
+/**
+ * Every input field is classified: `key` fields enter the preview key, `revision` fields stay out
+ * (the effect reads them from the latest input). A new field fails to compile until it is listed.
+ */
+export const CAPTION_PREVIEW_KEY_FIELDS = {
+  ownerId: 'key',
+  projectId: 'key',
+  plan: 'key',
+  ratio: 'key',
+  sources: 'key',
+  layoutObservations: 'key',
+  versions: 'key',
+  authoritativeFingerprint: 'key',
+  design: 'key',
+  projectRevision: 'revision',
+  planRevision: 'revision',
+} as const satisfies Record<keyof BrowserProjectCompositionInput, 'key' | 'revision'>
+
+/** Serializes the whole composition only when one of its inputs changes identity (or value, for design). */
+function useCaptionPreviewKey(
+  input: BrowserProjectCompositionInput | undefined,
+  enabled: boolean,
+  selectedId: string | undefined,
+  retry: number,
+) {
+  const present = !!input
+  const ownerId = input?.ownerId
+  const projectId = input?.projectId
+  const plan = input?.plan
+  const ratio = input?.ratio
+  const sources = input?.sources
+  const layoutObservations = input?.layoutObservations
+  const versions = input?.versions
+  const authoritativeFingerprint = input?.authoritativeFingerprint
+  // Callers pass a fresh design literal each render, so it is compared by value.
+  const designKey = JSON.stringify(input?.design ?? null)
+  return useMemo(
+    () =>
+      enabled && present
+        ? JSON.stringify([
+            {
+              ownerId,
+              projectId,
+              plan,
+              ratio,
+              sources,
+              layoutObservations,
+              versions,
+              authoritativeFingerprint,
+              design:
+                (JSON.parse(designKey) as BrowserProjectCompositionInput['design'] | null) ??
+                undefined,
+            },
+            selectedId,
+            retry,
+          ])
+        : '',
+    [
+      enabled,
+      present,
+      ownerId,
+      projectId,
+      plan,
+      ratio,
+      sources,
+      layoutObservations,
+      versions,
+      authoritativeFingerprint,
+      designKey,
+      selectedId,
+      retry,
+    ],
+  )
+}
 /** Metadata is native whole-layout; only the selected caption gets one still bitmap. */
 export function useClipLocalCaptionPreview(
   input: BrowserProjectCompositionInput | undefined,
   enabled: boolean,
   selectedId?: string,
 ) {
-  const [retry, setRetry] = useState(0),
-    key =
-      enabled && input
-        ? JSON.stringify([
-            { ...input, projectRevision: undefined, planRevision: undefined },
-            selectedId,
-            retry,
-          ])
-        : ''
+  const [retry, setRetry] = useState(0)
+  const key = useCaptionPreviewKey(input, enabled, selectedId, retry)
   const latest = useRef(input)
   useLayoutEffect(() => {
     latest.current = input

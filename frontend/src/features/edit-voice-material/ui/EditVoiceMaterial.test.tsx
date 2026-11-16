@@ -48,7 +48,13 @@ function host(options: FakeVoiceOptions = {}, sampleId = 'post') {
             detail={detail}
             prompt={
               detail.sample.kind === 'answer'
-                ? { key: 'photo', part: 'description', photo: true, text: '사진 질문' }
+                ? {
+                    key: 'photo',
+                    part: 'description',
+                    photo: true,
+                    text: '사진 질문',
+                    examples: [],
+                  }
                 : undefined
             }
             onSaved={onSaved}

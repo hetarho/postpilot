@@ -32,24 +32,28 @@ const LEGACY_PROMPTS: VoicePrompt[] = [
     part: 'opening',
     photo: false,
     text: '블로그 글을 시작할 때 쓰는 첫인사를 평소처럼 2~5문장으로 써 보세요.',
+    examples: [],
   },
   {
     key: 'photo_food',
     part: 'description',
     photo: true,
     text: '음식이나 음료 사진 한 장을 골라, 블로그에 쓰듯 2~5문장으로 써 보세요.',
+    examples: [],
   },
   {
     key: 'situation_value',
     part: 'description',
     photo: false,
     text: '가격이나 양, 가성비에 대한 생각을 2~5문장으로 써 보세요.',
+    examples: [],
   },
   {
     key: 'closing_greeting',
     part: 'closing',
     photo: false,
     text: '글을 마무리할 때 쓰는 끝인사를 평소처럼 2~5문장으로 써 보세요.',
+    examples: [],
   },
 ]
 

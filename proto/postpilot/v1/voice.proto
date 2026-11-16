@@ -29,6 +29,10 @@ service VoiceService {
   rpc ListVoicePrompts(ListVoicePromptsRequest) returns (ListVoicePromptsResponse) {}
   rpc CreateVoicePhotoUpload(CreateVoicePhotoUploadRequest) returns (CreateVoicePhotoUploadResponse) {}
   rpc AnswerVoicePrompt(AnswerVoicePromptRequest) returns (AnswerVoicePromptResponse) {}
+  // The learning chat's own experiences (VOICE-78): start one (a kind and an optional name) and
+  // list a voice's, newest first. Neither calls a model.
+  rpc StartVoiceExperience(StartVoiceExperienceRequest) returns (StartVoiceExperienceResponse) {}
+  rpc ListVoiceExperiences(ListVoiceExperiencesRequest) returns (ListVoiceExperiencesResponse) {}
   // 말투 만들기 and 다시 분석: one analyze_voice job at 100% (VOICE-23).
   rpc EstimateVoiceAnalysis(EstimateVoiceAnalysisRequest) returns (EstimateVoiceAnalysisResponse) {}
   rpc AnalyzeVoice(AnalyzeVoiceRequest) returns (AnalyzeVoiceResponse) {}
@@ -264,6 +268,8 @@ message VoiceSample {
   string prompt_key = 6;
   bool has_photo = 7;
   int64 content_revision = 8;
+  // The experience a thread answer belongs to (VOICE-78); empty for a post and a situation.
+  string experience_id = 9;
 }
 
 // One of the shared prompts every voice answers (VOICE-60). Its text is product copy, Korean in
@@ -276,6 +282,54 @@ message VoicePrompt {
   string scene = 5;
   string hint = 6;
   bool starter = 7;
+  // Three example replies in visibly different registers (VOICE-79); code, never 학습 글.
+  repeated VoicePromptExample examples = 8;
+  // The experience kind a thread question belongs to (VOICE-78); UNSPECIFIED for a situation.
+  // A thread question's text names the experience through the `{experience}` token.
+  VoiceExperienceKind experience_kind = 9;
+}
+
+// One of the six top-level review kinds the learning chat asks about first (VOICE-78).
+enum VoiceExperienceKind {
+  VOICE_EXPERIENCE_KIND_UNSPECIFIED = 0;
+  VOICE_EXPERIENCE_KIND_FOOD = 1;
+  VOICE_EXPERIENCE_KIND_CAFE = 2;
+  VOICE_EXPERIENCE_KIND_BEAUTY = 3;
+  VOICE_EXPERIENCE_KIND_STAY = 4;
+  VOICE_EXPERIENCE_KIND_LEISURE = 5;
+  VOICE_EXPERIENCE_KIND_PRODUCT = 6;
+}
+
+// An experience kind with its Korean label and the plain word an unnamed experience reads as
+// (그곳 · 그 제품).
+message VoiceExperienceKindInfo {
+  VoiceExperienceKind kind = 1;
+  string label = 2;
+  string plain = 3;
+}
+
+// One experience of the owner's the chat asks about: a kind and an optional name, private owner
+// data that feeds no fingerprint item and no readiness (VOICE-78).
+message VoiceExperience {
+  string id = 1;
+  VoiceExperienceKind kind = 2;
+  string name = 3;
+  string created_at = 4;
+}
+
+// The sentence-ending register an example reply is written in (VOICE-79).
+enum VoiceRegister {
+  VOICE_REGISTER_UNSPECIFIED = 0;
+  VOICE_REGISTER_HAEYO = 1;
+  VOICE_REGISTER_DA = 2;
+  VOICE_REGISTER_EUMSEUM = 3;
+  VOICE_REGISTER_HAMNIDA = 4;
+}
+
+// One example reply to a learning-chat question, labelled with its register.
+message VoicePromptExample {
+  VoiceRegister register = 1;
+  string text = 2;
 }
 
 // A voice as the directory talks about it. `deleted` is a tombstone: the voice keeps its
@@ -365,7 +419,11 @@ message GetVoiceSampleResponse {
 }
 
 message ListVoicePromptsRequest {}
-message ListVoicePromptsResponse { repeated VoicePrompt prompts = 1; }
+message ListVoicePromptsResponse {
+  repeated VoicePrompt prompts = 1;
+  // The six experience kinds in display order (VOICE-78).
+  repeated VoiceExperienceKindInfo kinds = 2;
+}
 
 // A photo prompt's photo is the owner's own, converted in the browser and PUT directly to
 // private storage as a post photo is (VOICE-60, POST-34).
@@ -386,8 +444,15 @@ message AnswerVoicePromptRequest {
   string upload_id = 4;
   int32 photo_width = 5;
   int32 photo_height = 6;
+  // Names the experience a thread question is answered about; a situation takes none.
+  string experience_id = 7;
 }
 message AnswerVoicePromptResponse { VoiceSample sample = 1; }
+
+message StartVoiceExperienceRequest { string voice_id = 1; VoiceExperienceKind kind = 2; string name = 3; }
+message StartVoiceExperienceResponse { VoiceExperience experience = 1; }
+message ListVoiceExperiencesRequest { string voice_id = 1; }
+message ListVoiceExperiencesResponse { repeated VoiceExperience experiences = 1; }
 
 // The model is named explicitly, like every start RPC (MODEL-23).
 message EstimateVoiceAnalysisRequest { string voice_id = 1; ModelRef model = 2; }

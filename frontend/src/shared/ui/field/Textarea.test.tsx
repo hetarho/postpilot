@@ -126,3 +126,35 @@ it('defers observer-induced height writes, coalesces notifications and cancels t
   cancel.mockRestore()
   vi.unstubAllGlobals()
 })
+
+it('keeps one observer when a parent re-renders with an equal inline allocation', () => {
+  const constructed = vi.fn()
+  vi.stubGlobal(
+    'ResizeObserver',
+    class {
+      constructor() {
+        constructed()
+      }
+      observe() {}
+      disconnect() {}
+    },
+  )
+  const view = render(
+    <Textarea
+      aria-label="Writing"
+      viewportAllocation={{ reservedBottom: 40 }}
+      value="a"
+      readOnly
+    />,
+  )
+  view.rerender(
+    <Textarea
+      aria-label="Writing"
+      viewportAllocation={{ reservedBottom: 40 }}
+      value="a"
+      readOnly
+    />,
+  )
+  expect(constructed).toHaveBeenCalledTimes(1)
+  vi.unstubAllGlobals()
+})

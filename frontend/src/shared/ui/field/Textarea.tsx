@@ -33,7 +33,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
 ) {
   const inner = useRef<HTMLTextAreaElement | null>(null)
   const allocatedMinimum = useRef<string | undefined>(undefined)
-  const grow = autoGrow || viewportAllocation !== undefined
+  const allocated = viewportAllocation !== undefined
+  const grow = autoGrow || allocated
   const reservedBottom = viewportAllocation?.reservedBottom ?? 0
 
   // Callback ref so the primitive can measure while still honouring the caller's ref.
@@ -49,14 +50,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   const resize = useCallback(() => {
     const node = inner.current
     if (!node) return
-    if (!viewportAllocation && allocatedMinimum.current !== undefined) {
+    if (!allocated && allocatedMinimum.current !== undefined) {
       node.style.minHeight = allocatedMinimum.current
       allocatedMinimum.current = undefined
     }
     if (!grow) return
     // Collapse first: scrollHeight can only ever report >= the current height, so without this the
     // field would grow monotonically and never shrink when text is deleted.
-    if (viewportAllocation) {
+    if (allocated) {
       if (allocatedMinimum.current === undefined) allocatedMinimum.current = node.style.minHeight
       const computed = getComputedStyle(node)
       const lineHeight =
@@ -77,7 +78,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
     // box, the field has to scroll again, so the overflow is decided from the measurement rather
     // than hard-coded: uncapped it stays hidden, capped it becomes the field's own bounded scroller.
     node.style.overflowY = node.scrollHeight > node.clientHeight ? 'auto' : 'hidden'
-  }, [grow, reservedBottom, viewportAllocation])
+  }, [grow, allocated, reservedBottom])
 
   // Layout effect, not effect: resizing after paint would show one frame at the wrong height on
   // every keystroke. Re-runs on `value` so a programmatic change grows the field too.
@@ -108,14 +109,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   }, [grow, resize])
 
   useLayoutEffect(() => {
-    if (!viewportAllocation) return
+    if (!allocated) return
     window.addEventListener('resize', resize)
     window.visualViewport?.addEventListener('resize', resize)
     return () => {
       window.removeEventListener('resize', resize)
       window.visualViewport?.removeEventListener('resize', resize)
     }
-  }, [viewportAllocation, resize])
+  }, [allocated, resize])
 
   return (
     <textarea

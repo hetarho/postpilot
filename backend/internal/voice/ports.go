@@ -114,6 +114,7 @@ type Storage interface {
 	VoiceDirectoryStore
 	AnalysisStore
 	SampleStore
+	ExperienceStore
 	PhotoUploadStore
 	CheckStore
 	MaterialEdits

@@ -74,6 +74,11 @@ beforeEach(() => {
     part: index % 3 === 0 ? 'opening' : index % 3 === 1 ? 'description' : 'closing',
     photo: false,
     starter: index < 10,
+    examples: [
+      { register: 'haeyo', text: '예시 해요체 문장이에요.' },
+      { register: 'da', text: '예시 다체 문장이다.' },
+      { register: 'eumseum', text: '예시 음슴체 문장임.' },
+    ],
   }))
   fake.answer.mockReset().mockImplementation(async (input) => ({
     sample: { id: 'saved-answer', promptKey: input.promptKey },
@@ -120,6 +125,26 @@ async function answer(
 }
 
 describe('scripted voice learning chat', () => {
+  it('offers the current question three collapsed examples that never reach the reply', async () => {
+    mount()
+    const user = userEvent.setup()
+    const toggle = await screen.findByRole('button', { name: '다른 사람들은 이렇게 말했어요' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByText('예시 해요체 문장이에요.')).toBeNull()
+    await user.click(toggle)
+    expect(screen.getByText('해요체')).toBeInTheDocument()
+    expect(screen.getByText('~다')).toBeInTheDocument()
+    expect(screen.getByText('음슴체')).toBeInTheDocument()
+    expect(screen.getByText('예시 음슴체 문장임.')).toBeInTheDocument()
+    await answer(user, '내가 직접 쓴 답이에요.')
+    await waitFor(() => expect(fake.answer).toHaveBeenCalledOnce())
+    expect(fake.answer.mock.calls[0][0].body).toBe('내가 직접 쓴 답이에요.')
+    expect(
+      await screen.findByRole('button', { name: '다른 사람들은 이렇게 말했어요' }),
+    ).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getAllByRole('button', { name: '다른 사람들은 이렇게 말했어요' })).toHaveLength(1)
+  })
+
   it('hands ten confirmed answers to review without exposing or calling analysis in the collection step', async () => {
     const current = profile(Array.from({ length: 10 }, (_, index) => `question-${index}`))
     const review = vi.fn()

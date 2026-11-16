@@ -142,7 +142,22 @@ type Sample struct {
 	PhotoKey        string
 	PhotoWidth      int
 	PhotoHeight     int
-	CreatedAt       time.Time
+	// ExperienceID names the experience a thread answer belongs to; empty for a pasted post
+	// and for a situation answer (VOICE-78).
+	ExperienceID string
+	CreatedAt    time.Time
+}
+
+// Experience is one experience of the owner's a learning chat asks about: a kind and an
+// optional name. It is private owner data kept only so a resumed chat asks about the same
+// experience, and feeds no fingerprint item and no readiness (VOICE-78, VOICE-58).
+type Experience struct {
+	ID        string
+	UserID    string
+	VoiceID   string
+	Kind      ExperienceKind
+	Name      string
+	CreatedAt time.Time
 }
 
 // HasPhoto reports an answer written on a photo.

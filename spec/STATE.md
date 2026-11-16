@@ -81,16 +81,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
-| T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
-| T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
-| T871 | Attach three register-labelled example replies to every learning-chat question | VOICE | - | todo |
-| T872 | Show a question's three examples collapsed under the chat bubble | VOICE THEME | T871 | todo |
-| T873 | Add the six experience threads to the prompt catalog | VOICE TMPL | T871 | todo |
-| T874 | Store experiences and thread answers keyed by experience | VOICE | T873 | todo |
-| T875 | Start experiences, answer by experience and count readiness per experience | VOICE | T874 | todo |
-| T876 | Expose experiences and experience answers over the voice API | VOICE | T875 | todo |
-| T877 | Give the voice entity experiences and experience-named question text | VOICE | T872 T876 | todo |
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 
@@ -104,3 +94,4 @@
 - gusta-implement-task T851 T871 T880
 - inspect work board for remaining tasks
 - gusta-implement-task T851 T869 T871
+- gusta-implement-task T869 T878 T879

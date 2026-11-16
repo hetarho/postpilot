@@ -207,9 +207,14 @@ func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postp
 	prompts := h.service.Prompts()
 	out := make([]*postpilotv1.VoicePrompt, 0, len(prompts))
 	for _, prompt := range prompts {
-		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter})
+		out = append(out, &postpilotv1.VoicePrompt{Key: prompt.Key, Part: toProtoPart(prompt.Part), Photo: prompt.Photo, Text: prompt.Text, Scene: prompt.Scene, Hint: prompt.Hint, Starter: prompt.Starter, Examples: toProtoPromptExamples(prompt.Examples), ExperienceKind: toProtoExperienceKind(prompt.Kind)})
 	}
-	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out}), nil
+	kinds := voice.ExperienceKinds()
+	infos := make([]*postpilotv1.VoiceExperienceKindInfo, 0, len(kinds))
+	for _, info := range kinds {
+		infos = append(infos, &postpilotv1.VoiceExperienceKindInfo{Kind: toProtoExperienceKind(info.Kind), Label: info.Label, Plain: info.Plain})
+	}
+	return connect.NewResponse(&postpilotv1.ListVoicePromptsResponse{Prompts: out, Kinds: infos}), nil
 }
 
 func (h *Handler) CreateVoicePhotoUpload(ctx context.Context, req *connect.Request[postpilotv1.CreateVoicePhotoUploadRequest]) (*connect.Response[postpilotv1.CreateVoicePhotoUploadResponse], error) {
@@ -234,11 +239,40 @@ func (h *Handler) AnswerVoicePrompt(ctx context.Context, req *connect.Request[po
 	sample, err := h.service.AnswerPrompt(ctx, userID, req.Msg.GetVoiceId(), voice.Answer{
 		PromptKey: req.Msg.GetPromptKey(), Body: req.Msg.GetBody(), UploadID: req.Msg.GetUploadId(),
 		PhotoWidth: int(req.Msg.GetPhotoWidth()), PhotoHeight: int(req.Msg.GetPhotoHeight()),
+		ExperienceID: req.Msg.GetExperienceId(),
 	})
 	if err != nil {
 		return nil, toConnectError("answer voice prompt", err)
 	}
 	return connect.NewResponse(&postpilotv1.AnswerVoicePromptResponse{Sample: toProtoSample(sample)}), nil
+}
+
+func (h *Handler) StartVoiceExperience(ctx context.Context, req *connect.Request[postpilotv1.StartVoiceExperienceRequest]) (*connect.Response[postpilotv1.StartVoiceExperienceResponse], error) {
+	userID, err := authactor.ActingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	experience, err := h.service.StartExperience(ctx, userID, req.Msg.GetVoiceId(), fromProtoExperienceKind(req.Msg.GetKind()), req.Msg.GetName())
+	if err != nil {
+		return nil, toConnectError("start voice experience", err)
+	}
+	return connect.NewResponse(&postpilotv1.StartVoiceExperienceResponse{Experience: toProtoExperience(experience)}), nil
+}
+
+func (h *Handler) ListVoiceExperiences(ctx context.Context, req *connect.Request[postpilotv1.ListVoiceExperiencesRequest]) (*connect.Response[postpilotv1.ListVoiceExperiencesResponse], error) {
+	userID, err := authactor.ActingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	list, err := h.service.ListExperiences(ctx, userID, req.Msg.GetVoiceId())
+	if err != nil {
+		return nil, toConnectError("list voice experiences", err)
+	}
+	out := make([]*postpilotv1.VoiceExperience, 0, len(list))
+	for _, e := range list {
+		out = append(out, toProtoExperience(e))
+	}
+	return connect.NewResponse(&postpilotv1.ListVoiceExperiencesResponse{Experiences: out}), nil
 }
 
 func (h *Handler) AnalyzeVoice(ctx context.Context, req *connect.Request[postpilotv1.AnalyzeVoiceRequest]) (*connect.Response[postpilotv1.AnalyzeVoiceResponse], error) {
@@ -292,6 +326,7 @@ func toConnectError(op string, err error) error {
 	}
 	var tooShort *voice.SampleTooShortError
 	var badName *voice.VoiceNameError
+	var badExperienceName *voice.ExperienceNameError
 	switch {
 	case errors.As(err, &tooShort):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice sample is too short", postpilotv1.FailureReason_VOICE_SAMPLE_TOO_SHORT, map[string]string{"actual": fmt.Sprint(tooShort.Chars), "min": fmt.Sprint(voice.SampleMinChars)})
@@ -300,6 +335,12 @@ func toConnectError(op string, err error) error {
 			return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is required", postpilotv1.FailureReason_VOICE_NAME_REQUIRED, nil)
 		}
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice name is too long", postpilotv1.FailureReason_VOICE_NAME_TOO_LONG, map[string]string{"actual": fmt.Sprint(badName.Chars), "max": fmt.Sprint(voice.VoiceNameMaxChars)})
+	case errors.As(err, &badExperienceName):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, "experience name is too long", postpilotv1.FailureReason_VOICE_NAME_TOO_LONG, map[string]string{"actual": fmt.Sprint(badExperienceName.Chars), "max": fmt.Sprint(voice.VoiceExperienceNameMaxChars)})
+	case errors.Is(err, voice.ErrExperienceKindUnknown), errors.Is(err, voice.ErrExperienceMismatch):
+		return rpcserver.NewAppError(connect.CodeInvalidArgument, err.Error(), postpilotv1.FailureReason_VOICE_REQUIRED, nil)
+	case errors.Is(err, voice.ErrExperienceNotFound):
+		return rpcserver.NewAppError(connect.CodeNotFound, "voice experience not found", postpilotv1.FailureReason_VOICE_NOT_FOUND, nil)
 	case errors.Is(err, voice.ErrVoiceRequired):
 		return rpcserver.NewAppError(connect.CodeInvalidArgument, "voice is required", postpilotv1.FailureReason_VOICE_REQUIRED, nil)
 	case errors.Is(err, voice.ErrCheckPromptUnanswered):
@@ -494,8 +535,23 @@ func toProtoSample(sample voice.Sample) *postpilotv1.VoiceSample {
 		Id: sample.ID, Label: sample.Label, Chars: int32(sample.Chars),
 		CreatedAt: sample.CreatedAt.UTC().Format(timeLayout),
 		Kind:      kind, PromptKey: sample.PromptKey, HasPhoto: sample.HasPhoto(),
-		ContentRevision: sample.ContentRevision,
+		ContentRevision: sample.ContentRevision, ExperienceId: sample.ExperienceID,
 	}
+}
+
+func toProtoExperience(e voice.Experience) *postpilotv1.VoiceExperience {
+	return &postpilotv1.VoiceExperience{Id: e.ID, Kind: toProtoExperienceKind(e.Kind), Name: e.Name, CreatedAt: e.CreatedAt.UTC().Format(timeLayout)}
+}
+
+// fromProtoExperienceKind is the inverse of toProtoExperienceKind; UNSPECIFIED maps to an empty
+// kind the service refuses as unknown.
+func fromProtoExperienceKind(kind postpilotv1.VoiceExperienceKind) voice.ExperienceKind {
+	for _, info := range voice.ExperienceKinds() {
+		if toProtoExperienceKind(info.Kind) == kind {
+			return info.Kind
+		}
+	}
+	return ""
 }
 
 func toProtoReadiness(readiness voice.Readiness) *postpilotv1.VoiceReadiness {
@@ -520,6 +576,50 @@ func toProtoPart(part voice.PromptPart) postpilotv1.VoicePromptPart {
 		return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_CLOSING
 	}
 	return postpilotv1.VoicePromptPart_VOICE_PROMPT_PART_UNSPECIFIED
+}
+
+// toProtoExperienceKind maps a thread question's kind (VOICE-78); a situation's empty kind is
+// UNSPECIFIED.
+func toProtoExperienceKind(kind voice.ExperienceKind) postpilotv1.VoiceExperienceKind {
+	switch kind {
+	case voice.ExperienceFood:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_FOOD
+	case voice.ExperienceCafe:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_CAFE
+	case voice.ExperienceBeauty:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_BEAUTY
+	case voice.ExperienceStay:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_STAY
+	case voice.ExperienceLeisure:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_LEISURE
+	case voice.ExperienceProduct:
+		return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_PRODUCT
+	}
+	return postpilotv1.VoiceExperienceKind_VOICE_EXPERIENCE_KIND_UNSPECIFIED
+}
+
+// toProtoPromptExamples carries a question's example replies (VOICE-79); the frame stays in Go.
+func toProtoPromptExamples(examples []voice.PromptExample) []*postpilotv1.VoicePromptExample {
+	out := make([]*postpilotv1.VoicePromptExample, 0, len(examples))
+	for _, example := range examples {
+		out = append(out, &postpilotv1.VoicePromptExample{Register: toProtoRegister(example.Register), Text: example.Text})
+	}
+	return out
+}
+
+// toProtoRegister maps the four registers; the generated enum is walked by a test (ARCH-3).
+func toProtoRegister(register voice.Register) postpilotv1.VoiceRegister {
+	switch register {
+	case voice.RegisterHaeyo:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_HAEYO
+	case voice.RegisterDa:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_DA
+	case voice.RegisterEumseum:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_EUMSEUM
+	case voice.RegisterHamnida:
+		return postpilotv1.VoiceRegister_VOICE_REGISTER_HAMNIDA
+	}
+	return postpilotv1.VoiceRegister_VOICE_REGISTER_UNSPECIFIED
 }
 
 var _ postpilotv1connect.VoiceServiceHandler = (*Handler)(nil)
