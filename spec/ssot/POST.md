@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r50 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r51 | Owner-controlled Naver Blog writing for 체험단 posts with an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -60,9 +60,9 @@
   - SDK request/response checksums are turned off ← R2 lacks the full-object CRC32 form
   - local development runs MinIO with the same four variables and path-style addressing
   - the server refuses to boot without `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET`, naming the missing one, checked before the listener but outside `config.Load` ← `api adduser` must work on a fresh box before a bucket exists
-- POST-43 [o] the Naver Blog channel's list is 내 콘텐츠's 글 section (`/naver-blog`, →THEME-38): its compact operational history of unfinished work, failures, test-result follow-ups and export artifacts, never a blog archive; new writing starts from its section's creation button, 새 글 (→THEME-67), or from the 만들기 tab (→THEME-68)
+- POST-43 [o] the 글 list is 내 콘텐츠's 글 section (`/posts`, →THEME-38): its compact operational history of unfinished work, failures, test-result follow-ups and export artifacts, never a blog archive; new writing starts from its section's creation button, 새 글 (→THEME-67), or from the 만들기 tab (→THEME-68)
   - it opens on 작성 중 and 완성 under the shared compact continuation policy (→!THEME-73); finished means 확정 or 발행됨 with no job running
-  - /naver-blog carries the history's search/status narrowing (→POST-68), incremental loading and existing not-found/outage handling; /posts stays a valid address that replaces itself with /naver-blog, keeping its filters; /posts/$slug stays the owner-scoped post address
+  - /posts carries the history's search/status narrowing (→POST-68), incremental loading and existing not-found/outage handling; the earlier address /naver-blog replaces itself with /posts, keeping its filters; /posts/$slug stays the owner-scoped post address
   - /posts/new is an unminted creation whose context survives its address replacement; the editor has no unconditional post-list button
   - its visible heading is 내 콘텐츠's large title over the hub's chip row (→THEME-38); with no posts it points to that 새 글 button, never an extra creation button of its own
 - POST-44 [o] the editor presents five lifecycle steps — ① 생성, ② 관찰, ③ 스토리라인, ④ 다듬기 and ⑤ 완성, labelled by those short names (→!THEME-39) — from the persisted post status, observations, storyline and content, alongside or below the visible location/contextual-return row. Reachable steps change no status and start no work; unreached panels explain their prerequisite. New unminted drafts have no lifecycle bar, and one mounted editor preserves title/memo/autosave/caret through step and address changes. ← the observations and the storyline are each read by the next AI call, so each stands as a step of its own where the owner reviews it first
@@ -262,7 +262,7 @@
   - each 필수 해시태그 is marked present when the tags carry it, ignoring a leading `#`
   - every non-empty line of the free text is a box the owner ticks; ticks are saved per post by the line's text, so an edited line starts unticked
   - it is advisory: it gates no copy, finalize or publish ← a requirement the counts cannot judge is still the owner's call
-- POST-120 [o] ⑤ carries `이 체험으로 영상 만들기` whenever canonical content exists: the owner confirms, with no channel to choose, and a new clip is created on 네이버 클립 (→CLIP-209) seeded with the post's title, its memo as the clip's instruction, its 체험단 글 switch and advertiser guide, and its attached videos as sources, and the post is linked to that clip as its story (→CLIP-214 →CLIP-215)
+- POST-120 [o] ⑤ carries `이 체험으로 영상 만들기` whenever canonical content exists: the owner confirms and a new clip is created (→CLIP-209) seeded with the post's title, its memo as the clip's instruction, its 체험단 글 switch and advertiser guide, and its attached videos as sources, and the post is linked to that clip as its story (→CLIP-214 →CLIP-215)
   - photos stay with the post ← a clip takes only video sources (→CLIP-6)
   - it starts no AI work and changes nothing on the post; later edits on either side do not flow to the other
 - POST-121 [o] a new post (`/posts/new`) on an account with no made writing voice or no template first offers, in the shared `Sheet`, to make what is missing; it forces nothing, and the post can always be written without either (→POST-101 →TMPL-32) ← the pickers' create options sit at the end of a closed list, so an owner with neither otherwise writes a first post in no voice and no shape without noticing
@@ -278,7 +278,7 @@
 ## flow
 - origin review: current canonical content + matching result evidence → phrase highlights/legend → select meaning → source detail | unconfirmed explanation → optional manual/AI refinement under existing action gates
 - new post: 만들기 | 블로그's 새 글 → `/posts/new` (voice picker seeded with the 기본, or 말투 없음; sponsored) → (no made voice or no template → offer: make it | 이대로 쓰기 | 다시 묻지 않기) → 글 종류 → 요청(sponsored: paste the guide · add suggested requirements) → 사진 → 템플릿 → 내용 → 덧붙임 → 확인 → the first input `mint()`s → slug → `/posts/<slug>` (replace, same screen) → autosave 1 s after each pause
-- finish: ⑤ → checklist(counted marks + owner ticks) → copy Naver output (placeholder on top while sponsored) → optional 이 체험으로 클립 만들기(channel → confirm → new clip seeded from the post)
+- finish: ⑤ → checklist(counted marks + owner ticks) → copy Naver output (placeholder on top while sponsored) → optional 이 체험으로 영상 만들기(confirm → new clip seeded from the post)
 - photo · video: select(gate) → (photo: decode → resize/encode | video: read metadata) → CreateUpload → PUT to storage → ConfirmUpload → cache patch → next GetPost supplies the presigned view URL
 - lifecycle: draft →(observation job) draft holding observations, on ② →(storyline job) draft holding a storyline, on ③ →(machine result) review, on ④ →(FinalizePost) finalized, on ⑤ →(changed content save | machine result) review | →(paste Naver URL) published →(clear URL) finalized
 - observe: ① 확인 → 관찰하기 → observation job → ② cards fill as batches persist → edit a field (autosave, marked by hand) · press a tile → large view · 다시 관찰하기(picker → confirm over hand edits) → observation job → 스토리라인 먼저 | 바로 글 쓰기
@@ -296,6 +296,7 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r51 261116 POST-43✎ /naver-blog list, /posts redirecting→/posts list, /naver-blog redirecting; POST-120✎ clip on 네이버 클립→clip with no channel
 - r50 261116 POST-120✎ owner picks 네이버 클립 or 인스타 클립→one confirm, 네이버 클립; POST-9✎ 저장됨 shown for 2000 ms→waiting/saving/saved silent, failure only; POST-45✎ save state in the precedence and live region→removed; POST-43✎ POST-109✎ 내 글's 블로그→내 콘텐츠's 글
 - r49 261116 POST-102✎ fingerprint beside the voice's with the measurements→the post's reading at the head of 출처 보기's 말투 view, none for a deleted/unmade voice; POST-112✎ legend of four categories→also names 출처 미확인; POST-128+ 출처 보기 의미 출처/말투 views
 - r48 261113 POST-44✎ steps 생성·다듬기·완성→생성·관찰·스토리라인·다듬기·완성; POST-53✎ POST-123✎ generation actions on ① 확인→② bar, 확인→관찰하기|다음; POST-54✎ POST-95✎ POST-96✎ POST-99✎ storyline space in ②→③ step; POST-97✎ space controls→③ step bar; POST-98✎ ①'s actions→②'s; POST-56✎ 이전 to 글 생성→to ③; POST-45✎ run card on 확인→on ②; POST-122✎ POST-100✎ contact sheet on 사진→on ②; POST-86✎ published ②→②③④ read-only; POST-66✎ +스토리라인 작성 완료 row state; POST-125+ ② 관찰; POST-126+ observation edits; POST-127+ storyline list badge

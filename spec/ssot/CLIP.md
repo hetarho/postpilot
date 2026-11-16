@@ -1,15 +1,15 @@
 # CLIP generated video projects and templates
-> r79 | Browser-first source-based vertical short-form creation for the Naver Clip and Instagram Clip channels, told from a linked post when there is one, with channel upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
+> r80 | Browser-first source-based vertical short-form video creation in Naver Clip's format, told from a linked post when there is one, with upload text, 체험단 advertiser guides, local animated components, qualified 15–60 second output and explicitly bounded Max server exports.
 
 ## decisions
-- CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its clip channel (→CLIP-209), 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
+- CLIP-1 [o] a clip project is independent of a post except for one optional linked post (→CLIP-215) and owns its 체험단 글 switch and advertiser guide (→CLIP-210), upload text (→CLIP-211), title, chosen video template, template answers, owner instruction, intro/outro enablement, presets and slot instructions/text, target duration, aspect ratio, caption pace, accent, analysis, edit plan, the record of what it was asked for and latest successful result
 - CLIP-2 [o] only the authenticated owner may list, view, change, generate, cancel, finalize, download or delete a clip project or video template; an unknown or foreign id is presented as not found
-- CLIP-3 [o] 내 콘텐츠's one 영상 section holds the operational history of every clip whichever channel it belongs to (→THEME-38 →CLIP-41), and new clip creation is that section's 새 영상 button or 만들기's 영상 (→THEME-58 →THEME-67 →THEME-68). Video templates and 영상 지침 are the 영상 side of 내 스타일's 템플릿 and 지침, shared by every clip; spoken voices are 내 스타일's 목소리; each keeps visible hierarchy and contextual return.
+- CLIP-3 [o] 내 콘텐츠's one 영상 section holds the operational history of every clip (→THEME-38 →CLIP-41), and new clip creation is that section's 새 영상 button or 만들기's 영상 (→THEME-58 →THEME-67 →THEME-68). Video templates and 영상 지침 are the 영상 side of 내 스타일's 템플릿 and 지침, shared by every clip; spoken voices are 내 스타일's 목소리; each keeps visible hierarchy and contextual return.
 - CLIP-4 [o] a video template is a reusable account-owned preset, not a precondition: it carries an ordered outline of what the clip shows from start to end — named composition stages (→CLIP-141), visible text entries and an optional disclosure badge — beside the information fields and repeated item groups its answers come from; it carries a starting design selection (→CLIP-166) and no timing, every value it carries is the project's to change afterwards and none of it admits or forbids footage ← a template that scripts the footage refuses every clip whose footage does not fit the script
 - CLIP-5 [o] a generation takes at most one video template and collects only the information that template explicitly marks required before it can start; a project with none is generated from its own settings, including enabled intro/outro slots, and no template outline reaches any prompt (→TMPL-1 →TMPL-12 →CLIP-186)
 - CLIP-6 [o] a project accepts up to 20 source videos whose combined duration is at most 30 minutes
 - CLIP-7 [o] the owner chooses a target result duration from 15 to 60 seconds before generation; composition measures cuts, transitions and total duration on the playback-rate-transformed timeline. Assembly may split or reconcile multiple non-overlapping ranges only within their observed source scenes and may be shorter than the target but never below 15 seconds; insufficient footage remains inspectable under CLIP-85. New generation, edited plans, template previews and either export kind enforce the same 60-second maximum.
-- CLIP-8 [o] a new project is vertical 9:16 ← both clip channels take vertical short-form video
+- CLIP-8 [o] a new project is vertical 9:16 ← the product's video is vertical short-form (→CLIP-209)
   - a project created with 16:9 or 1:1 keeps its ratio (→CLIP-9) and stays editable, renderable and downloadable
 - CLIP-9 [o] a project's ratio is fixed; producing another ratio starts another project ← reframing after cut and copy placement would make the approved composition unreliable
 - CLIP-10 [o] generation records each prepared source as ordered source-time scenes covering its full timeline, with concise events, action and motion, visual subjects, quality, audible speech and explicit unknown, uncertain or unusable spans; observation describes the material and makes no narrative, cut, copy or effect decision
@@ -84,11 +84,11 @@
   - ⑤: docked only for a running or failed render, never as an empty card (→POST-57 →CLIP-153)
   - template/completion-model selection remains in ①; confirmed voice selection is reachable in ① and ④
   - focused running work substitutes cancellation under THEME-40; committing actions flush saves (→CLIP-39 →CLIP-75)
-- CLIP-41 [o] the 영상 list is a section of 내 콘텐츠 (`/naver-clip`, →THEME-38) listing every clip of both stored channels (→CLIP-209), `/insta-clip` replacing itself with it keeping its filters; it is the compact operational history under POST-43/110, preserving owner-scoped direct links, search/status filters and latest-job polling, and presenting no full reading archive
+- CLIP-41 [o] the 영상 list is a section of 내 콘텐츠 (`/clips`, →THEME-38) listing every clip; the earlier addresses `/naver-clip` and `/insta-clip` replace themselves with it keeping their search and status filters; it is the compact operational history under POST-43/110, preserving owner-scoped direct links, search/status filters and latest-job polling, and presenting no full reading archive
   - it opens on 작성 중 and 완성 under the shared compact continuation policy (→!THEME-73); 완성 holds confirmed and finalized projects with no job running (→CLIP-229 →CLIP-76)
   - rows identify work title/name (`제목 없는 영상` for an empty title, →CLIP-130) and update time with compact template metadata (and the ratio of a 16:9 or 1:1 project), and prioritize running/cancelling, failed/cancelled and the project display state (→!CLIP-226), with continuation/export actions
   - the search and the status filter wait behind one 찾기 button as POST-68 states for posts
-  - its visible heading is 내 콘텐츠's large title over the hub's chip row; /clips?channel= replaces itself there keeping its filters; creation comes from that section's 새 영상 button or the 만들기 tab (→THEME-67 →THEME-68)
+  - its visible heading is 내 콘텐츠's large title over the hub's chip row; creation comes from that section's 새 영상 button or the 만들기 tab (→THEME-67 →THEME-68)
 - CLIP-42 [o] video templates use the product's shared directory and save controls (→!THEME-76): a directory card is the post template's — icon, name and one description line naming its stages in order — while the template picker and a saved template's reading keep the video-specific composition preview (→!CLIP-236).
   - one saved draft remains shared by a block builder and 원문 behind 고급, with one docked save (→=TMPL-26)
   - the editor holds the name, body and starting design; design is chosen beside the illustrative preview rather than before the body (→!CLIP-166 →!CLIP-169)
@@ -223,7 +223,7 @@
 - CLIP-127 [o] a cut's rate is read from what its own observation already records — the activity, the camera motion, the scene type and whether speech is audible: a span whose recorded activity repeats, prepares or only travels is offered a faster rate, a span holding the moment the clip exists for is offered a slower one where CDS-68 admits its source, and a span whose observation supports neither stays at 1x; observation gains no field for this and the writer is offered no rate its source cannot play (→CLIP-10 →CLIP-93 →CLIP-98 →CDS-68) ← the observation already states the facts a rate turns on, and a contract naming only 1x as the default would leave every one of them unread
 - CLIP-128 [o] at most 40 % of a plan's cuts leave 1x and no minimum obliges the writer to transform any; the share binds writing and is stated in the request, never checked at render, and a delivered plan above it renders as written (→CLIP-106 →CDS-37 →CDS-52) ← returning one cut to 1x moves every millisecond after it, which CDS-52's V15 already refuses to do silently
 - CLIP-129 [o] a cut whose observation records audible speech stays at 1x while its source retains original sound; the same source's silent spans stay transformable and a source with sound off carries no speech restriction; the rule binds writing and is stated in the request, never checked or silently re-rated at render, and a delivered plan carrying a transformed speech cut renders as written (→CLIP-10 →CLIP-18 →CLIP-100 →CLIP-128) ← a hurried or stretched voice is heard as a defect rather than as editing, while the same transform on silent footage is invisible
-- CLIP-130 [o] `/clips/new` is an unminted project running ①'s guide (→!CLIP-225); its first save mints a 9:16 project in the clip channel it was opened from, as a post's first save does (→CLIP-8 →CLIP-209 →POST-4 →POST-7 →POST-11), and there is no separate project-creation action ← every project is 9:16, so minting fixes nothing the owner chose
+- CLIP-130 [o] `/clips/new` is an unminted project running ①'s guide (→!CLIP-225); its first save mints a 9:16 project, as a post's first save does (→CLIP-8 →POST-4 →POST-7 →POST-11), and there is no separate project-creation action ← every project is 9:16, so minting fixes nothing the owner chose
   - the first save is whichever change saves first — a choice, an answer, typed text or a picked source; picking a source mints first so its upload can attach, and a pick made only of skipped files mints nothing
   - the address is replaced with `/clips/<id>` keeping its creation context, the screen in use and the typing caret (→CLIP-37)
   - the title is optional: an empty title saves, generates and renders, and histories and chrome name the project `제목 없는 영상` until it has one
@@ -426,26 +426,25 @@
   - no fixed completion-time or zero-infrastructure-cost promise is introduced; existing voice/provider qualification gates remain independent
 
 - CLIP-208 [o] a new video template comes from the wizard (→CLIP-213) and a saved one is refined conversationally under EDIT, using supported composition parsing and explicit version-checked publication. No render, media processing or extra preview model call is started by authoring.
-- CLIP-209 [o] a clip project stores one clip channel and the channel decides only its upload text (→CLIP-211): every new video — from 만들기, 영상 or a post (→POST-120) — is made on 네이버 클립, a project already stored on 인스타 클립 keeps it, every clip is listed in 영상 (→CLIP-41) and no control chooses or moves a channel ← both channels take the same vertical video, so the product shows one kind of video work
-  - a project created before clip channels belongs to 네이버 클립
+- CLIP-209 [o] a clip project has no channel: every video is one kind of work, made in 네이버 클립's vertical short-form format with its upload rules (→CLIP-211 →CLIP-212), and no screen, request, response or stored record names a channel ← the same vertical video serves wherever the owner posts it, so a channel only split one kind of work in two
+  - a project stored with a channel before this rule keeps its title, sources, plan, result and posted URL as stored; the upload text stored for the channel it was on stays its one upload text, body and tags as written, and later edits follow CLIP-212's limits; an upload text stored for the project's other channel — unreachable since only the project's own channel's text was ever shown — is removed
 - CLIP-210 [o] a clip carries a 체험단 글 switch and an advertiser guide with the stored meaning of POST-117 and POST-118, asked as the post asks them (→!CLIP-225): ①'s first question 영상 종류 offers 체험단으로 다녀왔어요 or 내 돈으로 다녀왔어요 as two explicit choices saved as an option save, and 요청, shown only while sponsored, holds the guide; a new project starts sponsored and an earlier one reads as off
   - its counted items are 필수 키워드 and 필수 해시태그, always shown under `영상에 꼭 담을 내용` below the free text; 최소 글자 수 and 최소 사진 수 belong to posts and are not offered
   - the free text is scanned in the browser for `#`hashtags, `키워드:` lists and quoted phrases asked to be included, offered as chips under POST-118's add, edit and dismiss rules; nothing becomes a counted item until the owner adds it, and no model reads the free text
   - while on, every clip writing call — storyline, flow, captions, narration and revision requests — receives the guide under GEN-88's rules: woven in as the advertiser's material, never the owner's experience, every 영상 지침 원칙 outranking it (→GUIDE-52)
   - the video template's disclosure badge (→CLIP-4) stays the owner's choice
-- CLIP-211 [o] ⑤ offers 업로드 문구 for the clip's channel once its plan is confirmed (→CLIP-230): a description and tags for 네이버 클립, a caption and hashtags for 인스타 클립
+- CLIP-211 [o] ⑤ offers 업로드 문구 once its plan is confirmed (→CLIP-230): a description and tags
   - one explicit bounded write-stage call (업로드 문구 만들기) writes it from the instruction, the linked post's text (→CLIP-216), facts, storyline, final captions and the advertiser guide while 체험단 글 is on, under the 영상 지침 원칙 and in the account's 기본 voice, or plain style without one; it shows its estimate and follows clip writing work's admission and settlement, and nothing writes it on its own
   - the owner edits it in place, it is saved with the project, each part has a copy control under the copy discipline (→EXPORT-10 →EXPORT-11), and writing it again asks before replacing an edited text
   - while 체험단 글 is on it opens with the disclosure placeholder line (→EXPORT-28) and carries the guide's required hashtags
-  - the other clip channel's text for the same video is one more explicit action and needs no new render ← both channels take the same video
-- CLIP-212 [o] each clip channel's upload-text length and tag-count limits are configuration set from that platform's current published upload rules, confirmed when implemented; the writer is told them and the parser keeps what fits
-- CLIP-213 [o] 새 영상 템플릿, from either clip channel, is TMPL-71's wizard over the same target tree (→TMPL-72) with a clip stage catalog per leaf
+- CLIP-212 [o] the upload text's length and tag-count limits are configuration set from 네이버 클립's current published upload rules, confirmed when implemented; the writer is told them and the parser keeps what fits
+- CLIP-213 [o] 새 영상 템플릿 is TMPL-71's wizard over the same target tree (→TMPL-72) with a clip stage catalog per leaf
   - each stage's step asks its name (TMPL-73 suggestions or own words), the one line saying what it shows (→CLIP-141) and whether it asks an information field such as 가격 or 위치
   - a last step chooses the design selection — intro and outro presets and caption styles — on the wizard's live preview (→CLIP-166 →!CLIP-221), then the standard save
   - first-use setup hosts the same wizard (→EDIT-15)
   - its progress is TMPL-71's with 디자인 before 완성
   - v1 stage roles, worded per target: 훅 (첫 장면) · 소개 · 하이라이트 (메뉴·시술·객실·기능마다) · 디테일·분위기 · 아쉬운 점 · 정보 (가격·위치, 직접 입력) · 마무리 한 줄 ← a short-form clip keeps one arc whatever its subject
-- CLIP-214 [o] a clip created from a post (→POST-120) starts in the chosen clip channel with the post's title, its memo as the instruction, its 체험단 글 switch and advertiser guide, and the post's attached videos as sources within CLIP-6's limits, and links the post (→CLIP-215); the post's photos are not sources, and it is otherwise an ordinary project
+- CLIP-214 [o] a clip created from a post (→POST-120) starts with the post's title, its memo as the instruction, its 체험단 글 switch and advertiser guide, and the post's attached videos as sources within CLIP-6's limits, and links the post (→CLIP-215); the post's photos are not sources, and it is otherwise an ordinary project
 - CLIP-215 [o] a clip links at most one of its owner's posts that has canonical content, and that link is the only tie between them (→CLIP-1) ← a clip may be started before its post, so the link is offered from the clip as well as from the post
   - ⑤'s 이 체험으로 클립 만들기 links the post to the clip it creates (→CLIP-214)
   - ①'s 글 연결 picks one of the owner's posts with canonical content, listing first those whose title contains the clip's title and then the most recently updated; the owner unlinks or replaces it there
@@ -475,7 +474,7 @@
   - an 인트로 · 자막 · 아웃트로 switch moves the scrubber to that part's first instant and marks the part the scrubber is in; a part the illustration does not draw is not offered, and fewer than two parts show no switch
   - choosing an intro preset moves to the intro, an outro preset to the outro, and adding a caption style to the first caption drawn in that style; removing a style moves to the first caption; a choice whose part is not drawn leaves the scrubber where it is
 - CLIP-223 [o] a new clip (`/clips/new`) on an account with no video template first offers to make one, with POST-121's timing, repetition and exceptions (→!POST-121); it never offers 말투 ← a clip takes no writing voice
-  - `새 영상 템플릿 만들기` opens CLIP-213's wizard in that channel; its 저장 returns to a new clip in that channel with that template selected, and leaving the wizard unsaved selects nothing
+  - `새 영상 템플릿 만들기` opens CLIP-213's wizard; its 저장 returns to the new clip with that template selected, and leaving the wizard unsaved selects nothing
   - `이대로 만들기`, Escape or the scrim close it for this creation; `다시 묻지 않기` stops the clip offer, apart from the post offer, for this account on this browser
 
 - CLIP-226 [o] the 영상 list and aggregate 내 콘텐츠 show a project as 초안, 스토리라인 작성 완료, 다듬는 중, 확정, 완료 or 게시됨 (→CLIP-229 →CLIP-76 →CLIP-232)
@@ -492,7 +491,7 @@
 - CLIP-230 [o] ⑤ 영상 완성 opens on a short 완성됐어요 heading, then in this order, as the post's ⑤ does (→POST-54):
   - the delivered render: its progress and cancellation while it runs (→CLIP-156 →CLIP-78), then its playback with the download under it (→CLIP-149 →CLIP-153)
   - the pre-submission checklist while 체험단 글 is on (→CLIP-231)
-  - the 업로드 문구 for the clip's channel (→CLIP-211)
+  - the 업로드 문구 (→CLIP-211)
   - one 더 해 보기 card (→CLIP-233)
   - the 게시 URL field at its foot with `완료로 표시` beside it (→CLIP-232)
 - CLIP-231 [o] while 체험단 글 is on, ⑤ shows a pre-submission checklist read against the confirmed plan and the saved 업로드 문구, with no AI call (→POST-119):
@@ -501,13 +500,12 @@
   - every non-empty line of the free text is a box the owner ticks; ticks are saved per clip by the line's text, so an edited line starts unticked
   - it is advisory: it gates no download, copy, finalization or 게시 URL ← a requirement the counts cannot judge is still the owner's call
 - CLIP-232 [o] a clip is finalized when its owner saves the clip's posted URL in the field at ⑤'s foot, becoming 게시됨, or presses `완료로 표시` without one, becoming 완료; both open CLIP-76's confirmation first, and the product posts nothing itself (→!CLIP-76 →CLIP-27)
-  - the URL is an `https` URL on the clip channel's platform host, configuration confirmed when implemented (→CLIP-212)
+  - the URL is an `https` URL on 네이버 클립's platform host (naver.com, naver.me), configuration confirmed when implemented (→CLIP-212); a URL already stored on another host stays as stored until the owner changes it
   - both are refused while a job or render of the project runs, or while no durable render matches the confirmed plan
   - a finalized project may still save or replace its URL, which changes nothing else; a 완료 project that saves one becomes 게시됨
 - CLIP-233 [o] ⑤'s 더 해 보기 card is enabled whenever the plan is confirmed, starts no AI work and changes nothing on the clip (→POST-54):
-  - `이 영상 형식으로 템플릿 만들기` opens CLIP-213's wizard in the clip's channel with the project's design selection preselected and its storyline body paragraphs offered as checked custom stages, each named in its own stage step (→POST-103 →TMPL-64)
+  - `이 영상 형식으로 템플릿 만들기` opens CLIP-213's wizard with the project's design selection preselected and its storyline body paragraphs offered as checked custom stages, each named in its own stage step (→POST-103 →TMPL-64)
   - `이 체험으로 글 쓰기` creates and opens a new post seeded with the title as its 가제, the instruction as its memo and the 체험단 글 switch and advertiser guide; no source or result video is copied, and once the post has canonical content ①'s 글 연결 may link it (→CLIP-215 →POST-4)
-  - the other clip channel's upload text is one more action here under CLIP-211, with no new render
 
 
 - CLIP-236 [o] video-template summaries in the template picker and a saved template's reading show a static vertical composition example, the template name and a short outline/design summary derived only from its stored body, intro/outro presets and allowed caption styles.
@@ -564,6 +562,7 @@
 - displayed item identity and scene-to-fact meaning require representative video review; schema validity and a project-wide text match alone do not establish semantic correctness
 
 ## chg
+- r80 261116 CLIP-209✎ one channel stored per project, 인스타 클립 kept→no channel anywhere, stored data folded; CLIP-211✎ CLIP-212✎ per-channel text and limits→one description+tags under 네이버 클립's rules; CLIP-41✎ /naver-clip, /insta-clip and /clips?channel=→/clips with both earlier addresses redirecting; CLIP-1✎ CLIP-3✎ CLIP-8✎ CLIP-130✎ CLIP-213✎ CLIP-214✎ channel wording removed; published URL on the channel's host→naver.com/naver.me, stored URLs kept
 - r79 261116 CLIP-3✎ CLIP-41✎ CLIP-226✎ a list per channel in 내 글→one 영상 list in 내 콘텐츠; CLIP-209✎ owner may move channel→naver default, no move; CLIP-38✎ save state shown→silent unless failing; CLIP-42✎ CLIP-236✎ preview on directory cards→stage line, preview in picker/reading; CLIP-213✎ +progress
 - r78 261114 CLIP-42✎ post-like prose surfaces→video composition examples; CLIP-53✎ compact-only preview→explicit viewport-bounded expansion; CLIP-143✎ scrolling stage then controls→pinned bounded preview and appearance-first controls; CLIP-225✎ names-only template choices→visual summaries; CLIP-236+ static stored-template examples
 - r77 261113 CLIP-36✎ steps 영상 생성·영상 다듬기·영상 완성→생성·관찰·스토리라인·다듬기·완성; CLIP-40✎ ① 확인 generation actions→관찰하기|다음, +② and ③ bars; CLIP-177✎ ①'s actions→②'s on stored observations; CLIP-48✎ read-only observations in ①②→② 관찰; CLIP-52✎ deferred observation editing and mandatory observation review→not deferred; CLIP-53✎ CLIP-179✎ CLIP-180✎ CLIP-182✎ CLIP-197✎ CLIP-165✎ storyline space in ②→③ step; CLIP-150✎ reference observations→in ②; CLIP-160✎ finalized ①②→①–④ read-only; CLIP-39✎ CLIP-227✎ +observation edits and 관찰하기 approval; CLIP-234+ 관찰하기 and ② 관찰; CLIP-235+ observation edits

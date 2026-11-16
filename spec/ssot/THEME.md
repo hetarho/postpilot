@@ -1,5 +1,5 @@
 # THEME theme preference and design language
-> r46 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
+> r47 | Shared accessible visual contracts for tab-navigated creation, guided authoring, comparisons and semantic-origin review.
 
 ## decisions
 - THEME-1 [o] three browser-owned preferences: `system` (the default, follows `prefers-color-scheme`), `light` → the `day` semantic map, `dark` → the `night` map; the effective theme is always exactly `day|night`; components consume semantic or functional tokens and never branch on a preference, an effective theme or a palette step
@@ -128,7 +128,7 @@
 - THEME-26 [o] every authenticated screen shows its current location, and every screen outside a focused flow shows the primary destinations (→!THEME-38) at every width; the shell has no hamburger-only navigation or centered modal for primary navigation.
   - a focused flow (→THEME-38) hides the destinations and keeps its own location and one way back ← one task per screen, with nothing competing with its one action
   - the clip workspace uses the wide shared frame aligned with shell content, bounding readable prose inside it; the post editor is one centred readable column at every width, its guided screens asking one question each (→POST-122)
-  - each channel's work list is compact operational information inside 내 콘텐츠 (→THEME-69); home offers the channels under THEME-47
+  - the 글 and 영상 work lists are compact operational information inside 내 콘텐츠 (→THEME-69); home offers 글 and 영상 under THEME-47
 - THEME-27 [o] elevation and shape:
   - three shadow steps mixed from `shadow-color` at each theme's `--shadow-strength` (night 55 %, day 14 %; `shadow-lg` at 1.4×) — `shadow-sm` resting, `shadow-md` a card or a floating panel, `shadow-lg` a modal, a docked bar or a lifted card — encoding distance from the page, never importance; the page ground casts none
   - radii `rounded-sm` (10 px) badges, checkboxes and small marks · `rounded-md` (14) fields · `rounded-lg` (20) panels and choice cards · `rounded-xl` (24) cards, sheets, dialogs and a docked bar · `rounded-2xl` (28) the tab bar's and the step bar's free edge · `rounded-full` buttons, chips, tabs, segmented controls, avatars and pills
@@ -217,12 +217,11 @@
   - the current tab is marked by accent ink, an indicator plane behind its glyph and `aria-current="page"`; the focused flows mark none, and every other route marks the tab its root belongs to
   - a slim top row holds the brand (home, →THEME-47), from `lg` the credit control (→QUOTA-27) and the interface preferences (→THEME-6), and the account menu (→AUTH-29); there is no second shell row
   - the focused flows — the editor, the clip workspace, template wizards and editors, the spoken-voice wizard, writing tests and first-use setup — hide the tab bar and carry their own location and way back (→THEME-26 →THEME-58); every other screen shows it, and its docks float above it
-  - 내 콘텐츠 holds 전체 (`/my`, →THEME-69), 글 (`/naver-blog`, →POST-43) and 영상 (`/naver-clip`, every clip whichever channel it belongs to, →CLIP-41); there is no 인스타 클립 section ← a video is one kind of work whichever channel it is posted to
-  - 내 스타일 holds 말투 (`/voices`), 템플릿, 지침, 기억 (`/memories`) and 목소리 (`/spoken-voices`), with `/style` as its overview (→THEME-70); 템플릿 and 지침 each have a 글 / 영상 switch under the chips (`/templates` | `/video-templates`, `/guidelines` | `/video-guidelines`) whose 영상 link carries the clip channel the page was opened under, 네이버 클립 without one
+  - 내 콘텐츠 holds 전체 (`/my`, →THEME-69), 글 (`/posts`, →POST-43) and 영상 (`/clips`, every clip, →CLIP-41) ← a video is one kind of work wherever it is posted (→CLIP-209)
+  - 내 스타일 holds 말투 (`/voices`), 템플릿, 지침, 기억 (`/memories`) and 목소리 (`/spoken-voices`), with `/style` as its overview (→THEME-70); 템플릿 and 지침 each have a 글 / 영상 switch under the chips (`/templates` | `/video-templates`, `/guidelines` | `/video-guidelines`) whose 영상 link carries no channelone
   - a hub section's page opens on the hub's large title with the hub's sections as a chip row under it, scrolling sideways in the page flow rather than the sticky chrome, the current chip inverted and marked `aria-current`; the page keeps its own `h1` for the outline; sections are siblings: moving between them sets no return, and their pages have no back link (→THEME-58) ← the owner switches between lists often, never while writing
-  - 말투 is one section shared by 글 and 영상; a link to it carries a clip channel in the URL, and none means 네이버 블로그
+  - 말투 is one section shared by 글 and 영상
   - every section list page carries its section's creation button (→!THEME-67)
-  - links to shared clip destinations carry their channel in the URL so new tabs, copied links and reload preserve location and return; a direct link with no valid origin uses 네이버 클립 (→!THEME-58)
   - AI 고르기 holds the stage model choices (→MODEL-96) and writing tests with their history and retained comparison records (→MODEL-44); no comparison or leaderboard destination stands elsewhere
   - 나 holds the credit balance with its 충전 (→QUOTA-75), 이용권 and 결제, 계정, 시작 설정 다시 and 관리자 (master only), and 화면 (theme and language, →THEME-6)
   - creating a post/clip and later minting its address preserve its creation context instead of implying arrival from history
@@ -314,15 +313,15 @@
   - input text retains the16px floor, controls retain THEME-23 targets, and required errors, current operation state and contextual return remain reachable
   - every route and its distinct working states is included in a mobile audit; actual320/360/390/430px browser checks cover both themes, input position and document height as well as overflow, with desktop and keyboard-height continuity checks for changed workflows
 
-- THEME-65 [?] whether and when 인스타 게시물 (a photo set with a caption and hashtags) joins the channels; until it is decided the navigation shows no entry for it ← an entry that leads nowhere reads as a broken product
+- THEME-65 [?] whether and when 인스타 게시물 (a photo set with a caption and hashtags) joins 글 and 영상; until it is decided the navigation shows no entry for it ← an entry that leads nowhere reads as a broken product
 - THEME-66 [o] a guided flow — the post's 글 생성 guide (→POST-122), the template wizard (→TMPL-71 →CLIP-213) and the learning chat (→VOICE-65) — speaks to the owner in plain words: each screen asks one question, explains its choices in the owner's terms (보통 이렇게 구성돼요) and shows where the owner is, under THEME-48–57 ← a first-time 체험단 creator should be guided, not handed a builder
 
 - THEME-67 [o] a section list page's creation is one floating button that opens that section's creation directly — 새 글 (영상: 새 영상), 새 템플릿, 새 말투, 새 지침, 새 기억 or 새 목소리 — and 내 콘텐츠 전체 carries 만들기, which opens the 만들기 tab (→THEME-68) ← the other sections' creations are one chip away, so a menu of them adds a step without adding reach
   - each opens its creation directly: the editor, the clip workspace, the template wizard, the spoken-voice wizard, or the section's own creation sheet (`?new=1`)
   - it stands on those list pages at every width and never on the editor, the clip workspace or any other page; a list page has no other docked creation control
   - it is one `hero` button (plus glyph and label) in THEME-24's list add-action place: lower band above the tab bar, the full width on a phone and a right-aligned pill from `sm:`, floating on its own shadow with no plane
-  - 새 글 / 새 영상 is the channel's creation entry (→THEME-58); pressing it creates no record or AI work until the creation itself does
-- THEME-68 [o] the 만들기 tab (`/create`) asks one question, 무엇을 만들까요?, over two equally weighted destination cards — 글 and 영상 — each naming its outcome in one line and opening its creation (`/posts/new`, or `/clips/new` on the 네이버 클립 channel, →CLIP-209)
+  - 새 글 / 새 영상 is its section's creation entry (→THEME-58); pressing it creates no record or AI work until the creation itself does
+- THEME-68 [o] the 만들기 tab (`/create`) asks one question, 무엇을 만들까요?, over two equally weighted destination cards — 글 and 영상 — each naming its outcome in one line and opening its creation (`/posts/new` or `/clips/new`)
   - the new work returns to its list in 내 콘텐츠 (→THEME-58)
   - opening the tab or a card creates no record or AI work
   - `largeTitle`, touch-sized cards (→THEME-13), both themes, keyboard, reduced motion, 200% zoom and 320 px reflow
@@ -346,9 +345,9 @@
   - shared section spacing, a reserved toolbar slot and representative list skeletons keep the first work group's origin steady during cold/loading transitions; a partial aggregate query waits for both histories before presenting groups
   - only the incoming list body may animate with opacity/transform; hub chrome never re-enters or moves on data arrival, and reduced motion disables decorative movement
   - filters, owner scope, list return/scroll restoration and direct URLs retain their existing meaning (→!THEME-58)
-- THEME-73 [o] aggregate, blog and clip histories present unfinished work once inside 작성 중, followed by 완성; no separate continuation section or oversized hero duplicates the group.
+- THEME-73 [o] aggregate, 글 and 영상 histories present unfinished work once inside 작성 중, followed by 완성; no separate continuation section or oversized hero duplicates the group.
   - without a search/status narrowing the latest unfinished item has a compact accent-tinted card using shared work-list styles, the same typography/density as its peers and a visible continuation affordance; group counts include it
-  - a narrowed channel history keeps the same two groups without special latest-item emphasis; completed-only and empty histories create no continuation placeholder
+  - a narrowed 글 or 영상 history keeps the same two groups without special latest-item emphasis; completed-only and empty histories create no continuation placeholder
   - running/cancelling and failure/cancellation feedback, recovery/export links, pending comparison routes and persisted list return context remain reachable; status colour always has a truthful text label (→!THEME-18)
 - THEME-74 [o] initial page and section reads use shared contextual loading feedback, reserving the approaching content's footprint so data arrival does not collapse or rebuild the page shell.
   - list/card grids, forms, detail workspaces and result tables use representative skeleton shapes with semantic surface roles; small inline reads and loading another page use the shared spinner with their existing localized status label
@@ -364,7 +363,7 @@
   - the control keeps the shared pointer-dependent target floor and visible keyboard focus; route loading, failure and missing-object states retain a usable way back
   - a child screen's top row is ONE row: ← at its column's top-left, the screen's title beside it, and its secondary actions (기본으로 설정, 삭제, 요청 기술 보기) at the far end; actions wrap under the row before the title is squeezed, which truncates instead, and a workspace's step switch takes a row of its own on a phone ← a lone arrow over an empty line spends the first screen on nothing
   - the screen's shared frame draws that row inside the screen's own column (`PageFrame`, or `WorkspaceHeader` in a workspace); the shell draws a child route's return only for a screen not on that frame and above a hub section's title (→THEME-38); no screen draws a text return link
-- THEME-76 [o] saved-resource directories in My style and clip channels use one shared card composition: consistent grid, spacing, leading icon, readable resource name, supporting description/status, compact metadata and separate secondary actions.
+- THEME-76 [o] saved-resource directories in My style and the 영상 section use one shared card composition: consistent grid, spacing, leading icon, readable resource name, supporting description/status, compact metadata and separate secondary actions.
   - post and video templates share that composition, including unfinished authoring-session entries; whole-card navigation and delete/resume controls are distinct keyboard targets without nested links or buttons
   - preserve every resource, count, draft/publication/conflict/job status, owner scope and deletion-focus recovery; repeated boilerplate does not outrank the resource name
   - a directory has one floating creation action (→!THEME-67); operational billing/admin tables and chronological histories retain their purpose-specific layouts
@@ -387,6 +386,7 @@
 - gates: `pnpm lint:style` and `pnpm lint:style:probe` (→ARCH-25); review at360/390/430px,320px reflow,1440x900/1920x1080 desktop,200% zoom, contextual return, keyboard and screen reader, both themes
 
 ## chg
+- r47 261116 THEME-38✎ /naver-blog·/naver-clip and channel-carrying links→/posts·/clips with no channel in any URL; THEME-65✎ THEME-67✎ THEME-68✎ THEME-73✎ THEME-76✎ channel and blog/clip wording→글 and 영상
 - r46 261116 THEME-38✎ 내 글→내 콘텐츠, 블로그·네이버 클립·인스타 클립→글·영상; THEME-67✎ THEME-72✎ hub names; THEME-68✎ three cards→글·영상; THEME-69✎ no filter→찾기 sheet + order; THEME-71✎ painted reason→screen-reader only in wizards; THEME-75✎ round ←→one top row in the frame; THEME-58✎ round link→THEME-75 row; THEME-29✎ THEME-56✎ guide-only→every sequence
 - r45 261116 THEME-62✎ four-category legend→also the unconfirmed state; roles +voice habit for 출처 보기's 말투 view
 - r44 261114 THEME-71✎ post/template step bars→all clip steps included; THEME-75+ shared icon return; THEME-76+ consistent resource catalogs; THEME-77+ complete clip/writing visual parity; THEME-78+ exhaustive route/control audit and regression enforcement

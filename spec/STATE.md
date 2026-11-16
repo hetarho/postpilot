@@ -26,18 +26,18 @@
 | ARCH | 25 | 25 | - | 0 |
 | AUTH | 15 | 15 | - | 0 |
 | QUOTA | 40 | 40 | - | 0 |
-| POST | 50 | 50 | - | 0 |
+| POST | 51 | 51 | - | 0 |
 | VOICE | 21 | 21 | - | 0 |
 | GEN | 33 | 33 | - | 0 |
 | MODEL | 38 | 38 | - | 0 |
 | TMPL | 33 | 33 | - | 0 |
-| GUIDE | 27 | 27 | - | 0 |
+| GUIDE | 28 | 28 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
-| THEME | 46 | 46 | - | 2 |
-| MKT | 12 | 12 | - | 0 |
+| THEME | 47 | 47 | - | 2 |
+| MKT | 13 | 13 | - | 0 |
 | VIDEO | 8 | 8 | - | 0 |
-| CLIP | 79 | 79 | - | 2 |
+| CLIP | 80 | 80 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
 | MEM | 8 | 8 | - | 2 |
@@ -99,6 +99,19 @@
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
 | T855 | Keep the acting-user helper in a leaf package | ARCH | - | todo |
+| T856 | Show one upload text with no channel | CLIP | - | todo |
+| T857 | Accept a posted URL on 네이버 클립 hosts only | CLIP | - | todo |
+| T858 | Create and set up a clip without a channel | CLIP | - | todo |
+| T859 | Finish the clip workspace without a channel | CLIP | - | todo |
+| T860 | Make a video from a post with no channel | POST CLIP | - | todo |
+| T861 | Open 말투, video templates and 영상 지침 without a channel | THEME GUIDE | - | todo |
+| T862 | Serve the 글 list at /posts and the 영상 list at /clips | THEME POST CLIP | T856 T857 T858 T859 T860 T861 | todo |
+| T863 | Name the sections and kinds 글 and 영상 in code | THEME | T862 | todo |
+| T864 | Remove the clip channel type from the frontend | CLIP | T856 T857 T858 T859 T860 T861 T862 T863 | todo |
+| T865 | Say 글 and 영상 in the marketing copy | MKT | - | todo |
+| T866 | Serve every clip as one video kind in the backend | CLIP | - | todo |
+| T867 | Remove the channel from the API contract | CLIP | T864 T866 | todo |
+| T868 | Fold and drop the stored clip channel | CLIP | T867 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
