@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "participants": {},
+  "gate": null,
+  "history": [],
+  "lastPlanning": {
+    "land": "main",
+    "base": "1833bf723c86dea0e90adc64a7641d9f23c85316",
+    "candidate": "6ac3344dae6c6557021de9013d658b53877247ee",
+    "at": "2026-11-16T01:28:43.204Z"
+  }
+}
