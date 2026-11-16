@@ -47,7 +47,7 @@ func TestEveryAIFieldMaps(t *testing.T) {
 	}
 }
 
-// ARCH-3: every counted item and facet unit maps to its own generated value, and every generated
+// ARCH-3: every counted item, facet unit and verdict maps to its own generated value, and every generated
 // value but UNSPECIFIED is one the domain has.
 func TestEveryFingerprintItemAndUnitMaps(t *testing.T) {
 	items := map[postpilotv1.FingerprintItem]bool{}
@@ -71,5 +71,19 @@ func TestEveryFingerprintItemAndUnitMaps(t *testing.T) {
 	}
 	if len(units) != len(postpilotv1.FingerprintFacetUnit_name)-1 {
 		t.Fatalf("the domain maps %d of %d generated units", len(units), len(postpilotv1.FingerprintFacetUnit_name)-1)
+	}
+	verdicts := map[postpilotv1.FingerprintVerdict]bool{}
+	for _, verdict := range voice.Verdicts() {
+		mapped := toProtoVerdict(verdict)
+		if mapped == postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_UNSPECIFIED || verdicts[mapped] {
+			t.Fatalf("%q maps to %v", verdict, mapped)
+		}
+		verdicts[mapped] = true
+	}
+	if len(verdicts) != len(postpilotv1.FingerprintVerdict_name)-1 {
+		t.Fatalf("the domain maps %d of %d generated verdicts", len(verdicts), len(postpilotv1.FingerprintVerdict_name)-1)
+	}
+	if toProtoVerdict(voice.VerdictNone) != postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_UNSPECIFIED {
+		t.Fatal("no verdict must stay UNSPECIFIED")
 	}
 }

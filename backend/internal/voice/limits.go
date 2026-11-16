@@ -8,3 +8,7 @@ const (
 	FewShotExcerptTargetChars = 500
 	FewShotExcerptMaxChars    = 800
 )
+
+// CompareMinExpected is VOICE_COMPARE_MIN_EXPECTED (VOICE-62): a habit the voice uses so rarely
+// that a text of this length would carry fewer occurrences than this is shown without a verdict.
+const CompareMinExpected = 2

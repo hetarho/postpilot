@@ -999,44 +999,199 @@ type Facet struct {
 	VoiceTerms, TextTerms []string
 }
 
+// Verdict is how a judged item reads against its voice: 비슷함 or 다름, or none (VOICE-62).
+type Verdict string
+
+const (
+	VerdictNone      Verdict = ""
+	VerdictSimilar   Verdict = "similar"
+	VerdictDifferent Verdict = "different"
+)
+
+// Verdicts lists the two verdicts an item can carry; an item without one has VerdictNone.
+func Verdicts() []Verdict { return []Verdict{VerdictSimilar, VerdictDifferent} }
+
+// The code-owned tolerances an item is 비슷함 within, each inclusive (VOICE-62).
+const (
+	endingsShareTolerance  = 0.15
+	marksTolerance         = 0.20
+	emojiMinTolerance      = 3.0
+	emojiRelativeTolerance = 0.5
+	shapeLengthTolerance   = 0.25
+	shapeLineTolerance     = 0.25
+	headingsTolerance      = 0.30
+	toleranceEpsilon       = 1e-9
+)
+
 // ItemComparison is one counted item measured on the voice and on a text.
 type ItemComparison struct {
-	Item     Item
-	Unknown  bool
-	Facets   []Facet
+	Item    Item
+	Unknown bool
+	Facets  []Facet
+	// Headline is the key of the facet the item leads with: the voice's dominant value.
 	Headline string
+	Verdict  Verdict
 	// Distance is 0…1, relative to the voice's own value.
 	Distance float64
 }
 
-// Compare measures a text against a voice: one comparison per item, the farthest first and
-// the unknown ones last.
+// Compare reads a text against a voice: one comparison per item the voice knows, 다름 first, then
+// 비슷함, then the items without a verdict (unknown on the text included), each group in item order.
 func Compare(voice, text Fingerprint) []ItemComparison {
 	out := make([]ItemComparison, 0, len(Items()))
 	for _, item := range Items() {
-		comparison := ItemComparison{Item: item}
+		if voice.Unknown(item) {
+			continue
+		}
+		comparison := ItemComparison{Item: item, Headline: leadOf(item, voice)}
 		comparison.Facets, comparison.Distance = compareItem(item, voice, text)
 		comparison.Distance = math.Max(0, math.Min(1, comparison.Distance))
-		comparison.Headline = headline(comparison.Facets)
-		if voice.Unknown(item) || text.Unknown(item) {
+		if text.Unknown(item) {
 			comparison.Unknown, comparison.Distance = true, 0
+		} else {
+			comparison.Verdict = judge(item, voice, text)
 		}
 		out = append(out, comparison)
 	}
-	order := map[Item]int{}
-	for i, item := range Items() {
-		order[item] = i
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Unknown != out[j].Unknown {
-			return !out[i].Unknown
-		}
-		if !out[i].Unknown && out[i].Distance != out[j].Distance {
-			return out[i].Distance > out[j].Distance
-		}
-		return order[out[i].Item] < order[out[j].Item]
-	})
+	rank := map[Verdict]int{VerdictDifferent: 0, VerdictSimilar: 1, VerdictNone: 2}
+	sort.SliceStable(out, func(i, j int) bool { return rank[out[i].Verdict] < rank[out[j].Verdict] })
 	return out
+}
+
+// leadOf is the facet key an item leads with: the voice's dominant value.
+func leadOf(item Item, v Fingerprint) string {
+	switch item {
+	case ItemEndings:
+		return largestKey(endingFacets(v, v))
+	case ItemMarks:
+		return largestKey(markFacets(v, v)[:6])
+	case ItemEmoji:
+		if key := largestKey(emojiFacets(v, v)); key != "" {
+			return key
+		}
+		return "emoji"
+	case ItemShape:
+		return "average"
+	case ItemOpenings:
+		if len(v.OpenClose.Openings) == 0 {
+			return "closings"
+		}
+		return "openings"
+	case ItemAdverbs:
+		if len(v.Adverbs.Words) > 0 {
+			return v.Adverbs.Words[0].Word
+		}
+		return ""
+	case ItemPerson:
+		return "dominant"
+	case ItemHeadings:
+		return "emoji"
+	}
+	return ""
+}
+
+// largestKey is the key of the facet with the largest voice value, the first on a tie, and ""
+// when every value is 0.
+func largestKey(facets []Facet) string {
+	best, bestValue := "", 0.0
+	for _, facet := range facets {
+		if facet.Voice > bestValue {
+			best, bestValue = facet.Key, facet.Voice
+		}
+	}
+	return best
+}
+
+// judge is an item's verdict under the code-owned tolerances, for an item known on both sides.
+func judge(item Item, v, t Fingerprint) Verdict {
+	similar := func(ok bool) Verdict {
+		if ok {
+			return VerdictSimilar
+		}
+		return VerdictDifferent
+	}
+	within := func(gap, tolerance float64) bool { return gap <= tolerance+toleranceEpsilon }
+	switch item {
+	case ItemEndings:
+		lead := largestKey(endingFacets(v, v))
+		if lead == "" || largestKey(endingFacets(t, t)) != lead {
+			return VerdictDifferent
+		}
+		for _, facet := range endingFacets(v, t) {
+			if facet.Key == lead {
+				return similar(within(math.Abs(facet.Voice-facet.Text), endingsShareTolerance))
+			}
+		}
+	case ItemMarks:
+		return similar(within(halfL1(markFacets(v, t)[:6]), marksTolerance))
+	case ItemEmoji:
+		for _, facet := range emojiFacets(v, t) {
+			if !within(math.Abs(facet.Voice-facet.Text), math.Max(emojiMinTolerance, emojiRelativeTolerance*facet.Voice)) {
+				return VerdictDifferent
+			}
+		}
+		return VerdictSimilar
+	case ItemShape:
+		length := math.Abs(v.Shape.AverageChars-t.Shape.AverageChars) / math.Max(v.Shape.AverageChars, 1)
+		return similar(within(length, shapeLengthTolerance) && within(math.Abs(v.Shape.LineBreakShare-t.Shape.LineBreakShare), shapeLineTolerance))
+	case ItemOpenings:
+		if len(v.OpenClose.Openings) == 0 && len(v.OpenClose.Closings) == 0 {
+			return VerdictNone
+		}
+		return similar(sharesLine(v.OpenClose.Openings, t.OpenClose.Openings) || sharesLine(v.OpenClose.Closings, t.OpenClose.Closings))
+	case ItemAdverbs:
+		judged, used := 0, 0
+		for _, word := range v.Adverbs.Words {
+			if expectedCount(word.PerHundred, t) < CompareMinExpected {
+				continue
+			}
+			judged++
+			if t.Adverbs.Rates[word.Word] > 0 {
+				used++
+			}
+		}
+		if judged == 0 {
+			return VerdictNone
+		}
+		return similar(used*2 >= judged)
+	case ItemPerson:
+		if v.Person.Dominant == "" {
+			return similar(t.Person.Dominant == "")
+		}
+		if expectedCount(personRate(v.Person), t) < CompareMinExpected {
+			return VerdictNone
+		}
+		return similar(t.Person.Dominant == v.Person.Dominant)
+	case ItemHeadings:
+		return similar(within(math.Abs(v.Headings.EmojiShare-t.Headings.EmojiShare), headingsTolerance) &&
+			within(math.Abs(v.Headings.QuestionShare-t.Headings.QuestionShare), headingsTolerance))
+	}
+	return VerdictNone
+}
+
+// expectedCount is how often a habit at the voice's rate per 100 sentences would appear in the text.
+func expectedCount(perHundred float64, t Fingerprint) float64 {
+	return perHundred * float64(t.Sentences) / 100
+}
+
+func endingFacets(v, t Fingerprint) []Facet {
+	share := func(key string, a, b float64) Facet { return Facet{Key: key, Unit: UnitShare, Voice: a, Text: b} }
+	return []Facet{share("다", v.Endings.Da, t.Endings.Da), share("해요", v.Endings.Haeyo, t.Endings.Haeyo), share("습니다", v.Endings.Seumnida, t.Endings.Seumnida), share("기타", v.Endings.Other, t.Endings.Other)}
+}
+
+func markFacets(v, t Fingerprint) []Facet {
+	share := func(key string, a, b float64) Facet { return Facet{Key: key, Unit: UnitShare, Voice: a, Text: b} }
+	return []Facet{
+		share(markExclaim, v.Marks.Exclaim, t.Marks.Exclaim), share(markQuestion, v.Marks.Question, t.Marks.Question),
+		share(markTilde, v.Marks.Tilde, t.Marks.Tilde), share(markEllipsis, v.Marks.Ellipsis, t.Marks.Ellipsis),
+		share(markPeriod, v.Marks.Period, t.Marks.Period), share(markNone, v.Marks.None, t.Marks.None),
+		share("repeat", v.Marks.Repeat, t.Marks.Repeat),
+	}
+}
+
+func emojiFacets(v, t Fingerprint) []Facet {
+	rate := func(key string, a, b float64) Facet { return Facet{Key: key, Unit: UnitPerHundred, Voice: a, Text: b} }
+	return []Facet{rate("emoji", v.Emoji.Emoji, t.Emoji.Emoji), rate("ㅎㅎ", v.Emoji.Hh, t.Emoji.Hh), rate("ㅋㅋ", v.Emoji.Kk, t.Emoji.Kk), rate("ㅠㅠ", v.Emoji.Tears, t.Emoji.Tears)}
 }
 
 func compareItem(item Item, v, t Fingerprint) ([]Facet, float64) {
@@ -1047,19 +1202,14 @@ func compareItem(item Item, v, t Fingerprint) ([]Facet, float64) {
 	}
 	switch item {
 	case ItemEndings:
-		facets := []Facet{share("다", v.Endings.Da, t.Endings.Da), share("해요", v.Endings.Haeyo, t.Endings.Haeyo), share("습니다", v.Endings.Seumnida, t.Endings.Seumnida), share("기타", v.Endings.Other, t.Endings.Other)}
+		facets := endingFacets(v, t)
 		facets = append(facets, terms("suffixes", suffixTexts(v.Endings.Suffixes), suffixTexts(t.Endings.Suffixes)))
 		return facets, halfL1(facets[:4])
 	case ItemMarks:
-		facets := []Facet{
-			share(markExclaim, v.Marks.Exclaim, t.Marks.Exclaim), share(markQuestion, v.Marks.Question, t.Marks.Question),
-			share(markTilde, v.Marks.Tilde, t.Marks.Tilde), share(markEllipsis, v.Marks.Ellipsis, t.Marks.Ellipsis),
-			share(markPeriod, v.Marks.Period, t.Marks.Period), share(markNone, v.Marks.None, t.Marks.None),
-			share("repeat", v.Marks.Repeat, t.Marks.Repeat),
-		}
+		facets := markFacets(v, t)
 		return facets, halfL1(facets[:6])
 	case ItemEmoji:
-		facets := []Facet{rate("emoji", v.Emoji.Emoji, t.Emoji.Emoji), rate("ㅎㅎ", v.Emoji.Hh, t.Emoji.Hh), rate("ㅋㅋ", v.Emoji.Kk, t.Emoji.Kk), rate("ㅠㅠ", v.Emoji.Tears, t.Emoji.Tears)}
+		facets := emojiFacets(v, t)
 		distance := 0.0
 		for _, facet := range facets {
 			distance = math.Max(distance, math.Abs(facet.Voice-facet.Text)/math.Max(math.Max(facet.Voice, facet.Text), 1))
@@ -1125,32 +1275,6 @@ func halfL1(facets []Facet) float64 {
 		sum += math.Abs(facet.Voice - facet.Text)
 	}
 	return sum / 2
-}
-
-// headline is the facet with the largest relative gap: a numeric one by |a−b| / max(a, b), a
-// list by the share of the voice's terms the text lacks.
-func headline(facets []Facet) string {
-	best, bestGap := "", -1.0
-	for _, facet := range facets {
-		gap := 0.0
-		if facet.Unit == UnitText {
-			if len(facet.VoiceTerms) > 0 {
-				missing := 0
-				for _, term := range facet.VoiceTerms {
-					if !slices.Contains(facet.TextTerms, term) {
-						missing++
-					}
-				}
-				gap = float64(missing) / float64(len(facet.VoiceTerms))
-			}
-		} else if top := math.Max(math.Abs(facet.Voice), math.Abs(facet.Text)); top > 0 {
-			gap = math.Abs(facet.Voice-facet.Text) / top
-		}
-		if gap > bestGap {
-			best, bestGap = facet.Key, gap
-		}
-	}
-	return best
 }
 
 // sharesLine reports a text line that begins like one of the voice's lines: the same first three

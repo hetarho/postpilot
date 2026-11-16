@@ -278,8 +278,140 @@ func TestFingerprintExamplesNameTheNewestMaterial(t *testing.T) {
 	}
 }
 
-// VOICE-62: one comparison per item, the farthest first, the unknown last.
-func TestCompareOrdersByDistance(t *testing.T) {
+// VOICE-62: the reported case — each item leads with the voice's dominant value and carries a
+// verdict; 다름 come first, then 비슷함, then the items without one, each group in item order.
+func TestCompareJudgesEachItem(t *testing.T) {
+	voice := Fingerprint{
+		Sentences: 100,
+		Endings:   Endings{Haeyo: 0.61, Other: 0.39},
+		Marks:     Marks{Exclaim: 0.3, Period: 0.7},
+		Emoji:     Emoji{Hh: 2},
+		Shape:     Shape{AverageChars: 20, LineBreakShare: 0.5},
+		OpenClose: OpenClose{Unknown: true},
+		Adverbs:   Adverbs{None: true},
+		Person:    Person{Jeo: 5, Dominant: PersonJeo},
+		Headings:  Headings{Unknown: true},
+	}
+	text := Fingerprint{
+		Sentences: 20,
+		Endings:   Endings{Haeyo: 0.58, Da: 0.02, Other: 0.40},
+		Marks:     Marks{Exclaim: 0.25, Period: 0.75},
+		Emoji:     Emoji{Emoji: 24, Hh: 2},
+		Shape:     Shape{Unknown: true},
+		OpenClose: OpenClose{Unknown: true},
+		Adverbs:   Adverbs{Rates: map[string]float64{}},
+		Person:    Person{},
+		Headings:  Headings{EmojiShare: 1},
+	}
+	got := Compare(voice, text)
+	type reading struct {
+		item     Item
+		headline string
+		verdict  Verdict
+		unknown  bool
+	}
+	var read []reading
+	for _, comparison := range got {
+		read = append(read, reading{comparison.Item, comparison.Headline, comparison.Verdict, comparison.Unknown})
+	}
+	want := []reading{
+		{ItemEmoji, "ㅎㅎ", VerdictDifferent, false},
+		{ItemEndings, "해요", VerdictSimilar, false},
+		{ItemMarks, markPeriod, VerdictSimilar, false},
+		{ItemShape, "average", VerdictNone, true},
+		{ItemAdverbs, "", VerdictNone, false},
+		{ItemPerson, "dominant", VerdictNone, false}, // 저 5/100 over 20 sentences expects 1 < CompareMinExpected
+	}
+	if !reflect.DeepEqual(read, want) {
+		t.Fatalf("comparison = %+v\nwant %+v", read, want)
+	}
+}
+
+// VOICE-62's tolerances at their edges.
+func TestCompareTolerances(t *testing.T) {
+	verdictOf := func(item Item, v, x Fingerprint) Verdict {
+		for _, comparison := range Compare(v, x) {
+			if comparison.Item == item {
+				return comparison.Verdict
+			}
+		}
+		t.Fatalf("%s left out", item)
+		return VerdictNone
+	}
+	base := func() Fingerprint {
+		return Fingerprint{Sentences: 100, Endings: Endings{Haeyo: 0.6, Da: 0.4}, Emoji: Emoji{Emoji: 10},
+			Shape: Shape{AverageChars: 20, LineBreakShare: 0.5}, OpenClose: OpenClose{Openings: []string{"안녕하세요 여러분"}},
+			Adverbs: Adverbs{Words: []WordRate{{"진짜", 10}, {"완전", 10}, {"근데", 1}}, Rates: map[string]float64{}},
+			Person:  Person{Dominant: ""}, Headings: Headings{EmojiShare: 0.5}}
+	}
+	v := base()
+	x := base()
+	x.Endings = Endings{Haeyo: 0.45, Da: 0.55}
+	if got := verdictOf(ItemEndings, v, x); got != VerdictDifferent {
+		t.Errorf("another largest class = %q", got)
+	}
+	x.Endings = Endings{Haeyo: 0.75, Da: 0.25}
+	if got := verdictOf(ItemEndings, v, x); got != VerdictSimilar {
+		t.Errorf("해요 0.60 vs 0.75 = %q", got)
+	}
+	x.Emoji = Emoji{Emoji: 15}
+	if got := verdictOf(ItemEmoji, v, x); got != VerdictSimilar {
+		t.Errorf("emoji 10 vs 15 = %q", got)
+	}
+	x.Emoji = Emoji{Emoji: 16}
+	if got := verdictOf(ItemEmoji, v, x); got != VerdictDifferent {
+		t.Errorf("emoji 10 vs 16 = %q", got)
+	}
+	x.Shape = Shape{AverageChars: 25, LineBreakShare: 0.75}
+	if got := verdictOf(ItemShape, v, x); got != VerdictSimilar {
+		t.Errorf("shape at both edges = %q", got)
+	}
+	x.Shape = Shape{AverageChars: 26, LineBreakShare: 0.5}
+	if got := verdictOf(ItemShape, v, x); got != VerdictDifferent {
+		t.Errorf("shape past the length edge = %q", got)
+	}
+	x.OpenClose = OpenClose{Openings: []string{"안녕하세요!"}}
+	if got := verdictOf(ItemOpenings, v, x); got != VerdictSimilar {
+		t.Errorf("a shared opening = %q", got)
+	}
+	x.OpenClose = OpenClose{Closings: []string{"다음에 또 봐요"}}
+	if got := verdictOf(ItemOpenings, v, x); got != VerdictDifferent {
+		t.Errorf("no shared line = %q", got)
+	}
+	// 근데 (expected 1) is not judged; one of 진짜 · 완전 is half of the judged words.
+	x.Adverbs = Adverbs{Rates: map[string]float64{"진짜": 5}}
+	if got := verdictOf(ItemAdverbs, v, x); got != VerdictSimilar {
+		t.Errorf("half the expected words = %q", got)
+	}
+	x.Adverbs = Adverbs{Rates: map[string]float64{"근데": 5}}
+	if got := verdictOf(ItemAdverbs, v, x); got != VerdictDifferent {
+		t.Errorf("only the unexpected word = %q", got)
+	}
+	x.Sentences = 10
+	if got := verdictOf(ItemAdverbs, v, x); got != VerdictNone {
+		t.Errorf("a text too short to expect any word = %q", got)
+	}
+	x.Person = Person{Dominant: PersonJeo}
+	if got := verdictOf(ItemPerson, v, x); got != VerdictDifferent {
+		t.Errorf("voice none, text 저 = %q", got)
+	}
+	v.Person, x.Sentences = Person{Jeo: 10, Dominant: PersonJeo}, 20
+	if got := verdictOf(ItemPerson, v, x); got != VerdictSimilar {
+		t.Errorf("저 expected 2 and used = %q", got)
+	}
+	x.Headings = Headings{EmojiShare: 0.8, QuestionShare: 0.3}
+	if got := verdictOf(ItemHeadings, v, x); got != VerdictSimilar {
+		t.Errorf("headings at the edge = %q", got)
+	}
+	x.Headings = Headings{EmojiShare: 0.85}
+	if got := verdictOf(ItemHeadings, v, x); got != VerdictDifferent {
+		t.Errorf("headings past the edge = %q", got)
+	}
+}
+
+// VOICE-62 on measured texts: the voice's own text is 비슷함 wherever judged, dropping the marks
+// makes ② 다름 first, and a one-sentence text leaves its items unknown without a verdict.
+func TestCompareMeasuredTexts(t *testing.T) {
 	voiceText := strings.Join([]string{
 		"안녕하세요! 오늘은 국수예요.",
 		repeatLines(20, "진짜 맛있었어요!", "저는 또 갈 거예요ㅎㅎ", "국물이 진했어요!"),
@@ -287,46 +419,21 @@ func TestCompareOrdersByDistance(t *testing.T) {
 	}, "\n")
 	voice := FingerprintOf([]Material{post("p", voiceText, 0)})
 
-	same := Compare(voice, MeasureText(voiceText))
-	if len(same) != len(Items()) {
-		t.Fatalf("comparisons = %d", len(same))
-	}
-	for _, comparison := range same {
-		if !comparison.Unknown && comparison.Distance > 1e-9 {
-			t.Fatalf("a text that matches every habit is %v away on %s", comparison.Distance, comparison.Item)
+	for _, comparison := range Compare(voice, MeasureText(voiceText)) {
+		if voice.Unknown(comparison.Item) || comparison.Verdict == VerdictDifferent {
+			t.Fatalf("the voice's own text on %s = %+v", comparison.Item, comparison)
 		}
 	}
 
-	calm := strings.ReplaceAll(voiceText, "!", ".")
-	dropped := Compare(voice, MeasureText(calm))
-	if dropped[0].Item != ItemMarks || dropped[0].Headline != markExclaim || dropped[0].Distance < 0.5 {
-		t.Fatalf("the farthest item after dropping the marks = %+v", dropped[0])
-	}
-	for i := 1; i < len(dropped); i++ {
-		if !dropped[i].Unknown && !dropped[i-1].Unknown && dropped[i].Distance > dropped[i-1].Distance {
-			t.Fatalf("not ordered by distance: %+v", dropped)
-		}
+	dropped := Compare(voice, MeasureText(strings.ReplaceAll(voiceText, "!", ".")))
+	if dropped[0].Item != ItemMarks || dropped[0].Verdict != VerdictDifferent || dropped[0].Headline != markExclaim {
+		t.Fatalf("the first item after dropping the marks = %+v", dropped[0])
 	}
 
-	short := Compare(voice, MeasureText("짧아요!"))
-	unknownSeen := false
-	for _, comparison := range short {
-		if comparison.Unknown {
-			unknownSeen = true
-			continue
+	for _, comparison := range Compare(voice, MeasureText("짧아요!")) {
+		if comparison.Unknown && comparison.Verdict != VerdictNone {
+			t.Fatalf("an unknown item with a verdict: %+v", comparison)
 		}
-		if unknownSeen {
-			t.Fatalf("a known item after an unknown one: %+v", short)
-		}
-	}
-	known := 0
-	for _, comparison := range short {
-		if !comparison.Unknown {
-			known++
-		}
-	}
-	if known > 2 {
-		t.Fatalf("a one-sentence text showed %d items: %+v", known, short)
 	}
 }
 

@@ -439,20 +439,29 @@ message FingerprintFacet {
   FingerprintFacetValue text = 4;
 }
 
-// One counted item on the voice and on the text; an unknown item has a distance of 0.
+// An item's reading under the code-owned tolerances; UNSPECIFIED is no verdict.
+enum FingerprintVerdict {
+  FINGERPRINT_VERDICT_UNSPECIFIED = 0;
+  FINGERPRINT_VERDICT_SIMILAR = 1;
+  FINGERPRINT_VERDICT_DIFFERENT = 2;
+}
+
+// One counted item on the voice and on the text; unknown means unknown on the text, with a
+// distance of 0 and no verdict. An item unknown on the voice is left out.
 message FingerprintItemComparison {
   FingerprintItem item = 1;
   bool unknown = 2;
   // 0…1, relative to the voice's own value.
   double distance = 3;
-  // The key of the facet with the largest gap.
+  // The key of the facet the item leads with: the voice's dominant value.
   string headline = 4;
   repeated FingerprintFacet facets = 5;
+  FingerprintVerdict verdict = 6;
 }
 
 message GetPostFingerprintRequest { string post_slug = 1; }
-// Items come farthest from the voice first and unknown last. applicable is false, with no
-// items, for a post with 말투 없음, with no content, or whose voice is deleted or not made.
+// Items come 다름 first, then 비슷함, then those without a verdict, each group in item order.
+// applicable is false, with no items, for a post with 말투 없음, with no content, or whose voice is deleted or not made.
 message GetPostFingerprintResponse {
   bool applicable = 1;
   // The content revision that was counted.

@@ -123,7 +123,8 @@ func TestAVoiceCheckWritesOnceWithTheAnswerWithheld(t *testing.T) {
 	if done.Status != voice.CheckDone || done.Piece != "안녕하세요! 오늘도 빵 이야기예요." || done.Answer != "안녕하세요, 오늘은 동네 빵집 이야기예요." || done.Stale {
 		t.Fatalf("done = %+v", done)
 	}
-	if len(done.Comparison) != len(voice.Items()) {
+	// an item unknown on the voice is left out (VOICE-62)
+	if len(done.Comparison) == 0 || len(done.Comparison) > len(voice.Items()) {
 		t.Fatalf("comparison = %+v", done.Comparison)
 	}
 	// Two sentences cannot show a ratio: the short piece reads unknown where it cannot count.
@@ -375,7 +376,7 @@ func TestAReflectionFreezesAndRunsTheCheckPrompt(t *testing.T) {
 	if _, err := h.svc.RunReflectionCandidate(ctx, input.Content, visionRef); err != nil {
 		t.Fatalf("a frozen snapshot on a deleted voice = %v", err)
 	}
-	if comparisons, err := h.svc.CompareTexts(ctx, "alice", alice, []string{result.Piece}); err != nil || len(comparisons) != 1 || len(comparisons[0]) != len(voice.Items()) {
+	if comparisons, err := h.svc.CompareTexts(ctx, "alice", alice, []string{result.Piece}); err != nil || len(comparisons) != 1 || len(comparisons[0]) == 0 || len(comparisons[0]) > len(voice.Items()) {
 		t.Fatalf("compare = %v err=%v", comparisons, err)
 	}
 	if _, err := h.svc.SnapshotReflectionInput(ctx, "alice", alice, "opening_greeting"); !errors.Is(err, voice.ErrVoiceDeleted) {

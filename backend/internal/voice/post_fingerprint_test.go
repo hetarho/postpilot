@@ -72,7 +72,7 @@ func TestPostFingerprintComparesThePostWithItsVoice(t *testing.T) {
 	h.models.completeCalls = 0
 
 	found, err := h.svc.PostFingerprint(ctx, "alice", "made")
-	if err != nil || !found.Applicable || found.Revision != 7 || len(found.Items) != len(voice.Items()) {
+	if err != nil || !found.Applicable || found.Revision != 7 || len(found.Items) == 0 || len(found.Items) > len(voice.Items()) {
 		t.Fatalf("made voice = %+v err=%v", found, err)
 	}
 	var endings voice.ItemComparison
@@ -81,7 +81,7 @@ func TestPostFingerprintComparesThePostWithItsVoice(t *testing.T) {
 			endings = item
 		}
 	}
-	if endings.Unknown || endings.Distance < 0.9 || endings.Headline == "" {
+	if endings.Unknown || endings.Distance < 0.9 || endings.Headline != "해요" || endings.Verdict != voice.VerdictDifferent {
 		t.Fatalf("해요 against 다 = %+v", endings)
 	}
 	for _, facet := range endings.Facets {

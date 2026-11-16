@@ -39,6 +39,7 @@ func ToProtoComparisons(items []voice.ItemComparison) []*postpilotv1.Fingerprint
 		}
 		out = append(out, &postpilotv1.FingerprintItemComparison{
 			Item: toProtoItem(item.Item), Unknown: item.Unknown, Distance: item.Distance, Headline: item.Headline, Facets: facets,
+			Verdict: toProtoVerdict(item.Verdict),
 		})
 	}
 	return out
@@ -73,6 +74,17 @@ func toProtoItem(item voice.Item) postpilotv1.FingerprintItem {
 		return postpilotv1.FingerprintItem_FINGERPRINT_ITEM_HEADINGS
 	}
 	return postpilotv1.FingerprintItem_FINGERPRINT_ITEM_UNSPECIFIED
+}
+
+// toProtoVerdict maps VerdictNone, an item without a verdict, to UNSPECIFIED.
+func toProtoVerdict(verdict voice.Verdict) postpilotv1.FingerprintVerdict {
+	switch verdict {
+	case voice.VerdictSimilar:
+		return postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_SIMILAR
+	case voice.VerdictDifferent:
+		return postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_DIFFERENT
+	}
+	return postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_UNSPECIFIED
 }
 
 func toProtoFacetUnit(unit voice.FacetUnit) postpilotv1.FingerprintFacetUnit {

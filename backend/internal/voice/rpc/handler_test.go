@@ -406,13 +406,21 @@ func TestGetPostFingerprintOverTheWire(t *testing.T) {
 		return res.Msg, nil
 	}
 
+	want := voice.Compare(counted, voice.MeasureBlocks([]voice.Block{{Type: voice.BlockText, Content: strings.Repeat("국물이 진했다. ", 12)}}))
 	made, err := ask(ctx, "made")
-	if err != nil || !made.GetApplicable() || made.GetRevision() != 5 || len(made.GetItems()) != len(voice.Items()) {
+	if err != nil || !made.GetApplicable() || made.GetRevision() != 5 || len(want) == 0 || len(made.GetItems()) != len(want) {
 		t.Fatalf("made = %+v err=%v", made, err)
 	}
-	want := voice.Compare(counted, voice.MeasureBlocks([]voice.Block{{Type: voice.BlockText, Content: strings.Repeat("국물이 진했다. ", 12)}}))
+	verdicts := map[voice.Verdict]postpilotv1.FingerprintVerdict{
+		voice.VerdictNone:      postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_UNSPECIFIED,
+		voice.VerdictSimilar:   postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_SIMILAR,
+		voice.VerdictDifferent: postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_DIFFERENT,
+	}
+	if made.GetItems()[0].GetVerdict() != postpilotv1.FingerprintVerdict_FINGERPRINT_VERDICT_DIFFERENT || made.GetItems()[0].GetHeadline() != "해요" {
+		t.Fatalf("해요 against 다 should lead as 다름 on 해요: %+v", made.GetItems()[0])
+	}
 	for i, item := range made.GetItems() {
-		if item.GetItem() == postpilotv1.FingerprintItem_FINGERPRINT_ITEM_UNSPECIFIED || item.GetUnknown() != want[i].Unknown || item.GetHeadline() != want[i].Headline || len(item.GetFacets()) != len(want[i].Facets) {
+		if item.GetItem() == postpilotv1.FingerprintItem_FINGERPRINT_ITEM_UNSPECIFIED || item.GetUnknown() != want[i].Unknown || item.GetHeadline() != want[i].Headline || item.GetVerdict() != verdicts[want[i].Verdict] || len(item.GetFacets()) != len(want[i].Facets) {
 			t.Fatalf("item %d = %+v, want %+v", i, item, want[i])
 		}
 		for j, facet := range item.GetFacets() {
