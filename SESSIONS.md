@@ -164,6 +164,7 @@
 - 261116 decided TMPL-76 T869: 우선순위 → 입력한 스타일 요청 > 내 템플릿 소제목 > 기본 말투, 참고 소제목을 그대로 반복하지 않고 같은 표현 방식으로 새로 씀 (alt: 참고 소제목이 요청보다 우선 / 그대로 재사용 허용)
 - 261116 decided TMPL-76 T870: 영상 템플릿 위저드에도 둘까 → 글 템플릿 위저드만, 영상 위저드는 그대로 (alt: 영상 위저드에도 저장된 영상 템플릿 단계 이름 참고)
 - 261116 decided T869 T870: 참고 줄을 누가 뽑나 → 브라우저가 템플릿 목록에서 뽑아 보내고 서버는 개수·길이·한 줄만 검사, 예상 크레딧은 기존 추정 그대로 (alt: 서버가 계정 템플릿을 직접 읽음 / 참고분만큼 추정 상향)
+- 261116 decided POST-123: Guidelines bounce while changing writing settings: standard saved/new-draft route tests show no runtime error -> open account guideline management in place (alt: retain the full-page detour and request error details). This preserves the editor and removes the reported navigation boundary without changing rule ownership.
 
 ## unlanded
 | id | tag | branch | commit | at |
