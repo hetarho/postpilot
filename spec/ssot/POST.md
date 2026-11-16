@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r53 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r54 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, safe first-save handoffs, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -101,7 +101,8 @@
 - POST-123 [o] ①'s 확인 summarizes what the run will be given, each row with one way to change it, and holds no second copy of any field:
   - 글 종류 · 사진 (up to four thumbnails with the photo and video counts) · 제목 · 템플릿 · 덧붙임, each with a 바꾸기 named by its row that opens that row's screen
   - 말투 as its labelled picker in place (→POST-101) with the voice warning under it (→POST-25)
-  - 지침, counting the owner's guidelines and the 기본 지침 switched on; its 바꾸기 opens the account's post-guideline management list in a Sheet over the current writing screen, without navigation, draft minting or model work on open; closing it preserves the current guide step, fields and normal autosave (→!GUIDE-20 →!GUIDE-43 →!THEME-29)
+  - 지침, counting the owner's guidelines and the 기본 지침 switched on; its 바꾸기 opens the account's post-guideline management list in a Sheet over the current writing screen, without leaving the writing workflow, minting an empty draft or starting model work; closing it preserves the current guide step, fields and normal autosave (→!GUIDE-20 →!GUIDE-43 →!THEME-29)
+  - when queued writing edits already require the first save, their normal canonical-address handoff completes before guideline management opens; the new editor opens the requested Sheet from its own guideline button so close restores focus, and links/history retain the saved draft address
   - the embedded list retains the account-wide ownership, scope, injection order and explicit-save behavior of guideline management; it does not create post-only rules or duplicate the directory's logic
   - existing standalone guidelines URLs carrying a validated post context retain their contextual return (→!THEME-58)
   - 글쓰기 옵션, whose 바꾸기 opens the writing brief (→POST-51)
@@ -299,6 +300,7 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r54 261116 POST-123✎ deferred first-save address replacement until Sheet close→ordinary queued-save/address handoff before Sheet open, preserving focus and saved-draft history
 - r53 261116 POST-123✎ 지침 바꾸기 flushes/mints and navigates to guidelines→opens the same account-owned management in a Sheet, keeping the draft route and step
 - r52 261116 POST-51✎ below-row anchored brief→portalled, viewport-bounded brief with an upward fallback above docks; POST-117✎ sponsored/self-paid visit labels→provided product/service and 내돈내산 labels
 - r51 261116 POST-43✎ /naver-blog list, /posts redirecting→/posts list, /naver-blog redirecting; POST-120✎ clip on 네이버 클립→clip with no channel
