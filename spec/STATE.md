@@ -80,7 +80,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T835 | Give the writer visual evidence for observations without origin spans | GEN POST | - | doing@261116.vfid |
 | T836 | Use the memo's names in every media caption and mark them owner input | GEN | T835 | todo |
 
 ## work
@@ -89,4 +88,4 @@
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 
 ## next
-- gusta-implement-task T835
+- gusta-implement-task T836
