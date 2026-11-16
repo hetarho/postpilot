@@ -165,6 +165,7 @@
 - 261116 decided POST-123: Guidelines bounce while changing writing settings: standard saved/new-draft route tests show no runtime error -> open account guideline management in place (alt: retain the full-page detour and request error details). This preserves the editor and removes the reported navigation boundary without changing rule ownership.
 - 261116 decided TMPL-45 T884: 빈 질문 칸 위의 소제목을 어떻게 함께 뺄까 → 빈 줄 없이 칸 바로 위에 붙은 줄(소제목·고정 문구)을 그 칸의 머리말로 보고 칸이 빠질 때 함께 뺌, 붙어 있는 칸 여럿은 모두 빠질 때만 (alt: 문법에 섹션/머리말 속성 추가 / 위저드 템플릿만 표시 / 그대로 둠)
 - 261116 decided TMPL-72 T885: 별점 칸을 어디에 둘까 → 모든 세부 종류의 마지막 파트 "별점"(질문을 바탕으로 작성, 사진 없음, 필수 아님) (alt: 4번째 내용 종류 "별점" / 1~5 별 선택 입력 UI)
+- 261116 decided TMPL-74 T885 T886: 별점 위 고정 문구(평가 기준)를 어떻게 받을까 → 질문을 바탕으로 작성에 선택 입력 고정 문구를 두고 칸 바로 위에 붙여 씀, 기본값은 비움(제품이 완성 문구를 내놓지 않음) (alt: 기본 평가 기준 문구 제공 / 별점 전용 카드)
 
 ## unlanded
 | id | tag | branch | commit | at |
