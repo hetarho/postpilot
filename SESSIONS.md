@@ -176,6 +176,7 @@
 | T868 | onev | gusta-session-start-onev-54d284a9 | 5cd9855fe | 2026-11-16T10:49Z |
 
 ## log
+- 261116 gusta-update-ssot TMPL start
 - 261116 fix voice-navigation: keep the unmade voice redirect inside its own subtree; all five primary destinations work
 - 261116 sketch voice-chat-examples start
 - 261116 T868 done
@@ -195,4 +196,3 @@
 - 261116 design ui (dsx): one-row returns via PageFrame, GuideProgress everywhere, 내 콘텐츠 with 글/영상 only, silent autosave, AI 고르기 sheet; merged ddbc5e9a6 (T854), not pushed
 - 261116 gusta-create-task review/tidy-261116 round two FE: T849-T853 (lanes fe-upload fe-render)
 - 261116 gusta-create-task review/tidy-261116 round two: T845-T848 (lane be-shared)
-- 261116 gusta-create-task review/tidy-261116: T837-T844 (lanes be-tidy fe-lib fe-clip)
