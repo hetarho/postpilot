@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:57Z | - | gusta-session-start-vfid-2c92eccf | 565fe336940b | 2c49cb3071a34ca1b4d9fe9c |
+| vfid | DESKTOP-VKPLS8P | autopilot | 2026-11-16T02:37Z | 2026-11-16T02:57Z | T833 | gusta-session-start-vfid-2c92eccf | b951476c9430 | 2c49cb3071a34ca1b4d9fe9c |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
