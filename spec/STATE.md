@@ -83,7 +83,6 @@
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T869 | Carry saved heading references through heading suggestions | TMPL | - | todo |
 | T870 | Offer 내 템플릿 소제목 참고해서 제안 받기 in the heading sheet | TMPL | T869 | todo |
-| T873 | Add the six experience threads to the prompt catalog | VOICE TMPL | T871 | todo |
 | T874 | Store experiences and thread answers keyed by experience | VOICE | T873 | todo |
 | T875 | Start experiences, answer by experience and count readiness per experience | VOICE | T874 | todo |
 | T876 | Expose experiences and experience answers over the voice API | VOICE | T875 | todo |
@@ -98,5 +97,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T869 T873
+- gusta-implement-task T869 T874
 - inspect work board for remaining tasks
