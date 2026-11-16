@@ -84,7 +84,6 @@
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
-| T858 | Create and set up a clip without a channel | CLIP | - | todo |
 | T859 | Finish the clip workspace without a channel | CLIP | - | todo |
 | T860 | Make a video from a post with no channel | POST CLIP | - | todo |
 | T861 | Open 말투, video templates and 영상 지침 without a channel | THEME GUIDE | - | todo |
@@ -103,5 +102,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T851 T858 T859
+- gusta-implement-task T851 T859 T860
 - inspect work board for remaining tasks
