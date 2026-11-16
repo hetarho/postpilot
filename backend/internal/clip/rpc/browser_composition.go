@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"connectrpc.com/connect"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 )
 
 func (h *Handler) StartClipBrowserCompositionRender(ctx context.Context, req *connect.Request[v1.StartClipBrowserCompositionRenderRequest]) (*connect.Response[v1.StartClipBrowserCompositionRenderResponse], error) {
-	user, e := actingUser(ctx)
+	user, e := authrpc.ActingUser(ctx)
 	if e != nil {
 		return nil, e
 	}

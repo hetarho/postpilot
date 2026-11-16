@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
 
@@ -17,7 +18,7 @@ import (
 )
 
 func (h *Handler) PrepareClipPreview(ctx context.Context, req *connect.Request[v1.PrepareClipPreviewRequest]) (*connect.Response[v1.PrepareClipPreviewResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +71,7 @@ func (h *Handler) PrepareClipPreview(ctx context.Context, req *connect.Request[v
 // sequence-rendered caption's output frames, as one sprite sheet per run
 // (CLIP-159). Admitted exactly as a draft preview is, and it changes nothing.
 func (h *Handler) PrepareClipCaptionFrames(ctx context.Context, req *connect.Request[v1.PrepareClipCaptionFramesRequest]) (*connect.Response[v1.PrepareClipCaptionFramesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -136,7 +137,7 @@ func responseFits(out proto.Message, limit int) bool {
 // GetClipCaptionPreview hands ② each caption's SVG fragment, its box and the
 // safe area, built by the one style registry the renderer uses (CDS-83).
 func (h *Handler) GetClipCaptionPreview(ctx context.Context, req *connect.Request[v1.GetClipCaptionPreviewRequest]) (*connect.Response[v1.GetClipCaptionPreviewResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +173,7 @@ func canvasBox(r clip.Region) *v1.ClipCanvasBox {
 // the same registry the render draws with, so the offer shows each style's own
 // look (CDS-80, CDS-83). It carries nothing of this project but its ratio.
 func (h *Handler) GetClipCaptionStyleSamples(ctx context.Context, req *connect.Request[v1.GetClipCaptionStyleSamplesRequest]) (*connect.Response[v1.GetClipCaptionStyleSamplesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +201,7 @@ func (h *Handler) GetClipCaptionStyleSamples(ctx context.Context, req *connect.R
 // renderer with its slots numbered by the caller's label (CLIP-165). Like the
 // style samples it carries nothing of this project but its ratio.
 func (h *Handler) GetClipRegionPresetSamples(ctx context.Context, req *connect.Request[v1.GetClipRegionPresetSamplesRequest]) (*connect.Response[v1.GetClipRegionPresetSamplesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

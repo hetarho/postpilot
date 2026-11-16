@@ -10,7 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/gen/postpilot/v1/postpilotv1connect"
 	"github.com/postpilot/backend/internal/llm"
@@ -30,7 +30,7 @@ func NewHandler(service *voice.Service) *Handler { return &Handler{service: serv
 // --- directory ---
 
 func (h *Handler) ListVoices(ctx context.Context, _ *connect.Request[postpilotv1.ListVoicesRequest]) (*connect.Response[postpilotv1.ListVoicesResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -42,7 +42,7 @@ func (h *Handler) ListVoices(ctx context.Context, _ *connect.Request[postpilotv1
 }
 
 func (h *Handler) CreateVoice(ctx context.Context, req *connect.Request[postpilotv1.CreateVoiceRequest]) (*connect.Response[postpilotv1.CreateVoiceResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func (h *Handler) CreateVoice(ctx context.Context, req *connect.Request[postpilo
 }
 
 func (h *Handler) RenameVoice(ctx context.Context, req *connect.Request[postpilotv1.RenameVoiceRequest]) (*connect.Response[postpilotv1.RenameVoiceResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func (h *Handler) RenameVoice(ctx context.Context, req *connect.Request[postpilo
 }
 
 func (h *Handler) SetDefaultVoice(ctx context.Context, req *connect.Request[postpilotv1.SetDefaultVoiceRequest]) (*connect.Response[postpilotv1.SetDefaultVoiceResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (h *Handler) SetDefaultVoice(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) DeleteVoice(ctx context.Context, req *connect.Request[postpilotv1.DeleteVoiceRequest]) (*connect.Response[postpilotv1.DeleteVoiceResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (h *Handler) DeleteVoice(ctx context.Context, req *connect.Request[postpilo
 }
 
 func (h *Handler) RestoreVoice(ctx context.Context, req *connect.Request[postpilotv1.RestoreVoiceRequest]) (*connect.Response[postpilotv1.RestoreVoiceResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (h *Handler) RestoreVoice(ctx context.Context, req *connect.Request[postpil
 // --- profile ---
 
 func (h *Handler) GetVoiceProfile(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceProfileRequest]) (*connect.Response[postpilotv1.GetVoiceProfileResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +116,7 @@ func (h *Handler) GetVoiceProfile(ctx context.Context, req *connect.Request[post
 }
 
 func (h *Handler) AddVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.AddVoiceSampleRequest]) (*connect.Response[postpilotv1.AddVoiceSampleResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (h *Handler) AddVoiceSample(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) DeleteVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.DeleteVoiceSampleRequest]) (*connect.Response[postpilotv1.DeleteVoiceSampleResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func (h *Handler) DeleteVoiceSample(ctx context.Context, req *connect.Request[po
 }
 
 func (h *Handler) UpdateVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.UpdateVoiceSampleRequest]) (*connect.Response[postpilotv1.UpdateVoiceSampleResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func optionalInt(value *int32) *int {
 }
 
 func (h *Handler) EstimateVoiceAnalysis(ctx context.Context, req *connect.Request[postpilotv1.EstimateVoiceAnalysisRequest]) (*connect.Response[postpilotv1.EstimateVoiceAnalysisResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +187,7 @@ func (h *Handler) EstimateVoiceAnalysis(ctx context.Context, req *connect.Reques
 }
 
 func (h *Handler) GetVoiceSample(ctx context.Context, req *connect.Request[postpilotv1.GetVoiceSampleRequest]) (*connect.Response[postpilotv1.GetVoiceSampleResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +202,7 @@ func (h *Handler) GetVoiceSample(ctx context.Context, req *connect.Request[postp
 }
 
 func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postpilotv1.ListVoicePromptsRequest]) (*connect.Response[postpilotv1.ListVoicePromptsResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authrpc.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	prompts := h.service.Prompts()
@@ -214,7 +214,7 @@ func (h *Handler) ListVoicePrompts(ctx context.Context, _ *connect.Request[postp
 }
 
 func (h *Handler) CreateVoicePhotoUpload(ctx context.Context, req *connect.Request[postpilotv1.CreateVoicePhotoUploadRequest]) (*connect.Response[postpilotv1.CreateVoicePhotoUploadResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +228,7 @@ func (h *Handler) CreateVoicePhotoUpload(ctx context.Context, req *connect.Reque
 }
 
 func (h *Handler) AnswerVoicePrompt(ctx context.Context, req *connect.Request[postpilotv1.AnswerVoicePromptRequest]) (*connect.Response[postpilotv1.AnswerVoicePromptResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -243,7 +243,7 @@ func (h *Handler) AnswerVoicePrompt(ctx context.Context, req *connect.Request[po
 }
 
 func (h *Handler) AnalyzeVoice(ctx context.Context, req *connect.Request[postpilotv1.AnalyzeVoiceRequest]) (*connect.Response[postpilotv1.AnalyzeVoiceResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -255,7 +255,7 @@ func (h *Handler) AnalyzeVoice(ctx context.Context, req *connect.Request[postpil
 }
 
 func (h *Handler) RestorePreviousVoiceAnalysis(ctx context.Context, req *connect.Request[postpilotv1.RestorePreviousVoiceAnalysisRequest]) (*connect.Response[postpilotv1.RestorePreviousVoiceAnalysisResponse], error) {
-	userID, err := actingUser(ctx)
+	userID, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -264,14 +264,6 @@ func (h *Handler) RestorePreviousVoiceAnalysis(ctx context.Context, req *connect
 		return nil, toConnectError("restore previous voice analysis", err)
 	}
 	return connect.NewResponse(&postpilotv1.RestorePreviousVoiceAnalysisResponse{Profile: toProtoProfile(profile)}), nil
-}
-
-func actingUser(ctx context.Context) (string, error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return userID, nil
 }
 
 // toConnectError maps the context's sentinels to wire codes. A foreign voice is NotFound

@@ -136,9 +136,9 @@ func (h *Handler) Logout(ctx context.Context, req *connect.Request[postpilotv1.L
 // The plan rides this probe so the app can gate master-only surfaces during boot without
 // a second round-trip; the server still refuses those procedures on its own.
 func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetMeRequest]) (*connect.Response[postpilotv1.GetMeResponse], error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
+	userID, err := ActingUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	acting, _ := auth.PlanFromContext(ctx)
 	user, err := h.svc.Account(ctx, userID)
@@ -153,9 +153,9 @@ func (h *Handler) GetMe(ctx context.Context, _ *connect.Request[postpilotv1.GetM
 }
 
 func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpilotv1.RegisterEmailRequest]) (*connect.Response[postpilotv1.RegisterEmailResponse], error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
+	userID, err := ActingUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if err := h.svc.RegisterEmail(ctx, userID, req.Msg.GetEmail()); err != nil {
 		return nil, authMutationError("register email", err)
@@ -164,9 +164,9 @@ func (h *Handler) RegisterEmail(ctx context.Context, req *connect.Request[postpi
 }
 
 func (h *Handler) ChangePassword(ctx context.Context, req *connect.Request[postpilotv1.ChangePasswordRequest]) (*connect.Response[postpilotv1.ChangePasswordResponse], error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
+	userID, err := ActingUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	if err := h.svc.ChangePassword(ctx, userID, req.Msg.GetCurrentPassword(), req.Msg.GetNewPassword()); err != nil {
 		return nil, authMutationError("change password", err)

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
-	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/campaign"
 	"github.com/postpilot/backend/internal/clip"
 	clipapp "github.com/postpilot/backend/internal/clip/app"
@@ -41,7 +41,7 @@ func (h *Handler) WithGeneration(g *clipapp.GenerationService, j *job.Queue) *Ha
 }
 
 func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[v1.StartClipGenerationRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (h *Handler) StartClipGeneration(ctx context.Context, req *connect.Request[
 // ListClipAnalysisEligibility answers CLIP-44 for every registered observe model:
 // refs and statuses only, no model call, no write, nothing from the provider.
 func (h *Handler) ListClipAnalysisEligibility(ctx context.Context, _ *connect.Request[v1.ListClipAnalysisEligibilityRequest]) (*connect.Response[v1.ListClipAnalysisEligibilityResponse], error) {
-	if _, err := actingUser(ctx); err != nil {
+	if _, err := authrpc.ActingUser(ctx); err != nil {
 		return nil, err
 	}
 	if h.generation == nil {
@@ -112,13 +112,6 @@ func eligibilityProto(s clip.EligibilityStatus) v1.ClipAnalysisEligibility {
 
 func NewHandler(service *clipapp.Service) *Handler                     { return &Handler{service: service} }
 func (h *Handler) WithSources(sources *clipapp.SourceService) *Handler { h.sources = sources; return h }
-func actingUser(ctx context.Context) (string, error) {
-	user, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return "", rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
-	}
-	return user, nil
-}
 func toConnectError(err error) error {
 	if errors.Is(err, context.Canceled) {
 		return connect.NewError(connect.CodeCanceled, context.Canceled)
@@ -348,7 +341,7 @@ func projectFields(p clip.Project) *v1.ClipProject {
 	return out
 }
 func (h *Handler) ListVideoTemplates(ctx context.Context, req *connect.Request[v1.ListVideoTemplatesRequest]) (*connect.Response[v1.ListVideoTemplatesResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -363,7 +356,7 @@ func (h *Handler) ListVideoTemplates(ctx context.Context, req *connect.Request[v
 	return connect.NewResponse(&v1.ListVideoTemplatesResponse{Templates: out}), nil
 }
 func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[v1.CreateVideoTemplateRequest]) (*connect.Response[v1.CreateVideoTemplateResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -384,7 +377,7 @@ func (h *Handler) CreateVideoTemplate(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&v1.CreateVideoTemplateResponse{Template: templateProto(value)}), nil
 }
 func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[v1.UpdateVideoTemplateRequest]) (*connect.Response[v1.UpdateVideoTemplateResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -398,7 +391,7 @@ func (h *Handler) UpdateVideoTemplate(ctx context.Context, req *connect.Request[
 }
 
 func (h *Handler) DeleteVideoTemplate(ctx context.Context, req *connect.Request[v1.DeleteVideoTemplateRequest]) (*connect.Response[v1.DeleteVideoTemplateResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -409,7 +402,7 @@ func (h *Handler) DeleteVideoTemplate(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&v1.DeleteVideoTemplateResponse{DetachedProjects: int32(n)}), nil
 }
 func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.ListClipProjectsRequest]) (*connect.Response[v1.ListClipProjectsResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -441,7 +434,7 @@ func (h *Handler) ListClipProjects(ctx context.Context, req *connect.Request[v1.
 	return connect.NewResponse(&v1.ListClipProjectsResponse{Projects: out}), nil
 }
 func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1.CreateClipProjectRequest]) (*connect.Response[v1.CreateClipProjectResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -457,7 +450,7 @@ func (h *Handler) CreateClipProject(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1.CreateClipProjectResponse{Project: projectProto(value)}), nil
 }
 func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.GetClipProjectRequest]) (*connect.Response[v1.GetClipProjectResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -544,7 +537,7 @@ func (h *Handler) GetClipProject(ctx context.Context, req *connect.Request[v1.Ge
 	return connect.NewResponse(&v1.GetClipProjectResponse{Project: out}), nil
 }
 func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1.UpdateClipProjectRequest]) (*connect.Response[v1.UpdateClipProjectResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -569,7 +562,7 @@ func (h *Handler) UpdateClipProject(ctx context.Context, req *connect.Request[v1
 	return connect.NewResponse(&v1.UpdateClipProjectResponse{Project: projectProto(value)}), nil
 }
 func (h *Handler) DeleteClipProject(ctx context.Context, req *connect.Request[v1.DeleteClipProjectRequest]) (*connect.Response[v1.DeleteClipProjectResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

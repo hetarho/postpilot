@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	"github.com/postpilot/backend/internal/clip"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/llm"
@@ -41,7 +42,7 @@ func generationError(err error, observe string) error {
 
 // QuoteClipStoryline prices 스토리라인 먼저 and 다시 만들기 (CLIP-177).
 func (h *Handler) QuoteClipStoryline(ctx context.Context, req *connect.Request[v1.QuoteClipStorylineRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +59,7 @@ func (h *Handler) QuoteClipStoryline(ctx context.Context, req *connect.Request[v
 
 // StartClipStoryline accepts an approved storyline call.
 func (h *Handler) StartClipStoryline(ctx context.Context, req *connect.Request[v1.StartClipStorylineRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +78,7 @@ func (h *Handler) StartClipStoryline(ctx context.Context, req *connect.Request[v
 
 // QuoteClipAnalysis prices 관찰하기 and 다시 관찰하기 (CLIP-234).
 func (h *Handler) QuoteClipAnalysis(ctx context.Context, req *connect.Request[v1.QuoteClipAnalysisRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +95,7 @@ func (h *Handler) QuoteClipAnalysis(ctx context.Context, req *connect.Request[v1
 
 // StartClipAnalysis accepts an approved analysis.
 func (h *Handler) StartClipAnalysis(ctx context.Context, req *connect.Request[v1.StartClipAnalysisRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +114,7 @@ func (h *Handler) StartClipAnalysis(ctx context.Context, req *connect.Request[v1
 
 // QuoteClipStorylineRevision prices one storyline request (CLIP-181).
 func (h *Handler) QuoteClipStorylineRevision(ctx context.Context, req *connect.Request[v1.QuoteClipStorylineRevisionRequest]) (*connect.Response[v1.QuoteClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +131,7 @@ func (h *Handler) QuoteClipStorylineRevision(ctx context.Context, req *connect.R
 
 // StartClipStorylineRevision accepts an approved storyline request.
 func (h *Handler) StartClipStorylineRevision(ctx context.Context, req *connect.Request[v1.StartClipStorylineRevisionRequest]) (*connect.Response[v1.StartClipGenerationResponse], error) {
-	user, err := actingUser(ctx)
+	user, err := authrpc.ActingUser(ctx)
 	if err != nil {
 		return nil, err
 	}

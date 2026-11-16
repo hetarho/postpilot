@@ -10,7 +10,7 @@ import (
 
 	"connectrpc.com/connect"
 
-	"github.com/postpilot/backend/internal/auth"
+	authrpc "github.com/postpilot/backend/internal/auth/rpc"
 	postpilotv1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
 	"github.com/postpilot/backend/internal/job"
 	"github.com/postpilot/backend/internal/platform/rpcserver"
@@ -23,9 +23,9 @@ type Handler struct {
 func NewHandler(queue *job.Queue) *Handler { return &Handler{queue: queue} }
 
 func (h *Handler) GetGeneration(ctx context.Context, req *connect.Request[postpilotv1.GetGenerationRequest]) (*connect.Response[postpilotv1.GetGenerationResponse], error) {
-	userID, ok := auth.UserFromContext(ctx)
-	if !ok {
-		return nil, rpcserver.NewAppError(connect.CodeUnauthenticated, "authentication required", postpilotv1.FailureReason_AUTH_REQUIRED, nil)
+	userID, err := authrpc.ActingUser(ctx)
+	if err != nil {
+		return nil, err
 	}
 	found, err := h.queue.Get(ctx, req.Msg.GetId(), userID)
 	if err != nil {
