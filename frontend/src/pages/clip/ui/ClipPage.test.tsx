@@ -249,7 +249,7 @@ describe('clip directory and setup', () => {
     const { router } = mount('/clips/new', { projectSaveFails: true, calls })
     const user = userEvent.setup()
     await clipGuideTo('kind')
-    await user.click(await screen.findByRole('button', { name: /내 돈으로 다녀왔어요/ }))
+    await user.click(await screen.findByRole('button', { name: /내돈내산이에요/ }))
     await clipGuideTo('content')
     await user.type(await screen.findByLabelText('클립 제목'), '새 경험')
     expect(
@@ -265,7 +265,7 @@ describe('clip directory and setup', () => {
     ).toBeGreaterThan(0)
     expect(screen.getByLabelText('클립 제목')).toHaveValue('새 경험')
     await clipGuideTo('kind')
-    expect(screen.getByRole('button', { name: /내 돈으로 다녀왔어요/ })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /내돈내산이에요/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
