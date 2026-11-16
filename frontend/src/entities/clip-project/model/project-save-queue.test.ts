@@ -25,7 +25,7 @@ describe('createProjectSaveQueue', () => {
     expect(queue.failure('p')).toBeUndefined()
   })
 
-  it('sends the newest sender and drops it with the queue', async () => {
+  it('sends only the newest sender', async () => {
     const queue = conflicted('error')
     const first = vi.fn(() => Promise.resolve())
     const second = vi.fn(() => Promise.resolve())
