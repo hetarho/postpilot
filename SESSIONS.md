@@ -171,6 +171,7 @@
 | T868 | onev | gusta-session-start-onev-54d284a9 | 5cd9855fe | 2026-11-16T10:49Z |
 
 ## log
+- 261116 onev: one video kind with no clip channel (T856-T868, CLIP r80 THEME r47 POST r51 GUIDE r28 MKT r13) landed and pushed 0715db3bb; CI, Deploy backend and Verify media green
 - 261116 T868 done
 - 261116 T867 done
 - 261116 T866 done
@@ -190,4 +191,3 @@
 - 261116 gusta-create-task review/tidy-261116 round two: T845-T848 (lane be-shared)
 - 261116 gusta-create-task review/tidy-261116: T837-T844 (lanes be-tidy fe-lib fe-clip)
 - 261116 gusta-create-task review/tidy-261116 start
-- 261116 T836 done
