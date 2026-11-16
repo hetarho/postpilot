@@ -186,6 +186,7 @@
 | T870 | hdref | gusta-session-start-hdref-c3df08ba | 64b47da1f13b | 2026-11-16T14:40Z |
 
 ## log
+- 261116 gusta-update-ssot POST r52 CLIP r81; gusta-create-task T880 T881: viewport-safe writing options and inclusive campaign labels
 - 261116 T870 done
 - 261116 T851 done
 - 261116 T869 done
@@ -205,4 +206,3 @@
 - 261116 T864 done
 - 261116 T863 done
 - 261116 T862 done
-- 261116 T861 done
