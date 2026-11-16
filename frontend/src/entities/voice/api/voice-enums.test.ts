@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ProtoFingerprintFacetUnit,
   ProtoFingerprintItem,
+  ProtoFingerprintVerdict,
   ProtoVoiceCheckStatus,
   VoiceAiField,
   VoiceNoticeKind,
@@ -14,6 +15,7 @@ import {
   requireCheckStatus,
   requireFacetUnit,
   requireFingerprintItem,
+  requireFingerprintVerdict,
   requireNoticeKind,
   requirePromptPart,
   requireSampleKind,
@@ -63,6 +65,13 @@ describe('the voice enum mirrors', () => {
       .map(requireFacetUnit)
     expect(units).toEqual(['share', 'per_hundred', 'chars', 'sentences', 'text'])
     expect(() => requireFacetUnit(ProtoFingerprintFacetUnit.UNSPECIFIED)).toThrow()
+  })
+
+  it('maps every fingerprint verdict the wire names, an unset one to no verdict', () => {
+    expect(
+      wireValues<ProtoFingerprintVerdict>(ProtoFingerprintVerdict).map(requireFingerprintVerdict),
+    ).toEqual([undefined, 'similar', 'different'])
+    expect(requireFingerprintVerdict(undefined)).toBeUndefined()
   })
 
   it('maps every check status the wire names', () => {

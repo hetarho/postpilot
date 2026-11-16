@@ -1,7 +1,7 @@
 import i18next from 'i18next'
 import { useTranslation } from 'react-i18next'
 import type { FingerprintComparisonItem, FingerprintFacet, FingerprintItem } from '@/entities/voice'
-import { Disclosure, Typography, typographyStyles } from '@/shared/ui'
+import { Badge, Disclosure, Typography, typographyStyles } from '@/shared/ui'
 
 /** The server's facet keys whose wording key differs from the key itself; every other key is
  *  its own wording key, and an adverb's key is the word (VOICE-24 ⑥). */
@@ -52,9 +52,10 @@ function sides(facet: FingerprintFacet): { voice: string; text: string } {
     : { voice: numberText(facet.unit, facet.voice), text: numberText(facet.unit, facet.text) }
 }
 
-/** The fingerprint comparison (VOICE-62): each counted item by its name, in the order given —
- *  farthest from the voice first — with its headline facet as 내 말투 · the text's value, every
- *  facet on demand, and 알 수 없음 where the text is too short to show the item. */
+/** The fingerprint comparison (VOICE-62): how many judged items are 비슷함, then each counted
+ *  item by its name in the server's order with its lead facet as 내 말투 · the text's value and
+ *  its 비슷함 or 다름 badge, every facet on demand, and 알 수 없음 where the text is too short
+ *  to show the item. An item with no verdict carries no badge and counts in no summary. */
 export function FingerprintComparison({
   items,
   textLabel,
@@ -66,63 +67,84 @@ export function FingerprintComparison({
   const { t: tr } = useTranslation('voices')
   const line = (facet: FingerprintFacet) =>
     tr('comparison.headline', { ...sides(facet), label: textLabel })
+  const judged = items.filter((item) => item.verdict)
+  const similar = judged.filter((item) => item.verdict === 'similar').length
   return (
-    <ul className="mt-2 flex flex-col">
-      {items.map((item) => {
-        const label = tr(`fingerprint.label.${item.item}`)
-        if (item.unknown)
+    <>
+      {judged.length > 0 && (
+        <Typography variant="body" as="p" className="text-content-primary mt-2 tabular-nums">
+          {tr('comparison.summary', { count: judged.length, total: judged.length, similar })}
+        </Typography>
+      )}
+      <ul className="mt-2 flex flex-col">
+        {items.map((item) => {
+          const label = tr(`fingerprint.label.${item.item}`)
+          if (item.unknown)
+            return (
+              // Indented past the chevron a known item's name follows, so the names line up.
+              <li key={item.item} className="flex min-h-11 flex-wrap items-center gap-x-2 ps-6">
+                <Typography variant="body" as="span" className="text-content-primary">
+                  {label}
+                </Typography>
+                <Typography variant="body" as="span" className="text-content-secondary">
+                  {tr('fingerprint.unknown')}
+                </Typography>
+              </li>
+            )
+          const headline = item.facets.find((facet) => facet.key === item.headline)
+          const verdict = item.verdict
           return (
-            // Indented past the chevron a known item's name follows, so the names line up.
-            <li key={item.item} className="flex min-h-11 flex-wrap items-center gap-x-2 ps-6">
-              <Typography variant="body" as="span" className="text-content-primary">
-                {label}
-              </Typography>
-              <Typography variant="body" as="span" className="text-content-secondary">
-                {tr('fingerprint.unknown')}
-              </Typography>
+            <li key={item.item}>
+              <Disclosure
+                size="row"
+                headingLevel={4}
+                title={label}
+                lead={
+                  (headline || verdict) && (
+                    <div className="ms-6 flex flex-wrap items-center gap-x-2 gap-y-1">
+                      {headline && (
+                        <p className={typographyStyles({ variant: 'body' })}>
+                          <span className="text-content-secondary">
+                            {facetLabel(item.item, headline.key)}
+                          </span>{' '}
+                          <span className="text-content-primary tabular-nums">
+                            {line(headline)}
+                          </span>
+                        </p>
+                      )}
+                      {verdict && (
+                        <Badge tone={verdict === 'similar' ? 'success' : 'danger'}>
+                          {tr(`comparison.verdict.${verdict}`)}
+                        </Badge>
+                      )}
+                    </div>
+                  )
+                }
+              >
+                <dl className="ms-6 mt-1 flex flex-col gap-1">
+                  {item.facets.map((facet) => (
+                    <div key={facet.key} className="flex flex-wrap gap-x-2">
+                      <dt
+                        className={typographyStyles({
+                          variant: 'body',
+                          className: 'text-content-secondary',
+                        })}
+                      >
+                        {facetLabel(item.item, facet.key)}
+                      </dt>
+                      <dd
+                        className={typographyStyles({ variant: 'body', className: 'tabular-nums' })}
+                      >
+                        {line(facet)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </Disclosure>
             </li>
           )
-        const headline = item.facets.find((facet) => facet.key === item.headline)
-        return (
-          <li key={item.item}>
-            <Disclosure
-              size="row"
-              headingLevel={4}
-              title={label}
-              lead={
-                headline && (
-                  <p className={typographyStyles({ variant: 'body', className: 'ms-6' })}>
-                    <span className="text-content-secondary">
-                      {facetLabel(item.item, headline.key)}
-                    </span>{' '}
-                    <span className="text-content-primary tabular-nums">{line(headline)}</span>
-                  </p>
-                )
-              }
-            >
-              <dl className="ms-6 mt-1 flex flex-col gap-1">
-                {item.facets.map((facet) => (
-                  <div key={facet.key} className="flex flex-wrap gap-x-2">
-                    <dt
-                      className={typographyStyles({
-                        variant: 'body',
-                        className: 'text-content-secondary',
-                      })}
-                    >
-                      {facetLabel(item.item, facet.key)}
-                    </dt>
-                    <dd
-                      className={typographyStyles({ variant: 'body', className: 'tabular-nums' })}
-                    >
-                      {line(facet)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </Disclosure>
-          </li>
-        )
-      })}
-    </ul>
+        })}
+      </ul>
+    </>
   )
 }

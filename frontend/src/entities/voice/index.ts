@@ -4,6 +4,7 @@ export type {
   FingerprintFacet,
   FingerprintFacetUnit,
   FingerprintItem,
+  FingerprintVerdict,
   FingerprintRow,
   PostFingerprint,
 } from './model/fingerprint'

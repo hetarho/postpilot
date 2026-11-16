@@ -3,6 +3,7 @@ import type { WritingVoiceOrigin } from '../model/types'
 import {
   ProtoFingerprintFacetUnit,
   ProtoFingerprintItem,
+  ProtoFingerprintVerdict,
   ProtoVoiceCheckStatus,
   VoiceAiField as ProtoAiField,
   VoiceNoticeKind as ProtoNoticeKind,
@@ -10,7 +11,11 @@ import {
   VoiceSampleKind as ProtoKind,
 } from '@/shared/api'
 import type { VoiceAiField, VoiceNotice, VoicePromptPart, VoiceSampleKind } from '../model/types'
-import type { FingerprintFacetUnit, FingerprintItem } from '../model/fingerprint'
+import type {
+  FingerprintFacetUnit,
+  FingerprintItem,
+  FingerprintVerdict,
+} from '../model/fingerprint'
 import type { VoiceCheckStatus } from '../model/check'
 
 const PART_FROM_PROTO = new Map<ProtoPart, VoicePromptPart>([
@@ -95,6 +100,22 @@ export function requireFacetUnit(value: ProtoFingerprintFacetUnit): FingerprintF
   const unit = UNIT_FROM_PROTO.get(value)
   if (!unit) throw new Error(`unsupported fingerprint facet unit enum: ${String(value)}`)
   return unit
+}
+
+const VERDICT_FROM_PROTO = new Map<ProtoFingerprintVerdict, FingerprintVerdict | undefined>([
+  [ProtoFingerprintVerdict.UNSPECIFIED, undefined],
+  [ProtoFingerprintVerdict.SIMILAR, 'similar'],
+  [ProtoFingerprintVerdict.DIFFERENT, 'different'],
+])
+
+/** An item's verdict; unset is no verdict, and a value this build does not know fails the read. */
+export function requireFingerprintVerdict(
+  value: ProtoFingerprintVerdict | undefined,
+): FingerprintVerdict | undefined {
+  const key = value ?? ProtoFingerprintVerdict.UNSPECIFIED
+  if (!VERDICT_FROM_PROTO.has(key))
+    throw new Error(`unsupported fingerprint verdict enum: ${String(value)}`)
+  return VERDICT_FROM_PROTO.get(key)
 }
 
 const CHECK_STATUS_FROM_PROTO = new Map<ProtoVoiceCheckStatus, VoiceCheckStatus>([

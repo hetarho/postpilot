@@ -24,15 +24,19 @@ export type FingerprintFacet =
   | { key: string; unit: Exclude<FingerprintFacetUnit, 'text'>; voice: number; text: number }
   | { key: string; unit: 'text'; voice: string[]; text: string[] }
 
+/** An item's reading under the server's tolerances; an item with no verdict is left unjudged. */
+export type FingerprintVerdict = 'similar' | 'different'
+
 /** One counted item measured on the voice and on a text, as the server orders them: farthest
  *  from the voice first, unknown last (VOICE-62). */
 export interface FingerprintComparisonItem {
   item: FingerprintItem
   unknown: boolean
   distance: number
-  /** The key of the facet with the largest gap. */
+  /** The key of the facet the item leads with: the voice's dominant value. */
   headline: string
   facets: FingerprintFacet[]
+  verdict?: FingerprintVerdict
 }
 
 /** ②'s reading of a post against its voice (POST-102); not applicable for 말투 없음, no content,

@@ -7,6 +7,10 @@ export const i18n = {
   ko: {
     comparison: {
       headline: '내 말투 {{voice}} · {{label}} {{text}}',
+      summary: '{{total}}개 중 {{similar}}개 비슷해요',
+      summary_one: '{{total}}개 중 {{similar}}개 비슷해요',
+      summary_other: '{{total}}개 중 {{similar}}개 비슷해요',
+      verdict: { similar: '비슷함', different: '다름' },
       facet: {
         endings: {
           da: "'~다'",
@@ -54,6 +58,10 @@ export const i18n = {
   en: {
     comparison: {
       headline: 'Your voice {{voice}} · {{label}} {{text}}',
+      summary: '{{similar}} of {{total}} match your voice',
+      summary_one: '{{similar}} of {{total}} matches your voice',
+      summary_other: '{{similar}} of {{total}} match your voice',
+      verdict: { similar: 'Similar', different: 'Different' },
       facet: {
         endings: {
           da: "'~다'",

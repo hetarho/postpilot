@@ -1,6 +1,6 @@
 import type { ProtoFingerprintFacetValue, ProtoFingerprintItemComparison } from '@/shared/api'
 import type { FingerprintComparisonItem, FingerprintFacet } from '../model/fingerprint'
-import { requireFacetUnit, requireFingerprintItem } from './voice-enums'
+import { requireFacetUnit, requireFingerprintItem, requireFingerprintVerdict } from './voice-enums'
 
 const numberOf = (value: ProtoFingerprintFacetValue | undefined) =>
   value?.value.case === 'number' ? value.value.value : 0
@@ -17,6 +17,7 @@ export function toComparisons(
     unknown: item.unknown,
     distance: item.distance,
     headline: item.headline,
+    verdict: requireFingerprintVerdict(item.verdict),
     facets: item.facets.map((facet): FingerprintFacet => {
       const unit = requireFacetUnit(facet.unit)
       return unit === 'text'

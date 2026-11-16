@@ -362,6 +362,7 @@ export {
   RestorePreviousVoiceAnalysisResponseSchema,
   FingerprintItem as ProtoFingerprintItem,
   FingerprintFacetUnit as ProtoFingerprintFacetUnit,
+  FingerprintVerdict as ProtoFingerprintVerdict,
   FingerprintItemComparisonSchema,
   GetPostFingerprintResponseSchema,
   VoiceCheckStatus as ProtoVoiceCheckStatus,
