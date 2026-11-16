@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ReactNode, Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useGuidelines } from '@/entities/guideline'
 import { Thumbnail } from '@/entities/image'
@@ -8,7 +8,7 @@ import type { GuideStep } from '../model/guide'
 
 /** Guide: 확인 — the short summary 글 생성 ends on. Each part of what the run will be given is one
  *  row: its name, what it holds now, and one way to change it. The story, photos and details jump
- *  back to their own screen; 말투 is its own picker in place; 지침 opens its page; the writing
+ *  back to their own screen; 말투 is its own picker in place; 지침 opens its Sheet; the writing
  *  options open the brief. Nothing here is a second copy of a field. */
 export function EditorReview({
   post,
@@ -22,6 +22,7 @@ export function EditorReview({
   brief,
   onGo,
   onOpenGuidelines,
+  guidelinesButtonRef,
 }: {
   post?: PostDraft
   ownerId: string
@@ -36,6 +37,7 @@ export function EditorReview({
   brief: ReactNode
   onGo: (step: GuideStep) => void
   onOpenGuidelines: () => void
+  guidelinesButtonRef?: Ref<HTMLButtonElement>
 }) {
   const { t } = useTranslation('posts')
   const images = post?.images ?? []
@@ -113,7 +115,11 @@ export function EditorReview({
           {voice}
           {voiceWarning}
         </div>
-        <GuidelinesRow ownerId={ownerId} onOpen={onOpenGuidelines} />
+        <GuidelinesRow
+          ownerId={ownerId}
+          onOpen={onOpenGuidelines}
+          buttonRef={guidelinesButtonRef}
+        />
         <div className="flex min-h-14 items-center gap-3 px-4 py-2 sm:px-5">
           <Typography variant="label" as="span" className="w-20 shrink-0">
             {t('guide.summary.options')}
@@ -165,7 +171,15 @@ function SummaryRow({
 }
 
 /** The guidelines the next run follows, counted: the owner's own and the 기본 지침 switched on. */
-function GuidelinesRow({ ownerId, onOpen }: { ownerId: string; onOpen: () => void }) {
+function GuidelinesRow({
+  ownerId,
+  onOpen,
+  buttonRef,
+}: {
+  ownerId: string
+  onOpen: () => void
+  buttonRef?: Ref<HTMLButtonElement>
+}) {
   const { t } = useTranslation('posts')
   const { guidelines, defaults, isPending, isError } = useGuidelines(ownerId, 'post')
   const label = t('guide.summary.guidelines')
@@ -188,6 +202,7 @@ function GuidelinesRow({ ownerId, onOpen }: { ownerId: string; onOpen: () => voi
             })}
       </span>
       <Button
+        ref={buttonRef}
         variant="ghost"
         onClick={onOpen}
         aria-label={`${label} ${t('guide.change')}`}

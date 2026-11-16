@@ -17,8 +17,8 @@ const project = {
 }
 afterEach(() => discardClipDraftQueues())
 
-const sponsored = () => screen.getByRole('button', { name: /체험단으로 다녀왔어요/ })
-const selfPaid = () => screen.getByRole('button', { name: /내 돈으로 다녀왔어요/ })
+const sponsored = () => screen.getByRole('button', { name: /제품이나 서비스를 제공받았어요/ })
+const selfPaid = () => screen.getByRole('button', { name: /내돈내산이에요/ })
 
 it('asks 영상 종류 first and edits the guide on 요청, read through real navigation', async () => {
   const user = userEvent.setup()

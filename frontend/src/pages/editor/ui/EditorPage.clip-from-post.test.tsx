@@ -257,7 +257,7 @@ describe('making a clip from a finished post', () => {
     await user.clear(screen.getByLabelText('메모'))
     await user.type(screen.getByLabelText('메모'), '방금 쓴 메모')
     await guideTo(user, GUIDE.kind)
-    await user.click(screen.getByRole('button', { name: '내 돈으로 다녀왔어요' }))
+    await user.click(screen.getByRole('button', { name: '내돈내산이에요' }))
     await openStep(user, '완성')
     await confirm(user)
     await arrived(view)

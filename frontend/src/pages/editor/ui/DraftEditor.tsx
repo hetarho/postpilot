@@ -9,6 +9,8 @@ import {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
+import { X } from 'lucide-react'
+import { GuidelineDirectory } from '@/widgets/guideline-directory'
 import {
   isPublished,
   postReturnDestination,
@@ -42,6 +44,8 @@ import {
 } from '@/features/fill-template-answers'
 import {
   SegmentedControl,
+  Button,
+  Sheet,
   WorkspaceHeader,
   ChoiceButton,
   type PopoverHandle,
@@ -49,7 +53,16 @@ import {
   Typography,
 } from '@/shared/ui'
 import { editorNavigationCopy } from '../config/i18n'
-import { initialGuideStep, stashGuideStep, takeGuideStep, type GuideStep } from '../model/guide'
+import {
+  initialGuideStep,
+  peekGuideStep,
+  stashGuideStep,
+  takeGuideStep,
+  stashGuidelinesRequest,
+  peekGuidelinesRequest,
+  takeGuidelinesRequest,
+  type GuideStep,
+} from '../model/guide'
 import { editorSteps } from '../model/steps'
 import { useDraftAssignments } from '../model/useDraftAssignments'
 import { useDraftSteps } from '../model/useDraftSteps'
@@ -125,12 +138,34 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   // from the new post's offer, and 템플릿 is where the owner sees what they made (TMPL-32).
   const [guide, setGuide] = useState<GuideStep>(
     () =>
-      takeGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
+      peekGuideStep(post?.slug) ?? (!post && handedTemplate ? 'template' : initialGuideStep(post)),
   )
+  const [resumeGuidelines] = useState(() =>
+    post?.slug ? peekGuidelinesRequest(ownerId, post.slug) : false,
+  )
+  const [guidelinesOpen, setGuidelinesOpen] = useState(resumeGuidelines)
+  const guidelineOpening = useRef<'idle' | 'flushing' | 'minted'>('idle')
+  const guidelinesButton = useRef<HTMLButtonElement>(null)
+  const guidelinesOpenRef = useRef(guidelinesOpen)
   const guideRef = useRef(guide)
+  useLayoutEffect(() => {
+    takeGuideStep(post?.slug)
+  }, [post?.slug])
   useEffect(() => {
     guideRef.current = guide
-  }, [guide])
+    guidelinesOpenRef.current = guidelinesOpen
+  }, [guide, guidelinesOpen])
+  useLayoutEffect(() => {
+    if (resumeGuidelines && post?.slug && takeGuidelinesRequest(ownerId, post.slug)) {
+      guidelinesButton.current?.focus({ preventScroll: true })
+    }
+  }, [resumeGuidelines, ownerId, post?.slug])
+  useEffect(
+    () => () => {
+      if (post?.slug && guidelinesOpenRef.current) stashGuideStep(post.slug, guideRef.current)
+    },
+    [post?.slug],
+  )
 
   // ①'s text and its lock are the autosave's (POST-86); the page only lays the SELECTED template's
   // fields over it (POST-62).
@@ -154,6 +189,13 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
       // Replace the unminted address without changing its creation/history context. The scroll
       // stays: the mint is an edit’s side effect, and a router reset would move the input
       // away from the owner.
+      if (
+        (guidelineOpening.current === 'flushing' || guidelinesOpen) &&
+        guideRef.current === 'review'
+      ) {
+        guidelineOpening.current = 'minted'
+        stashGuidelinesRequest(ownerId, slug)
+      }
       void navigate({ to: '/posts/$slug', params: { slug }, replace: true, resetScroll: false })
     },
   })
@@ -354,22 +396,19 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
     },
   })
 
-  // 확인's 지침 row: the guidelines page with this post as its explicit way back (POST-123
-  // →THEME-58). A draft not yet saved is saved first, as the template wizard's is, so there is a
-  // post to come back to; and coming back — by the page's 글 작성 or the browser's Back — lands on
-  // 확인, the screen the owner left, not the screen a returning draft would otherwise open on.
-  const openGuidelines = () => {
-    void autosave
-      .flush()
-      .then(async () => {
-        const slug = post?.slug ?? (await autosave.ensureSlug())
-        await flushContentQueue(slug)
-        stashGuideStep(slug, 'review')
-        await navigate({ to: '/guidelines', search: { post: slug } })
-      })
-      .catch(() => {
-        /* The draft/content save status retains and explains a refusal. */
-      })
+  const openGuidelines = async () => {
+    if (guidelineOpening.current !== 'idle') return
+    guidelineOpening.current = 'flushing'
+    try {
+      await autosave.flush()
+      if (guidelineOpening.current === 'flushing') {
+        guidelineOpening.current = 'idle'
+        if (guideRef.current === 'review') setGuidelinesOpen(true)
+      }
+    } catch {
+      guidelineOpening.current = 'idle'
+      // The autosave status retains and explains a save refusal.
+    }
   }
 
   // Each writing screen holds one task; the summary links back to every input.
@@ -455,7 +494,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         }
         brief={choices.brief}
         onGo={setGuide}
-        onOpenGuidelines={openGuidelines}
+        onOpenGuidelines={() => void openGuidelines()}
+        guidelinesButtonRef={guidelinesButton}
       />
     ),
   }
@@ -610,6 +650,29 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         <div className="flex flex-1 flex-col">{renderGuide()}</div>
       )}
       {choices.sheet}
+      <Sheet
+        open={guidelinesOpen}
+        label={t('guide.summary.guidelines')}
+        onClose={() => setGuidelinesOpen(false)}
+        size="wide"
+        header={
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <Typography as="h2" variant="title">
+              {t('guide.summary.guidelines')}
+            </Typography>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={t('action.close', { ns: 'common' })}
+              onClick={() => setGuidelinesOpen(false)}
+            >
+              <X aria-hidden="true" className="size-5" />
+            </Button>
+          </div>
+        }
+      >
+        <GuidelineDirectory kind="post" embedded />
+      </Sheet>
     </main>
   )
 }

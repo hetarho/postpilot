@@ -243,6 +243,8 @@ export interface FakePostsOptions {
   listPageGate?: Promise<void>
   /** Fail this many SavePostDraft calls before the first success. */
   failSaves?: number
+  /** Holds draft saves after receipt, before the fake confirms a row. */
+  draftSaveGate?: Promise<void>
   /** Answer SavePostDraft 200 with no post — a confirmation the client must not trust. */
   saveReturnsNoPost?: boolean
   /** Refuse every SavePostDraft carrying an advertiser guide, as the server refuses one past its
@@ -697,8 +699,9 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
     return {}
   })
 
-  rpc(PostService.method.savePostDraft, (req) => {
+  rpc(PostService.method.savePostDraft, async (req) => {
     calls?.push('SavePostDraft')
+    if (options.draftSaveGate) await options.draftSaveGate
     options.draftMaterials?.push({ slug: req.slug, title: req.title, memo: req.memo })
     options.draftSaves?.push({
       slug: req.slug,
