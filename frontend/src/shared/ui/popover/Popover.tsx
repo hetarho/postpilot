@@ -3,20 +3,25 @@ import {
   useEffect,
   useId,
   useImperativeHandle,
-  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
 } from 'react'
+import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { twMerge } from '@/shared/lib'
-import { POPOVER_VIEWPORT_GUTTER_PX, POPOVER_MIN_PANEL_PX, POPOVER_TRIGGER_GAP_PX } from './config'
+import {
+  POPOVER_VIEWPORT_GUTTER_PX,
+  POPOVER_MIN_PANEL_PX,
+  POPOVER_TRIGGER_GAP_PX,
+  POPOVER_MAX_VIEWPORT_RATIO,
+} from './config'
 import { Button } from '../button/Button'
 import type { ButtonSize, ButtonVariant } from '../button/buttonStyles'
 import { Sheet } from '../sheet/Sheet'
 import { SM_MEDIA_QUERY, useMediaQuery } from '../media-query/useMediaQuery'
-import { ANCHORED_PANEL_ATTRIBUTE } from '../anchored-panel/useAnchoredPanel'
+import { ANCHORED_PANEL_ATTRIBUTE, useAnchoredPanel } from '../anchored-panel/useAnchoredPanel'
 import { FOCUSABLE_SELECTOR, focusablesIn } from '../focus/focusable'
 
 /** Opens the surface from elsewhere on the page. The editor's generation empty state offers a way
@@ -121,6 +126,25 @@ export const Popover = forwardRef<
     if (focusWasInside) queueMicrotask(() => triggerRef.current?.focus({ preventScroll: true }))
   }
 
+  const box = useAnchoredPanel({
+    open: open && !asSheet,
+    triggerRef,
+    panelRef,
+    placement: {
+      gapPx: POPOVER_TRIGGER_GAP_PX,
+      gutterPx: POPOVER_VIEWPORT_GUTTER_PX,
+      minPx: POPOVER_MIN_PANEL_PX,
+      maxViewportRatio: POPOVER_MAX_VIEWPORT_RATIO,
+    },
+    width: 'content',
+    side: placement,
+    align,
+    onGone: (focusWasInside) => {
+      dismiss()
+      if (focusWasInside) triggerRef.current?.focus({ preventScroll: true })
+    },
+  })
+
   useImperativeHandle(
     ref,
     () => ({
@@ -129,36 +153,6 @@ export const Popover = forwardRef<
     }),
     [],
   )
-
-  // The panel is anchored to the trigger, and a trigger can sit anywhere in the viewport. Nothing
-  // in CSS knows where, so both bounds are measured here.
-  //
-  // HEIGHT first: the panel opens into the gap between the trigger and the edge it grows toward,
-  // and a `dvh`-based token can only guess at that gap. A tall surface — the whole writing brief —
-  // has to scroll inside the gap it actually has, because the part that runs past the viewport
-  // edge is unreachable: the page behind is scroll-locked on a phone and the panel is anchored to
-  // a docked bar that does not move on a pointer. The floor keeps the panel usable rather than
-  // squeezing it to a sliver when the trigger sits almost against that edge.
-  useLayoutEffect(() => {
-    const panel = panelRef.current
-    const trigger = triggerRef.current
-    if (!open || asSheet || !panel || !trigger) return
-    panel.style.transform = ''
-    const anchor = trigger.getBoundingClientRect()
-    const room =
-      placement === 'above'
-        ? anchor.top - POPOVER_TRIGGER_GAP_PX - POPOVER_VIEWPORT_GUTTER_PX
-        : window.innerHeight - anchor.bottom - POPOVER_TRIGGER_GAP_PX - POPOVER_VIEWPORT_GUTTER_PX
-    panel.style.maxHeight = `${Math.max(room, POPOVER_MIN_PANEL_PX)}px`
-    const rect = panel.getBoundingClientRect()
-    if (!rect.width) return
-    let shift = 0
-    const overflowRight = rect.right - (window.innerWidth - POPOVER_VIEWPORT_GUTTER_PX)
-    if (overflowRight > 0) shift = -overflowRight
-    const overflowLeft = POPOVER_VIEWPORT_GUTTER_PX - (rect.left + shift)
-    if (overflowLeft > 0) shift += overflowLeft
-    if (shift) panel.style.transform = `translateX(${shift}px)`
-  }, [asSheet, open, placement])
 
   useEffect(() => {
     if (!open || asSheet) return
@@ -185,9 +179,13 @@ export const Popover = forwardRef<
       // Nor on the panel of a `Toggletip` opened from inside this one, which is portalled for the
       // same reason and carries the anchored-panel attribute.
       if (target?.closest?.(`[${ANCHORED_PANEL_ATTRIBUTE}]`)) return
-      if (!rootRef.current?.contains(target)) dismiss()
+      if (!rootRef.current?.contains(target) && !panelRef.current?.contains(target)) dismiss()
     }
     const onKeyDown = (event: KeyboardEvent) => {
+      const owner = (event.target as Element | null)?.closest?.(
+        '[data-popover-panel], [aria-modal="true"]',
+      )
+      if (owner && owner !== panelRef.current) return
       if (event.key === 'Escape') {
         event.preventDefault()
         close()
@@ -279,34 +277,50 @@ export const Popover = forwardRef<
   return (
     <div ref={rootRef} className={twMerge('relative inline-flex', className)}>
       {trigger}
-      {open && (
-        <div
-          ref={panelRef}
-          id={id}
-          role="dialog"
-          tabIndex={-1}
-          aria-label={label}
-          // The panel is its own scroller, so it owes the focus ring the same clear space the
-          // sheet's body does (THEME-33). Its `p-4` already exceeds the ring's 4px on every side, so
-          // the gutter is satisfied by the padding it has and nothing is reserved on top of it.
-          //
-          // `overflow-x-hidden` is not decoration. A scroll container resolves BOTH axes away
-          // from `visible`, so `overflow-y-auto` alone silently made the panel scrollable
-          // SIDEWAYS as well — and a 288px surface whose content is a column of full-width fields
-          // has nothing to reach out there. Anything that did stick out was a field failing to
-          // shrink, which is fixed where the field is, not by letting the panel scroll. Clipping
-          // happens at the padding box, so the 4px ring inside `p-4` is untouched.
-          className={`bg-surface-highest max-w-popover absolute z-30 w-72 overflow-x-hidden rounded-lg p-4 shadow-lg ${
-            align === 'start' ? 'left-0' : 'right-0'
-          } ${
-            placement === 'below'
-              ? 'max-h-popover-below-max top-full mt-2 overflow-y-auto overscroll-contain'
-              : 'max-h-popover-above-max bottom-full mb-2 overflow-y-auto overscroll-contain'
-          }`}
-        >
-          {children(close)}
-        </div>
-      )}
+      {open &&
+        box &&
+        createPortal(
+          // Share Sheet's layer so a confirmation opened later can cover this whole surface.
+          // The panel's own overlay level still outranks its dock; the transparent layer lets
+          // outside presses reach their original target.
+          <div className="pointer-events-none fixed inset-0 z-50">
+            <div
+              ref={panelRef}
+              id={id}
+              role="dialog"
+              tabIndex={-1}
+              aria-label={label}
+              data-anchored-panel=""
+              data-popover-panel=""
+              style={{ left: box.left, top: box.top, bottom: box.bottom, maxHeight: box.maxHeight }}
+              onKeyDown={(event) => {
+                if (
+                  event.key === 'Escape' &&
+                  (event.target as Element).closest('[data-popover-panel], [aria-modal="true"]') ===
+                    event.currentTarget
+                ) {
+                  event.preventDefault()
+                  event.stopPropagation()
+                  close()
+                }
+              }}
+              // The panel is its own scroller, so it owes the focus ring the same clear space the
+              // sheet's body does (THEME-33). Its `p-4` already exceeds the ring's 4px on every side, so
+              // the gutter is satisfied by the padding it has and nothing is reserved on top of it.
+              //
+              // `overflow-x-hidden` is not decoration. A scroll container resolves BOTH axes away
+              // from `visible`, so `overflow-y-auto` alone silently made the panel scrollable
+              // SIDEWAYS as well — and a 288px surface whose content is a column of full-width fields
+              // has nothing to reach out there. Anything that did stick out was a field failing to
+              // shrink, which is fixed where the field is, not by letting the panel scroll. Clipping
+              // happens at the padding box, so the 4px ring inside `p-4` is untouched.
+              className="bg-surface-highest z-overlay-panel max-w-popover pointer-events-auto fixed w-72 overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg p-4 shadow-lg"
+            >
+              {children(close)}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 })

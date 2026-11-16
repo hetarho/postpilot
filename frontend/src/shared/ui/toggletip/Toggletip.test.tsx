@@ -22,7 +22,7 @@ function Row() {
 }
 
 function bubble(): HTMLElement | null {
-  return document.body.querySelector<HTMLElement>('[data-anchored-panel]')
+  return document.body.querySelector<HTMLElement>('[data-anchored-panel][aria-hidden="true"]')
 }
 
 async function withFineHover(run: () => Promise<void>) {

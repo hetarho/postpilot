@@ -48,6 +48,8 @@ interface AnchoredPanelOptions {
   /** `trigger` spans the panel across its trigger (a listbox); `content` keeps the panel's CSS
    *  width and starts it at the trigger's left edge, clamped inside the viewport's gutters. */
   width: 'trigger' | 'content'
+  side?: 'above' | 'below'
+  align?: 'start' | 'end'
   /** The trigger left the viewport, and whether focus was inside the panel at that moment. */
   onGone: (focusWasInside: boolean) => void
   /** Anything else the measurement depends on, such as a listbox's options. */
@@ -77,6 +79,8 @@ export function useAnchoredPanel({
   panelRef,
   placement,
   width,
+  side = 'below',
+  align = 'start',
   onGone,
   remeasure,
 }: AnchoredPanelOptions): AnchoredPanelBox | undefined {
@@ -124,8 +128,11 @@ export function useAnchoredPanel({
       // docked field with just over the floor beneath it opened a long list downward into a
       // three-row sliver against the bottom edge, with the room overhead standing empty.
       const wanted = Math.max(Math.min(panelRef.current?.scrollHeight ?? 0, ceiling), minPx)
-      const flip = below < wanted && above > below
-      const room = Math.min(flip ? above : below, ceiling)
+      const preferred = side === 'above' ? above : below
+      const opposite = side === 'above' ? below : above
+      const flip = preferred < wanted && opposite > preferred
+      const up = side === 'above' ? !flip : flip
+      const room = Math.min(up ? above : below, ceiling)
       let left = anchor.left
       let spanned: number | undefined
       if (width === 'trigger') {
@@ -133,14 +140,15 @@ export function useAnchoredPanel({
       } else {
         const panelWidth = panelRef.current?.getBoundingClientRect().width ?? 0
         const rightmost = Math.max(gutterPx, window.innerWidth - gutterPx - panelWidth)
-        left = Math.min(Math.max(anchor.left, gutterPx), rightmost)
+        const start = align === 'end' ? anchor.right - panelWidth : anchor.left
+        left = Math.min(Math.max(start, gutterPx), rightmost)
       }
       const next: AnchoredPanelBox = {
-        drop: flip ? 'up' : 'down',
+        drop: up ? 'up' : 'down',
         left,
         width: spanned,
-        top: flip ? undefined : anchor.bottom + gapPx,
-        bottom: flip ? window.innerHeight - anchor.top + gapPx : undefined,
+        top: up ? undefined : anchor.bottom + gapPx,
+        bottom: up ? window.innerHeight - anchor.top + gapPx : undefined,
         maxHeight: Math.max(room, minPx),
       }
       setBox((current) => (current && samePanelBox(current, next) ? current : next))
@@ -161,6 +169,8 @@ export function useAnchoredPanel({
     minPx,
     maxViewportRatio,
     width,
+    side,
+    align,
     remeasure,
     mounted,
   ])

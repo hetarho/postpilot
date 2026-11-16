@@ -14,3 +14,6 @@ export const POPOVER_TRIGGER_GAP_PX = 8
  *  Below roughly three rows a scroller is worse than a panel that overhangs the viewport edge a
  *  little, and a trigger that close to the edge is a layout bug to fix at the call site. */
 export const POPOVER_MIN_PANEL_PX = 160
+
+/** A long brief may use all the room between its trigger and the viewport gutter. */
+export const POPOVER_MAX_VIEWPORT_RATIO = 1

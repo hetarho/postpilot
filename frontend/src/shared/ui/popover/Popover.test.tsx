@@ -1,12 +1,28 @@
 import { useState } from 'react'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { SM_MEDIA_QUERY } from '../media-query/useMediaQuery'
 import { Dialog } from '../dialog/Dialog'
 import { Listbox } from '../listbox/Listbox'
 import { Toggletip } from '../toggletip/Toggletip'
 import { Popover } from './Popover'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+})
+
+function layout(anchor: () => DOMRect) {
+  vi.stubGlobal('innerWidth', 1000)
+  vi.stubGlobal('innerHeight', 720)
+  vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.getAttribute('role') === 'dialog' ? new DOMRect(0, 0, 288, 500) : anchor()
+  })
+  vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockReturnValue(500)
+}
 
 it('opens from the keyboard, closes on Escape, and restores trigger focus', async () => {
   const user = userEvent.setup()
@@ -15,7 +31,7 @@ it('opens from the keyboard, closes on Escape, and restores trigger focus', asyn
   trigger.focus()
   await user.keyboard('{Enter}')
   expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
-  expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toHaveClass('bottom-full')
+  expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toHaveClass('fixed')
   expect(screen.getByLabelText('옵션 값')).toHaveFocus()
   await user.keyboard('{Escape}')
   expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -33,7 +49,6 @@ it('bounds a below-header panel to the viewport and lets its contents scroll', a
 
   await user.click(screen.getByRole('button', { name: '계정' }))
   expect(screen.getByRole('dialog', { name: '계정' })).toHaveClass(
-    'max-h-popover-below-max',
     'overflow-y-auto',
     'overscroll-contain',
   )
@@ -106,16 +121,18 @@ it('includes a native details summary in the focus cycle', async () => {
 
 it('keeps the right-aligned panel and clamps its width to the viewport by default', async () => {
   const user = userEvent.setup()
+  layout(() => new DOMRect(700, 600, 100, 44))
   render(<Popover label="테스트 옵션">{() => <span>내용</span>}</Popover>)
 
   await user.click(screen.getByRole('button', { name: '테스트 옵션' }))
   const panel = screen.getByRole('dialog', { name: '테스트 옵션' })
-  expect(panel).toHaveClass('right-0', 'max-w-popover')
-  expect(panel).not.toHaveClass('left-0')
+  expect(panel).toHaveClass('max-w-popover')
+  expect(panel.style.left).toBe('512px')
 })
 
 it('pins the panel to the trigger start edge when asked', async () => {
   const user = userEvent.setup()
+  layout(() => new DOMRect(300, 600, 100, 44))
   render(
     <Popover label="테스트 옵션" align="start">
       {() => <span>내용</span>}
@@ -124,8 +141,7 @@ it('pins the panel to the trigger start edge when asked', async () => {
 
   await user.click(screen.getByRole('button', { name: '테스트 옵션' }))
   const panel = screen.getByRole('dialog', { name: '테스트 옵션' })
-  expect(panel).toHaveClass('left-0')
-  expect(panel).not.toHaveClass('right-0')
+  expect(panel.style.left).toBe('300px')
 })
 
 it('opens as a bottom sheet below sm: when phone="sheet", with a visible way out', async () => {
@@ -170,7 +186,7 @@ it('stays a popover from sm: up even when phone="sheet"', async () => {
       </Popover>,
     )
     await user.click(screen.getByRole('button', { name: '글쓰기 옵션' }))
-    expect(screen.getByRole('dialog', { name: '글쓰기 옵션' })).toHaveClass('bottom-full')
+    expect(screen.getByRole('dialog', { name: '글쓰기 옵션' })).toHaveClass('fixed')
     expect(document.body.style.overflow).toBe('')
   } finally {
     window.matchMedia = original
@@ -208,6 +224,10 @@ it('survives a modal opened from inside its own panel', async () => {
 
   // The panel is still open, so the control that opened the dialog is still mounted.
   expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: '확인 열기' }))
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: '정말 바꿀까요?' })).toBeNull()
+  expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toBeInTheDocument()
 })
 
 // `Toggletip` portals its panel to the body, as a listbox does, so a press inside one opened from
@@ -240,10 +260,80 @@ it('bounds the above panel and lets a tall brief scroll inside it', async () => 
 
   await user.click(screen.getByRole('button', { name: '테스트 옵션' }))
   expect(screen.getByRole('dialog', { name: '테스트 옵션' })).toHaveClass(
-    'max-h-popover-above-max',
     'overflow-y-auto',
     'overscroll-contain',
   )
+})
+
+it('portals a long review-row brief above the dock and flips it into the available space', async () => {
+  const user = userEvent.setup()
+  layout(() => new DOMRect(700, 600, 100, 44))
+  const { container } = render(
+    <div className="overflow-hidden">
+      <Popover label="글쓰기 옵션" placement="below">
+        {() => <button>저장</button>}
+      </Popover>
+    </div>,
+  )
+  await user.click(screen.getByRole('button', { name: '글쓰기 옵션' }))
+  const panel = screen.getByRole('dialog', { name: '글쓰기 옵션' })
+  expect(container.contains(panel)).toBe(false)
+  expect(panel.parentElement?.parentElement).toBe(document.body)
+  expect(panel).toHaveClass('fixed', 'z-overlay-panel')
+  expect(panel.style.bottom).toBe('128px')
+  expect(panel.style.top).toBe('')
+  expect(Number.parseFloat(panel.style.maxHeight)).toBeLessThanOrEqual(600 - 8 - 16)
+  await user.click(within(panel).getByRole('button', { name: '저장' }))
+  expect(panel).toBeInTheDocument()
+})
+
+it('flips a preferred-above panel down near the top edge and keeps its left gutter', async () => {
+  const user = userEvent.setup()
+  layout(() => new DOMRect(4, 20, 100, 44))
+  render(<Popover label="옵션">{() => <button>저장</button>}</Popover>)
+  await user.click(screen.getByRole('button', { name: '옵션' }))
+  const panel = screen.getByRole('dialog')
+  expect(panel.style.top).toBe('72px')
+  expect(panel.style.bottom).toBe('')
+  expect(panel.style.left).toBe('16px')
+})
+
+it('tracks scrolling and resize and dismisses once its trigger leaves the viewport', async () => {
+  const user = userEvent.setup()
+  let anchor = new DOMRect(700, 600, 100, 44)
+  layout(() => anchor)
+  const closed = vi.fn()
+  render(
+    <Popover label="옵션" onClose={closed}>
+      {() => <button>저장</button>}
+    </Popover>,
+  )
+  await user.click(screen.getByRole('button', { name: '옵션' }))
+  anchor = new DOMRect(500, 500, 100, 44)
+  fireEvent.scroll(window)
+  expect(screen.getByRole('dialog').style.left).toBe('312px')
+  vi.stubGlobal('innerWidth', 560)
+  fireEvent.resize(window)
+  expect(screen.getByRole('dialog').style.left).toBe('256px')
+  anchor = new DOMRect(500, -100, 100, 44)
+  fireEvent.scroll(window)
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(closed).toHaveBeenCalledTimes(1)
+})
+
+it('closes only the innermost portalled popover on Escape', async () => {
+  const user = userEvent.setup()
+  render(
+    <Popover label="바깥 옵션">
+      {() => <Popover label="안쪽 옵션">{() => <button>선택</button>}</Popover>}
+    </Popover>,
+  )
+  await user.click(screen.getByRole('button', { name: '바깥 옵션' }))
+  await user.click(screen.getByRole('button', { name: '안쪽 옵션' }))
+  await user.keyboard('{Escape}')
+  expect(screen.queryByRole('dialog', { name: '안쪽 옵션' })).toBeNull()
+  expect(screen.getByRole('dialog', { name: '바깥 옵션' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '안쪽 옵션' })).toHaveFocus()
 })
 
 it('closes only the listbox inside it on the first Escape', async () => {
