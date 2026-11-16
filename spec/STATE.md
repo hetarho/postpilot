@@ -97,7 +97,6 @@
 | T881 | Name sponsored and self-paid experiences across products, services and visits | POST CLIP ARCH | - | todo |
 | T882 | Edit writing guidelines in place without leaving or minting the draft | POST GUIDE THEME ARCH | - | todo |
 | T883 | Preserve first-save guideline history and return focus | POST THEME ARCH | - | todo |
-| T884 | Drop a skipped field's lead lines with the field | TMPL GEN | - | todo |
 | T885 | Add the 별점 part and place 질문's optional 고정 문구 in the wizard body | TMPL | T884 | todo |
 | T886 | Edit and draw 질문을 바탕으로 작성's optional 고정 문구 in the wizard | TMPL | T885 | todo |
 
@@ -108,9 +107,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T884
-- gusta-implement-task T851
+- gusta-implement-task T851 T871 T880
 - inspect work board for remaining tasks
-- gusta-implement-task T880
-- gusta-implement-task T881
-- gusta-implement-task T871

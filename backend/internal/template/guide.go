@@ -61,6 +61,7 @@ const guideKorean = `아래 형식으로 블로그 글 템플릿의 본문을 �
 - 각 태그에는 위에 나온 속성만 쓰고, 한 태그에 같은 속성을 두 번 쓰지 않습니다.
 - ask는 label이 반드시 있어야 하고, label은 {askLabelMax}자까지이며, 한 본문 안에서 label이 겹치면 안 됩니다. repeat 안에는 넣을 수 없고, 한 본문에 최대 {askMax}개까지입니다.
 - ask의 required는 true만 쓸 수 있습니다. 비워 두거나 끌 수 없는 입력란에만 붙이세요.
+- 선택 입력 ask 바로 위에 빈 줄 없이 붙여 쓴 줄은 그 입력란이 비면 함께 빠집니다. 늘 남길 줄은 빈 줄로 띄우세요.
 - write에는 그 자리에 들어갈 주제만 적습니다. 내용 있는 ask에는 작성자의 실제 경험·확인한 사실·불확실한 점을 묻는 구체적인 질문을 적어도 됩니다. 어느 쪽에도 모델의 말투·길이·서식·생략·반복을 지시하지 말고, 그런 작문 규칙은 지침에 적으세요.
 - ask는 사용자가 직접 겪거나 확인해야 아는 내용(별점, 방문일, 가격 등)을 AI가 지어내지 않도록 물을 때 쓰세요.
 - 위 다섯 가지 말고 다른 태그를 쓰면 저장되지 않습니다.
@@ -97,6 +98,7 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 - Each tag takes only the attributes shown above, and no attribute twice.
 - ask must carry a label of at most {askLabelMax} characters, no two may share one in the same body, none may sit inside a repeat, and one body holds at most {askMax}.
 - An ask's required attribute may only have the value true. Use it only for a field the author must fill.
+- Lines written directly above an optional ask, with no blank line between, leave with it when the field is left empty. Separate a line with a blank line to keep it.
 - A write names only what belongs at its position. A text-bearing ask may ask the author a concrete question about firsthand experience, verified facts, or uncertainty. Neither may command the model's tone, length, formatting, omissions, or repetition; those writing rules belong in guidelines.
 - Use ask for what only the author experienced or checked, such as a rating, visit date, or price, so the AI does not invent it.
 - Any tag other than those five is refused.

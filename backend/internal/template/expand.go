@@ -95,19 +95,88 @@ func RenderTemplate(name string, title, body []Node, hasPhotos bool, answers []A
 //
 // Removing the node rather than emptying it is the whole guarantee (TMPL-45): the frozen
 // body then neither names the field nor leaves a gap, so a template with the field off
-// produces a byte-identical prompt to one that never carried it. The value is carried on the
-// node itself — a resolved ask keeps its Label and holds the ANSWER in Text — so rendering
-// stays a single pass with no second lookup.
+// produces a byte-identical prompt to one that never carried the field or its lead. The value is
+// carried on the node itself — a resolved ask keeps its Label and holds the ANSWER in Text — so
+// rendering stays a single pass with no second lookup.
+//
+// A removed field takes its lead with it: the literal lines written directly above it with no
+// blank line between (a wizard section's heading and fixed text). Fields standing directly one
+// under another share the lead above the first, which leaves only when all of them do.
 func resolveAsks(nodes []Node, answers []Answer) []Node {
 	byLabel := answersByLabel(answers)
-	out := make([]Node, 0, len(nodes))
-	for _, node := range nodes {
-		if node.Kind == NodeAsk && !byLabel[Decode(node.Label)].usable() {
+	removed := make([]bool, len(nodes))
+	for i, node := range nodes {
+		removed[i] = node.Kind == NodeAsk && !byLabel[Decode(node.Label)].usable()
+	}
+	leads := make(map[int]string)
+	for i := 0; i < len(nodes); i++ {
+		if nodes[i].Kind != NodeAsk {
 			continue
+		}
+		last, all := i, removed[i]
+		for {
+			next := last + 1
+			if next < len(nodes) && nodes[next].Kind == NodeLiteral && lineBreakOnly(nodes[next].Text) {
+				next++
+			}
+			if next >= len(nodes) || nodes[next].Kind != NodeAsk {
+				break
+			}
+			last, all = next, all && removed[next]
+		}
+		if all && i > 0 && nodes[i-1].Kind == NodeLiteral {
+			if kept, cut := withoutLead(nodes[i-1].Text, i-1 == 0); cut {
+				leads[i-1] = kept
+			}
+		}
+		i = last
+	}
+	out := make([]Node, 0, len(nodes))
+	for i, node := range nodes {
+		if removed[i] {
+			continue
+		}
+		if kept, cut := leads[i]; cut {
+			if kept == "" {
+				continue
+			}
+			node.Text, node.Source = kept, kept
 		}
 		out = append(out, node)
 	}
 	return out
+}
+
+// lineBreakOnly is what stands between two fields written one directly under the other: nothing
+// but whitespace and at most one line break.
+func lineBreakOnly(text string) bool {
+	return strings.TrimSpace(text) == "" && strings.Count(text, "\n") <= 1
+}
+
+// withoutLead cuts a field's lead from the literal standing directly before it. The field must
+// start its own line, and the lead is the nonblank lines above it back to a blank line. The
+// literal's first line is the tail of the previous tag's line unless the literal opens the area,
+// so it can be lead only there.
+func withoutLead(text string, opensArea bool) (string, bool) {
+	end := strings.LastIndex(text, "\n")
+	if end < 0 || strings.TrimSpace(text[end+1:]) != "" {
+		return text, false
+	}
+	lines := strings.Split(text[:end], "\n")
+	cut := len(lines)
+	for i := len(lines) - 1; i >= 0; i-- {
+		if strings.TrimSpace(lines[i]) == "" || (i == 0 && !opensArea) {
+			break
+		}
+		cut = i
+	}
+	if cut == len(lines) {
+		return text, false
+	}
+	if cut == 0 {
+		return text[end+1:], true
+	}
+	return strings.Join(lines[:cut], "\n") + "\n" + text[end+1:], true
 }
 
 // answersByLabel keys the post's answers the way the body names them. A label with no answer

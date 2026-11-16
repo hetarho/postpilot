@@ -22,6 +22,7 @@ A template is the skeleton of a post. It decides the order and what goes where; 
 - Each tag takes only the attributes shown above, and no attribute twice.
 - ask must carry a label of at most 40 characters, no two may share one in the same body, none may sit inside a repeat, and one body holds at most 10.
 - An ask's required attribute may only have the value true. Use it only for a field the author must fill.
+- Lines written directly above an optional ask, with no blank line between, leave with it when the field is left empty. Separate a line with a blank line to keep it.
 - A write names only what belongs at its position. A text-bearing ask may ask the author a concrete question about firsthand experience, verified facts, or uncertainty. Neither may command the model's tone, length, formatting, omissions, or repetition; those writing rules belong in guidelines.
 - Use ask for what only the author experienced or checked, such as a rating, visit date, or price, so the AI does not invent it.
 - Any tag other than those five is refused.

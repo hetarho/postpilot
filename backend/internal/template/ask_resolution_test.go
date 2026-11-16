@@ -1,6 +1,7 @@
 package template
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -21,10 +22,11 @@ func renderAsks(t *testing.T, body string, hasPhotos bool, answers []Answer) Ren
 }
 
 // The guarantee TMPL-45 buys: an off, blank or unanswered field leaves a body byte for
-// byte identical to the same template with that node deleted from the source. Nothing names
-// the field, and nothing leaves a gap where it was.
+// byte identical to the same template with that node and its lead deleted from the source.
+// Nothing names the field, and nothing leaves a gap where it was. 방문 기록 is written directly
+// onto 방문일, so it is that field's lead and leaves with it.
 func TestAnUnusableFieldRendersAsIfItWereNotInTheBody(t *testing.T) {
-	withoutBoth := "방문 기록\n\n<write>인트로</write>\n\n<slot kind=\"photo\"/>"
+	withoutBoth := "\n<write>인트로</write>\n\n<slot kind=\"photo\"/>"
 
 	cases := []struct {
 		name    string
@@ -115,4 +117,51 @@ func TestAskLabelKeepsItsEscapeInTheAttribute(t *testing.T) {
 	if len(rendered.Facts) != 1 || rendered.Facts[0].Label != `네이버 "별점"` {
 		t.Errorf("facts = %+v, want the decoded title", rendered.Facts)
 	}
+}
+
+// A wizard section is a heading, maybe fixed text, then its field and photo place (TMPL-74). A
+// skipped field takes the lines written directly onto it (TMPL-45), so no empty heading is left.
+func TestASkippedFieldTakesTheLinesWrittenDirectlyOntoIt(t *testing.T) {
+	const wizard = "📦 상자 안에는 뭐가 들었냐면요...\n<ask label=\"구성품\">구성품</ask>\n<slot kind=\"photo\" count=\"2\"/>\n" +
+		"⭐ 별점\n평가 기준\n⭐ 다시는 안 갈 것 같음\n<ask label=\"별점\">직접 매긴 별점과 그 이유</ask>\n" +
+		"🛒 어디서 사냐구요?\n<ask label=\"구매처\">가격과 살 수 있는 곳</ask>"
+	cases := []struct {
+		name, body, want string
+		answers          []Answer
+	}{
+		{"the area's first heading", wizard, "\n<slot kind=\"photo\" count=\"2\"/>\n" +
+			"⭐ 별점\n평가 기준\n⭐ 다시는 안 갈 것 같음\n<ask label=\"별점\">직접 매긴 별점과 그 이유</ask>\n" +
+			"🛒 어디서 사냐구요?\n<ask label=\"구매처\">가격과 살 수 있는 곳</ask>",
+			[]Answer{{Label: "별점", Text: "4점", Enabled: true}, {Label: "구매처", Text: "온라인", Enabled: true}}},
+		{"a heading and its fixed text after a photo place", wizard, "📦 상자 안에는 뭐가 들었냐면요...\n<ask label=\"구성품\">구성품</ask>\n<slot kind=\"photo\" count=\"2\"/>\n\n" +
+			"🛒 어디서 사냐구요?\n<ask label=\"구매처\">가격과 살 수 있는 곳</ask>",
+			[]Answer{{Label: "구성품", Text: "본체", Enabled: true}, {Label: "별점", Text: "4점", Enabled: false}, {Label: "구매처", Text: "온라인", Enabled: true}}},
+		{"every section skipped", wizard, "\n<slot kind=\"photo\" count=\"2\"/>\n\n", nil},
+		{"a blank line keeps the line", "머리말\n\n<ask label=\"a\">주제</ask>\n끝", "머리말\n\n\n끝", nil},
+		{"text before the field on its line stays", "가격: <ask label=\"a\"/>\n끝", "가격: \n끝", nil},
+		{"a line holding a tag is never lead", "<write>도입</write> 소개\n<ask label=\"a\">주제</ask>\n끝", "<write>도입</write> 소개\n\n끝", nil},
+		{"stacked fields keep the lead while one has a value", "정보\n<ask label=\"a\"/>\n<ask label=\"b\"/>\n끝",
+			"정보\n\n<ask label=\"b\"/>\n끝", []Answer{{Label: "b", Text: "값", Enabled: true}}},
+		{"stacked fields take the lead when all leave", "앞\n\n정보\n<ask label=\"a\"/>\n<ask label=\"b\"/>\n끝", "앞\n\n\n\n끝", nil},
+		{"a required field keeps its lead", "머리말\n<ask label=\"a\" required=\"true\">주제</ask>", "머리말\n<ask label=\"a\" required=\"true\">주제</ask>",
+			[]Answer{{Label: "a", Text: "값", Enabled: true}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := renderAsks(t, tc.body, true, tc.answers)
+			// The expectation is the template as if the skipped fields and their leads had never
+			// been written, rendered with the same answers.
+			want := renderAsks(t, tc.want, true, tc.answers)
+			if got.Body != want.Body {
+				t.Fatalf("body:\n got %q\nwant %q", got.Body, want.Body)
+			}
+			if !reflectEqualParts(got.BodyParts, want.BodyParts) {
+				t.Fatalf("material parts differ:\n got %+v\nwant %+v", got.BodyParts, want.BodyParts)
+			}
+		})
+	}
+}
+
+func reflectEqualParts(a, b []MaterialPart) bool {
+	return reflect.DeepEqual(a, b)
 }
