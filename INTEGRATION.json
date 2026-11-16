@@ -148,9 +148,9 @@
     "via": "merge",
     "executor": {
       "host": "ihaelam-ui-MacBookPro.local",
-      "pid": 97509
+      "pid": 12547
     },
-    "phase": "failed",
+    "phase": "checking",
     "land": "main",
     "base": "0715db3bba661f48f62e5bdd57527c348774d814",
     "cohort": [
@@ -166,7 +166,7 @@
     ],
     "at": "2026-11-16T14:08:35.792Z",
     "deadline": "2026-11-16T15:08:32.315Z",
-    "candidate": "05a191004446354cec50360a32e9d9b51a693efb",
+    "candidate": "012c6f776c448cac8af066ed7bc77b736946336e",
     "checks": [
       {
         "command": "pnpm test:dev",
@@ -1070,7 +1070,7 @@
         "at": "2026-11-16T14:21:19.381Z"
       }
     ],
-    "path": "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/b5394707-79a4-4451-abff-b38559ff9b61",
+    "path": "/private/var/folders/cd/rj398yyj6bx9vxv_0jw5qnl40000gn/T/postpilot-tonenav-d6oufuyf/candidate",
     "branch": "integration/b5394707-79a4-4451-abff-b38559ff9b61",
     "version": {
       "level": "patch",
