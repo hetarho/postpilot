@@ -212,7 +212,7 @@
       "host": "ihaelam-ui-MacBookPro.local",
       "pid": 23774
     },
-    "phase": "checking",
+    "phase": "failed",
     "land": "main",
     "base": "e9becca53376079187f488473c8ceb0d9dc5fa39",
     "cohort": [
@@ -249,13 +249,429 @@
     "candidate": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
     "checks": [
       {
+        "command": "pnpm test:dev",
+        "schemaVersion": 1,
         "ok": false,
-        "command": "spec close",
-        "errors": [
-          "reports/261116-vcx.md: FORMAT 골격 밖 섹션이 있습니다: ## checks## next",
-          "reports/261116-vcx.md에 ## checks 섹션이 없습니다.",
-          "reports/261116-vcx.md에 ## next 섹션이 없습니다."
-        ]
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 7091,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-546253e1-d735-48c8-9258-3857fa359803.log",
+        "tail": [
+          "    code: 'ERR_ASSERTION',",
+          "    actual: false,",
+          "    expected: true,",
+          "    operator: '==',",
+          "    diff: 'simple'",
+          "  }",
+          " ELIFECYCLE  Command failed with exit code 1.",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 4871,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-7a769d4f-643a-4fdb-8fae-381d6f6bf5a6.log",
+        "tail": [
+          "",
+          "> postpilot@0.3.0 gen:proto /Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff",
+          "> node scripts/gen.mjs proto",
+          "",
+          "",
+          "▶ codegen",
+          "  · buf generate (proto → Go·TS)",
+          "  ✓ buf 완료"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm gen:sql && git diff --exit-code -- backend",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 22047,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-edae829a-400b-483a-8ef3-ff1cf213084f.log",
+        "tail": [
+          "",
+          "> postpilot@0.3.0 gen:sql /Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff",
+          "> node scripts/gen.mjs sql",
+          "",
+          "",
+          "▶ codegen",
+          "  · sqlc generate (SQL → Go)",
+          "  ✓ sqlc 완료"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 715,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-c4d0d85f-1732-403a-a0fb-9bad767d137a.log",
+        "tail": [
+          "",
+          "sh: eslint: command not found",
+          "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 lint: `eslint .`",
+          "spawn ENOENT",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
+          " ELIFECYCLE  Command failed with exit code 1.",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint:fsd",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 732,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-2a619181-85e9-4bd7-940c-bc4c972b7ca0.log",
+        "tail": [
+          "",
+          "sh: steiger: command not found",
+          "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 lint:fsd: `steiger ./src`",
+          "spawn ENOENT",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
+          " ELIFECYCLE  Command failed with exit code 1.",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint:retirement",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 907,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-084c0881-bf32-4306-90ca-7ec0b5e3c714.log",
+        "tail": [
+          "ℹ suites 0",
+          "ℹ pass 2",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 124.966375",
+          "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint:style:probe && pnpm lint:style",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 522,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-93e2358d-c3a4-41fc-b321-1eec5b2518ad.log",
+        "tail": [
+          "  requireStack: [",
+          "    '/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend/package.json'",
+          "  ]",
+          "}",
+          "",
+          "Node.js v26.8.1",
+          " ELIFECYCLE  Command failed with exit code 1.",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 622,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-1b096673-95f2-4554-b302-ac5b5e80b1f7.log",
+        "tail": [
+          "스킬 동기화 상태 정상: 20개 (claude, codex)"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm --filter ./frontend test",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 521,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-1a65695f-0365-4559-9a06-1dd80a5a1939.log",
+        "tail": [
+          "> frontend@0.0.0 test /Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend",
+          "> vitest run",
+          "",
+          "sh: vitest: command not found",
+          "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 test: `vitest run`",
+          "spawn ENOENT",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm build:web",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 709,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-d0f51aca-8cc0-4542-a15e-a4750ef60662.log",
+        "tail": [
+          "",
+          "sh: tsc: command not found",
+          "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+          " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 build: `tsc -b && vite build`",
+          "spawn ENOENT",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
+          " ELIFECYCLE  Command failed with exit code 1.",
+          " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 94219,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-7d99a204-3167-4747-bc25-d8b5ab33ba53.log",
+        "tail": [
+          "test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure (media_release_test.ReleaseBudget) ... ok",
+          "test_storage_failure_precedes_application_builds_and_resources (media_release_test.ReleaseBudget) ... ok",
+          "test_storage_precedes_both_layouts_even_when_application_builds_are_skipped (media_release_test.ReleaseBudget) ... ok",
+          "",
+          "----------------------------------------------------------------------",
+          "Ran 69 tests in 92.528s",
+          "",
+          "OK"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 144046,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-4a26362e-f037-4bb7-8c18-8b73369b2553.log",
+        "tail": [
+          "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t4.326s",
+          "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+          "ok  \tgithub.com/postpilot/backend/internal/voice/store\t4.086s",
+          "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher\t3.258s",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t4.221s",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t3.072s",
+          "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
       }
     ],
     "agentChecks": [],
@@ -274,6 +690,437 @@
           }
         ],
         "at": "2026-11-16T16:04:50.349Z"
+      },
+      {
+        "candidate": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+        "checks": [
+          {
+            "command": "pnpm test:dev",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 7091,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-546253e1-d735-48c8-9258-3857fa359803.log",
+            "tail": [
+              "    code: 'ERR_ASSERTION',",
+              "    actual: false,",
+              "    expected: true,",
+              "    operator: '==',",
+              "    diff: 'simple'",
+              "  }",
+              " ELIFECYCLE  Command failed with exit code 1.",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 4871,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-7a769d4f-643a-4fdb-8fae-381d6f6bf5a6.log",
+            "tail": [
+              "",
+              "> postpilot@0.3.0 gen:proto /Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff",
+              "> node scripts/gen.mjs proto",
+              "",
+              "",
+              "▶ codegen",
+              "  · buf generate (proto → Go·TS)",
+              "  ✓ buf 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:sql && git diff --exit-code -- backend",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 22047,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-edae829a-400b-483a-8ef3-ff1cf213084f.log",
+            "tail": [
+              "",
+              "> postpilot@0.3.0 gen:sql /Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff",
+              "> node scripts/gen.mjs sql",
+              "",
+              "",
+              "▶ codegen",
+              "  · sqlc generate (SQL → Go)",
+              "  ✓ sqlc 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 715,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-c4d0d85f-1732-403a-a0fb-9bad767d137a.log",
+            "tail": [
+              "",
+              "sh: eslint: command not found",
+              "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+              " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 lint: `eslint .`",
+              "spawn ENOENT",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
+              " ELIFECYCLE  Command failed with exit code 1.",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:fsd",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 732,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-2a619181-85e9-4bd7-940c-bc4c972b7ca0.log",
+            "tail": [
+              "",
+              "sh: steiger: command not found",
+              "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+              " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 lint:fsd: `steiger ./src`",
+              "spawn ENOENT",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
+              " ELIFECYCLE  Command failed with exit code 1.",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:retirement",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 907,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-084c0881-bf32-4306-90ca-7ec0b5e3c714.log",
+            "tail": [
+              "ℹ suites 0",
+              "ℹ pass 2",
+              "ℹ fail 0",
+              "ℹ cancelled 0",
+              "ℹ skipped 0",
+              "ℹ todo 0",
+              "ℹ duration_ms 124.966375",
+              "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:style:probe && pnpm lint:style",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 522,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-93e2358d-c3a4-41fc-b321-1eec5b2518ad.log",
+            "tail": [
+              "  requireStack: [",
+              "    '/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend/package.json'",
+              "  ]",
+              "}",
+              "",
+              "Node.js v26.8.1",
+              " ELIFECYCLE  Command failed with exit code 1.",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 622,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-1b096673-95f2-4554-b302-ac5b5e80b1f7.log",
+            "tail": [
+              "스킬 동기화 상태 정상: 20개 (claude, codex)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm --filter ./frontend test",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 521,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-1a65695f-0365-4559-9a06-1dd80a5a1939.log",
+            "tail": [
+              "> frontend@0.0.0 test /Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend",
+              "> vitest run",
+              "",
+              "sh: vitest: command not found",
+              "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+              " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 test: `vitest run`",
+              "spawn ENOENT",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm build:web",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 709,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-d0f51aca-8cc0-4542-a15e-a4750ef60662.log",
+            "tail": [
+              "",
+              "sh: tsc: command not found",
+              "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff/frontend:",
+              " ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  frontend@0.0.0 build: `tsc -b && vite build`",
+              "spawn ENOENT",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?",
+              " ELIFECYCLE  Command failed with exit code 1.",
+              " WARN   Local package.json exists, but node_modules missing, did you mean to install?"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 94219,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-7d99a204-3167-4747-bc25-d8b5ab33ba53.log",
+            "tail": [
+              "test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure (media_release_test.ReleaseBudget) ... ok",
+              "test_storage_failure_precedes_application_builds_and_resources (media_release_test.ReleaseBudget) ... ok",
+              "test_storage_precedes_both_layouts_even_when_application_builds_are_skipped (media_release_test.ReleaseBudget) ... ok",
+              "",
+              "----------------------------------------------------------------------",
+              "Ran 69 tests in 92.528s",
+              "",
+              "OK"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 144046,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "e9becca53376079187f488473c8ceb0d9dc5fa39",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "2d0da9920b218298b35350ba51dc4a0c2b14c987",
+            "tree": "793dfd4a500dd009003cf4096fd990ca041d7d6d",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-4a26362e-f037-4bb7-8c18-8b73369b2553.log",
+            "tail": [
+              "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t4.326s",
+              "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+              "ok  \tgithub.com/postpilot/backend/internal/voice/store\t4.086s",
+              "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher\t3.258s",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t4.221s",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t3.072s",
+              "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          }
+        ],
+        "at": "2026-11-16T16:10:13.481Z"
       }
     ],
     "path": "/Users/ihaelam/project/postpilot/.git/gusta/integration-worktrees/a15b98d3-675b-4085-9904-6b652ef895ff",
