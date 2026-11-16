@@ -37,6 +37,7 @@ export {
   type TemplateArea,
   type TemplateNode,
 } from './lib/grammar'
+export { savedHeadingLines } from './lib/heading-references'
 export { useFormatGuide } from './api/useFormatGuide'
 export {
   useCancelTemplateRequest,

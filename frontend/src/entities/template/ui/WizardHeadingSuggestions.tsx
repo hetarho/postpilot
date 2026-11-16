@@ -18,17 +18,21 @@ import type { WizardHeadingSuggestionsOperation as HeadingSuggestionsOperation }
 
 /** 제목 제안 받기 (TMPL-73): one button on the headings step that opens a sheet asking how the
  *  owner wants the headings worded. Nothing is spent before the sheet's own 제안 받기; the step
- *  keeps the progress and the result, so the owner goes on in their own words meanwhile. */
+ *  keeps the progress and the result, so the owner goes on in their own words meanwhile.
+ *  `referenceHeadings` are the owner's saved heading lines (TMPL-76): when there are any, the
+ *  sheet also offers to word the suggestions like them. */
 export function WizardHeadingSuggestions({
   operation,
   count,
   writeModel,
   modelPending,
+  referenceHeadings = [],
 }: {
   operation: HeadingSuggestionsOperation
   count: number
   writeModel: HeadingSuggestionInput['writeModel'] | null
   modelPending: boolean
+  referenceHeadings?: readonly string[]
 }) {
   const { t } = useTranslation('templateTargets')
   const [open, setOpen] = useState(false)
@@ -76,6 +80,7 @@ export function WizardHeadingSuggestions({
           open={open}
           operation={operation}
           writeModel={writeModel}
+          referenceHeadings={referenceHeadings}
           onClose={() => setOpen(false)}
         />
       )}
@@ -89,17 +94,20 @@ function StyleRequestSheet({
   open,
   operation,
   writeModel,
+  referenceHeadings,
   onClose,
 }: {
   open: boolean
   operation: HeadingSuggestionsOperation
   writeModel: Parameters<HeadingSuggestionsOperation['start']>[0]
+  referenceHeadings: readonly string[]
   onClose: () => void
 }) {
   const { t } = useTranslation('templateTargets')
   const id = useId()
   const [request, setRequest] = useState('')
-  const [sending, setSending] = useState(false)
+  // Which of the sheet's two sends is being admitted, so only that one shows it.
+  const [sending, setSending] = useState<'plain' | 'referenced' | null>(null)
   const estimate = useHeadingSuggestionsEstimate(writeModel)
   const chars = Array.from(request.trim()).length
   const over = chars > HEADING_STYLE_REQUEST_MAX_CHARS
@@ -108,11 +116,15 @@ function StyleRequestSheet({
     returnObjects: true,
   }) as readonly string[]
 
-  const send = async () => {
+  const send = async (kind: 'plain' | 'referenced') => {
     if (over || sending) return
-    setSending(true)
-    const admitted = await operation.start(writeModel, request)
-    setSending(false)
+    setSending(kind)
+    const admitted = await operation.start(
+      writeModel,
+      request,
+      kind === 'referenced' ? referenceHeadings : [],
+    )
+    setSending(null)
     if (admitted) onClose()
   }
 
@@ -166,7 +178,7 @@ function StyleRequestSheet({
             ))}
           </div>
         </div>
-        {operation.failure && !sending && <AppFailureMessage failure={operation.failure} />}
+        {operation.failure && sending === null && <AppFailureMessage failure={operation.failure} />}
         {/* In flow after the field, not a pinned footer: the software keyboard does not resize
             the layout viewport a pinned footer is anchored to (VOICE-53). */}
         <div className="flex flex-wrap items-center justify-end gap-3">
@@ -177,7 +189,23 @@ function StyleRequestSheet({
               {t('headings.credits', { ns: 'templateTargets', count: estimate.credits })}
             </Typography>
           ) : null}
-          <Button variant="cta" pending={sending} disabled={over} onClick={() => void send()}>
+          {referenceHeadings.length > 0 && (
+            <Button
+              variant="secondary"
+              pending={sending === 'referenced'}
+              disabled={over || sending === 'plain'}
+              onClick={() => void send('referenced')}
+              className="h-auto min-h-11 py-2 whitespace-normal"
+            >
+              {t('headings.sheet.sendWithReferences', { ns: 'templateTargets' })}
+            </Button>
+          )}
+          <Button
+            variant="cta"
+            pending={sending === 'plain'}
+            disabled={over || sending === 'referenced'}
+            onClick={() => void send('plain')}
+          >
             {t('headings.sheet.send', { ns: 'templateTargets' })}
           </Button>
         </div>

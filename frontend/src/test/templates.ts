@@ -49,6 +49,8 @@ export interface FakeTemplatesOptions {
     sections: Array<{ role: string; description: string }>
     /** Recorded only when the owner sent one (TMPL-73). */
     styleRequest?: string
+    /** Recorded only when the request carried saved heading lines (TMPL-76). */
+    referenceHeadings?: string[]
   }>
   headingJobId?: string
   headingEstimate?: { free?: boolean; credits?: number }
@@ -187,6 +189,9 @@ export function registerTemplateService(router: ConnectRouter, options: FakeTemp
       targetPath: [...req.targetPath],
       sections: headingSections,
       ...(req.styleRequest ? { styleRequest: req.styleRequest } : {}),
+      ...(req.referenceHeadings.length > 0
+        ? { referenceHeadings: [...req.referenceHeadings] }
+        : {}),
     })
     if (options.headingRefusal)
       throw connectAppError(options.headingRefusal, Code.FailedPrecondition)

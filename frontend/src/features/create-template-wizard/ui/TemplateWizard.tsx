@@ -279,7 +279,9 @@ function OwnedTemplateWizard({
           next: headings.pending
             ? { ...next, disabled: true, pending: true, reason: t('wizard.headings.waiting') }
             : next,
-          children: <HeadingsStep state={current} send={send} operation={headings} />,
+          children: (
+            <HeadingsStep ownerId={ownerId} state={current} send={send} operation={headings} />
+          ),
         }
       case 'section': {
         const section = checkedSections(current)[current.cursor]!

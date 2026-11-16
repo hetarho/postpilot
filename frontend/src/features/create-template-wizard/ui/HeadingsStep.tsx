@@ -9,10 +9,12 @@ import { HeadingChoices, HeadingSuggestions } from './HeadingSuggestions'
 /** A heading per section in the owner's own words; each starts at the section's name, so the
  *  screen's ordinary 다음 works at once, and 제목 제안 받기 sits above the fields (TMPL-71). */
 export function HeadingsStep({
+  ownerId,
   state,
   send,
   operation,
 }: {
+  ownerId: string
   state: WizardState
   send: Dispatch<WizardEvent>
   operation: HeadingSuggestionsOperation
@@ -21,7 +23,11 @@ export function HeadingsStep({
   const id = useId()
   return (
     <div className="space-y-6">
-      <HeadingSuggestions operation={operation} count={checkedSections(state).length} />
+      <HeadingSuggestions
+        ownerId={ownerId}
+        operation={operation}
+        count={checkedSections(state).length}
+      />
       <ul className="space-y-4">
         {checkedSections(state).map((section) => {
           const heading = section.heading.trim()
