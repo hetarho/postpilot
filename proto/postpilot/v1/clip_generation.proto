@@ -76,8 +76,8 @@ message CreateClipProjectRequest {
   ClipRegionEdit intro_region = 17;
   ClipRegionEdit outro_region = 18;
   ClipDubbingOptions dubbing = 20;
-  // Absent takes the Naver channel, including requests from earlier clients.
-  string channel = 19;
+  reserved 19;
+  reserved "channel";
   optional bool campaign = 21;
   AdvertiserGuide advertiser_guide = 22;
   // Atomic seed for a clip created from an owned canonical post.
@@ -117,7 +117,8 @@ message UpdateClipProjectRequest {
   ClipRegionEdit outro_region = 18;
   ClipDubbingOptions dubbing = 20;
   optional int32 expected_region_revision = 19;
-  optional string channel = 21;
+  reserved 21;
+  reserved "channel";
   optional bool campaign = 22;
   AdvertiserGuide advertiser_guide = 23;
   // Absent preserves the link; present and empty unlinks.
@@ -286,9 +287,10 @@ message ListClipAnalysisEligibilityRequest {}
 // Registry order; display metadata is the observe model list's (ProviderService).
 message ListClipAnalysisEligibilityResponse { repeated ClipAnalysisModelEligibility models = 1; }
 
-// Upload text is metadata for either channel, independent of rendering and original files.
+// Upload text is the project's one upload metadata, independent of rendering and original files (CLIP-211).
 message ClipUploadText {
-  string channel = 1;
+  reserved 1;
+  reserved "channel";
   string body = 2;
   repeated string tags = 3;
   bool edited = 4;
@@ -296,33 +298,40 @@ message ClipUploadText {
   int32 revision = 6;
 }
 message ClipUploadTextLimits {
-  string channel = 1;
+  reserved 1;
+  reserved "channel";
   int32 max_chars = 2;
   int32 max_tags = 3;
   bool tags_in_caption = 4;
 }
 message GetClipUploadTextsRequest { string project_id = 1; }
 message GetClipUploadTextsResponse {
-  repeated ClipUploadText texts = 1;
-  repeated ClipUploadTextLimits limits = 2;
+  reserved 1, 2;
+  reserved "texts";
+  // Absent until the project has an upload text.
+  ClipUploadText text = 3;
+  ClipUploadTextLimits limits = 4;
 }
 message SaveClipUploadTextRequest {
+  reserved 2;
+  reserved "channel";
   string project_id = 1;
-  string channel = 2;
   string body = 3;
   repeated string tags = 4;
   int32 expected_revision = 5;
 }
 message SaveClipUploadTextResponse { ClipUploadText text = 1; }
 message QuoteClipUploadTextRequest {
+  reserved 2;
+  reserved "channel";
   string project_id = 1;
-  string channel = 2;
   ModelRef write_model = 3;
   bool confirm_edited = 4;
 }
 message StartClipUploadTextRequest {
+  reserved 2;
+  reserved "channel";
   string project_id = 1;
-  string channel = 2;
   ModelRef write_model = 3;
   bool confirm_edited = 4;
   string quote_id = 5;

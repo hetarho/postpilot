@@ -84,7 +84,7 @@
 | T851 | Serialize the caption preview key only when its inputs change | ARCH | - | todo |
 | T852 | Keep Textarea's layout effects stable across parent renders | ARCH | T851 | todo |
 | T853 | Parse the clip composition template once per body | ARCH | T852 | todo |
-| T867 | Remove the channel from the API contract | CLIP | T864 T866 | todo |
+| T867 | Remove the channel from the API contract | CLIP | T864 T866 | doing@261116.onev |
 | T868 | Fold and drop the stored clip channel | CLIP | T867 | todo |
 
 ## work

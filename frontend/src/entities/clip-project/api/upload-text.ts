@@ -25,8 +25,6 @@ export interface ClipUploadTextLimits {
   maxTags: number
   tagsInCaption: boolean
 }
-// The proto still carries a channel until T867 removes it; a project has one upload text (CLIP-209),
-// so the first row is it and no channel is read.
 function textOf(row: ProtoClipUploadText): ClipUploadText {
   if (row.revision <= 0) throw new Error('Invalid upload text')
   return {
@@ -52,8 +50,7 @@ export function useClipUploadTexts(ownerId: string, projectId: string) {
         { projectId },
         { signal },
       )
-      const text = response.texts[0]
-      const limits = response.limits[0]
+      const { text, limits } = response
       return { text: text && textOf(text), limits: limits && limitsOf(limits) }
     },
   })

@@ -15,7 +15,7 @@ import (
 )
 
 func uploadTextProto(text clip.UploadText) *v1.ClipUploadText {
-	return &v1.ClipUploadText{Channel: text.Channel, Body: text.Body, Tags: text.Tags, Edited: text.Edited, UpdatedAt: text.UpdatedAt.UTC().Format(time.RFC3339Nano), Revision: int32(text.Revision)}
+	return &v1.ClipUploadText{Body: text.Body, Tags: text.Tags, Edited: text.Edited, UpdatedAt: text.UpdatedAt.UTC().Format(time.RFC3339Nano), Revision: int32(text.Revision)}
 }
 func uploadTextError(err error) error {
 	if errors.Is(err, clip.ErrUploadTextConfirmation) {
@@ -39,12 +39,11 @@ func (h *Handler) GetClipUploadTexts(ctx context.Context, req *connect.Request[v
 	if err != nil {
 		return nil, toConnectError(err)
 	}
-	out := &v1.GetClipUploadTextsResponse{}
-	for _, row := range rows {
-		out.Texts = append(out.Texts, uploadTextProto(row))
-	}
 	limits := clip.UploadLimits()
-	out.Limits = append(out.Limits, &v1.ClipUploadTextLimits{Channel: clip.ChannelNaver, MaxChars: int32(limits.MaxChars), MaxTags: int32(limits.MaxTags)})
+	out := &v1.GetClipUploadTextsResponse{Limits: &v1.ClipUploadTextLimits{MaxChars: int32(limits.MaxChars), MaxTags: int32(limits.MaxTags)}}
+	if len(rows) > 0 {
+		out.Text = uploadTextProto(rows[0])
+	}
 	return connect.NewResponse(out), nil
 }
 func (h *Handler) SaveClipUploadText(ctx context.Context, req *connect.Request[v1.SaveClipUploadTextRequest]) (*connect.Response[v1.SaveClipUploadTextResponse], error) {

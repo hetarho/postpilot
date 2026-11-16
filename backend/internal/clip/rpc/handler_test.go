@@ -203,18 +203,16 @@ func (s *rpcStore) InsertProject(_ context.Context, p clip.Project) error {
 	return nil
 }
 
-func TestCreateIsVerticalOnlyAndIgnoresAnyChannel(t *testing.T) {
+func TestCreateIsVerticalOnly(t *testing.T) {
 	s := &rpcStore{}
 	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(t.Context(), "alice")
-	for _, channel := range []string{"", clip.ChannelNaver, "instagram_clip", "unknown"} {
-		got, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Title: "new", Ratio: "vertical", Channel: channel, Language: v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got.Msg.Project.Channel != clip.ChannelNaver || s.inserted[len(s.inserted)-1].Channel != clip.ChannelNaver || got.Msg.Project.Ratio != "vertical" || s.inserted[len(s.inserted)-1].UserID != "alice" {
-			t.Fatal(got.Msg.Project)
-		}
+	got, err := h.CreateClipProject(ctx, connect.NewRequest(&v1.CreateClipProjectRequest{Title: "new", Ratio: "vertical", Language: v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Msg.Project.Ratio != "vertical" || s.inserted[len(s.inserted)-1].UserID != "alice" {
+		t.Fatal(got.Msg.Project)
 	}
 	accepted := len(s.inserted)
 	for _, ratio := range []string{"", "horizontal", "square", "9:16"} {
@@ -233,42 +231,17 @@ func TestCreateIsVerticalOnlyAndIgnoresAnyChannel(t *testing.T) {
 	}
 }
 
-func TestUpdateIgnoresTheChannel(t *testing.T) {
-	original := clip.Project{ID: "owned", UserID: "alice", Title: "keep", Ratio: "horizontal", Channel: clip.ChannelNaver, Language: "ko", Instruction: "keep instruction", TargetDurationMS: 30000, EditPlanRevision: 3, RenderedPlanRevision: 3, Analysis: "saved analysis", Result: &clip.Result{ID: "saved"}}
-	s := &rpcStore{project: &original}
-	h := NewHandler(testProjects(s))
-	ctx := auth.WithUser(t.Context(), "alice")
-	for _, channel := range []string{"instagram_clip", clip.ChannelNaver, "", "unknown"} {
-		response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &channel}))
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !reflect.DeepEqual(*s.project, original) || response.Msg.Project.Channel != clip.ChannelNaver || s.patch.Channel != nil {
-			t.Fatalf("a channel patch changed the project: %+v %+v", s.project, s.patch)
-		}
-	}
-	_, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "foreign", Channel: ptrChannel("instagram_clip")}))
-	if connect.CodeOf(err) != connect.CodeNotFound {
-		t.Fatal(err)
-	}
-}
-func ptrChannel(value string) *string { return &value }
-
-func TestFinalizedChannelPatchIsIgnoredAndTitleStaysLocked(t *testing.T) {
+func TestFinalizedTitleStaysLocked(t *testing.T) {
 	original := clip.Project{ID: "owned", UserID: "alice", Title: "confirmed", Ratio: "square", Channel: clip.ChannelNaver, Finalized: &clip.Finalization{At: time.Now(), PlanRevision: 1, ResultID: "result"}}
 	s := &rpcStore{project: &original}
 	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(t.Context(), "alice")
-	channel, title := "instagram_clip", "changed"
-	if _, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &channel, Title: &title})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
-		t.Fatal("mixed edit accepted", err)
+	title := "changed"
+	if _, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Title: &title})); connect.CodeOf(err) != connect.CodeFailedPrecondition {
+		t.Fatal("finalized title edit accepted", err)
 	}
-	response, err := h.UpdateClipProject(ctx, connect.NewRequest(&v1.UpdateClipProjectRequest{Id: "owned", Channel: &channel}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(*s.project, original) || response.Msg.Project.FinalizedResultId != "result" || response.Msg.Project.Channel != clip.ChannelNaver {
-		t.Fatal(s.project, response.Msg.Project)
+	if !reflect.DeepEqual(*s.project, original) {
+		t.Fatal(s.project)
 	}
 }
 

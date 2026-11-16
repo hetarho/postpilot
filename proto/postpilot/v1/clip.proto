@@ -126,8 +126,8 @@ message ClipProject {
   bool plan_edited_by_hand = 39;
   ClipProjectRegions regions = 40;
   ClipDubbingOptions dubbing = 41;
-  // naver_clip or instagram_clip; independent of composition and result.
-  string channel = 42;
+  reserved 42;
+  reserved "channel";
   bool campaign = 43;
   AdvertiserGuide advertiser_guide = 44;
   ClipLinkedPost linked_post = 45;

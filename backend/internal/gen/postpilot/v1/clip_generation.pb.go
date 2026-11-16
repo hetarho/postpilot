@@ -126,10 +126,8 @@ type CreateClipProjectRequest struct {
 	IntroRegion          *ClipRegionEdit     `protobuf:"bytes,17,opt,name=intro_region,json=introRegion,proto3" json:"intro_region,omitempty"`
 	OutroRegion          *ClipRegionEdit     `protobuf:"bytes,18,opt,name=outro_region,json=outroRegion,proto3" json:"outro_region,omitempty"`
 	Dubbing              *ClipDubbingOptions `protobuf:"bytes,20,opt,name=dubbing,proto3" json:"dubbing,omitempty"`
-	// Absent takes the Naver channel, including requests from earlier clients.
-	Channel         string           `protobuf:"bytes,19,opt,name=channel,proto3" json:"channel,omitempty"`
-	Campaign        *bool            `protobuf:"varint,21,opt,name=campaign,proto3,oneof" json:"campaign,omitempty"`
-	AdvertiserGuide *AdvertiserGuide `protobuf:"bytes,22,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
+	Campaign             *bool               `protobuf:"varint,21,opt,name=campaign,proto3,oneof" json:"campaign,omitempty"`
+	AdvertiserGuide      *AdvertiserGuide    `protobuf:"bytes,22,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
 	// Atomic seed for a clip created from an owned canonical post.
 	LinkedPostSlug *string `protobuf:"bytes,23,opt,name=linked_post_slug,json=linkedPostSlug,proto3,oneof" json:"linked_post_slug,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -283,13 +281,6 @@ func (x *CreateClipProjectRequest) GetDubbing() *ClipDubbingOptions {
 		return x.Dubbing
 	}
 	return nil
-}
-
-func (x *CreateClipProjectRequest) GetChannel() string {
-	if x != nil {
-		return x.Channel
-	}
-	return ""
 }
 
 func (x *CreateClipProjectRequest) GetCampaign() bool {
@@ -471,7 +462,6 @@ type UpdateClipProjectRequest struct {
 	OutroRegion            *ClipRegionEdit     `protobuf:"bytes,18,opt,name=outro_region,json=outroRegion,proto3" json:"outro_region,omitempty"`
 	Dubbing                *ClipDubbingOptions `protobuf:"bytes,20,opt,name=dubbing,proto3" json:"dubbing,omitempty"`
 	ExpectedRegionRevision *int32              `protobuf:"varint,19,opt,name=expected_region_revision,json=expectedRegionRevision,proto3,oneof" json:"expected_region_revision,omitempty"`
-	Channel                *string             `protobuf:"bytes,21,opt,name=channel,proto3,oneof" json:"channel,omitempty"`
 	Campaign               *bool               `protobuf:"varint,22,opt,name=campaign,proto3,oneof" json:"campaign,omitempty"`
 	AdvertiserGuide        *AdvertiserGuide    `protobuf:"bytes,23,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
 	// Absent preserves the link; present and empty unlinks.
@@ -636,13 +626,6 @@ func (x *UpdateClipProjectRequest) GetExpectedRegionRevision() int32 {
 		return *x.ExpectedRegionRevision
 	}
 	return 0
-}
-
-func (x *UpdateClipProjectRequest) GetChannel() string {
-	if x != nil && x.Channel != nil {
-		return *x.Channel
-	}
-	return ""
 }
 
 func (x *UpdateClipProjectRequest) GetCampaign() bool {
@@ -2388,10 +2371,9 @@ func (x *ListClipAnalysisEligibilityResponse) GetModels() []*ClipAnalysisModelEl
 	return nil
 }
 
-// Upload text is metadata for either channel, independent of rendering and original files.
+// Upload text is the project's one upload metadata, independent of rendering and original files (CLIP-211).
 type ClipUploadText struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Channel       string                 `protobuf:"bytes,1,opt,name=channel,proto3" json:"channel,omitempty"`
 	Body          string                 `protobuf:"bytes,2,opt,name=body,proto3" json:"body,omitempty"`
 	Tags          []string               `protobuf:"bytes,3,rep,name=tags,proto3" json:"tags,omitempty"`
 	Edited        bool                   `protobuf:"varint,4,opt,name=edited,proto3" json:"edited,omitempty"`
@@ -2431,13 +2413,6 @@ func (*ClipUploadText) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_clip_generation_proto_rawDescGZIP(), []int{34}
 }
 
-func (x *ClipUploadText) GetChannel() string {
-	if x != nil {
-		return x.Channel
-	}
-	return ""
-}
-
 func (x *ClipUploadText) GetBody() string {
 	if x != nil {
 		return x.Body
@@ -2475,7 +2450,6 @@ func (x *ClipUploadText) GetRevision() int32 {
 
 type ClipUploadTextLimits struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Channel       string                 `protobuf:"bytes,1,opt,name=channel,proto3" json:"channel,omitempty"`
 	MaxChars      int32                  `protobuf:"varint,2,opt,name=max_chars,json=maxChars,proto3" json:"max_chars,omitempty"`
 	MaxTags       int32                  `protobuf:"varint,3,opt,name=max_tags,json=maxTags,proto3" json:"max_tags,omitempty"`
 	TagsInCaption bool                   `protobuf:"varint,4,opt,name=tags_in_caption,json=tagsInCaption,proto3" json:"tags_in_caption,omitempty"`
@@ -2511,13 +2485,6 @@ func (x *ClipUploadTextLimits) ProtoReflect() protoreflect.Message {
 // Deprecated: Use ClipUploadTextLimits.ProtoReflect.Descriptor instead.
 func (*ClipUploadTextLimits) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_clip_generation_proto_rawDescGZIP(), []int{35}
-}
-
-func (x *ClipUploadTextLimits) GetChannel() string {
-	if x != nil {
-		return x.Channel
-	}
-	return ""
 }
 
 func (x *ClipUploadTextLimits) GetMaxChars() int32 {
@@ -2586,9 +2553,10 @@ func (x *GetClipUploadTextsRequest) GetProjectId() string {
 }
 
 type GetClipUploadTextsResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
-	Texts         []*ClipUploadText       `protobuf:"bytes,1,rep,name=texts,proto3" json:"texts,omitempty"`
-	Limits        []*ClipUploadTextLimits `protobuf:"bytes,2,rep,name=limits,proto3" json:"limits,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Absent until the project has an upload text.
+	Text          *ClipUploadText       `protobuf:"bytes,3,opt,name=text,proto3" json:"text,omitempty"`
+	Limits        *ClipUploadTextLimits `protobuf:"bytes,4,opt,name=limits,proto3" json:"limits,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2623,14 +2591,14 @@ func (*GetClipUploadTextsResponse) Descriptor() ([]byte, []int) {
 	return file_postpilot_v1_clip_generation_proto_rawDescGZIP(), []int{37}
 }
 
-func (x *GetClipUploadTextsResponse) GetTexts() []*ClipUploadText {
+func (x *GetClipUploadTextsResponse) GetText() *ClipUploadText {
 	if x != nil {
-		return x.Texts
+		return x.Text
 	}
 	return nil
 }
 
-func (x *GetClipUploadTextsResponse) GetLimits() []*ClipUploadTextLimits {
+func (x *GetClipUploadTextsResponse) GetLimits() *ClipUploadTextLimits {
 	if x != nil {
 		return x.Limits
 	}
@@ -2640,7 +2608,6 @@ func (x *GetClipUploadTextsResponse) GetLimits() []*ClipUploadTextLimits {
 type SaveClipUploadTextRequest struct {
 	state            protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId        string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Channel          string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
 	Body             string                 `protobuf:"bytes,3,opt,name=body,proto3" json:"body,omitempty"`
 	Tags             []string               `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty"`
 	ExpectedRevision int32                  `protobuf:"varint,5,opt,name=expected_revision,json=expectedRevision,proto3" json:"expected_revision,omitempty"`
@@ -2681,13 +2648,6 @@ func (*SaveClipUploadTextRequest) Descriptor() ([]byte, []int) {
 func (x *SaveClipUploadTextRequest) GetProjectId() string {
 	if x != nil {
 		return x.ProjectId
-	}
-	return ""
-}
-
-func (x *SaveClipUploadTextRequest) GetChannel() string {
-	if x != nil {
-		return x.Channel
 	}
 	return ""
 }
@@ -2760,7 +2720,6 @@ func (x *SaveClipUploadTextResponse) GetText() *ClipUploadText {
 type QuoteClipUploadTextRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Channel       string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
 	WriteModel    *ModelRef              `protobuf:"bytes,3,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	ConfirmEdited bool                   `protobuf:"varint,4,opt,name=confirm_edited,json=confirmEdited,proto3" json:"confirm_edited,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -2804,13 +2763,6 @@ func (x *QuoteClipUploadTextRequest) GetProjectId() string {
 	return ""
 }
 
-func (x *QuoteClipUploadTextRequest) GetChannel() string {
-	if x != nil {
-		return x.Channel
-	}
-	return ""
-}
-
 func (x *QuoteClipUploadTextRequest) GetWriteModel() *ModelRef {
 	if x != nil {
 		return x.WriteModel
@@ -2828,7 +2780,6 @@ func (x *QuoteClipUploadTextRequest) GetConfirmEdited() bool {
 type StartClipUploadTextRequest struct {
 	state                     protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId                 string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
-	Channel                   string                 `protobuf:"bytes,2,opt,name=channel,proto3" json:"channel,omitempty"`
 	WriteModel                *ModelRef              `protobuf:"bytes,3,opt,name=write_model,json=writeModel,proto3" json:"write_model,omitempty"`
 	ConfirmEdited             bool                   `protobuf:"varint,4,opt,name=confirm_edited,json=confirmEdited,proto3" json:"confirm_edited,omitempty"`
 	QuoteId                   string                 `protobuf:"bytes,5,opt,name=quote_id,json=quoteId,proto3" json:"quote_id,omitempty"`
@@ -2875,13 +2826,6 @@ func (x *StartClipUploadTextRequest) GetProjectId() string {
 	return ""
 }
 
-func (x *StartClipUploadTextRequest) GetChannel() string {
-	if x != nil {
-		return x.Channel
-	}
-	return ""
-}
-
 func (x *StartClipUploadTextRequest) GetWriteModel() *ModelRef {
 	if x != nil {
 		return x.WriteModel
@@ -2924,7 +2868,7 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\"postpilot/v1/clip_generation.proto\x12\fpostpilot.v1\x1a\x17postpilot/v1/clip.proto\x1a\x17postpilot/v1/post.proto\x1a\x1bpostpilot/v1/provider.proto\x1a\x1bpostpilot/v1/language.proto\"\x19\n" +
 	"\x17ListClipProjectsRequest\"Q\n" +
 	"\x18ListClipProjectsResponse\x125\n" +
-	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xf2\b\n" +
+	"\bprojects\x18\x01 \x03(\v2\x19.postpilot.v1.ClipProjectR\bprojects\"\xe7\b\n" +
 	"\x18CreateClipProjectRequest\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12*\n" +
 	"\x11video_template_id\x18\x02 \x01(\tR\x0fvideoTemplateId\x12\x14\n" +
@@ -2945,8 +2889,7 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\x16allowed_caption_styles\x18\x10 \x01(\v2\x1f.postpilot.v1.ClipCaptionStylesR\x14allowedCaptionStyles\x12?\n" +
 	"\fintro_region\x18\x11 \x01(\v2\x1c.postpilot.v1.ClipRegionEditR\vintroRegion\x12?\n" +
 	"\foutro_region\x18\x12 \x01(\v2\x1c.postpilot.v1.ClipRegionEditR\voutroRegion\x12:\n" +
-	"\adubbing\x18\x14 \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12\x18\n" +
-	"\achannel\x18\x13 \x01(\tR\achannel\x12\x1f\n" +
+	"\adubbing\x18\x14 \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12\x1f\n" +
 	"\bcampaign\x18\x15 \x01(\bH\x04R\bcampaign\x88\x01\x01\x12H\n" +
 	"\x10advertiser_guide\x18\x16 \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuide\x12-\n" +
 	"\x10linked_post_slug\x18\x17 \x01(\tH\x05R\x0elinkedPostSlug\x88\x01\x01B\x0f\n" +
@@ -2955,13 +2898,13 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\r_intro_presetB\x0f\n" +
 	"\r_outro_presetB\v\n" +
 	"\t_campaignB\x13\n" +
-	"\x11_linked_post_slugJ\x04\b\x05\x10\x06J\x04\b\a\x10\bR\aanswersR\x03cta\"P\n" +
+	"\x11_linked_post_slugJ\x04\b\x05\x10\x06J\x04\b\a\x10\bJ\x04\b\x13\x10\x14R\aanswersR\x03ctaR\achannel\"P\n" +
 	"\x19CreateClipProjectResponse\x123\n" +
 	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"'\n" +
 	"\x15GetClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\"M\n" +
 	"\x16GetClipProjectResponse\x123\n" +
-	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\xac\v\n" +
+	"\aproject\x18\x01 \x01(\v2\x19.postpilot.v1.ClipProjectR\aproject\"\x90\v\n" +
 	"\x18UpdateClipProjectRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x19\n" +
 	"\x05title\x18\x02 \x01(\tH\x00R\x05title\x88\x01\x01\x12/\n" +
@@ -2984,11 +2927,10 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\foutro_region\x18\x12 \x01(\v2\x1c.postpilot.v1.ClipRegionEditR\voutroRegion\x12:\n" +
 	"\adubbing\x18\x14 \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12=\n" +
 	"\x18expected_region_revision\x18\x13 \x01(\x05H\n" +
-	"R\x16expectedRegionRevision\x88\x01\x01\x12\x1d\n" +
-	"\achannel\x18\x15 \x01(\tH\vR\achannel\x88\x01\x01\x12\x1f\n" +
-	"\bcampaign\x18\x16 \x01(\bH\fR\bcampaign\x88\x01\x01\x12H\n" +
+	"R\x16expectedRegionRevision\x88\x01\x01\x12\x1f\n" +
+	"\bcampaign\x18\x16 \x01(\bH\vR\bcampaign\x88\x01\x01\x12H\n" +
 	"\x10advertiser_guide\x18\x17 \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuide\x12-\n" +
-	"\x10linked_post_slug\x18\x18 \x01(\tH\rR\x0elinkedPostSlug\x88\x01\x01\x12E\n" +
+	"\x10linked_post_slug\x18\x18 \x01(\tH\fR\x0elinkedPostSlug\x88\x01\x01\x12E\n" +
 	"\x0fchecklist_ticks\x18\x19 \x01(\v2\x1c.postpilot.v1.ChecklistTicksR\x0echecklistTicksB\b\n" +
 	"\x06_titleB\x14\n" +
 	"\x12_video_template_idB\x15\n" +
@@ -3000,11 +2942,9 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\a_accentB\x0f\n" +
 	"\r_intro_presetB\x0f\n" +
 	"\r_outro_presetB\x1b\n" +
-	"\x19_expected_region_revisionB\n" +
-	"\n" +
-	"\b_channelB\v\n" +
+	"\x19_expected_region_revisionB\v\n" +
 	"\t_campaignB\x13\n" +
-	"\x11_linked_post_slugJ\x04\b\x05\x10\x06J\x04\b\a\x10\bR\aanswersR\x03cta\"Y\n" +
+	"\x11_linked_post_slugJ\x04\b\x05\x10\x06J\x04\b\a\x10\bJ\x04\b\x15\x10\x16R\aanswersR\x03ctaR\achannel\"Y\n" +
 	"\x11ClipStorylineEdit\x12D\n" +
 	"\n" +
 	"paragraphs\x18\x01 \x03(\v2$.postpilot.v1.ClipStorylineParagraphR\n" +
@@ -3157,53 +3097,48 @@ const file_postpilot_v1_clip_generation_proto_rawDesc = "" +
 	"\baccepted\x18\x03 \x01(\bR\baccepted\"$\n" +
 	"\"ListClipAnalysisEligibilityRequest\"i\n" +
 	"#ListClipAnalysisEligibilityResponse\x12B\n" +
-	"\x06models\x18\x01 \x03(\v2*.postpilot.v1.ClipAnalysisModelEligibilityR\x06models\"\xa5\x01\n" +
-	"\x0eClipUploadText\x12\x18\n" +
-	"\achannel\x18\x01 \x01(\tR\achannel\x12\x12\n" +
+	"\x06models\x18\x01 \x03(\v2*.postpilot.v1.ClipAnalysisModelEligibilityR\x06models\"\x9a\x01\n" +
+	"\x0eClipUploadText\x12\x12\n" +
 	"\x04body\x18\x02 \x01(\tR\x04body\x12\x12\n" +
 	"\x04tags\x18\x03 \x03(\tR\x04tags\x12\x16\n" +
 	"\x06edited\x18\x04 \x01(\bR\x06edited\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\x05 \x01(\tR\tupdatedAt\x12\x1a\n" +
-	"\brevision\x18\x06 \x01(\x05R\brevision\"\x90\x01\n" +
-	"\x14ClipUploadTextLimits\x12\x18\n" +
-	"\achannel\x18\x01 \x01(\tR\achannel\x12\x1b\n" +
+	"\brevision\x18\x06 \x01(\x05R\brevisionJ\x04\b\x01\x10\x02R\achannel\"\x85\x01\n" +
+	"\x14ClipUploadTextLimits\x12\x1b\n" +
 	"\tmax_chars\x18\x02 \x01(\x05R\bmaxChars\x12\x19\n" +
 	"\bmax_tags\x18\x03 \x01(\x05R\amaxTags\x12&\n" +
-	"\x0ftags_in_caption\x18\x04 \x01(\bR\rtagsInCaption\":\n" +
+	"\x0ftags_in_caption\x18\x04 \x01(\bR\rtagsInCaptionJ\x04\b\x01\x10\x02R\achannel\":\n" +
 	"\x19GetClipUploadTextsRequest\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\"\x8c\x01\n" +
-	"\x1aGetClipUploadTextsResponse\x122\n" +
-	"\x05texts\x18\x01 \x03(\v2\x1c.postpilot.v1.ClipUploadTextR\x05texts\x12:\n" +
-	"\x06limits\x18\x02 \x03(\v2\".postpilot.v1.ClipUploadTextLimitsR\x06limits\"\xa9\x01\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\x9d\x01\n" +
+	"\x1aGetClipUploadTextsResponse\x120\n" +
+	"\x04text\x18\x03 \x01(\v2\x1c.postpilot.v1.ClipUploadTextR\x04text\x12:\n" +
+	"\x06limits\x18\x04 \x01(\v2\".postpilot.v1.ClipUploadTextLimitsR\x06limitsJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05texts\"\x9e\x01\n" +
 	"\x19SaveClipUploadTextRequest\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
-	"\achannel\x18\x02 \x01(\tR\achannel\x12\x12\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x12\n" +
 	"\x04body\x18\x03 \x01(\tR\x04body\x12\x12\n" +
 	"\x04tags\x18\x04 \x03(\tR\x04tags\x12+\n" +
-	"\x11expected_revision\x18\x05 \x01(\x05R\x10expectedRevision\"N\n" +
+	"\x11expected_revision\x18\x05 \x01(\x05R\x10expectedRevisionJ\x04\b\x02\x10\x03R\achannel\"N\n" +
 	"\x1aSaveClipUploadTextResponse\x120\n" +
-	"\x04text\x18\x01 \x01(\v2\x1c.postpilot.v1.ClipUploadTextR\x04text\"\xb5\x01\n" +
+	"\x04text\x18\x01 \x01(\v2\x1c.postpilot.v1.ClipUploadTextR\x04text\"\xaa\x01\n" +
 	"\x1aQuoteClipUploadTextRequest\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
-	"\achannel\x18\x02 \x01(\tR\achannel\x127\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x127\n" +
 	"\vwrite_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12%\n" +
-	"\x0econfirm_edited\x18\x04 \x01(\bR\rconfirmEdited\"\xe0\x02\n" +
+	"\x0econfirm_edited\x18\x04 \x01(\bR\rconfirmEditedJ\x04\b\x02\x10\x03R\achannel\"\xd5\x02\n" +
 	"\x1aStartClipUploadTextRequest\x12\x1d\n" +
 	"\n" +
-	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x18\n" +
-	"\achannel\x18\x02 \x01(\tR\achannel\x127\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x127\n" +
 	"\vwrite_model\x18\x03 \x01(\v2\x16.postpilot.v1.ModelRefR\n" +
 	"writeModel\x12%\n" +
 	"\x0econfirm_edited\x18\x04 \x01(\bR\rconfirmEdited\x12\x19\n" +
 	"\bquote_id\x18\x05 \x01(\tR\aquoteId\x125\n" +
 	"\x14approved_max_credits\x18\x06 \x01(\x05H\x00R\x12approvedMaxCredits\x88\x01\x01\x12>\n" +
 	"\x1bcancellation_policy_version\x18\a \x01(\x05R\x19cancellationPolicyVersionB\x17\n" +
-	"\x15_approved_max_credits2\xef\x13\n" +
+	"\x15_approved_max_creditsJ\x04\b\x02\x10\x03R\achannel2\xef\x13\n" +
 	"\x15ClipGenerationService\x12c\n" +
 	"\x10ListClipProjects\x12%.postpilot.v1.ListClipProjectsRequest\x1a&.postpilot.v1.ListClipProjectsResponse\"\x00\x12f\n" +
 	"\x11CreateClipProject\x12&.postpilot.v1.CreateClipProjectRequest\x1a'.postpilot.v1.CreateClipProjectResponse\"\x00\x12]\n" +
@@ -3351,7 +3286,7 @@ var file_postpilot_v1_clip_generation_proto_depIdxs = []int32{
 	56, // 44: postpilot.v1.CancelClipJobResponse.job:type_name -> postpilot.v1.GenerationJob
 	57, // 45: postpilot.v1.CancelClipJobResponse.accounting:type_name -> postpilot.v1.ClipAccounting
 	58, // 46: postpilot.v1.ListClipAnalysisEligibilityResponse.models:type_name -> postpilot.v1.ClipAnalysisModelEligibility
-	34, // 47: postpilot.v1.GetClipUploadTextsResponse.texts:type_name -> postpilot.v1.ClipUploadText
+	34, // 47: postpilot.v1.GetClipUploadTextsResponse.text:type_name -> postpilot.v1.ClipUploadText
 	35, // 48: postpilot.v1.GetClipUploadTextsResponse.limits:type_name -> postpilot.v1.ClipUploadTextLimits
 	34, // 49: postpilot.v1.SaveClipUploadTextResponse.text:type_name -> postpilot.v1.ClipUploadText
 	52, // 50: postpilot.v1.QuoteClipUploadTextRequest.write_model:type_name -> postpilot.v1.ModelRef

@@ -20,7 +20,6 @@ const project: ClipProject = {
 }
 const stored = (extra = {}) => ({
   projectId: 'clip',
-  channel: '',
   body: '다시 찾고 싶은 곳',
   tags: ['광고주', '방문'],
   edited: false,
@@ -105,7 +104,6 @@ describe('clip upload text', () => {
     expect(view.quotes).toHaveLength(1)
     expect(view.quotes[0]).toMatchObject({
       projectId: 'clip',
-      channel: '',
       writeModel: model,
       confirmEdited: false,
     })
@@ -164,7 +162,7 @@ describe('clip upload text', () => {
     await view.user.click(await screen.findByRole('button', { name: '최대 4 크레딧 · 문구 작성' }))
     await waitFor(() => expect(view.starts).toHaveLength(1))
     expect(view.starts[0]).toMatchObject({ confirmEdited: true })
-    expect(view.starts[0]).toMatchObject({ channel: '' })
+    expect(view.starts[0]).not.toHaveProperty('channel')
     expect(view.calls.some((call) => /Render|Source|StartClipGeneration/u.test(call))).toBe(false)
   })
 

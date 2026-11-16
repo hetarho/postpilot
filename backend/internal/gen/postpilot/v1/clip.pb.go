@@ -560,11 +560,9 @@ type ClipProject struct {
 	PlanEditedByHand bool                `protobuf:"varint,39,opt,name=plan_edited_by_hand,json=planEditedByHand,proto3" json:"plan_edited_by_hand,omitempty"`
 	Regions          *ClipProjectRegions `protobuf:"bytes,40,opt,name=regions,proto3" json:"regions,omitempty"`
 	Dubbing          *ClipDubbingOptions `protobuf:"bytes,41,opt,name=dubbing,proto3" json:"dubbing,omitempty"`
-	// naver_clip or instagram_clip; independent of composition and result.
-	Channel         string           `protobuf:"bytes,42,opt,name=channel,proto3" json:"channel,omitempty"`
-	Campaign        bool             `protobuf:"varint,43,opt,name=campaign,proto3" json:"campaign,omitempty"`
-	AdvertiserGuide *AdvertiserGuide `protobuf:"bytes,44,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
-	LinkedPost      *ClipLinkedPost  `protobuf:"bytes,45,opt,name=linked_post,json=linkedPost,proto3" json:"linked_post,omitempty"`
+	Campaign         bool                `protobuf:"varint,43,opt,name=campaign,proto3" json:"campaign,omitempty"`
+	AdvertiserGuide  *AdvertiserGuide    `protobuf:"bytes,44,opt,name=advertiser_guide,json=advertiserGuide,proto3" json:"advertiser_guide,omitempty"`
+	LinkedPost       *ClipLinkedPost     `protobuf:"bytes,45,opt,name=linked_post,json=linkedPost,proto3" json:"linked_post,omitempty"`
 	// The plan revision 확정하기 last confirmed (CLIP-75, CLIP-229), 0 when never. The project
 	// reads as confirmed exactly while this equals edit_plan_revision.
 	ConfirmedPlanRevision int32  `protobuf:"varint,46,opt,name=confirmed_plan_revision,json=confirmedPlanRevision,proto3" json:"confirmed_plan_revision,omitempty"`
@@ -883,13 +881,6 @@ func (x *ClipProject) GetDubbing() *ClipDubbingOptions {
 		return x.Dubbing
 	}
 	return nil
-}
-
-func (x *ClipProject) GetChannel() string {
-	if x != nil {
-		return x.Channel
-	}
-	return ""
 }
 
 func (x *ClipProject) GetCampaign() bool {
@@ -5896,7 +5887,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\n" +
 	"created_at\x18\x04 \x01(\tR\tcreatedAt\x12\x19\n" +
 	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12!\n" +
-	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x92\x13\n" +
+	"\fdownload_url\x18\x06 \x01(\tR\vdownloadUrl\"\x87\x13\n" +
 	"\vClipProject\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12*\n" +
@@ -5944,8 +5935,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\tstoryline\x18& \x01(\v2\x1b.postpilot.v1.ClipStorylineR\tstoryline\x12-\n" +
 	"\x13plan_edited_by_hand\x18' \x01(\bR\x10planEditedByHand\x12:\n" +
 	"\aregions\x18( \x01(\v2 .postpilot.v1.ClipProjectRegionsR\aregions\x12:\n" +
-	"\adubbing\x18) \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12\x18\n" +
-	"\achannel\x18* \x01(\tR\achannel\x12\x1a\n" +
+	"\adubbing\x18) \x01(\v2 .postpilot.v1.ClipDubbingOptionsR\adubbing\x12\x1a\n" +
 	"\bcampaign\x18+ \x01(\bR\bcampaign\x12H\n" +
 	"\x10advertiser_guide\x18, \x01(\v2\x1d.postpilot.v1.AdvertiserGuideR\x0fadvertiserGuide\x12=\n" +
 	"\vlinked_post\x18- \x01(\v2\x1c.postpilot.v1.ClipLinkedPostR\n" +
@@ -5961,7 +5951,7 @@ const file_postpilot_v1_clip_proto_rawDesc = "" +
 	"\t_can_editB\x0f\n" +
 	"\r_can_finalizeB\x13\n" +
 	"\x11_last_render_kindB\x0e\n" +
-	"\f_can_confirmJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12R\aanswersR\x03cta\"Y\n" +
+	"\f_can_confirmJ\x04\b\x06\x10\aJ\x04\b\x11\x10\x12J\x04\b*\x10+R\aanswersR\x03ctaR\achannel\"Y\n" +
 	"\x0eClipLinkedPost\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x1d\n" +

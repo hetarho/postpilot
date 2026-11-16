@@ -157,7 +157,6 @@ export interface FakeClipsOptions {
 
   uploadTexts?: Array<{
     projectId: string
-    channel: string
     body: string
     tags: string[]
     edited: boolean
@@ -565,8 +564,8 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('GetClipUploadTexts')
     if (!projects.has(req.projectId)) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     return create(GetClipUploadTextsResponseSchema, {
-      texts: uploadTexts.filter((row) => row.projectId === req.projectId),
-      limits: [{ maxChars: 300, maxTags: 5, tagsInCaption: false }],
+      text: uploadTexts.find((row) => row.projectId === req.projectId),
+      limits: { maxChars: 300, maxTags: 5, tagsInCaption: false },
     })
   })
   router.rpc(ClipGenerationService.method.saveClipUploadText, (req) => {
@@ -578,7 +577,6 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       throw connectAppError('CLIP_PLAN_CONFLICT', Code.FailedPrecondition)
     const text = {
       projectId: req.projectId,
-      channel: '',
       body: req.body,
       tags: [...req.tags],
       edited: true,
@@ -599,7 +597,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
       throw connectAppError('CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED', Code.FailedPrecondition)
     await options.uploadTextQuoteGate
     const id = `upload-quote-${++quoteNumber}`
-    uploadQuotes.set(req.projectId + req.channel, { id, confirmEdited: req.confirmEdited })
+    uploadQuotes.set(req.projectId, { id, confirmEdited: req.confirmEdited })
     return create(QuoteClipGenerationResponseSchema, {
       quoteId: id,
       maxCredits: 4,
@@ -617,7 +615,7 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     options.calls?.push('StartClipUploadText')
     options.uploadTextStarts?.push(req)
     const p = projects.get(req.projectId)
-    const quote = uploadQuotes.get(req.projectId + req.channel)
+    const quote = uploadQuotes.get(req.projectId)
     if (
       !p ||
       !quote ||
@@ -816,11 +814,10 @@ export function registerClipService(router: ConnectRouter, options: FakeClipsOpt
     if (!p) throw connectAppError('CLIP_NOT_FOUND', Code.NotFound)
     if (
       p.finalized &&
-      (!req.channel ||
-        Object.entries(req).some(
-          ([key, value]) =>
-            !['$typeName', 'id', 'channel', 'checklistTicks'].includes(key) && value !== undefined,
-        ))
+      Object.entries(req).some(
+        ([key, value]) =>
+          !['$typeName', 'id', 'checklistTicks'].includes(key) && value !== undefined,
+      )
     )
       throw connectAppError('CLIP_FINALIZED', Code.FailedPrecondition)
     // The server bounds the instruction in every Unicode character (clip.BoundedText).
