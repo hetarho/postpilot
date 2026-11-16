@@ -80,7 +80,6 @@ function PublishedUrlForm({
   const { t } = useTranslation('clips')
   const id = useId()
   const finalized = !!project.finalized
-  const channel = project.channel ?? 'naver_clip'
   const [draft, setDraft] = useState(project.publishedUrl ?? '')
   const [localError, setLocalError] = useState('')
   // Which press the last failure answers: a URL's refusal belongs under the field.
@@ -111,7 +110,7 @@ function PublishedUrlForm({
     if (action.pending || (finalized ? disabled || action.uncertain : held)) return
     const trimmed = draft.trim()
     if (trimmed === '') return
-    if (!validClipPublishedUrl(channel, trimmed)) {
+    if (!validClipPublishedUrl(trimmed)) {
       setLocalError(formatAppFailure({ reason: 'CLIP_PUBLISHED_URL_INVALID', params: {} }))
       return
     }
@@ -126,7 +125,7 @@ function PublishedUrlForm({
     // `noValidate`: the browser's own url check would answer in its own words before ours.
     <form onSubmit={submit} noValidate className="mt-3 space-y-3">
       <div>
-        <FieldLabel htmlFor={`${id}-url`}>{t(`publishedUrl.label.${channel}`)}</FieldLabel>
+        <FieldLabel htmlFor={`${id}-url`}>{t('publishedUrl.label')}</FieldLabel>
         <TextField
           id={`${id}-url`}
           type="url"
@@ -137,7 +136,7 @@ function PublishedUrlForm({
           enterKeyHint="done"
           spellCheck={false}
           value={draft}
-          placeholder={t(`publishedUrl.placeholder.${channel}`)}
+          placeholder={t('publishedUrl.placeholder')}
           aria-invalid={fieldError ? true : undefined}
           aria-describedby={
             [refusal ? reasonId : '', fieldError ? errorId : ''].filter(Boolean).join(' ') ||

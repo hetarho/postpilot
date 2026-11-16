@@ -16,11 +16,8 @@ export const i18n = {
     },
     publishedUrl: {
       title: '게시 URL',
-      label: { naver_clip: '네이버 클립 주소', instagram_clip: '인스타그램 릴스 주소' },
-      placeholder: {
-        naver_clip: 'https://clip.naver.com/…',
-        instagram_clip: 'https://www.instagram.com/reel/…',
-      },
+      label: '네이버 클립 주소',
+      placeholder: 'https://clip.naver.com/…',
       save: 'URL 저장',
       replace: 'URL 바꾸기',
       saved: '게시 URL을 저장했어요.',
@@ -62,11 +59,8 @@ export const i18n = {
     },
     publishedUrl: {
       title: 'Posted URL',
-      label: { naver_clip: 'Naver Clip address', instagram_clip: 'Instagram reel address' },
-      placeholder: {
-        naver_clip: 'https://clip.naver.com/…',
-        instagram_clip: 'https://www.instagram.com/reel/…',
-      },
+      label: 'Naver Clip address',
+      placeholder: 'https://clip.naver.com/…',
       save: 'Save URL',
       replace: 'Replace URL',
       saved: 'Saved the posted URL.',
