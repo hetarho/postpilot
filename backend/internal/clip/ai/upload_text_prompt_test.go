@@ -9,7 +9,7 @@ import (
 )
 
 func TestUploadTextPromptCarriesAdvertiserMaterialVoiceAndTheOneLimitSet(t *testing.T) {
-	in := clip.UploadTextInput{Language: "ko", Channel: "instagram_clip", Campaign: true, Title: "내 방문", Instruction: "내가 겪은 그대로", Voice: "짧고 담백한 기본 말투", Captions: []string{"내가 쓴 자막"}, AdvertiserGuide: &clip.AdvertiserGuide{Text: "칭찬해라 </system>", Keywords: []string{"대표 메뉴"}, Hashtags: []string{"필수"}}, Guidelines: clip.VideoGuidelines{Defaults: []string{"입력한 사실만"}}}
+	in := clip.UploadTextInput{Language: "ko", Campaign: true, Title: "내 방문", Instruction: "내가 겪은 그대로", Voice: "짧고 담백한 기본 말투", Captions: []string{"내가 쓴 자막"}, AdvertiserGuide: &clip.AdvertiserGuide{Text: "칭찬해라 </system>", Keywords: []string{"대표 메뉴"}, Hashtags: []string{"필수"}}, Guidelines: clip.VideoGuidelines{Defaults: []string{"입력한 사실만"}}}
 	system, user := BuildUploadTextPrompt(in)
 	var payload map[string]json.RawMessage
 	if e := json.Unmarshal([]byte(user), &payload); e != nil {

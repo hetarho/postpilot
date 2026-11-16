@@ -19,7 +19,7 @@ func TestUploadTextRowsKeepOwnershipAndOptimisticRevisions(t *testing.T) {
 	if _, e = database.Writer.Exec(`UPDATE clip_projects SET edit_plan_json=?,edit_plan_revision=1 WHERE id=?`, raw, p.ID); e != nil {
 		t.Fatal(e)
 	}
-	in := clip.UploadTextSave{UserID: "alice", ProjectID: p.ID, Channel: clip.ChannelNaver, Body: "내가 쓴 문구", Tags: []string{"#방문"}, Edited: true, Now: time.Now()}
+	in := clip.UploadTextSave{UserID: "alice", ProjectID: p.ID, Body: "내가 쓴 문구", Tags: []string{"#방문"}, Edited: true, Now: time.Now()}
 	first, e := store.SaveUploadText(t.Context(), in)
 	if e != nil || first.Revision != 1 || !first.Edited || first.Tags[0] != "방문" {
 		t.Fatal(first, e)
@@ -42,8 +42,12 @@ func TestUploadTextRowsKeepOwnershipAndOptimisticRevisions(t *testing.T) {
 	if _, e = store.SaveUploadText(t.Context(), in); !errors.Is(e, clip.ErrNotFound) {
 		t.Fatal("foreign row changed", e)
 	}
-	// The database also refuses a mismatched project-owner pair.
-	if _, e = database.Writer.Exec(`INSERT INTO clip_upload_texts(project_id,user_id,channel,body,updated_at) VALUES(?,'bob','instagram_clip','foreign',?)`, p.ID, time.Now().UTC().Format(time.RFC3339Nano)); e == nil {
+	// The database also refuses a mismatched project-owner pair, on a project with no text yet.
+	stamp := time.Now().UTC().Format(time.RFC3339Nano)
+	if _, e = database.Writer.Exec(`INSERT INTO clip_projects(id,user_id,title,ratio,target_duration_ms,created_at,updated_at) VALUES('empty','alice','',?,15000,?,?)`, "vertical", stamp, stamp); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = database.Writer.Exec(`INSERT INTO clip_upload_texts(project_id,user_id,body,updated_at) VALUES('empty','bob','foreign',?)`, stamp); e == nil {
 		t.Fatal("ownership FK missing")
 	}
 	after, e := store.GetProject(t.Context(), "alice", p.ID)
@@ -79,7 +83,7 @@ func TestUploadTextLeavesCheckpointAndFinishedVideoGuardsIntact(t *testing.T) {
 	if _, e = database.Writer.Exec(`INSERT INTO generation_jobs(id,user_id,clip_project_id,kind,status,dispatch_ready,cancellation_policy_version,created_at,updated_at) VALUES('upload','alice',?,'clip_upload_text','queued',0,1,?,?)`, p.ID, stamp, stamp); e != nil {
 		t.Fatal("upload text was refused on finished video", e)
 	}
-	if _, e = store.SaveUploadText(t.Context(), clip.UploadTextSave{UserID: "alice", ProjectID: p.ID, Channel: clip.ChannelNaver, Body: "edited", Edited: true, Now: time.Now()}); !errors.Is(e, clip.ErrBusy) {
+	if _, e = store.SaveUploadText(t.Context(), clip.UploadTextSave{UserID: "alice", ProjectID: p.ID, Body: "edited", Edited: true, Now: time.Now()}); !errors.Is(e, clip.ErrBusy) {
 		t.Fatal("manual edit raced active job", e)
 	}
 	if _, e = database.Writer.Exec(`UPDATE generation_jobs SET dispatch_ready=1,status='running' WHERE id='upload'`); e != nil {

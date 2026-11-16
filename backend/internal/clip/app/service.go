@@ -185,8 +185,6 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 	if input.Ratio != "vertical" {
 		return clip.Project{}, clip.ErrRatioUnsupported
 	}
-	// A request's channel is ignored: every project is one kind of video (CLIP-209).
-	input.Channel = clip.ChannelNaver
 	title := strings.TrimSpace(input.Title)
 	// The title is optional: an empty one saves, generates and renders (CLIP-130).
 	// An unset duration is allowed at creation — the owner chooses it in ①
@@ -252,7 +250,7 @@ func (s *Service) CreateProject(ctx context.Context, user string, input clip.Pro
 		return clip.Project{}, clip.ErrInvalid
 	}
 	now := s.now()
-	p := clip.Project{Campaign: campaign, AdvertiserGuide: guide, ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Channel: input.Channel, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
+	p := clip.Project{Campaign: campaign, AdvertiserGuide: guide, ID: newID(), UserID: user, Title: title, VideoTemplateID: input.VideoTemplateID, Ratio: input.Ratio, Language: input.Language, Disclosure: input.Disclosure, HideDisclosure: input.HideDisclosure, Instruction: input.Instruction, CaptionPace: pace, Accent: accent, IntroPreset: intro, OutroPreset: outro, CaptionStyles: styles, TargetDurationMS: input.TargetDurationMS, CreatedAt: now, UpdatedAt: now}
 	var err error
 	p.Composition, err = s.projectComposition(template, input.CompositionInputs, p)
 	if err != nil {
@@ -321,14 +319,6 @@ func (s *Service) SaveObservationEdits(ctx context.Context, user, id string, edi
 
 func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.ProjectPatch) (clip.Project, error) {
 	p.LinkedPostIdentity, p.StaleLinkedPostIdentity = nil, nil
-	// A channel patch is ignored: the stored channel never changes, and a patch
-	// that carried nothing else is the unchanged project (CLIP-209).
-	if p.Channel != nil {
-		p.Channel = nil
-		if p == (clip.ProjectPatch{}) {
-			return s.store.GetProject(ctx, user, id)
-		}
-	}
 	if p.ChecklistTicks != nil {
 		ticks, err := clip.NormalizeChecklistTicks(*p.ChecklistTicks)
 		if err != nil {
@@ -357,7 +347,7 @@ func (s *Service) UpdateProject(ctx context.Context, user, id string, p clip.Pro
 		}
 		p.Dubbing = &chosen
 	}
-	if old.Finalized != nil && !p.MetadataOnly() {
+	if old.Finalized != nil && !p.TicksOnly() {
 		return clip.Project{}, clip.ErrFinalized
 	}
 	if err := s.prepareLinkedPostPatch(ctx, user, old, &p); err != nil {

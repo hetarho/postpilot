@@ -9,45 +9,43 @@ import (
 	"unicode/utf8"
 )
 
-// A project stored on the retired Instagram channel keeps the one Naver rule set (CLIP-209, CLIP-212).
+// Every project follows the one Naver rule set (CLIP-209, CLIP-212).
 func TestUploadTextBoundsWhatIsActuallyCopied(t *testing.T) {
-	for _, channel := range []string{ChannelNaver, "instagram_clip"} {
-		for _, language := range []string{"ko", "en"} {
-			for _, on := range []bool{false, true} {
-				in := UploadTextInput{Channel: channel, Language: language, Campaign: on, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#필수 하나", "필수둘", "셋", "넷", "다섯"}}}
-				text, e := BoundGeneratedUploadText(in, strings.Repeat("가🚀", 2200), []string{"optional", "OPTIONAL"})
-				if e != nil {
-					t.Fatal(e)
-				}
-				if !utf8.ValidString(text.Body) || len(text.Tags) > UploadTextMaxTags {
-					t.Fatal(text)
-				}
-				if on && (len(text.Tags) != 5 || text.Tags[0] != "필수하나") {
-					t.Fatal("required tags lost", text.Tags)
-				}
-				body := text.Body
-				if on {
-					body = UploadTextDisclosure(language) + "\n\n" + body
-				}
-				if utf8.RuneCountInString(body) > UploadLimits().MaxChars {
-					t.Fatal("copied caption exceeded limit", channel, language, on)
-				}
-				room, e := UploadTextBodyLimit(language, on, text.Tags)
-				if e != nil {
-					t.Fatal(e)
-				}
-				if _, e = ValidateUploadTextEdit(channel, language, on, strings.Repeat("가", room), text.Tags); e != nil {
-					t.Fatal(e)
-				}
-				if _, e = ValidateUploadTextEdit(channel, language, on, strings.Repeat("가", room+1), text.Tags); !errors.Is(e, ErrUploadTextLimit) {
-					t.Fatal("owner edit was silently cut", e)
-				}
+	for _, language := range []string{"ko", "en"} {
+		for _, on := range []bool{false, true} {
+			in := UploadTextInput{Language: language, Campaign: on, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#필수 하나", "필수둘", "셋", "넷", "다섯"}}}
+			text, e := BoundGeneratedUploadText(in, strings.Repeat("가🚀", 2200), []string{"optional", "OPTIONAL"})
+			if e != nil {
+				t.Fatal(e)
+			}
+			if !utf8.ValidString(text.Body) || len(text.Tags) > UploadTextMaxTags {
+				t.Fatal(text)
+			}
+			if on && (len(text.Tags) != 5 || text.Tags[0] != "필수하나") {
+				t.Fatal("required tags lost", text.Tags)
+			}
+			body := text.Body
+			if on {
+				body = UploadTextDisclosure(language) + "\n\n" + body
+			}
+			if utf8.RuneCountInString(body) > UploadLimits().MaxChars {
+				t.Fatal("copied caption exceeded limit", language, on)
+			}
+			room, e := UploadTextBodyLimit(language, on, text.Tags)
+			if e != nil {
+				t.Fatal(e)
+			}
+			if _, e = ValidateUploadTextEdit(language, on, strings.Repeat("가", room), text.Tags); e != nil {
+				t.Fatal(e)
+			}
+			if _, e = ValidateUploadTextEdit(language, on, strings.Repeat("가", room+1), text.Tags); !errors.Is(e, ErrUploadTextLimit) {
+				t.Fatal("owner edit was silently cut", e)
 			}
 		}
 	}
 }
 func TestUploadTextKeepsRequiredTagsBeforeOptionalOnes(t *testing.T) {
-	in := UploadTextInput{Channel: "instagram_clip", Language: "ko", Campaign: true, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#제주"}}}
+	in := UploadTextInput{Language: "ko", Campaign: true, AdvertiserGuide: &AdvertiserGuide{Hashtags: []string{"#제주"}}}
 	got, e := BoundGeneratedUploadText(in, "직접 쓴 말", []string{"제 주", "JEJU", "c", "d", "e", "discarded"})
 	if e != nil || len(got.Tags) != 5 || got.Tags[0] != "제주" {
 		t.Fatal(got, e)

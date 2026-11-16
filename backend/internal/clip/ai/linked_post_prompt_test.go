@@ -13,7 +13,7 @@ import (
 
 func linkedPromptCases(post *clip.LinkedPostText) []advertiserPromptCase {
 	cases := advertiserPromptCases(nil, post)
-	s, u := BuildUploadTextPrompt(clip.UploadTextInput{LinkedPost: post, Language: "ko", Channel: clip.ChannelNaver, Title: "내 방문", Instruction: "내가 겪은 그대로", Captions: []string{"내 자막"}})
+	s, u := BuildUploadTextPrompt(clip.UploadTextInput{LinkedPost: post, Language: "ko", Title: "내 방문", Instruction: "내가 겪은 그대로", Captions: []string{"내 자막"}})
 	return append(cases, advertiserPromptCase{"upload-text", s, u})
 }
 func TestLinkedPostReachesEveryWritingPrompt(t *testing.T) {

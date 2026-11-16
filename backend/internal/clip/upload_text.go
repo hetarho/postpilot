@@ -37,25 +37,25 @@ func UploadLimits() UploadTextLimits {
 }
 
 type UploadText struct {
-	ProjectID, UserID, Channel, Body string
-	LastJobID                        string
-	Tags                             []string
-	Edited                           bool
-	Revision                         int
-	UpdatedAt                        time.Time
+	ProjectID, UserID, Body string
+	LastJobID               string
+	Tags                    []string
+	Edited                  bool
+	Revision                int
+	UpdatedAt               time.Time
 }
 
 type UploadTextInput struct {
-	LinkedPost                            *LinkedPostText `json:",omitempty"`
-	Language, Channel, Title, Instruction string
-	Campaign                              bool
-	Facts                                 CompositionInputs
-	Storyline                             *Storyline
-	Captions                              []string
-	AdvertiserGuide                       *AdvertiserGuide `json:",omitempty"`
-	Voice                                 string           `json:",omitempty"`
-	Guidelines                            VideoGuidelines
-	Policy                                llm.CallPolicy
+	LinkedPost                   *LinkedPostText `json:",omitempty"`
+	Language, Title, Instruction string
+	Campaign                     bool
+	Facts                        CompositionInputs
+	Storyline                    *Storyline
+	Captions                     []string
+	AdvertiserGuide              *AdvertiserGuide `json:",omitempty"`
+	Voice                        string           `json:",omitempty"`
+	Guidelines                   VideoGuidelines
+	Policy                       llm.CallPolicy
 }
 
 type UploadTextWriter interface {
@@ -73,16 +73,15 @@ type UploadTextPricing interface {
 }
 
 type UploadTextSave struct {
-	UserID, ProjectID, Channel, Body, JobID string
-	Tags                                    []string
-	ExpectedRevision, ExpectedPlanRevision  int
-	Edited                                  bool
-	Now                                     time.Time
+	UserID, ProjectID, Body, JobID         string
+	Tags                                   []string
+	ExpectedRevision, ExpectedPlanRevision int
+	Edited                                 bool
+	Now                                    time.Time
 }
 
 type UploadTextQuote struct {
 	GenerationQuote
-	Channel          string
 	ExpectedRevision int
 }
 
@@ -124,7 +123,7 @@ func UploadTextMaterial(p Project) (UploadTextInput, error) {
 	if err != nil {
 		return UploadTextInput{}, err
 	}
-	in := UploadTextInput{LinkedPost: p.LinkedPostText, Language: p.Language, Channel: DefaultChannel(p.Channel), Title: p.Title,
+	in := UploadTextInput{LinkedPost: p.LinkedPostText, Language: p.Language, Title: p.Title,
 		Instruction: p.Instruction, Campaign: p.Campaign, Storyline: p.Storyline,
 		AdvertiserGuide: EffectiveAdvertiserGuide(p), Captions: []string{}}
 	if p.Composition != nil {
@@ -240,11 +239,11 @@ func BoundGeneratedUploadText(in UploadTextInput, body string, suggested []strin
 	if strings.TrimSpace(string(text)) == "" {
 		return UploadText{}, llm.ErrBadOutput
 	}
-	return UploadText{Channel: in.Channel, Body: strings.TrimSpace(string(text)), Tags: tags}, nil
+	return UploadText{Body: strings.TrimSpace(string(text)), Tags: tags}, nil
 }
 
 // Owner edits are refused at the bound; only generated output is trimmed.
-func ValidateUploadTextEdit(storedChannel, language string, on bool, body string, rawTags []string) (UploadText, error) {
+func ValidateUploadTextEdit(language string, on bool, body string, rawTags []string) (UploadText, error) {
 	tags, err := normalizedUploadTags(rawTags)
 	if err != nil {
 		return UploadText{}, err
@@ -254,7 +253,7 @@ func ValidateUploadTextEdit(storedChannel, language string, on bool, body string
 	if err != nil || body == "" || utf8.RuneCountInString(body) > room {
 		return UploadText{}, ErrUploadTextLimit
 	}
-	return UploadText{Channel: storedChannel, Body: body, Tags: tags, Edited: true}, nil
+	return UploadText{Body: body, Tags: tags, Edited: true}, nil
 }
 
 // Match the current caption words, including owner-edited rows and phrase splits.

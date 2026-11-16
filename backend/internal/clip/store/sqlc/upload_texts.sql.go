@@ -35,22 +35,20 @@ func (q *Queries) ConsumeClipUploadTextQuote(ctx context.Context, arg ConsumeCli
 }
 
 const getClipUploadText = `-- name: GetClipUploadText :one
-SELECT project_id, user_id, channel, body, tags, edited, updated_at, revision, last_job_id FROM clip_upload_texts WHERE project_id=? AND user_id=? AND channel=?
+SELECT project_id, user_id, body, tags, edited, updated_at, revision, last_job_id FROM clip_upload_texts WHERE project_id=? AND user_id=?
 `
 
 type GetClipUploadTextParams struct {
 	ProjectID string
 	UserID    string
-	Channel   string
 }
 
 func (q *Queries) GetClipUploadText(ctx context.Context, arg GetClipUploadTextParams) (ClipUploadText, error) {
-	row := q.db.QueryRowContext(ctx, getClipUploadText, arg.ProjectID, arg.UserID, arg.Channel)
+	row := q.db.QueryRowContext(ctx, getClipUploadText, arg.ProjectID, arg.UserID)
 	var i ClipUploadText
 	err := row.Scan(
 		&i.ProjectID,
 		&i.UserID,
-		&i.Channel,
 		&i.Body,
 		&i.Tags,
 		&i.Edited,
@@ -62,7 +60,7 @@ func (q *Queries) GetClipUploadText(ctx context.Context, arg GetClipUploadTextPa
 }
 
 const getClipUploadTextQuote = `-- name: GetClipUploadTextQuote :one
-SELECT id, user_id, project_id, channel, expected_revision, input_digest, pricing_json, max_credits, expires_at, consumed_job_id FROM clip_upload_text_quotes WHERE user_id=? AND id=?
+SELECT id, user_id, project_id, expected_revision, input_digest, pricing_json, max_credits, expires_at, consumed_job_id FROM clip_upload_text_quotes WHERE user_id=? AND id=?
 `
 
 type GetClipUploadTextQuoteParams struct {
@@ -77,7 +75,6 @@ func (q *Queries) GetClipUploadTextQuote(ctx context.Context, arg GetClipUploadT
 		&i.ID,
 		&i.UserID,
 		&i.ProjectID,
-		&i.Channel,
 		&i.ExpectedRevision,
 		&i.InputDigest,
 		&i.PricingJson,
@@ -89,13 +86,12 @@ func (q *Queries) GetClipUploadTextQuote(ctx context.Context, arg GetClipUploadT
 }
 
 const insertClipUploadText = `-- name: InsertClipUploadText :execrows
-INSERT INTO clip_upload_texts(project_id,user_id,channel,body,tags,edited,updated_at,revision,last_job_id) VALUES(?,?,?,?,?,?,?,1,?) ON CONFLICT(project_id,channel) DO NOTHING
+INSERT INTO clip_upload_texts(project_id,user_id,body,tags,edited,updated_at,revision,last_job_id) VALUES(?,?,?,?,?,?,1,?) ON CONFLICT(project_id) DO NOTHING
 `
 
 type InsertClipUploadTextParams struct {
 	ProjectID string
 	UserID    string
-	Channel   string
 	Body      string
 	Tags      string
 	Edited    int64
@@ -107,7 +103,6 @@ func (q *Queries) InsertClipUploadText(ctx context.Context, arg InsertClipUpload
 	result, err := q.db.ExecContext(ctx, insertClipUploadText,
 		arg.ProjectID,
 		arg.UserID,
-		arg.Channel,
 		arg.Body,
 		arg.Tags,
 		arg.Edited,
@@ -121,7 +116,7 @@ func (q *Queries) InsertClipUploadText(ctx context.Context, arg InsertClipUpload
 }
 
 const listClipUploadTexts = `-- name: ListClipUploadTexts :many
-SELECT project_id, user_id, channel, body, tags, edited, updated_at, revision, last_job_id FROM clip_upload_texts WHERE project_id=? AND user_id=? ORDER BY channel
+SELECT project_id, user_id, body, tags, edited, updated_at, revision, last_job_id FROM clip_upload_texts WHERE project_id=? AND user_id=?
 `
 
 type ListClipUploadTextsParams struct {
@@ -141,7 +136,6 @@ func (q *Queries) ListClipUploadTexts(ctx context.Context, arg ListClipUploadTex
 		if err := rows.Scan(
 			&i.ProjectID,
 			&i.UserID,
-			&i.Channel,
 			&i.Body,
 			&i.Tags,
 			&i.Edited,
@@ -163,9 +157,9 @@ func (q *Queries) ListClipUploadTexts(ctx context.Context, arg ListClipUploadTex
 }
 
 const saveClipUploadTextQuote = `-- name: SaveClipUploadTextQuote :execrows
-INSERT INTO clip_upload_text_quotes(id,user_id,project_id,channel,expected_revision,input_digest,pricing_json,max_credits,expires_at)
-VALUES(?,?,?,?,?,?,?,?,?)
-ON CONFLICT(project_id,channel) WHERE consumed_job_id IS NULL DO UPDATE SET id=excluded.id,expected_revision=excluded.expected_revision,input_digest=excluded.input_digest,pricing_json=excluded.pricing_json,max_credits=excluded.max_credits,expires_at=excluded.expires_at
+INSERT INTO clip_upload_text_quotes(id,user_id,project_id,expected_revision,input_digest,pricing_json,max_credits,expires_at)
+VALUES(?,?,?,?,?,?,?,?)
+ON CONFLICT(project_id) WHERE consumed_job_id IS NULL DO UPDATE SET id=excluded.id,expected_revision=excluded.expected_revision,input_digest=excluded.input_digest,pricing_json=excluded.pricing_json,max_credits=excluded.max_credits,expires_at=excluded.expires_at
 WHERE clip_upload_text_quotes.consumed_job_id IS NULL AND clip_upload_text_quotes.user_id=excluded.user_id
 `
 
@@ -173,7 +167,6 @@ type SaveClipUploadTextQuoteParams struct {
 	ID               string
 	UserID           string
 	ProjectID        string
-	Channel          string
 	ExpectedRevision int64
 	InputDigest      string
 	PricingJson      string
@@ -186,7 +179,6 @@ func (q *Queries) SaveClipUploadTextQuote(ctx context.Context, arg SaveClipUploa
 		arg.ID,
 		arg.UserID,
 		arg.ProjectID,
-		arg.Channel,
 		arg.ExpectedRevision,
 		arg.InputDigest,
 		arg.PricingJson,
@@ -200,7 +192,7 @@ func (q *Queries) SaveClipUploadTextQuote(ctx context.Context, arg SaveClipUploa
 }
 
 const updateClipUploadText = `-- name: UpdateClipUploadText :execrows
-UPDATE clip_upload_texts SET body=?,tags=?,edited=?,updated_at=?,revision=revision+1,last_job_id=? WHERE project_id=? AND user_id=? AND channel=? AND revision=?
+UPDATE clip_upload_texts SET body=?,tags=?,edited=?,updated_at=?,revision=revision+1,last_job_id=? WHERE project_id=? AND user_id=? AND revision=?
 `
 
 type UpdateClipUploadTextParams struct {
@@ -211,7 +203,6 @@ type UpdateClipUploadTextParams struct {
 	LastJobID string
 	ProjectID string
 	UserID    string
-	Channel   string
 	Revision  int64
 }
 
@@ -224,7 +215,6 @@ func (q *Queries) UpdateClipUploadText(ctx context.Context, arg UpdateClipUpload
 		arg.LastJobID,
 		arg.ProjectID,
 		arg.UserID,
-		arg.Channel,
 		arg.Revision,
 	)
 	if err != nil {

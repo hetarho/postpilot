@@ -7,35 +7,17 @@ import (
 	"unicode/utf8"
 )
 
-// Every clip is one kind of video (CLIP-209). The stored channel survives until
-// the columns go (T868) and only finds a project's one stored upload-text row;
-// no request or patch can set it.
-const ChannelNaver = "naver_clip"
-
-// An omitted stored channel is the Naver one every project began with.
-func DefaultChannel(value string) string {
-	if value == "" {
-		return ChannelNaver
-	}
-	return value
-}
-
-// MetadataOnly admits directory metadata and advisory checklist ticks after
-// finalization without opening any canonical setting (CLIP-209, CLIP-231). A
-// future patch field also has to be absent.
-func (p ProjectPatch) MetadataOnly() bool {
-	if p.Channel == nil && p.ChecklistTicks == nil {
+// TicksOnly is a patch of the advisory checklist ticks alone, the one write a
+// finalized project still admits and no running job can conflict with
+// (CLIP-231). A future patch field also has to be absent.
+func (p ProjectPatch) TicksOnly() bool {
+	if p.ChecklistTicks == nil {
 		return false
 	}
-	p.Channel, p.ChecklistTicks = nil, nil
+	p.ChecklistTicks = nil
 	// Clearing an already absent link is internal storage maintenance.
 	p.StaleLinkedPostIdentity = nil
 	return p == (ProjectPatch{})
-}
-
-// TicksOnly is a patch of the advisory ticks alone, which no running job can conflict with.
-func (p ProjectPatch) TicksOnly() bool {
-	return p.Channel == nil && p.MetadataOnly()
 }
 
 // A posted URL is an https URL on 네이버 클립's platform host or a subdomain of

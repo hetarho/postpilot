@@ -22,7 +22,7 @@ func uploadTextRow(r sqlc.ClipUploadText) (clip.UploadText, error) {
 	if err = json.Unmarshal([]byte(r.Tags), &tags); err != nil {
 		return clip.UploadText{}, err
 	}
-	return clip.UploadText{ProjectID: r.ProjectID, UserID: r.UserID, Channel: r.Channel, Body: r.Body, Tags: tags, Edited: r.Edited != 0, Revision: int(r.Revision), UpdatedAt: at, LastJobID: r.LastJobID}, nil
+	return clip.UploadText{ProjectID: r.ProjectID, UserID: r.UserID, Body: r.Body, Tags: tags, Edited: r.Edited != 0, Revision: int(r.Revision), UpdatedAt: at, LastJobID: r.LastJobID}, nil
 }
 
 func (s *Store) ListUploadTexts(ctx context.Context, user, id string) ([]clip.UploadText, error) {
@@ -44,10 +44,10 @@ func (s *Store) ListUploadTexts(ctx context.Context, user, id string) ([]clip.Up
 	return out, nil
 }
 
-func readUploadText(ctx context.Context, q *sqlc.Queries, user, id, channel string) (clip.UploadText, error) {
-	r, err := q.GetClipUploadText(ctx, sqlc.GetClipUploadTextParams{ProjectID: id, UserID: user, Channel: channel})
+func readUploadText(ctx context.Context, q *sqlc.Queries, user, id string) (clip.UploadText, error) {
+	r, err := q.GetClipUploadText(ctx, sqlc.GetClipUploadTextParams{ProjectID: id, UserID: user})
 	if errors.Is(dbError(err), clip.ErrNotFound) {
-		return clip.UploadText{ProjectID: id, UserID: user, Channel: channel, Tags: []string{}}, nil
+		return clip.UploadText{ProjectID: id, UserID: user, Tags: []string{}}, nil
 	}
 	if err != nil {
 		return clip.UploadText{}, err
@@ -79,15 +79,15 @@ func (s *Store) SaveUploadText(ctx context.Context, in clip.UploadTextSave) (cli
 		} else if p.EditPlanRevision != in.ExpectedPlanRevision {
 			return clip.UploadText{}, clip.ErrPlanConflict
 		}
-		checked, err := clip.ValidateUploadTextEdit(in.Channel, p.Language, p.Campaign, in.Body, in.Tags)
+		checked, err := clip.ValidateUploadTextEdit(p.Language, p.Campaign, in.Body, in.Tags)
 		if err != nil {
 			return clip.UploadText{}, err
 		}
 		var n int64
 		if in.ExpectedRevision == 0 {
-			n, err = q.InsertClipUploadText(ctx, sqlc.InsertClipUploadTextParams{ProjectID: in.ProjectID, UserID: in.UserID, Channel: in.Channel, Body: checked.Body, Tags: encodeGuideItems(checked.Tags), Edited: flag(in.Edited), UpdatedAt: stamp(in.Now), LastJobID: in.JobID})
+			n, err = q.InsertClipUploadText(ctx, sqlc.InsertClipUploadTextParams{ProjectID: in.ProjectID, UserID: in.UserID, Body: checked.Body, Tags: encodeGuideItems(checked.Tags), Edited: flag(in.Edited), UpdatedAt: stamp(in.Now), LastJobID: in.JobID})
 		} else {
-			n, err = q.UpdateClipUploadText(ctx, sqlc.UpdateClipUploadTextParams{Body: checked.Body, Tags: encodeGuideItems(checked.Tags), Edited: flag(in.Edited), UpdatedAt: stamp(in.Now), LastJobID: in.JobID, ProjectID: in.ProjectID, UserID: in.UserID, Channel: in.Channel, Revision: int64(in.ExpectedRevision)})
+			n, err = q.UpdateClipUploadText(ctx, sqlc.UpdateClipUploadTextParams{Body: checked.Body, Tags: encodeGuideItems(checked.Tags), Edited: flag(in.Edited), UpdatedAt: stamp(in.Now), LastJobID: in.JobID, ProjectID: in.ProjectID, UserID: in.UserID, Revision: int64(in.ExpectedRevision)})
 		}
 		if err != nil {
 			return clip.UploadText{}, err
@@ -95,7 +95,7 @@ func (s *Store) SaveUploadText(ctx context.Context, in clip.UploadTextSave) (cli
 		if n != 1 {
 			return clip.UploadText{}, clip.ErrPlanConflict
 		}
-		return readUploadText(ctx, q, in.UserID, in.ProjectID, in.Channel)
+		return readUploadText(ctx, q, in.UserID, in.ProjectID)
 	})
 }
 
@@ -105,7 +105,7 @@ func uploadQuoteRow(r sqlc.ClipUploadTextQuote) (clip.UploadTextQuote, error) {
 		return clip.UploadTextQuote{}, clip.ErrQuoteChanged
 	}
 	expires, err := time.Parse(time.RFC3339Nano, r.ExpiresAt)
-	return clip.UploadTextQuote{GenerationQuote: clip.GenerationQuote{ID: r.ID, UserID: r.UserID, ProjectID: r.ProjectID, InputDigest: r.InputDigest, Pricing: pricing, ExpiresAt: expires, ConsumedJobID: r.ConsumedJobID.String}, Channel: r.Channel, ExpectedRevision: int(r.ExpectedRevision)}, err
+	return clip.UploadTextQuote{GenerationQuote: clip.GenerationQuote{ID: r.ID, UserID: r.UserID, ProjectID: r.ProjectID, InputDigest: r.InputDigest, Pricing: pricing, ExpiresAt: expires, ConsumedJobID: r.ConsumedJobID.String}, ExpectedRevision: int(r.ExpectedRevision)}, err
 }
 
 func (s *Store) GetUploadTextQuote(ctx context.Context, user, id string) (clip.UploadTextQuote, error) {
@@ -138,7 +138,7 @@ func (s *Store) SaveUploadTextQuote(ctx context.Context, quote clip.UploadTextQu
 		if active > 0 {
 			return struct{}{}, clip.ErrBusy
 		}
-		text, e := readUploadText(ctx, q, quote.UserID, quote.ProjectID, quote.Channel)
+		text, e := readUploadText(ctx, q, quote.UserID, quote.ProjectID)
 		if e != nil {
 			return struct{}{}, e
 		}
@@ -149,7 +149,7 @@ func (s *Store) SaveUploadTextQuote(ctx context.Context, quote clip.UploadTextQu
 		if e != nil {
 			return struct{}{}, e
 		}
-		n, e := q.SaveClipUploadTextQuote(ctx, sqlc.SaveClipUploadTextQuoteParams{ID: quote.ID, UserID: quote.UserID, ProjectID: quote.ProjectID, Channel: quote.Channel, ExpectedRevision: int64(quote.ExpectedRevision), InputDigest: quote.InputDigest, PricingJson: string(raw), MaxCredits: int64(quote.Pricing.MaxCredits), ExpiresAt: stamp(quote.ExpiresAt)})
+		n, e := q.SaveClipUploadTextQuote(ctx, sqlc.SaveClipUploadTextQuoteParams{ID: quote.ID, UserID: quote.UserID, ProjectID: quote.ProjectID, ExpectedRevision: int64(quote.ExpectedRevision), InputDigest: quote.InputDigest, PricingJson: string(raw), MaxCredits: int64(quote.Pricing.MaxCredits), ExpiresAt: stamp(quote.ExpiresAt)})
 		if e != nil {
 			return struct{}{}, e
 		}
@@ -191,11 +191,11 @@ func (s *Store) LinkUploadTextJob(ctx context.Context, quote clip.UploadTextQuot
 		if e != nil {
 			return struct{}{}, e
 		}
-		text, e := readUploadText(ctx, q, quote.UserID, quote.ProjectID, quote.Channel)
+		text, e := readUploadText(ctx, q, quote.UserID, quote.ProjectID)
 		if e != nil {
 			return struct{}{}, e
 		}
-		if frozen.UserID != quote.UserID || frozen.ProjectID != quote.ProjectID || frozen.Input.Channel != quote.Channel || frozen.PlanRevision != p.EditPlanRevision || frozen.TextRevision != text.Revision || text.Revision != quote.ExpectedRevision ||
+		if frozen.UserID != quote.UserID || frozen.ProjectID != quote.ProjectID || frozen.PlanRevision != p.EditPlanRevision || frozen.TextRevision != text.Revision || text.Revision != quote.ExpectedRevision ||
 			frozen.MaterialDigest != clip.UploadMaterialDigest(material) || quote.InputDigest != clip.UploadQuoteDigest(frozen.Input, text.Revision, frozen.ConfirmEdited, quote.Pricing) {
 			return struct{}{}, clip.ErrQuoteChanged
 		}

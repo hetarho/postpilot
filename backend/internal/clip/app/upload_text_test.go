@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -38,12 +37,12 @@ func (s *uploadMemory) ListUploadTexts(ctx context.Context, user, id string) ([]
 	return out, nil
 }
 func (s *uploadMemory) SaveUploadText(_ context.Context, in clip.UploadTextSave) (clip.UploadText, error) {
-	row := s.rows[in.Channel]
+	row := s.rows[in.ProjectID]
 	if row.Revision != in.ExpectedRevision {
 		return row, clip.ErrPlanConflict
 	}
-	row = clip.UploadText{ProjectID: in.ProjectID, UserID: in.UserID, Channel: in.Channel, Body: in.Body, Tags: in.Tags, Revision: row.Revision + 1, Edited: in.Edited, LastJobID: in.JobID, UpdatedAt: in.Now}
-	s.rows[in.Channel] = row
+	row = clip.UploadText{ProjectID: in.ProjectID, UserID: in.UserID, Body: in.Body, Tags: in.Tags, Revision: row.Revision + 1, Edited: in.Edited, LastJobID: in.JobID, UpdatedAt: in.Now}
+	s.rows[in.ProjectID] = row
 	return row, nil
 }
 func (s *uploadMemory) SaveUploadTextQuote(_ context.Context, q clip.UploadTextQuote, _ time.Time) error {
@@ -163,7 +162,7 @@ func uploadFixture(t *testing.T) (*GenerationService, *uploadMemory, *uploadJobs
 	if e != nil {
 		t.Fatal(e)
 	}
-	store := &uploadMemory{project: clip.Project{ID: "project", UserID: "alice", Language: "ko", Channel: clip.ChannelNaver, Title: "내 방문", Instruction: "겪은 그대로", Campaign: true, AdvertiserGuide: clip.AdvertiserGuide{Text: "광고주의 안내", Hashtags: []string{"필수"}}, EditPlan: raw, EditPlanRevision: 1}, rows: map[string]clip.UploadText{}, quotes: map[string]clip.UploadTextQuote{}}
+	store := &uploadMemory{project: clip.Project{ID: "project", UserID: "alice", Language: "ko", Title: "내 방문", Instruction: "겪은 그대로", Campaign: true, AdvertiserGuide: clip.AdvertiserGuide{Text: "광고주의 안내", Hashtags: []string{"필수"}}, EditPlan: raw, EditPlanRevision: 1}, rows: map[string]clip.UploadText{}, quotes: map[string]clip.UploadTextQuote{}}
 	jobs := &uploadJobs{jobs: map[string]*clip.ClipJob{}}
 	writer := &uploadWriter{}
 	voice := &uploadVoice{"짧은 기본 말투"}
@@ -209,7 +208,7 @@ func TestUploadTextIsOneQuotedCall(t *testing.T) {
 	if writer.calls != 1 || jobs.holds != 1 || writer.input.Voice != "짧은 기본 말투" || writer.input.AdvertiserGuide.Text != "광고주의 안내" || writer.input.Captions[0] != "내가 쓴 자막" {
 		t.Fatal("wrong frozen input or call order", writer.input, jobs.holds, writer.calls)
 	}
-	if store.rows[clip.ChannelNaver].Edited || store.rows[clip.ChannelNaver].Tags[0] != "필수" {
+	if store.rows["project"].Edited || store.rows["project"].Tags[0] != "필수" {
 		t.Fatal(store.rows)
 	}
 	duplicate, e := s.StartUploadText(t.Context(), "alice", "project", "p/w", false, clip.QuoteApproval{QuoteID: q.ID, MaxCredits: &q.Pricing.MaxCredits, CancellationPolicyVersion: 1})
@@ -229,25 +228,6 @@ func TestUploadTextNeedsNoRender(t *testing.T) {
 	// Media, source and render collaborators are all nil in this fixture.
 }
 
-// A project stored on the retired Instagram channel reads and saves its one stored text, under the Naver limits (CLIP-209).
-func TestStoredInstagramProjectKeepsItsOneText(t *testing.T) {
-	s, store, _, _, _, _ := uploadFixture(t)
-	const stored = "instagram_clip"
-	store.project.Channel = stored
-	store.rows[stored] = clip.UploadText{ProjectID: "project", UserID: "alice", Channel: stored, Body: "남아 있는 문구", Tags: []string{"저장"}, Revision: 1}
-	store.rows[clip.ChannelNaver] = clip.UploadText{ProjectID: "project", UserID: "alice", Channel: clip.ChannelNaver, Body: "닿지 않는 문구", Revision: 1}
-	rows, e := s.UploadTexts(t.Context(), "alice", "project")
-	if e != nil || len(rows) != 1 || rows[0].Body != "남아 있는 문구" {
-		t.Fatal("the project's other text was reachable", rows, e)
-	}
-	if _, e = s.SaveUploadText(t.Context(), "alice", "project", strings.Repeat("가", clip.UploadTextMaxChars+1), nil, 1); !errors.Is(e, clip.ErrUploadTextLimit) {
-		t.Fatal("the Naver limit was not applied", e)
-	}
-	saved, e := s.SaveUploadText(t.Context(), "alice", "project", "내가 고친 문구", nil, 1)
-	if e != nil || saved.Channel != stored || store.rows[stored].Body != "내가 고친 문구" || store.rows[clip.ChannelNaver].Body != "닿지 않는 문구" {
-		t.Fatal("save did not follow the stored text", saved, e)
-	}
-}
 func TestEditedTextNeedsConfirmation(t *testing.T) {
 	s, store, jobs, writer, _, _ := uploadFixture(t)
 	if _, e := s.SaveUploadText(t.Context(), "alice", "project", "내가 고친 문구", nil, 0); e != nil {
@@ -256,12 +236,12 @@ func TestEditedTextNeedsConfirmation(t *testing.T) {
 	if _, e := s.QuoteUploadText(t.Context(), "alice", "project", "p/w", false); !errors.Is(e, clip.ErrUploadTextConfirmation) {
 		t.Fatal("manual edit was overwritten without confirmation", e)
 	}
-	if writer.calls != 0 || jobs.holds != 0 || store.rows[clip.ChannelNaver].Body != "내가 고친 문구" {
+	if writer.calls != 0 || jobs.holds != 0 || store.rows["project"].Body != "내가 고친 문구" {
 		t.Fatal("confirmation refusal changed text")
 	}
 	id, _ := uploadStart(t, s, true)
 	runUpload(t, s, jobs, id)
-	if store.rows[clip.ChannelNaver].Revision != 2 || store.rows[clip.ChannelNaver].Edited {
+	if store.rows["project"].Revision != 2 || store.rows["project"].Edited {
 		t.Fatal(store.rows)
 	}
 }

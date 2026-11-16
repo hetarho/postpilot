@@ -37,11 +37,11 @@ func TestPublishedURLHosts(t *testing.T) {
 
 // CLIP-231: ticks are advisory metadata a finalized project still saves; anything else is not.
 func TestTicksAreFinalizedWritableMetadata(t *testing.T) {
-	ticks, channel, title := []string{"a"}, "instagram_clip", "t"
-	if !(clip.ProjectPatch{ChecklistTicks: &ticks}).TicksOnly() || !(clip.ProjectPatch{ChecklistTicks: &ticks, Channel: &channel}).MetadataOnly() {
-		t.Fatal("ticks or channel are not metadata")
+	ticks, title := []string{"a"}, "t"
+	if !(clip.ProjectPatch{ChecklistTicks: &ticks}).TicksOnly() {
+		t.Fatal("ticks are not metadata")
 	}
-	if (clip.ProjectPatch{ChecklistTicks: &ticks, Channel: &channel}).TicksOnly() || (clip.ProjectPatch{ChecklistTicks: &ticks, Title: &title}).MetadataOnly() || (clip.ProjectPatch{}).MetadataOnly() {
+	if (clip.ProjectPatch{ChecklistTicks: &ticks, Title: &title}).TicksOnly() || (clip.ProjectPatch{}).TicksOnly() {
 		t.Fatal("a content patch passed as metadata")
 	}
 	if _, err := clip.NormalizeChecklistTicks([]string{strings.Repeat("가", 501)}); err == nil {

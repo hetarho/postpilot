@@ -29,7 +29,7 @@ func confirmableProject(t *testing.T) clip.Project {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return clip.Project{ID: "clip", UserID: "alice", Ratio: "vertical", Channel: clip.ChannelNaver, Analysis: string(analysis), EditPlan: plan, EditPlanRevision: 3,
+	return clip.Project{ID: "clip", UserID: "alice", Ratio: "vertical", Analysis: string(analysis), EditPlan: plan, EditPlanRevision: 3,
 		RenderedPlanRevision: 3, Result: &clip.Result{ID: "r3", Key: "clip-results/r3.mp4", ContentType: "video/mp4", Bytes: 100, DurationMS: 15000, CreatedAt: time.Unix(5, 0)}}
 }
 

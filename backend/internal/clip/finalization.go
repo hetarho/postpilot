@@ -26,7 +26,7 @@ type FinalizationRequest struct {
 	UserID, ProjectID string
 	ExpectedRevision  int
 	ExpectedResultID  string
-	// Present finalizes as 게시됨, empty as 완료 (CLIP-232); validated against the project's channel.
+	// Present finalizes as 게시됨, empty as 완료 (CLIP-232); validated against the platform host.
 	PublishedURL string
 }
 

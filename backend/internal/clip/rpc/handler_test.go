@@ -39,9 +39,6 @@ func (s *rpcStore) UpdateProject(_ context.Context, user, id string, p clip.Proj
 	s.patch = p
 	if s.project != nil {
 		value := *s.project
-		if p.Channel != nil {
-			value.Channel = *p.Channel
-		}
 		s.project = &value
 		return value, nil
 	}
@@ -232,7 +229,7 @@ func TestCreateIsVerticalOnly(t *testing.T) {
 }
 
 func TestFinalizedTitleStaysLocked(t *testing.T) {
-	original := clip.Project{ID: "owned", UserID: "alice", Title: "confirmed", Ratio: "square", Channel: clip.ChannelNaver, Finalized: &clip.Finalization{At: time.Now(), PlanRevision: 1, ResultID: "result"}}
+	original := clip.Project{ID: "owned", UserID: "alice", Title: "confirmed", Ratio: "square", Finalized: &clip.Finalization{At: time.Now(), PlanRevision: 1, ResultID: "result"}}
 	s := &rpcStore{project: &original}
 	h := NewHandler(testProjects(s))
 	ctx := auth.WithUser(t.Context(), "alice")

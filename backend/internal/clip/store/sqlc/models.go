@@ -229,7 +229,6 @@ type ClipProject struct {
 	DubbingVoiceID           string
 	DubbingBindingDigest     string
 	ResultSpeechJson         string
-	Channel                  string
 	Campaign                 int64
 	AdvertiserGuide          string
 	AdvertiserKeywords       string
@@ -309,7 +308,6 @@ type ClipSpeechCleanup struct {
 type ClipUploadText struct {
 	ProjectID string
 	UserID    string
-	Channel   string
 	Body      string
 	Tags      string
 	Edited    int64
@@ -322,7 +320,6 @@ type ClipUploadTextQuote struct {
 	ID               string
 	UserID           string
 	ProjectID        string
-	Channel          string
 	ExpectedRevision int64
 	InputDigest      string
 	PricingJson      string

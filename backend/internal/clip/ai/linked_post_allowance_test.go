@@ -32,7 +32,7 @@ func TestLinkedPostCountsTowardAllowance(t *testing.T) {
 	if err := s.ValidateRevision(testRef(), revision); !errors.Is(err, clip.ErrInputTooLarge) {
 		t.Fatal("revision escaped bound", err)
 	}
-	upload := clip.UploadTextInput{LinkedPost: base.LinkedPost, Language: "ko", Channel: clip.ChannelNaver, Policy: base.Policy}
+	upload := clip.UploadTextInput{LinkedPost: base.LinkedPost, Language: "ko", Policy: base.Policy}
 	upload.Policy = testPolicy("write")
 	upload.Policy.InputTokens = llm.ClipInputUnits
 	upload.Policy.ResponseRetries = 0

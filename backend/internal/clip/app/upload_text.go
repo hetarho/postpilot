@@ -26,28 +26,16 @@ func (s *GenerationService) uploadStore() (clip.UploadTextStore, error) {
 	return store, nil
 }
 
-// UploadTexts returns the project's one upload text. A row stored for the project's
-// other channel was never shown and stays unreachable until it is removed (CLIP-209).
+// UploadTexts returns the project's one upload text, or none before it is written.
 func (s *GenerationService) UploadTexts(ctx context.Context, user, id string) ([]clip.UploadText, error) {
-	p, err := s.projects.store.GetProject(ctx, user, id)
-	if err != nil {
+	if _, err := s.projects.store.GetProject(ctx, user, id); err != nil {
 		return nil, err
 	}
 	store, err := s.uploadStore()
 	if err != nil {
 		return nil, err
 	}
-	rows, err := store.ListUploadTexts(ctx, user, id)
-	if err != nil {
-		return nil, err
-	}
-	own := rows[:0:0]
-	for _, row := range rows {
-		if row.Channel == clip.DefaultChannel(p.Channel) {
-			own = append(own, row)
-		}
-	}
-	return own, nil
+	return store.ListUploadTexts(ctx, user, id)
 }
 func (s *GenerationService) SaveUploadText(ctx context.Context, user, id, body string, tags []string, revision int) (clip.UploadText, error) {
 	p, err := s.projects.store.GetProject(ctx, user, id)
@@ -57,8 +45,7 @@ func (s *GenerationService) SaveUploadText(ctx context.Context, user, id, body s
 	if _, err = clip.UploadTextMaterial(p); err != nil {
 		return clip.UploadText{}, err
 	}
-	channel := clip.DefaultChannel(p.Channel)
-	checked, err := clip.ValidateUploadTextEdit(channel, p.Language, p.Campaign, body, tags)
+	checked, err := clip.ValidateUploadTextEdit(p.Language, p.Campaign, body, tags)
 	if err != nil {
 		return clip.UploadText{}, err
 	}
@@ -66,7 +53,7 @@ func (s *GenerationService) SaveUploadText(ctx context.Context, user, id, body s
 	if err != nil {
 		return clip.UploadText{}, err
 	}
-	return store.SaveUploadText(ctx, clip.UploadTextSave{UserID: user, ProjectID: id, Channel: channel, Body: checked.Body, Tags: checked.Tags, ExpectedRevision: revision, Edited: true, Now: s.now()})
+	return store.SaveUploadText(ctx, clip.UploadTextSave{UserID: user, ProjectID: id, Body: checked.Body, Tags: checked.Tags, ExpectedRevision: revision, Edited: true, Now: s.now()})
 }
 func (s *GenerationService) uploadInputs(ctx context.Context, user, id string, confirmed bool) (clip.Project, clip.UploadTextInput, clip.UploadText, error) {
 	var empty clip.UploadTextInput
@@ -103,11 +90,8 @@ func (s *GenerationService) uploadInputs(ctx context.Context, user, id string, c
 	if err != nil {
 		return p, in, row, err
 	}
-	for _, text := range rows {
-		if text.Channel == in.Channel {
-			row = text
-			break
-		}
+	if len(rows) > 0 {
+		row = rows[0]
 	}
 	if row.Edited && !confirmed {
 		return p, in, row, clip.ErrUploadTextConfirmation
@@ -153,7 +137,7 @@ func (s *GenerationService) QuoteUploadText(ctx context.Context, user, id, write
 		return clip.UploadTextQuote{}, clip.ErrPricingUnavailable
 	}
 	now := s.now()
-	quote := clip.UploadTextQuote{GenerationQuote: clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, InputDigest: clip.UploadQuoteDigest(in, row.Revision, confirmed, pricing), Pricing: pricing, ExpiresAt: now.Add(s.cfg.QuoteTTL)}, Channel: in.Channel, ExpectedRevision: row.Revision}
+	quote := clip.UploadTextQuote{GenerationQuote: clip.GenerationQuote{ID: newID(), UserID: user, ProjectID: id, InputDigest: clip.UploadQuoteDigest(in, row.Revision, confirmed, pricing), Pricing: pricing, ExpiresAt: now.Add(s.cfg.QuoteTTL)}, ExpectedRevision: row.Revision}
 	store, _ := s.uploadStore()
 	if err = store.SaveUploadTextQuote(ctx, quote, now); err != nil {
 		return clip.UploadTextQuote{}, err
@@ -283,10 +267,8 @@ func (s *GenerationService) RunUploadText(ctx context.Context, user, job, projec
 		return err
 	}
 	revision := 0
-	for _, r := range rows {
-		if r.Channel == frozen.Input.Channel {
-			revision = r.Revision
-		}
+	if len(rows) > 0 {
+		revision = rows[0].Revision
 	}
 	if revision != frozen.TextRevision {
 		return clip.ErrPlanConflict
@@ -311,6 +293,6 @@ func (s *GenerationService) RunUploadText(ctx context.Context, user, job, projec
 		return err
 	}
 	stage = "save"
-	_, err = finisher.CompleteUploadText(ctx, clip.UploadTextSave{UserID: user, ProjectID: project, Channel: frozen.Input.Channel, Body: text.Body, Tags: text.Tags, ExpectedRevision: frozen.TextRevision, ExpectedPlanRevision: frozen.PlanRevision, JobID: job, Now: s.now()})
+	_, err = finisher.CompleteUploadText(ctx, clip.UploadTextSave{UserID: user, ProjectID: project, Body: text.Body, Tags: text.Tags, ExpectedRevision: frozen.TextRevision, ExpectedPlanRevision: frozen.PlanRevision, JobID: job, Now: s.now()})
 	return err
 }

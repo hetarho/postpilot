@@ -77,9 +77,6 @@ func (s *linkedProjectStore) UpdateProject(_ context.Context, _, _ string, p cli
 	if p.Title != nil {
 		s.project.Title = *p.Title
 	}
-	if p.Channel != nil {
-		s.project.Channel = *p.Channel
-	}
 	return s.project, nil
 }
 

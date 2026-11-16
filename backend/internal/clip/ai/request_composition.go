@@ -153,7 +153,7 @@ func RequestCompositions() []llm.RequestComposition {
 	revision.Current.Narration = &clip.NarrationPlan{Enabled: true, Segments: []clip.SpokenSegment{{ID: "synthetic-segment", Text: "Synthetic reviewed spoken text", StartMS: 0, EndMS: 1000}}}
 	system, user = buildSpokenRevisionPrompt(revision, revision.Current, limits)
 	add("spoken-script-revision", system, user)
-	upload := clip.UploadTextInput{LinkedPost: in.LinkedPost, Language: in.Language, Channel: clip.ChannelNaver, Campaign: true, Title: "Synthetic clip", Instruction: in.Instruction, Facts: document.Inputs, Storyline: &story, Captions: []string{"Synthetic caption"}, AdvertiserGuide: in.AdvertiserGuide, Voice: "Synthetic default voice style", Guidelines: in.Guidelines}
+	upload := clip.UploadTextInput{LinkedPost: in.LinkedPost, Language: in.Language, Campaign: true, Title: "Synthetic clip", Instruction: in.Instruction, Facts: document.Inputs, Storyline: &story, Captions: []string{"Synthetic caption"}, AdvertiserGuide: in.AdvertiserGuide, Voice: "Synthetic default voice style", Guidelines: in.Guidelines}
 	system, user = BuildUploadTextPrompt(upload)
 	out = append(out, *clipComposition("upload-text", system, user, upload.Guidelines, nil))
 	return out
