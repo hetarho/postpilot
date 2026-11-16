@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { sha256Hex } from '@/shared/lib'
 import { useTranslation } from 'react-i18next'
 import { Button, Typography } from '@/shared/ui'
 import type { ClipSpeechRef } from '../model/spoken'
@@ -60,9 +61,7 @@ function SpeechPlayer({
         const blob = await response.blob()
         if (blob.size !== a.bytes) throw new Error('Invalid speech size')
         const data = await blob.arrayBuffer()
-        const hash = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', data)), (n) =>
-          n.toString(16).padStart(2, '0'),
-        ).join('')
+        const hash = await sha256Hex(data)
         if (hash !== speech.audioHash) throw new Error('Speech provenance changed')
         if (abort.current?.signal.aborted) return
         resource.current = URL.createObjectURL(blob)

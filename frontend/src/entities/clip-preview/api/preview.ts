@@ -10,7 +10,7 @@ import {
   PrepareClipCaptionFramesRequestSchema,
   PrepareClipPreviewRequestSchema,
 } from '@/shared/api'
-import { delay } from '@/shared/lib'
+import { delay, sha256Hex } from '@/shared/lib'
 import { CLIP_DRAFT_PREVIEW } from '@/entities/clip-design/@x/clip-preview'
 import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
 import type { PreviewPage } from '../model/draft-preview'
@@ -46,8 +46,7 @@ export async function clipPreviewRequest(
   const bytes = toBinary(ClipEditPlanSchema, plan)
   if (bytes.byteLength > CLIP_DRAFT_PREVIEW.maxRequestBytes)
     throw new Error('CLIP_PREVIEW_TOO_LARGE')
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new Uint8Array(bytes)))
-  const hash = [...digest].map((v) => v.toString(16).padStart(2, '0')).join('')
+  const hash = await sha256Hex(new Uint8Array(bytes))
   return {
     hash,
     /** One run of a sequence-rendered caption's own frames, for a browser render to draw

@@ -7,7 +7,7 @@ import {
 } from './browser-composition'
 import { BrowserLocalComponents, type BrowserBackgroundGeometry } from './local-components'
 import { ClipInkError } from './ink-typography'
-import { NATIVE_SOURCE_COLOR_VERSION } from '@/shared/lib'
+import { NATIVE_SOURCE_COLOR_VERSION, sha256Hex } from '@/shared/lib'
 import { backgroundContrastNotices } from './background-paint'
 import {
   backgroundSampleFrames,
@@ -230,9 +230,9 @@ export async function measureBrowserBackground(
       notices,
     }
     const data = new TextEncoder().encode(JSON.stringify(proof))
-    const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', data))
+    const digest = await sha256Hex(data)
     check()
-    return { ...proof, digest: [...hash].map((v) => v.toString(16).padStart(2, '0')).join('') }
+    return { ...proof, digest }
   } finally {
     epoch.cancel()
     await footage.dispose()

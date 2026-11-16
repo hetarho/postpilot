@@ -1,29 +1,19 @@
-import { useMutation, useTransport } from '@connectrpc/connect-query'
-import { useQueryClient } from '@tanstack/react-query'
-import { myPlanQueryKey, planToProto, type PlanName } from '@/entities/plan/@x/subscription'
-import { invalidateModelAccess } from '@/entities/model-catalog/@x/subscription'
-import { appFailureFromConnect, BillingService } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { useMutation } from '@connectrpc/connect-query'
+import { planToProto, type PlanName } from '@/entities/plan/@x/subscription'
+import { BillingService } from '@/shared/api'
+import { connectFailureMessage } from '@/shared/lib'
 import type { BillingTerm } from '../model/types'
 import { termToProto } from './billing-mappers'
-import { myBillingQueryKey } from './useMyBilling'
+import { useBillingInvalidation } from './useBillingInvalidation'
 
 export function useSubscribe() {
-  const transport = useTransport()
-  const queryClient = useQueryClient()
   const mutation = useMutation(BillingService.method.subscribe, {
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: myBillingQueryKey(transport) }),
-        queryClient.invalidateQueries({ queryKey: myPlanQueryKey(transport) }),
-        invalidateModelAccess(queryClient, transport),
-      ])
-    },
+    onSuccess: useBillingInvalidation(),
   })
   return {
     ...mutation,
     subscribe: (plan: PlanName, term: BillingTerm) =>
       mutation.mutateAsync({ plan: planToProto(plan), term: termToProto(term) }),
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
   }
 }

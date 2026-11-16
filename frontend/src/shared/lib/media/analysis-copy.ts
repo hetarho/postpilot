@@ -1,3 +1,4 @@
+import { sha256Hex } from './sha256-hex'
 import {
   canEncodeAudio,
   canEncodeVideo,
@@ -338,10 +339,7 @@ async function inspectCompletedCopy(
           sample.close()
         }
       }
-    const digest = await crypto.subtle.digest('SHA-256', buffer)
-    const sha256 = Array.from(new Uint8Array(digest), (n) => n.toString(16).padStart(2, '0')).join(
-      '',
-    )
+    const sha256 = await sha256Hex(buffer)
     const artifact: CompletedMediaCopy = {
       buffer,
       sha256,

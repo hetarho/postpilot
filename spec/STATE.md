@@ -81,9 +81,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T840 | One connect-failure message helper and one billing invalidation | ARCH | - | todo |
-| T841 | One SHA-256 hex helper for fingerprint code | ARCH | T840 | todo |
-| T842 | One confirm-then-run control for the delete buttons | ARCH | T841 | todo |
 | T843 | One factory for the per-project clip autosave queues | ARCH | - | todo |
 | T844 | Stop the per-second re-render of the dubbing editor | ARCH | T843 | todo |
 | T849 | Publish clip upload progress only when it changes | ARCH | - | todo |
@@ -96,7 +93,7 @@
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
-| tidy-261116 | 3 | 14 | 7 | 7 | 7 | 0 | 0 | 2026-11-16T07:45:14.097Z | [history](work/tidy-261116.json) |
+| tidy-261116 | 3 | 14 | 10 | 4 | 0 | 2 | 2 | 2026-11-16T07:50:23.384Z | [history](work/tidy-261116.json) |
 
 ## next
 - inspect work board for remaining tasks

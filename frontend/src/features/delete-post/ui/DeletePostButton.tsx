@@ -1,9 +1,8 @@
-import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from '@tanstack/react-router'
 import { Trash2 } from 'lucide-react'
 import { displayTitle, useDeletePost, type PostDraft } from '@/entities/post'
-import { Button, Dialog, FieldMessage } from '@/shared/ui'
+import { Button, ConfirmedAction, FieldMessage } from '@/shared/ui'
 
 /** Deletes the post the editor is showing. The server delete is hard — no trash, no restore —
  *  so the confirmation sheet is the whole protection and has to say what it destroys.
@@ -29,21 +28,11 @@ export function DeletePostButton({
   const { t } = useTranslation(['posts', 'common'])
   const navigate = useNavigate()
   const remove = useDeletePost()
-  const [confirming, setConfirming] = useState(false)
   const title = displayTitle(post)
 
-  const confirm = async () => {
-    try {
-      await remove.remove(post.slug)
-    } catch {
-      // A refusal renders beside the trigger, and the dialog closes on failure too so the
-      // message is not left behind the scrim. Only the DELETE is caught here: a navigation
-      // that fails afterwards must not be reported as a refusal, because by then the post
-      // really is gone.
-      setConfirming(false)
-      return
-    }
-    setConfirming(false)
+  const done = async () => {
+    // Only the DELETE counts as a refusal: a navigation that fails afterwards must not be
+    // reported as one, because by then the post really is gone.
     onDeleted?.()
     if (returnTo) {
       await navigate({ href: returnTo.href })
@@ -52,42 +41,44 @@ export function DeletePostButton({
   }
 
   return (
-    <>
-      {/* The glyph carries it on a phone, where the row also holds the step bar, as in the clip
+    <ConfirmedAction
+      trigger={(open) => (
+        <>
+          {/* The glyph carries it on a phone, where the row also holds the step bar, as in the clip
           workspace; the word comes back from `sm:`. The name is the word at every width. */}
-      <Button
-        variant="danger"
-        aria-label={t('editor.delete.trigger', { ns: 'posts' })}
-        disabled={remove.isPending}
-        onClick={() => setConfirming(true)}
-      >
-        <Trash2 aria-hidden="true" className="size-5" />
-        <span className="hidden sm:inline">{t('editor.delete.trigger', { ns: 'posts' })}</span>
-      </Button>
-      {/* `w-full` inside the wrapping top row, so a refusal takes its own line under the trigger
+          <Button
+            variant="danger"
+            aria-label={t('editor.delete.trigger', { ns: 'posts' })}
+            disabled={remove.isPending}
+            onClick={open}
+          >
+            <Trash2 aria-hidden="true" className="size-5" />
+            <span className="hidden sm:inline">{t('editor.delete.trigger', { ns: 'posts' })}</span>
+          </Button>
+        </>
+      )}
+      failed={remove.isError}
+      failure={
+        /* `w-full` inside the wrapping top row, so a refusal takes its own line under the trigger
           instead of squeezing the row it was pressed from (THEME-24 — feedback
-          renders where the user is looking). */}
-      {remove.isError && (
+          renders where the user is looking). */
         <FieldMessage className="w-full">
           {remove.failure?.reason === 'POST_BUSY'
             ? t('editor.delete.busy', { ns: 'posts' })
             : remove.errorMessage}
         </FieldMessage>
-      )}
-      <Dialog
-        open={confirming}
-        title={t('editor.delete.title', { ns: 'posts' })}
-        confirmLabel={t('action.delete', { ns: 'common' })}
-        pending={remove.isPending}
-        onClose={() => setConfirming(false)}
-        onConfirm={() => void confirm()}
-      >
-        {t('editor.delete.description', {
-          ns: 'posts',
-          title,
-          interpolation: { escapeValue: false },
-        })}
-      </Dialog>
-    </>
+      }
+      title={t('editor.delete.title', { ns: 'posts' })}
+      confirmLabel={t('action.delete', { ns: 'common' })}
+      pending={remove.isPending}
+      run={() => remove.remove(post.slug)}
+      onDone={done}
+    >
+      {t('editor.delete.description', {
+        ns: 'posts',
+        title,
+        interpolation: { escapeValue: false },
+      })}
+    </ConfirmedAction>
   )
 }

@@ -1,12 +1,7 @@
 import { create } from '@bufbuild/protobuf'
 import { useMutation } from '@connectrpc/connect-query'
-import {
-  appFailureFromConnect,
-  GenerationService,
-  ModelRefSchema,
-  ReobserveSelectionSchema,
-} from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { GenerationService, ModelRefSchema, ReobserveSelectionSchema } from '@/shared/api'
+import { connectFailureMessage } from '@/shared/lib'
 import type { ModelRef } from '../model/types'
 
 /** 관찰하기 and 다시 관찰하기 (GEN-89): an observation job, which observes the post's attachments
@@ -17,7 +12,7 @@ export function useStartObservation() {
 
   return {
     ...mutation,
-    errorMessage: mutation.error ? formatAppFailure(appFailureFromConnect(mutation.error)) : '',
+    errorMessage: connectFailureMessage(mutation.error),
     /** `reobserveFiles` carries PRESENCE (GEN-9): an EMPTY array is 관찰하기, which observes only
      *  the attachments lacking an observation, the picker's answer is 다시 관찰하기, and
      *  `undefined` observes every attachment. */

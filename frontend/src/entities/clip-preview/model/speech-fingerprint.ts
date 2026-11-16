@@ -1,4 +1,5 @@
 import type { ClipEditPlan } from '@/entities/clip-plan/@x/clip-preview'
+import { sha256Hex } from '@/shared/lib'
 /** Same UTF-8 length framing as clip.SpeechFingerprint; it covers actual audio and its output placement. */
 export async function speechRenderFingerprint(plan: ClipEditPlan) {
   const narration = plan.narration
@@ -37,6 +38,5 @@ export async function speechRenderFingerprint(plan: ClipEditPlan) {
       field(timing.endMs)
     }
   }
-  const hash = await crypto.subtle.digest('SHA-256', encoder.encode(framed))
-  return Array.from(new Uint8Array(hash), (value) => value.toString(16).padStart(2, '0')).join('')
+  return await sha256Hex(encoder.encode(framed))
 }

@@ -1,11 +1,10 @@
 import { appFailureFromConnect } from '@/shared/api'
-import { formatAppFailure } from '@/shared/lib'
+import { connectFailureMessage } from '@/shared/lib'
 
 /** Shared by every guideline mutation so stable reasons are translated consistently. The server's
  *  message is what the user reads — no client-side rephrasing of a refusal. */
 export function guidelineErrorMessage(error: unknown): string {
-  if (!error) return ''
-  return formatAppFailure(appFailureFromConnect(error))
+  return connectFailureMessage(error)
 }
 
 /** True when a create was refused because the account already holds that exact text. It is

@@ -28,6 +28,8 @@ export {
   formatPercent,
 } from './localization'
 export { formatAppFailure } from './localization'
+export { connectFailureMessage } from './localization'
+export { sha256Hex } from './media/sha256-hex'
 export { activeLocale } from './localization'
 export type { Locale } from './localization'
 export {
