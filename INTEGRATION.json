@@ -150,10 +150,10 @@
       "publication": "merge",
       "host": "ihaelam-ui-MacBookPro",
       "branch": "gusta-session-start-hdref-c3df08ba",
-      "head": "1649b4eb0e5396a04d93c9cf2a76c8dbca57aa93",
+      "head": "3baf45f6e856f99bc548a7c794d61a2d3a766ecb",
       "land": "main",
-      "status": "ready",
-      "at": "2026-11-16T14:42:04.398Z",
+      "status": "working",
+      "at": "2026-11-16T14:42:50.886Z",
       "agentChecks": [],
       "verificationCommands": []
     },
