@@ -5,7 +5,7 @@
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
 | hdref | ihaelam-ui-MacBookPro | pair | 2026-11-16T14:31Z | 2026-11-16T14:36Z | T870 | gusta-session-start-hdref-c3df08ba | 64b47da1f13b | da8e3d345d9d016094ffa3ea |
-| vcx | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:38Z | 2026-11-16T14:40Z | T851 | gusta-session-start-vcx-4f46f7d4 | 5afb206314c3 | f5a394dab36ea32f44a2de9a |
+| vcx | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:38Z | 2026-11-16T14:40Z | - | gusta-session-start-vcx-4f46f7d4 | 5afb20631 | f5a394dab36ea32f44a2de9a |
 | wopts | ihaelam-ui-MacBookPro | autopilot | 2026-11-16T14:39Z | 2026-11-16T14:39Z | - | gusta-session-start-wopts-7b887426 | 37783c03cc0e | c699e1db263037aca837d56d |
 
 ## inbox
@@ -182,8 +182,10 @@
 | T867 | onev | gusta-session-start-onev-54d284a9 | a04e117dc491 | 2026-11-16T10:37Z |
 | T868 | onev | gusta-session-start-onev-54d284a9 | 5cd9855fe | 2026-11-16T10:49Z |
 | T869 | hdref | gusta-session-start-hdref-c3df08ba | 35df02f90e0e | 2026-11-16T14:36Z |
+| T851 | vcx | gusta-session-start-vcx-4f46f7d4 | 5afb20631 | 2026-11-16T14:40Z |
 
 ## log
+- 261116 T851 done
 - 261116 T869 done
 - 261116 sketch voice-chat-examples done: VOICE r22, T871-T879
 - 261116 gusta-create-task VOICE renumbered T869-T877→T871-T879 (another checkout published T869 T870 first)
@@ -203,4 +205,3 @@
 - 261116 T862 done
 - 261116 T861 done
 - 261116 T860 done
-- 261116 T859 done
