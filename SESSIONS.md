@@ -148,6 +148,7 @@
 - 261114 parked ARCH-31 ARCH-1: Gusta 0.17.2 installation verified; owner decision required for shared fixed-candidate verification and FORMAT alignment, primary browser/agent AC allocation, and explicit product-stage/support windows. Preserve current deterministic/media/human/hardware/live gates and existing support until approved. Evidence and concrete proposal: docs/qa/gusta-update-261114.md.
 
 ## log
+- 261116 ARCH r25 DUB r5 no-op (no code impact): ARCH-71 product stage/support, ARCH-31 shared integration owner
 - 261116 gusta-update-ssot ARCH start
 - 261116 sketch voice-fidelity: VOICE r21 POST r49 GEN r33 THEME r45, T827-T836 todo, style-guide/AI scoring deferred to ideation
 - 261116 gusta-create-task VOICE POST GEN THEME start
@@ -167,4 +168,3 @@
 - 261113 T818 done
 - 261113 T817 done
 - 261113 T822 done
-- 261113 T821 done
