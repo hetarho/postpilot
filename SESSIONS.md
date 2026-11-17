@@ -221,8 +221,10 @@
 | T893 | wtform | gusta-session-start-wtform-501eaa2b | ce73fb32d8dd | 2026-11-17T07:00Z |
 | T894 | wtform | gusta-session-start-wtform-501eaa2b | fbc91efb96e7 | 2026-11-17T07:07Z |
 | T895 | wtform | gusta-session-start-wtform-501eaa2b | 7564bd9abcc9 | 2026-11-17T07:16Z |
+| T896 | wtform | gusta-session-start-wtform-501eaa2b | bd746e005435 | 2026-11-17T07:29Z |
 
 ## log
+- 261117 T896 done
 - 261117 T895 done
 - 261117 T894 done
 - 261117 T893 done
@@ -242,4 +244,3 @@
 - 261117 gusta-update-ssot ARCH start: owner approved future task checks using affected unit and fast static checks; full frontend TypeScript checking belongs to existing shared batch build. Preserve submitted T878/T879 evidence.
 - 261117 T879 done
 - 261117 T878 done
-- 261116 onev: one video kind with no clip channel (T856-T868, CLIP r80 THEME r47 POST r51 GUIDE r28 MKT r13) landed and pushed 0715db3bb; CI, Deploy backend and Verify media green
