@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| lchat | DESKTOP-VKPLS8P | autopilot | 2026-11-17T00:31Z | 2026-11-17T01:09Z | T879 | gusta-session-start-lchat-fe660cf1 | 59abcd6b3829 | 106ee959112c2b36f2fa6c9c |
+| lchat | DESKTOP-VKPLS8P | autopilot | 2026-11-17T00:31Z | 2026-11-17T01:09Z | - | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 106ee959112c2b36f2fa6c9c |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -206,8 +206,10 @@
 | T885 | hdref | gusta-session-start-hdref-c3df08ba | 64fdefcf3a68 | 2026-11-16T15:41Z |
 | T886 | hdref | gusta-session-start-hdref-c3df08ba | 0c7d9a8d91b8 | 2026-11-16T15:43Z |
 | T878 | lchat | gusta-session-start-lchat-fe660cf1 | 5e5bca352 | 2026-11-17T00:59Z |
+| T879 | lchat | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 2026-11-17T01:09Z |
 
 ## log
+- 261117 T879 done
 - 261117 T878 done
 - 261116 onev: one video kind with no clip channel (T856-T868, CLIP r80 THEME r47 POST r51 GUIDE r28 MKT r13) landed and pushed 0715db3bb; CI, Deploy backend and Verify media green
 - 261116 T886 done
@@ -227,4 +229,3 @@
 - 261116 T871 done
 - 261116 T881 done
 - 261116 T880 done
-- 261116 T853 done
