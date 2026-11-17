@@ -232,10 +232,15 @@ it('lists each photo contestant with its failure, words the retry in observation
   mount('/tests/test', fixture)
   await screen.findByRole('button', { name: '실패한 AI의 다시 관찰 비용 확인' })
   const list = within(screen.getByRole('region', { name: '후보별 진행' }))
-  expect(list.getAllByText('관찰 완료')).toHaveLength(2)
+  // Every contestant is a card of the review's viewer; a failed one states its reason in its card.
   expect(list.getAllByText(/^실패 · /)).toHaveLength(6)
   expect(list.getAllByText(/AI 결과가 중간에 끊겼어요/)).toHaveLength(5)
   expect(list.getByText(/AI 모델 요청이 많아/)).toBeInTheDocument()
+  // The contestant switcher's dropdown names each letter with its status.
+  await userEvent.click(list.getByRole('button', { name: /^후보 [A-H]$/ }))
+  expect(screen.getAllByRole('menuitemradio', { name: / · 관찰 완료$/ })).toHaveLength(2)
+  expect(screen.getAllByRole('menuitemradio', { name: / · 실패$/ })).toHaveLength(6)
+  await userEvent.keyboard('{Escape}')
   expect(screen.queryByText(/선택 완료|대결 \d+ \/ \d+ 완료/)).toBeNull()
   await userEvent.click(screen.getByRole('button', { name: '실패한 AI의 다시 관찰 비용 확인' }))
   expect(

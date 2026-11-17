@@ -12,11 +12,12 @@ import { WritingTestObservationViewer } from './WritingTestObservationPair'
 import { WritingTestPost } from './WritingTestPair'
 
 /** Each blind contestant by its letter as waiting, working, done or failed with its normalized
- *  reason (MODEL-101). A done contestant opens in place to its stored output, read with the review's
- *  own renderer — observations photo by photo, a post as the pair shows it — so the owner can read
- *  what was paid for while the others still work or have failed. The reason is the identity-safe
- *  product message the wire already carries; no model name or diagnostic appears before the reveal
- *  (MODEL-32). */
+ *  reason (MODEL-101). A photo observation test's list is the review's own observation viewer over
+ *  every contestant: one held photo, one card per contestant, the switcher's dropdown naming each
+ *  letter with its status and a card without observations stating where its contestant is. A
+ *  writing test's done contestant opens in place to its post as the pair shows it. Once the payload
+ *  is purged each letter shows its status alone. The reason is the identity-safe product message
+ *  the wire already carries; no model name or diagnostic appears before the reveal (MODEL-32). */
 export function WritingTestContestantStatus({
   test,
   ownerId,
@@ -33,15 +34,36 @@ export function WritingTestContestantStatus({
         ? ` · ${formatAppFailure(candidate.failure)}`
         : ''
     }`
+  const title = (
+    <Typography variant="fieldTitle" as="h3">
+      {t('contestants.title')}
+    </Typography>
+  )
+  if (unit === 'observation' && payloadAvailable && test.photos?.length)
+    return (
+      <section aria-label={t('contestants.title')}>
+        {title}
+        <div className="mt-2">
+          <WritingTestObservationViewer
+            test={test}
+            columns={test.candidates.map((candidate) => ({
+              candidate,
+              label: writingTestCandidateLabel(test, candidate.id),
+              status: t(`contestants.observation.${candidate.status}`),
+              note: candidate.status === 'succeeded' ? undefined : statusText(candidate),
+            }))}
+          />
+        </div>
+      </section>
+    )
   return (
     <section aria-label={t('contestants.title')}>
-      <Typography variant="fieldTitle" as="h3">
-        {t('contestants.title')}
-      </Typography>
+      {title}
       <ul className="divide-divider mt-2 divide-y">
         {test.candidates.map((candidate) => {
           const label = writingTestCandidateLabel(test, candidate.id)
           const readable =
+            unit === 'post' &&
             payloadAvailable &&
             candidate.status === 'succeeded' &&
             writingTestCandidateReadable(candidate)
@@ -58,19 +80,13 @@ export function WritingTestContestantStatus({
                     </Typography>
                   }
                 >
-                  <div className="pt-2 pb-4">
-                    {unit === 'observation' ? (
-                      <WritingTestObservationViewer test={test} columns={[{ candidate, label }]} />
-                    ) : (
-                      <div lang={test.targetLanguage}>
-                        <WritingTestPost
-                          ownerId={ownerId}
-                          test={test}
-                          candidate={candidate}
-                          label={label}
-                        />
-                      </div>
-                    )}
+                  <div className="pt-2 pb-4" lang={test.targetLanguage}>
+                    <WritingTestPost
+                      ownerId={ownerId}
+                      test={test}
+                      candidate={candidate}
+                      label={label}
+                    />
                   </div>
                 </Disclosure>
               </li>

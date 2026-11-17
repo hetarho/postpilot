@@ -17,9 +17,14 @@ const readyCandidates = (test: WritingTest) =>
     (candidate) => candidate.status === 'succeeded' && writingTestCandidateReadable(candidate),
   ).length
 
-interface ObservationColumn {
+export interface WritingTestObservationColumn {
   candidate: WritingTestCandidate
   label: string
+  /** Where the contestant is (MODEL-101), named beside its letter in the switcher's dropdown. */
+  status?: string
+  /** Why the contestant has no observations to read — still waiting, observing or failed with its
+   *  reason. Its card states this in place of the observations. */
+  note?: string
 }
 
 interface WritingTestObservationPairProps {
@@ -120,18 +125,25 @@ export function WritingTestObservationPair({
  *  후보 A · 사진 3 (MODEL-97). The photo switcher and the candidate switcher each step previous/next
  *  and open a menu of every photo or candidate; a sideways swipe of the card moves to the other
  *  candidate. Every photo and every card stays mounted, so a switch shows at once. One column —
- *  the champion, a done contestant — reads the same viewer without the candidate switcher. */
+ *  the champion — reads the same viewer without the candidate switcher; the contestant progress
+ *  list passes every contestant with its status and opens on the first with observations
+ *  (MODEL-101). */
 export function WritingTestObservationViewer({
   test,
   columns,
 }: {
   test: WritingTest
-  columns: ObservationColumn[]
+  columns: WritingTestObservationColumn[]
 }) {
   const { t } = useWritingTestTranslation()
   const photos = test.photos ?? []
   const [photoIndex, setPhotoIndex] = useState(0)
-  const [columnIndex, setColumnIndex] = useState(0)
+  const [columnIndex, setColumnIndex] = useState(() =>
+    Math.max(
+      0,
+      columns.findIndex((each) => !each.note),
+    ),
+  )
   const current = Math.min(photoIndex, Math.max(photos.length - 1, 0))
   const column = Math.min(columnIndex, Math.max(columns.length - 1, 0))
   const photo = photos[current]
@@ -167,7 +179,11 @@ export function WritingTestObservationViewer({
             nextLabel={t('observation.nextCandidate')}
             triggerLabel={t('candidate', { label: columns[column]!.label })}
             index={column}
-            options={columns.map(({ label }) => t('candidate', { label }))}
+            options={columns.map(({ label, status }) =>
+              status
+                ? t('observation.candidateStatus', { candidate: t('candidate', { label }), status })
+                : t('candidate', { label }),
+            )}
             onChange={setColumnIndex}
           />
         )}
@@ -177,12 +193,13 @@ export function WritingTestObservationViewer({
           label={t('observation.cards')}
           className="-mx-1 gap-3 p-1"
         >
-          {columns.map(({ candidate, label }) => (
+          {columns.map(({ candidate, label, note }) => (
             <ObservationCard
               key={candidate.id}
               test={test}
               candidate={candidate}
               label={label}
+              note={note}
               photo={photo}
               number={current + 1}
             />
@@ -273,18 +290,22 @@ function ObservationCard({
   test,
   candidate,
   label,
+  note,
   photo,
   number,
 }: {
   test: WritingTest
   candidate: WritingTestCandidate
   label: string
+  note?: string
   photo: WritingTestPhoto
   number: number
 }) {
   const { t } = useWritingTestTranslation()
   const titleId = useId()
-  const observation = candidate.observations?.find((entry) => entry.file === photo.filename)
+  const observation = note
+    ? undefined
+    : candidate.observations?.find((entry) => entry.file === photo.filename)
   const none = t('observation.absent')
   return (
     <section
@@ -315,8 +336,8 @@ function ObservationCard({
           ))}
         </dl>
       ) : (
-        <Typography variant="body" as="p" className="text-content-secondary mt-3">
-          {t('observation.missing')}
+        <Typography variant="body" as="p" className="text-content-secondary mt-3 break-words">
+          {note || t('observation.missing')}
         </Typography>
       )}
     </section>
