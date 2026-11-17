@@ -366,6 +366,21 @@
       ],
       "verificationCommands": [],
       "landed": "44e5dc5e9dfa14544eb1abd8a9f7f9232ef705b3"
+    },
+    "851a118b0e28d990abee25ff": {
+      "id": "851a118b0e28d990abee25ff",
+      "owner": "20e1d1bd-df2c-4321-a18e-54413e963889",
+      "tag": "obsfix",
+      "kind": "start",
+      "publication": "merge",
+      "host": "DESKTOP-VKPLS8P",
+      "branch": "gusta-session-start-obsfix-f75bb1c7",
+      "head": "6c7dcaead6bc0323e40bc7e76a74a506e019a94a",
+      "land": "main",
+      "status": "working",
+      "at": "2026-11-17T09:06:37.401Z",
+      "agentChecks": [],
+      "verificationCommands": []
     }
   },
   "gate": null,
