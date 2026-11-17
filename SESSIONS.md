@@ -179,6 +179,7 @@
 - 261117 decided T897: MODEL-97 T897: how does a phone read the pair photo by photo? → both observations stay stacked under each photo with explicit winner buttons in the dock, so no candidate tab or per-candidate reading position is needed (alt: the post pairs candidate tabs with a saved scroll position per candidate, which would compare the same photo out of view).
 - 261117 parked T897: shared integration waits only on the perf6 participant from another device (status working since 2026-11-16T16:29Z, no live session); wtform, wtform2 and both lchat sessions are ready. Finish or close perf6 on that device (vibe integration close --tag perf6 in its worktree), then resume here with vibe loop --tag wtform2 to run the batch gate and land
 - 261117 decided T897: the owner said to ignore perf6 and merge → set only the perf6 participant to withdrawn (reason owner-approved-skip) in the shared integration record, leaving its branch and work untouched; it re-registers on its next ready (alt: merge this session by hand outside the shared gate | keep waiting)
+- 261117 decided T897: the wtform loop cannot resume: its failed-stop report lacks the next section and the runner refuses any edit to it → close that report by hand and run T897 plus the batch gate under tag wtform2 (alt: implement T897 and run the gate by hand | leave the run stopped)
 
 ## unlanded
 | id | tag | branch | commit | at |
