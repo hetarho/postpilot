@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r26 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
+> r27 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -100,6 +100,7 @@
   - gusta runs through npx at the version `.gusta-lock.json` records and is never a package dependency ← check compares the files with the running package's skills, so `@latest` fails CI whenever a release lands before the update
 - ARCH-31 [o] the initiating Gusta coordinator owns task completion; the shared integration owner (the initiating coordinator when it is the only participant) owns batch/CI completion, verification and publication of the fixed candidate under SETTINGS
   - task: →=ARCH-24
+  - prepare: `pnpm install --frozen-lockfile --offline` ← every worktree the Gusta CLI creates starts without node_modules; a failure here is the environment's, never the change's
   - batch:
     - `pnpm test:dev`
     - `pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen`
@@ -114,7 +115,7 @@
     - `python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v`
     - `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...`
   - CI: after each actual code push inspect `CI` and every triggered deployment/media workflow for the pushed revision; an unavailable remote result remains unchecked, with that revision recorded for follow-up
-  - the batch gate runs once on the fixed shared integration candidate after every participating session is ready, before landing or whole-work completion, including when committing only; retain ARCH-25–30 coverage and deployment Python unittests with deploy/requirements-test.txt installed
+  - the batch gate runs once on the fixed shared integration candidate after every live participating session is ready, before landing or whole-work completion, including when committing only; retain ARCH-25–30 coverage and deployment Python unittests with deploy/requirements-test.txt installed
   - the integration owner adds the production Compose validation, both deployed CPU image builds and all three media gates when the final diff can trigger `Deploy backend` or `Verify media`, or changes their definitions; exact commands, targets, CPU/memory budgets and disposable environment handling live in `docs/verification.md`
   - apply the installed Gusta verification cache, process cleanup, shared integration ownership and deadline, closing-reserve and unit limits; reuse each still-valid successful check and rerun failed, affected or unrun checks after a targeted repair
   - reuse requires unchanged consumed source, configuration, dependencies, command, environment and scope; docs/progress changes alone do not prove validity, and source/input mutation during a check invalidates its evidence
@@ -221,6 +222,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r27 261117 ARCH-31✎ batch gate after every participating session→every live participating session is ready; no workspace preparation→a frozen offline pnpm install prepares every CLI-created worktree before any check
 - r26 261117 ARCH-24✎ frontend task whole-project TypeScript checks→existing shared-batch frontend build; task static checks→changed-file fast checks with slower scopes handed off
 - r25 261116 ARCH-71+ product stage alpha with a Chrome-first support scope; ARCH-31✎ initiating coordinator owns batch/CI and publication under cumulative failure limits→shared integration owner (initiating coordinator when alone) under deadline/closing-reserve/unit limits; ARCH-24✎ ARCH-37✎ coordinator's/coordinator-owned batch gate→shared batch gate
 - r24 261114 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ task build/full-suite completion→unit/static task checks plus coordinator batch handoff; pre-push-only full CI→final implementation batch and CI; ARCH-70✎ serial direct-main orchestration→Gusta/SETTINGS
