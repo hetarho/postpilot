@@ -166,6 +166,7 @@
 - 261116 parked T887 review/audio-true-peak-261117: T887 is measured exact and63.99% faster, Codex implementation87b0aa8e7 independently approved by Claude review4425bdc2. work integrate blocks on64 baseline spec warnings; latest0.17.3 has no supported baseline exception. Concrete historical metadata proposal prepared; user scope/immutability exception requested before altering three archived task records. Preserve approved attempt and evidence; no main publication or guard bypass.
 - 261117 suggest ARCH-24: move task check `/tmp/claude-1000/-home-hrlee-project--gusta-worktrees-postpilot-bffb2063-start-lchat-fe660cf1/9d93f17f-19ad-4842-b2c9-9cde88c2be45/scratchpad/task-check.sh` to the final gate (ARCH batch): it averaged 104s over 3 runs
 - 261117 parked T878: lchat (T878 T879) is ready for the shared integration, which waits only on perf6 from another device (working since 2026-11-16T16:29Z, tied to the parked T887 decision) -> not assumed idle; after perf6 is ready or withdrawn, run vibe integration finish --tag lchat for the one full gate and the T878 browser walk on the fixed candidate
+- 261117 decided MODEL-98: "비교할 모델 드롭다운이 있으면 안돼" means which control? → the photo test asks for no writer/voice/template dropdown and every model test picks contestants from one checklist with credits per post (MODEL-98) instead of per-slot dropdowns (alt: keep per-slot model dropdowns and add credits to their options | drop only the fixed-writer dropdown)
 
 ## unlanded
 | id | tag | branch | commit | at |
