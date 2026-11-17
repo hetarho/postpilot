@@ -375,10 +375,10 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-obsfix-f75bb1c7",
-      "head": "6c7dcaead6bc0323e40bc7e76a74a506e019a94a",
+      "head": "5cf54cc4465ecb8e9a40bec86aa68405e0ebb599",
       "land": "main",
       "status": "working",
-      "at": "2026-11-17T09:06:37.401Z",
+      "at": "2026-11-17T09:10:52.442Z",
       "agentChecks": [],
       "verificationCommands": []
     }
