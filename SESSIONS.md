@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| obsfix | DESKTOP-VKPLS8P | pair | 2026-11-17T09:10Z | 2026-11-17T09:10Z | T898 | gusta-session-start-obsfix-f75bb1c7 | 5cf54cc4465e | 851a118b0e28d990abee25ff |
+| obsfix | DESKTOP-VKPLS8P | pair | 2026-11-17T09:10Z | 2026-11-17T09:15Z | - | gusta-session-start-obsfix-f75bb1c7 | 01afffddc011 | 851a118b0e28d990abee25ff |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -188,7 +188,13 @@
 - 261117 suggest -: gusta CLI follow-ups for /gusta-send-issue: an abbreviated candidate SHA in a unit receipt marks finished work failed and stops the loop; a failed-stop report omits its next section so the next preflight fails spec lint; a corrected report cannot be resumed under the same tag; an inbox line containing a markdown heading token drops the following report sections
 - 261117 decided MODEL-100 T898: how much room does a reasoning observer get? → four times the batch budget (8,192 tokens for four photos, the clip observer budget) for any model whose source publishes a reasoning object, since the truncating models expose no effort control (alt: double it like the writer headroom | raise every observation budget regardless of reasoning)
 
+## unlanded
+| id | tag | branch | commit | at |
+|---|---|---|---|---|
+| T898 | obsfix | gusta-session-start-obsfix-f75bb1c7 | 01afffddc011 | 2026-11-17T09:15Z |
+
 ## log
+- 261117 T898 done
 - 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
 - 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 reworded without a markdown heading token (it truncated report sections)
@@ -208,4 +214,3 @@
 - 261117 gusta-update-ssot MODEL start
 - 261117 fix writing-tests: unchosen model slots keep their placeholder after one slot is chosen
 - 261117 fix writing-tests: setting tests send no model stage (400 WRITING_TEST_FACTOR_INVALID); 4 files incl. one test fixture correction, over the 3-file light limit
-- 261117 gusta-update-ssot ARCH r26 complete: future task checks use affected units and changed-file fast static checks, full frontend TypeScript remains in existing shared batch build. No code task generated. Spec published to planning main as 4fe6f9246; runbook committed separately as fa6a59a81 on owned update branch. Lint passes with 58 inherited warnings plus T887 ARCH freshness warning; submitted task evidence preserved.
