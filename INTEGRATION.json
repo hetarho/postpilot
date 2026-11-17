@@ -372,7 +372,7 @@
       "host": "DESKTOP-VKPLS8P",
       "pid": 741711
     },
-    "phase": "waiting-agent",
+    "phase": "verified",
     "land": "main",
     "base": "e253e8fc3db955b448e9cc6b857ead6b278f09aa",
     "cohort": [
@@ -903,15 +903,18 @@
           "Confirm the explicit analysis action appears"
         ],
         "expected": "The owner's line shows the name, each question names the experience, a swap does not count, the offer appears after five replies and the analysis action after ten.",
-        "observed": "",
-        "evidence": [],
-        "status": "not-run",
-        "reason": "The T878 unit had no browser tooling and covered the flow with machine and VoiceLearningChat component tests only; its returned check carried an abbreviated candidate SHA and a free-text owner, so the CLI rejected it. Resubmitted unchanged in substance for the capable host on the fixed candidate.",
+        "observed": "Observed on the candidate frontend with the mobile-route fixture at 390px: an unmade voice opens the learning chat asking 최근에 다녀왔거나 써 본 것 하나만 떠올려 볼까요? with the experience kinds, the 이름 (선택) field and 생각나는 게 없어요; picking 맛집 with a name and sending started the experience. NOT observed: the five thread questions naming the experience, the swap, the offer after five and the analysis action after ten, because the shared fake voice prompt bank has no thread prompts, so the fixture chat skips straight to the offer (the owner name line did not render there either). Those behaviours rest on the T878 machine and VoiceLearningChat component tests. The owner approved landing on this observed scope instead of a dev-stack walk.",
+        "evidence": [
+          "scratchpad ac-run3.json (driver ac-driver.cjs) on candidate 44e5dc5e9dfa14544eb1abd8a9f7f9232ef705b3",
+          "C:/Users/DEEPNOID/AppData/Local/Temp/ac-t878-after-experience.png"
+        ],
+        "status": "pass",
+        "reason": "owner-approved observed scope; dev-stack walk not run",
         "replaces": [],
         "stage": "integration",
         "required": true,
-        "owner": "host",
-        "candidate": null,
+        "owner": "host DESKTOP-VKPLS8P (start conversation, Windows Chrome)",
+        "candidate": "44e5dc5e9dfa14544eb1abd8a9f7f9232ef705b3",
         "duplicationReason": "No automated e2e covers the chat walk, so this check adds none and replaces no e2e."
       },
       {
@@ -924,18 +927,21 @@
           "Open /ai-models and confirm the adopted model is the active 사진 보는 AI."
         ],
         "expected": "Both viewports compare photo by photo with blind labels until the reveal; the champion adopts as the observe-stage AI only on the explicit action and shows on /ai-models; no post is applied or exported.",
-        "observed": "Not run: this unit has no browser host. The same flow is covered by unit-level tests over the real actor and the studio fixture (WritingTestObservationReview, WritingTestObservationPair, WritingTestChampionOutput, WritingTestHistory and writing-test-machine tests).",
+        "observed": "Observed on the candidate frontend with the mobile-route fixture (in-memory transports, routed storage), Windows Chrome headless: the /ai-models photo card opened /tests/photos with no writing material, writer, voice, template or tag field; two observe models checked, two JPEGs uploaded and confirmed, cost confirmed, start opened /tests/$testId titled 사진 관찰 테스트 (fixed on this candidate after the walk found 글쓰기 테스트). At 1280px both photos loaded and the pair read photo by photo with 후보 A/B only; at 390px the same pair stacked with 후보 A/B를 승자로 선택 buttons and no horizontal overflow. Picking a winner revealed the champion view with 사진 보는 AI로 쓰기 and no post application, copy or export. NOT observed: real model observation text (the fixture observations do not match uploaded filenames and render 이 사진은 관찰하지 못했어요) and the adopted model on /ai-models (the fixture selection store is static); these rest on the backend suite (cmd/api writing-test tests) and the T893/T894/T897 unit tests. The owner approved landing on this observed scope instead of a dev-stack walk.",
         "evidence": [
-          "frontend/src/widgets/writing-test/ui/WritingTestObservationReview.test.tsx",
-          "frontend/src/widgets/writing-test/ui/WritingTestObservationPair.test.tsx"
+          "scratchpad ac-run3.json (driver ac-driver.cjs) on candidate 44e5dc5e9dfa14544eb1abd8a9f7f9232ef705b3",
+          "C:/Users/DEEPNOID/AppData/Local/Temp/ac-t897-desktop.png",
+          "C:/Users/DEEPNOID/AppData/Local/Temp/ac-t897-phone.png",
+          "C:/Users/DEEPNOID/AppData/Local/Temp/ac-t897-champion.png",
+          "backend suite and media gates passed on bff9364f (backend identical)"
         ],
-        "status": "not-run",
-        "reason": "No browser host is available in this unit; the desktop and phone browser observation is handed to the integration owner.",
+        "status": "pass",
+        "reason": "owner-approved observed scope; dev-stack walk not run",
         "replaces": [],
         "stage": "integration",
         "required": true,
-        "owner": "host",
-        "candidate": "05aa28d07eab3749acac25d089a0567b7768e302",
+        "owner": "host DESKTOP-VKPLS8P (start conversation, Windows Chrome)",
+        "candidate": "44e5dc5e9dfa14544eb1abd8a9f7f9232ef705b3",
         "duplicationReason": "Replaces no automated e2e; the unit tests cover component and actor behaviour only, not real browser layout, photo loading or the cross-page adoption on /ai-models."
       }
     ],
