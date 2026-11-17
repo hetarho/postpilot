@@ -1,6 +1,8 @@
 # postpilot
 
-Project rules for Claude Code. AGENTS.md holds the shared agent instructions (provider preference, GUSTA); the rule below binds every agent and is repeated there.
+@AGENTS.md
+
+AGENTS.md (imported above) holds every agent's project instructions: provider preference, the UI reuse rule and GUSTA. The rule below is repeated here because it is the one most often broken.
 
 ## UI reuse (hard rule)
 
