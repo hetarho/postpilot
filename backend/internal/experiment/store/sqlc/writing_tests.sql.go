@@ -64,7 +64,7 @@ func (q *Queries) DecideWritingTestMatch(ctx context.Context, arg DecideWritingT
 }
 
 const getWritingTest = `-- name: GetWritingTest :one
-SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE user_id=? AND id=?
+SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at, output FROM writing_tests WHERE user_id=? AND id=?
 `
 
 type GetWritingTestParams struct {
@@ -100,6 +100,7 @@ func (q *Queries) GetWritingTest(ctx context.Context, arg GetWritingTestParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ContentExpiresAt,
+		&i.Output,
 	)
 	return i, err
 }
@@ -174,7 +175,7 @@ func (q *Queries) GetWritingTestAttemptByRequest(ctx context.Context, arg GetWri
 }
 
 const getWritingTestByRequest = `-- name: GetWritingTestByRequest :one
-SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE user_id=? AND operation_key=?
+SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at, output FROM writing_tests WHERE user_id=? AND operation_key=?
 `
 
 type GetWritingTestByRequestParams struct {
@@ -210,6 +211,7 @@ func (q *Queries) GetWritingTestByRequest(ctx context.Context, arg GetWritingTes
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ContentExpiresAt,
+		&i.Output,
 	)
 	return i, err
 }
@@ -944,7 +946,7 @@ func (q *Queries) ListWritingTestPublications(ctx context.Context, arg ListWriti
 }
 
 const listWritingTests = `-- name: ListWritingTests :many
-SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE writing_tests.user_id=?1
+SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at, output FROM writing_tests WHERE writing_tests.user_id=?1
 AND (CAST(?2 AS TEXT)='' OR writing_tests.source_post_slug=?2)
 AND (CAST(?3 AS TEXT)=''
  OR json_extract(writing_tests.context,'$.Input.VoiceID')=?3
@@ -1007,6 +1009,7 @@ func (q *Queries) ListWritingTests(ctx context.Context, arg ListWritingTestsPara
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ContentExpiresAt,
+			&i.Output,
 		); err != nil {
 			return nil, err
 		}
@@ -1022,7 +1025,7 @@ func (q *Queries) ListWritingTests(ctx context.Context, arg ListWritingTestsPara
 }
 
 const listWritingTestsForPurge = `-- name: ListWritingTestsForPurge :many
-SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE purge_fence=0 AND content_expires_at IS NOT NULL AND content_expires_at<=? AND status IN ('completed','cancelled','failed','partial')
+SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at, output FROM writing_tests WHERE purge_fence=0 AND content_expires_at IS NOT NULL AND content_expires_at<=? AND status IN ('completed','cancelled','failed','partial')
 `
 
 func (q *Queries) ListWritingTestsForPurge(ctx context.Context, contentExpiresAt sql.NullString) ([]WritingTest, error) {
@@ -1059,6 +1062,7 @@ func (q *Queries) ListWritingTestsForPurge(ctx context.Context, contentExpiresAt
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ContentExpiresAt,
+			&i.Output,
 		); err != nil {
 			return nil, err
 		}
@@ -1074,7 +1078,7 @@ func (q *Queries) ListWritingTestsForPurge(ctx context.Context, contentExpiresAt
 }
 
 const listWritingTestsForSource = `-- name: ListWritingTestsForSource :many
-SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at FROM writing_tests WHERE user_id=? AND source_post_slug=?
+SELECT id, user_id, operation_key, fingerprint, kind, factor, model_stage, count, status, revision, source_post_slug, context, common_snapshot, common_hash, prompt_version, purge_fence, job_id, winner_candidate_id, confirmed_credits, reserved_credits, failure_reason, created_at, updated_at, content_expires_at, output FROM writing_tests WHERE user_id=? AND source_post_slug=?
 `
 
 type ListWritingTestsForSourceParams struct {
@@ -1116,6 +1120,7 @@ func (q *Queries) ListWritingTestsForSource(ctx context.Context, arg ListWriting
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.ContentExpiresAt,
+			&i.Output,
 		); err != nil {
 			return nil, err
 		}

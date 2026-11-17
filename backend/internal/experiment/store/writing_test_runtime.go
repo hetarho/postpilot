@@ -485,6 +485,10 @@ func purgeTest(ctx context.Context, q *sqlc.Queries, found experiment.WritingTes
 	if err := q.PurgeWritingTestCheckpoints(ctx, sqlc.PurgeWritingTestCheckpointsParams{UserID: found.UserID, TestID: found.ID}); err != nil {
 		return err
 	}
+	// The photo rows go with the payload; their objects are left to the stray sweep (T892).
+	if err := q.DeleteWritingTestPhotosForTest(ctx, sqlc.DeleteWritingTestPhotosForTestParams{UserID: found.UserID, TestID: nullString(found.ID)}); err != nil {
+		return err
+	}
 	if err := q.PurgeWritingTestQuoteForTest(ctx, sqlc.PurgeWritingTestQuoteForTestParams{UserID: found.UserID, TestID: nullString(found.ID), ConsumedTestID: found.ID}); err != nil {
 		return err
 	}

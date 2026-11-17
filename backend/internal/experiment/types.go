@@ -491,6 +491,39 @@ func (f TestFactor) Valid() bool {
 	return f == FactorModel || f == FactorVoice || f == FactorTemplate || f == FactorGuideline
 }
 
+// TestOutputKind is what each contestant of a test produces: a complete post, or only the
+// observation of the test's photos (MODEL-97). A stored test with no kind reads as a post.
+type TestOutputKind string
+
+const (
+	OutputPost        TestOutputKind = "post"
+	OutputObservation TestOutputKind = "observation"
+)
+
+func (o TestOutputKind) Valid() bool { return o == OutputPost || o == OutputObservation }
+
+// Photo statuses of a test-owned photo: pending until its object is confirmed.
+const (
+	TestPhotoPending = "pending"
+	TestPhotoReady   = "ready"
+)
+
+// TestPhoto is one photo its owner uploaded to a photo observation test. It is private test
+// input: unattached until the test is admitted, then frozen with that test and purged with
+// its payload (MODEL-42).
+type TestPhoto struct {
+	ID, UserID, TestID, Filename, Key, Status string
+	Bytes, Width, Height                      int64
+	ExpiresAt, CreatedAt                      time.Time
+}
+
+// A photo the caller may not use is unknown, someone else's, not yet confirmed or already
+// attached to a test, and every case answers alike so ownership never leaks (MODEL-41).
+var (
+	ErrTestPhotoNotFound    = errors.New("the test photo is not found")
+	ErrTestPhotoUnavailable = errors.New("a test photo is unknown, not ready or already attached")
+)
+
 type TestStatus string
 
 const (
@@ -568,6 +601,7 @@ type TestInput struct {
 	Material                             string
 	Fictional                            bool
 	AttachmentIDs                        []string
+	PhotoIDs                             []string `json:",omitempty"`
 	TemplateAnswers                      []TestAnswer
 	ObserveModel, WriteModel             ModelRef
 	VoiceID, TemplateID, GuidelineSlotID string
@@ -710,6 +744,7 @@ type TestPublication struct{ ID, UserID, TestID, WinnerID, Action, RequestKey, T
 type WritingTest struct {
 	ID, UserID, Kind, SourcePostSlug, JobID, CommonHash, PromptVersion, WinnerID string
 	Factor                                                                       TestFactor
+	Output                                                                       TestOutputKind
 	ModelStage                                                                   Stage
 	Count                                                                        int
 	Status                                                                       TestStatus
