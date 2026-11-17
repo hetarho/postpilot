@@ -175,6 +175,7 @@
 - 261117 decided MODEL-97 T890 T893 T894: how is the photo observation test built? → as an output kind (observation) of the existing writing-test engine, reusing its tournament, quote, checkpoint, retention and history paths, with test-owned photo rows under tests/ (alt: a separate observation-test engine and tables | revive the legacy ModelExperimentService observe experiment)
 - 261117 decided T891: T891 impl notes name the output kind experiment.TestOutput but that is already the output body struct (writing_test_output.go:15), so what is the kind type called? -> TestOutputKind with OutputPost/OutputObservation, and the T891/T893 notes now say so (alt: rename the existing struct, which T893/T894 extend | a plain string field).
 - 261117 suggest ARCH-24: move task check `/tmp/claude-1000/-home-hrlee-project--gusta-worktrees-postpilot-bffb2063-start-wtform-501eaa2b/1c09f0f1-f29d-40bd-ade3-6a325f428546/scratchpad/task-check.sh` to the final gate (ARCH batch): it averaged 158s over 2 runs
+- 261117 decided T897: the wtform loop cannot resume: its failed-stop report lacks ## next and the runner refuses any edit to it → close that report by hand and run T897 plus the batch gate under tag wtform2 in the same worktree (alt: implement T897 and run the gate by hand | leave the run stopped)
 
 ## unlanded
 | id | tag | branch | commit | at |
