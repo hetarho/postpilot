@@ -300,10 +300,11 @@
       "branch": "gusta-session-start-wtform-bf0871e5",
       "head": "bd5bc53f1e3f2e4d583f89de93254d77f42994e2",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-17T05:30:58.334Z",
+      "status": "withdrawn",
+      "at": "2026-11-17T06:25:50.158Z",
       "agentChecks": [],
-      "verificationCommands": []
+      "verificationCommands": [],
+      "reason": "session-closed"
     },
     "57003c600520721f5f5a87e1": {
       "id": "57003c600520721f5f5a87e1",
