@@ -331,10 +331,10 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-wtform2-c523edbc",
-      "head": "eb38251ba49fc0b3344761ecd17f88c76717d57b",
+      "head": "6c7dcaead6bc0323e40bc7e76a74a506e019a94a",
       "land": "main",
-      "status": "ready",
-      "at": "2026-11-17T07:45:03.460Z",
+      "status": "working",
+      "at": "2026-11-17T07:55:35.222Z",
       "agentChecks": [
         {
           "id": "T897-AC5",
