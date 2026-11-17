@@ -383,7 +383,35 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "c3d3f235-22e0-4c1d-9d35-9bafadfb0db1",
+    "owner": "obsfix",
+    "via": "merge",
+    "executor": {
+      "host": "DESKTOP-VKPLS8P",
+      "pid": 801278
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "5cf54cc4465ecb8e9a40bec86aa68405e0ebb599",
+    "cohort": [
+      {
+        "id": "851a118b0e28d990abee25ff",
+        "tag": "obsfix",
+        "branch": "gusta-session-start-obsfix-f75bb1c7",
+        "head": "29c29a3f0939c8ab7a2673a1caea433e142fcca0",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-17T09:23:09.667Z",
+    "deadline": "2026-11-17T10:23:08.038Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "06cc927e-ab2d-4b8f-970a-d3b72a5d526d",
