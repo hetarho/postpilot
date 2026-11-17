@@ -78,6 +78,7 @@ export function ChatComposer({
   attachment,
   feedback,
   actions,
+  placeholder,
 }: {
   value: string
   onChange: (value: string) => void
@@ -91,6 +92,8 @@ export function ChatComposer({
   attachment?: ReactNode
   feedback?: ReactNode
   actions?: ReactNode
+  /** An example of what to write, shown while the field is empty. */
+  placeholder?: string
 }) {
   return (
     <form
@@ -105,6 +108,7 @@ export function ChatComposer({
           onChange={(event) => onChange(event.target.value)}
           aria-label={label}
           aria-invalid={invalid || undefined}
+          placeholder={placeholder}
           disabled={pending}
           autoGrow
           rows={1}

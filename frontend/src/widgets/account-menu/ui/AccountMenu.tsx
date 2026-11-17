@@ -173,11 +173,9 @@ function AccountPanel({
       </nav>
 
       {/* Between where the session GOES and the one action that ends it: a preference is neither,
-          and putting it last would sit it under a destructive control.
-          `lg:hidden`, because the desk header has the room to keep both preferences as their own
-          controls and the owner wants them there (owner decision 2026-09-22); this panel is where
-          they go once that room is gone. */}
-      {preferences && <section className="py-3 lg:hidden">{preferences}</section>}
+          and putting it last would sit it under a destructive control. At every width: the
+          header holds the brand, the credits and this avatar, nothing else (owner 2026-11-17). */}
+      {preferences && <section className="py-3">{preferences}</section>}
 
       <div className="grid gap-2 pt-2">
         {/* The same row shape as the destinations above — widened into the padding, icon first —

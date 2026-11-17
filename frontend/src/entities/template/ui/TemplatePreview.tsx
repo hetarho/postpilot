@@ -26,6 +26,9 @@ interface TemplatePreviewProps {
   titleArea: string
   body: string
   className?: string
+  /** Leaves out the preview's own eyebrow and note, for a host that already names what it shows
+   *  (the template list's cards, where the template's name heads the preview). */
+  bare?: boolean
   lastValidTitleArea?: string
   lastValidBody?: string
 }
@@ -43,6 +46,7 @@ export function TemplatePreview({
   className,
   lastValidTitleArea,
   lastValidBody,
+  bare = false,
 }: TemplatePreviewProps) {
   const { t } = useTranslation('templates')
   const title = useLastParsed(titleArea, true, lastValidTitleArea)
@@ -53,19 +57,23 @@ export function TemplatePreview({
 
   return (
     <article aria-label={t('preview.heading')} className={twMerge('min-w-0', className)}>
-      <Typography variant="eyebrow" as="p">
-        {t('preview.heading')}
-      </Typography>
-      <Typography variant="meta" as="p" className="text-content-tertiary mt-1">
-        {t('preview.note')}
-      </Typography>
+      {!bare && (
+        <>
+          <Typography variant="eyebrow" as="p">
+            {t('preview.heading')}
+          </Typography>
+          <Typography variant="meta" as="p" className="text-content-tertiary mt-1">
+            {t('preview.note')}
+          </Typography>
+        </>
+      )}
       {failure && <ParseNotice failure={failure} />}
       {empty && !failure ? (
         <Typography variant="body" as="p" className="text-content-secondary mt-8">
           {t('preview.empty')}
         </Typography>
       ) : (
-        <PreviewPostCard className="mt-4">
+        <PreviewPostCard className={bare ? undefined : 'mt-4'}>
           {title && title.length > 0 && (
             <Typography variant="fieldTitle" as="h3" className="mb-5 break-words">
               <InlineNodes nodes={title} />

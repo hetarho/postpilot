@@ -1,47 +1,55 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { clsx } from 'clsx'
+import { Plus, Quote } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import {
   useVoices,
   useVoiceProfile,
   VoiceMaterialFreshness,
+  VoiceReadinessMeter,
   voiceAnalysisDate,
   type Voice,
 } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
-import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
-import { ChannelActions } from '@/widgets/channel-actions'
 import { RestoreVoiceButton } from '@/features/restore-voice'
-import { Quote } from 'lucide-react'
+import { SetDefaultVoiceButton } from '@/features/set-default-voice'
+import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
 import {
+  ActionBar,
+  ActionMenu,
   Badge,
   Button,
+  ChipToggle,
   Notice,
   LoadingState,
   LoadingStatus,
+  Skeleton,
   Typography,
-  cardStyles,
+  buttonStyles,
   typographyStyles,
   pageStyles,
 } from '@/shared/ui'
 
-/** The account's voices (VOICE-52): the 말투 section every channel shares, one list in 내 글's row
- *  shape and explicit creation paths. 새 말투 comes from the section's creation button (`?new=1`);
- *  the other creation paths sit above the list. Every lifecycle action lives on the voice's own
- *  title row, so a row here is nothing but a way into one voice. */
+/** Guide: 말투 — what a voice IS: how the owner's sentences sound. The screen holds one voice at a
+ *  time as a specimen — its own sentence in quotes, the impression it leaves, the phrases it keeps
+ *  coming back to — and the owner's other voices as a row of names to switch between. A voice
+ *  still being made shows how far its material has come instead, with the way to carry on. Making
+ *  a new voice is one button whose two ways (from the owner's own writing, or an AI suggestion)
+ *  open from it (VOICE-52). */
 export function VoicesPage() {
-  const { t } = useTranslation(['voices', 'common'])
+  const { t } = useTranslation(['voices', 'common', 'authoring', 'creation'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  const { active, deleted, isPending, isError, isFetching, refetch } = useVoices(ownerId)
+  const { active, deleted, defaultVoice, isPending, isError, isFetching, refetch } =
+    useVoices(ownerId)
   const [authoringOpen, setAuthoringOpen] = useState(false)
   const search = useSearch({ strict: false }) as { new?: unknown }
   const navigate = useNavigate()
-  // `?new=1` is the section's 새 말투 button (THEME-67): it opens the sheet and is dropped from the
-  // address at once, so closing the sheet, or the sheet's own move to the new voice, needs no
-  // second navigation back here.
+  // `?new=1` (홈's 다음 step, an old 새 말투 link) opens the sheet and is dropped from the address at
+  // once, so closing the sheet, or the sheet's own move to the new voice, needs no navigation back.
   const requested = search.new === 1 || search.new === '1'
   const [createOpen, setCreateOpen] = useState(requested)
   const [request, setRequest] = useState(requested)
@@ -52,51 +60,35 @@ export function VoicesPage() {
   useEffect(() => {
     if (requested) void navigate({ to: '/voices', search: {}, replace: true })
   }, [requested, navigate])
-  const { t: authoringText } = useTranslation('authoring')
+  const [chosenId, setChosenId] = useState<string>()
+  const shown =
+    active.find((voice) => voice.id === chosenId) ??
+    (defaultVoice && !defaultVoice.deleted ? defaultVoice : undefined) ??
+    active.find((voice) => voice.made) ??
+    active[0]
 
   return (
-    // The page gutter lives on each block rather than on `main`, so the rows run edge to edge
-    // the way 내 글's do (THEME-23).
     <main
       className={pageStyles({
         width: 'wide',
-        gutters: false,
-        className: 'flex flex-1 flex-col pt-4 sm:pt-6 lg:pt-8',
+        className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
-      <div className="px-4 sm:px-6 lg:px-8">
-        {/* Guide: the hub's title and the 말투 chip say where this is; the page leads with what a
-            voice does — and each card below shows how it sounds before anything about it. */}
-        <h1 className="sr-only">{t('title', { ns: 'voices' })}</h1>
-        <Typography variant="display" as="p" aria-hidden="true">
-          {t('page.lead', { ns: 'voices' })}
-        </Typography>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button variant="secondary" onClick={() => setAuthoringOpen(true)}>
-            {authoringText('host.createVoice')}
-          </Button>
-          <AIAuthoringSheet
-            open={authoringOpen}
-            onOpenChange={setAuthoringOpen}
-            ownerId={ownerId}
-            kind="writing-voice"
-            onSaved={() => {
-              refetch()
-              setAuthoringOpen(false)
-            }}
-          />
-          <details>
-            <summary className="text-content-secondary min-h-11 cursor-pointer py-3">
-              {authoringText('host.legacyVoice')}
-            </summary>
-            <GeneratedWritingVoicesSheet ownerId={ownerId} />
-          </details>
-        </div>
-        <CreateVoiceSheet ownerId={ownerId} open={createOpen} onOpenChange={setCreateOpen} />
-      </div>
+      <h1 className="sr-only">{t('title', { ns: 'voices' })}</h1>
+      <CreateVoiceSheet ownerId={ownerId} open={createOpen} onOpenChange={setCreateOpen} />
+      <AIAuthoringSheet
+        open={authoringOpen}
+        onOpenChange={setAuthoringOpen}
+        ownerId={ownerId}
+        kind="writing-voice"
+        onSaved={() => {
+          refetch()
+          setAuthoringOpen(false)
+        }}
+      />
 
       {isError && (
-        <Notice tone="danger" role="alert" className="mx-4 mt-8 sm:mx-6">
+        <Notice tone="danger" role="alert" className="mt-6">
           <span>{t('loadFailed', { ns: 'voices' })}</span>
           <Button
             variant="ghost"
@@ -108,154 +100,261 @@ export function VoicesPage() {
           </Button>
         </Notice>
       )}
-      <LoadingStatus
-        label={
-          isError
-            ? ''
-            : isPending
-              ? t('state.loading', { ns: 'common' })
-              : active.length === 0
-                ? t('page.empty', { ns: 'voices' })
-                : ''
-        }
-        className={
-          !isError && !isPending && active.length === 0
-            ? typographyStyles({
-                variant: 'body',
-                className: 'text-content-tertiary mt-8 block px-4 sm:px-6 lg:px-8',
-              })
-            : 'sr-only'
-        }
-      />
+      <LoadingStatus label={!isError && isPending ? t('state.loading', { ns: 'common' }) : ''} />
       {!isError && isPending && (
-        <div aria-hidden="true">
-          <LoadingState
-            variant="cards"
-            label={t('state.loading', { ns: 'common' })}
-            className="mt-6 px-4 sm:px-6 lg:px-8 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
-          />
-        </div>
+        <LoadingState
+          variant="detail"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-6"
+        />
       )}
 
-      {!isError && !isPending && (
-        <>
-          {active.length > 0 && (
-            <ul className="mt-6 grid shrink-0 gap-4 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-              {active.map((voice) => (
-                <li key={voice.id}>
-                  <Link
-                    to="/voices/$voiceId"
-                    params={{ voiceId: voice.id }}
-                    className={cardStyles({
-                      interactive: true,
-                      className: 'flex h-full flex-col gap-4',
-                    })}
-                  >
-                    <VoiceRowContent ownerId={ownerId} voice={voice} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+      {!isError && !isPending && active.length === 0 && (
+        <section aria-labelledby="voices-empty" className="mt-6 flex flex-col items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="bg-kit-voice/15 text-kit-voice flex size-16 items-center justify-center rounded-2xl"
+          >
+            <Quote className="size-8" />
+          </span>
+          <Typography variant="title" id="voices-empty">
+            {t('specimen.empty', { ns: 'voices' })}
+          </Typography>
+          <Typography variant="body" className="text-content-secondary max-w-measure">
+            {t('kit.does.voices', { ns: 'creation' })}
+          </Typography>
+        </section>
+      )}
 
-          {deleted.length > 0 && (
-            // Closed by default: a tombstone is history, and the list the user came for is the
-            // active one. It exists at all so a restore stays reachable.
-            <details className="mt-10">
-              <summary
-                className={typographyStyles({
-                  variant: 'label',
-                  className:
-                    'active:bg-row-bg-active text-content-secondary mx-4 min-h-11 cursor-pointer rounded-md px-4 py-3 select-none sm:mx-6 lg:mx-8',
-                })}
-              >
-                {t('page.deleted', { ns: 'voices', count: deleted.length })}
-              </summary>
-              <ul className="divide-divider mt-3 divide-y">
-                {deleted.map((voice) => (
-                  <DeletedVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
-                ))}
-              </ul>
-            </details>
+      {!isError && !isPending && shown && (
+        <>
+          {active.length > 1 && (
+            // Finding a voice: every one of the owner's voices by name, the one shown marked.
+            <nav
+              aria-label={t('specimen.pick', { ns: 'voices' })}
+              className="-mx-4 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0"
+            >
+              {active.map((voice) => (
+                <ChipToggle
+                  key={voice.id}
+                  pressed={voice.id === shown.id}
+                  onClick={() => setChosenId(voice.id)}
+                  className="min-h-10 gap-2 rounded-full px-4"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={clsx(
+                      'size-2 rounded-full',
+                      voice.made ? 'bg-kit-voice' : 'border-content-tertiary border',
+                    )}
+                  />
+                  {voice.name}
+                  {voice.isDefault && (
+                    <span className="sr-only">{t('state.default', { ns: 'common' })}</span>
+                  )}
+                </ChipToggle>
+              ))}
+            </nav>
           )}
+          <VoiceSpecimen key={shown.id} ownerId={ownerId} voice={shown} />
         </>
       )}
-      {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions section="voices" className="action-list-inset mt-auto" />
+
+      {!isError && !isPending && deleted.length > 0 && (
+        // Closed by default: a tombstone is history. It exists at all so a restore stays reachable.
+        <details className="mt-8">
+          <summary
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'active:bg-row-bg-active text-content-secondary -mx-4 min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
+            })}
+          >
+            {t('page.deleted', { ns: 'voices', count: deleted.length })}
+          </summary>
+          <ul className="divide-divider mt-3 divide-y">
+            {deleted.map((voice) => (
+              <DeletedVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
+            ))}
+          </ul>
+        </details>
+      )}
+      {!isError && !isPending && (
+        <details className="mt-2">
+          <summary
+            className={typographyStyles({
+              variant: 'label',
+              className:
+                'active:bg-row-bg-active text-content-secondary -mx-4 min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
+            })}
+          >
+            {t('host.legacyVoice', { ns: 'authoring' })}
+          </summary>
+          <div className="mt-3">
+            <GeneratedWritingVoicesSheet ownerId={ownerId} />
+          </div>
+        </details>
+      )}
+
+      {/* The section's one creation, its two ways opening from it (THEME-67). */}
+      <ActionBar
+        dock="list"
+        ariaLabel={t('create.dockAria', { ns: 'voices' })}
+        className="mt-auto w-full sm:w-fit"
+      >
+        <ActionMenu
+          label={t('create.open', { ns: 'voices' })}
+          triggerVariant="cta"
+          triggerLabel={
+            <span className="inline-flex items-center gap-2">
+              <Plus aria-hidden="true" className="size-6 shrink-0" />
+              {t('create.open', { ns: 'voices' })}
+            </span>
+          }
+          className="w-full sm:w-auto [&>button]:min-h-14 [&>button]:w-full [&>button]:px-7"
+          items={[
+            {
+              id: 'own',
+              label: t('specimen.createOwn', { ns: 'voices' }),
+              description: t('specimen.createOwnHelp', { ns: 'voices' }),
+              onSelect: () => setCreateOpen(true),
+            },
+            {
+              id: 'ai',
+              label: t('host.createVoice', { ns: 'authoring' }),
+              description: t('specimen.createAIHelp', { ns: 'voices' }),
+              onSelect: () => setAuthoringOpen(true),
+            },
+          ]}
+        />
+      </ActionBar>
     </main>
   )
 }
 
-/** Guide: a voice card leads with how the voice SOUNDS — the analysis's one-line impression and
- *  one of its own example sentences in quotes, then its signature phrases — and only then its
- *  name, the 기본 badge and the meta line (`만드는 중` until it is made, then how many 학습 글 it
- *  holds and the day its analysis was published). A sentence an AI-made style was read from is a
- *  fictional sample, and the card says so over it (VOICE-69). */
-function VoiceRowContent({ voice, ownerId }: { voice: Voice; ownerId: string }) {
+/** One voice, held up to be read: what it sounds like before anything about it. A voice made from
+ *  an AI suggestion is read from a fictional sample, and the specimen says so over it (VOICE-69). */
+function VoiceSpecimen({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   const { t } = useTranslation(['voices', 'common', 'authoring'])
-  const { profile } = useVoiceProfile(ownerId, voice.made ? voice.id : '')
+  const { profile, isPending } = useVoiceProfile(ownerId, voice.id)
   const analysis = profile?.analysis
   const ai = analysis?.ai
   const sample = analysis?.syntheticSample || ai?.examples[0]?.sentence
   const fictional = Boolean(analysis?.syntheticSample) || analysis?.origin === 'synthetic'
   return (
-    <>
-      <span className="flex min-w-0 items-start gap-3">
-        <span
-          aria-hidden="true"
-          className="bg-badge-accent-bg text-badge-accent-fg flex size-11 shrink-0 items-center justify-center rounded-lg"
-        >
-          <Quote className="size-5" />
+    <section
+      aria-labelledby="voice-specimen-name"
+      className="bg-card-bg animate-step-in relative mt-4 overflow-hidden rounded-3xl p-6 shadow-md sm:p-10"
+    >
+      {/* The voice's hue, as a soft wash behind the quote. */}
+      <div
+        aria-hidden="true"
+        className="bg-kit-voice/20 pointer-events-none absolute -top-24 -right-16 size-72 rounded-full blur-3xl"
+      />
+      <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
+        <Typography variant="eyebrow" as="p" className="text-kit-voice">
+          {t('specimen.eyebrow', { ns: 'voices' })}
+        </Typography>
+        <span className="flex flex-wrap items-center gap-2">
+          {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
+          {voice.origin === 'synthetic' && <Badge tone="neutral">{t('origin.synthetic')}</Badge>}
+          {voice.made && <VoiceMaterialFreshnessFor ownerId={ownerId} voiceId={voice.id} />}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <Typography variant="fieldTitle" as="span" className="text-content-primary truncate">
-            {voice.name}
-          </Typography>
-          <span className="flex min-w-0 flex-wrap items-center gap-2">
-            {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
-            {voice.origin === 'synthetic' && <Badge tone="neutral">{t('origin.synthetic')}</Badge>}
-            {voice.made && <DirectoryFreshness ownerId={ownerId} voiceId={voice.id} />}
-          </span>
-        </span>
-      </span>
-      {sample && (
-        <span className="bg-card-well flex flex-col gap-1 rounded-lg px-4 py-3">
-          {fictional && (
-            <span className={typographyStyles({ variant: 'label' })}>
-              {t('fictional', { ns: 'authoring' })}
+      </div>
+      <Typography
+        variant="title"
+        as="h2"
+        id="voice-specimen-name"
+        className="relative mt-1 break-words"
+      >
+        {voice.name}
+      </Typography>
+
+      {voice.made ? (
+        <div className="relative mt-6 space-y-5">
+          {isPending ? (
+            <span aria-busy="true" className="loading-reveal block space-y-2">
+              <Skeleton className="h-7 w-full" />
+              <Skeleton className="h-7 w-2/3" />
             </span>
+          ) : (
+            sample && (
+              <figure>
+                {fictional && (
+                  <figcaption className={typographyStyles({ variant: 'label' })}>
+                    {t('fictional', { ns: 'authoring' })}
+                  </figcaption>
+                )}
+                <blockquote
+                  className={typographyStyles({
+                    variant: 'display',
+                    className: 'text-content-primary mt-1 text-pretty',
+                  })}
+                >
+                  “{sample}”
+                </blockquote>
+              </figure>
+            )
           )}
-          <span
-            className={typographyStyles({ variant: 'body', className: 'text-content-primary' })}
-          >
-            “{sample}”
-          </span>
-        </span>
-      )}
-      {ai?.impression && (
-        <span
-          className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}
-        >
-          {ai.impression}
-        </span>
-      )}
-      {ai && ai.signaturePhrases.length > 0 && (
-        <span className="flex flex-wrap gap-1.5">
-          {ai.signaturePhrases.slice(0, 3).map((phrase) => (
-            <Badge key={phrase}>{phrase}</Badge>
-          ))}
-        </span>
-      )}
-      <span className={typographyStyles({ variant: 'meta', className: 'mt-auto truncate' })}>
-        {voice.made
-          ? t('page.meta', {
+          {ai?.impression && (
+            <Typography variant="body" className="text-content-secondary max-w-measure">
+              {ai.impression}
+            </Typography>
+          )}
+          {ai && ai.signaturePhrases.length > 0 && (
+            <div>
+              <Typography variant="label" as="p" className="text-content-secondary">
+                {t('specimen.phrases', { ns: 'voices' })}
+              </Typography>
+              <ul className="mt-2 flex flex-wrap gap-2">
+                {ai.signaturePhrases.slice(0, 6).map((phrase) => (
+                  <li
+                    key={phrase}
+                    className={typographyStyles({
+                      variant: 'label',
+                      className: 'bg-kit-voice/15 text-content-primary rounded-full px-3 py-1',
+                    })}
+                  >
+                    {phrase}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <Typography variant="meta" as="p">
+            {t('page.meta', {
               ns: 'voices',
               count: voice.materialCount,
               date: voiceAnalysisDate(voice.analyzedAt),
-            })
-          : t('page.making', { ns: 'voices', percent: voice.readinessPercent })}
-      </span>
-    </>
+            })}
+          </Typography>
+        </div>
+      ) : (
+        <div className="relative mt-6 space-y-4">
+          <Typography variant="body" className="text-content-secondary max-w-measure">
+            {t('specimen.unmade', { ns: 'voices' })}
+          </Typography>
+          {profile ? (
+            <VoiceReadinessMeter readiness={profile.readiness} className="max-w-measure" />
+          ) : (
+            <span aria-busy="true" className="loading-reveal block">
+              <Skeleton className="h-10 w-full max-w-md" />
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="relative mt-8 flex flex-wrap items-center gap-3">
+        <Link
+          to="/voices/$voiceId"
+          params={{ voiceId: voice.id }}
+          className={buttonStyles({ variant: voice.made ? 'secondary' : 'cta' })}
+        >
+          {t(voice.made ? 'specimen.open' : 'specimen.continue', { ns: 'voices' })}
+        </Link>
+        <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
+      </div>
+    </section>
   )
 }
 
@@ -264,7 +363,7 @@ function VoiceRowContent({ voice, ownerId }: { voice: Voice; ownerId: string }) 
  *  anchor. */
 function DeletedVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   return (
-    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2 sm:px-6 lg:px-8">
+    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative -mx-4 flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2">
       <Link
         to="/voices/$voiceId"
         params={{ voiceId: voice.id }}
@@ -282,7 +381,7 @@ function DeletedVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) 
   )
 }
 
-function DirectoryFreshness({ ownerId, voiceId }: { ownerId: string; voiceId: string }) {
+function VoiceMaterialFreshnessFor({ ownerId, voiceId }: { ownerId: string; voiceId: string }) {
   const { profile } = useVoiceProfile(ownerId, voiceId)
   return profile ? <VoiceMaterialFreshness profile={profile} compact /> : null
 }

@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { Stage } from '@/shared/api'
+import { writeSetupProgress, emptySetupProgress } from '@/features/complete-setup'
 import { renderAppAt } from '@/test/app'
 import type { FakeTemplatesOptions } from '@/test/templates'
 
@@ -13,8 +14,13 @@ async function headings(options: FakeTemplatesOptions = {}, withModel = true) {
   const user = userEvent.setup()
   const calls: string[] = []
   const starts: NonNullable<FakeTemplatesOptions['headingStarts']> = []
-  const view = renderAppAt('/templates/new', {
+  // The guided wizard is first-use setup's template step: a new template elsewhere is made by
+  // talking to the AI (owner 2026-11-17).
+  writeSetupProgress('alice', { ...emptySetupProgress(), skipped: [], resume: 'post-template' })
+  const view = renderAppAt('/setup', {
     user: { id: 'alice' },
+    firstUseSetup: true,
+    voice: { voices: [{ id: 'voice-default', name: '내 말투', made: true }] },
     calls,
     providers: withModel ? providers : {},
     templates: { headingStarts: starts, headingEstimate: { credits: 2 }, ...options },
@@ -174,63 +180,9 @@ describe('explicit heading suggestions', () => {
     expect(starts[0]!.styleRequest ?? '').toBe('')
   })
 
-  it('offers 내 템플릿 소제목 참고해서 제안 받기 with saved headings and sends them with the request', async () => {
-    const { user, starts } = await headings({
-      templates: [
-        {
-          id: 't1',
-          name: '맛집 기록',
-          body: '📝 어쩌다 가게 됐냐면요...\n<write>방문 계기</write>\n🍽️ 이건 꼭 드세요\n<write>메뉴</write>',
-        },
-      ],
-    })
-    await user.click(screen.getByRole('button', { name: '제목 제안 받기' }))
-    const sheet = await screen.findByRole('dialog', { name: '제목 제안 받기' })
-    await user.type(within(sheet).getByLabelText('원하는 스타일을 말씀해주세요'), '짧게')
-    await user.click(
-      await within(sheet).findByRole('button', { name: '내 템플릿 소제목 참고해서 제안 받기' }),
-    )
-    await waitFor(() => expect(starts).toHaveLength(1))
-    expect(starts[0]).toMatchObject({
-      styleRequest: '짧게',
-      referenceHeadings: ['📝 어쩌다 가게 됐냐면요...', '🍽️ 이건 꼭 드세요'],
-    })
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    await screen.findByRole('button', { name: '방문 계기 후보 하나' })
-  })
-
-  it('sends no references from the ordinary 제안 받기', async () => {
-    const { user, starts } = await headings({
-      templates: [
-        {
-          id: 't1',
-          name: '맛집 기록',
-          body: '📝 어쩌다 가게 됐냐면요...\n<write>방문 계기</write>',
-        },
-      ],
-    })
-    await user.click(screen.getByRole('button', { name: '제목 제안 받기' }))
-    const sheet = await screen.findByRole('dialog', { name: '제목 제안 받기' })
-    await within(sheet).findByRole('button', { name: '내 템플릿 소제목 참고해서 제안 받기' })
-    await user.click(within(sheet).getByRole('button', { name: '제안 받기' }))
-    await waitFor(() => expect(starts).toHaveLength(1))
-    expect(starts[0]!.referenceHeadings).toBeUndefined()
-  })
-
-  it('has no reference action without a saved heading line', async () => {
-    const { user, calls } = await headings({
-      templates: [{ id: 't1', name: '쓰기만', body: '<write>방문 계기</write>' }],
-    })
-    // The directory has been read, so the absence is not a load still on its way.
-    await waitFor(() => expect(calls).toContain('ListTemplates'))
-    await user.click(screen.getByRole('button', { name: '제목 제안 받기' }))
-    const sheet = await screen.findByRole('dialog', { name: '제목 제안 받기' })
-    expect(within(sheet).getByRole('button', { name: '제안 받기' })).toBeInTheDocument()
-    expect(
-      within(sheet).queryByRole('button', { name: '내 템플릿 소제목 참고해서 제안 받기' }),
-    ).not.toBeInTheDocument()
-  })
-
+  // The reference to saved templates' headings (TMPL-76) is not reachable here: the wizard runs only
+  // as first-use setup's template step, which an account with a saved template never reaches —
+  // a new template otherwise is made by talking to the AI.
   it('requires an explicit eligible writer while own words remain available', async () => {
     const { user, starts } = await headings({}, false)
     expect(screen.getByRole('button', { name: '제목 제안 받기' })).toBeDisabled()

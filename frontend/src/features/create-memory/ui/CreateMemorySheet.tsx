@@ -27,9 +27,18 @@ import {
  *
  *  A fact the author knows on day one should not require generating a post first (MEM-25), which
  *  is what this is for: the same field rules as an approval, with no post behind it. */
-export function CreateMemorySheet({ ownerId, className }: { ownerId: string; className?: string }) {
+export function CreateMemorySheet({
+  ownerId,
+  className,
+  defaultOpen = false,
+}: {
+  ownerId: string
+  className?: string
+  /** Opens the sheet as it mounts — a host reached through its 기억 더하기 link (홈). */
+  defaultOpen?: boolean
+}) {
   const { t } = useTranslation('memories')
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(defaultOpen)
   return (
     <>
       <Button variant="cta" size="hero" className={className} onClick={() => setOpen(true)}>

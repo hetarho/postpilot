@@ -29,7 +29,7 @@ describe('batched named template states', () => {
       authoring: { summaries: [summary] },
     })
     const directory = within(await screen.findByRole('region', { name: '저장된 템플릿' }))
-    expect(directory.getByText('글에 사용할 수 있어요')).toBeInTheDocument()
+    expect(directory.getByRole('link', { name: '저장된 구성' })).toBeInTheDocument()
     expect(
       await directory.findByText('“저장된 구성”의 편집 내용은 아직 저장하지 않았어요.'),
     ).toBeInTheDocument()
@@ -85,7 +85,7 @@ describe('batched named template states', () => {
       await screen.findByRole('region', { name: '아직 저장하지 않은 새 템플릿' }),
     )
     await user.click(unsaved.getByRole('link', { name: '템플릿 “아직 만드는 구성” 이어서 만들기' }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    await screen.findByRole('log', { name: '템플릿 대화' })
     expect(router.state.location.search).toMatchObject({ session: 'new-work' })
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')

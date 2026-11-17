@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Pencil } from 'lucide-react'
-import { useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
+import { MEMORY_KINDS, useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
+import { memoriesIllustration } from '@/shared/assets'
 import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
@@ -10,6 +12,7 @@ import {
   ActionBar,
   Badge,
   Button,
+  ChipToggle,
   Notice,
   LoadingState,
   Typography,
@@ -18,7 +21,10 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 
-/** The account's 기억 (MEM-24). Composition only — every action is its own feature.
+/** Guide: 기억 — what the AI knows about the owner, kept like a notebook: the facts grouped by what
+ *  they are about (취향, 설정, 장소, 인물, 이력), each a plain line with its tags and the posts it was
+ *  learned from, and the tags as a row that narrows the notebook to one subject. The account's 기억
+ *  (MEM-24). Composition only — every action is its own feature.
  *
  *  Nothing on this screen calls a model or enqueues a job: a memory is an authored fact, and
  *  reading, editing or deleting one is a plain CRUD round trip ([I5], MEM-23). The list is
@@ -29,6 +35,16 @@ export function MemoriesPage() {
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { memories, isPending, isError, isFetching, refetch } = useMemories(ownerId)
+  const search = useSearch({ strict: false }) as { new?: unknown }
+  const navigate = useNavigate()
+  // `?new=1` is 홈's 기억 더하기: the sheet opens as the page mounts and the address drops it.
+  const [requested] = useState(search.new === 1 || search.new === '1')
+  useEffect(() => {
+    if (requested) void navigate({ to: '/memories', search: {}, replace: true })
+  }, [requested, navigate])
+  const [tag, setTag] = useState<string>()
+  const tags = Array.from(new Set(memories.flatMap((memory) => memory.tags)))
+  const shown = tag ? memories.filter((memory) => memory.tags.includes(tag)) : memories
   const page = useRef<HTMLElement>(null)
   const list = useRef<HTMLUListElement>(null)
   // A confirmed delete hands focus back to the trash button, then the re-read list removes the row
@@ -93,26 +109,69 @@ export function MemoriesPage() {
           {memories.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-6">
-              <h2 className="flex items-baseline gap-2">
-                <span className={typographyStyles({ variant: 'title' })}>
-                  {t('page.saved', { ns: 'memories' })}
-                </span>
-                <span className={typographyStyles({ variant: 'label' })}>{memories.length}</span>
-              </h2>
-              <Typography variant="meta" as="p" className="mt-1">
+            <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-4">
+              <Typography variant="meta" as="p">
+                {t('page.count', { ns: 'memories', count: memories.length })}
+                {' · '}
                 {t('page.order', { ns: 'memories' })}
               </Typography>
-              {/* Guide: each fact on its own card, its kind and tags under it. */}
-              <ul ref={list} className="mt-3 grid gap-3 lg:grid-cols-2">
-                {memories.map((memory, index) => (
-                  <MemoryRow
-                    key={memory.id}
-                    ownerId={ownerId}
-                    memory={memory}
-                    onDeleted={() => setRemoved({ id: memory.id, index })}
-                  />
-                ))}
+              {tags.length > 0 && (
+                // Finding a fact: the owner's own tags narrow the notebook to one subject.
+                <nav
+                  aria-label={t('page.tags', { ns: 'memories' })}
+                  className="-mx-4 mt-3 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0"
+                >
+                  {[undefined, ...tags].map((value) => (
+                    <ChipToggle
+                      key={value ?? ''}
+                      pressed={tag === value}
+                      onClick={() => setTag(value)}
+                      className="min-h-10 rounded-full px-4"
+                    >
+                      {value === undefined ? t('page.allTags', { ns: 'memories' }) : `#${value}`}
+                    </ChipToggle>
+                  ))}
+                </nav>
+              )}
+              <ul ref={list} className="mt-4 gap-4 sm:columns-2 lg:columns-2">
+                {MEMORY_KINDS.map((kind) => {
+                  const members = shown.filter((memory) => memory.kind === kind)
+                  if (members.length === 0) return null
+                  return (
+                    <li
+                      key={kind}
+                      className={cardStyles({
+                        padding: 'none',
+                        className: 'mb-4 break-inside-avoid overflow-hidden',
+                      })}
+                    >
+                      <h2 className="border-divider flex items-center gap-2 border-b px-5 py-3">
+                        <span
+                          aria-hidden="true"
+                          className="bg-kit-memory size-2.5 shrink-0 rounded-full"
+                        />
+                        <span className={typographyStyles({ variant: 'fieldTitle' })}>
+                          {t(`kind.${kind}`, { ns: 'memories' })}
+                        </span>
+                        <span className={typographyStyles({ variant: 'label' })}>
+                          {members.length}
+                        </span>
+                      </h2>
+                      <ul className="divide-divider divide-y">
+                        {members.map((memory) => (
+                          <MemoryRow
+                            key={memory.id}
+                            ownerId={ownerId}
+                            memory={memory}
+                            onDeleted={() =>
+                              setRemoved({ id: memory.id, index: memories.indexOf(memory) })
+                            }
+                          />
+                        ))}
+                      </ul>
+                    </li>
+                  )
+                })}
               </ul>
             </section>
           )}
@@ -127,7 +186,7 @@ export function MemoriesPage() {
         ariaLabel={t('create.dockAria', { ns: 'memories' })}
         className="mt-auto w-full sm:w-fit"
       >
-        <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
+        <CreateMemorySheet ownerId={ownerId} defaultOpen={requested} className="w-full sm:w-auto" />
       </ActionBar>
     </main>
   )
@@ -149,16 +208,29 @@ function buttonNamed(root: Element | null | undefined, name: string) {
 function EmptyState() {
   const { t } = useTranslation('memories')
   return (
-    <section aria-labelledby="memories-empty-heading" className="mt-8">
-      <Typography variant="title" id="memories-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.emptyHelp')}
-      </Typography>
-      <Typography variant="body" className="text-content-primary mt-3">
-        {t('page.example')}
-      </Typography>
+    <section
+      aria-labelledby="memories-empty-heading"
+      className="mt-6 flex flex-col items-center gap-2 text-center sm:flex-row sm:text-left"
+    >
+      <img
+        src={memoriesIllustration}
+        alt=""
+        width={440}
+        height={440}
+        className="size-44 shrink-0 object-contain"
+        draggable={false}
+      />
+      <div>
+        <Typography variant="title" id="memories-empty-heading">
+          {t('page.empty')}
+        </Typography>
+        <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+          {t('page.emptyHelp')}
+        </Typography>
+        <Typography variant="body" className="text-content-primary mt-3">
+          {t('page.example')}
+        </Typography>
+      </div>
     </section>
   )
 }
@@ -193,7 +265,7 @@ function MemoryRow({
 
   if (form.editing)
     return (
-      <li className={cardStyles({ padding: 'sm' })}>
+      <li className="p-4">
         <MemoryEditForm
           memory={memory}
           save={update.save}
@@ -208,10 +280,10 @@ function MemoryRow({
     )
 
   return (
-    <li className={cardStyles({ padding: 'sm' })}>
-      <div className="flex flex-wrap items-start gap-1">
+    <li className="px-5 py-3">
+      <div className="flex items-start gap-1">
         <Typography
-          variant="fieldTitle"
+          variant="body"
           as="p"
           className="text-content-primary min-w-0 flex-1 pt-2 whitespace-pre-wrap"
         >
@@ -232,14 +304,13 @@ function MemoryRow({
         </Button>
         <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} onDeleted={onDeleted} />
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <Badge tone="accent">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
+      <div className="flex flex-wrap items-center gap-2">
         {memory.tags.map((tag) => (
-          <Badge key={tag}>{tag}</Badge>
+          <Badge key={tag}>#{tag}</Badge>
         ))}
-        {memory.tags.length === 0 && (
+        {memory.sourcePostSlugs.length > 0 && (
           <Typography variant="meta" as="span">
-            {t('page.noTags', { ns: 'memories' })}
+            {t('page.learnedFrom', { ns: 'memories', count: memory.sourcePostSlugs.length })}
           </Typography>
         )}
       </div>

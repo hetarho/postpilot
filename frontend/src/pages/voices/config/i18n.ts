@@ -16,6 +16,18 @@ export const i18n = {
       deleted_other: '삭제된 말투 {{count}}개',
     },
     loadFailed: '말투 목록을 불러오지 못했어요.',
+    specimen: {
+      eyebrow: '이 말투로 쓰면',
+      empty: '아직 말투가 없어요',
+      unmade: '분석하면 이 말투로 쓴 문장이 여기에 보여요.',
+      phrases: '자주 쓰는 말',
+      open: '자세히 보기',
+      continue: '이어서 만들기',
+      pick: '말투 고르기',
+      createOwn: '내가 쓴 글로 만들기',
+      createOwnHelp: '직접 쓴 글과 문항 답에서 배워요',
+      createAIHelp: '원하는 느낌을 말하면 AI가 말투를 제안해요',
+    },
   },
   en: {
     page: {
@@ -31,5 +43,17 @@ export const i18n = {
       deleted_other: '{{count}} deleted voices',
     },
     loadFailed: 'Could not load the voice list.',
+    specimen: {
+      eyebrow: 'Written in this style',
+      empty: 'No styles yet',
+      unmade: 'Once analyzed, sentences in this style show here.',
+      phrases: 'Phrases it keeps using',
+      open: 'Open',
+      continue: 'Keep making it',
+      pick: 'Choose a style',
+      createOwn: 'From my own writing',
+      createOwnHelp: 'Learns from posts you wrote and your answers',
+      createAIHelp: 'Describe a feel and the AI suggests styles',
+    },
   },
 } as const satisfies I18nFragment

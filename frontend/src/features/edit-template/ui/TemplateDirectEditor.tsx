@@ -1,16 +1,12 @@
-import { useId, useState } from 'react'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthoringArtifact } from '@/entities/ai-authoring'
 import {
   TEMPLATE_LIMITS,
   TEMPLATE_PARSE_OPTIONS,
-  TemplateComposition,
   TemplateSource,
   parseTemplate,
-  askFields,
   remainingChars,
-  readCompositionWorkingState,
-  type CompositionWorkingState,
   type TemplateArea,
 } from '@/entities/template'
 import {
@@ -23,11 +19,9 @@ import {
 } from '@/entities/post'
 import {
   Checkbox,
-  Disclosure,
   FieldCount,
   FieldLabel,
   FieldMessage,
-  SegmentedControl,
   TextField,
   Textarea,
   Typography,
@@ -45,15 +39,7 @@ export function TemplateDirectEditor({
 }) {
   const { t } = useTranslation(['templates', 'common'])
   const id = useId()
-  const [mode, setMode] = useState<'builder' | 'source'>('builder')
-  const [advanced, setAdvanced] = useState(false)
-  const [focusSource, setFocusSource] = useState<TemplateArea | null>(null)
   const parsed = parseTemplate(source.titleArea, source.body, TEMPLATE_PARSE_OPTIONS)
-  const titleAskLabels = new Set(
-    askFields(source.titleArea, { ...TEMPLATE_PARSE_OPTIONS, titleArea: true }).map(
-      (field) => field.label,
-    ),
-  )
   const failureIn = (area: TemplateArea) =>
     !parsed.ok && parsed.failure.area === area ? parsed.failure : null
   const working = readBuilderMetadata(source.builderState)
@@ -72,18 +58,6 @@ export function TemplateDirectEditor({
         numberMemory: { ...numberMemory, [field]: last },
       }),
     })
-  const composition = (area: TemplateArea, state: CompositionWorkingState) => {
-    onChange({
-      ...source,
-      [area === 'body' ? 'body' : 'titleArea']: state.source,
-      builderState: JSON.stringify({ ...working, [area]: state }),
-    })
-  }
-  const fix = (area: TemplateArea) => {
-    setAdvanced(true)
-    setFocusSource(area)
-    setMode('source')
-  }
   return (
     <div className="min-w-0 space-y-6">
       <div>
@@ -141,33 +115,6 @@ export function TemplateDirectEditor({
         fallback={POST_TAG_COUNT_DEFAULT}
         onChange={(value, last) => numberChange('tagCount', value, last)}
       />
-      <Disclosure
-        title={t('screen.advanced', { ns: 'templates' })}
-        size="row"
-        headingLevel={3}
-        open={advanced}
-        onOpenChange={(open) => {
-          setAdvanced(open)
-          if (!open) {
-            setMode('builder')
-            setFocusSource(null)
-          }
-        }}
-      >
-        <SegmentedControl
-          value={mode}
-          options={[
-            { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
-            { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
-          ]}
-          onChange={(next) => {
-            setMode(next)
-            setFocusSource(null)
-          }}
-          disabled={disabled}
-          ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
-        />
-      </Disclosure>
       <section aria-labelledby={id + '-title-area'}>
         <Typography variant="fieldTitle" as="h3" id={id + '-title-area'}>
           {t('screen.titleArea.heading', { ns: 'templates' })}{' '}
@@ -176,61 +123,26 @@ export function TemplateDirectEditor({
         <Typography variant="body" as="p" className="text-content-secondary mt-2">
           {t('screen.titleArea.help', { ns: 'templates' })}
         </Typography>
-        {mode === 'source' ? (
-          <TemplateSource
-            area="title_area"
-            value={source.titleArea}
-            disabled={disabled}
-            failure={failureIn('title_area')}
-            autoFocus={focusSource === 'title_area'}
-            onChange={(value) => change('titleArea', value)}
-            className="mt-3"
-          />
-        ) : (
-          <TemplateComposition
-            area="title_area"
-            value={source.titleArea}
-            disabled={disabled}
-            failure={failureIn('title_area')}
-            workingState={readCompositionWorkingState(working.title_area, source.titleArea)}
-            onWorkingChange={(state) => composition('title_area', state)}
-            onChange={(value) => change('titleArea', value)}
-            onFixInSource={() => fix('title_area')}
-            className="mt-3"
-          />
-        )}
+        <TemplateSource
+          area="title_area"
+          value={source.titleArea}
+          disabled={disabled}
+          failure={failureIn('title_area')}
+          onChange={(value) => change('titleArea', value)}
+          className="mt-3"
+        />
       </section>
       <section aria-labelledby={id + '-body'}>
         <Typography variant="fieldTitle" as="h3" id={id + '-body'}>
           {t('create.body', { ns: 'templates' })}
         </Typography>
-        <Typography variant="body" as="p" className="text-content-secondary mt-2">
-          {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
-            ns: 'templates',
-          })}
-        </Typography>
-        {mode === 'source' ? (
-          <TemplateSource
-            value={source.body}
-            disabled={disabled}
-            failure={failureIn('body')}
-            autoFocus={focusSource === 'body'}
-            onChange={(value) => change('body', value)}
-            className="mt-3"
-          />
-        ) : (
-          <TemplateComposition
-            value={source.body}
-            takenAskTitles={titleAskLabels}
-            disabled={disabled}
-            failure={failureIn('body')}
-            workingState={readCompositionWorkingState(working.body, source.body)}
-            onWorkingChange={(state) => composition('body', state)}
-            onChange={(value) => change('body', value)}
-            onFixInSource={() => fix('body')}
-            className="mt-3"
-          />
-        )}
+        <TemplateSource
+          value={source.body}
+          disabled={disabled}
+          failure={failureIn('body')}
+          onChange={(value) => change('body', value)}
+          className="mt-3"
+        />
       </section>
     </div>
   )

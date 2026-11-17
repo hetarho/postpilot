@@ -1,6 +1,7 @@
 export const manageSpokenVoiceResources = {
   ko: {
     rename: '이름 바꾸기',
+    menu: '{{name}} 관리',
     name: '목소리 이름',
     save: '이름 저장',
     changeSound: '새 목소리로 만들기',
@@ -14,6 +15,7 @@ export const manageSpokenVoiceResources = {
   },
   en: {
     rename: 'Rename',
+    menu: 'Manage {{name}}',
     name: 'Voice name',
     save: 'Save name',
     changeSound: 'Create a new sound',

@@ -7,6 +7,7 @@ export const i18n = {
     new: '새 글',
     list: {
       mine: '네이버 블로그',
+      title: '내 글',
       loadFailed: '목록을 불러오지 못했어요.',
       empty: '아직 글이 없어요. 아래 + 새 글에서 시작할 수 있어요.',
       writingAria: '글 작성',
@@ -42,6 +43,7 @@ export const i18n = {
     new: 'New post',
     list: {
       mine: 'Naver Blog',
+      title: 'My posts',
       loadFailed: 'Could not load the post list.',
       empty: 'There are no posts yet. Start one from + New post below.',
       writingAria: 'Write a post',

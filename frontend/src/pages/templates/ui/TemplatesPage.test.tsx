@@ -56,19 +56,23 @@ describe('the template directory', () => {
     expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
-    // The add action is the section's one creation button, straight to the wizard (THEME-67).
+    // The add action is the section's one creation button, straight to the conversation.
     expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
       'href',
       '/templates/new',
     )
 
-    // A12: the shell prepares model defaults; the list calls no AI and enqueues nothing ([I5]).
+    // A12: the shell prepares model defaults and the kit's chips read the kit's own lists; the
+    // list calls no AI and enqueues nothing ([I5]).
     const allowed = [
       'InitializeDefaultSelections',
       'GetMe',
       'GetMyPlan',
       'ListTemplates',
       'ListAuthoringSummaries',
+      'ListVoices',
+      'ListGuidelines',
+      'ListMemories',
     ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })

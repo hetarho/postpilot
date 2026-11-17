@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { readClipReturnContext } from '@/entities/clip-project'
@@ -37,16 +37,32 @@ it.each([
 // Each section's button opens that section's creation directly, carrying no channel (an old link's is ignored).
 it.each([
   ['/templates', '새 템플릿', '/templates/new'],
-  ['/voices', '새 말투', '/voices?new=1'],
-  ['/guidelines', '새 지침', '/guidelines?new=1'],
-  ['/voices', '새 말투', '/voices?new=1'],
-  ['/video-guidelines', '새 지침', '/video-guidelines?new=1'],
   ['/video-templates', '새 템플릿', '/video-templates/new'],
 ] as const)('offers %s its own creation only', async (path, label, href) => {
   renderAppAt(path, { user: { id: 'alice' } })
   expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
   expect(screen.queryByRole('menu')).toBeNull()
   expect(document.querySelector('[data-action-bar="list"] [aria-haspopup]')).toBeNull()
+})
+
+// A section with several ways to make one keeps ONE creation button, and its ways open from it
+// (a choice opens from the control that needs it); none of them reaches another section.
+it.each([
+  ['/voices', '새 말투 만들기', ['내가 쓴 글로 만들기', 'AI 말투 추천받기']],
+  ['/guidelines', '새 지침', ['AI와 함께 만들기', '직접 쓰기', '기본 지침에서 고르기']],
+  ['/video-guidelines', '새 지침', ['AI와 함께 만들기', '직접 쓰기', '기본 지침에서 고르기']],
+] as const)('opens %s ways to make one from its one creation button', async (path, label, ways) => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  renderAppAt(path, { user: { id: 'alice' }, calls })
+  await user.click(await screen.findByRole('button', { name: label }))
+  const menu = await screen.findByRole('menu', { name: label })
+  expect(
+    within(menu)
+      .getAllByRole('menuitem')
+      .map((item) => item.textContent),
+  ).toEqual(ways.map((way) => expect.stringContaining(way)))
+  expect(calls.filter((call) => /^(Start|Create|Generate|Analyze|Save)/.test(call))).toEqual([])
 })
 
 it.each(['/posts/new', '/clips/new'])(

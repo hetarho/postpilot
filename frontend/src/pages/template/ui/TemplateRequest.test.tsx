@@ -1,10 +1,12 @@
 import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { BlockType, PostContentSchema } from '@/shared/api'
+import { BlockType, PostContentSchema, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import { finalizedPostRow } from '@/test/posts'
+import { openTemplateDirect } from '@/test/authoring-ui'
+import type { FakeAuthoringOptions } from '@/test/authoring'
 const source = finalizedPostRow({
   slug: 'owned',
   title: 'private title',
@@ -21,29 +23,25 @@ const source = finalizedPostRow({
     ],
   }),
 })
-async function target(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: /^맛집/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(await screen.findByRole('button', { name: /^식사/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('heading', { name: '이런 글은 보통 이렇게 구성돼요' })
+const providers = {
+  models: [{ providerId: 'stub', modelId: 'writer', label: '작가AI', stages: [Stage.WRITE] }],
+  selections: [{ stage: Stage.WRITE, providerId: 'stub', modelId: 'writer' }],
 }
-describe('template creation from post headings', () => {
-  it('seeds the wizard with the post’s headings', async () => {
+// 이 글 형식으로 템플릿 만들기 (TMPL-64): the post is handed to the conversation as its one bounded
+// reference text (EDIT-16) — its headings marked — and none of it is shown on the screen.
+describe('template creation from a post', () => {
+  it('hands the post to the conversation as its reference, showing none of it', async () => {
     const calls: string[] = []
+    const creates: NonNullable<FakeAuthoringOptions['creates']> = []
     const user = userEvent.setup()
     renderAppAt('/templates/new?from=owned', {
       user: { id: 'alice' },
       calls,
       posts: { posts: [source] },
+      authoring: { creates },
+      providers,
     })
-    await target(user)
-    const boxes = screen.getAllByRole('checkbox')
-    expect(boxes.slice(-2).map((box) => box.closest('label')?.textContent)).toEqual([
-      '첫인상과 공간',
-      '아쉬움과 추천',
-    ])
-    expect(boxes.slice(-2).every((box) => (box as HTMLInputElement).checked)).toBe(true)
+    await screen.findByRole('log', { name: '템플릿 대화' })
     for (const text of [
       'private title',
       'private memo',
@@ -51,44 +49,28 @@ describe('template creation from post headings', () => {
       'private caption',
       'private summary',
       'private tag',
+      '첫인상과 공간',
     ])
       expect(screen.queryByText(new RegExp(text))).not.toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: '이전' })[0]!)
-    await user.click(await screen.findByRole('button', { name: /^식사/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getAllByRole('checkbox', { name: '첫인상과 공간' })).toHaveLength(1)
-    expect(calls.filter((name) => /Create|Start/.test(name))).toEqual([])
+    expect(calls.filter((name) => /Start/.test(name))).toEqual([])
+    await user.type(screen.getByRole('textbox', { name: '무엇을 올리는지' }), '이 글처럼 써 줘')
+    const send = screen.getByRole('button', { name: '초안 만들기' })
+    await waitFor(() => expect(send).toBeEnabled())
+    await user.click(send)
+    // The session (and its reference) is made when the owner confirms the quoted draft.
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: '이대로 요청하기' }))
+    await waitFor(() => expect(creates).toHaveLength(1))
+    expect(creates[0].referencePost).toContain('## 첫인상과 공간')
+    // Bounded: this post's 24,000-character body is cut to the reference limit.
+    expect(Array.from(creates[0].referencePost)).toHaveLength(12000)
   })
-  it('offers the target roles alone when the post has no headings', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/templates/new?from=owned', {
-      user: { id: 'alice' },
-      posts: {
-        posts: [
-          {
-            ...source,
-            content: create(PostContentSchema, {
-              title: 'private title',
-              blocks: [{ type: BlockType.TEXT, content: 'private body' }],
-            }),
-          },
-        ],
-      },
-    })
-    await target(user)
-    // 식사's eleven roles and 별점 (TMPL-72).
-    expect(screen.getAllByRole('checkbox')).toHaveLength(12)
-    expect(screen.queryByRole('button', { name: /부분 빼기/ })).not.toBeInTheDocument()
-  })
-  it('keeps an unavailable post out and offers a fresh wizard', async () => {
-    const user = userEvent.setup()
+  it('opens the conversation without a reference when the post cannot be read', async () => {
     renderAppAt('/templates/new?from=missing', { user: { id: 'alice' } })
-    expect(await screen.findByText(/참고 글을 읽지 못했어요/)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '참고 글 빼기' }))
+    expect(await screen.findByRole('log', { name: '템플릿 대화' })).toBeInTheDocument()
     expect(
-      await screen.findByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'AI와 템플릿 만들기' })).not.toBeInTheDocument()
+      screen.queryByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
+    ).not.toBeInTheDocument()
   })
   it('never exposes the retired request/correction/undo form in saved direct editing', async () => {
     const user = userEvent.setup()
@@ -96,8 +78,8 @@ describe('template creation from post headings', () => {
       user: { id: 'alice' },
       templates: { templates: [{ id: 'saved', name: '내 구성', body: '<write>인트로</write>' }] },
     })
-    await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
-    await screen.findByLabelText('이름')
+    await screen.findByRole('log', { name: '템플릿 대화' })
+    await openTemplateDirect(user)
     for (const name of ['AI에게 요청', '요청 보내기', '요청 전으로 되돌리기'])
       expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
   })

@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { Bot, CircleUserRound, Files, Palette, SquarePen } from 'lucide-react'
+import { Clapperboard, FileText, House, Trophy } from 'lucide-react'
 import { takePendingGift } from '@/features/redeem-voucher'
 import {
   Button,
@@ -26,6 +26,7 @@ import {
 import { AccountMenu } from '@/widgets/account-menu'
 import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
+import { KitRing, useWritingKit, type KitElement } from '@/widgets/writing-kit'
 import { endSession } from '../model/end-session'
 import {
   entryHref,
@@ -39,22 +40,21 @@ import {
   isFocusedFlow,
   isStructuralNavigationEntry,
   isTopLevelDestination,
-  MINE_SECTIONS,
+  KIT_SECTIONS,
   navigationPathname,
   routeLocation,
-  STYLE_SECTIONS,
-  styleKinds,
   TAB_DESTINATIONS,
+  VIDEO_SECTIONS,
+  type HubSection,
 } from './navigation'
 import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
 
 /** Guide: one glyph per tab, so a destination is found by shape before it is read. */
 const TAB_ICONS = {
-  '/create': SquarePen,
-  '/my': Files,
-  '/style': Palette,
-  '/ai-models': Bot,
-  '/settings': CircleUserRound,
+  '/': House,
+  '/posts': FileText,
+  '/clips': Clapperboard,
+  '/ai-models': Trophy,
 } as const
 
 function NavigationLink({ href, children, className, onClick, ...rest }: NavigationLinkProps) {
@@ -168,7 +168,7 @@ export function AuthenticatedLayout() {
           ? t(`location.${routeLocation(returnHref).current}`)
           : undefined
   const immersive = pathname === '/plans'
-  const quiet = pathname === '/create' || pathname === '/setup'
+  const quiet = pathname === '/setup'
   const setup = pathname === '/setup'
   // The editor, the clip workspace and the writing tests carry their own way back in their top
   // row; every other child route gets exactly one here (THEME-58).
@@ -330,31 +330,6 @@ export function AuthenticatedLayout() {
     icon: TAB_ICONS[to],
     current: current === to,
   }))
-  const chips =
-    section?.hub === 'mine'
-      ? MINE_SECTIONS.map(({ key, href }) => ({
-          key,
-          href,
-          label: t(`mine.${key}`),
-          current: section.key === key,
-        }))
-      : section?.hub === 'style'
-        ? STYLE_SECTIONS.map(({ key, href }) => ({
-            key,
-            href,
-            label: t(`style.${key}`),
-            current: section.key === key,
-          }))
-        : []
-  const kinds =
-    section?.hub === 'style' && (section.key === 'templates' || section.key === 'guidelines')
-      ? styleKinds(section.key).map(({ key, href }) => ({
-          key,
-          href,
-          label: t(`kinds.${key}`),
-          current: section.kind === key,
-        }))
-      : []
   return (
     <NavigationProvider value={framedNavigation}>
       <div
@@ -382,7 +357,7 @@ export function AuthenticatedLayout() {
               in the bottom tab bar, where the thumb is. */}
           <div className="h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
             <Link
-              to="/create"
+              to="/"
               aria-label={t('home')}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
             >
@@ -390,11 +365,7 @@ export function AuthenticatedLayout() {
             </Link>
             <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
-              {wide && (
-                <div className="flex">
-                  <InterfacePreferences />
-                </div>
-              )}
+              {/* Theme and language live inside the avatar at every width (owner 2026-11-17). */}
               <AccountMenu
                 preferences={<InterfacePreferences layout="rows" />}
                 onLoggedOut={() => {
@@ -405,10 +376,11 @@ export function AuthenticatedLayout() {
             </div>
           </div>
         </header>
-        {/* Guide: a hub's pages (내 글's channels, 내 스타일's sections) open on the hub's large
-            title, with the sibling pages as a chip row under it that scrolls sideways rather than
-            wrapping. The page keeps its own (visually hidden) `h1`, so the title is the sighted
-            reader's copy of the hub's name, not a second heading in the outline. */}
+        {/* Guide: a hub's pages (the writing kit's four elements, 영상 and what shapes a video)
+            open on the hub's large title, with the sibling pages as a chip row under it that
+            scrolls sideways rather than wrapping. The page keeps its own (visually hidden) `h1`,
+            so the title is the sighted reader's copy of the hub's name, not a second heading in
+            the outline. */}
         {/* A hub page holds a back link only when a post opened it, and then it heads the page,
             over the hub's title (THEME-58). */}
         {section && backNav}
@@ -421,45 +393,7 @@ export function AuthenticatedLayout() {
             >
               {t(`hub.${section.hub}`)}
             </p>
-            <nav
-              aria-label={t('sections')}
-              className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
-            >
-              {chips.map((chip) => (
-                <Link
-                  key={chip.key}
-                  to={chip.href}
-                  aria-current={chip.current ? 'page' : undefined}
-                  className={chipStyles({ current: chip.current })}
-                >
-                  {chip.label}
-                </Link>
-              ))}
-            </nav>
-            {kinds.length > 0 && (
-              // 템플릿 and 지침 each have a 글 side and a 영상 side: a small two-way switch under
-              // the chips rather than a third row of tabs.
-              <nav aria-label={t('kinds.aria')} className="mt-1 flex gap-1">
-                {kinds.map((kind) => (
-                  <Link
-                    key={kind.key}
-                    to={kind.href}
-                    aria-current={kind.current ? 'page' : undefined}
-                    className={typographyStyles({
-                      variant: 'label',
-                      className: clsx(
-                        'inline-flex min-h-11 items-center rounded-full px-4',
-                        kind.current
-                          ? 'bg-badge-accent-bg text-badge-accent-fg'
-                          : 'text-content-secondary hover:text-content-primary',
-                      ),
-                    })}
-                  >
-                    {kind.label}
-                  </Link>
-                ))}
-              </nav>
-            )}
+            <HubChips section={section} ownerId={ownerId} />
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
@@ -480,4 +414,47 @@ export function AuthenticatedLayout() {
       </div>
     </NavigationProvider>
   )
+}
+
+/** A hub's sibling pages as one chip row. The writing kit's chips each carry their element's ring,
+ *  read from the same lists as the home graphic, so the kit reads the same on every page of it. */
+function HubChips({ section, ownerId }: { section: HubSection; ownerId: string }) {
+  const { t } = useTranslation('nav')
+  return (
+    <nav
+      aria-label={t('sections')}
+      className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
+    >
+      {section.hub === 'kit' ? (
+        <KitChips current={section.key} ownerId={ownerId} />
+      ) : (
+        VIDEO_SECTIONS.map(({ key, href }) => (
+          <Link
+            key={key}
+            to={href}
+            aria-current={section.key === key ? 'page' : undefined}
+            className={chipStyles({ current: section.key === key })}
+          >
+            {t(`video.${key}`)}
+          </Link>
+        ))
+      )}
+    </nav>
+  )
+}
+
+function KitChips({ current, ownerId }: { current: KitElement; ownerId: string }) {
+  const { t } = useTranslation('nav')
+  const kit = useWritingKit(ownerId)
+  return KIT_SECTIONS.map(({ key, href }) => (
+    <Link
+      key={key}
+      to={href}
+      aria-current={current === key ? 'page' : undefined}
+      className={chipStyles({ current: current === key, className: 'gap-2 pl-2.5' })}
+    >
+      <KitRing reading={kit.entries[key].reading} size="sm" />
+      {t(`kit.${key}`)}
+    </Link>
+  ))
 }

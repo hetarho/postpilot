@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ProtoConfigurationKind, ProtoAuthoringDraftState } from '@/shared/api'
+import { ProtoConfigurationKind, ProtoAuthoringDraftState, Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
-import { publishAuthoringDraft } from '@/test/authoring-ui'
+import { openTemplateDirect, publishTemplateConversation } from '@/test/authoring-ui'
 import type { FakeTemplatesOptions } from '@/test/templates'
 import type { FakeAuthoringOptions } from '@/test/authoring'
 const stored = {
@@ -36,32 +36,63 @@ async function direct(
   calls: string[] = [],
 ) {
   const view = mount(path, templates, authoring, calls)
-  await user.click(
-    await screen.findByRole('button', {
-      name: path.endsWith('/new') ? '직접 편집' : /식당 리뷰.*직접 편집하기/,
-    }),
-  )
-  await screen.findByLabelText('이름')
+  await screen.findByRole('log', { name: '템플릿 대화' })
+  await openTemplateDirect(user)
   return view
 }
-const add = (name: string) =>
-  within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
-    name: new RegExp('^' + name),
-  })
-describe('named template shared editing', () => {
-  it('opens the saved usable template before a method and reads summaries without a session or paid work', async () => {
+// Templates are made by talking to the AI (owner 2026-11-17): new or saved, the screen opens on
+// one conversation beside the draft's live preview; the text is edited by hand behind ⋯.
+describe('templates made by talking', () => {
+  it('opens a saved template straight into its conversation, the draft beside it, with no paid work', async () => {
     const calls: string[] = []
     mount(undefined, {}, {}, calls)
-    await screen.findByRole('heading', { level: 1, name: '식당 리뷰' })
-    expect(await screen.findByText('메뉴 소개')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /식당 리뷰.*AI로 편집하기/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /식당 리뷰.*직접 편집하기/ })).toBeInTheDocument()
-    await waitFor(() => expect(calls).toContain('ListAuthoringSummaries'))
+    const log = await screen.findByRole('log', { name: '템플릿 대화' })
+    expect(within(log).getByText('“식당 리뷰” 템플릿이에요. 무엇을 바꿀까요?')).toBeInTheDocument()
+    const draft = screen.getByRole('complementary', { name: '초안' })
+    expect(await within(draft).findByText('메뉴 소개')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '바꾸고 싶은 점' })).toBeInTheDocument()
+    // Nothing changed yet, so there is nothing to save.
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
+    expect(calls.filter((name) => /Start|EstimateAuthoring|SaveAuthoring/.test(name))).toEqual([])
+  })
+  it('opens a new template on the question of what the owner posts, with no wizard and no paid work', async () => {
+    const calls: string[] = []
+    mount('/templates/new', { templates: [] }, {}, calls)
+    const log = await screen.findByRole('log', { name: '템플릿 대화' })
+    expect(within(log).getByText(/어떤 글을 올리세요\?/)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '무엇을 올리는지' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '초안 만들기' })).toBeDisabled()
+    expect(screen.getByText('초안이 여기에 그려져요')).toBeInTheDocument()
     expect(
-      calls.filter((name) =>
-        /AuthoringSession|Start|EstimateAuthoring|SaveAuthoring|GetAuthoringSession/.test(name),
-      ),
-    ).toEqual([])
+      screen.queryByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
+    expect(calls.filter((call) => /Start|EstimateAuthoring|SaveAuthoring/.test(call))).toEqual([])
+  })
+  it('asks for one draft only after the owner describes what they post, and quotes it first', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/templates/new', {
+      user: { id: 'alice' },
+      calls,
+      templates: { templates: [] },
+      providers: {
+        models: [{ providerId: 'stub', modelId: 'writer', label: '작가AI', stages: [Stage.WRITE] }],
+        selections: [{ stage: Stage.WRITE, providerId: 'stub', modelId: 'writer' }],
+      },
+    })
+    const field = await screen.findByRole('textbox', { name: '무엇을 올리는지' })
+    await user.type(field, '동네 카페 방문기를 사진 위주로 올려요')
+    const send = screen.getByRole('button', { name: '초안 만들기' })
+    await waitFor(() => expect(send).toBeEnabled())
+    await user.click(send)
+    // The estimate comes first; nothing starts until the owner confirms it.
+    const dialog = await screen.findByRole('dialog')
+    expect(
+      within(dialog).getByRole('heading', { name: '이 설명으로 초안을 만들까요?' }),
+    ).toBeInTheDocument()
+    expect(calls).toContain('EstimateAuthoringOperation')
+    expect(calls.filter((call) => /StartAuthoring/.test(call))).toEqual([])
   })
   it('preserves an untouched legacy body and all owner numbers in one versioned publication', async () => {
     const user = userEvent.setup()
@@ -71,7 +102,7 @@ describe('named template shared editing', () => {
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('1800')
     await user.type(screen.getByLabelText('이름'), ' 2편')
     expect(updates).toHaveLength(0)
-    await publishAuthoringDraft(user)
+    await publishTemplateConversation(user)
     await waitFor(() => expect(updates).toHaveLength(1))
     expect(updates[0]).toMatchObject({
       id: 'review',
@@ -84,52 +115,23 @@ describe('named template shared editing', () => {
     expect(calls).not.toContain('StartAuthoringOperation')
     expect(calls).not.toContain('StartTemplateRequest')
   })
-  it('retains incomplete builder rows across source, AI and direct modes and durable recovery', async () => {
-    const user = userEvent.setup()
-    const patches: NonNullable<FakeAuthoringOptions['patches']> = []
-    await direct(user, undefined, {}, { patches })
-    await user.click(add('고정 문구'))
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
-    expect(screen.getByLabelText('원문')).toHaveValue(
-      '<write>메뉴 소개</write>\n지도\n<write></write>',
-    )
-    await user.click(screen.getByRole('tab', { name: '블록' }))
-    expect(screen.getByText('들어갈 문구를 적어 주세요')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /식당 리뷰.*AI로 편집하기/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
-    expect(patches).toHaveLength(1)
-    expect(patches[0].builderState).toContain('"kind":"text"')
-    expect(patches[0].body).toContain('<write></write>')
-    await user.click(screen.getByRole('button', { name: /식당 리뷰.*직접 편집하기/ }))
-    expect(await screen.findByText('들어갈 문구를 적어 주세요')).toBeInTheDocument()
-    const emptyRow = screen
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('들어갈 문구를 적어 주세요'))!
-    await user.click(emptyRow)
-    await user.type(screen.getByLabelText('들어갈 문구'), '마무리')
-    await publishAuthoringDraft(user)
-    await screen.findByRole('heading', { level: 1, name: '식당 리뷰' })
-  })
   it('keeps invalid raw title/body unchanged and publication unavailable', async () => {
     const user = userEvent.setup()
     const patches: NonNullable<FakeAuthoringOptions['patches']> = []
     await direct(user, undefined, {}, { patches })
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
     fireEvent.change(screen.getByLabelText('원문'), { target: { value: '<write>unfinished' } })
     fireEvent.change(screen.getByLabelText('제목 원문'), {
       target: { value: '<slot kind="photo"/>' },
     })
     await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
     expect(await screen.findByText(/마지막 유효한 미리보기/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '저장할 내용 확인하기' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     expect(patches[0]).toMatchObject({
       body: '<write>unfinished',
       titleArea: '<slot kind="photo"/>',
     })
   })
-  it('shows named unfinished work separately and resume retains it while a fresh method captures saved content', async () => {
+  it('reopens a saved template on its unsaved conversation instead of a fresh copy', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     const draft = {
@@ -161,22 +163,16 @@ describe('named template shared editing', () => {
       },
       calls,
     )
-    await user.click(await screen.findByRole('button', { name: /식당 리뷰.*이어서 편집하기/ }))
-    await user.click(await screen.findByRole('button', { name: /식당 리뷰.*직접 편집하기/ }))
-    expect(await screen.findByLabelText('이름')).toHaveValue('편집 중 이름')
+    await screen.findByRole('log', { name: '템플릿 대화' })
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '편집 중 이름' }),
+    ).toBeInTheDocument()
+    await openTemplateDirect(user)
+    expect(screen.getByLabelText('이름')).toHaveValue('편집 중 이름')
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')
   })
-  it('opens the wizard for a new template', async () => {
-    const calls: string[] = []
-    mount('/templates/new', { templates: [] }, {}, calls)
-    expect(
-      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '직접 편집' })).not.toBeInTheDocument()
-    expect(calls.filter((call) => /Create|StartAuthoring/.test(call))).toEqual([])
-  })
-  it('resumes an unsaved creation session', async () => {
+  it('resumes an unsaved creation session in its conversation', async () => {
     const calls: string[] = []
     mount(
       '/templates/new?session=unfinished',
@@ -209,12 +205,13 @@ describe('named template shared editing', () => {
       },
       calls,
     )
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    await screen.findByRole('log', { name: '템플릿 대화' })
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '이어 만들기' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: '바꾸고 싶은 점' })).toBeInTheDocument()
     expect(calls).toContain('GetAuthoringSession')
     expect(calls.filter((call) => /Create|Start/.test(call))).toEqual([])
-    expect(
-      screen.queryByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
-    ).not.toBeInTheDocument()
   })
   it('retains the draft on target conflict without publishing or starting AI', async () => {
     const user = userEvent.setup()
@@ -222,7 +219,7 @@ describe('named template shared editing', () => {
     const calls: string[] = []
     await direct(user, undefined, { updates }, { saveConflict: true }, calls)
     await user.type(screen.getByLabelText('이름'), ' 새 이름')
-    await publishAuthoringDraft(user)
+    await publishTemplateConversation(user)
     expect(await screen.findByText(/다른 곳에서 바뀌었/)).toBeInTheDocument()
     expect(updates).toHaveLength(0)
     expect(calls).not.toContain('StartAuthoringOperation')

@@ -1,6 +1,6 @@
 import { Code, ConnectError, type Transport } from '@connectrpc/connect'
 import { describe, expect, it } from 'vitest'
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoGuidelineKind, ProtoGuidelineScope } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
@@ -40,8 +40,22 @@ function renderVideoGuidelines(guidelines: FakeGuidelinesOptions = {}, calls: st
 
 const section = async (name: string) => within(await screen.findByRole('region', { name }))
 
+/** The 기본 지침 in use and the 원칙 wait in one closed group, under the owner's own rules' groups'
+ *  heading order (the order they are applied in); a test about one opens the group first. */
+function openDefaultsGroup() {
+  const group = screen.queryByRole('button', { name: /^기본으로 지키는 것/, expanded: false })
+  if (group) fireEvent.click(group)
+}
+
+/** The 기본 지침 sheet opens from the one 새 지침 button's menu. */
+async function openDefaultSheet(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '새 지침' }))
+  await user.click(await screen.findByRole('menuitem', { name: '기본 지침에서 고르기' }))
+}
+
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '새 영상 지침 직접 쓰기' }))
+  await user.click(await screen.findByRole('button', { name: '새 지침' }))
+  await user.click(await screen.findByRole('menuitem', { name: '직접 쓰기' }))
   const dialog = within(await screen.findByRole('dialog'))
   await dialog.findByLabelText('지침')
   return dialog
@@ -62,6 +76,7 @@ describe('/video-guidelines', () => {
 
     expect(await screen.findByRole('heading', { level: 1, name: '영상 지침' })).toBeInTheDocument()
     const list = await section('영상 지침 목록')
+    openDefaultsGroup()
     const items = list.getAllByRole('listitem')
     // The clip 기본 지침 in use first, then the owner's, as one list (GUIDE-44).
     expect(items).toHaveLength(4)
@@ -106,6 +121,8 @@ describe('/video-guidelines', () => {
     })
 
     const list = await section('영상 지침 목록')
+
+    openDefaultsGroup()
     expect(list.queryByText('입력한 사실만')).not.toBeInTheDocument()
     expect(within(list.getAllByRole('listitem')[0]).getByText('과장 금지')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Postpilot 원칙/ }))
@@ -123,6 +140,8 @@ describe('/video-guidelines', () => {
     })
 
     const list = await section('영상 지침 목록')
+
+    openDefaultsGroup()
     await user.click(list.getByRole('button', { name: /과장 금지/, expanded: false }))
     await user.click(list.getByRole('button', { name: '과장 금지 적용 안함' }))
     await waitFor(() => expect(defaultSwitches).toHaveLength(1))
@@ -157,6 +176,7 @@ describe('/video-guidelines', () => {
       fields: [],
     })
     const list = await section('영상 지침 목록')
+    openDefaultsGroup()
     await waitFor(() => expect(list.getByText('자막은 두 줄까지')).toBeInTheDocument())
   })
 
@@ -171,7 +191,7 @@ describe('/video-guidelines', () => {
       defaultSwitches,
     })
 
-    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    await openDefaultSheet(user)
     const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
     expect(sheet.queryByText('글 기본')).not.toBeInTheDocument()
     await user.click(sheet.getByRole('button', { name: '과장 금지 추가' }))
@@ -381,6 +401,8 @@ describe('directory removal keyboard focus', () => {
   }
 
   async function focusRow(user: ReturnType<typeof userEvent.setup>, name: string) {
+    await screen.findByRole('region', { name: /지침 목록/ })
+    openDefaultsGroup()
     const disclosure = await screen.findByRole('button', {
       name: new RegExp(`^${name}`),
       expanded: false,
@@ -424,7 +446,7 @@ describe('directory removal keyboard focus', () => {
     await confirmFocusDelete(user, name)
     await waitFor(() => expect(queryDisclosure(name)).toBeNull())
     expect(
-      next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+      next ? getDisclosure(next) : screen.getByRole('button', { name: '새 지침' }),
     ).toHaveFocus()
   })
 
@@ -445,7 +467,7 @@ describe('directory removal keyboard focus', () => {
       await stopByKeyboard(user, name)
       await waitFor(() => expect(queryDisclosure(name)).toBeNull())
       expect(
-        next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+        next ? getDisclosure(next) : screen.getByRole('button', { name: '새 지침' }),
       ).toHaveFocus()
     },
   )
@@ -469,7 +491,7 @@ describe('directory removal keyboard focus', () => {
     await confirmFocusDelete(user, 'Owned Middle')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(queryDisclosure('Owned Middle')).toBeInTheDocument()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: '새 지침' })
     target.focus()
     await act(() => queryClient.invalidateQueries())
     expect(target).toHaveFocus()
@@ -511,7 +533,7 @@ describe('directory removal keyboard focus', () => {
     await stopByKeyboard(user, 'Default First')
     await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
     expect(getDisclosure('Owned First')).toHaveFocus()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: '새 지침' })
     target.focus()
     await act(async () => releaseSwitch())
     await act(() => queryClient.invalidateQueries())
@@ -532,7 +554,7 @@ describe('directory removal keyboard focus', () => {
     await stopByKeyboard(user, 'Default First')
     await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
     expect(getDisclosure('Owned First')).toHaveFocus()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: '새 지침' })
     target.focus()
     await act(async () => releaseSwitch())
     expect(await screen.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()

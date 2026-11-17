@@ -166,6 +166,8 @@ it('changes account guidelines over the saved writing review without leaving the
   await user.click(opener)
   const sheet = await screen.findByRole('dialog', { name: '지침' })
   expect(router.state.location.pathname).toBe('/posts/saved')
+  // The 기본 지침 in use wait in their own closed group, after the owner's own rules' groups.
+  await user.click(await within(sheet).findByRole('button', { name: /^기본으로 지키는 것/ }))
   await user.click(await within(sheet).findByRole('button', { name: /반복 줄이기/ }))
   await user.click(within(sheet).getByRole('button', { name: '반복 줄이기 적용 안함' }))
   await waitFor(() => expect(calls).toContain('SetDefaultGuidelineEnabled'))

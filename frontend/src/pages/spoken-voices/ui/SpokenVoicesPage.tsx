@@ -7,13 +7,20 @@ import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
 import {
   ActionBar,
-  DirectoryItem,
   LoadingState,
   Typography,
   pageStyles,
   buttonStyles,
   typographyStyles,
 } from '@/shared/ui'
+
+/** The bars of a voice card's waveform: a fixed, decorative shape (no audio is analysed). */
+const WAVE = [6, 14, 22, 12, 28, 18, 34, 20, 26, 10, 30, 16, 24, 8, 20, 12] as const
+
+/** Guide: 목소리 — what a spoken voice IS: the voice a video is read in. Each voice is a card made
+ *  for listening — its sample's play control first, beside its waveform, then its name and how it
+ *  was made; renaming, re-making and removing wait behind the card's ⋯. A voice still being made
+ *  waits under 이어 만들기, and 새 목소리 is the one creation. */
 export function SpokenVoicesPage() {
   const { t } = useTranslation('spokenVoices'),
     { t: model } = useTranslation('models'),
@@ -21,86 +28,117 @@ export function SpokenVoicesPage() {
     ownerId = user?.id ?? '',
     library = useSpokenLibrary(ownerId),
     [status, setStatus] = useState('')
+  const drafts = library.drafts.filter((draft) => !draft.confirmedVoiceId)
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex min-w-0 flex-1 flex-col' })}>
-      <Typography variant="display">{t('title')}</Typography>
-      <Typography variant="body" className="text-content-secondary mt-4">
-        {t('about')}
+    <main
+      className={pageStyles({
+        width: 'wide',
+        className: 'flex min-w-0 flex-1 flex-col pt-2 sm:pt-4',
+      })}
+    >
+      <h1 className="sr-only">{t('title')}</h1>
+      <Typography variant="display" as="p" aria-hidden="true">
+        {t('lead')}
       </Typography>
-      <Typography role="status" as="p" variant="meta" className="mt-4 min-h-5">
+      <Typography role="status" as="p" variant="meta" className="mt-3 min-h-5">
         {library.voicesQuery.isError || library.draftsQuery.isError
           ? t('failed')
           : status
             ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-            : !library.voicesQuery.isPending && !library.voices.length
-              ? t('empty')
-              : '\u00a0'}
+            : ' '}
       </Typography>
       {!library.voicesQuery.isError && library.voicesQuery.isPending && (
-        <LoadingState variant="list" label={t('loading')} className="mt-4" />
+        <LoadingState variant="cards" label={t('loading')} className="mt-4" />
       )}
-      <ul className="mt-6 grid gap-3 lg:grid-cols-2 lg:gap-4" aria-label={t('title')}>
-        {library.voices.map((voice) => (
-          <DirectoryItem
-            key={voice.id}
-            icon={<AudioLines className="size-6" />}
-            title={
-              <Typography variant="fieldTitle" as="h2" className="break-words">
-                {voice.name}
-              </Typography>
-            }
-            description={
-              <Typography variant="meta" as="p" className="break-words">
-                {voice.profile.designLabel} → {voice.profile.speechLabel} ·{' '}
-                {voice.profile.grade
-                  ? model(`level.${voice.profile.grade}`)
-                  : model('catalog.levelUnset')}
-              </Typography>
-            }
-            status={
-              <SpokenSamplePlayer
-                ownerId={ownerId}
-                assetId={voice.sampleAssetId}
-                name={voice.name}
-                durationMs={voice.sampleDurationMs}
-                onFailure={() => setStatus('playFailed')}
-              />
-            }
-            metadata={
-              <SpokenVoiceActions
-                ownerId={ownerId}
-                voice={voice}
-                onStatus={(key) => setStatus(key === 'failed' ? 'renameFailed' : key)}
-              />
-            }
-          />
-        ))}
-      </ul>
-      {library.drafts.some((d) => !d.confirmedVoiceId) && (
-        <section className="mt-8 min-w-0">
-          <Typography variant="title">{t('drafts')}</Typography>
-          <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
-            {library.drafts
-              .filter((d) => !d.confirmedVoiceId)
-              .map((d) => (
-                <DirectoryItem
-                  key={d.id}
-                  interactive
-                  icon={<AudioLines className="size-6" />}
-                  title={
-                    <Link
-                      to="/spoken-voices/new"
-                      search={{ draft: d.id }}
-                      className={typographyStyles({
-                        variant: 'fieldTitle',
-                        className: 'break-words after:absolute after:inset-0',
-                      })}
-                    >
-                      {t('resume', { name: d.name })}
-                    </Link>
-                  }
+      {!library.voicesQuery.isPending && !library.voices.length && (
+        <section className="mt-4 flex flex-col items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="bg-badge-accent-bg text-badge-accent-fg flex size-16 items-center justify-center rounded-2xl"
+          >
+            <AudioLines className="size-8" />
+          </span>
+          <Typography variant="title" as="h2">
+            {t('empty')}
+          </Typography>
+        </section>
+      )}
+      {library.voices.length > 0 && (
+        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('title')}>
+          {library.voices.map((voice) => (
+            <li
+              key={voice.id}
+              className="bg-card-bg relative flex min-w-0 flex-col gap-4 overflow-hidden rounded-3xl p-5 shadow-md"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <Typography variant="fieldTitle" as="h2" className="break-words">
+                    {voice.name}
+                  </Typography>
+                  <Typography variant="meta" as="p" className="break-words">
+                    {voice.profile.designLabel} → {voice.profile.speechLabel} ·{' '}
+                    {voice.profile.grade
+                      ? model(`level.${voice.profile.grade}`)
+                      : model('catalog.levelUnset')}
+                  </Typography>
+                </div>
+                <SpokenVoiceActions
+                  ownerId={ownerId}
+                  voice={voice}
+                  presentation="menu"
+                  onStatus={(key) => setStatus(key === 'failed' ? 'renameFailed' : key)}
                 />
-              ))}
+              </div>
+              {/* The card's job: hearing the voice. */}
+              <div className="bg-surface-recessed flex min-w-0 flex-wrap items-center gap-4 rounded-2xl px-4 py-3">
+                <SpokenSamplePlayer
+                  ownerId={ownerId}
+                  assetId={voice.sampleAssetId}
+                  name={voice.name}
+                  durationMs={voice.sampleDurationMs}
+                  onFailure={() => setStatus('playFailed')}
+                />
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 min-w-0 flex-1 items-center gap-1 overflow-hidden"
+                >
+                  {WAVE.map((height, index) => (
+                    <span
+                      key={index}
+                      className="bg-link-fg-current/60 w-1 shrink-0 rounded-full"
+                      style={{ height }}
+                    />
+                  ))}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {drafts.length > 0 && (
+        <section className="mt-8 min-w-0">
+          <Typography variant="title" as="h2">
+            {t('drafts')}
+          </Typography>
+          <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+            {drafts.map((draft) => (
+              <li
+                key={draft.id}
+                className="bg-card-bg hover:bg-card-bg-hover relative flex min-h-16 items-center gap-3 rounded-2xl px-4 py-3 shadow-sm"
+              >
+                <AudioLines aria-hidden="true" className="text-content-tertiary size-5 shrink-0" />
+                <Link
+                  to="/spoken-voices/new"
+                  search={{ draft: draft.id }}
+                  className={typographyStyles({
+                    variant: 'fieldTitle',
+                    className: 'min-w-0 break-words after:absolute after:inset-0',
+                  })}
+                >
+                  {t('resume', { name: draft.name })}
+                </Link>
+              </li>
+            ))}
           </ul>
         </section>
       )}

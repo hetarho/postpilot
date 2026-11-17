@@ -3,13 +3,13 @@ import { useRef, type Ref } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
-import { useTemplates, type Template } from '@/entities/template'
+import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
 import { DeleteTemplateButton } from '@/features/delete-template'
 import { ChannelActions } from '@/widgets/channel-actions'
-import { LayoutList } from 'lucide-react'
+import { MessagesSquare } from 'lucide-react'
+import { templateDraftIllustration } from '@/shared/assets'
 import {
   Badge,
-  DirectoryItem,
   Button,
   Notice,
   LoadingState,
@@ -19,8 +19,10 @@ import {
   useListRemovalFocus,
 } from '@/shared/ui'
 
-/** The account's 템플릿 (TMPL-24): a list, and the one action that adds to it. Composition only —
- *  every action is its own feature, and a row is the way into one template.
+/** Guide: 템플릿 — what a template IS: the shape a post takes. Each saved template is shown as the
+ *  post it makes (the same preview the template's own screen draws), under its name, so the owner
+ *  finds one by its shape rather than by a label. A new one is made by talking to the AI (새 템플릿);
+ *  a conversation not yet saved waits under 이어서 대화하기 (TMPL-24).
  *
  *  Editing lives on the template's own screen, so this list carries nothing but the list (change
  *  30). Nothing here calls a model or enqueues a job: a template is authored text, and reading or
@@ -96,8 +98,9 @@ export function TemplatesPage() {
               <Typography variant="title" id="templates-heading">
                 {t('page.saved', { ns: 'templates' })}
               </Typography>
-              {/* Guide: each template is a card; the card opens its own focused screen. */}
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              {/* Guide: each template is the shape of the post it makes; the card opens its
+                  conversation. */}
+              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -123,22 +126,27 @@ export function TemplatesPage() {
               <Typography variant="title" as="h2" id="templates-unsaved-heading">
                 {t('screen.unsavedWork', { ns: 'templates' })}
               </Typography>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
-                    <DirectoryItem
+                    <li
                       key={row.sessionId}
-                      interactive
-                      icon={<LayoutList className="size-6" />}
-                      title={
+                      className="bg-card-bg hover:bg-card-bg-hover relative flex min-h-16 items-center gap-3 rounded-2xl px-4 py-3 shadow-sm"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="bg-kit-template/15 text-kit-template flex size-10 shrink-0 items-center justify-center rounded-xl"
+                      >
+                        <MessagesSquare className="size-5" />
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col">
                         <Link
                           to="/templates/new"
                           search={{ session: row.sessionId }}
                           className={typographyStyles({
                             variant: 'fieldTitle',
-                            className:
-                              'text-content-primary break-words after:absolute after:inset-0',
+                            className: 'text-content-primary truncate after:absolute after:inset-0',
                           })}
                         >
                           {t('screen.resumeNew', {
@@ -146,14 +154,9 @@ export function TemplatesPage() {
                             name: row.displayName || t('page.new', { ns: 'templates' }),
                           })}
                         </Link>
-                      }
-                      description={
-                        <Typography variant="meta" as="p">
-                          {t('screen.unsaved', { ns: 'templates' })}
-                        </Typography>
-                      }
-                      status={<EditingStatus summary={row} />}
-                    />
+                        <EditingStatus summary={row} />
+                      </span>
+                    </li>
                   ))}
               </ul>
             </section>
@@ -172,13 +175,26 @@ export function TemplatesPage() {
 function EmptyState() {
   const { t } = useTranslation('templates')
   return (
-    <section aria-labelledby="templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="templates-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.emptyHelp')}
-      </Typography>
+    <section
+      aria-labelledby="templates-empty-heading"
+      className="mt-6 flex flex-col items-center gap-2 text-center sm:flex-row sm:text-left"
+    >
+      <img
+        src={templateDraftIllustration}
+        alt=""
+        width={440}
+        height={440}
+        className="size-44 shrink-0 object-contain"
+        draggable={false}
+      />
+      <div>
+        <Typography variant="title" id="templates-empty-heading">
+          {t('page.empty')}
+        </Typography>
+        <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+          {t('page.emptyTalk')}
+        </Typography>
+      </div>
     </section>
   )
 }
@@ -201,46 +217,49 @@ function TemplateRow({
 }) {
   const { t } = useTranslation('templates')
   return (
-    <DirectoryItem
-      interactive
-      icon={<LayoutList className="size-6" />}
-      title={
-        <Link
-          to="/templates/$templateId"
-          params={{ templateId: template.id }}
-          className={typographyStyles({
-            variant: 'fieldTitle',
-            className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
-          })}
-        >
-          {template.name}
-        </Link>
-      }
-      description={
-        template.description && (
-          <Typography variant="body" as="span" className="line-clamp-2">
-            {template.description}
-          </Typography>
-        )
-      }
-      status={summary && <EditingStatus summary={summary} />}
-      metadata={
-        <>
-          <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
-          <Typography variant="meta" as="span">
-            {t('screen.savedAvailable')}
-          </Typography>
-        </>
-      }
-      actions={
-        <DeleteTemplateButton
-          ownerId={ownerId}
-          template={template}
-          buttonRef={deleteButtonRef}
-          onDeleted={onDeleted}
-        />
-      }
-    />
+    <li className="group bg-surface-recessed hover:bg-card-bg-hover relative flex min-w-0 flex-col overflow-hidden rounded-3xl transition-colors">
+      <div className="flex items-start gap-2 px-5 pt-4">
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
+          <Link
+            to="/templates/$templateId"
+            params={{ templateId: template.id }}
+            className={typographyStyles({
+              variant: 'fieldTitle',
+              className:
+                'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
+            })}
+          >
+            {template.name}
+          </Link>
+          {template.description && (
+            <Typography variant="meta" as="span" className="line-clamp-2">
+              {template.description}
+            </Typography>
+          )}
+        </span>
+        <span className="relative z-10 -mt-1 -mr-2 shrink-0">
+          <DeleteTemplateButton
+            ownerId={ownerId}
+            template={template}
+            buttonRef={deleteButtonRef}
+            onDeleted={onDeleted}
+          />
+        </span>
+      </div>
+      {/* The post this template makes, as its own screen draws it, cut to the card. A picture of
+          the shape for the eye; the template's screen reads it in full. */}
+      <div
+        aria-hidden="true"
+        inert
+        className="pointer-events-none relative mt-3 max-h-64 [zoom:0.86] overflow-hidden [mask-image:linear-gradient(to_bottom,black_65%,transparent)] px-4"
+      >
+        <TemplatePreview bare titleArea={template.titleArea} body={template.body} />
+      </div>
+      <div className="relative mt-auto flex flex-wrap items-center gap-2 px-5 pt-1 pb-4">
+        <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
+        {summary && <EditingStatus summary={summary} />}
+      </div>
+    </li>
   )
 }
 

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
+import { openTemplateDirect } from '@/test/authoring-ui'
 const preview = () => within(screen.getByRole('article', { name: '미리보기' }))
-// A new template is made through the guided wizard (TMPL-71), so the shared editor's preview is
-// exercised on a saved template's direct editing.
+// A template is made by talking to the AI; editing its 원문 by hand is the secondary path, and
+// its preview is the same live draft the conversation shows.
 const PLAIN = {
   id: 'plain',
   name: '빈 구성',
@@ -14,22 +15,17 @@ const PLAIN = {
 }
 async function mount(user: ReturnType<typeof userEvent.setup>) {
   renderAppAt('/templates/plain', { user: { id: 'alice' }, templates: { templates: [PLAIN] } })
-  await user.click(await screen.findByRole('button', { name: /빈 구성.*직접 편집하기/ }))
-  await screen.findByLabelText('이름')
+  await screen.findByRole('log', { name: '템플릿 대화' })
+  await openTemplateDirect(user)
 }
 describe('live shared template preview', () => {
-  it('redraws builder/source edits and retains its last valid parse while source is incomplete', async () => {
+  it('redraws 원문 edits and retains its last valid parse while the text is incomplete', async () => {
     const user = userEvent.setup()
     await mount(user)
-    await user.click(
-      within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
-        name: /^AI가 쓰는 글/,
-      }),
-    )
-    await user.type(screen.getByLabelText('이 자리에 오는 것'), '메뉴 소개')
+    fireEvent.change(screen.getByLabelText('원문'), {
+      target: { value: '<write>메뉴 소개</write>' },
+    })
     expect(preview().getByText('메뉴 소개')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
     fireEvent.change(screen.getByLabelText('원문'), {
       target: { value: '<write>메뉴 소개</write>\n안녕하세요' },
     })

@@ -286,6 +286,14 @@
   --promo-hue-b: var(--palette-blue-500);
   --promo-hue-c: var(--palette-gold-300);
 
+  /* The writing kit's four hues: one per thing the owner teaches the AI (말투, 템플릿, 지침, 기억),
+     so the home graphic, the kit's chips and each kit screen name an element by the same colour.
+     Strokes and marks only — text stays on the content roles. */
+  --kit-voice: var(--palette-violet-300);
+  --kit-template: var(--palette-blue-300);
+  --kit-guideline: var(--palette-green-300);
+  --kit-memory: var(--palette-gold-300);
+
   /* How dark a lifted plane's shadow is. A raised step card on the night ground needs a deep,
      wide shadow to read as lifted; on the light day ground the same mix is a smudge. */
   --shadow-strength: 55%;
@@ -357,6 +365,11 @@
   --promo-hue-a: var(--palette-violet-400);
   --promo-hue-b: var(--palette-blue-400);
   --promo-hue-c: var(--palette-gold-300);
+
+  --kit-voice: var(--palette-violet-500);
+  --kit-template: var(--palette-blue-500);
+  --kit-guideline: var(--palette-green-500);
+  --kit-memory: var(--palette-gold-400);
 
   --shadow-strength: 14%;
 }
@@ -732,6 +745,12 @@
      stroke's halo swells and fades ONCE, on opacity and transform alone. It ends invisible, so
      the reduced-motion rule, which jumps to the last frame, leaves no glow at all. */
   --animate-preview-glow: preview-glow 1.2s var(--ease-standard) both;
+  /* The writing kit's halo: once every element is ready, a soft disc behind the page breathes on
+     opacity and scale alone. Motion lives in the halo, never in a stroke (owner 2026-09). */
+  --animate-kit-halo: kit-halo 4.2s var(--ease-standard) infinite alternate;
+  /* A kit mark ARRIVING: it draws itself along its arc once, on mount (`pathLength="1"` with a
+     `1 1` dash). It ends drawn, so reduced motion shows the finished ring. */
+  --animate-kit-draw: kit-draw 900ms var(--ease-emphasized) both;
   /* Guide: a step screen ARRIVING. One gentle, one-time slide-and-fade on mount — forward steps
      come in from the right, a step back from the left — on transform and opacity alone. */
   --animate-step-in: step-in var(--duration-slow) var(--ease-emphasized) both;
@@ -813,6 +832,24 @@
     }
     to {
       transform: translate(20%, -30%) scale(1.2);
+    }
+  }
+  @keyframes kit-draw {
+    from {
+      stroke-dashoffset: 1;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes kit-halo {
+    from {
+      opacity: 0.35;
+      transform: scale(0.94);
+    }
+    to {
+      opacity: 0.8;
+      transform: scale(1.04);
     }
   }
   @keyframes rise {
@@ -1020,6 +1057,10 @@
   --color-chip-fg-current: var(--chip-fg-current);
   --color-progress-step-done: var(--progress-step-done);
   --color-progress-step-todo: var(--progress-step-todo);
+  --color-kit-voice: var(--kit-voice);
+  --color-kit-template: var(--kit-template);
+  --color-kit-guideline: var(--kit-guideline);
+  --color-kit-memory: var(--kit-memory);
 
   /* Shadows are mixed from the physical role so they re-skin with the theme, at the theme's own
      strength: soft and wide, the way a card lifts off the page. */

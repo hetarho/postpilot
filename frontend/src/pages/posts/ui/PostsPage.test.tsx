@@ -816,13 +816,13 @@ describe('PostsPage paging (POST-90..92)', () => {
   })
 })
 
-// THEME-38, POST-43: the channel opens straight onto its history — no visible heading, its 새 글
-// button the one creation — and the old address lands here.
+// The 글 tab says what it holds in its own large title, its 새 글 button the one creation, and
+// the old address lands here.
 describe('the Naver Blog channel', () => {
-  it('opens on its history with no visible heading and its creation button', async () => {
+  it('opens on its history under its own title and its creation button', async () => {
     renderList({ posts: [{ slug: 'jeju', title: '제주 3일', status: 'draft' }] })
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: '네이버 블로그' })).toHaveClass('sr-only')
+    expect(screen.getByRole('heading', { level: 1, name: '내 글' })).not.toHaveClass('sr-only')
     expect(screen.queryByText('글 작업 내역', { selector: 'h1, h2, p' })).toBeNull()
 
     // The 글 section's one creation opens the editor directly (THEME-67).

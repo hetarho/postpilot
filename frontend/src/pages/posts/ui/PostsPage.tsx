@@ -151,9 +151,16 @@ export function PostsPage() {
         className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
-      {/* The channel opens straight onto this list: the marked channel link names the place, so
-          the heading is for assistive technology only (THEME-38, POST-43). */}
-      <h1 className="sr-only">{t('list.mine', { ns: 'posts' })}</h1>
+      {/* Guide: the 글 tab says what it holds in its own large title — every post, the unfinished
+          ones first — the way 영상 does above its chips. */}
+      <h1
+        className={typographyStyles({
+          variant: 'largeTitle',
+          className: 'px-4 pt-2 sm:px-6 sm:pt-6 lg:px-8',
+        })}
+      >
+        {t('list.title', { ns: 'posts' })}
+      </h1>
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
           the list opens on its work. The button is there at every post count, and says how many

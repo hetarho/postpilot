@@ -38,31 +38,40 @@ async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
  *  scoped to a row to mean anything. */
 async function row(text: string) {
   const list = within(await screen.findByRole('region', { name: '저장된 기억' }))
+  // The facts sit inside their kind's group, itself a list item: the row is the innermost one.
   const found = list
     .getAllByRole('listitem')
-    .find((item) => within(item).queryByText(text) !== null)
+    .filter((item) => within(item).queryByText(text) !== null)
+    .at(-1)
   if (!found) throw new Error(`no row with text ${text}`)
   return within(found)
 }
 
 describe('the memory directory', () => {
   // MEM-23/MEM-24: the screen reads and edits authored facts and nothing else.
-  it('lists the memories in the server order with their kind and tags, and asks no model anything', async () => {
+  // Guide: the notebook groups the facts by what they are about (취향 · 설정 · 장소 · 인물 · 이력),
+  // each group keeping the server's order, and the owner's tags narrow it to one subject.
+  it('groups the memories by kind with their tags and sources, and asks no model anything', async () => {
+    const user = userEvent.setup()
     const calls: string[] = []
     renderMemories({}, calls)
 
     const list = within(await screen.findByRole('region', { name: '저장된 기억' }))
-    const items = list.getAllByRole('listitem')
-    expect(items.map((item) => item.textContent?.includes('연남동에 자주 간다'))).toEqual([
-      true,
-      false,
-    ])
+    expect(
+      list.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
+    ).toEqual(['취향1', '장소1'])
     const place = await row('연남동에 자주 간다')
-    expect(place.getByText('장소')).toBeInTheDocument()
-    expect(place.getByText('연남동')).toBeInTheDocument()
-    expect(place.getByText('산책')).toBeInTheDocument()
-    // A memory with no tags says so rather than rendering an empty row of chips.
-    expect((await row('매운 음식을 못 먹는다')).getByText('태그 없음')).toBeInTheDocument()
+    expect(place.getByText('#연남동')).toBeInTheDocument()
+    expect(place.getByText('#산책')).toBeInTheDocument()
+    expect(place.getByText('글 1편에서 배움')).toBeInTheDocument()
+    // A memory with no tags carries no empty row of chips.
+    expect((await row('매운 음식을 못 먹는다')).queryByText(/^#/)).toBeNull()
+    // A tag narrows the notebook to the facts that carry it.
+    await user.click(screen.getByRole('button', { name: '#산책' }))
+    expect(screen.queryByText('매운 음식을 못 먹는다')).not.toBeInTheDocument()
+    expect(screen.getByText('연남동에 자주 간다')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '전체' }))
+    expect(screen.getByText('매운 음식을 못 먹는다')).toBeInTheDocument()
 
     // Reading the directory starts no job and calls no model: a memory is authored text.
     await waitFor(() => expect(calls).toContain('ListMemories'))
@@ -131,7 +140,12 @@ describe('the memory directory', () => {
       tags: ['연남동', '저녁'],
     })
     const edited = await row('연남동에서 산책한다')
-    expect(edited.getByText('취향')).toBeInTheDocument()
+    // The fact moved to the group of its new kind.
+    const group = screen
+      .getByText('연남동에서 산책한다')
+      .closest('li')!
+      .parentElement!.closest('li')!
+    expect(within(group).getByRole('heading', { level: 2 })).toHaveTextContent('취향')
     expect(edited.queryByRole('textbox')).not.toBeInTheDocument()
   })
 

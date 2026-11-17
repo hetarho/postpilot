@@ -1,14 +1,16 @@
-import { clsx } from 'clsx'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { usePost } from '@/entities/post'
-import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
-import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
-import { TemplateDirectEditor } from '@/features/edit-template'
-import { TemplateWizard } from '@/features/create-template-wizard'
+import {
+  AUTHORING_REFERENCE_POST_MAX_CHARS,
+  useAuthoringSummaries,
+  type AuthoringSavedRef,
+} from '@/entities/ai-authoring'
 import { BlockType } from '@/shared/api'
+import { useTemplates, type Template } from '@/entities/template'
+import { TemplateDirectEditor } from '@/features/edit-template'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
 
@@ -54,273 +56,158 @@ export function TemplatePage() {
       </PageFrame>
     )
   return (
-    <TemplateAuthoringPage
-      key={JSON.stringify([
-        ownerId,
-        stored?.id ?? 'new',
-        stored ? '' : session,
-        stored ? '' : from,
-      ])}
-      ownerId={ownerId}
-      stored={stored}
-      sampleSlug={stored ? undefined : from}
-      sessionId={stored ? undefined : session}
-      returnPost={stored ? undefined : post}
-      onPublished={refetch}
-    />
+    <TemplateReference slug={stored ? undefined : from}>
+      {(reference) => (
+        <TemplateAuthoringPage
+          key={JSON.stringify([
+            ownerId,
+            stored?.id ?? 'new',
+            stored ? '' : session,
+            stored ? '' : from,
+          ])}
+          ownerId={ownerId}
+          stored={stored}
+          reference={reference}
+          sessionId={stored ? undefined : session}
+          returnPost={stored ? undefined : post}
+          onPublished={refetch}
+        />
+      )}
+    </TemplateReference>
   )
 }
 
+/** `?from=<slug>` (이 글 형식으로 템플릿 만들기): the post the owner asked the new template to follow,
+ *  handed to the conversation as its one bounded reference text (EDIT-16) — its headings marked,
+ *  its paragraphs as they are. A post that cannot be read leaves the conversation without one. */
+function TemplateReference({
+  slug,
+  children,
+}: {
+  slug?: string
+  children: (reference: string | undefined) => ReactNode
+}) {
+  const { t } = useTranslation('common')
+  const sample = usePost(slug ?? '', { enabled: !!slug })
+  if (!slug) return children(undefined)
+  if (sample.isPending)
+    return (
+      <PageFrame width="wide">
+        <LoadingState variant="detail" label={t('state.loading')} className="mt-8" />
+      </PageFrame>
+    )
+  const reference = sample.post?.content?.blocks
+    .map((block) => (block.type === BlockType.HEADING ? `## ${block.content}` : block.content))
+    .filter((text) => text.trim() !== '')
+    .join('\n\n')
+  return children(
+    reference
+      ? Array.from(reference).slice(0, AUTHORING_REFERENCE_POST_MAX_CHARS).join('')
+      : undefined,
+  )
+}
+
+/** Guide: a template is made by talking (owner 2026-11-17). New or saved, the screen opens on one
+ *  conversation beside the draft's live preview: the owner says what they post, the AI drafts the
+ *  template from scratch, each message refines it, and 저장 names and keeps it. Editing the text by
+ *  hand is one ⋯ away. There is no wizard and nothing to drag. */
 function TemplateAuthoringPage({
   ownerId,
   stored,
-  sampleSlug,
+  reference,
   sessionId,
   returnPost,
   onPublished,
 }: {
   ownerId: string
   stored?: Template
-  sampleSlug?: string
+  /** The post the template should follow, as text (`?from=`). */
+  reference?: string
   sessionId?: string
-  /** The post whose 템플릿 picker opened the wizard, or `new` for an unsaved draft (TMPL-32). */
+  /** The post whose 템플릿 picker opened this screen, or `new` for an unsaved draft (TMPL-32). */
   returnPost?: string
   onPublished: () => void
 }) {
-  const { t } = useTranslation(['templates', 'authoring', 'common'])
+  const { t } = useTranslation(['templates', 'authoring', 'nav', 'common'])
   const navigate = useNavigate()
-  const summaries = useAuthoringSummaries({ ownerId, kind: 'post-template' })
-  const summary = summaries.data?.find(
-    (row) => row.targetId === stored?.id || (!!stored && row.lastPublication?.id === stored.id),
-  )
-  const [method, setMethod] = useState<'ai' | 'direct' | null>(sessionId ? 'ai' : null)
-  const [activeSession, setActiveSession] = useState(sessionId)
-  const [sample, setSample] = useState(sampleSlug ?? '')
   const [published, setPublished] = useState<AuthoringSavedRef>()
-  const guided = !stored && !sessionId
-  const samplePost = usePost(sample, { enabled: guided && sample !== '' })
-  const seedHeadings =
-    samplePost.post?.content?.blocks
-      .filter((block) => block.type === BlockType.HEADING)
-      .map((block) => block.content) ?? []
-  const publication =
-    published ??
-    (stored && summary?.lastPublication?.id === stored.id ? summary.lastPublication : undefined)
-  const named = {
-    kind: t('kinds.post-template', { ns: 'authoring' }),
-    name: stored?.name ?? t('page.new', { ns: 'templates' }),
-  }
+  // A saved template with work not yet saved reopens that conversation rather than a fresh one
+  // from the saved copy, so nothing the owner changed is hidden (EDIT-15, EDIT-18).
+  const summaries = useAuthoringSummaries({ ownerId, kind: 'post-template' })
+  const unfinished = stored
+    ? summaries.data?.find(
+        (row) =>
+          row.targetId === stored.id &&
+          (row.hasUnpublishedChanges ||
+            !!row.activeJobId ||
+            row.publicationPending ||
+            row.targetConflict),
+      )
+    : undefined
+  const resume = sessionId ?? unfinished?.sessionId
+  if (stored && summaries.isPending)
+    return (
+      <PageFrame width="wide">
+        <LoadingState
+          variant="detail"
+          label={t('state.loading', { ns: 'common' })}
+          className="mt-8"
+        />
+      </PageFrame>
+    )
   return (
     <PageFrame
       width="board"
-      // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
-      className={clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0')}
+      className="flex flex-1 flex-col py-4 sm:py-8"
       title={
-        <Typography variant="title" as="h1" className="text-content-secondary truncate">
-          {named.name}
+        <Typography variant="label" as="h1" className="text-content-secondary truncate">
+          {t(stored ? 'location.template' : 'location.newTemplate', { ns: 'nav' })}
         </Typography>
       }
     >
-      {publication?.outcome && (
-        <Typography variant="body" role="status" className="mt-4">
-          {t(publication.outcome === 'updated' ? 'confirmedUpdate' : 'confirmedCreate', {
+      {published?.outcome && (
+        <Typography variant="body" role="status" className="mb-4">
+          {t(published.outcome === 'updated' ? 'confirmedUpdate' : 'confirmedCreate', {
             ns: 'authoring',
-            ...named,
-            name: publication.name,
+            kind: t('kinds.post-template', { ns: 'authoring' }),
+            name: published.name,
           })}
         </Typography>
       )}
-      {guided ? (
-        <div className="mt-4 flex flex-1 flex-col sm:mt-8">
-          {samplePost.isPending ? (
-            <LoadingState variant="form" label={t('state.loading', { ns: 'common' })} />
-          ) : sample !== '' && (samplePost.failure || !samplePost.post?.content) ? (
-            <Notice tone="danger" role="alert">
-              {t('screen.referenceMissing', { ns: 'templates' })}
-              <Button variant="ghost" onClick={() => setSample('')}>
-                {t('screen.removeReference', { ns: 'templates' })}
-              </Button>
-            </Notice>
-          ) : (
-            <TemplateWizard
-              ownerId={ownerId}
-              seedHeadings={seedHeadings}
-              onSaved={(templateId) => {
-                onPublished()
-                // Opened from a post's picker: back to that post with the template assigned.
-                if (returnPost === 'new')
-                  void navigate({
-                    to: '/posts/new',
-                    search: { template: templateId },
-                    replace: true,
-                  })
-                else if (returnPost)
-                  void navigate({
-                    to: '/posts/$slug',
-                    params: { slug: returnPost },
-                    search: { template: templateId },
-                    replace: true,
-                  })
-                else
-                  void navigate({
-                    to: '/templates/$templateId',
-                    params: { templateId },
-                    replace: true,
-                  })
-              }}
-            />
-          )}
-        </div>
-      ) : method === null ? (
-        <section className="mt-4 flex flex-col sm:mt-8">
-          <Typography variant="stepTitle" as="h2">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('screen.reviewKind', { ns: 'templates' })}</span>
-                <span className="hidden sm:inline">
-                  {t('reviewNamed', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('screen.chooseCreation', { ns: 'templates' })
-            )}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-2 sm:mt-4">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('screen.savedAvailable', { ns: 'templates' })}</span>
-                <span className="hidden sm:inline">
-                  {t('savedUsable', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('screen.unsaved', { ns: 'templates' })
-            )}
-          </Typography>
-          {summaries.isPending && (
-            <LoadingState
-              variant="inline"
-              label={t('screen.checkingWork', { ns: 'templates' })}
-              className="mt-4"
-            />
-          )}
-          {summaries.isError && (
-            <Notice tone="danger" role="alert" className="mt-4">
-              {t('screen.workLoadFailed', { ns: 'templates' })}
-              <Button variant="ghost" onClick={() => void summaries.refetch()}>
-                {t('action.retry', { ns: 'common' })}
-              </Button>
-            </Notice>
-          )}
-          {summary && (
-            <div role="status" className="mt-4 space-y-2">
-              {summary.hasUnpublishedChanges && (
-                <Typography variant="body">
-                  {t('unpublished', { ns: 'authoring', ...named })}
-                </Typography>
-              )}
-              {summary.activeJobId && (
-                <Typography variant="body">
-                  {t('screen.activeAI', { ns: 'templates', name: named.name })}
-                </Typography>
-              )}
-              {summary.publicationPending && (
-                <Typography variant="body">
-                  {t('screen.publicationPending', { ns: 'templates', name: named.name })}
-                </Typography>
-              )}
-              {summary.targetConflict && (
-                <Notice tone="warning">
-                  {t('screen.conflict', { ns: 'templates', name: named.name })}
-                </Notice>
-              )}
-            </div>
-          )}
-          {stored && (
-            <div className="order-2 mt-4 sm:order-none sm:mt-6">
-              <TemplatePreview titleArea={stored.titleArea} body={stored.body} />
-            </div>
-          )}
-          <div className="order-1 mt-4 flex flex-wrap gap-2 sm:order-none sm:mt-8 sm:gap-4">
-            <Button
-              aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('ai')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('screen.editAI', { ns: 'templates' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('aiNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('screen.createAI', { ns: 'templates' })
-              )}
-            </Button>
-            <Button
-              aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('direct')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('screen.editDirect', { ns: 'templates' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('directNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('host.manual', { ns: 'authoring' })
-              )}
-            </Button>
-            {summary &&
-              (summary.hasUnpublishedChanges ||
-                summary.activeJobId ||
-                summary.publicationPending ||
-                summary.targetConflict) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setActiveSession(summary.sessionId)
-                    setMethod('ai')
-                  }}
-                >
-                  {t('continueNamed', { ns: 'authoring', ...named })}
-                </Button>
-              )}
-          </div>
-        </section>
-      ) : (
-        <AIAuthoringStudio
-          ownerId={ownerId}
-          kind="post-template"
-          targetId={stored?.id}
-          targetName={stored?.name}
-          sessionId={activeSession}
-          initialMethod={method}
-          startFromSaved={!activeSession}
-          renderDirectEditor={(props) => <TemplateDirectEditor {...props} />}
-          onSaved={(saved) => {
-            setPublished(saved)
-            onPublished()
-            if (stored) setMethod(null)
-            else
-              void navigate({
-                to: '/templates/$templateId',
-                params: { templateId: saved.id },
-                replace: true,
-              })
-          }}
-          className="mt-8"
-        />
-      )}
+      <AIAuthoringStudio
+        ownerId={ownerId}
+        kind="post-template"
+        layout="conversation"
+        candidateCount={1}
+        targetId={stored?.id}
+        targetName={stored?.name}
+        sessionId={resume}
+        initialMethod={stored ? 'ai' : undefined}
+        startFromSaved={!resume}
+        referencePost={reference}
+        renderDirectEditor={(props) => <TemplateDirectEditor {...props} />}
+        onSaved={(saved) => {
+          setPublished(saved)
+          onPublished()
+          // Opened from a post's picker: back to that post with the template assigned.
+          if (returnPost === 'new')
+            void navigate({ to: '/posts/new', search: { template: saved.id }, replace: true })
+          else if (returnPost)
+            void navigate({
+              to: '/posts/$slug',
+              params: { slug: returnPost },
+              search: { template: saved.id },
+              replace: true,
+            })
+          else if (!stored)
+            void navigate({
+              to: '/templates/$templateId',
+              params: { templateId: saved.id },
+              replace: true,
+            })
+        }}
+        className="flex-1"
+      />
     </PageFrame>
   )
 }

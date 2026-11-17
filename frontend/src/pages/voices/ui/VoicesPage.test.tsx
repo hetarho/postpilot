@@ -25,58 +25,63 @@ function renderDirectory(voice: FakeVoiceOptions = {}, calls: string[] = []) {
   return renderAppAt('/voices', { user: USER, calls, voice: { voices: VOICES, ...voice } })
 }
 
-/** The active list is the first list on the page, rendered once the directory answered. */
-const activeRows = async () => (await within(screen.getByRole('main')).findAllByRole('list'))[0]!
+/** The owner's voices by name, the one shown pressed (more than one voice). */
+const voiceChips = async () =>
+  within(await screen.findByRole('navigation', { name: '말투 고르기' })).getAllByRole('button')
+/** The voice held up to be read. */
+const specimen = async (name: string | RegExp) =>
+  within(await screen.findByRole('region', { name }))
 const deletedGroup = async () =>
   within((await screen.findByText(/삭제된 말투 \d+개/)).closest('details')!)
 
 /** The sheet is mounted only while open, so every creation flow starts by opening it — from the
- *  section's 새 말투 button (THEME-67). */
+ *  section's one creation button, its way from the owner's own writing (THEME-67). */
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('link', { name: '새 말투' }))
+  await user.click(await screen.findByRole('button', { name: '새 말투 만들기' }))
+  await user.click(await screen.findByRole('menuitem', { name: /내가 쓴 글로 만들기/ }))
   return within(await screen.findByRole('dialog'))
 }
 
 describe('the voice directory', () => {
-  // VOICE-52: 내 글's rows — each voice one link with its name, the 기본 badge and a meta line —
-  // tombstones folded away, nothing interactive on a row.
-  it('lists the voices as whole-row links with a meta line and folds the tombstones away', async () => {
+  // Guide: one voice at a time, held up as a specimen of how it sounds, the others as names to
+  // switch between; a voice still being made shows how far its material has come.
+  it('holds one voice up as a specimen and the others as names to switch between', async () => {
+    const user = userEvent.setup()
     const calls: string[] = []
     renderDirectory({}, calls)
 
     expect(await screen.findByRole('heading', { level: 1, name: '말투' })).toBeInTheDocument()
-    const rows = within(await activeRows()).getAllByRole('link')
-    expect(rows).toHaveLength(3)
-    expect(rows[0]).toHaveAttribute('href', '/voices/voice-default')
-    expect(rows[0]).toHaveTextContent('기본 말투')
-    expect(rows[0]).toHaveTextContent('기본')
-    expect(rows[0]).toHaveTextContent('학습 글 1편 · 2026.08.29 분석')
-    expect(rows[1]).toHaveTextContent('리뷰')
-    expect(rows[1]).toHaveTextContent('학습 글 3편 · 2026.08.29 분석')
-    expect(rows[1]).not.toHaveTextContent('기본')
-    expect(rows[2]).toHaveTextContent('새 말투')
-    expect(rows[2]).toHaveTextContent('만드는 중 0%')
-    // Nothing interactive on a row: no 기본으로 설정, no 삭제, no language chip.
-    for (const row of rows) expect(within(row).queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '기본으로 설정' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /삭제$/ })).not.toBeInTheDocument()
-    expect(screen.queryByText('한국어')).not.toBeInTheDocument()
-
-    // 새 말투 is the section's creation button; the AI method sits above the list, outside the saved
-    // voices.
+    const chips = await voiceChips()
+    expect(chips).toHaveLength(3)
+    // The 기본 voice is the one shown first.
+    const shown = await specimen('기본 말투')
+    expect(shown.getByRole('link', { name: '자세히 보기' })).toHaveAttribute(
+      'href',
+      '/voices/voice-default',
+    )
+    expect(shown.getByText('학습 글 1편 · 2026.08.29 분석')).toBeInTheDocument()
+    expect(chips.find((chip) => chip.textContent?.startsWith('기본 말투'))).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    // A voice still being made shows its readiness and the way to carry on.
+    await user.click(chips.find((chip) => chip.textContent === '새 말투')!)
+    const making = await specimen('새 말투')
+    expect(making.getByRole('link', { name: '이어서 만들기' })).toHaveAttribute(
+      'href',
+      '/voices/voice-new',
+    )
+    // One creation button; its two ways open from it.
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '새 말투' })).toHaveAttribute('href', '/voices?new=1')
-    expect(
-      screen
-        .getAllByRole('button', { name: 'AI 말투 추천받기' })
-        .find((button) => !button.closest('details')),
-    ).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '새 말투 만들기' }))
+    expect(await screen.findByRole('menuitem', { name: /AI 말투 추천받기/ })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
 
     const deleted = await deletedGroup()
     expect(deleted.getByRole('link', { name: '옛 말투' })).toBeInTheDocument()
     expect(screen.getByText('삭제된 말투 1개').closest('details')).not.toHaveAttribute('open')
 
-    // Looking at the directory changes nothing and asks no model anything ([I5]).
+    // Looking at the voices changes nothing and asks no model anything ([I5]).
     expect(
       calls.filter(
         (call) =>
@@ -88,6 +93,10 @@ describe('the voice directory', () => {
             'ListModels',
             'GetSelections',
             'InitializeDefaultSelections',
+            'ListTemplates',
+            'ListGuidelines',
+            'ListMemories',
+            'ListAuthoringSummaries',
           ].includes(call),
       ),
     ).toEqual([])
@@ -109,9 +118,9 @@ describe('the voice directory', () => {
       },
     })
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    const card = within(await activeRows()).getByRole('link', { name: /AI 말투/ })
-    await waitFor(() => expect(card).toHaveTextContent('바다가 보이는 창가에서 커피를 마셨어요.'))
-    expect(card).toHaveTextContent('AI가 만든 가상의 예문')
+    const card = await specimen('AI 말투')
+    expect(await card.findByText('“바다가 보이는 창가에서 커피를 마셨어요.”')).toBeInTheDocument()
+    expect(card.getByText('AI가 만든 가상의 예문')).toBeInTheDocument()
   })
 
   it("leaves a sample from the owner's own writing unlabelled", async () => {
@@ -130,9 +139,9 @@ describe('the voice directory', () => {
       },
     })
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    const card = within(await activeRows()).getByRole('link', { name: /내 말투/ })
-    await waitFor(() => expect(card).toHaveTextContent('오늘도 손님이 많았다.'))
-    expect(card).not.toHaveTextContent('가상의 예문')
+    const card = await specimen('내 말투')
+    expect(await card.findByText('“오늘도 손님이 많았다.”')).toBeInTheDocument()
+    expect(card.queryByText(/가상의 예문/)).not.toBeInTheDocument()
   })
 
   it('renders no tombstone group at all when nothing is deleted', async () => {
@@ -200,12 +209,9 @@ describe('the voice directory', () => {
   it('says in plain words what a voice is when there is none', async () => {
     renderDirectory({ voices: [] })
 
-    expect(
-      await screen.findByText(
-        '아직 말투가 없어요. 직접 쓴 글이나 문항 답으로 나만의 말투를 만들어 보세요.',
-      ),
-    ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '새 말투' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '아직 말투가 없어요' })).toBeInTheDocument()
+    expect(screen.getByText('문장이 내 말투로 써져요')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투 만들기' })).toBeInTheDocument()
   })
 
   // THEME-67: `?new=1` — the section's 새 말투 — opens the sheet at once, and closing it
@@ -272,11 +278,12 @@ describe('the voice directory', () => {
     await user.click((await deletedGroup()).getByRole('button', { name: '복원' }))
 
     await waitFor(() => expect(calls).toContain('RestoreVoice'))
-    await waitFor(async () =>
-      expect(within(await activeRows()).getAllByRole('link')).toHaveLength(4),
-    )
+    await waitFor(async () => expect(await voiceChips()).toHaveLength(4))
     expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument()
-    expect(within(await activeRows()).getAllByText('기본')).toHaveLength(1)
+    // The 기본 stays the one voice it was.
+    expect((await voiceChips()).filter((chip) => chip.textContent?.endsWith('기본'))).toHaveLength(
+      1,
+    )
   })
 
   it('refuses a restore whose name is taken and says how to resolve it', async () => {

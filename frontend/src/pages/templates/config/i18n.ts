@@ -15,6 +15,7 @@ export const i18n = {
         '매번 같은 틀로 쓰는 글이 있다면, 그 틀을 한 번만 만들어 두고 글마다 골라 쓰세요. 인트로·사진 설명·총평처럼 글의 순서를 정해 두면 AI가 매번 그 순서대로 씁니다.',
       name: '이름',
       newDockAria: '새 템플릿 만들기',
+      emptyTalk: '어떤 글을 올리는지 AI에게 말해 주면, 그 글에 맞는 구성을 처음부터 짜 드려요.',
     },
   },
   en: {
@@ -29,6 +30,7 @@ export const i18n = {
         'If you write the same shape of post again and again, build that shape once and pick it per post. Set the order — intro, a description per photo, a verdict — and AI follows it every time.',
       name: 'Name',
       newDockAria: 'Create a new template',
+      emptyTalk: 'Tell the AI what you post, and it drafts a shape for those posts from scratch.',
     },
   },
 } as const satisfies I18nFragment

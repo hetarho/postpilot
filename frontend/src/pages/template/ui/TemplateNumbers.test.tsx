@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import { publishAuthoringDraft } from '@/test/authoring-ui'
+import { openTemplateDirect, publishTemplateConversation } from '@/test/authoring-ui'
 import type { FakeTemplatesOptions } from '@/test/templates'
 import type { FakeAuthoringOptions } from '@/test/authoring'
 const template = {
@@ -28,8 +28,7 @@ async function mount(
     },
     authoring,
   })
-  await user.click(await screen.findByRole('button', { name: /리뷰.*직접 편집하기/ }))
-  await screen.findByLabelText('이름')
+  await openTemplateDirect(user)
 }
 describe('owner template generation numbers in shared drafts', () => {
   it('captures both stored numbers, outside the source composition', async () => {
@@ -39,8 +38,8 @@ describe('owner template generation numbers in shared drafts', () => {
     expect(screen.getByLabelText('최소 태그 수 사용')).toBeChecked()
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('1800')
     expect(screen.getByLabelText('최소 태그 수')).toHaveValue('7')
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
+    // The text is edited as 원문 alone: there is no builder to drag rows in.
+    expect(screen.queryByRole('button', { name: '고급' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('원문')).toHaveValue(template.body)
   })
   it('uses owner opt-in defaults and remembers typed numbers when toggled off and on', async () => {
@@ -62,7 +61,7 @@ describe('owner template generation numbers in shared drafts', () => {
     const updates: NonNullable<FakeTemplatesOptions['updates']> = []
     await mount(user, true, { updates })
     await user.click(screen.getByLabelText('최소 태그 수 사용'))
-    await publishAuthoringDraft(user)
+    await publishTemplateConversation(user)
     await waitFor(() => expect(updates).toHaveLength(1))
     expect(updates[0]).toMatchObject({ targetLength: 1800, tagCount: undefined })
   })
@@ -79,18 +78,21 @@ describe('owner template generation numbers in shared drafts', () => {
       await waitFor(() => expect(patches).toHaveLength(1))
       expect(patches[0].tagCount).toBe(value || ' ')
       expect(updates).toHaveLength(0)
-      expect(screen.queryByRole('button', { name: '저장할 내용 확인하기' })).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: /^(변경사항 저장|새 템플릿으로 저장)$/ }),
+      ).toBeNull()
     },
   )
-  it('keeps the owner’s earlier numeric input across an untick and AI/direct method switch', async () => {
+  it('keeps the owner’s earlier numeric input across an untick and conversation/direct switch', async () => {
     const user = userEvent.setup()
     await mount(user, false)
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     fireEvent.change(screen.getByLabelText('목표 글자 수'), { target: { value: '2500' } })
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
+    // Back to the conversation and into the text again: the same working draft.
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
-    await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
+    await screen.findByRole('log', { name: '템플릿 대화' })
+    await openTemplateDirect(user)
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('2500')
   })

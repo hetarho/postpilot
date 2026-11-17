@@ -1,17 +1,31 @@
 import { useId, useState } from 'react'
-import { Link } from '@tanstack/react-router'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { Ellipsis } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useSpokenActions, SPOKEN_NAME_MAX, type SpokenVoice } from '@/entities/spoken-voice'
-import { Button, Dialog, FieldLabel, Sheet, TextField, Typography, buttonStyles } from '@/shared/ui'
+import {
+  ActionMenu,
+  Button,
+  Dialog,
+  FieldLabel,
+  Sheet,
+  TextField,
+  Typography,
+  buttonStyles,
+} from '@/shared/ui'
 export function SpokenVoiceActions({
   ownerId,
   voice,
   onStatus,
+  presentation = 'buttons',
 }: {
   ownerId: string
   voice: SpokenVoice
   onStatus: (key: 'failed' | 'renamed') => void
+  /** `menu`: the three actions behind one ⋯, for a card whose own job is listening. */
+  presentation?: 'buttons' | 'menu'
 }) {
+  const navigate = useNavigate()
   const { t } = useTranslation('manageSpokenVoice'),
     id = useId(),
     actions = useSpokenActions(ownerId)
@@ -40,36 +54,63 @@ export function SpokenVoiceActions({
       onStatus('failed')
     }
   }
+  const openRename = () => {
+    setName(voice.name)
+    setFailed(false)
+    setRenaming(true)
+  }
+  const openRemove = () => {
+    setFailed(false)
+    setRemoving(true)
+  }
   return (
     <>
-      <div className="flex min-w-0 flex-wrap gap-3">
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setName(voice.name)
-            setFailed(false)
-            setRenaming(true)
-          }}
-        >
-          {t('rename')}
-        </Button>
-        <Link
-          to="/spoken-voices/new"
-          search={{ copy: voice.id }}
-          className={buttonStyles({ variant: 'ghost' })}
-        >
-          {t('changeSound')}
-        </Link>
-        <Button
-          variant="ghost"
-          onClick={() => {
-            setFailed(false)
-            setRemoving(true)
-          }}
-        >
-          {t('remove')}
-        </Button>
-      </div>
+      {presentation === 'menu' ? (
+        <ActionMenu
+          label={t('menu', { name: voice.name })}
+          triggerLabel={<Ellipsis aria-hidden="true" className="size-5" />}
+          triggerVariant="ghost"
+          items={[
+            { id: 'rename', label: t('rename'), onSelect: openRename },
+            {
+              id: 'sound',
+              label: t('changeSound'),
+              onSelect: () =>
+                void navigate({ to: '/spoken-voices/new', search: { copy: voice.id } }),
+            },
+            { id: 'remove', label: t('remove'), onSelect: openRemove },
+          ]}
+        />
+      ) : (
+        <div className="flex min-w-0 flex-wrap gap-3">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setName(voice.name)
+              setFailed(false)
+              setRenaming(true)
+            }}
+          >
+            {t('rename')}
+          </Button>
+          <Link
+            to="/spoken-voices/new"
+            search={{ copy: voice.id }}
+            className={buttonStyles({ variant: 'ghost' })}
+          >
+            {t('changeSound')}
+          </Link>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setFailed(false)
+              setRemoving(true)
+            }}
+          >
+            {t('remove')}
+          </Button>
+        </div>
+      )}
       <Sheet
         open={renaming}
         onClose={() => setRenaming(false)}
