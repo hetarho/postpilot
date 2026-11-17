@@ -172,6 +172,7 @@
 - 261117 decided MODEL-99: how do template question groups lay out beyond phones? → tabs on phones only, stacked named groups from sm up (alt: tabs at every width | one merged list with a template badge per question)
 - 261117 suggest GEN-18: GEN-18 still describes observer writing-test snapshots, which now exist only as admitted records; a gusta-doc-review pass can scope it to them
 - 261117 decided T888 T889 T890: the loop stopped after two completed units were recorded failed (abbreviated candidate SHA in agentChecks) and an empty duplicate wtform session held integration → withdraw the duplicate, add a full-SHA receipt note to T890-T897 and resume the same scope under the original deadline (alt: stop and report | hand-implement the remaining tasks in this session)
+- 261117 decided MODEL-97 T890 T893 T894: how is the photo observation test built? → as an output kind (observation) of the existing writing-test engine, reusing its tournament, quote, checkpoint, retention and history paths, with test-owned photo rows under tests/ (alt: a separate observation-test engine and tables | revive the legacy ModelExperimentService observe experiment)
 
 ## unlanded
 | id | tag | branch | commit | at |
