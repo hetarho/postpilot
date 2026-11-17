@@ -180,6 +180,7 @@
 - 261117 parked T897: shared integration waits only on the perf6 participant from another device (status working since 2026-11-16T16:29Z, no live session); wtform, wtform2 and both lchat sessions are ready. Finish or close perf6 on that device (vibe integration close --tag perf6 in its worktree), then resume here with vibe loop --tag wtform2 to run the batch gate and land
 - 261117 decided T897: the owner said to ignore perf6 and merge → set only the perf6 participant to withdrawn (reason owner-approved-skip) in the shared integration record, leaving its branch and work untouched; it re-registers on its next ready (alt: merge this session by hand outside the shared gate | keep waiting)
 - 261117 decided T897: the wtform loop cannot resume: its failed-stop report lacks the next section and the runner refuses any edit to it → close that report by hand and run T897 plus the batch gate under tag wtform2 (alt: implement T897 and run the gate by hand | leave the run stopped)
+- 261117 suggest -: gusta CLI follow-ups for /gusta-send-issue: an abbreviated candidate SHA in a unit receipt marks finished work failed and stops the loop; a failed-stop report omits its next section so the next preflight fails spec lint; a corrected report cannot be resumed under the same tag; an inbox line containing a markdown heading token drops the following report sections
 
 ## unlanded
 | id | tag | branch | commit | at |
