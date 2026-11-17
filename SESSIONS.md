@@ -188,12 +188,6 @@
 - 261117 suggest -: gusta CLI follow-ups for /gusta-send-issue: an abbreviated candidate SHA in a unit receipt marks finished work failed and stops the loop; a failed-stop report omits its next section so the next preflight fails spec lint; a corrected report cannot be resumed under the same tag; an inbox line containing a markdown heading token drops the following report sections
 - 261117 decided MODEL-100 T898: how much room does a reasoning observer get? → four times the batch budget (8,192 tokens for four photos, the clip observer budget) for any model whose source publishes a reasoning object, since the truncating models expose no effort control (alt: double it like the writer headroom | raise every observation budget regardless of reasoning)
 
-## unlanded
-| id | tag | branch | commit | at |
-|---|---|---|---|---|
-| T898 | obsfix | gusta-session-start-obsfix-f75bb1c7 | 01afffddc011 | 2026-11-17T09:15Z |
-| T899 | obsfix | gusta-session-start-obsfix-f75bb1c7 | 9350785e1838 | 2026-11-17T09:22Z |
-
 ## log
 - 261117 T899 done
 - 261117 T898 done
