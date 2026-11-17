@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r41 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
+> r42 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -129,12 +129,13 @@
   - photos are uploaded into the test, never into a post: photos only, at least one, through the post photo selection gate, conversion and per-post count (→!POST-31–33); videos are not accepted
   - the photos step is the writing editor's own photo slot: each photo a tile that opens large (→=POST-100), can be deleted and moved, with the upload progress beside the picker; deleting or moving changes only the test's draft, and no turn is offered ← the owner judges an observation against photos they can see, and one job keeps one surface
   - every contestant observes the same frozen photos independently with the ordinary observation request and no writing material
-  - review shows the pair's two observations photo by photo: beside each other on desktop, the same pair with explicit winner controls on phones
+  - review shows one photo at a time, held still, beside one contestant's observation card, named like 후보 A · 사진 3: a photo switcher and a contestant switcher each step previous/next and open a dropdown of every photo or contestant, a sideways swipe of the card moves to the other contestant, and every switch shows its card at once without a fetch; the explicit winner controls stay docked; a champion's or a done contestant's observations read in the same viewer without the contestant switcher ← two long observation columns under every photo made the same photo hard to compare
   - format, blindness, concurrency, progress, failure recovery, champion, adoption as the observe stage's active model, usage, ownership and retention follow the writing-test rules (→!MODEL-32–36 →!MODEL-39–42 →!MODEL-75 →!MODEL-89 →!MODEL-91); the uploaded photos are private test input, purged with the test's payload
   - its estimate prices the observation calls only, through the ordinary test estimate and explicit approval
   - its records appear in 지난 비교 beside writing tests and open at /tests/$testId
 - MODEL-98 [o] model contestants are chosen from one list of the stage's selectable models in which the owner checks exactly the format's count; models are never chosen through per-slot dropdowns
-  - each row shows the model's name, grade and credits per post for that stage, or 무료 (→=QUOTA-64 →!QUOTA-66); a row whose figure is unknown says so instead of a number
+  - the list is MODEL-96's model list: compact rows under their grade's heading (무료, 가성비 … 최고, then 등급 미정), never one card per model ← a card per model with its own grade badge let a few models fill the screen
+  - each row shows the model's name and credits per post for that stage, or 무료 (→=QUOTA-64 →!QUOTA-66); a row whose figure is unknown says so instead of a number
   - locked or incompatible models stay listed as disabled rows stating their reason, including the required plan (→!MODEL-14)
   - rows order like MODEL-96's picker (→=MODEL-96); the number checked is shown against the format's count, and checking past it is refused in place
   - a saved two-model pair prefills the A/B list (→!MODEL-65)
@@ -178,11 +179,11 @@
   - admin offers a separate free-group view/filter and explicit classification controls; user selectors order free before the four paid grades
 - MODEL-58 [o] classification gates ordinary selections, preset application, comparisons and execution through QUOTA-19, as well as paid estimator-combo assignment. Unclassified registrations remain visible only for operator curation and cannot bypass entitlement. Locked higher grades stay visible to users with the required plan; being price-zero alone does not classify a registration as free.
 - MODEL-59 [o] a models-v1 paste line is an id optionally followed by `free`, `value`, `balanced`, `premium` or `top`. An omitted classification explicitly unsets it; export/preview/apply round-trip the complete membership and classification. Unknown tokens reject the whole document; ordinary access follows MODEL-58.
-- MODEL-96 [o] `/ai-models` shows the model in use for each of the write, observe and analyze stages as a row with its grade and per-post credit figure (→=QUOTA-64); its 바꾸기 opens a picker of that stage's selectable models as radio cards, and a tap saves that choice at once (→!MODEL-25)
+- MODEL-96 [o] `/ai-models` shows the model in use for each of the write, observe and analyze stages as a row with its grade and per-post credit figure (→=QUOTA-64); its 바꾸기 opens a picker of that stage's selectable models as compact radio rows under grade headings (→=MODEL-98), and a tap saves that choice at once (→!MODEL-25)
   - the picker opens free first, then 가성비 up to 최고, unclassified last, with catalog order inside a grade (→!MODEL-57)
-  - 품질 먼저 (highest grade first) and 균형 (밸런스 first, nearest grades next) apply only when the owner picks them; 가격 먼저 puts free first, then the fewest credits per post
-  - locked or unaffordable models stay visible as disabled cards stating their reason, including the required plan (→!MODEL-14)
-  - cards and orderings read credits per post only, never a supplier price or pricing date (→!QUOTA-66)
+  - 품질 먼저 (highest grade first) and 균형 (밸런스 first, nearest grades next, the lower of two equally near grades first) apply only when the owner picks them and keep each grade under its heading; 가격 먼저 puts free first, then the fewest credits per post, with no headings and each row naming its grade
+  - locked or unaffordable models stay visible as disabled rows stating their reason, including the required plan (→!MODEL-14)
+  - rows and orderings read credits per post only, never a supplier price or pricing date (→!QUOTA-66)
 - MODEL-60 [o] tests retain the originating creation/settings/history location under THEME-58, including filters and safe return through reload or new-tab deep links. A direct test link defaults to test history; a missing source does not imply an unconditional post-list return.
 - MODEL-66 [o] test admission, generation and match decisions never mutate source content, observations, voice, template, guideline or active model. Only MODEL-36/90 explicit result actions publish; the test origin controls contextual return, not hidden source mutation.
 - MODEL-65 [o] saved eligible model A/B pairs may prefill the two-contestant model test; choosing a complete distinct pair saves it atomically, while count4/8/16 candidates belong to the test draft. Existing seven-slot operator recommendation documents remain compatible and do not silently populate/replace larger test entrants.
@@ -335,6 +336,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r42 261117 MODEL-97✎ review two observation columns under every photo→one held photo beside one contestant's card (후보 A · 사진 3) with photo and contestant switchers, dropdowns and a swipe; MODEL-98✎ a card per model with a grade badge→compact rows under grade headings, the same list as MODEL-96; MODEL-96✎ radio cards→compact radio rows under grade headings, 균형 tie to the lower grade, 가격 먼저 without headings
 - r41 261117 MODEL-97✎ photos step a picker with a count→the writing editor's photo slot (tiles, large view, delete, move); MODEL-101✎ done contestants a status only→open to their output with the review's renderer; a running test's poll passed through loading→refreshes in place
 - r40 261117 MODEL-46✎ observation keeps its batch budget→follows MODEL-100; MODEL-100+ reasoning observers get an observation reasoning multiplier; MODEL-101+ per-contestant progress with failure reasons, match progress only once ready, retry named in the test's unit
 - r39 261117 MODEL-30✎ observe or write stage→write stage only; MODEL-31✎ observer tests write posts→photo observation tests, admitted observe-stage tests readable only; MODEL-44✎ observer opens on candidates→photo test, model selectors→MODEL-98; MODEL-97+ photo observation tests; MODEL-98+ model checklist with credits; MODEL-99+ template groups/tabs, 필수, refusal placement, docked step bar

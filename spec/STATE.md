@@ -29,7 +29,7 @@
 | POST | 54 | 54 | - | 0 |
 | VOICE | 22 | 22 | - | 0 |
 | GEN | 34 | 34 | - | 0 |
-| MODEL | 41 | 41 | - | 0 |
+| MODEL | 42 | 42 | - | 0 |
 | TMPL | 35 | 35 | - | 0 |
 | GUIDE | 28 | 28 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
@@ -82,6 +82,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T901 | Compare observations one held photo and one contestant card at a time, and list models as compact rows under grade headings | MODEL THEME ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
