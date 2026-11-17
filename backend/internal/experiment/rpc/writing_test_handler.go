@@ -158,6 +158,14 @@ func (h *WritingTestHandler) ApplyWritingTestOutput(ctx context.Context, req *co
 	publication, test, err := h.publication.ApplyOutput(ctx, experiment.OutputApplication{TestMutation: experiment.TestMutation{UserID: user, TestID: req.Msg.GetTestId(), ExpectedRevision: req.Msg.GetExpectedRevision(), RequestKey: req.Msg.GetRequestKey()}, WinnerID: req.Msg.GetWinnerCandidateId(), InputRevision: req.Msg.GetExpectedInputRevision(), ContentRevision: req.Msg.GetExpectedContentRevision()})
 	return writingPublicationResponse(publication, test, err)
 }
+
+// CreateTestPhotoUpload and ConfirmTestPhotoUpload answer Unimplemented until the photo test storage lands.
+func (h *WritingTestHandler) CreateTestPhotoUpload(context.Context, *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("test photo upload is not available yet"))
+}
+func (h *WritingTestHandler) ConfirmTestPhotoUpload(context.Context, *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("test photo upload is not available yet"))
+}
 func writingResponse(found experiment.WritingTest, err error) (*connect.Response[v1.WritingTestResponse], error) {
 	if err != nil {
 		return nil, writingError(err)

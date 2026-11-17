@@ -21,6 +21,56 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// What each contestant produces. UNSPECIFIED reads as POST, so every existing test is a post test.
+type WritingTestOutput int32
+
+const (
+	WritingTestOutput_WRITING_TEST_OUTPUT_UNSPECIFIED WritingTestOutput = 0
+	WritingTestOutput_WRITING_TEST_OUTPUT_POST        WritingTestOutput = 1
+	WritingTestOutput_WRITING_TEST_OUTPUT_OBSERVATION WritingTestOutput = 2
+)
+
+// Enum value maps for WritingTestOutput.
+var (
+	WritingTestOutput_name = map[int32]string{
+		0: "WRITING_TEST_OUTPUT_UNSPECIFIED",
+		1: "WRITING_TEST_OUTPUT_POST",
+		2: "WRITING_TEST_OUTPUT_OBSERVATION",
+	}
+	WritingTestOutput_value = map[string]int32{
+		"WRITING_TEST_OUTPUT_UNSPECIFIED": 0,
+		"WRITING_TEST_OUTPUT_POST":        1,
+		"WRITING_TEST_OUTPUT_OBSERVATION": 2,
+	}
+)
+
+func (x WritingTestOutput) Enum() *WritingTestOutput {
+	p := new(WritingTestOutput)
+	*p = x
+	return p
+}
+
+func (x WritingTestOutput) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (WritingTestOutput) Descriptor() protoreflect.EnumDescriptor {
+	return file_postpilot_v1_writing_test_proto_enumTypes[0].Descriptor()
+}
+
+func (WritingTestOutput) Type() protoreflect.EnumType {
+	return &file_postpilot_v1_writing_test_proto_enumTypes[0]
+}
+
+func (x WritingTestOutput) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use WritingTestOutput.Descriptor instead.
+func (WritingTestOutput) EnumDescriptor() ([]byte, []int) {
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{0}
+}
+
 type WritingTestFactor int32
 
 const (
@@ -60,11 +110,11 @@ func (x WritingTestFactor) String() string {
 }
 
 func (WritingTestFactor) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_writing_test_proto_enumTypes[0].Descriptor()
+	return file_postpilot_v1_writing_test_proto_enumTypes[1].Descriptor()
 }
 
 func (WritingTestFactor) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_writing_test_proto_enumTypes[0]
+	return &file_postpilot_v1_writing_test_proto_enumTypes[1]
 }
 
 func (x WritingTestFactor) Number() protoreflect.EnumNumber {
@@ -73,7 +123,7 @@ func (x WritingTestFactor) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WritingTestFactor.Descriptor instead.
 func (WritingTestFactor) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{0}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{1}
 }
 
 type WritingTestStage int32
@@ -109,11 +159,11 @@ func (x WritingTestStage) String() string {
 }
 
 func (WritingTestStage) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_writing_test_proto_enumTypes[1].Descriptor()
+	return file_postpilot_v1_writing_test_proto_enumTypes[2].Descriptor()
 }
 
 func (WritingTestStage) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_writing_test_proto_enumTypes[1]
+	return &file_postpilot_v1_writing_test_proto_enumTypes[2]
 }
 
 func (x WritingTestStage) Number() protoreflect.EnumNumber {
@@ -122,7 +172,7 @@ func (x WritingTestStage) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WritingTestStage.Descriptor instead.
 func (WritingTestStage) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{1}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{2}
 }
 
 type WritingTestStatus int32
@@ -173,11 +223,11 @@ func (x WritingTestStatus) String() string {
 }
 
 func (WritingTestStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_writing_test_proto_enumTypes[2].Descriptor()
+	return file_postpilot_v1_writing_test_proto_enumTypes[3].Descriptor()
 }
 
 func (WritingTestStatus) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_writing_test_proto_enumTypes[2]
+	return &file_postpilot_v1_writing_test_proto_enumTypes[3]
 }
 
 func (x WritingTestStatus) Number() protoreflect.EnumNumber {
@@ -186,7 +236,7 @@ func (x WritingTestStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WritingTestStatus.Descriptor instead.
 func (WritingTestStatus) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{2}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{3}
 }
 
 type WritingTestCandidateStatus int32
@@ -231,11 +281,11 @@ func (x WritingTestCandidateStatus) String() string {
 }
 
 func (WritingTestCandidateStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_writing_test_proto_enumTypes[3].Descriptor()
+	return file_postpilot_v1_writing_test_proto_enumTypes[4].Descriptor()
 }
 
 func (WritingTestCandidateStatus) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_writing_test_proto_enumTypes[3]
+	return &file_postpilot_v1_writing_test_proto_enumTypes[4]
 }
 
 func (x WritingTestCandidateStatus) Number() protoreflect.EnumNumber {
@@ -244,7 +294,7 @@ func (x WritingTestCandidateStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WritingTestCandidateStatus.Descriptor instead.
 func (WritingTestCandidateStatus) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{3}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{4}
 }
 
 type WritingTestPublicationAction int32
@@ -286,11 +336,11 @@ func (x WritingTestPublicationAction) String() string {
 }
 
 func (WritingTestPublicationAction) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_writing_test_proto_enumTypes[4].Descriptor()
+	return file_postpilot_v1_writing_test_proto_enumTypes[5].Descriptor()
 }
 
 func (WritingTestPublicationAction) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_writing_test_proto_enumTypes[4]
+	return &file_postpilot_v1_writing_test_proto_enumTypes[5]
 }
 
 func (x WritingTestPublicationAction) Number() protoreflect.EnumNumber {
@@ -299,7 +349,7 @@ func (x WritingTestPublicationAction) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WritingTestPublicationAction.Descriptor instead.
 func (WritingTestPublicationAction) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{4}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{5}
 }
 
 type WritingTestPublicationStatus int32
@@ -338,11 +388,11 @@ func (x WritingTestPublicationStatus) String() string {
 }
 
 func (WritingTestPublicationStatus) Descriptor() protoreflect.EnumDescriptor {
-	return file_postpilot_v1_writing_test_proto_enumTypes[5].Descriptor()
+	return file_postpilot_v1_writing_test_proto_enumTypes[6].Descriptor()
 }
 
 func (WritingTestPublicationStatus) Type() protoreflect.EnumType {
-	return &file_postpilot_v1_writing_test_proto_enumTypes[5]
+	return &file_postpilot_v1_writing_test_proto_enumTypes[6]
 }
 
 func (x WritingTestPublicationStatus) Number() protoreflect.EnumNumber {
@@ -351,7 +401,7 @@ func (x WritingTestPublicationStatus) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use WritingTestPublicationStatus.Descriptor instead.
 func (WritingTestPublicationStatus) EnumDescriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{5}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{6}
 }
 
 type WritingTestSettingRef struct {
@@ -658,8 +708,10 @@ type WritingTestContext struct {
 	TagCount        int32           `protobuf:"varint,12,opt,name=tag_count,json=tagCount,proto3" json:"tag_count,omitempty"`
 	UseMemory       bool            `protobuf:"varint,13,opt,name=use_memory,json=useMemory,proto3" json:"use_memory,omitempty"`
 	QualityRules    []QualityMetric `protobuf:"varint,14,rep,packed,name=quality_rules,json=qualityRules,proto3,enum=postpilot.v1.QualityMetric" json:"quality_rules,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// Test-owned photo ids, observation tests only.
+	PhotoIds      []string `protobuf:"bytes,15,rep,name=photo_ids,json=photoIds,proto3" json:"photo_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WritingTestContext) Reset() {
@@ -790,14 +842,23 @@ func (x *WritingTestContext) GetQualityRules() []QualityMetric {
 	return nil
 }
 
+func (x *WritingTestContext) GetPhotoIds() []string {
+	if x != nil {
+		return x.PhotoIds
+	}
+	return nil
+}
+
 type WritingTestPlan struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Factor     WritingTestFactor      `protobuf:"varint,1,opt,name=factor,proto3,enum=postpilot.v1.WritingTestFactor" json:"factor,omitempty"`
 	ModelStage WritingTestStage       `protobuf:"varint,2,opt,name=model_stage,json=modelStage,proto3,enum=postpilot.v1.WritingTestStage" json:"model_stage,omitempty"`
 	// Exactly 2/4/8/16, and equal to entrants.size. There is no default or silent reduction.
-	Count         int32                 `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
-	Entrants      []*WritingTestEntrant `protobuf:"bytes,4,rep,name=entrants,proto3" json:"entrants,omitempty"`
-	Context       *WritingTestContext   `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	Count    int32                 `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
+	Entrants []*WritingTestEntrant `protobuf:"bytes,4,rep,name=entrants,proto3" json:"entrants,omitempty"`
+	Context  *WritingTestContext   `protobuf:"bytes,5,opt,name=context,proto3" json:"context,omitempty"`
+	// UNSPECIFIED reads as POST.
+	Output        WritingTestOutput `protobuf:"varint,6,opt,name=output,proto3,enum=postpilot.v1.WritingTestOutput" json:"output,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -865,6 +926,13 @@ func (x *WritingTestPlan) GetContext() *WritingTestContext {
 		return x.Context
 	}
 	return nil
+}
+
+func (x *WritingTestPlan) GetOutput() WritingTestOutput {
+	if x != nil {
+		return x.Output
+	}
+	return WritingTestOutput_WRITING_TEST_OUTPUT_UNSPECIFIED
 }
 
 type WritingTestIdentity struct {
@@ -999,7 +1067,9 @@ type WritingTestCandidate struct {
 	DisplayLabel string               `protobuf:"bytes,6,opt,name=display_label,json=displayLabel,proto3" json:"display_label,omitempty"`
 	Storyline    *Storyline           `protobuf:"bytes,7,opt,name=storyline,proto3" json:"storyline,omitempty"`
 	// Absent while blind; preserved for completed or explicitly abandoned tests, including failed calls.
-	Usage         *WritingTestUsage `protobuf:"bytes,8,opt,name=usage,proto3" json:"usage,omitempty"`
+	Usage *WritingTestUsage `protobuf:"bytes,8,opt,name=usage,proto3" json:"usage,omitempty"`
+	// Observation tests: one entry per frozen photo. `model` stays empty while blind (MODEL-32).
+	Observations  []*Observation `protobuf:"bytes,9,rep,name=observations,proto3" json:"observations,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1086,6 +1156,13 @@ func (x *WritingTestCandidate) GetStoryline() *Storyline {
 func (x *WritingTestCandidate) GetUsage() *WritingTestUsage {
 	if x != nil {
 		return x.Usage
+	}
+	return nil
+}
+
+func (x *WritingTestCandidate) GetObservations() []*Observation {
+	if x != nil {
+		return x.Observations
 	}
 	return nil
 }
@@ -1274,6 +1351,91 @@ func (x *WritingTestPublication) GetFailure() *Failure {
 	return nil
 }
 
+// A photo the owner uploaded into an observation test; private test input, purged with the test payload.
+type WritingTestPhoto struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Filename      string                 `protobuf:"bytes,2,opt,name=filename,proto3" json:"filename,omitempty"`
+	Width         int32                  `protobuf:"varint,3,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`
+	ViewUrl       string                 `protobuf:"bytes,5,opt,name=view_url,json=viewUrl,proto3" json:"view_url,omitempty"`
+	ViewExpiresAt string                 `protobuf:"bytes,6,opt,name=view_expires_at,json=viewExpiresAt,proto3" json:"view_expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *WritingTestPhoto) Reset() {
+	*x = WritingTestPhoto{}
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *WritingTestPhoto) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*WritingTestPhoto) ProtoMessage() {}
+
+func (x *WritingTestPhoto) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use WritingTestPhoto.ProtoReflect.Descriptor instead.
+func (*WritingTestPhoto) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *WritingTestPhoto) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *WritingTestPhoto) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+func (x *WritingTestPhoto) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *WritingTestPhoto) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+func (x *WritingTestPhoto) GetViewUrl() string {
+	if x != nil {
+		return x.ViewUrl
+	}
+	return ""
+}
+
+func (x *WritingTestPhoto) GetViewExpiresAt() string {
+	if x != nil {
+		return x.ViewExpiresAt
+	}
+	return ""
+}
+
 type WritingTest struct {
 	state             protoimpl.MessageState    `protogen:"open.v1"`
 	Id                string                    `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1299,13 +1461,17 @@ type WritingTest struct {
 	// Stored admission target and every output's content-language provenance, also on history reads.
 	// Never substitute the current UI locale or a source post's later target language for export.
 	TargetLanguage ContentLanguage `protobuf:"varint,21,opt,name=target_language,json=targetLanguage,proto3,enum=postpilot.v1.ContentLanguage" json:"target_language,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// UNSPECIFIED reads as POST.
+	Output WritingTestOutput `protobuf:"varint,22,opt,name=output,proto3,enum=postpilot.v1.WritingTestOutput" json:"output,omitempty"`
+	// Observation tests: the frozen photos every contestant observed.
+	Photos        []*WritingTestPhoto `protobuf:"bytes,23,rep,name=photos,proto3" json:"photos,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *WritingTest) Reset() {
 	*x = WritingTest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[11]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1317,7 +1483,7 @@ func (x *WritingTest) String() string {
 func (*WritingTest) ProtoMessage() {}
 
 func (x *WritingTest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[11]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1330,7 +1496,7 @@ func (x *WritingTest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WritingTest.ProtoReflect.Descriptor instead.
 func (*WritingTest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{11}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *WritingTest) GetId() string {
@@ -1480,6 +1646,20 @@ func (x *WritingTest) GetTargetLanguage() ContentLanguage {
 	return ContentLanguage_CONTENT_LANGUAGE_UNSPECIFIED
 }
 
+func (x *WritingTest) GetOutput() WritingTestOutput {
+	if x != nil {
+		return x.Output
+	}
+	return WritingTestOutput_WRITING_TEST_OUTPUT_UNSPECIFIED
+}
+
+func (x *WritingTest) GetPhotos() []*WritingTestPhoto {
+	if x != nil {
+		return x.Photos
+	}
+	return nil
+}
+
 type EstimateWritingTestRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Plan          *WritingTestPlan       `protobuf:"bytes,1,opt,name=plan,proto3" json:"plan,omitempty"`
@@ -1489,7 +1669,7 @@ type EstimateWritingTestRequest struct {
 
 func (x *EstimateWritingTestRequest) Reset() {
 	*x = EstimateWritingTestRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[12]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1501,7 +1681,7 @@ func (x *EstimateWritingTestRequest) String() string {
 func (*EstimateWritingTestRequest) ProtoMessage() {}
 
 func (x *EstimateWritingTestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[12]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1514,7 +1694,7 @@ func (x *EstimateWritingTestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EstimateWritingTestRequest.ProtoReflect.Descriptor instead.
 func (*EstimateWritingTestRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{12}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *EstimateWritingTestRequest) GetPlan() *WritingTestPlan {
@@ -1537,7 +1717,7 @@ type EstimateFailedTestCandidatesRequest struct {
 
 func (x *EstimateFailedTestCandidatesRequest) Reset() {
 	*x = EstimateFailedTestCandidatesRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[13]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1549,7 +1729,7 @@ func (x *EstimateFailedTestCandidatesRequest) String() string {
 func (*EstimateFailedTestCandidatesRequest) ProtoMessage() {}
 
 func (x *EstimateFailedTestCandidatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[13]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1562,7 +1742,7 @@ func (x *EstimateFailedTestCandidatesRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use EstimateFailedTestCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*EstimateFailedTestCandidatesRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{13}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *EstimateFailedTestCandidatesRequest) GetTestId() string {
@@ -1598,7 +1778,7 @@ type EstimateWritingTestResponse struct {
 
 func (x *EstimateWritingTestResponse) Reset() {
 	*x = EstimateWritingTestResponse{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[14]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1610,7 +1790,7 @@ func (x *EstimateWritingTestResponse) String() string {
 func (*EstimateWritingTestResponse) ProtoMessage() {}
 
 func (x *EstimateWritingTestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[14]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1623,7 +1803,7 @@ func (x *EstimateWritingTestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EstimateWritingTestResponse.ProtoReflect.Descriptor instead.
 func (*EstimateWritingTestResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{14}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *EstimateWritingTestResponse) GetCredits() int64 {
@@ -1666,7 +1846,7 @@ type StartWritingTestRequest struct {
 
 func (x *StartWritingTestRequest) Reset() {
 	*x = StartWritingTestRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[15]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1678,7 +1858,7 @@ func (x *StartWritingTestRequest) String() string {
 func (*StartWritingTestRequest) ProtoMessage() {}
 
 func (x *StartWritingTestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[15]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1691,7 +1871,7 @@ func (x *StartWritingTestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StartWritingTestRequest.ProtoReflect.Descriptor instead.
 func (*StartWritingTestRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{15}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *StartWritingTestRequest) GetPlan() *WritingTestPlan {
@@ -1724,7 +1904,7 @@ type GetWritingTestRequest struct {
 
 func (x *GetWritingTestRequest) Reset() {
 	*x = GetWritingTestRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[16]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1736,7 +1916,7 @@ func (x *GetWritingTestRequest) String() string {
 func (*GetWritingTestRequest) ProtoMessage() {}
 
 func (x *GetWritingTestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[16]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1749,7 +1929,7 @@ func (x *GetWritingTestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetWritingTestRequest.ProtoReflect.Descriptor instead.
 func (*GetWritingTestRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{16}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *GetWritingTestRequest) GetTestId() string {
@@ -1772,7 +1952,7 @@ type ListWritingTestsRequest struct {
 
 func (x *ListWritingTestsRequest) Reset() {
 	*x = ListWritingTestsRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[17]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1784,7 +1964,7 @@ func (x *ListWritingTestsRequest) String() string {
 func (*ListWritingTestsRequest) ProtoMessage() {}
 
 func (x *ListWritingTestsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[17]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1797,7 +1977,7 @@ func (x *ListWritingTestsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWritingTestsRequest.ProtoReflect.Descriptor instead.
 func (*ListWritingTestsRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{17}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *ListWritingTestsRequest) GetPageSize() int32 {
@@ -1838,7 +2018,7 @@ type ListWritingTestsResponse struct {
 
 func (x *ListWritingTestsResponse) Reset() {
 	*x = ListWritingTestsResponse{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[18]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1850,7 +2030,7 @@ func (x *ListWritingTestsResponse) String() string {
 func (*ListWritingTestsResponse) ProtoMessage() {}
 
 func (x *ListWritingTestsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[18]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1863,7 +2043,7 @@ func (x *ListWritingTestsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListWritingTestsResponse.ProtoReflect.Descriptor instead.
 func (*ListWritingTestsResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{18}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *ListWritingTestsResponse) GetTests() []*WritingTest {
@@ -1889,7 +2069,7 @@ type WritingTestResponse struct {
 
 func (x *WritingTestResponse) Reset() {
 	*x = WritingTestResponse{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[19]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1901,7 +2081,7 @@ func (x *WritingTestResponse) String() string {
 func (*WritingTestResponse) ProtoMessage() {}
 
 func (x *WritingTestResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[19]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1914,7 +2094,7 @@ func (x *WritingTestResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WritingTestResponse.ProtoReflect.Descriptor instead.
 func (*WritingTestResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{19}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *WritingTestResponse) GetTest() *WritingTest {
@@ -1937,7 +2117,7 @@ type RetryFailedTestCandidatesRequest struct {
 
 func (x *RetryFailedTestCandidatesRequest) Reset() {
 	*x = RetryFailedTestCandidatesRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[20]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1949,7 +2129,7 @@ func (x *RetryFailedTestCandidatesRequest) String() string {
 func (*RetryFailedTestCandidatesRequest) ProtoMessage() {}
 
 func (x *RetryFailedTestCandidatesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[20]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1962,7 +2142,7 @@ func (x *RetryFailedTestCandidatesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RetryFailedTestCandidatesRequest.ProtoReflect.Descriptor instead.
 func (*RetryFailedTestCandidatesRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{20}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *RetryFailedTestCandidatesRequest) GetTestId() string {
@@ -2013,7 +2193,7 @@ type DecideTestMatchRequest struct {
 
 func (x *DecideTestMatchRequest) Reset() {
 	*x = DecideTestMatchRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[21]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2025,7 +2205,7 @@ func (x *DecideTestMatchRequest) String() string {
 func (*DecideTestMatchRequest) ProtoMessage() {}
 
 func (x *DecideTestMatchRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[21]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2038,7 +2218,7 @@ func (x *DecideTestMatchRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DecideTestMatchRequest.ProtoReflect.Descriptor instead.
 func (*DecideTestMatchRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{21}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *DecideTestMatchRequest) GetTestId() string {
@@ -2087,7 +2267,7 @@ type CancelWritingTestRequest struct {
 
 func (x *CancelWritingTestRequest) Reset() {
 	*x = CancelWritingTestRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[22]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2099,7 +2279,7 @@ func (x *CancelWritingTestRequest) String() string {
 func (*CancelWritingTestRequest) ProtoMessage() {}
 
 func (x *CancelWritingTestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[22]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2112,7 +2292,7 @@ func (x *CancelWritingTestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CancelWritingTestRequest.ProtoReflect.Descriptor instead.
 func (*CancelWritingTestRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{22}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CancelWritingTestRequest) GetTestId() string {
@@ -2154,7 +2334,7 @@ type SaveWritingTestWinnerRequest struct {
 
 func (x *SaveWritingTestWinnerRequest) Reset() {
 	*x = SaveWritingTestWinnerRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[23]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2166,7 +2346,7 @@ func (x *SaveWritingTestWinnerRequest) String() string {
 func (*SaveWritingTestWinnerRequest) ProtoMessage() {}
 
 func (x *SaveWritingTestWinnerRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[23]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2179,7 +2359,7 @@ func (x *SaveWritingTestWinnerRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SaveWritingTestWinnerRequest.ProtoReflect.Descriptor instead.
 func (*SaveWritingTestWinnerRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{23}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *SaveWritingTestWinnerRequest) GetTestId() string {
@@ -2259,7 +2439,7 @@ type ApplyWritingTestOutputRequest struct {
 
 func (x *ApplyWritingTestOutputRequest) Reset() {
 	*x = ApplyWritingTestOutputRequest{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[24]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2271,7 +2451,7 @@ func (x *ApplyWritingTestOutputRequest) String() string {
 func (*ApplyWritingTestOutputRequest) ProtoMessage() {}
 
 func (x *ApplyWritingTestOutputRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[24]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2284,7 +2464,7 @@ func (x *ApplyWritingTestOutputRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ApplyWritingTestOutputRequest.ProtoReflect.Descriptor instead.
 func (*ApplyWritingTestOutputRequest) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{24}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ApplyWritingTestOutputRequest) GetTestId() string {
@@ -2339,7 +2519,7 @@ type WritingTestPublicationResponse struct {
 
 func (x *WritingTestPublicationResponse) Reset() {
 	*x = WritingTestPublicationResponse{}
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[25]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2351,7 +2531,7 @@ func (x *WritingTestPublicationResponse) String() string {
 func (*WritingTestPublicationResponse) ProtoMessage() {}
 
 func (x *WritingTestPublicationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_postpilot_v1_writing_test_proto_msgTypes[25]
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2364,7 +2544,7 @@ func (x *WritingTestPublicationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use WritingTestPublicationResponse.ProtoReflect.Descriptor instead.
 func (*WritingTestPublicationResponse) Descriptor() ([]byte, []int) {
-	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{25}
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *WritingTestPublicationResponse) GetPublication() *WritingTestPublication {
@@ -2377,6 +2557,222 @@ func (x *WritingTestPublicationResponse) GetPublication() *WritingTestPublicatio
 func (x *WritingTestPublicationResponse) GetTest() *WritingTest {
 	if x != nil {
 		return x.Test
+	}
+	return nil
+}
+
+type CreateTestPhotoUploadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Filename      string                 `protobuf:"bytes,1,opt,name=filename,proto3" json:"filename,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTestPhotoUploadRequest) Reset() {
+	*x = CreateTestPhotoUploadRequest{}
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTestPhotoUploadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTestPhotoUploadRequest) ProtoMessage() {}
+
+func (x *CreateTestPhotoUploadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTestPhotoUploadRequest.ProtoReflect.Descriptor instead.
+func (*CreateTestPhotoUploadRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *CreateTestPhotoUploadRequest) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
+type CreateTestPhotoUploadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UploadId      string                 `protobuf:"bytes,1,opt,name=upload_id,json=uploadId,proto3" json:"upload_id,omitempty"`
+	PutUrl        string                 `protobuf:"bytes,2,opt,name=put_url,json=putUrl,proto3" json:"put_url,omitempty"`
+	ContentType   string                 `protobuf:"bytes,3,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	ExpiresAt     string                 `protobuf:"bytes,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateTestPhotoUploadResponse) Reset() {
+	*x = CreateTestPhotoUploadResponse{}
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateTestPhotoUploadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateTestPhotoUploadResponse) ProtoMessage() {}
+
+func (x *CreateTestPhotoUploadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateTestPhotoUploadResponse.ProtoReflect.Descriptor instead.
+func (*CreateTestPhotoUploadResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *CreateTestPhotoUploadResponse) GetUploadId() string {
+	if x != nil {
+		return x.UploadId
+	}
+	return ""
+}
+
+func (x *CreateTestPhotoUploadResponse) GetPutUrl() string {
+	if x != nil {
+		return x.PutUrl
+	}
+	return ""
+}
+
+func (x *CreateTestPhotoUploadResponse) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *CreateTestPhotoUploadResponse) GetExpiresAt() string {
+	if x != nil {
+		return x.ExpiresAt
+	}
+	return ""
+}
+
+type ConfirmTestPhotoUploadRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UploadId      string                 `protobuf:"bytes,1,opt,name=upload_id,json=uploadId,proto3" json:"upload_id,omitempty"`
+	Width         int32                  `protobuf:"varint,2,opt,name=width,proto3" json:"width,omitempty"`
+	Height        int32                  `protobuf:"varint,3,opt,name=height,proto3" json:"height,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmTestPhotoUploadRequest) Reset() {
+	*x = ConfirmTestPhotoUploadRequest{}
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmTestPhotoUploadRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmTestPhotoUploadRequest) ProtoMessage() {}
+
+func (x *ConfirmTestPhotoUploadRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmTestPhotoUploadRequest.ProtoReflect.Descriptor instead.
+func (*ConfirmTestPhotoUploadRequest) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ConfirmTestPhotoUploadRequest) GetUploadId() string {
+	if x != nil {
+		return x.UploadId
+	}
+	return ""
+}
+
+func (x *ConfirmTestPhotoUploadRequest) GetWidth() int32 {
+	if x != nil {
+		return x.Width
+	}
+	return 0
+}
+
+func (x *ConfirmTestPhotoUploadRequest) GetHeight() int32 {
+	if x != nil {
+		return x.Height
+	}
+	return 0
+}
+
+type ConfirmTestPhotoUploadResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Photo         *WritingTestPhoto      `protobuf:"bytes,1,opt,name=photo,proto3" json:"photo,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ConfirmTestPhotoUploadResponse) Reset() {
+	*x = ConfirmTestPhotoUploadResponse{}
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ConfirmTestPhotoUploadResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ConfirmTestPhotoUploadResponse) ProtoMessage() {}
+
+func (x *ConfirmTestPhotoUploadResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_postpilot_v1_writing_test_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ConfirmTestPhotoUploadResponse.ProtoReflect.Descriptor instead.
+func (*ConfirmTestPhotoUploadResponse) Descriptor() ([]byte, []int) {
+	return file_postpilot_v1_writing_test_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ConfirmTestPhotoUploadResponse) GetPhoto() *WritingTestPhoto {
+	if x != nil {
+		return x.Photo
 	}
 	return nil
 }
@@ -2404,7 +2800,7 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\x04text\x18\x01 \x01(\tR\x04text\x12\x1c\n" +
 	"\tfictional\x18\x02 \x01(\bR\tfictional\x12%\n" +
 	"\x0eattachment_ids\x18\x03 \x03(\tR\rattachmentIds\x12G\n" +
-	"\x10template_answers\x18\x04 \x03(\v2\x1c.postpilot.v1.TemplateAnswerR\x0ftemplateAnswers\"\xba\x05\n" +
+	"\x10template_answers\x18\x04 \x03(\v2\x1c.postpilot.v1.TemplateAnswerR\x0ftemplateAnswers\"\xd7\x05\n" +
 	"\x12WritingTestContext\x12(\n" +
 	"\x10source_post_slug\x18\x01 \x01(\tR\x0esourcePostSlug\x126\n" +
 	"\x17expected_input_revision\x18\x02 \x01(\x03R\x15expectedInputRevision\x12:\n" +
@@ -2423,14 +2819,16 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\ttag_count\x18\f \x01(\x05R\btagCount\x12\x1d\n" +
 	"\n" +
 	"use_memory\x18\r \x01(\bR\tuseMemory\x12@\n" +
-	"\rquality_rules\x18\x0e \x03(\x0e2\x1b.postpilot.v1.QualityMetricR\fqualityRules\"\x9b\x02\n" +
+	"\rquality_rules\x18\x0e \x03(\x0e2\x1b.postpilot.v1.QualityMetricR\fqualityRules\x12\x1b\n" +
+	"\tphoto_ids\x18\x0f \x03(\tR\bphotoIds\"\xd4\x02\n" +
 	"\x0fWritingTestPlan\x127\n" +
 	"\x06factor\x18\x01 \x01(\x0e2\x1f.postpilot.v1.WritingTestFactorR\x06factor\x12?\n" +
 	"\vmodel_stage\x18\x02 \x01(\x0e2\x1e.postpilot.v1.WritingTestStageR\n" +
 	"modelStage\x12\x14\n" +
 	"\x05count\x18\x03 \x01(\x05R\x05count\x12<\n" +
 	"\bentrants\x18\x04 \x03(\v2 .postpilot.v1.WritingTestEntrantR\bentrants\x12:\n" +
-	"\acontext\x18\x05 \x01(\v2 .postpilot.v1.WritingTestContextR\acontext\"\x83\x01\n" +
+	"\acontext\x18\x05 \x01(\v2 .postpilot.v1.WritingTestContextR\acontext\x127\n" +
+	"\x06output\x18\x06 \x01(\x0e2\x1f.postpilot.v1.WritingTestOutputR\x06output\"\x83\x01\n" +
 	"\x13WritingTestIdentity\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x128\n" +
 	"\x06source\x18\x02 \x01(\v2 .postpilot.v1.WritingTestEntrantR\x06source\x12\x1c\n" +
@@ -2439,7 +2837,7 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\rprompt_tokens\x18\x01 \x01(\x03R\fpromptTokens\x12+\n" +
 	"\x11completion_tokens\x18\x02 \x01(\x03R\x10completionTokens\x12\x1d\n" +
 	"\n" +
-	"latency_ms\x18\x03 \x01(\x03R\tlatencyMs\"\x9d\x03\n" +
+	"latency_ms\x18\x03 \x01(\x03R\tlatencyMs\"\xdc\x03\n" +
 	"\x14WritingTestCandidate\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12@\n" +
 	"\x06status\x18\x02 \x01(\x0e2(.postpilot.v1.WritingTestCandidateStatusR\x06status\x121\n" +
@@ -2448,7 +2846,8 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\bidentity\x18\x05 \x01(\v2!.postpilot.v1.WritingTestIdentityR\bidentity\x12#\n" +
 	"\rdisplay_label\x18\x06 \x01(\tR\fdisplayLabel\x125\n" +
 	"\tstoryline\x18\a \x01(\v2\x17.postpilot.v1.StorylineR\tstoryline\x124\n" +
-	"\x05usage\x18\b \x01(\v2\x1e.postpilot.v1.WritingTestUsageR\x05usage\"\xd8\x01\n" +
+	"\x05usage\x18\b \x01(\v2\x1e.postpilot.v1.WritingTestUsageR\x05usage\x12=\n" +
+	"\fobservations\x18\t \x03(\v2\x19.postpilot.v1.ObservationR\fobservations\"\xd8\x01\n" +
 	"\x10WritingTestMatch\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x14\n" +
 	"\x05round\x18\x02 \x01(\x05R\x05round\x12\x14\n" +
@@ -2465,7 +2864,14 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\vrequest_key\x18\x06 \x01(\tR\n" +
 	"requestKey\x12\x1b\n" +
 	"\ttarget_id\x18\a \x01(\tR\btargetId\x12/\n" +
-	"\afailure\x18\b \x01(\v2\x15.postpilot.v1.FailureR\afailure\"\xb2\a\n" +
+	"\afailure\x18\b \x01(\v2\x15.postpilot.v1.FailureR\afailure\"\xaf\x01\n" +
+	"\x10WritingTestPhoto\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
+	"\bfilename\x18\x02 \x01(\tR\bfilename\x12\x14\n" +
+	"\x05width\x18\x03 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x04 \x01(\x05R\x06height\x12\x19\n" +
+	"\bview_url\x18\x05 \x01(\tR\aviewUrl\x12&\n" +
+	"\x0fview_expires_at\x18\x06 \x01(\tR\rviewExpiresAt\"\xa3\b\n" +
 	"\vWritingTest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\brevision\x18\x02 \x01(\rR\brevision\x127\n" +
@@ -2493,7 +2899,9 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\x11confirmed_credits\x18\x12 \x01(\x03R\x10confirmedCredits\x12)\n" +
 	"\x10reserved_credits\x18\x13 \x01(\x03R\x0freservedCredits\x12/\n" +
 	"\afailure\x18\x14 \x01(\v2\x15.postpilot.v1.FailureR\afailure\x12F\n" +
-	"\x0ftarget_language\x18\x15 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\"O\n" +
+	"\x0ftarget_language\x18\x15 \x01(\x0e2\x1d.postpilot.v1.ContentLanguageR\x0etargetLanguage\x127\n" +
+	"\x06output\x18\x16 \x01(\x0e2\x1f.postpilot.v1.WritingTestOutputR\x06output\x126\n" +
+	"\x06photos\x18\x17 \x03(\v2\x1e.postpilot.v1.WritingTestPhotoR\x06photos\"O\n" +
 	"\x1aEstimateWritingTestRequest\x121\n" +
 	"\x04plan\x18\x01 \x01(\v2\x1d.postpilot.v1.WritingTestPlanR\x04plan\"\x90\x01\n" +
 	"#EstimateFailedTestCandidatesRequest\x12\x17\n" +
@@ -2566,7 +2974,25 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\x19expected_content_revision\x18\x06 \x01(\x03R\x17expectedContentRevision\"\x97\x01\n" +
 	"\x1eWritingTestPublicationResponse\x12F\n" +
 	"\vpublication\x18\x01 \x01(\v2$.postpilot.v1.WritingTestPublicationR\vpublication\x12-\n" +
-	"\x04test\x18\x02 \x01(\v2\x19.postpilot.v1.WritingTestR\x04test*\xbb\x01\n" +
+	"\x04test\x18\x02 \x01(\v2\x19.postpilot.v1.WritingTestR\x04test\":\n" +
+	"\x1cCreateTestPhotoUploadRequest\x12\x1a\n" +
+	"\bfilename\x18\x01 \x01(\tR\bfilename\"\x97\x01\n" +
+	"\x1dCreateTestPhotoUploadResponse\x12\x1b\n" +
+	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x17\n" +
+	"\aput_url\x18\x02 \x01(\tR\x06putUrl\x12!\n" +
+	"\fcontent_type\x18\x03 \x01(\tR\vcontentType\x12\x1d\n" +
+	"\n" +
+	"expires_at\x18\x04 \x01(\tR\texpiresAt\"j\n" +
+	"\x1dConfirmTestPhotoUploadRequest\x12\x1b\n" +
+	"\tupload_id\x18\x01 \x01(\tR\buploadId\x12\x14\n" +
+	"\x05width\x18\x02 \x01(\x05R\x05width\x12\x16\n" +
+	"\x06height\x18\x03 \x01(\x05R\x06height\"V\n" +
+	"\x1eConfirmTestPhotoUploadResponse\x124\n" +
+	"\x05photo\x18\x01 \x01(\v2\x1e.postpilot.v1.WritingTestPhotoR\x05photo*{\n" +
+	"\x11WritingTestOutput\x12#\n" +
+	"\x1fWRITING_TEST_OUTPUT_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18WRITING_TEST_OUTPUT_POST\x10\x01\x12#\n" +
+	"\x1fWRITING_TEST_OUTPUT_OBSERVATION\x10\x02*\xbb\x01\n" +
 	"\x11WritingTestFactor\x12#\n" +
 	"\x1fWRITING_TEST_FACTOR_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19WRITING_TEST_FACTOR_MODEL\x10\x01\x12\x1d\n" +
@@ -2603,7 +3029,8 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"+WRITING_TEST_PUBLICATION_STATUS_UNSPECIFIED\x10\x00\x12+\n" +
 	"'WRITING_TEST_PUBLICATION_STATUS_PENDING\x10\x01\x12-\n" +
 	")WRITING_TEST_PUBLICATION_STATUS_CONFIRMED\x10\x02\x12,\n" +
-	"(WRITING_TEST_PUBLICATION_STATUS_CONFLICT\x10\x032\xc1\b\n" +
+	"(WRITING_TEST_PUBLICATION_STATUS_CONFLICT\x10\x032\xac\n" +
+	"\n" +
 	"\x12WritingTestService\x12l\n" +
 	"\x13EstimateWritingTest\x12(.postpilot.v1.EstimateWritingTestRequest\x1a).postpilot.v1.EstimateWritingTestResponse\"\x00\x12~\n" +
 	"\x1cEstimateFailedTestCandidates\x121.postpilot.v1.EstimateFailedTestCandidatesRequest\x1a).postpilot.v1.EstimateWritingTestResponse\"\x00\x12^\n" +
@@ -2614,7 +3041,9 @@ const file_postpilot_v1_writing_test_proto_rawDesc = "" +
 	"\x0fDecideTestMatch\x12$.postpilot.v1.DecideTestMatchRequest\x1a!.postpilot.v1.WritingTestResponse\"\x00\x12`\n" +
 	"\x11CancelWritingTest\x12&.postpilot.v1.CancelWritingTestRequest\x1a!.postpilot.v1.WritingTestResponse\"\x00\x12s\n" +
 	"\x15SaveWritingTestWinner\x12*.postpilot.v1.SaveWritingTestWinnerRequest\x1a,.postpilot.v1.WritingTestPublicationResponse\"\x00\x12u\n" +
-	"\x16ApplyWritingTestOutput\x12+.postpilot.v1.ApplyWritingTestOutputRequest\x1a,.postpilot.v1.WritingTestPublicationResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x16ApplyWritingTestOutput\x12+.postpilot.v1.ApplyWritingTestOutputRequest\x1a,.postpilot.v1.WritingTestPublicationResponse\"\x00\x12r\n" +
+	"\x15CreateTestPhotoUpload\x12*.postpilot.v1.CreateTestPhotoUploadRequest\x1a+.postpilot.v1.CreateTestPhotoUploadResponse\"\x00\x12u\n" +
+	"\x16ConfirmTestPhotoUpload\x12+.postpilot.v1.ConfirmTestPhotoUploadRequest\x1a,.postpilot.v1.ConfirmTestPhotoUploadResponse\"\x00BDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_writing_test_proto_rawDescOnce sync.Once
@@ -2628,115 +3057,131 @@ func file_postpilot_v1_writing_test_proto_rawDescGZIP() []byte {
 	return file_postpilot_v1_writing_test_proto_rawDescData
 }
 
-var file_postpilot_v1_writing_test_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_postpilot_v1_writing_test_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
+var file_postpilot_v1_writing_test_proto_enumTypes = make([]protoimpl.EnumInfo, 7)
+var file_postpilot_v1_writing_test_proto_msgTypes = make([]protoimpl.MessageInfo, 31)
 var file_postpilot_v1_writing_test_proto_goTypes = []any{
-	(WritingTestFactor)(0),                      // 0: postpilot.v1.WritingTestFactor
-	(WritingTestStage)(0),                       // 1: postpilot.v1.WritingTestStage
-	(WritingTestStatus)(0),                      // 2: postpilot.v1.WritingTestStatus
-	(WritingTestCandidateStatus)(0),             // 3: postpilot.v1.WritingTestCandidateStatus
-	(WritingTestPublicationAction)(0),           // 4: postpilot.v1.WritingTestPublicationAction
-	(WritingTestPublicationStatus)(0),           // 5: postpilot.v1.WritingTestPublicationStatus
-	(*WritingTestSettingRef)(nil),               // 6: postpilot.v1.WritingTestSettingRef
-	(*WritingTestAuthoringRef)(nil),             // 7: postpilot.v1.WritingTestAuthoringRef
-	(*WritingTestEntrant)(nil),                  // 8: postpilot.v1.WritingTestEntrant
-	(*WritingTestMaterial)(nil),                 // 9: postpilot.v1.WritingTestMaterial
-	(*WritingTestContext)(nil),                  // 10: postpilot.v1.WritingTestContext
-	(*WritingTestPlan)(nil),                     // 11: postpilot.v1.WritingTestPlan
-	(*WritingTestIdentity)(nil),                 // 12: postpilot.v1.WritingTestIdentity
-	(*WritingTestUsage)(nil),                    // 13: postpilot.v1.WritingTestUsage
-	(*WritingTestCandidate)(nil),                // 14: postpilot.v1.WritingTestCandidate
-	(*WritingTestMatch)(nil),                    // 15: postpilot.v1.WritingTestMatch
-	(*WritingTestPublication)(nil),              // 16: postpilot.v1.WritingTestPublication
-	(*WritingTest)(nil),                         // 17: postpilot.v1.WritingTest
-	(*EstimateWritingTestRequest)(nil),          // 18: postpilot.v1.EstimateWritingTestRequest
-	(*EstimateFailedTestCandidatesRequest)(nil), // 19: postpilot.v1.EstimateFailedTestCandidatesRequest
-	(*EstimateWritingTestResponse)(nil),         // 20: postpilot.v1.EstimateWritingTestResponse
-	(*StartWritingTestRequest)(nil),             // 21: postpilot.v1.StartWritingTestRequest
-	(*GetWritingTestRequest)(nil),               // 22: postpilot.v1.GetWritingTestRequest
-	(*ListWritingTestsRequest)(nil),             // 23: postpilot.v1.ListWritingTestsRequest
-	(*ListWritingTestsResponse)(nil),            // 24: postpilot.v1.ListWritingTestsResponse
-	(*WritingTestResponse)(nil),                 // 25: postpilot.v1.WritingTestResponse
-	(*RetryFailedTestCandidatesRequest)(nil),    // 26: postpilot.v1.RetryFailedTestCandidatesRequest
-	(*DecideTestMatchRequest)(nil),              // 27: postpilot.v1.DecideTestMatchRequest
-	(*CancelWritingTestRequest)(nil),            // 28: postpilot.v1.CancelWritingTestRequest
-	(*SaveWritingTestWinnerRequest)(nil),        // 29: postpilot.v1.SaveWritingTestWinnerRequest
-	(*ApplyWritingTestOutputRequest)(nil),       // 30: postpilot.v1.ApplyWritingTestOutputRequest
-	(*WritingTestPublicationResponse)(nil),      // 31: postpilot.v1.WritingTestPublicationResponse
-	(ConfigurationKind)(0),                      // 32: postpilot.v1.ConfigurationKind
-	(*ModelRef)(nil),                            // 33: postpilot.v1.ModelRef
-	(*TemplateAnswer)(nil),                      // 34: postpilot.v1.TemplateAnswer
-	(ContentLanguage)(0),                        // 35: postpilot.v1.ContentLanguage
-	(QualityMetric)(0),                          // 36: postpilot.v1.QualityMetric
-	(*PostContent)(nil),                         // 37: postpilot.v1.PostContent
-	(*Failure)(nil),                             // 38: postpilot.v1.Failure
-	(*Storyline)(nil),                           // 39: postpilot.v1.Storyline
+	(WritingTestOutput)(0),                      // 0: postpilot.v1.WritingTestOutput
+	(WritingTestFactor)(0),                      // 1: postpilot.v1.WritingTestFactor
+	(WritingTestStage)(0),                       // 2: postpilot.v1.WritingTestStage
+	(WritingTestStatus)(0),                      // 3: postpilot.v1.WritingTestStatus
+	(WritingTestCandidateStatus)(0),             // 4: postpilot.v1.WritingTestCandidateStatus
+	(WritingTestPublicationAction)(0),           // 5: postpilot.v1.WritingTestPublicationAction
+	(WritingTestPublicationStatus)(0),           // 6: postpilot.v1.WritingTestPublicationStatus
+	(*WritingTestSettingRef)(nil),               // 7: postpilot.v1.WritingTestSettingRef
+	(*WritingTestAuthoringRef)(nil),             // 8: postpilot.v1.WritingTestAuthoringRef
+	(*WritingTestEntrant)(nil),                  // 9: postpilot.v1.WritingTestEntrant
+	(*WritingTestMaterial)(nil),                 // 10: postpilot.v1.WritingTestMaterial
+	(*WritingTestContext)(nil),                  // 11: postpilot.v1.WritingTestContext
+	(*WritingTestPlan)(nil),                     // 12: postpilot.v1.WritingTestPlan
+	(*WritingTestIdentity)(nil),                 // 13: postpilot.v1.WritingTestIdentity
+	(*WritingTestUsage)(nil),                    // 14: postpilot.v1.WritingTestUsage
+	(*WritingTestCandidate)(nil),                // 15: postpilot.v1.WritingTestCandidate
+	(*WritingTestMatch)(nil),                    // 16: postpilot.v1.WritingTestMatch
+	(*WritingTestPublication)(nil),              // 17: postpilot.v1.WritingTestPublication
+	(*WritingTestPhoto)(nil),                    // 18: postpilot.v1.WritingTestPhoto
+	(*WritingTest)(nil),                         // 19: postpilot.v1.WritingTest
+	(*EstimateWritingTestRequest)(nil),          // 20: postpilot.v1.EstimateWritingTestRequest
+	(*EstimateFailedTestCandidatesRequest)(nil), // 21: postpilot.v1.EstimateFailedTestCandidatesRequest
+	(*EstimateWritingTestResponse)(nil),         // 22: postpilot.v1.EstimateWritingTestResponse
+	(*StartWritingTestRequest)(nil),             // 23: postpilot.v1.StartWritingTestRequest
+	(*GetWritingTestRequest)(nil),               // 24: postpilot.v1.GetWritingTestRequest
+	(*ListWritingTestsRequest)(nil),             // 25: postpilot.v1.ListWritingTestsRequest
+	(*ListWritingTestsResponse)(nil),            // 26: postpilot.v1.ListWritingTestsResponse
+	(*WritingTestResponse)(nil),                 // 27: postpilot.v1.WritingTestResponse
+	(*RetryFailedTestCandidatesRequest)(nil),    // 28: postpilot.v1.RetryFailedTestCandidatesRequest
+	(*DecideTestMatchRequest)(nil),              // 29: postpilot.v1.DecideTestMatchRequest
+	(*CancelWritingTestRequest)(nil),            // 30: postpilot.v1.CancelWritingTestRequest
+	(*SaveWritingTestWinnerRequest)(nil),        // 31: postpilot.v1.SaveWritingTestWinnerRequest
+	(*ApplyWritingTestOutputRequest)(nil),       // 32: postpilot.v1.ApplyWritingTestOutputRequest
+	(*WritingTestPublicationResponse)(nil),      // 33: postpilot.v1.WritingTestPublicationResponse
+	(*CreateTestPhotoUploadRequest)(nil),        // 34: postpilot.v1.CreateTestPhotoUploadRequest
+	(*CreateTestPhotoUploadResponse)(nil),       // 35: postpilot.v1.CreateTestPhotoUploadResponse
+	(*ConfirmTestPhotoUploadRequest)(nil),       // 36: postpilot.v1.ConfirmTestPhotoUploadRequest
+	(*ConfirmTestPhotoUploadResponse)(nil),      // 37: postpilot.v1.ConfirmTestPhotoUploadResponse
+	(ConfigurationKind)(0),                      // 38: postpilot.v1.ConfigurationKind
+	(*ModelRef)(nil),                            // 39: postpilot.v1.ModelRef
+	(*TemplateAnswer)(nil),                      // 40: postpilot.v1.TemplateAnswer
+	(ContentLanguage)(0),                        // 41: postpilot.v1.ContentLanguage
+	(QualityMetric)(0),                          // 42: postpilot.v1.QualityMetric
+	(*PostContent)(nil),                         // 43: postpilot.v1.PostContent
+	(*Failure)(nil),                             // 44: postpilot.v1.Failure
+	(*Storyline)(nil),                           // 45: postpilot.v1.Storyline
+	(*Observation)(nil),                         // 46: postpilot.v1.Observation
 }
 var file_postpilot_v1_writing_test_proto_depIdxs = []int32{
-	32, // 0: postpilot.v1.WritingTestSettingRef.kind:type_name -> postpilot.v1.ConfigurationKind
-	33, // 1: postpilot.v1.WritingTestEntrant.model:type_name -> postpilot.v1.ModelRef
-	6,  // 2: postpilot.v1.WritingTestEntrant.setting:type_name -> postpilot.v1.WritingTestSettingRef
-	7,  // 3: postpilot.v1.WritingTestEntrant.authoring_candidate:type_name -> postpilot.v1.WritingTestAuthoringRef
-	34, // 4: postpilot.v1.WritingTestMaterial.template_answers:type_name -> postpilot.v1.TemplateAnswer
-	9,  // 5: postpilot.v1.WritingTestContext.material:type_name -> postpilot.v1.WritingTestMaterial
-	33, // 6: postpilot.v1.WritingTestContext.observe_model:type_name -> postpilot.v1.ModelRef
-	33, // 7: postpilot.v1.WritingTestContext.write_model:type_name -> postpilot.v1.ModelRef
-	35, // 8: postpilot.v1.WritingTestContext.target_language:type_name -> postpilot.v1.ContentLanguage
-	36, // 9: postpilot.v1.WritingTestContext.quality_rules:type_name -> postpilot.v1.QualityMetric
-	0,  // 10: postpilot.v1.WritingTestPlan.factor:type_name -> postpilot.v1.WritingTestFactor
-	1,  // 11: postpilot.v1.WritingTestPlan.model_stage:type_name -> postpilot.v1.WritingTestStage
-	8,  // 12: postpilot.v1.WritingTestPlan.entrants:type_name -> postpilot.v1.WritingTestEntrant
-	10, // 13: postpilot.v1.WritingTestPlan.context:type_name -> postpilot.v1.WritingTestContext
-	8,  // 14: postpilot.v1.WritingTestIdentity.source:type_name -> postpilot.v1.WritingTestEntrant
-	3,  // 15: postpilot.v1.WritingTestCandidate.status:type_name -> postpilot.v1.WritingTestCandidateStatus
-	37, // 16: postpilot.v1.WritingTestCandidate.output:type_name -> postpilot.v1.PostContent
-	38, // 17: postpilot.v1.WritingTestCandidate.failure:type_name -> postpilot.v1.Failure
-	12, // 18: postpilot.v1.WritingTestCandidate.identity:type_name -> postpilot.v1.WritingTestIdentity
-	39, // 19: postpilot.v1.WritingTestCandidate.storyline:type_name -> postpilot.v1.Storyline
-	13, // 20: postpilot.v1.WritingTestCandidate.usage:type_name -> postpilot.v1.WritingTestUsage
-	4,  // 21: postpilot.v1.WritingTestPublication.action:type_name -> postpilot.v1.WritingTestPublicationAction
-	5,  // 22: postpilot.v1.WritingTestPublication.status:type_name -> postpilot.v1.WritingTestPublicationStatus
-	38, // 23: postpilot.v1.WritingTestPublication.failure:type_name -> postpilot.v1.Failure
-	0,  // 24: postpilot.v1.WritingTest.factor:type_name -> postpilot.v1.WritingTestFactor
-	1,  // 25: postpilot.v1.WritingTest.model_stage:type_name -> postpilot.v1.WritingTestStage
-	2,  // 26: postpilot.v1.WritingTest.status:type_name -> postpilot.v1.WritingTestStatus
-	14, // 27: postpilot.v1.WritingTest.candidates:type_name -> postpilot.v1.WritingTestCandidate
-	15, // 28: postpilot.v1.WritingTest.matches:type_name -> postpilot.v1.WritingTestMatch
-	16, // 29: postpilot.v1.WritingTest.publications:type_name -> postpilot.v1.WritingTestPublication
-	38, // 30: postpilot.v1.WritingTest.failure:type_name -> postpilot.v1.Failure
-	35, // 31: postpilot.v1.WritingTest.target_language:type_name -> postpilot.v1.ContentLanguage
-	11, // 32: postpilot.v1.EstimateWritingTestRequest.plan:type_name -> postpilot.v1.WritingTestPlan
-	11, // 33: postpilot.v1.StartWritingTestRequest.plan:type_name -> postpilot.v1.WritingTestPlan
-	17, // 34: postpilot.v1.ListWritingTestsResponse.tests:type_name -> postpilot.v1.WritingTest
-	17, // 35: postpilot.v1.WritingTestResponse.test:type_name -> postpilot.v1.WritingTest
-	4,  // 36: postpilot.v1.SaveWritingTestWinnerRequest.action:type_name -> postpilot.v1.WritingTestPublicationAction
-	16, // 37: postpilot.v1.WritingTestPublicationResponse.publication:type_name -> postpilot.v1.WritingTestPublication
-	17, // 38: postpilot.v1.WritingTestPublicationResponse.test:type_name -> postpilot.v1.WritingTest
-	18, // 39: postpilot.v1.WritingTestService.EstimateWritingTest:input_type -> postpilot.v1.EstimateWritingTestRequest
-	19, // 40: postpilot.v1.WritingTestService.EstimateFailedTestCandidates:input_type -> postpilot.v1.EstimateFailedTestCandidatesRequest
-	21, // 41: postpilot.v1.WritingTestService.StartWritingTest:input_type -> postpilot.v1.StartWritingTestRequest
-	22, // 42: postpilot.v1.WritingTestService.GetWritingTest:input_type -> postpilot.v1.GetWritingTestRequest
-	23, // 43: postpilot.v1.WritingTestService.ListWritingTests:input_type -> postpilot.v1.ListWritingTestsRequest
-	26, // 44: postpilot.v1.WritingTestService.RetryFailedTestCandidates:input_type -> postpilot.v1.RetryFailedTestCandidatesRequest
-	27, // 45: postpilot.v1.WritingTestService.DecideTestMatch:input_type -> postpilot.v1.DecideTestMatchRequest
-	28, // 46: postpilot.v1.WritingTestService.CancelWritingTest:input_type -> postpilot.v1.CancelWritingTestRequest
-	29, // 47: postpilot.v1.WritingTestService.SaveWritingTestWinner:input_type -> postpilot.v1.SaveWritingTestWinnerRequest
-	30, // 48: postpilot.v1.WritingTestService.ApplyWritingTestOutput:input_type -> postpilot.v1.ApplyWritingTestOutputRequest
-	20, // 49: postpilot.v1.WritingTestService.EstimateWritingTest:output_type -> postpilot.v1.EstimateWritingTestResponse
-	20, // 50: postpilot.v1.WritingTestService.EstimateFailedTestCandidates:output_type -> postpilot.v1.EstimateWritingTestResponse
-	25, // 51: postpilot.v1.WritingTestService.StartWritingTest:output_type -> postpilot.v1.WritingTestResponse
-	25, // 52: postpilot.v1.WritingTestService.GetWritingTest:output_type -> postpilot.v1.WritingTestResponse
-	24, // 53: postpilot.v1.WritingTestService.ListWritingTests:output_type -> postpilot.v1.ListWritingTestsResponse
-	25, // 54: postpilot.v1.WritingTestService.RetryFailedTestCandidates:output_type -> postpilot.v1.WritingTestResponse
-	25, // 55: postpilot.v1.WritingTestService.DecideTestMatch:output_type -> postpilot.v1.WritingTestResponse
-	25, // 56: postpilot.v1.WritingTestService.CancelWritingTest:output_type -> postpilot.v1.WritingTestResponse
-	31, // 57: postpilot.v1.WritingTestService.SaveWritingTestWinner:output_type -> postpilot.v1.WritingTestPublicationResponse
-	31, // 58: postpilot.v1.WritingTestService.ApplyWritingTestOutput:output_type -> postpilot.v1.WritingTestPublicationResponse
-	49, // [49:59] is the sub-list for method output_type
-	39, // [39:49] is the sub-list for method input_type
-	39, // [39:39] is the sub-list for extension type_name
-	39, // [39:39] is the sub-list for extension extendee
-	0,  // [0:39] is the sub-list for field type_name
+	38, // 0: postpilot.v1.WritingTestSettingRef.kind:type_name -> postpilot.v1.ConfigurationKind
+	39, // 1: postpilot.v1.WritingTestEntrant.model:type_name -> postpilot.v1.ModelRef
+	7,  // 2: postpilot.v1.WritingTestEntrant.setting:type_name -> postpilot.v1.WritingTestSettingRef
+	8,  // 3: postpilot.v1.WritingTestEntrant.authoring_candidate:type_name -> postpilot.v1.WritingTestAuthoringRef
+	40, // 4: postpilot.v1.WritingTestMaterial.template_answers:type_name -> postpilot.v1.TemplateAnswer
+	10, // 5: postpilot.v1.WritingTestContext.material:type_name -> postpilot.v1.WritingTestMaterial
+	39, // 6: postpilot.v1.WritingTestContext.observe_model:type_name -> postpilot.v1.ModelRef
+	39, // 7: postpilot.v1.WritingTestContext.write_model:type_name -> postpilot.v1.ModelRef
+	41, // 8: postpilot.v1.WritingTestContext.target_language:type_name -> postpilot.v1.ContentLanguage
+	42, // 9: postpilot.v1.WritingTestContext.quality_rules:type_name -> postpilot.v1.QualityMetric
+	1,  // 10: postpilot.v1.WritingTestPlan.factor:type_name -> postpilot.v1.WritingTestFactor
+	2,  // 11: postpilot.v1.WritingTestPlan.model_stage:type_name -> postpilot.v1.WritingTestStage
+	9,  // 12: postpilot.v1.WritingTestPlan.entrants:type_name -> postpilot.v1.WritingTestEntrant
+	11, // 13: postpilot.v1.WritingTestPlan.context:type_name -> postpilot.v1.WritingTestContext
+	0,  // 14: postpilot.v1.WritingTestPlan.output:type_name -> postpilot.v1.WritingTestOutput
+	9,  // 15: postpilot.v1.WritingTestIdentity.source:type_name -> postpilot.v1.WritingTestEntrant
+	4,  // 16: postpilot.v1.WritingTestCandidate.status:type_name -> postpilot.v1.WritingTestCandidateStatus
+	43, // 17: postpilot.v1.WritingTestCandidate.output:type_name -> postpilot.v1.PostContent
+	44, // 18: postpilot.v1.WritingTestCandidate.failure:type_name -> postpilot.v1.Failure
+	13, // 19: postpilot.v1.WritingTestCandidate.identity:type_name -> postpilot.v1.WritingTestIdentity
+	45, // 20: postpilot.v1.WritingTestCandidate.storyline:type_name -> postpilot.v1.Storyline
+	14, // 21: postpilot.v1.WritingTestCandidate.usage:type_name -> postpilot.v1.WritingTestUsage
+	46, // 22: postpilot.v1.WritingTestCandidate.observations:type_name -> postpilot.v1.Observation
+	5,  // 23: postpilot.v1.WritingTestPublication.action:type_name -> postpilot.v1.WritingTestPublicationAction
+	6,  // 24: postpilot.v1.WritingTestPublication.status:type_name -> postpilot.v1.WritingTestPublicationStatus
+	44, // 25: postpilot.v1.WritingTestPublication.failure:type_name -> postpilot.v1.Failure
+	1,  // 26: postpilot.v1.WritingTest.factor:type_name -> postpilot.v1.WritingTestFactor
+	2,  // 27: postpilot.v1.WritingTest.model_stage:type_name -> postpilot.v1.WritingTestStage
+	3,  // 28: postpilot.v1.WritingTest.status:type_name -> postpilot.v1.WritingTestStatus
+	15, // 29: postpilot.v1.WritingTest.candidates:type_name -> postpilot.v1.WritingTestCandidate
+	16, // 30: postpilot.v1.WritingTest.matches:type_name -> postpilot.v1.WritingTestMatch
+	17, // 31: postpilot.v1.WritingTest.publications:type_name -> postpilot.v1.WritingTestPublication
+	44, // 32: postpilot.v1.WritingTest.failure:type_name -> postpilot.v1.Failure
+	41, // 33: postpilot.v1.WritingTest.target_language:type_name -> postpilot.v1.ContentLanguage
+	0,  // 34: postpilot.v1.WritingTest.output:type_name -> postpilot.v1.WritingTestOutput
+	18, // 35: postpilot.v1.WritingTest.photos:type_name -> postpilot.v1.WritingTestPhoto
+	12, // 36: postpilot.v1.EstimateWritingTestRequest.plan:type_name -> postpilot.v1.WritingTestPlan
+	12, // 37: postpilot.v1.StartWritingTestRequest.plan:type_name -> postpilot.v1.WritingTestPlan
+	19, // 38: postpilot.v1.ListWritingTestsResponse.tests:type_name -> postpilot.v1.WritingTest
+	19, // 39: postpilot.v1.WritingTestResponse.test:type_name -> postpilot.v1.WritingTest
+	5,  // 40: postpilot.v1.SaveWritingTestWinnerRequest.action:type_name -> postpilot.v1.WritingTestPublicationAction
+	17, // 41: postpilot.v1.WritingTestPublicationResponse.publication:type_name -> postpilot.v1.WritingTestPublication
+	19, // 42: postpilot.v1.WritingTestPublicationResponse.test:type_name -> postpilot.v1.WritingTest
+	18, // 43: postpilot.v1.ConfirmTestPhotoUploadResponse.photo:type_name -> postpilot.v1.WritingTestPhoto
+	20, // 44: postpilot.v1.WritingTestService.EstimateWritingTest:input_type -> postpilot.v1.EstimateWritingTestRequest
+	21, // 45: postpilot.v1.WritingTestService.EstimateFailedTestCandidates:input_type -> postpilot.v1.EstimateFailedTestCandidatesRequest
+	23, // 46: postpilot.v1.WritingTestService.StartWritingTest:input_type -> postpilot.v1.StartWritingTestRequest
+	24, // 47: postpilot.v1.WritingTestService.GetWritingTest:input_type -> postpilot.v1.GetWritingTestRequest
+	25, // 48: postpilot.v1.WritingTestService.ListWritingTests:input_type -> postpilot.v1.ListWritingTestsRequest
+	28, // 49: postpilot.v1.WritingTestService.RetryFailedTestCandidates:input_type -> postpilot.v1.RetryFailedTestCandidatesRequest
+	29, // 50: postpilot.v1.WritingTestService.DecideTestMatch:input_type -> postpilot.v1.DecideTestMatchRequest
+	30, // 51: postpilot.v1.WritingTestService.CancelWritingTest:input_type -> postpilot.v1.CancelWritingTestRequest
+	31, // 52: postpilot.v1.WritingTestService.SaveWritingTestWinner:input_type -> postpilot.v1.SaveWritingTestWinnerRequest
+	32, // 53: postpilot.v1.WritingTestService.ApplyWritingTestOutput:input_type -> postpilot.v1.ApplyWritingTestOutputRequest
+	34, // 54: postpilot.v1.WritingTestService.CreateTestPhotoUpload:input_type -> postpilot.v1.CreateTestPhotoUploadRequest
+	36, // 55: postpilot.v1.WritingTestService.ConfirmTestPhotoUpload:input_type -> postpilot.v1.ConfirmTestPhotoUploadRequest
+	22, // 56: postpilot.v1.WritingTestService.EstimateWritingTest:output_type -> postpilot.v1.EstimateWritingTestResponse
+	22, // 57: postpilot.v1.WritingTestService.EstimateFailedTestCandidates:output_type -> postpilot.v1.EstimateWritingTestResponse
+	27, // 58: postpilot.v1.WritingTestService.StartWritingTest:output_type -> postpilot.v1.WritingTestResponse
+	27, // 59: postpilot.v1.WritingTestService.GetWritingTest:output_type -> postpilot.v1.WritingTestResponse
+	26, // 60: postpilot.v1.WritingTestService.ListWritingTests:output_type -> postpilot.v1.ListWritingTestsResponse
+	27, // 61: postpilot.v1.WritingTestService.RetryFailedTestCandidates:output_type -> postpilot.v1.WritingTestResponse
+	27, // 62: postpilot.v1.WritingTestService.DecideTestMatch:output_type -> postpilot.v1.WritingTestResponse
+	27, // 63: postpilot.v1.WritingTestService.CancelWritingTest:output_type -> postpilot.v1.WritingTestResponse
+	33, // 64: postpilot.v1.WritingTestService.SaveWritingTestWinner:output_type -> postpilot.v1.WritingTestPublicationResponse
+	33, // 65: postpilot.v1.WritingTestService.ApplyWritingTestOutput:output_type -> postpilot.v1.WritingTestPublicationResponse
+	35, // 66: postpilot.v1.WritingTestService.CreateTestPhotoUpload:output_type -> postpilot.v1.CreateTestPhotoUploadResponse
+	37, // 67: postpilot.v1.WritingTestService.ConfirmTestPhotoUpload:output_type -> postpilot.v1.ConfirmTestPhotoUploadResponse
+	56, // [56:68] is the sub-list for method output_type
+	44, // [44:56] is the sub-list for method input_type
+	44, // [44:44] is the sub-list for extension type_name
+	44, // [44:44] is the sub-list for extension extendee
+	0,  // [0:44] is the sub-list for field type_name
 }
 
 func init() { file_postpilot_v1_writing_test_proto_init() }
@@ -2755,14 +3200,14 @@ func file_postpilot_v1_writing_test_proto_init() {
 		(*WritingTestEntrant_Setting)(nil),
 		(*WritingTestEntrant_AuthoringCandidate)(nil),
 	}
-	file_postpilot_v1_writing_test_proto_msgTypes[14].OneofWrappers = []any{}
+	file_postpilot_v1_writing_test_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_postpilot_v1_writing_test_proto_rawDesc), len(file_postpilot_v1_writing_test_proto_rawDesc)),
-			NumEnums:      6,
-			NumMessages:   26,
+			NumEnums:      7,
+			NumMessages:   31,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

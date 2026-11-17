@@ -22,6 +22,14 @@ service WritingTestService {
   rpc CancelWritingTest(CancelWritingTestRequest) returns (WritingTestResponse) {}
   rpc SaveWritingTestWinner(SaveWritingTestWinnerRequest) returns (WritingTestPublicationResponse) {}
   rpc ApplyWritingTestOutput(ApplyWritingTestOutputRequest) returns (WritingTestPublicationResponse) {}
+  rpc CreateTestPhotoUpload(CreateTestPhotoUploadRequest) returns (CreateTestPhotoUploadResponse) {}
+  rpc ConfirmTestPhotoUpload(ConfirmTestPhotoUploadRequest) returns (ConfirmTestPhotoUploadResponse) {}
+}
+// What each contestant produces. UNSPECIFIED reads as POST, so every existing test is a post test.
+enum WritingTestOutput {
+  WRITING_TEST_OUTPUT_UNSPECIFIED = 0;
+  WRITING_TEST_OUTPUT_POST = 1;
+  WRITING_TEST_OUTPUT_OBSERVATION = 2;
 }
 enum WritingTestFactor {
   WRITING_TEST_FACTOR_UNSPECIFIED = 0;
@@ -106,6 +114,8 @@ message WritingTestContext {
   int32 tag_count = 12;
   bool use_memory = 13;
   repeated QualityMetric quality_rules = 14;
+  // Test-owned photo ids, observation tests only.
+  repeated string photo_ids = 15;
 }
 message WritingTestPlan {
   WritingTestFactor factor = 1;
@@ -114,6 +124,8 @@ message WritingTestPlan {
   int32 count = 3;
   repeated WritingTestEntrant entrants = 4;
   WritingTestContext context = 5;
+  // UNSPECIFIED reads as POST.
+  WritingTestOutput output = 6;
 }
 message WritingTestIdentity {
   string label = 1;
@@ -137,6 +149,8 @@ message WritingTestCandidate {
   Storyline storyline = 7;
   // Absent while blind; preserved for completed or explicitly abandoned tests, including failed calls.
   WritingTestUsage usage = 8;
+  // Observation tests: one entry per frozen photo. `model` stays empty while blind (MODEL-32).
+  repeated Observation observations = 9;
 }
 message WritingTestMatch {
   string id = 1;
@@ -155,6 +169,15 @@ message WritingTestPublication {
   string request_key = 6;
   string target_id = 7;
   Failure failure = 8;
+}
+// A photo the owner uploaded into an observation test; private test input, purged with the test payload.
+message WritingTestPhoto {
+  string id = 1;
+  string filename = 2;
+  int32 width = 3;
+  int32 height = 4;
+  string view_url = 5;
+  string view_expires_at = 6;
 }
 message WritingTest {
   string id = 1;
@@ -180,6 +203,10 @@ message WritingTest {
   // Stored admission target and every output's content-language provenance, also on history reads.
   // Never substitute the current UI locale or a source post's later target language for export.
   ContentLanguage target_language = 21;
+  // UNSPECIFIED reads as POST.
+  WritingTestOutput output = 22;
+  // Observation tests: the frozen photos every contestant observed.
+  repeated WritingTestPhoto photos = 23;
 }
 message EstimateWritingTestRequest { WritingTestPlan plan = 1; }
 // Requote only the selected failed work of the stored immutable test after reload/expiry.
@@ -251,3 +278,17 @@ message ApplyWritingTestOutputRequest {
   int64 expected_content_revision = 6;
 }
 message WritingTestPublicationResponse { WritingTestPublication publication = 1; WritingTest test = 2; }
+
+message CreateTestPhotoUploadRequest { string filename = 1; }
+message CreateTestPhotoUploadResponse {
+  string upload_id = 1;
+  string put_url = 2;
+  string content_type = 3;
+  string expires_at = 4;
+}
+message ConfirmTestPhotoUploadRequest {
+  string upload_id = 1;
+  int32 width = 2;
+  int32 height = 3;
+}
+message ConfirmTestPhotoUploadResponse { WritingTestPhoto photo = 1; }
