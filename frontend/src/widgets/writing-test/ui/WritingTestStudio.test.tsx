@@ -119,6 +119,8 @@ it('requires every chosen slot and preserves unsent material through Back withou
   mount(fixture)
   await chooseFactor('AI 모델')
   await select('후보 2', 'Model 2')
+  // Choosing one slot fills the others with empty entrants, which still read as unchosen.
+  expect(screen.getByRole('combobox', { name: '후보 1 선택해 주세요' })).toBeVisible()
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
   expect(screen.getByText('서로 다른 후보 2개를 선택해 주세요.')).toBeVisible()
   expect(screen.queryByRole('textbox', { name: '공통 글감' })).not.toBeInTheDocument()

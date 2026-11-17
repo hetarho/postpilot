@@ -825,7 +825,7 @@ function OwnedStudio({
                   <WritingSelect
                     key={index}
                     label={t('contender', { number: index + 1 })}
-                    value={plan.entrants[index] ? choiceKey(plan.entrants[index]) : ''}
+                    value={emptySlot(plan.entrants[index]) ? '' : choiceKey(plan.entrants[index])}
                     options={[
                       { value: '', label: t(plan.factor === 'model' ? 'choose' : 'autoAI') },
                       ...(plan.entrants[index]?.type === 'authoring'
