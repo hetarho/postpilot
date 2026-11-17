@@ -68,3 +68,20 @@ export function writingTestHistorySearchSchema(
     ...(text('entry') && safeInternalPath(text('entry')!) ? { entry: text('entry') } : {}),
   }
 }
+export interface PhotoTestSearch {
+  count: TestCount
+  entry?: string
+  /** One setup's key: a reload keeps it and resumes, a new entry has none and starts over. */
+  draft?: string
+}
+export function photoTestSearchSchema(raw: Record<string, unknown>): PhotoTestSearch {
+  const count = Number(raw.count ?? 2)
+  const text = (key: string) =>
+    typeof raw[key] === 'string' && raw[key] !== '' ? (raw[key] as string) : undefined
+  const entry = text('entry')
+  return {
+    count: ([2, 4, 8, 16].includes(count) ? count : 2) as TestCount,
+    ...(entry && safeInternalPath(entry) ? { entry } : {}),
+    ...(text('draft') ? { draft: text('draft') } : {}),
+  }
+}

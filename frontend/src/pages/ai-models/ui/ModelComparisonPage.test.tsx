@@ -2,7 +2,6 @@ import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, it } from 'vitest'
 import { Stage } from '@/shared/api'
-import { chooseOption } from '@/test/listbox'
 import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
 beforeEach(() => sessionStorage.clear())
@@ -17,7 +16,6 @@ async function chooseFactor(user: ReturnType<typeof userEvent.setup>, label: str
 it.each([
   ['', 'model', 'write'],
   ['?stage=write', 'model', 'write'],
-  ['?stage=observe', 'model', 'observe'],
   ['?stage=voice&voiceId=voice-default', 'voice', 'write'],
   ['?stage=analyze', 'model', 'write'],
 ] as const)(
@@ -31,14 +29,9 @@ it.each([
     expect(router.state.location.search).toMatchObject({ factor, stage, count: 2 })
     if (factor === 'voice') expect(router.state.location.search.voiceId).toBe('voice-default')
     const main = within(screen.getByRole('main'))
-    if (stage === 'observe') {
-      // Photo reading compares AIs only: it opens on its two candidates, with no factor question.
-      expect(main.queryByRole('button', { name: 'AI 모델' })).toBeNull()
-      expect(main.getAllByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toHaveLength(2)
-    } else
-      expect(
-        main.getByRole('button', { name: factor === 'voice' ? '말투' : 'AI 모델' }),
-      ).toHaveAttribute('aria-pressed', 'true')
+    expect(
+      main.getByRole('button', { name: factor === 'voice' ? '말투' : 'AI 모델' }),
+    ).toHaveAttribute('aria-pressed', 'true')
     expect(main.getByRole('combobox', { name: /^비교 형식(?:\s|$)/ })).toHaveTextContent(
       'A/B 테스트',
     )
@@ -49,6 +42,15 @@ it.each([
     expect(fixture.admissions).toEqual([])
   },
 )
+
+it('sends the retired photo comparison to the photo observation test', async () => {
+  const { router, fixture } = renderLegacyModelRoute('/ai-models/compare?stage=observe', {
+    user: { id: 'alice' },
+  })
+  await waitFor(() => expect(router.state.location.pathname).toBe('/tests/photos'))
+  expect(router.state.location.search).toMatchObject({ count: 2 })
+  expect(fixture.admissions).toEqual([])
+})
 
 it('offers only two, four, eight and sixteen entrants and changes count without preparing or starting work', async () => {
   const user = userEvent.setup(),
@@ -64,9 +66,11 @@ it('offers only two, four, eight and sixteen entrants and changes count without 
   ).toEqual(['A/B 테스트', '4강전', '8강전', '16강전'])
   await user.click(screen.getByRole('option', { name: '16강전' }))
   await chooseFactor(user, 'AI 모델')
+  // Model contestants are one checklist counted against the format (MODEL-98).
   expect(
-    within(screen.getByRole('main')).getAllByRole('combobox', { name: /^후보 \d+(?:\s|$)/ }),
-  ).toHaveLength(16)
+    within(screen.getByRole('main')).getByRole('group', { name: '0 / 16개 선택' }),
+  ).toBeVisible()
+  expect(screen.queryByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toBeNull()
   expect(fixture.preparations).toEqual([])
   expect(fixture.estimates).toEqual([])
   expect(fixture.admissions).toEqual([])
@@ -89,11 +93,7 @@ it('preserves an owned source through the alias and preloads its complete record
   })
   await chooseFactor(user, 'AI 모델')
   for (let index = 1; index <= 2; index++)
-    await chooseOption(
-      user,
-      screen.getByRole('combobox', { name: new RegExp(`^후보 ${index}(?:\\s|$)`) }),
-      `Model ${index}`,
-    )
+    await user.click(await screen.findByRole('checkbox', { name: `Model ${index}` }))
   await user.click(screen.getByRole('button', { name: '다음' }))
   expect(await screen.findByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'Real recorded material',
@@ -131,7 +131,9 @@ it('does not import obsolete five-candidate rankings or auto-save a legacy compa
     'A/B 테스트',
   )
   await chooseFactor(user, 'AI 모델')
-  expect(screen.getAllByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toHaveLength(2)
+  // The saved pair prefills the A/B checklist; the three extra legacy candidates stay out.
+  expect(screen.getByRole('group', { name: '2 / 2개 선택' })).toBeVisible()
+  expect(screen.getAllByRole('checkbox', { checked: true })).toHaveLength(2)
   expect(procedures).not.toContain('SaveComparisonPair')
   expect(paidActions(procedures)).toEqual([])
 })

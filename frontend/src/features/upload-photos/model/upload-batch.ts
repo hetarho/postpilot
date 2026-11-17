@@ -124,6 +124,8 @@ interface Batch {
   listeners: Set<() => void>
   deps: UploadBatchDeps
   discarded: boolean
+  /** Set by a photo-only caller; clips are then skipped at the gate. */
+  photosOnly: boolean
 }
 
 const batches = new Map<string, Batch>()
@@ -380,9 +382,11 @@ export function uploadBatch(
   slug: string,
   deps: UploadBatchDeps,
   held: HeldAttachments = { photos: 0, videos: 0 },
+  options: { photosOnly?: boolean } = {},
 ): UploadBatchHandle {
   const attached = batchFor(slug)
   attached.deps = deps
+  if (options.photosOnly) attached.photosOnly = true
   // What the POST already holds, which the batch cannot know: its own items are only this
   // session's picks.
   const heldPhotos = held.photos
@@ -404,7 +408,7 @@ export function uploadBatch(
         else held.photos += 1
       }
       for (const file of files) {
-        const verdict = filterFile(file, held)
+        const verdict = filterFile(file, held, { photosOnly: attached.photosOnly })
         if (verdict.kind === 'skipped') {
           added.push(skippedItem(file, verdict.reason))
           continue
@@ -510,6 +514,7 @@ function batchFor(slug: string): Batch {
         onConfirmed: () => {},
       },
       discarded: false,
+      photosOnly: false,
     }
     batches.set(slug, batch)
   }

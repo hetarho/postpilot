@@ -146,10 +146,10 @@ it('offers named common test entries and optional A/B settings without changing 
       name: '비교하기',
     })
     const url = new URL(link.getAttribute('href')!, 'https://postpilot.test')
-    expect(url.pathname).toBe('/tests')
+    // Photo reading is its own test at /tests/photos (MODEL-97).
+    expect(url.pathname).toBe(stage === 'observe' ? '/tests/photos' : '/tests')
     expect(Object.fromEntries(url.searchParams)).toMatchObject({
-      factor: 'model',
-      stage,
+      ...(stage === 'write' ? { factor: 'model', stage } : {}),
       count: '2',
       entry: '/ai-models',
     })

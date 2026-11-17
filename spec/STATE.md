@@ -85,7 +85,7 @@
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
-| T896 | Build the photo observation test setup at /tests/photos | MODEL POST THEME ARCH | T889 T895 | todo |
+| T896 | Build the photo observation test setup at /tests/photos | MODEL POST THEME ARCH | T889 T895 | doing@261117.wtform |
 | T897 | Review, reveal and adopt photo observation test results | MODEL ARCH | T894 T896 | todo |
 
 ## work

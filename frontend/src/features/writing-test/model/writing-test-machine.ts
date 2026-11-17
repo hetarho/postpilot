@@ -252,6 +252,21 @@ export function writingTestDraftProblem(plan?: WritingTestPlan): AppFailure | un
     new Set(plan.context.material.attachmentIds).size !== plan.context.material.attachmentIds.length
   )
     return failure('WRITING_TEST_MATERIAL_INVALID')
+  // A photo observation test reads only its own photos and carries no writing material (MODEL-97).
+  if (plan.output === 'observation') {
+    const photoIds = plan.context.photoIds ?? []
+    if (
+      plan.factor !== 'model' ||
+      plan.modelStage !== 'observe' ||
+      !photoIds.length ||
+      photoIds.some((id) => !concrete(id)) ||
+      new Set(photoIds).size !== photoIds.length ||
+      plan.context.material.text.trim() ||
+      plan.context.material.attachmentIds.length
+    )
+      return failure('WRITING_TEST_MATERIAL_INVALID')
+    return undefined
+  }
   if (!plan.context.material.text.trim() && !plan.context.material.attachmentIds.length)
     return failure('WRITING_TEST_MATERIAL_INVALID')
   if (
@@ -336,7 +351,10 @@ export function writingTestPlanShape(value: unknown): value is WritingTestPlan {
       (name) => typeof context[name] === 'string',
     ) ||
     (context.writeModel !== undefined && !modelShape(context.writeModel)) ||
-    (context.observeModel !== undefined && !modelShape(context.observeModel))
+    (context.observeModel !== undefined && !modelShape(context.observeModel)) ||
+    (value.output !== undefined && value.output !== 'post' && value.output !== 'observation') ||
+    (context.photoIds !== undefined &&
+      (!Array.isArray(context.photoIds) || !context.photoIds.every((id) => typeof id === 'string')))
   )
     return false
   return value.entrants.every((entrant) => {
