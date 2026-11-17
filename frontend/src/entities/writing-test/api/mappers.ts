@@ -210,8 +210,11 @@ export function entrantKey(value: TestEntrant): string {
 export function planToProto(plan: WritingTestPlan) {
   count(plan.count)
   const factor = toEnum(factorMap, plan.factor, 'factor')
-  const modelStage = toEnum(stageMap, plan.modelStage, 'stage')
   if (plan.factor !== 'model' && plan.modelStage !== 'write') invalid('stage')
+  // Only a model test varies a stage (MODEL-30); the server refuses any other factor that
+  // names one, so a setting test's local `write` never reaches the wire.
+  const modelStage =
+    plan.factor === 'model' ? toEnum(stageMap, plan.modelStage, 'stage') : Stage.UNSPECIFIED
   if (plan.entrants.length !== plan.count) invalid('entrant count')
   const expectedKind: Partial<Record<TestFactor, TestSettingKind>> = {
     voice: 'writing-voice',
@@ -322,10 +325,13 @@ export function mapWritingTest(wire: WireTest, expectedId?: string): WritingTest
   if (expectedId && wire.id !== expectedId) invalid('identity mismatch')
   const entrantCount = count(wire.count)
   const factor = fromEnum(factorMap, wire.factor, 'factor')
-  const modelStage = fromEnum(stageMap, wire.modelStage, 'stage')
+  // The server names a stage only for a model test; a setting test reads as the write stage
+  // its fixed writer runs at.
+  if (factor !== 'model' && wire.modelStage !== Stage.UNSPECIFIED) invalid('stage')
+  const modelStage: TestStage =
+    factor === 'model' ? fromEnum(stageMap, wire.modelStage, 'stage') : 'write'
   const status = fromEnum(statusMap, wire.status, 'status')
   if (wire.revealed && !['completed', 'cancelled'].includes(status)) invalid('premature reveal')
-  if (factor !== 'model' && modelStage !== 'write') invalid('stage')
   if (
     wire.candidates.length !== entrantCount ||
     new Set(wire.candidates.map((candidate) => candidate.id)).size !== entrantCount

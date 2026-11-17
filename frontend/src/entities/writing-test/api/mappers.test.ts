@@ -4,6 +4,7 @@ import {
   EstimateWritingTestResponseSchema,
   WritingTestFactor,
   WritingTestService,
+  WritingTestStage,
   WritingTestStatus,
   WritingTestCandidateStatus,
   WritingTestPublicationAction,
@@ -181,6 +182,26 @@ describe('explicit plan and credit boundaries', () => {
       case: 'authoringCandidate',
       value: { revision: 7 },
     })
+  })
+  it('names a stage on the wire only for a model test, as the server requires', () => {
+    expect(planToProto(testPlan()).modelStage).toBe(WritingTestStage.WRITE)
+    for (const factor of ['voice', 'template', 'guideline'] as const) {
+      const plan = testPlan()
+      plan.factor = factor
+      plan.context.writeModel = { providerId: 'provider', modelId: 'fixed' }
+      plan.context.guidelineSlotId = 'slot'
+      plan.entrants = [0, 1].map((index) => ({
+        type: 'authoring' as const,
+        authoring: { sessionId: 'session', candidateId: `candidate-${index}`, revision: 1 },
+      }))
+      expect(planToProto(plan).modelStage).toBe(WritingTestStage.UNSPECIFIED)
+    }
+    const setting = wireTest()
+    setting.factor = WritingTestFactor.TEMPLATE
+    setting.modelStage = WritingTestStage.UNSPECIFIED
+    expect(mapWritingTest(setting)).toMatchObject({ factor: 'template', modelStage: 'write' })
+    setting.modelStage = WritingTestStage.WRITE
+    expect(() => mapWritingTest(setting)).toThrow('stage')
   })
   it('refuses partial counts, duplicate semantic entrants, wrong factors and observation without attachments', () => {
     const plan = testPlan(4)

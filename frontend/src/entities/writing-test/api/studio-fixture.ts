@@ -19,7 +19,9 @@ import {
   WritingTestPublicationAction,
   WritingTestPublicationStatus,
   WritingTestPublicationSchema,
+  WritingTestFactor,
   WritingTestService as Service,
+  WritingTestStage,
   WritingTestStatus,
   contentLanguageToProto,
   type StartWritingTestRequest,
@@ -31,6 +33,13 @@ import {
 } from '@/shared/api'
 import type { TestCount, TestFactor, WritingTestPlan } from '../model/types'
 import { wireTest } from './fixtures.test-support'
+
+/** The server's shape check (experiment.ValidateTestShape): only a model test names a stage. */
+function refuseServerShape(plan: WirePlan) {
+  const model = plan.factor === WritingTestFactor.MODEL
+  if (model === (plan.modelStage === WritingTestStage.UNSPECIFIED))
+    throw new ConnectError('WRITING_TEST_FACTOR_INVALID', Code.InvalidArgument)
+}
 
 /** Deterministic RPC fixture used by real actors in host tests and temporary browser previews. */
 export function createWritingTestStudioFixture(
@@ -295,6 +304,7 @@ export function createWritingTestStudioFixture(
     rpc(Service.method.estimateWritingTest, (request) => {
       calls.push('EstimateWritingTest')
       if (!request.plan) throw new ConnectError('plan required', Code.InvalidArgument)
+      refuseServerShape(request.plan)
       estimates.push(request.plan)
       if (estimatesToRefuse > 0) {
         estimatesToRefuse--
@@ -311,6 +321,7 @@ export function createWritingTestStudioFixture(
       admissions.push(request)
       const caller = ownerId
       if (!request.plan) throw new ConnectError('plan required', Code.InvalidArgument)
+      refuseServerShape(request.plan)
       if (options.generationGate) await options.generationGate
       admittedPlan = request.plan
       ledger = wireTest(request.plan.count as TestCount)
