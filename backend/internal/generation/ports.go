@@ -127,11 +127,12 @@ type QualityRulesForPrompt interface {
 // WritingTestSnapshots freeze every nonvaried input once. Variant data is server-resolved.
 // Observe variants execute independent observation; other factors share missing observations.
 type WritingTestSnapshotRequest struct {
-	UserID, SourcePostSlug, Factor, ModelStage string
-	InputRevision, ContentRevision             int64
-	CommonMaterial                             []byte
-	Variants                                   [][]byte
-	Count                                      int
+	// Output is WritingTestOutputObservation for a photo observation test, else a post.
+	UserID, SourcePostSlug, Factor, ModelStage, Output string
+	InputRevision, ContentRevision                     int64
+	CommonMaterial                                     []byte
+	Variants                                           [][]byte
+	Count                                              int
 }
 type WritingTestSnapshot struct {
 	Common                               []byte

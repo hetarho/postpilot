@@ -28,9 +28,12 @@ type WritingTestCheckpoint struct {
 	Observations                                                                                      []Observation
 	CompletedObserveCalls                                                                             int
 	Prepared                                                                                          bool
-	InFlightStage, FailedStage                                                                        string
-	Answer                                                                                            *WriteAnswer
-	RequestInspections                                                                                []llm.RequestInspection
+	// ObservationOnly marks a photo observation test's entrant, whose result is its observations;
+	// Settled records that result durably, so a resume replays it instead of observing again.
+	ObservationOnly, Settled   bool
+	InFlightStage, FailedStage string
+	Answer                     *WriteAnswer
+	RequestInspections         []llm.RequestInspection
 }
 
 // SaveWritingTestCheckpoint must commit the test's ownership/revision/purge/cancellation fence
@@ -46,8 +49,10 @@ type WritingTestRunOptions struct {
 }
 
 type WritingTestRunResult struct {
-	Checkpoint      WritingTestCheckpoint
-	Answer          WriteAnswer
+	Checkpoint WritingTestCheckpoint
+	Answer     WriteAnswer
+	// Observations is a photo observation test entrant's whole result (MODEL-97).
+	Observations    []Observation
 	ContentLanguage Language
 	// Usage contains only work issued by this invocation, never a replay's original accounting.
 	Usage    CandidateUsage

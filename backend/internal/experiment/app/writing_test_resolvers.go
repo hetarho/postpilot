@@ -19,6 +19,12 @@ type TestPostMaterials interface {
 	WritingTestAttachments(context.Context, string, []string) ([]post.WritingTestAttachment, error)
 	ValidateWritingTestMaterial(post.WritingTestMaterial) error
 }
+
+// TestPhotoMaterials reads a photo observation test's photos: the owner's ready photos among
+// ids, oldest first, an unknown, foreign or pending id being simply absent (MODEL-97).
+type TestPhotoMaterials interface {
+	ListReadyTestPhotos(ctx context.Context, user string, ids []string) ([]experiment.TestPhoto, error)
+}
 type TestModelDirectory interface {
 	RegisteredTestModel(llm.ModelRef) (llm.ModelInfo, bool)
 	PrepareTestModel(context.Context, string, provider.Stage, llm.ModelRef) (llm.ModelInfo, error)
@@ -28,6 +34,7 @@ type TestVoiceProfiles interface {
 }
 type ResolverDependencies struct {
 	Posts              TestPostMaterials
+	Photos             TestPhotoMaterials
 	Models             TestModelDirectory
 	Voices             TestVoiceProfiles
 	Templates          *template.Authoring
@@ -39,7 +46,7 @@ type ResolverDependencies struct {
 type WritingTestResolvers struct{ dependencies ResolverDependencies }
 
 func NewWritingTestResolvers(d ResolverDependencies) *WritingTestResolvers {
-	if d.Posts == nil || d.Models == nil || d.Voices == nil || d.Templates == nil || d.Guidelines == nil || d.GuidelineAuthoring == nil || d.Candidates == nil || d.Styles == nil {
+	if d.Posts == nil || d.Photos == nil || d.Models == nil || d.Voices == nil || d.Templates == nil || d.Guidelines == nil || d.GuidelineAuthoring == nil || d.Candidates == nil || d.Styles == nil {
 		panic("experiment/app: every writing-test owner resolver is required")
 	}
 	return &WritingTestResolvers{dependencies: d}

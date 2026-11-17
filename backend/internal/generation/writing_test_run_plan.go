@@ -57,14 +57,17 @@ func (f *WritingTestFactory) PlanWritingTestRetry(snapshot WritingTestSnapshot, 
 				return nil, err
 			}
 		}
-		if checkpoint.Answer != nil {
+		if checkpoint.Answer != nil || checkpoint.Settled {
 			continue
 		}
 		if err := writingTestResumeAllowed(checkpoint, true); err != nil {
 			return nil, err
 		}
 		calls = appendWritingTestCall(calls, WritingTestCall{Ref: variant.ObserveModel, Stage: "observe", Count: len(batches) - checkpoint.CompletedObserveCalls, PromptTokens: variant.ObservePromptTokens, CompletionTokens: variant.ObserveCompletionTokens})
-		calls = appendWritingTestCall(calls, WritingTestCall{Ref: variant.WriteModel, Stage: "write", Count: 1, PromptTokens: variant.WritePromptTokens, CompletionTokens: variant.WriteCompletionTokens})
+		// An observation test retries only the failed entrants' remaining observation.
+		if !observationWritingTest(common) {
+			calls = appendWritingTestCall(calls, WritingTestCall{Ref: variant.WriteModel, Stage: "write", Count: 1, PromptTokens: variant.WritePromptTokens, CompletionTokens: variant.WriteCompletionTokens})
+		}
 	}
 	return calls, nil
 }

@@ -30,7 +30,7 @@ func wireWritingTests(ctx context.Context, c *contexts) error {
 	templates := template.NewAuthoring(c.template, templatestore.New(database.Writer, database.Reader))
 	guidelines := guideline.NewAuthoring(c.guideline, guidelinestore.New(database.Writer, database.Reader))
 	styles := voice.NewAuthoring(c.voice, voicestore.New(database.Writer, database.Reader))
-	resolvers := experimentapp.NewWritingTestResolvers(experimentapp.ResolverDependencies{Posts: post.NewWritingTestMaterials(c.post, poststore.New(database.Writer, database.Reader)), Models: c.provider, Voices: c.voice, Templates: templates, Guidelines: c.guideline, GuidelineAuthoring: guidelines, Candidates: c.authoring, Styles: styles})
+	resolvers := experimentapp.NewWritingTestResolvers(experimentapp.ResolverDependencies{Posts: post.NewWritingTestMaterials(c.post, poststore.New(database.Writer, database.Reader)), Photos: c.experimentStore, Models: c.provider, Voices: c.voice, Templates: templates, Guidelines: c.guideline, GuidelineAuthoring: guidelines, Candidates: c.authoring, Styles: styles})
 	deps := generation.WritingTestFactoryDeps{Sources: resolvers, Models: resolvers, Profiles: resolvers, Templates: resolvers, Guidelines: resolvers, Candidates: resolvers}
 	execution := experimentapp.NewWritingTestExecutionModels(generationModels{registry: c.metered}, jobstore.New(database.Writer, database.Reader, jobKinds()))
 	c.writingTestFactory = generation.NewWritingTestFactoryWithExecution(c.generation, deps, execution)

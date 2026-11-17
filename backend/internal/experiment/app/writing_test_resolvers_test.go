@@ -174,7 +174,7 @@ func actualResolverHarness(t *testing.T) *resolverHarness {
 	authoringStore := authoringstore.New(handle.Writer, handle.Reader)
 	authoringUnused := resolverAuthoringUnused{}
 	authoringService := authoring.NewService(authoringStore, &adapterLLM{}, authoringUnused, resolverAuthoringTargets{templates: templateAuthoring, guidelines: guidelineAuthoring, styles: styleFactory}, authoringUnused, authoringUnused)
-	resolver := NewWritingTestResolvers(ResolverDependencies{Posts: postSpy, Models: models, Voices: voiceService, Templates: templateAuthoring, Guidelines: guidelines, GuidelineAuthoring: guidelineAuthoring, Candidates: authoringService, Styles: styleFactory})
+	resolver := NewWritingTestResolvers(ResolverDependencies{Posts: postSpy, Photos: testPhotoSpy{}, Models: models, Voices: voiceService, Templates: templateAuthoring, Guidelines: guidelines, GuidelineAuthoring: guidelineAuthoring, Candidates: authoringService, Styles: styleFactory})
 	return &resolverHarness{resolver: resolver, db: handle, posts: posts, postSpy: postSpy, voices: voices, voiceService: voiceService, templates: templates, guidelines: guidelines, authoring: authoringService, authoringStore: authoringStore, templateAuthoring: templateAuthoring, guidelineAuthoring: guidelineAuthoring, at: at}
 }
 func (h *resolverHarness) seedSource(t *testing.T, user, slug string) {
