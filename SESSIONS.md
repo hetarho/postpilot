@@ -170,6 +170,7 @@
 - 261117 decided MODEL-97: where does the photo test live and what may be uploaded? → /tests/photos with photos only, reusing the post photo gate, conversion and 30-photo count (alt: allow short videos like post attachments | a route under /ai-models)
 - 261117 decided MODEL-31: what happens to observe-stage writing tests? → no new one is offered in the product and admitted ones stay readable with their actions; the server keeps admitting the wire shape for now (alt: refuse new observe-stage writing tests server-side | migrate old records into photo tests)
 - 261117 decided MODEL-99: how do template question groups lay out beyond phones? → tabs on phones only, stacked named groups from sm up (alt: tabs at every width | one merged list with a template badge per question)
+- 261117 suggest GEN-18: GEN-18 still describes observer writing-test snapshots, which now exist only as admitted records; a gusta-doc-review pass can scope it to them
 
 ## unlanded
 | id | tag | branch | commit | at |
