@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r40 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
+> r41 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -127,6 +127,7 @@
 - MODEL-97 [o] a photo observation test compares observer models on photos the owner uploads to the test; each contestant produces only its observation, never a post ← an observer is judged by what it sees, and a written post mixes in the writer's work
   - 사진 보는 AI 비교 opens it at /tests/photos; its steps are candidates (format and observe-stage models, →!MODEL-98), photos, cost, then review; it asks for no writing material, writer, voice, template, guideline, language, length or tags
   - photos are uploaded into the test, never into a post: photos only, at least one, through the post photo selection gate, conversion and per-post count (→!POST-31–33); videos are not accepted
+  - the photos step is the writing editor's own photo slot: each photo a tile that opens large (→=POST-100), can be deleted and moved, with the upload progress beside the picker; deleting or moving changes only the test's draft, and no turn is offered ← the owner judges an observation against photos they can see, and one job keeps one surface
   - every contestant observes the same frozen photos independently with the ordinary observation request and no writing material
   - review shows the pair's two observations photo by photo: beside each other on desktop, the same pair with explicit winner controls on phones
   - format, blindness, concurrency, progress, failure recovery, champion, adoption as the observe stage's active model, usage, ownership and retention follow the writing-test rules (→!MODEL-32–36 →!MODEL-39–42 →!MODEL-75 →!MODEL-89 →!MODEL-91); the uploaded photos are private test input, purged with the test's payload
@@ -148,6 +149,8 @@
   - ordinary observation, its quote and hold, and observation frozen into tests use the same budget (→QUOTA-32 →MODEL-30 →MODEL-97)
   - the reasoning signal reaches the budget decision without a catalog type crossing the `internal/llm` boundary
 - MODEL-101 [o] a running or partly failed test shows each blind contestant by its letter as working, done or failed with its normalized failure reason, never an identity (→!MODEL-32); a summary line alone does not stand in for the list
+  - a done contestant opens in place to its stored output, read with the review's own renderer — observations photo by photo, a post as the pair shows it — still blind; nothing opens once the payload is purged ← a status word alone hides what the paid call returned
+  - a running test's poll refreshes the list in place: the title, progress and 테스트 끝내기 stay on screen and a cancel is taken mid-read, never a flash of the loading state
   - match progress (decisions made of the format's N-1) appears only once matches are ready, worded as match progress
   - a failed-only retry names what it reruns in the test's own unit — posts for a writing test, observations for a photo observation test — with its estimate (→MODEL-35 →MODEL-97)
 - MODEL-45 [o] automated judges/winner selection, round-by-round regeneration, three/five-way ranking, Elo winner selection, multi-factor changes, video-render tournaments, automatic traffic splitting/model fallback, statistical-superiority claims, BYOK and a second completion provider are outside unified writing tests.
@@ -332,6 +335,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r41 261117 MODEL-97✎ photos step a picker with a count→the writing editor's photo slot (tiles, large view, delete, move); MODEL-101✎ done contestants a status only→open to their output with the review's renderer; a running test's poll passed through loading→refreshes in place
 - r40 261117 MODEL-46✎ observation keeps its batch budget→follows MODEL-100; MODEL-100+ reasoning observers get an observation reasoning multiplier; MODEL-101+ per-contestant progress with failure reasons, match progress only once ready, retry named in the test's unit
 - r39 261117 MODEL-30✎ observe or write stage→write stage only; MODEL-31✎ observer tests write posts→photo observation tests, admitted observe-stage tests readable only; MODEL-44✎ observer opens on candidates→photo test, model selectors→MODEL-98; MODEL-97+ photo observation tests; MODEL-98+ model checklist with credits; MODEL-99+ template groups/tabs, 필수, refusal placement, docked step bar
 - r38 261116 MODEL-44✎ one primary writer action, observer and history beside→two equal comparison cards + 지난 비교 link, factor tap selects then 다음, observer skips the factor; MODEL-71✎ page section→추천으로 적용 sheet; MODEL-91✎ navigating preserves recoverable setup→discards a setup with no test
