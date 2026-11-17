@@ -377,8 +377,8 @@
       "branch": "gusta-session-start-obsfix-f75bb1c7",
       "head": "29c29a3f0939c8ab7a2673a1caea433e142fcca0",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-17T09:22:22.207Z",
+      "status": "ready",
+      "at": "2026-11-17T09:22:29.677Z",
       "agentChecks": [],
       "verificationCommands": []
     }
