@@ -29,7 +29,7 @@
 | POST | 54 | 54 | - | 0 |
 | VOICE | 22 | 22 | - | 0 |
 | GEN | 34 | 34 | - | 0 |
-| MODEL | 39 | 39 | - | 0 |
+| MODEL | 40 | 40 | - | 0 |
 | TMPL | 35 | 35 | - | 0 |
 | GUIDE | 28 | 28 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
@@ -83,6 +83,8 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
+| T898 | Give reasoning observers room to finish an observation batch | MODEL QUOTA ARCH | - | todo |
+| T899 | Show each contestant's state and word retries and match progress in the test's own terms | MODEL ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |

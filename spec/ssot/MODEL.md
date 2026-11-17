@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r39 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
+> r40 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -144,9 +144,15 @@
   - a required field or question shows 필수 beside its label; an optional one shows no mark
   - pressing the step bar's action with a problem starts nothing: the step bar states the problem above its row, naming the first field and how many need attention (→=THEME-71); each problem field shows its message under it with `aria-invalid` (→=THEME-29); the first is scrolled into view and focused, opening its tab first
   - the step bar stays docked at the screen's bottom edge on phones while the step scrolls (→=THEME-24)
+- MODEL-100 [o] an observation call whose resolved observer reasons (its source publishes a reasoning object) gets its batch budget times a code-owned observation reasoning multiplier, bounded by `Ceiling`; a non-reasoning observer keeps the batch budget ← measured 261117: four reasoning observers without effort control spent the whole 2,048-token batch budget before writing an entry, while the two that finished needed 359–526 tokens
+  - ordinary observation, its quote and hold, and observation frozen into tests use the same budget (→QUOTA-32 →MODEL-30 →MODEL-97)
+  - the reasoning signal reaches the budget decision without a catalog type crossing the `internal/llm` boundary
+- MODEL-101 [o] a running or partly failed test shows each blind contestant by its letter as working, done or failed with its normalized failure reason, never an identity (→!MODEL-32); a summary line alone does not stand in for the list
+  - match progress (decisions made of the format's N-1) appears only once matches are ready, worded as match progress
+  - a failed-only retry names what it reruns in the test's own unit — posts for a writing test, observations for a photo observation test — with its estimate (→MODEL-35 →MODEL-97)
 - MODEL-45 [o] automated judges/winner selection, round-by-round regeneration, three/five-way ranking, Elo winner selection, multi-factor changes, video-render tournaments, automatic traffic splitting/model fallback, statistical-superiority claims, BYOK and a second completion provider are outside unified writing tests.
 - MODEL-46 [o] `LLMCompletionBudget` applies a code-owned headroom multiplier to the write and revision budgets only when the resolved model's `reasoning_native_effort` is true, bounded by `Ceiling` ← for a native-effort model the effort string is passed through and is a hint, not a cap, so reasoning can spend the whole completion budget and truncate, while on a model whose effort OpenRouter converts to a percentage extra room would only buy a longer think
-  - observation keeps its batch-derived budget
+  - observation follows MODEL-100
   - `LLM_MAX_TOKENS_DEFAULT` and `WriteFloor` are never lowered by it
   - the native-effort signal reaches the budget decision without a catalog type crossing the `internal/llm` boundary
   - QUOTA-32 makes the raised budget held rather than absorbed at settlement
@@ -326,6 +332,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r40 261117 MODEL-46✎ observation keeps its batch budget→follows MODEL-100; MODEL-100+ reasoning observers get an observation reasoning multiplier; MODEL-101+ per-contestant progress with failure reasons, match progress only once ready, retry named in the test's unit
 - r39 261117 MODEL-30✎ observe or write stage→write stage only; MODEL-31✎ observer tests write posts→photo observation tests, admitted observe-stage tests readable only; MODEL-44✎ observer opens on candidates→photo test, model selectors→MODEL-98; MODEL-97+ photo observation tests; MODEL-98+ model checklist with credits; MODEL-99+ template groups/tabs, 필수, refusal placement, docked step bar
 - r38 261116 MODEL-44✎ one primary writer action, observer and history beside→two equal comparison cards + 지난 비교 link, factor tap selects then 다음, observer skips the factor; MODEL-71✎ page section→추천으로 적용 sheet; MODEL-91✎ navigating preserves recoverable setup→discards a setup with no test
 - r37 261111 MODEL-44✎ place of tests "a destination beside model settings at /ai-models"→"under the AI 고르기 tab (/ai-models), whose one primary action is the two-writer comparison"; MODEL-96+ /ai-models stage rows and picker: radio cards, a tap saves, free-first order, owner-chosen 품질 먼저/균형/가격 먼저, locked cards disabled with reason, credits only
