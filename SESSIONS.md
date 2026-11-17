@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| obsfix | DESKTOP-VKPLS8P | pair | 2026-11-17T09:10Z | 2026-11-17T09:16Z | T899 | gusta-session-start-obsfix-f75bb1c7 | 0aa84769d06d | 851a118b0e28d990abee25ff |
+| obsfix | DESKTOP-VKPLS8P | pair | 2026-11-17T09:10Z | 2026-11-17T09:22Z | - | gusta-session-start-obsfix-f75bb1c7 | 9350785e1838 | 851a118b0e28d990abee25ff |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -192,8 +192,10 @@
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
 | T898 | obsfix | gusta-session-start-obsfix-f75bb1c7 | 01afffddc011 | 2026-11-17T09:15Z |
+| T899 | obsfix | gusta-session-start-obsfix-f75bb1c7 | 9350785e1838 | 2026-11-17T09:22Z |
 
 ## log
+- 261117 T899 done
 - 261117 T898 done
 - 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
 - 261117 reworded without a markdown heading token (it truncated report sections)
@@ -213,4 +215,3 @@
 - 261117 gusta-update-ssot MODEL r39 VIDEO r9 done: photo observation tests, model checklist with credits, setup legibility
 - 261117 gusta-update-ssot MODEL start
 - 261117 fix writing-tests: unchosen model slots keep their placeholder after one slot is chosen
-- 261117 fix writing-tests: setting tests send no model stage (400 WRITING_TEST_FACTOR_INVALID); 4 files incl. one test fixture correction, over the 3-file light limit
