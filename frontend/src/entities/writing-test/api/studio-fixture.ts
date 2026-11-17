@@ -364,6 +364,15 @@ export function createWritingTestStudioFixture(
         expiresAt: '2099-01-01T00:00:00Z',
       })
     })
+    rpc(Service.method.estimateFailedTestCandidates, (request) => {
+      calls.push('EstimateFailedTestCandidates')
+      if (!ledger || ledgerOwnerId !== ownerId) throw new ConnectError('not found', Code.NotFound)
+      return create(Service.method.estimateFailedTestCandidates.output, {
+        credits: BigInt(request.candidateIds.length * 2),
+        quoteKey: `retry-quote-${request.candidateIds.length}`,
+        expiresAt: '2099-01-01T00:00:00Z',
+      })
+    })
     rpc(Service.method.startWritingTest, async (request) => {
       calls.push('StartWritingTest')
       admissions.push(request)

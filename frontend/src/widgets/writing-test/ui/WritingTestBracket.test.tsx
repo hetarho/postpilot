@@ -47,7 +47,7 @@ it('renders stable stored pairs and progress without inventing a next contestant
   expect(rows[0]).toHaveTextContent('승자 후보 A')
   expect(rows[1]).toHaveTextContent('후보 C · 후보 D')
   expect(rows[2]).toHaveTextContent('앞 대결의 승자를 기다리고 있어요')
-  expect(screen.getByRole('status')).toHaveTextContent('1 / 3번 선택 완료')
+  expect(screen.getByRole('status')).toHaveTextContent('대결 1 / 3 완료')
   expect(screen.queryByText(/우승|Elo|순위/)).not.toBeInTheDocument()
 })
 
@@ -67,7 +67,7 @@ it('keeps the same match row nodes when a server decision fills an awaiting fina
   }
   rendered.rerender(<WritingTestBracket test={next} />)
   expect(screen.getAllByRole('listitem')[0]).toBe(first)
-  expect(screen.getByRole('status')).toHaveTextContent('2 / 3번 선택 완료')
+  expect(screen.getByRole('status')).toHaveTextContent('대결 2 / 3 완료')
   expect(screen.getAllByRole('listitem')[2]).toHaveTextContent('후보 A · 후보 D')
   expect(screen.getAllByRole('listitem')[2]).not.toHaveTextContent('승자')
 })

@@ -123,7 +123,7 @@ it('keeps failed-only retry and abandonment for a photo test that only partly ob
   expect(
     await screen.findByRole('heading', { level: 2, name: '일부 AI가 사진을 관찰하지 못했어요' }),
   ).toBeVisible()
-  expect(screen.getByRole('button', { name: '실패한 후보의 비용 확인' })).toBeVisible()
+  expect(screen.getByRole('button', { name: '실패한 AI의 다시 관찰 비용 확인' })).toBeVisible()
   expect(screen.getByRole('button', { name: '테스트 끝내기' })).toBeVisible()
   expect(screen.queryByRole('button', { name: /승자로 선택/ })).not.toBeInTheDocument()
   expect(fixture.admissions).toHaveLength(0)

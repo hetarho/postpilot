@@ -161,7 +161,7 @@ it('shows durable champion and expired metadata beside paid legacy records witho
     'href',
     '/tests/records/old-three-way?entry=%2Ftests%2Fhistory',
   )
-  expect(screen.getAllByText('1 / 1번 선택 완료')).toHaveLength(1)
+  expect(screen.getAllByText('대결 1 / 1 완료')).toHaveLength(1)
   expect(
     screen.queryByRole('button', { name: /승자|활성 모델|저장|다시 만들기/ }),
   ).not.toBeInTheDocument()

@@ -73,6 +73,7 @@ import {
 import { BLOG_FIELD_IDS } from '@/entities/blog-field'
 import { WritingTestPair } from './WritingTestPair'
 import { WritingTestBracket } from './WritingTestBracket'
+import { WritingTestContestantStatus } from './WritingTestContestantStatus'
 import { WritingTestChampionOutput } from './WritingTestChampionOutput'
 import { WritingFieldLabel, WritingTestTemplateFacts } from './WritingTestTemplateFacts'
 import { factAnswered, factFieldId, type FactGroup } from '../lib/template-facts'
@@ -581,7 +582,14 @@ function OwnedStudio({
         : flow.view === 'material'
           ? t('materialTitle')
           : flow.view === 'estimate'
-            ? t('estimateTitle', { count: quoteCount })
+            ? t(
+                observing
+                  ? flow.context.retryEstimate
+                    ? 'observation.retryTitle'
+                    : 'photoTest.estimateTitle'
+                  : 'estimateTitle',
+                { count: quoteCount },
+              )
             : flow.view === 'compare'
               ? t(wording('compareTitle', 'observation.compareTitle'))
               : flow.view === 'champion'
@@ -763,7 +771,8 @@ function OwnedStudio({
         {title}
       </Typography>
       <div role="status" aria-live="polite" className="mt-3">
-        {test && (
+        {/* Match progress means something only once every output is ready (MODEL-101). */}
+        {test && ['review', 'completed'].includes(test.status) && (
           <Typography variant="meta">
             {t('matchProgress', {
               done: test.matches.filter((m) => m.winnerCandidateId).length,
@@ -1336,7 +1345,15 @@ function OwnedStudio({
       )}
       {flow.view === 'estimate' && (
         <section className="mt-5 flex flex-1 flex-col gap-5">
-          <Typography variant="body">{t('onceOnly')}</Typography>
+          <Typography variant="body">
+            {t(
+              observing
+                ? flow.context.retryEstimate
+                  ? 'observation.retryHelp'
+                  : 'photoTest.onceOnly'
+                : 'onceOnly',
+            )}
+          </Typography>
           <Typography variant="title">
             {flow.context.quote?.free
               ? t('free')
@@ -1359,7 +1376,12 @@ function OwnedStudio({
                 className="min-w-0 flex-1"
                 onClick={() => flow.send({ type: 'CONFIRM' })}
               >
-                {t(flow.context.retryEstimate ? 'retry' : 'start', { count: quoteCount })}
+                {t(
+                  flow.context.retryEstimate
+                    ? wording('retry', 'observation.retry')
+                    : wording('start', 'photoTest.start'),
+                  { count: quoteCount },
+                )}
               </Button>
             </StepBarActions>
           </StepBar>
@@ -1378,6 +1400,7 @@ function OwnedStudio({
               <Typography variant="body">{t('leaveHelp')}</Typography>
             </>
           )}
+          {test && <WritingTestContestantStatus test={test} />}
           <a href="/tests/history" className={buttonStyles({ variant: 'ghost' })}>
             {t('history')}
           </a>
@@ -1599,7 +1622,7 @@ function OwnedStudio({
           <Typography variant="body">
             {t(
               flow.phase === 'partial'
-                ? 'partialHelp'
+                ? wording('partialHelp', 'observation.partialHelp')
                 : flow.phase === 'expired'
                   ? 'expiredHelp'
                   : flow.phase === 'conflict'
@@ -1623,8 +1646,11 @@ function OwnedStudio({
                 })
               }
             >
-              {t('estimateRetry')}
+              {t(wording('estimateRetry', 'observation.estimateRetry'))}
             </Button>
+          )}
+          {test && ['partial', 'failed'].includes(flow.phase) && (
+            <WritingTestContestantStatus test={test} />
           )}
           {flow.phase === 'quoteExpired' && (
             <Button variant="cta" onClick={() => flow.send({ type: 'ESTIMATE' })}>

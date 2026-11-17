@@ -250,12 +250,14 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
             total: test.count,
           })}
         </Typography>
-        <Typography variant="meta" as="p" className="text-content-secondary mt-1">
-          {t('matchProgress', {
-            done: test.matches.filter((match) => match.winnerCandidateId).length,
-            total: test.count - 1,
-          })}
-        </Typography>
+        {['review', 'completed'].includes(test.status) && (
+          <Typography variant="meta" as="p" className="text-content-secondary mt-1">
+            {t('matchProgress', {
+              done: test.matches.filter((match) => match.winnerCandidateId).length,
+              total: test.count - 1,
+            })}
+          </Typography>
+        )}
         {champion && (
           <Typography variant="body" className="mt-2 break-words">
             {champion.identity?.label ||

@@ -1,4 +1,5 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { create } from '@bufbuild/protobuf'
 import userEvent from '@testing-library/user-event'
 import {
   createMemoryHistory,
@@ -11,7 +12,13 @@ import {
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
-import { contentLanguageToProto, Stage } from '@/shared/api'
+import {
+  contentLanguageToProto,
+  FailureSchema,
+  Stage,
+  WritingTestCandidateStatus,
+  WritingTestStatus,
+} from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
 import { wireObservationTest } from '@/entities/writing-test/api/fixtures.test-support'
@@ -205,6 +212,37 @@ it('names a photo observation test as such on its deep link (MODEL-97)', async (
   await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
   expect(screen.getByRole('heading', { level: 1, name: '사진 관찰 테스트' })).toBeInTheDocument()
   expect(screen.queryByRole('heading', { level: 1, name: '글쓰기 테스트' })).toBeNull()
+})
+it('lists each photo contestant with its failure, words the retry in observations and shows match progress only once ready (MODEL-101)', async () => {
+  const fixture = createWritingTestStudioFixture()
+  const wire = wireObservationTest(['photo-1'], 8)
+  wire.status = WritingTestStatus.PARTIAL
+  wire.revealed = false
+  wire.winnerCandidateId = ''
+  wire.matches = []
+  wire.candidates.forEach((candidate, index) => {
+    if (index < 2) return
+    candidate.status = WritingTestCandidateStatus.FAILED
+    candidate.observations = []
+    candidate.failure = create(FailureSchema, {
+      reason: index === 7 ? 'MODEL_RATE_LIMITED' : 'MODEL_OUTPUT_TRUNCATED',
+    })
+  })
+  fixture.restoreTest(wire)
+  mount('/tests/test', fixture)
+  await screen.findByRole('button', { name: '실패한 AI의 다시 관찰 비용 확인' })
+  const list = within(screen.getByRole('region', { name: '후보별 진행' }))
+  expect(list.getAllByText('관찰 완료')).toHaveLength(2)
+  expect(list.getAllByText(/^실패 · /)).toHaveLength(6)
+  expect(list.getAllByText(/AI 결과가 중간에 끊겼어요/)).toHaveLength(5)
+  expect(list.getByText(/AI 모델 요청이 많아/)).toBeInTheDocument()
+  expect(screen.queryByText(/선택 완료|대결 \d+ \/ \d+ 완료/)).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: '실패한 AI의 다시 관찰 비용 확인' }))
+  expect(
+    await screen.findByRole('heading', { name: '실패한 AI 6개의 관찰을 다시 할까요?' }),
+  ).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '실패한 관찰 6개 다시 하기' })).toBeInTheDocument()
+  expect(screen.queryByText(/글 \d+편|실제 글|글을 한 번/)).toBeNull()
 })
 it('mounts common and one selected voice history as read-only and offers an explicit fresh draft action', async () => {
   const fixture = createWritingTestStudioFixture({ readableTest: true })

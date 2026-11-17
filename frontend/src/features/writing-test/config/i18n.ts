@@ -114,6 +114,13 @@ export const writingTestI18n = {
       working: 'AI마다 사진을 관찰하고 있어요',
       progress: '{{ready}} / {{total}}개 관찰 완료',
       partial: '일부 AI가 사진을 관찰하지 못했어요',
+      partialHelp:
+        '관찰을 마친 결과는 그대로 남아요. 실패한 AI만 다시 관찰하거나 테스트를 끝낼 수 있어요.',
+      estimateRetry: '실패한 AI의 다시 관찰 비용 확인',
+      retryTitle: '실패한 AI {{count}}개의 관찰을 다시 할까요?',
+      retryHelp:
+        '실패한 AI만 같은 사진을 다시 관찰해요. 성공한 관찰 결과는 그대로 두고 다시 만들지 않아요.',
+      retry: '실패한 관찰 {{count}}개 다시 하기',
       expired: '사진과 관찰 결과의 보관 기간이 지났어요',
       expiredHelp: '대결 기록과 우승한 AI 정보는 남아 있어요.',
       compareTitle: '어떤 관찰이 더 정확한가요?',
@@ -150,12 +157,29 @@ export const writingTestI18n = {
     compareHelp:
       '두 글을 끝까지 읽고 승자를 골라 주세요. 후보의 이름은 모든 대결이 끝나면 보여 드려요.',
     pickWinner: '{{label}}를 승자로 선택',
-    matchProgress: '{{done}} / {{total}}번 선택 완료',
+    matchProgress: '대결 {{done}} / {{total}} 완료',
     bracket: '대결 진행',
     round: '{{round}}라운드 · {{number}}번 대결',
     decided: '승자 {{label}}',
     waitingMatch: '앞 대결의 승자를 기다리고 있어요',
     candidate: '후보 {{label}}',
+    contestants: {
+      title: '후보별 진행',
+      post: {
+        pending: '대기 중',
+        running: '글 쓰는 중',
+        succeeded: '글 완성',
+        failed: '실패',
+        cancelled: '중단됨',
+      },
+      observation: {
+        pending: '대기 중',
+        running: '관찰 중',
+        succeeded: '관찰 완료',
+        failed: '실패',
+        cancelled: '중단됨',
+      },
+    },
     winnerTitle: {
       model: '마음에 드는 AI 모델을 찾았어요',
       voice: '마음에 드는 말투를 찾았어요',
@@ -364,6 +388,13 @@ export const writingTestI18n = {
       working: 'Each AI is observing the photos',
       progress: '{{ready}} / {{total}} observations ready',
       partial: 'Some AIs could not observe the photos',
+      partialHelp:
+        'Finished observations stay unchanged. Re-observe only the failed AIs or end the test.',
+      estimateRetry: 'Check the cost to re-observe failed AIs',
+      retryTitle: 'Re-observe with the {{count}} failed AIs?',
+      retryHelp:
+        'Only the failed AIs observe the same photos again. Finished observations stay as they are and are not made again.',
+      retry: 'Re-observe {{count}} failed',
       expired: 'The photos and observations are past their retention period',
       expiredHelp: 'The match record and the winning AI stay available.',
       compareTitle: 'Which observation is more accurate?',
@@ -401,12 +432,29 @@ export const writingTestI18n = {
     compareHelp:
       'Read both complete posts and choose the winner. Identities are revealed after all matches.',
     pickWinner: 'Choose {{label}} as winner',
-    matchProgress: '{{done}} / {{total}} decisions complete',
+    matchProgress: 'Matches {{done}} / {{total}} decided',
     bracket: 'Match progress',
     round: 'Round {{round}} · match {{number}}',
     decided: 'Winner {{label}}',
     waitingMatch: 'Waiting for the previous winners',
     candidate: 'Candidate {{label}}',
+    contestants: {
+      title: 'Each contestant',
+      post: {
+        pending: 'Waiting',
+        running: 'Writing',
+        succeeded: 'Post ready',
+        failed: 'Failed',
+        cancelled: 'Stopped',
+      },
+      observation: {
+        pending: 'Waiting',
+        running: 'Observing',
+        succeeded: 'Observed',
+        failed: 'Failed',
+        cancelled: 'Stopped',
+      },
+    },
     winnerTitle: {
       model: 'You found your preferred AI model',
       voice: 'You found your preferred writing style',
