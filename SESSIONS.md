@@ -169,6 +169,7 @@
 - 261117 decided MODEL-98: "비교할 모델 드롭다운이 있으면 안돼" means which control? → the photo test asks for no writer/voice/template dropdown and every model test picks contestants from one checklist with credits per post (MODEL-98) instead of per-slot dropdowns (alt: keep per-slot model dropdowns and add credits to their options | drop only the fixed-writer dropdown)
 - 261117 decided MODEL-97: where does the photo test live and what may be uploaded? → /tests/photos with photos only, reusing the post photo gate, conversion and 30-photo count (alt: allow short videos like post attachments | a route under /ai-models)
 - 261117 decided MODEL-31: what happens to observe-stage writing tests? → no new one is offered in the product and admitted ones stay readable with their actions; the server keeps admitting the wire shape for now (alt: refuse new observe-stage writing tests server-side | migrate old records into photo tests)
+- 261117 decided MODEL-99: how do template question groups lay out beyond phones? → tabs on phones only, stacked named groups from sm up (alt: tabs at every width | one merged list with a template badge per question)
 
 ## unlanded
 | id | tag | branch | commit | at |
