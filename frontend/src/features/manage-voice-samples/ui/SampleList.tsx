@@ -5,7 +5,9 @@ import {
   type VoiceSample,
   type VoiceSampleDetail,
   type VoicePrompt,
+  promptText,
   useDeleteVoiceSample,
+  useVoiceExperiences,
   useVoicePrompts,
   useVoiceSample,
 } from '@/entities/voice'
@@ -42,12 +44,18 @@ function OwnedSampleList({
   renderEditor,
 }: SampleListProps) {
   const { t } = useTranslation('voices')
-  const { prompts } = useVoicePrompts()
+  const { prompts, kinds } = useVoicePrompts()
+  const { experiences } = useVoiceExperiences(ownerId, voiceId)
+  /** The prompt with its experience named (VOICE-78); a situation reads unchanged. */
+  const promptOf = (sample: VoiceSample): VoicePrompt | undefined => {
+    const prompt = prompts.find((candidate) => candidate.key === sample.promptKey)
+    if (!prompt) return undefined
+    const experience = experiences.find((candidate) => candidate.id === sample.experienceId)
+    return { ...prompt, text: promptText(prompt, kinds, experience) }
+  }
   const [opened, setOpened] = useState<VoiceSample | null>(null)
   const titleOf = (sample: VoiceSample) =>
-    sample.kind === 'answer'
-      ? (prompts.find((prompt) => prompt.key === sample.promptKey)?.text ?? '')
-      : sample.label
+    sample.kind === 'answer' ? (promptOf(sample)?.text ?? '') : sample.label
 
   return (
     // The tab's own heading names the list (학습 글), so it carries none of its own.
@@ -88,7 +96,7 @@ function OwnedSampleList({
           sample={opened}
           title={titleOf(opened)}
           blocked={blocked}
-          prompt={prompts.find((prompt) => prompt.key === opened.promptKey)}
+          prompt={promptOf(opened)}
           renderEditor={renderEditor}
           onClose={() => setOpened(null)}
         />

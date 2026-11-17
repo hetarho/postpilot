@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  promptText,
+  useVoiceExperiences,
   useVoicePrompts,
   useVoiceSample,
   type VoiceSample,
@@ -33,12 +35,18 @@ export function LearningMaterials({
   }) => ReactNode
 }) {
   const { t } = useTranslation('voicePreparation')
-  const { prompts } = useVoicePrompts()
+  const { prompts, kinds } = useVoicePrompts()
+  const { experiences } = useVoiceExperiences(ownerId, voiceId)
+  /** The prompt with its experience named (VOICE-78); a situation reads unchanged. */
+  const promptOf = (sample: VoiceSample): VoicePrompt | undefined => {
+    const prompt = prompts.find((candidate) => candidate.key === sample.promptKey)
+    if (!prompt) return undefined
+    const experience = experiences.find((candidate) => candidate.id === sample.experienceId)
+    return { ...prompt, text: promptText(prompt, kinds, experience) }
+  }
   const [opened, setOpened] = useState<VoiceSample | null>(null)
   const title = (sample: VoiceSample) =>
-    sample.label ||
-    prompts.find((prompt) => prompt.key === sample.promptKey)?.text ||
-    t('savedMaterial')
+    sample.label || promptOf(sample)?.text || t('savedMaterial')
   return (
     <>
       <ul className="divide-divider divide-y">
@@ -63,7 +71,7 @@ export function LearningMaterials({
           title={title(opened)}
           onClose={() => setOpened(null)}
           blocked={blocked}
-          prompt={prompts.find((prompt) => prompt.key === opened.promptKey)}
+          prompt={promptOf(opened)}
           renderEditor={renderEditor}
           onBusyChange={onBusyChange}
         />

@@ -2085,6 +2085,8 @@ export interface FakeVoicePrompt {
   scene?: string
   hint?: string
   starter?: boolean
+  /** A thread question's kind (VOICE-78); its text carries `{experience}`. */
+  experienceKind?: VoiceExperienceKind | 'food' | 'cafe' | 'beauty' | 'stay' | 'leisure' | 'product'
 }
 export interface FakeVoiceRow {
   origin?: 'personal' | 'synthetic'
@@ -2109,6 +2111,8 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 
 export interface FakeVoiceOptions {
   prompts?: readonly FakeVoicePrompt[]
+  /** Experiences the default voice already holds (VOICE-78). */
+  experiences?: ReadonlyArray<{ id: string; kind: VoiceExperienceKind; name: string }>
   createFails?: boolean
   createGate?: Promise<void>
 
@@ -2251,7 +2255,7 @@ const toSampleKind = (kind: FakeVoiceSampleRow['kind']) =>
   kind === 'answer' ? VoiceSampleKind.ANSWER : VoiceSampleKind.POST
 
 export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOptions = {}) {
-  const promptBank = options.prompts ?? FAKE_VOICE_PROMPTS
+  const promptBank: readonly FakeVoicePrompt[] = options.prompts ?? FAKE_VOICE_PROMPTS
   const { rpc } = router
   let sequence = options.samples?.length ?? 0
   let profileReads = 0
@@ -2696,14 +2700,28 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('ListVoicePrompts')
     return create(ListVoicePromptsResponseSchema, {
       prompts: promptBank.map((prompt) =>
-        create(VoicePromptSchema, { ...prompt, part: PART_TO_PROTO[prompt.part] }),
+        create(VoicePromptSchema, {
+          ...prompt,
+          part: PART_TO_PROTO[prompt.part],
+          experienceKind:
+            typeof prompt.experienceKind === 'string'
+              ? VoiceExperienceKind[prompt.experienceKind.toUpperCase() as 'FOOD']
+              : prompt.experienceKind,
+        }),
       ),
       kinds: FAKE_EXPERIENCE_KINDS.map((info) => create(VoiceExperienceKindInfoSchema, info)),
     })
   })
 
   // The learning chat's own experiences (VOICE-78), per voice in the order they were started.
-  const experiences = new Map<string, ProtoVoiceExperience[]>()
+  const experiences = new Map<string, ProtoVoiceExperience[]>([
+    [
+      DEFAULT_FAKE_VOICE.id,
+      (options.experiences ?? []).map((row) =>
+        create(VoiceExperienceSchema, { ...row, createdAt: NOW }),
+      ),
+    ],
+  ])
   rpc(VoiceService.method.listVoiceExperiences, (request) => {
     options.calls?.push('ListVoiceExperiences')
     owned(request.voiceId)

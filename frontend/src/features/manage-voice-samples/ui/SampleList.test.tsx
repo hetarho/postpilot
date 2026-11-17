@@ -80,3 +80,43 @@ describe('the 학습 글 list', () => {
     )
   })
 })
+
+// VOICE-78: a thread answer names its experience; until experiences load it reads the plain word.
+describe('a thread answer in the 학습 글 list', () => {
+  const thread: VoiceSample = {
+    id: 'thread-1',
+    kind: 'answer',
+    label: '',
+    promptKey: 'thread_food_open',
+    experienceId: 'experience-1',
+    hasPhoto: false,
+    chars: 20,
+    createdAt: '2026-08-30T12:00:00Z',
+  }
+  function renderThread() {
+    const transport = createFakeAuthTransport({
+      voice: {
+        prompts: [
+          {
+            key: 'thread_food_open',
+            part: 'opening',
+            photo: false,
+            text: '{experience}, 어쩌다 가게 됐어요?',
+            experienceKind: 'food',
+          },
+        ],
+        experiences: [{ id: 'experience-1', kind: 1, name: '회사 앞 칼국숫집' }],
+        samples: [{ ...thread, body: '점심에 갔어요.' }],
+      },
+    })
+    return render(<SampleList ownerId="alice" voiceId="voice-default" samples={[thread]} />, {
+      wrapper: withProviders(transport, createTestQueryClient()),
+    })
+  }
+
+  it('shows the plain word first and then the named experience, never the token', async () => {
+    renderThread()
+    expect(screen.queryByText(/\{experience\}/)).not.toBeInTheDocument()
+    expect(await screen.findByText('회사 앞 칼국숫집, 어쩌다 가게 됐어요?')).toBeInTheDocument()
+  })
+})
