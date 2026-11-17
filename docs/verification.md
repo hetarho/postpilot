@@ -18,13 +18,13 @@ Maintain the matching integration/e2e tests in the implementation, and hand thei
 
 ## Shared integration final gate
 
-The shared integration owner (the initiating Gusta coordinator when it is the only participant) runs builds, integration/e2e and full suites once on the fixed integration candidate after every participating session is ready, before landing or whole-work completion, including when committing only. Implementation/review units hand off these checks; a unit or session ending does not start another full gate. Real supplier, human, hardware and live-deployment qualification remains an explicit activation or delivery condition.
+The shared integration owner (the initiating Gusta coordinator when it is the only participant) runs builds, integration/e2e and full suites once on the fixed integration candidate after every live participating session is ready, before landing or whole-work completion, including when committing only. A paused session, one with no signal for 90 minutes, or a ready one whose head cannot be fetched is deferred to a later integration with its branch and claims kept; it is never withdrawn, landed or taken over. Implementation/review units hand off these checks; a unit or session ending does not start another full gate. Real supplier, human, hardware and live-deployment qualification remains an explicit activation or delivery condition.
 
 Apply Gusta's cache, process cleanup and its deadline, closing-reserve and unit limits. Reuse each still-valid successful check; after a targeted repair run failed, affected or unrun checks. Reuse depends on actual consumed inputs, command, environment and scope, including transitive scripts/configuration/dependencies. A docs-only merge is not sufficient proof by itself. Optional named verification plans may store separate check receipts; do not infer a narrower input set from a script name. Stop writes to the candidate while checking, and invalidate evidence when its inputs change.
 
 ## Batch: full CI-equivalent coverage
 
-The integration owner runs this coverage for the fixed integration candidate, from the repository root, with the Node version in `.node-version`, Go from `backend/go.mod`, installed lockfile dependencies and Docker available. These are the checks in `.github/workflows/ci.yml`; changes to that workflow require updating this list.
+The integration owner runs this coverage for the fixed integration candidate, from the repository root, with the Node version in `.node-version`, Go from `backend/go.mod`, installed lockfile dependencies and Docker available. These are the checks in `.github/workflows/ci.yml`; changes to that workflow require updating this list. Every worktree the Gusta CLI creates (session, work group, worker, integration candidate) first runs ARCH-31's `prepare:` command, `pnpm install --frozen-lockfile --offline`, which leaves tracked files unchanged; a failure there is an environment failure, repaired in the environment and never sent back as a code correction.
 
 ```sh
 (
