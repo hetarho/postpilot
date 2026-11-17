@@ -211,6 +211,7 @@
 | T879 | lchat | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 2026-11-17T01:09Z |
 
 ## log
+- 261117 gusta-create-task MODEL r39 VIDEO r9 -> T888-T897
 - 261117 gusta-create-task MODEL VIDEO start
 - 261117 gusta-update-ssot MODEL r39 VIDEO r9 done: photo observation tests, model checklist with credits, setup legibility
 - 261117 gusta-update-ssot MODEL start
@@ -230,4 +231,3 @@
 - 261116 fix creation: align remaining clip and clip-from-post self-paid choice expectations; affected tests and scoped static checks passed
 - 261116 T883 done
 - 261116 T877 done
-- 261116 T876 done
