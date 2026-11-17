@@ -316,8 +316,8 @@
       "branch": "gusta-session-start-wtform-501eaa2b",
       "head": "0ec8ba25cac2ec0325d9041ce77138208c0e5e76",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-17T07:46:04.211Z",
+      "status": "ready",
+      "at": "2026-11-17T07:46:11.127Z",
       "agentChecks": [],
       "verificationCommands": [],
       "reason": "failed"
