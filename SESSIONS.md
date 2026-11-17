@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| wtform | DESKTOP-VKPLS8P | autopilot | 2026-11-17T05:59Z | 2026-11-17T06:00Z | T888 | gusta-session-start-wtform-501eaa2b | 212a30a9fbbc | 57003c600520721f5f5a87e1 |
+| wtform | DESKTOP-VKPLS8P | autopilot | 2026-11-17T05:59Z | 2026-11-17T06:17Z | - | gusta-session-start-wtform-501eaa2b | bfc0cfb99b7a | 57003c600520721f5f5a87e1 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -214,8 +214,10 @@
 | T886 | hdref | gusta-session-start-hdref-c3df08ba | 0c7d9a8d91b8 | 2026-11-16T15:43Z |
 | T878 | lchat | gusta-session-start-lchat-fe660cf1 | 5e5bca352 | 2026-11-17T00:59Z |
 | T879 | lchat | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 2026-11-17T01:09Z |
+| T888 | wtform | gusta-session-start-wtform-501eaa2b | bfc0cfb99b7a | 2026-11-17T06:17Z |
 
 ## log
+- 261117 T888 done
 - 261117 gusta-create-task MODEL r39 VIDEO r9 -> T888-T897
 - 261117 gusta-create-task MODEL VIDEO start
 - 261117 gusta-update-ssot MODEL r39 VIDEO r9 done: photo observation tests, model checklist with credits, setup legibility
@@ -235,4 +237,3 @@
 - 261116 wopts ready at 7641f90be; T880-T883 complete and reviewed. Shared gate awaits both registered vcx working participants. Preserve peer ownership. Cohort integration owner must include conditional ARCH-31 deployment/media checks for backend changes. No full candidate or main publication claimed.
 - 261116 fix creation: align remaining clip and clip-from-post self-paid choice expectations; affected tests and scoped static checks passed
 - 261116 T883 done
-- 261116 T877 done
