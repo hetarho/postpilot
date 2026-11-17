@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "packageName": "@haeram/gusta",
-  "packageVersion": "0.17.4",
-  "installedAt": "2026-11-17T04:43:21.157Z",
+  "packageVersion": "0.17.5",
+  "installedAt": "2026-11-17T13:33:21.482Z",
   "agents": [
     "claude",
     "codex"
   ],
   "files": {
     ".claude/skills/gusta-create-architecture/assets/FORMAT.md": {
-      "sha256": "5720e4f736276800e891ec973798ee90fd856e4b6ec90875af6c4e4ee6db2a96"
+      "sha256": "126d23c983c763a2943ea350f3436118c0bc73cccab3cfe5587c3620e911a589"
     },
     ".claude/skills/gusta-create-architecture/assets/STATE.md": {
       "sha256": "45844fb3f06860d3e3021e48ea31fee479c27a1ebb5a4d10de199d9ebe0ccee3"
@@ -18,7 +18,7 @@
       "sha256": "2f2be1dd966dee04f4174a8a573d0672e673dcac2b86697b8974788f6999fa7f"
     },
     ".claude/skills/gusta-create-architecture/SKILL.md": {
-      "sha256": "ab0217fc36f3ad045ca2f37d062fdc65cf55c43ff3a254bdd1ad54db198ebd52"
+      "sha256": "553b5230b7a0a47569007cc740d4402f1b3b41b15b7c36a9d0cb0c5ec4cef631"
     },
     ".claude/skills/gusta-create-narrative/references/korean-style.md": {
       "sha256": "60745a1c6f2e69a750cd3c29fc2f581defcc24b2d160caf0fc4f5220869b951e"
@@ -42,10 +42,10 @@
       "sha256": "433e84dc364c8b28de6d2e5c46966f04f7091da0e2ccef15fecb225cf2c7aa01"
     },
     ".claude/skills/gusta-create-task/SKILL.md": {
-      "sha256": "2e395d4ba2f9da5c93ddf53d4431bb1601ee7525299252b77665db7533bfb836"
+      "sha256": "3df17071482751564375fd9ede27ac7e8feff4b0ff8b56f1f3b94bb51426b20c"
     },
     ".claude/skills/gusta-design-mode/SKILL.md": {
-      "sha256": "4c586f03f26c1a0d77f39ffe666c86695ad8117f5ac714a72c78205a5700b483"
+      "sha256": "3cbd39551c05c5b61d8ba9a5dd705e867da821e8fcc2eb330d24a661ac6c5bb7"
     },
     ".claude/skills/gusta-doc-review/SKILL.md": {
       "sha256": "891cad797c3f860bf8d02f5ec20c9ce3bfbe0ffd0fb4ead13340ae1ac0f01b21"
@@ -54,7 +54,7 @@
       "sha256": "7f49211f0f1610ceebe6e2efb0ada2ad851788df2cad3aa649d812395cebe4c6"
     },
     ".claude/skills/gusta-implement-task/SKILL.md": {
-      "sha256": "65df39f5afeec3133745c13bd7164d86e1227243b2e7438f1914b17ebef79c51"
+      "sha256": "e41f1b5dee16e2913c9db9c342024510eb9d535052855eb256e2327bd81021f7"
     },
     ".claude/skills/gusta-init/SKILL.md": {
       "sha256": "0822fcd9ceacede378229235e25c1e660cc59c71b4e54733181c1ffffb85f341"
@@ -108,7 +108,7 @@
       "sha256": "98529e7452f35ffc23f378f06cbba7f1156ae0cdb1b07f9c439fa0eaf3439e89"
     },
     ".claude/skills/gusta-self-improve-remote/SKILL.md": {
-      "sha256": "c18256b308dfb93a92654d5e4bc20689ee180af0cf5a8b04625f323ae8e76846"
+      "sha256": "0ebd71e148608ee3d221d0526aa988617e0a00d0cb2ebdef4ae8fbbe274d7c05"
     },
     ".claude/skills/gusta-self-improve/assets/scout-prompt.md": {
       "sha256": "f3e8c4e3f359fe411e7ee1875b3a305f91f4ff33bf69cc1c0688ebe97b0963f3"
@@ -120,7 +120,7 @@
       "sha256": "4c3d7820e73471efd6a8158288056821fc1883b985f2a73c4f9c6406200e9159"
     },
     ".claude/skills/gusta-self-improve/SKILL.md": {
-      "sha256": "1733e356954c06b990a8c133fcf1116b9e235919c8a178abd51797f3ab037583"
+      "sha256": "f4e73e96c979ac5cb4c11fdcbff231f96972e0893ee393ae10320040e0aa75b8"
     },
     ".claude/skills/gusta-send-issue/SKILL.md": {
       "sha256": "a0a670ef093a790995a014e1077d99f376b52377054dfc34f3d5ed9be8a46487"
@@ -138,40 +138,40 @@
       "sha256": "49ba10c99fb60cf5ff35c3f8ba67b5e76f5a4e3bb3a62502119ab5ec53717189"
     },
     ".claude/skills/gusta-start/references/coordinator.md": {
-      "sha256": "8bc93d7cb3b115356e7f359fb8befa0ab9db869e50f9079ad486d44afa399558"
+      "sha256": "a1bad2b2d4d4ecc0eef8debde171a2933cdf8fcf0bacf2fa9c337fe8b7386af3"
     },
     ".claude/skills/gusta-start/references/loop-control.md": {
-      "sha256": "e1bea8165aae6dbd51b067586d0d4d4154d1eb8ae0e19f4dda802f1ec3c75127"
+      "sha256": "9d101d7eed7fcea8f598e123c9ead479227e8e4294d993cad888b8946c2e8fb8"
     },
     ".claude/skills/gusta-start/references/request.md": {
-      "sha256": "a72452ec9a60781305beba6c22a618327ffc6944d3dc44b8841cca81dfa09fa3"
+      "sha256": "dd21dac5c0587371b520363c9f416c907ada976ae3f5546384772e4376d78463"
     },
     ".claude/skills/gusta-start/references/session.md": {
-      "sha256": "d156cb7b61efbec69984aeccd4c177edbafd6a3f2d4f47dd10f109bfd15b2541"
+      "sha256": "727bcba1e7bedea2e407311e17f55972d2e9b4922bc6b9de9c8f840ee4561207"
     },
     ".claude/skills/gusta-start/references/usage.md": {
       "sha256": "04526bdb35ef4e52520fea314ce95d01b7cceaceeac05768342a0bfaafa49eee"
     },
     ".claude/skills/gusta-start/references/verification.md": {
-      "sha256": "9d8778a04fb3766652ba43c16369650865119bb2f3ea62d13824a2da5c249aa0"
+      "sha256": "9015c35cb0edabc71625fdb77d4c096fc57d81839859a1d4edd258ded0cdfea3"
     },
     ".claude/skills/gusta-start/SKILL.md": {
-      "sha256": "6bcaba6aa602db056649c46b63cc79ffc671b071978e573fa6c761ec4b00d9d9"
+      "sha256": "7d056f290e8a790c90d494146bd2de9acf402bbdf889d54103fd0144e041d682"
     },
     ".claude/skills/gusta-update-ssot/SKILL.md": {
-      "sha256": "6d99f59b0fea395de1b76668e3d4b91b2f647d3b06483942394bc5a87a0ce056"
+      "sha256": "e782c23d04e80d28051f0823f5c4f98209ca405fab61b0d9d4e30bcb85671203"
     },
     ".claude/skills/gusta-update/references/project-rules.md": {
-      "sha256": "251cb4a02956111c1cafe0da0dafa4e98c8f3927f8a1154abe539945865dc7d7"
+      "sha256": "ceecd220be97f5691b65071ba2598e715874b1725d4cfe0acbbafe3cfd579bb9"
     },
     ".claude/skills/gusta-update/SKILL.md": {
-      "sha256": "5fb5a9a5404483d68f0bb16218555dcc9a99cda27b53f363e68a1bd72d80316f"
+      "sha256": "0f32b0a745fd262abfd9a4ccde12f914a3de16a5744db1010147918ffe694eae"
     },
     ".codex/skills/gusta-create-architecture/agents/openai.yaml": {
       "sha256": "0e4499fbed6e5f9c2e440560a132cf9e0f63c506a5f5dbe005ae6e4e567bdaa2"
     },
     ".codex/skills/gusta-create-architecture/assets/FORMAT.md": {
-      "sha256": "5720e4f736276800e891ec973798ee90fd856e4b6ec90875af6c4e4ee6db2a96"
+      "sha256": "126d23c983c763a2943ea350f3436118c0bc73cccab3cfe5587c3620e911a589"
     },
     ".codex/skills/gusta-create-architecture/assets/STATE.md": {
       "sha256": "45844fb3f06860d3e3021e48ea31fee479c27a1ebb5a4d10de199d9ebe0ccee3"
@@ -180,7 +180,7 @@
       "sha256": "2f2be1dd966dee04f4174a8a573d0672e673dcac2b86697b8974788f6999fa7f"
     },
     ".codex/skills/gusta-create-architecture/SKILL.md": {
-      "sha256": "ab0217fc36f3ad045ca2f37d062fdc65cf55c43ff3a254bdd1ad54db198ebd52"
+      "sha256": "553b5230b7a0a47569007cc740d4402f1b3b41b15b7c36a9d0cb0c5ec4cef631"
     },
     ".codex/skills/gusta-create-narrative/agents/openai.yaml": {
       "sha256": "e1d78d62dcf1d49d2a5876cfcc5f81122a68c0b4526b1755c29b2bc6a62e62ba"
@@ -213,13 +213,13 @@
       "sha256": "433e84dc364c8b28de6d2e5c46966f04f7091da0e2ccef15fecb225cf2c7aa01"
     },
     ".codex/skills/gusta-create-task/SKILL.md": {
-      "sha256": "2e395d4ba2f9da5c93ddf53d4431bb1601ee7525299252b77665db7533bfb836"
+      "sha256": "3df17071482751564375fd9ede27ac7e8feff4b0ff8b56f1f3b94bb51426b20c"
     },
     ".codex/skills/gusta-design-mode/agents/openai.yaml": {
       "sha256": "7cb7a9830ce99618f9fcb5f104ba424d26cb2d31e3bb445cad1e6f048c4bc356"
     },
     ".codex/skills/gusta-design-mode/SKILL.md": {
-      "sha256": "4c586f03f26c1a0d77f39ffe666c86695ad8117f5ac714a72c78205a5700b483"
+      "sha256": "3cbd39551c05c5b61d8ba9a5dd705e867da821e8fcc2eb330d24a661ac6c5bb7"
     },
     ".codex/skills/gusta-doc-review/agents/openai.yaml": {
       "sha256": "6b0658ec82dca69b706da80fc7a3342ba1ba98b5da5b4a337df0e6ef43b688de"
@@ -234,7 +234,7 @@
       "sha256": "7f49211f0f1610ceebe6e2efb0ada2ad851788df2cad3aa649d812395cebe4c6"
     },
     ".codex/skills/gusta-implement-task/SKILL.md": {
-      "sha256": "65df39f5afeec3133745c13bd7164d86e1227243b2e7438f1914b17ebef79c51"
+      "sha256": "e41f1b5dee16e2913c9db9c342024510eb9d535052855eb256e2327bd81021f7"
     },
     ".codex/skills/gusta-init/agents/openai.yaml": {
       "sha256": "7a28907e4ba0d961b4416a9d7ef7b9fdfcce4720860cfc355b7644daadecfab0"
@@ -306,7 +306,7 @@
       "sha256": "98529e7452f35ffc23f378f06cbba7f1156ae0cdb1b07f9c439fa0eaf3439e89"
     },
     ".codex/skills/gusta-self-improve-remote/SKILL.md": {
-      "sha256": "c18256b308dfb93a92654d5e4bc20689ee180af0cf5a8b04625f323ae8e76846"
+      "sha256": "0ebd71e148608ee3d221d0526aa988617e0a00d0cb2ebdef4ae8fbbe274d7c05"
     },
     ".codex/skills/gusta-self-improve/agents/openai.yaml": {
       "sha256": "92a9aa87d7df5ecbf7a9fc95ae81b2781face422911d921276b83a82a4dc1fb1"
@@ -321,7 +321,7 @@
       "sha256": "4c3d7820e73471efd6a8158288056821fc1883b985f2a73c4f9c6406200e9159"
     },
     ".codex/skills/gusta-self-improve/SKILL.md": {
-      "sha256": "1733e356954c06b990a8c133fcf1116b9e235919c8a178abd51797f3ab037583"
+      "sha256": "f4e73e96c979ac5cb4c11fdcbff231f96972e0893ee393ae10320040e0aa75b8"
     },
     ".codex/skills/gusta-send-issue/agents/openai.yaml": {
       "sha256": "f638c3026fd958f90c997d152d06fb889bcb1c5271409d9b42752ab6e098f404"
@@ -351,40 +351,40 @@
       "sha256": "49ba10c99fb60cf5ff35c3f8ba67b5e76f5a4e3bb3a62502119ab5ec53717189"
     },
     ".codex/skills/gusta-start/references/coordinator.md": {
-      "sha256": "8bc93d7cb3b115356e7f359fb8befa0ab9db869e50f9079ad486d44afa399558"
+      "sha256": "a1bad2b2d4d4ecc0eef8debde171a2933cdf8fcf0bacf2fa9c337fe8b7386af3"
     },
     ".codex/skills/gusta-start/references/loop-control.md": {
-      "sha256": "e1bea8165aae6dbd51b067586d0d4d4154d1eb8ae0e19f4dda802f1ec3c75127"
+      "sha256": "9d101d7eed7fcea8f598e123c9ead479227e8e4294d993cad888b8946c2e8fb8"
     },
     ".codex/skills/gusta-start/references/request.md": {
-      "sha256": "a72452ec9a60781305beba6c22a618327ffc6944d3dc44b8841cca81dfa09fa3"
+      "sha256": "dd21dac5c0587371b520363c9f416c907ada976ae3f5546384772e4376d78463"
     },
     ".codex/skills/gusta-start/references/session.md": {
-      "sha256": "d156cb7b61efbec69984aeccd4c177edbafd6a3f2d4f47dd10f109bfd15b2541"
+      "sha256": "727bcba1e7bedea2e407311e17f55972d2e9b4922bc6b9de9c8f840ee4561207"
     },
     ".codex/skills/gusta-start/references/usage.md": {
       "sha256": "04526bdb35ef4e52520fea314ce95d01b7cceaceeac05768342a0bfaafa49eee"
     },
     ".codex/skills/gusta-start/references/verification.md": {
-      "sha256": "9d8778a04fb3766652ba43c16369650865119bb2f3ea62d13824a2da5c249aa0"
+      "sha256": "9015c35cb0edabc71625fdb77d4c096fc57d81839859a1d4edd258ded0cdfea3"
     },
     ".codex/skills/gusta-start/SKILL.md": {
-      "sha256": "6bcaba6aa602db056649c46b63cc79ffc671b071978e573fa6c761ec4b00d9d9"
+      "sha256": "7d056f290e8a790c90d494146bd2de9acf402bbdf889d54103fd0144e041d682"
     },
     ".codex/skills/gusta-update-ssot/agents/openai.yaml": {
       "sha256": "4378b5cfb2b2dad29bc59f60bf8b3eca278f0776e65cfe94e9bec56232eb83e9"
     },
     ".codex/skills/gusta-update-ssot/SKILL.md": {
-      "sha256": "6d99f59b0fea395de1b76668e3d4b91b2f647d3b06483942394bc5a87a0ce056"
+      "sha256": "e782c23d04e80d28051f0823f5c4f98209ca405fab61b0d9d4e30bcb85671203"
     },
     ".codex/skills/gusta-update/agents/openai.yaml": {
       "sha256": "0f6611050cc74028d58f9c59da4b49d49739b0fb5ab4dc0571f46909a7f9beb2"
     },
     ".codex/skills/gusta-update/references/project-rules.md": {
-      "sha256": "251cb4a02956111c1cafe0da0dafa4e98c8f3927f8a1154abe539945865dc7d7"
+      "sha256": "ceecd220be97f5691b65071ba2598e715874b1725d4cfe0acbbafe3cfd579bb9"
     },
     ".codex/skills/gusta-update/SKILL.md": {
-      "sha256": "5fb5a9a5404483d68f0bb16218555dcc9a99cda27b53f363e68a1bd72d80316f"
+      "sha256": "0f32b0a745fd262abfd9a4ccde12f914a3de16a5744db1010147918ffe694eae"
     }
   }
 }
