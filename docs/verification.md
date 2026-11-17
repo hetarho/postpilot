@@ -10,7 +10,9 @@ Assess the complete task delta against its recorded starting revision, including
 
 Vitest can select related unit tests with `--changed` against the task-start SHA or `related --run` against source paths relative to `frontend/`. Select Go packages and test cases for the changed isolated behavior. Inspect actual dependencies before classifying tests: SQLite/process/transport/browser integration tests stay at the shared batch gate, regardless of their filename.
 
-Use applicable static checks expected under a minute. Frontend commands are `pnpm --filter ./frontend lint`, `pnpm --filter ./frontend format:check` and `pnpm --filter ./frontend exec tsc --noEmit -p tsconfig.app.json`; select the affected fast formatter/type checks for other paths. The batch gate still runs the complete checks listed below.
+Use applicable static checks expected under a minute. For frontend tasks, run `pnpm --filter ./frontend exec eslint` and `pnpm --filter ./frontend exec prettier --check` on changed files, passing paths relative to `frontend/`. Include applicable fast boundary/style checks; hand off slower scopes with their exact commands and paths. Select the affected fast formatter/static checks for other paths.
+
+Full-project frontend TypeScript checking belongs to the shared batch gate. Its existing `pnpm build:web` command calls the frontend build (`tsc -b && vite build`), so task checks do not run another `tsc -b` or an app-wide `tsc --noEmit` instead. Record this handoff in task acceptance and result limits. The batch and CI coverage below remains required.
 
 Maintain the matching integration/e2e tests in the implementation, and hand their exact commands, test paths, input revision and any extra consumer coverage to the shared batch gate in result limits. An unbounded impact expands the batch selection to the affected full suite. Record the unit/static commands, actual evidence, selection rationale and unrun coverage in the task result. Task completion covers implementation, affected-unit verification and the handoff; it does not certify the later batch gate.
 
