@@ -9,8 +9,8 @@ import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
 import { i18n as creationOfferI18n } from '@/features/offer-creation-setup/config/i18n'
 import { i18n as channelI18n } from '@/widgets/channel-actions/config/i18n'
 import { i18n as workListI18n } from '@/widgets/work-list/config/i18n'
-import { i18n as createI18n } from '@/pages/create/config/i18n'
-import { i18n as guideHubsI18n } from '@/pages/style/config/i18n'
+import { i18n as homeI18n } from '@/pages/home/config/i18n'
+import { i18n as writingKitI18n } from '@/widgets/writing-kit/config/i18n'
 import { i18n as libraryI18n } from '@/pages/library/config/i18n'
 import { i18n as settingsI18n } from '@/pages/settings/config/i18n'
 import { spokenVoiceResources } from '@/entities/spoken-voice/config/i18n'
@@ -76,7 +76,6 @@ import { i18n as voiceFingerprintI18n } from '@/widgets/voice-fingerprint/config
 import { i18n as configureModelPairI18n } from '@/features/configure-model-pair/config/i18n'
 import { i18n as contactSheetI18n } from '@/widgets/contact-sheet/config/i18n'
 import { i18n as createVoiceI18n } from '@/features/create-voice/config/i18n'
-import { i18n as creditBadgeI18n } from '@/widgets/credit-badge/config/i18n'
 import { i18n as deleteGuidelineI18n } from '@/features/delete-guideline/config/i18n'
 import { i18n as deleteTemplateI18n } from '@/features/delete-template/config/i18n'
 import { i18n as deleteVoiceI18n } from '@/features/delete-voice/config/i18n'
@@ -175,8 +174,8 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   creationOfferI18n,
   channelI18n,
   workListI18n,
-  createI18n,
-  guideHubsI18n,
+  homeI18n,
+  writingKitI18n,
   libraryI18n,
   settingsI18n,
   { namespace: 'spokenVoice', ...spokenVoiceResources },
@@ -242,7 +241,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   modelLeaderboardI18n,
   reviewModelExperimentI18n,
   selectModelModelsI18n,
-  creditBadgeI18n,
   planI18n,
   plansI18n,
   giftPageI18n,
@@ -302,8 +300,8 @@ export const resources = {
     voicePreparation: { ...voicePreparationI18n.ko },
     channel: { ...channelI18n.ko, ...workListI18n.ko },
     creation: {
-      ...createI18n.ko,
-      ...guideHubsI18n.ko,
+      ...homeI18n.ko,
+      ...writingKitI18n.ko,
       ...libraryI18n.ko,
       ...settingsI18n.ko,
       ...setupI18n.ko,
@@ -405,7 +403,6 @@ export const resources = {
     errors: { ...koErrors, ...headingErrors.ko } satisfies Record<AppFailureReason, string>,
     marketing: koMarketing,
     plans: {
-      ...creditBadgeI18n.ko,
       ...planI18n.ko,
       ...plansI18n.ko,
       ...giftPageI18n.ko,
@@ -456,8 +453,8 @@ export const resources = {
     voicePreparation: { ...voicePreparationI18n.en },
     channel: { ...channelI18n.en, ...workListI18n.en },
     creation: {
-      ...createI18n.en,
-      ...guideHubsI18n.en,
+      ...homeI18n.en,
+      ...writingKitI18n.en,
       ...libraryI18n.en,
       ...settingsI18n.en,
       ...setupI18n.en,
@@ -559,7 +556,6 @@ export const resources = {
     errors: { ...enErrors, ...headingErrors.en } satisfies Record<AppFailureReason, string>,
     marketing: enMarketing,
     plans: {
-      ...creditBadgeI18n.en,
       ...planI18n.en,
       ...plansI18n.en,
       ...giftPageI18n.en,

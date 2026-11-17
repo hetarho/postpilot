@@ -38,10 +38,9 @@ export function AccountMenu({
   preferences,
 }: {
   onLoggedOut: () => void
-  /** The interface preferences, composed by the shell. They live in this panel rather than beside
-   *  it (owner decision 2026-09-22): everything about the session is behind the one avatar, and
-   *  the 320px header keeps two fewer controls. The shell passes them in because both are widgets
-   *  and a widget does not reach across to another one. */
+  /** The interface preferences, composed by the shell. They live in this panel at every width:
+   *  everything about the session is behind the one avatar. The shell passes them in because both
+   *  are widgets and a widget does not reach across to another one. */
   preferences?: ReactNode
 }) {
   const { t } = useTranslation('auth')
@@ -173,11 +172,9 @@ function AccountPanel({
       </nav>
 
       {/* Between where the session GOES and the one action that ends it: a preference is neither,
-          and putting it last would sit it under a destructive control.
-          `lg:hidden`, because the desk header has the room to keep both preferences as their own
-          controls and the owner wants them there (owner decision 2026-09-22); this panel is where
-          they go once that room is gone. */}
-      {preferences && <section className="py-3 lg:hidden">{preferences}</section>}
+          and putting it last would sit it under a destructive control. The theme and the language
+          live here at every width — the header holds the brand and this avatar, nothing else. */}
+      {preferences && <section className="py-3">{preferences}</section>}
 
       <div className="grid gap-2 pt-2">
         {/* The same row shape as the destinations above — widened into the padding, icon first —

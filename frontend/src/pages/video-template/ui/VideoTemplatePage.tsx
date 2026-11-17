@@ -138,7 +138,11 @@ function VideoTemplateHost({
             params: { templateId },
             replace: true,
           })
-  const [method, setMethod] = useState<'ai' | 'direct' | 'design' | null>(sessionId ? 'ai' : null)
+  // A new video template is made by talking to the AI from scratch; only one started from a clip
+  // keeps the seeded wizard, since its storyline and design are already decided.
+  const [method, setMethod] = useState<'ai' | 'direct' | 'design' | null>(
+    sessionId || (!stored && !fromClip) ? 'ai' : null,
+  )
   const [activeSession, setActiveSession] = useState(sessionId)
   const [published, setPublished] = useState<AuthoringSavedRef>()
   const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
@@ -154,7 +158,7 @@ function VideoTemplateHost({
     kind: t('kinds.video-template', { ns: 'authoring' }),
     name: stored?.name ?? t('directory.create', { ns: 'clips' }),
   }
-  const guided = !stored && !sessionId
+  const guided = !stored && !sessionId && !!fromClip
   return (
     <PageFrame
       width="board"
@@ -347,6 +351,8 @@ function VideoTemplateHost({
         </section>
       ) : (
         <AIAuthoringStudio
+          layout="conversation"
+          candidateCount={1}
           ownerId={ownerId}
           kind="video-template"
           targetId={stored?.id}

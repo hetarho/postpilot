@@ -39,8 +39,7 @@ describe('owner template generation numbers in shared drafts', () => {
     expect(screen.getByLabelText('최소 태그 수 사용')).toBeChecked()
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('1800')
     expect(screen.getByLabelText('최소 태그 수')).toHaveValue('7')
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
+    // The source is the direct editor itself: no 고급, no builder to switch away from.
     expect(screen.getByLabelText('원문')).toHaveValue(template.body)
   })
   it('uses owner opt-in defaults and remembers typed numbers when toggled off and on', async () => {
@@ -89,9 +88,11 @@ describe('owner template generation numbers in shared drafts', () => {
     fireEvent.change(screen.getByLabelText('목표 글자 수'), { target: { value: '2500' } })
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
-    await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
-    await user.click(screen.getByLabelText('목표 글자 수 사용'))
+    await screen.findByRole('textbox', { name: '바꾸고 싶은 점을 말해 주세요' })
+    // In the conversation, 직접 고치기 waits behind 더보기.
+    await user.click(screen.getByRole('button', { name: '더보기' }))
+    await user.click(await screen.findByRole('menuitem', { name: '직접 고치기' }))
+    await user.click(await screen.findByLabelText('목표 글자 수 사용'))
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('2500')
   })
 })

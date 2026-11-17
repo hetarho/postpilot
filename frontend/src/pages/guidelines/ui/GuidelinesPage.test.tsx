@@ -45,7 +45,9 @@ const section = async (name: string) => within(await screen.findByRole('region',
 
 /** The sheet is mounted only while open, so every creation flow starts by opening it (GUIDE-20). */
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '새 지침 직접 쓰기' }))
+  // 새 지침 is one menu in the heading row; 직접 쓰기 is one of its two ways.
+  await user.click(await screen.findByRole('button', { name: '새 지침' }))
+  await user.click(await screen.findByRole('menuitem', { name: /직접 쓰기/ }))
   const dialog = within(await screen.findByRole('dialog'))
   await dialog.findByLabelText('지침')
   return dialog
@@ -310,7 +312,7 @@ describe('the 기본 지침', () => {
     const defaultSwitches: FakeGuidelinesOptions['defaultSwitches'] = []
     renderGuidelines({ defaults: DEFAULTS, defaultSwitches })
 
-    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    await user.click(await screen.findByRole('button', { name: '기본 지침 고르기' }))
     const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
     const options = sheet.getAllByRole('listitem')
     expect(options.map((option) => within(option).getByRole('heading').textContent)).toEqual([
@@ -380,7 +382,7 @@ describe('the 기본 지침', () => {
     expect(principles.queryByRole('button')).toBeNull()
     expect(screen.queryByRole('button', { name: /재료에 있는 사실만 적용 안함/ })).toBeNull()
 
-    await user.click(screen.getByRole('button', { name: '기본 지침' }))
+    await user.click(screen.getByRole('button', { name: '기본 지침 고르기' }))
     const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
     expect(
       sheet
@@ -393,7 +395,7 @@ describe('the 기본 지침', () => {
     const user = userEvent.setup()
     renderGuidelines({ defaults: DEFAULTS, refuseDefaultSwitch: true })
 
-    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    await user.click(await screen.findByRole('button', { name: '기본 지침 고르기' }))
     const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
     await user.click(sheet.getByRole('button', { name: '메모의 이름으로 추가' }))
     const naming = within(sheet.getAllByRole('listitem')[1])
@@ -579,6 +581,11 @@ describe('the guideline candidate section', () => {
       'ListGuidelineCandidates',
       'ListAuthoringSummaries',
       'ListTemplates',
+      // The page's header draws the 지침 ring 홈 draws, from the same reads 홈 makes.
+      'ListVoices',
+      'ListMemories',
+      'ListModels',
+      'GetSelections',
     ]
     expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
   })
@@ -944,7 +951,7 @@ describe('directory removal keyboard focus', () => {
     await confirmFocusDelete(user, name)
     await waitFor(() => expect(queryDisclosure(name)).toBeNull())
     expect(
-      next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+      next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침 고르기' }),
     ).toHaveFocus()
   })
 
@@ -965,7 +972,7 @@ describe('directory removal keyboard focus', () => {
       await stopByKeyboard(user, name)
       await waitFor(() => expect(queryDisclosure(name)).toBeNull())
       expect(
-        next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+        next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침 고르기' }),
       ).toHaveFocus()
     },
   )
@@ -989,7 +996,7 @@ describe('directory removal keyboard focus', () => {
     await confirmFocusDelete(user, 'Owned Middle')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(queryDisclosure('Owned Middle')).toBeInTheDocument()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: '기본 지침 고르기' })
     target.focus()
     await act(() => queryClient.invalidateQueries())
     expect(target).toHaveFocus()
@@ -1031,7 +1038,7 @@ describe('directory removal keyboard focus', () => {
     await stopByKeyboard(user, 'Default First')
     await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
     expect(getDisclosure('Owned First')).toHaveFocus()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: '기본 지침 고르기' })
     target.focus()
     await act(async () => releaseSwitch())
     await act(() => queryClient.invalidateQueries())
@@ -1052,7 +1059,7 @@ describe('directory removal keyboard focus', () => {
     await stopByKeyboard(user, 'Default First')
     await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
     expect(getDisclosure('Owned First')).toHaveFocus()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: '기본 지침 고르기' })
     target.focus()
     await act(async () => releaseSwitch())
     expect(await screen.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()

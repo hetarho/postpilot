@@ -56,7 +56,7 @@ it('refuses external/malformed/unproven record parents and clears unsafe filters
 
 it('separates root switches from structural and explicit workflow entry', () => {
   const storage = memory()
-  for (const target of ['/', '/posts', '/clips', '/settings'])
+  for (const target of ['/', '/posts', '/clips', '/ai-models'])
     expect(rememberNavigationEntry('alice', target, '/posts', 'history', 100, storage, true)).toBe(
       false,
     )

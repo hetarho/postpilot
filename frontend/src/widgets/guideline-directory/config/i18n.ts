@@ -5,6 +5,26 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'guidelines',
   ko: {
+    layers: {
+      defaults: {
+        title: '기본 지침',
+        how: 'Postpilot이 권하는 규칙이에요. 고르거나 끌 수 있어요',
+        choose: '기본 지침 고르기',
+      },
+      global: { title: '모든 글에', how: '내가 쓴 규칙 — 어떤 글이든 지켜요' },
+      clipGlobal: { title: '모든 영상에', how: '내가 쓴 규칙 — 어떤 영상이든 지켜요' },
+      templates: { title: '이 템플릿으로 쓸 때', how: '그 템플릿으로 쓰는 글에서만 지켜요' },
+      fields: { title: '이 분야의 글에', how: '그 분야의 글에서만 지켜요' },
+      none: '아직 없어요',
+      ownEmpty:
+        '내가 쓴 규칙이 아직 없어요. 받아 본 글에서 매번 고치던 부분을 한 번만 적어 두세요.',
+      newMenu: '새 지침',
+      methodAi: 'AI와 대화로 만들기',
+      methodAiHelp: '바라는 점을 말하면 AI가 규칙 문장으로 다듬어요',
+      methodDirect: '직접 쓰기',
+    },
+    statement: 'AI가 글을 쓸 때 늘 지키는 규칙이에요. 위에서부터 차례로 겹쳐 적용돼요.',
+    clipStatement: 'AI가 영상을 짤 때 늘 지키는 규칙이에요. 위에서부터 차례로 겹쳐 적용돼요.',
     principles: {
       title: 'Postpilot 원칙',
       summary: '항상 적용돼요',
@@ -52,6 +72,27 @@ export const i18n = {
     },
   },
   en: {
+    layers: {
+      defaults: {
+        title: 'Default rules',
+        how: 'Rules Postpilot recommends. Pick or switch them off',
+        choose: 'Choose default rules',
+      },
+      global: { title: 'Every post', how: 'Your own rules — kept in every post' },
+      clipGlobal: { title: 'Every video', how: 'Your own rules — kept in every video' },
+      templates: { title: 'With a template', how: 'Kept only in posts written with that template' },
+      fields: { title: 'In a field', how: 'Kept only in posts of that field' },
+      none: 'Nothing yet',
+      ownEmpty:
+        'No rules of your own yet. Write down, once, what you keep fixing in the posts you get.',
+      newMenu: 'New rule',
+      methodAi: 'Make it by talking to AI',
+      methodAiHelp: 'Say what you want and the AI turns it into a rule',
+      methodDirect: 'Write it myself',
+    },
+    statement: 'The rules the AI always keeps while writing. They stack in order, top first.',
+    clipStatement:
+      'The rules the AI always keeps while making a video. They stack in order, top first.',
     principles: {
       title: 'Postpilot principles',
       summary: 'Always applied',

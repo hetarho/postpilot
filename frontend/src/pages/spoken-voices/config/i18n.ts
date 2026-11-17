@@ -14,6 +14,16 @@ export const spokenVoicesResources = {
     renameFailed: '변경을 저장하지 못했어요. 다시 시도해 주세요.',
     renamed: '목소리 이름을 저장했어요.',
     playFailed: '샘플을 재생하지 못했어요. 듣기를 다시 눌러 주세요.',
+    heading: '목소리',
+    statement: '영상의 내레이션을 이 목소리로 읽어 줘요. 글의 말투와는 따로예요.',
+    howAria: '목소리를 만드는 순서',
+    how: {
+      describe: '어떤 목소리인지 말해요',
+      describeExample: '“차분한 30대, 또박또박”',
+      listen: 'AI가 만든 후보를 들어 봐요',
+      pick: '마음에 드는 하나를 골라 저장해요',
+    },
+    saved: '저장한 목소리',
   },
   en: {
     title: 'My spoken voices',
@@ -30,5 +40,15 @@ export const spokenVoicesResources = {
     renameFailed: 'Could not save the change. Please try again.',
     renamed: 'Voice name saved.',
     playFailed: 'Could not play the sample. Press Listen again.',
+    heading: 'Voices',
+    statement: 'Your videos are narrated in this voice. It is separate from your writing style.',
+    howAria: 'How a voice is made',
+    how: {
+      describe: 'Say what the voice is like',
+      describeExample: '“Calm, thirties, clear”',
+      listen: 'Listen to the candidates the AI makes',
+      pick: 'Pick one and save it',
+    },
+    saved: 'Saved voices',
   },
 } as const

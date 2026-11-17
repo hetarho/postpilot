@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
-import { Check, FileText, Sparkles } from 'lucide-react'
+import { Check, FileText, Plus, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadges,
@@ -33,6 +33,7 @@ import {
   StopDefaultGuidelineButton,
 } from '@/features/toggle-default-guideline'
 import {
+  ActionMenu,
   Badge,
   GuideProgress,
   Button,
@@ -67,6 +68,7 @@ export function GuidelineDirectory({
   onCreateClosed,
   dock,
   embedded = false,
+  renderHeader,
 }: {
   kind: GuidelineKind
   /** Open an empty new guideline — as the screen mounts (TMPL-61's 지침 만들기) or when the
@@ -77,6 +79,10 @@ export function GuidelineDirectory({
   dock?: ReactNode
   /** The editor's guideline Sheet shares the same rules without another page frame. */
   embedded?: boolean
+  /** The page's own header, composed by the page around this directory's ONE creation menu (새
+   *  지침 → AI와 대화로 · 직접 쓰기). Given, it replaces the plain lead and the button row, and the
+   *  기본 지침 choice moves into the 기본 지침 layer it changes. */
+  renderHeader?: (actions: ReactNode) => ReactNode
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
@@ -145,17 +151,55 @@ export function GuidelineDirectory({
           : pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })
       }
     >
-      {/* Guide: the hub's large title and the 지침 chip say where this is; the page leads with
-          what the list IS — the plain sentences the AI always keeps to. */}
-      {!embedded && <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>}
-      <Typography
-        variant={embedded ? 'body' : 'display'}
-        as="p"
-        aria-hidden={embedded ? undefined : true}
-        className="text-balance"
-      >
-        {t(`${page}.always`, { ns: 'guidelines' })}
-      </Typography>
+      {renderHeader ? (
+        renderHeader(
+          <ActionMenu
+            label={t('layers.newMenu', { ns: 'guidelines' })}
+            triggerVariant="cta"
+            triggerLabel={
+              <>
+                <Plus aria-hidden="true" className="size-5 shrink-0" />
+                {t('layers.newMenu', { ns: 'guidelines' })}
+              </>
+            }
+            items={[
+              {
+                id: 'ai',
+                label: t('layers.methodAi', { ns: 'guidelines' }),
+                description: t('layers.methodAiHelp', { ns: 'guidelines' }),
+                onSelect: () => {
+                  setCreationSession(undefined)
+                  setCreateMethod('ai')
+                  setAuthoringOpen(true)
+                },
+              },
+              {
+                id: 'direct',
+                label: t('layers.methodDirect', { ns: 'guidelines' }),
+                onSelect: () => {
+                  setCreationSession(undefined)
+                  setCreateMethod('direct')
+                  setAuthoringOpen(true)
+                },
+              },
+            ]}
+          />,
+        )
+      ) : (
+        <>
+          {/* Guide: inside the editor's sheet the directory leads with what the list IS — the
+              plain sentences the AI always keeps to. */}
+          {!embedded && <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>}
+          <Typography
+            variant={embedded ? 'body' : 'display'}
+            as="p"
+            aria-hidden={embedded ? undefined : true}
+            className="text-balance"
+          >
+            {t(`${page}.always`, { ns: 'guidelines' })}
+          </Typography>
+        </>
+      )}
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -171,29 +215,30 @@ export function GuidelineDirectory({
         </Notice>
       )}
       {!isError && !isPending && <CandidateSection ownerId={ownerId} kind={kind} />}
-      {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
-              writing one directly stay on the page, above the list (GUIDE-44). */}
       <div
         ref={(actions) => {
           // The existing first action opens the default-guidelines sheet. Read its actual
           // button without adding a wrapper, translated selector or another control.
           defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
         }}
-        className="mt-6 flex flex-wrap items-center gap-3"
+        className={renderHeader ? 'contents' : 'mt-6 flex flex-wrap items-center gap-3'}
       >
-        <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setCreationSession(undefined)
-            setCreateMethod('direct')
-            setAuthoringOpen(true)
-          }}
-        >
-          {t(kind === 'clip' ? 'authoringState.createVideoDirect' : 'authoringState.createDirect', {
-            ns: 'guidelines',
-          })}
-        </Button>
+        {!renderHeader && <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />}
+        {!renderHeader && (
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setCreationSession(undefined)
+              setCreateMethod('direct')
+              setAuthoringOpen(true)
+            }}
+          >
+            {t(
+              kind === 'clip' ? 'authoringState.createVideoDirect' : 'authoringState.createDirect',
+              { ns: 'guidelines' },
+            )}
+          </Button>
+        )}
         <AuthoringSheet
           open={authoringOpen}
           onOpenChange={(open) => {
@@ -255,29 +300,37 @@ export function GuidelineDirectory({
               </Typography>
             )}
           </div>
-          {principles.length > 0 && <PrincipleCard principles={principles} />}
-          {inUse.length === 0 && guidelines.length === 0 ? (
-            <EmptyState kind={kind} />
-          ) : (
-            <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className="mt-6">
-              <Typography variant="meta" as="p">
-                {t(`${page}.order`, { ns: 'guidelines' })}
-              </Typography>
-              {/* Guide: each rule is one card holding its plain sentence; tapping it opens the
-                  rule's own reading view with its scope and the way to edit it. */}
-              <ul className="mt-3 grid gap-3">
-                {inUse.map((guideline, index) => (
-                  <DefaultGuidelineItem
-                    key={guideline.key}
+          {renderHeader ? (
+            <GuidelineLayers
+              kind={kind}
+              principles={principles}
+              defaultsAction={
+                <span
+                  ref={(holder) => {
+                    defaultAction.current = holder?.querySelector('button') ?? null
+                  }}
+                >
+                  <DefaultGuidelineSheet
                     ownerId={ownerId}
                     kind={kind}
-                    guideline={guideline}
-                    onRefused={setStopRefusal}
-                    rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
-                    onRemoving={() => requestRemoval(rowKeys[index], index)}
+                    label={t('layers.defaults.choose', { ns: 'guidelines' })}
                   />
-                ))}
-                {guidelines.map((guideline, index) => (
+                </span>
+              }
+              defaults={inUse.map((guideline, index) => (
+                <DefaultGuidelineItem
+                  key={guideline.key}
+                  ownerId={ownerId}
+                  kind={kind}
+                  guideline={guideline}
+                  onRefused={setStopRefusal}
+                  rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
+                  onRemoving={() => requestRemoval(rowKeys[index], index)}
+                />
+              ))}
+              own={guidelines.map((guideline, index) => ({
+                guideline,
+                row: (
                   <GuidelineRow
                     key={guideline.id}
                     ownerId={ownerId}
@@ -295,9 +348,57 @@ export function GuidelineDirectory({
                       setSavedOutcome({ ownerId, ref: saved })
                     }}
                   />
-                ))}
-              </ul>
-            </section>
+                ),
+              }))}
+            />
+          ) : (
+            <>
+              {principles.length > 0 && <PrincipleCard principles={principles} />}
+              {inUse.length === 0 && guidelines.length === 0 ? (
+                <EmptyState kind={kind} />
+              ) : (
+                <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className="mt-6">
+                  <Typography variant="meta" as="p">
+                    {t(`${page}.order`, { ns: 'guidelines' })}
+                  </Typography>
+                  {/* Guide: each rule is one card holding its plain sentence; tapping it opens the
+                      rule's own reading view with its scope and the way to edit it. */}
+                  <ul className="mt-3 grid gap-3">
+                    {inUse.map((guideline, index) => (
+                      <DefaultGuidelineItem
+                        key={guideline.key}
+                        ownerId={ownerId}
+                        kind={kind}
+                        guideline={guideline}
+                        onRefused={setStopRefusal}
+                        rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
+                        onRemoving={() => requestRemoval(rowKeys[index], index)}
+                      />
+                    ))}
+                    {guidelines.map((guideline, index) => (
+                      <GuidelineRow
+                        key={guideline.id}
+                        ownerId={ownerId}
+                        guideline={guideline}
+                        rowRef={(row) => rememberDisclosure(rowKeys[inUse.length + index], row)}
+                        onDeleted={() =>
+                          requestRemoval(rowKeys[inUse.length + index], inUse.length + index)
+                        }
+                        summary={summaries.data?.find(
+                          (row) =>
+                            row.targetId === guideline.id ||
+                            row.lastPublication?.id === guideline.id,
+                        )}
+                        onPublished={(saved) => {
+                          void refetch()
+                          setSavedOutcome({ ownerId, ref: saved })
+                        }}
+                      />
+                    ))}
+                  </ul>
+                </section>
+              )}
+            </>
           )}
 
           {summaries.data?.some((row) => !row.targetId && !row.lastPublication) && (
@@ -353,6 +454,158 @@ export function GuidelineDirectory({
       )}
       {dock}
     </Frame>
+  )
+}
+
+/** Guide: the rules as the stack the writer is given, top first (GUIDE-14): the 원칙, the 기본
+ *  지침 in use, then the owner's own — for every post, for one template, for one field. Each
+ *  layer says in one line when it applies, so the screen reads as what the rules DO to a post
+ *  rather than as a list of cards. A layer of the owner's own with nothing in it is left out; if
+ *  all of them are empty, one line under 기본 지침 says what belongs there. */
+function GuidelineLayers({
+  kind,
+  principles,
+  defaultsAction,
+  defaults,
+  own,
+}: {
+  kind: GuidelineKind
+  principles: DefaultGuideline[]
+  defaultsAction: ReactNode
+  defaults: ReactNode[]
+  own: { guideline: Guideline; row: ReactNode }[]
+}) {
+  const { t } = useTranslation('guidelines')
+  const page = kind === 'clip' ? 'clipPage' : 'page'
+  const scoped = (scope: Guideline['scope']) =>
+    own.filter(({ guideline }) => guideline.scope === scope).map(({ row }) => row)
+  const layers: { key: string; title: string; how: string; rows: ReactNode[] }[] = [
+    {
+      key: 'global',
+      title: t(kind === 'clip' ? 'layers.clipGlobal.title' : 'layers.global.title'),
+      how: t(kind === 'clip' ? 'layers.clipGlobal.how' : 'layers.global.how'),
+      rows: scoped('global'),
+    },
+    {
+      key: 'templates',
+      title: t('layers.templates.title'),
+      how: t('layers.templates.how'),
+      rows: scoped('templates'),
+    },
+    ...(kind === 'clip'
+      ? []
+      : [
+          {
+            key: 'fields',
+            title: t('layers.fields.title'),
+            how: t('layers.fields.how'),
+            rows: scoped('fields'),
+          },
+        ]),
+  ].filter((layer) => layer.rows.length > 0)
+  // The order the writer is given them in: the 원칙 (when there are any), the 기본 지침, then the
+  // owner's own layers.
+  const first = principles.length > 0 ? 1 : 0
+  return (
+    // One region holding every rule, as the list was (its rows are the list items); the layers
+    // are its visual order, not a second list around them.
+    <section aria-label={t(`${page}.listAria`)} className="mt-6 flex flex-col">
+      {principles.length > 0 && (
+        <Layer step={1} last={false}>
+          <PrincipleCard principles={principles} flush />
+        </Layer>
+      )}
+      <Layer
+        step={first + 1}
+        last={layers.length === 0}
+        title={t('layers.defaults.title')}
+        how={t('layers.defaults.how')}
+        action={defaultsAction}
+      >
+        {defaults.length > 0 ? (
+          <ul className="grid gap-2">{defaults}</ul>
+        ) : (
+          <Typography variant="meta" as="p">
+            {t('layers.none')}
+          </Typography>
+        )}
+        {layers.length === 0 && (
+          <Typography
+            variant="body"
+            as="p"
+            className="text-content-secondary border-divider mt-6 rounded-xl border border-dashed px-4 py-5"
+          >
+            {t('layers.ownEmpty')}
+            <span className="text-content-primary mt-2 block">{t(`${page}.example`)}</span>
+          </Typography>
+        )}
+      </Layer>
+      {layers.map((layer, index) => (
+        <Layer
+          key={layer.key}
+          step={first + 2 + index}
+          last={index === layers.length - 1}
+          title={layer.title}
+          how={layer.how}
+        >
+          <ul className="grid gap-2">{layer.rows}</ul>
+        </Layer>
+      ))}
+    </section>
+  )
+}
+
+/** One layer of the stack: its place in the order on a rail that runs down to the next one, its
+ *  name and when it applies, an optional action that changes it, and its rules. */
+function Layer({
+  step,
+  last,
+  title,
+  how,
+  action,
+  children,
+}: {
+  step: number
+  last: boolean
+  title?: string
+  how?: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="relative grid grid-cols-[2rem_minmax(0,1fr)] gap-x-3 pb-8 last:pb-0">
+      {!last && (
+        <span aria-hidden="true" className="bg-divider absolute top-9 bottom-1 left-4 w-px" />
+      )}
+      <span
+        aria-hidden="true"
+        className={typographyStyles({
+          variant: 'label',
+          className:
+            'bg-badge-accent-bg text-badge-accent-fg mt-1 flex size-8 items-center justify-center rounded-full',
+        })}
+      >
+        {step}
+      </span>
+      <div className="flex min-w-0 flex-col gap-3">
+        {title && (
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+            <div className="flex min-w-0 flex-col">
+              <Typography variant="fieldTitle" as="h2">
+                {title}
+              </Typography>
+              {how && (
+                <Typography variant="meta" as="p">
+                  {how}
+                </Typography>
+              )}
+            </div>
+            {action}
+          </div>
+        )}
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -412,10 +665,17 @@ const ruleCard = cardStyles({ padding: 'none', className: 'px-4 py-2 sm:px-5 sm:
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
-function PrincipleCard({ principles }: { principles: DefaultGuideline[] }) {
+function PrincipleCard({
+  principles,
+  flush = false,
+}: {
+  principles: DefaultGuideline[]
+  /** Inside a layer of the stack, which already spaces it. */
+  flush?: boolean
+}) {
   const { t } = useTranslation('guidelines')
   return (
-    <section className="mt-6">
+    <section className={flush ? undefined : 'mt-6'}>
       <Disclosure
         size="row"
         headingLevel={2}

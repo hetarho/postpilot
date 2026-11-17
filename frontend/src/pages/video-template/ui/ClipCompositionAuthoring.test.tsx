@@ -72,9 +72,11 @@ describe('durable clip template composition editing', () => {
     await mount(user, {}, { patches })
     fireEvent.change(await source(user), { target: { value: '<clip version="1"><stage' } })
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    await screen.findByRole('textbox', { name: '바꾸고 싶은 점을 말해 주세요' })
     expect(patches[0].body).toBe('<clip version="1"><stage')
-    await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
+    // In the conversation, 직접 고치기 waits behind 더보기.
+    await user.click(screen.getByRole('button', { name: '더보기' }))
+    await user.click(await screen.findByRole('menuitem', { name: '직접 고치기' }))
     expect(await source(user)).toHaveValue('<clip version="1"><stage')
     expect(screen.queryByRole('button', { name: /변경사항 저장하기$/ })).not.toBeInTheDocument()
   })

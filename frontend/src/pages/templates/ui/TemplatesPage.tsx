@@ -1,59 +1,61 @@
 import { useTranslation } from 'react-i18next'
-import { useRef, type Ref } from 'react'
 import { Link } from '@tanstack/react-router'
+import { MessagesSquare, Sparkles } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
-import { useTemplates, type Template } from '@/entities/template'
-import { DeleteTemplateButton } from '@/features/delete-template'
-import { ChannelActions } from '@/widgets/channel-actions'
-import { LayoutList } from 'lucide-react'
+import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
+import { KitScreenHeader } from '@/widgets/writing-kit'
+import { templateIllustration } from '@/shared/assets'
 import {
   Badge,
-  DirectoryItem,
   Button,
   Notice,
   LoadingState,
   Typography,
+  buttonStyles,
+  cardStyles,
   pageStyles,
   typographyStyles,
-  useListRemovalFocus,
 } from '@/shared/ui'
 
-/** The account's 템플릿 (TMPL-24): a list, and the one action that adds to it. Composition only —
- *  every action is its own feature, and a row is the way into one template.
+/** Guide: 템플릿 — the shapes the owner's posts flow in. Each template is shown AS its shape: a
+ *  miniature of the post it makes (the same preview its own screen draws, clipped to a page),
+ *  under its name and how many posts use it — so the owner finds one by what it looks like, not
+ *  by reading a list of names. A tile opens the template, where it is reviewed, changed by
+ *  talking, or deleted. A new template is never assembled here: `AI와 새 템플릿` opens a
+ *  conversation that drafts one from what the owner says they post (TMPL departure: no wizard).
+ *  A conversation left unsaved waits at the top to be picked up.
  *
- *  Editing lives on the template's own screen, so this list carries nothing but the list (change
- *  30). Nothing here calls a model or enqueues a job: a template is authored text, and reading or
- *  deleting one is a plain CRUD round trip ([I5]). */
+ *  Nothing here calls a model or enqueues a job ([I5]). */
 export function TemplatesPage() {
   const { t } = useTranslation(['templates', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { templates, isPending, isError, isFetching, refetch } = useTemplates(ownerId)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'post-template' })
-  const page = useRef<HTMLElement>(null)
-  const deleteButtons = useRef(new Map<string, HTMLButtonElement>())
-  const requestRemoval = useListRemovalFocus({
-    keys: templates.map((template) => template.id),
-    getTarget: (id) => deleteButtons.current.get(id),
-    getFallback: () => page.current?.querySelector<HTMLAnchorElement>('a[href="/templates/new"]'),
-  })
+  const unsaved = summaries.data?.filter((row) => !row.targetId && !row.lastPublication) ?? []
 
   return (
-    <main
-      ref={page}
-      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
-    >
-      {/* Guide: the hub's title and the 템플릿 chip say where this is; the page leads with what a
-          template does. */}
-      <h1 className="sr-only">{t('title', { ns: 'templates' })}</h1>
-      <Typography variant="display" as="p" aria-hidden="true">
-        {t('page.lead', { ns: 'templates' })}
-      </Typography>
+    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-4 sm:pt-8' })}>
+      <KitScreenHeader
+        kit="template"
+        title={t('title')}
+        statement={t('page.statement')}
+        illustration={templateIllustration}
+        actions={
+          <Link
+            to="/templates/new"
+            className={buttonStyles({ variant: 'cta', className: 'gap-2' })}
+          >
+            <Sparkles aria-hidden="true" className="size-5 shrink-0" />
+            {t('page.create')}
+          </Link>
+        }
+      />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
-          <span>{t('loadFailed', { ns: 'templates' })}</span>
+          <span>{t('loadFailed')}</span>
           <Button
             variant="ghost"
             onClick={refetch}
@@ -68,222 +70,183 @@ export function TemplatesPage() {
         <LoadingState
           variant="cards"
           label={t('state.loading', { ns: 'common' })}
-          className="mt-8 [&>.loading-reveal]:gap-3 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+          className="mt-8 sm:[&>.loading-reveal]:grid-cols-2 lg:[&>.loading-reveal]:grid-cols-3"
         />
       )}
-
-      {!isError && !isPending && (
-        <>
-          {summaries.isPending && (
-            <LoadingState
-              variant="inline"
-              label={t('screen.checkingWork', { ns: 'templates' })}
-              className="mt-6"
-            />
-          )}
-          {summaries.isError && (
-            <Notice tone="danger" role="alert" className="mt-6">
-              {t('screen.workLoadFailed', { ns: 'templates' })}
-              <Button variant="ghost" onClick={() => void summaries.refetch()}>
-                {t('action.retry', { ns: 'common' })}
-              </Button>
-            </Notice>
-          )}
-          {templates.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <section aria-labelledby="templates-heading" className="mt-6">
-              <Typography variant="title" id="templates-heading">
-                {t('page.saved', { ns: 'templates' })}
-              </Typography>
-              {/* Guide: each template is a card; the card opens its own focused screen. */}
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
-                {templates.map((template, index) => (
-                  <TemplateRow
-                    key={template.id}
-                    ownerId={ownerId}
-                    template={template}
-                    deleteButtonRef={(button) => {
-                      if (button) deleteButtons.current.set(template.id, button)
-                      else deleteButtons.current.delete(template.id)
-                    }}
-                    onDeleted={() => requestRemoval(template.id, index)}
-                    summary={summaries.data?.find(
-                      (row) =>
-                        row.targetId === template.id || row.lastPublication?.id === template.id,
-                    )}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {summaries.data?.some((row) => !row.targetId && !row.lastPublication) && (
-            <section className="mt-8" aria-labelledby="templates-unsaved-heading">
-              <Typography variant="title" as="h2" id="templates-unsaved-heading">
-                {t('screen.unsavedWork', { ns: 'templates' })}
-              </Typography>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
-                {summaries.data
-                  .filter((row) => !row.targetId && !row.lastPublication)
-                  .map((row) => (
-                    <DirectoryItem
-                      key={row.sessionId}
-                      interactive
-                      icon={<LayoutList className="size-6" />}
-                      title={
-                        <Link
-                          to="/templates/new"
-                          search={{ session: row.sessionId }}
-                          className={typographyStyles({
-                            variant: 'fieldTitle',
-                            className:
-                              'text-content-primary break-words after:absolute after:inset-0',
-                          })}
-                        >
-                          {t('screen.resumeNew', {
-                            ns: 'templates',
-                            name: row.displayName || t('page.new', { ns: 'templates' }),
-                          })}
-                        </Link>
-                      }
-                      description={
-                        <Typography variant="meta" as="p">
-                          {t('screen.unsaved', { ns: 'templates' })}
-                        </Typography>
-                      }
-                      status={<EditingStatus summary={row} />}
-                    />
-                  ))}
-              </ul>
-            </section>
-          )}
-        </>
+      {summaries.isError && (
+        <Notice tone="danger" role="alert" className="mt-6">
+          {t('screen.workLoadFailed')}
+          <Button variant="ghost" onClick={() => void summaries.refetch()}>
+            {t('action.retry', { ns: 'common' })}
+          </Button>
+        </Notice>
       )}
-      {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions section="templates" />
+
+      {unsaved.length > 0 && (
+        <section aria-labelledby="templates-unsaved" className="mt-8">
+          <Typography variant="eyebrow" as="h2" id="templates-unsaved">
+            {t('page.resumeHeading')}
+          </Typography>
+          <ul className="mt-2 flex flex-col gap-2">
+            {unsaved.map((row) => (
+              <li key={row.sessionId}>
+                <Link
+                  to="/templates/new"
+                  search={{ session: row.sessionId }}
+                  className="bg-badge-accent-bg hover:bg-card-bg-hover active:bg-card-bg-active flex min-h-14 items-center gap-3 rounded-2xl px-4 py-2"
+                >
+                  <MessagesSquare
+                    aria-hidden="true"
+                    className="text-badge-accent-fg size-5 shrink-0"
+                  />
+                  <span
+                    className={typographyStyles({
+                      variant: 'label',
+                      className: 'text-content-primary min-w-0 flex-1 truncate',
+                    })}
+                  >
+                    {t('screen.resumeNew', {
+                      name: row.displayName || t('page.new'),
+                    })}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {!isError && !isPending && templates.length === 0 && (
+        <section
+          aria-labelledby="templates-empty"
+          className="border-divider mt-8 flex flex-col items-start gap-3 rounded-3xl border border-dashed px-6 py-8"
+        >
+          <Typography variant="title" as="h2" id="templates-empty">
+            {t('page.emptyTitle')}
+          </Typography>
+          <Typography variant="body" as="p" className="text-content-secondary max-w-measure">
+            {t('page.emptyBody')}
+          </Typography>
+          <Link
+            to="/templates/new"
+            className={buttonStyles({ variant: 'secondary', className: 'mt-2 gap-2' })}
+          >
+            <Sparkles aria-hidden="true" className="size-4 shrink-0" />
+            {t('page.create')}
+          </Link>
+        </section>
+      )}
+
+      {!isError && !isPending && templates.length > 0 && (
+        <section aria-labelledby="templates-saved" className="mt-8">
+          <h2 id="templates-saved" className="sr-only">
+            {t('page.saved')}
+          </h2>
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {templates.map((template, index) => (
+              <TemplateTile
+                key={template.id}
+                template={template}
+                index={index}
+                summary={summaries.data?.find(
+                  (row) => row.targetId === template.id || row.lastPublication?.id === template.id,
+                )}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
     </main>
   )
 }
 
-/** Plain language and no example. The grammar is what the write prompt reads, not something the
- *  user authors in — so the empty state says what a template is FOR and lets the composition
- *  editor teach its own vocabulary (TMPL-24). It creates nothing: there are no shipped presets. */
-function EmptyState() {
-  const { t } = useTranslation('templates')
-  return (
-    <section aria-labelledby="templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="templates-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.emptyHelp')}
-      </Typography>
-    </section>
-  )
-}
-
-/** One template, one target. The link stretches over the whole row through its `::after`, so the
- *  padding and the empty space navigate too, while the delete paints above that layer and acts
- *  without navigating — a row is one target, not a row with a button inside it (THEME-23). */
-function TemplateRow({
-  ownerId,
+/** One template as a page: its shape in miniature, faded where the tile ends, then its name, its
+ *  description and how many posts use it. The whole tile is the one link. */
+function TemplateTile({
   template,
+  index,
   summary,
-  deleteButtonRef,
-  onDeleted,
 }: {
-  ownerId: string
   template: Template
+  index: number
   summary?: AuthoringSummary
-  deleteButtonRef: Ref<HTMLButtonElement>
-  onDeleted: () => void
 }) {
   const { t } = useTranslation('templates')
   return (
-    <DirectoryItem
-      interactive
-      icon={<LayoutList className="size-6" />}
-      title={
-        <Link
-          to="/templates/$templateId"
-          params={{ templateId: template.id }}
-          className={typographyStyles({
-            variant: 'fieldTitle',
-            className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
-          })}
-        >
-          {template.name}
-        </Link>
-      }
-      description={
-        template.description && (
-          <Typography variant="body" as="span" className="line-clamp-2">
-            {template.description}
-          </Typography>
-        )
-      }
-      status={summary && <EditingStatus summary={summary} />}
-      metadata={
-        <>
-          <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
-          <Typography variant="meta" as="span">
-            {t('screen.savedAvailable')}
-          </Typography>
-        </>
-      }
-      actions={
-        <DeleteTemplateButton
-          ownerId={ownerId}
-          template={template}
-          buttonRef={deleteButtonRef}
-          onDeleted={onDeleted}
-        />
-      }
-    />
+    <li className="animate-rise" style={{ animationDelay: `${index * 50}ms` }}>
+      <Link
+        to="/templates/$templateId"
+        params={{ templateId: template.id }}
+        className={cardStyles({
+          interactive: true,
+          padding: 'none',
+          className: 'group flex h-full flex-col overflow-hidden',
+        })}
+      >
+        <div className="bg-card-well relative h-52 overflow-hidden px-5 pt-5">
+          <div className="bg-card-bg duration-slow ease-emphasized origin-top rounded-t-xl px-4 pt-4 shadow-sm transition-transform group-hover:-translate-y-1">
+            <TemplatePreview
+              variant="thumbnail"
+              titleArea={template.titleArea}
+              body={template.body}
+            />
+          </div>
+          <div
+            aria-hidden="true"
+            className="from-card-well pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-linear-to-t to-transparent"
+          />
+        </div>
+        <div className="flex flex-1 flex-col gap-1 p-5">
+          <span
+            className={typographyStyles({
+              variant: 'fieldTitle',
+              className: 'text-content-primary line-clamp-2 break-words',
+            })}
+          >
+            {template.name}
+          </span>
+          {template.description && (
+            <span
+              className={typographyStyles({
+                variant: 'body',
+                className: 'text-content-secondary line-clamp-2',
+              })}
+            >
+              {template.description}
+            </span>
+          )}
+          <span className="mt-auto flex flex-wrap items-center gap-2 pt-2">
+            <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
+            <WorkState summary={summary} />
+          </span>
+        </div>
+      </Link>
+    </li>
   )
 }
 
-function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
+/** A conversation still running, waiting to be saved or holding unsaved changes: one quiet word on
+ *  the tile, the detail on the template's own screen. */
+function WorkState({ summary }: { summary?: AuthoringSummary }) {
   const { t } = useTranslation(['templates', 'authoring'])
   if (!summary) return null
   const named = {
     kind: t('kinds.post-template', { ns: 'authoring' }),
-    name: summary.displayName || t('page.new', { ns: 'templates' }),
+    name: summary.displayName || t('page.new'),
   }
+  const text = summary.activeJobId
+    ? t('screen.activeAI', named)
+    : summary.publicationPending
+      ? t('screen.publicationPending', named)
+      : summary.targetConflict
+        ? t('screen.conflict', named)
+        : summary.hasUnpublishedChanges
+          ? t('unpublished', { ns: 'authoring', ...named })
+          : ''
+  if (!text) return null
   return (
-    <div className="mt-1 space-y-1" role="status">
-      {summary.lastPublication?.outcome && (
-        <Typography variant="meta" as="p">
-          {t('screen.lastPublication', {
-            ns: 'templates',
-            result: t(
-              summary.lastPublication.outcome === 'created' ? 'confirmedCreate' : 'confirmedUpdate',
-              { ns: 'authoring', kind: named.kind, name: summary.lastPublication.name },
-            ),
-          })}
-        </Typography>
-      )}
-      {summary.hasUnpublishedChanges && (
-        <Typography variant="meta" as="p">
-          {t('unpublished', { ns: 'authoring', ...named })}
-        </Typography>
-      )}
-      {summary.activeJobId && (
-        <Typography variant="meta" as="p">
-          {t('screen.activeAI', { ns: 'templates', name: named.name })}
-        </Typography>
-      )}
-      {summary.publicationPending && (
-        <Typography variant="meta" as="p">
-          {t('screen.publicationPending', { ns: 'templates', name: named.name })}
-        </Typography>
-      )}
-      {summary.targetConflict && (
-        <Typography variant="meta" as="p">
-          {t('screen.conflict', { ns: 'templates', name: named.name })}
-        </Typography>
-      )}
-    </div>
+    <span role="status" className={typographyStyles({ variant: 'meta', className: 'min-w-0' })}>
+      {text}
+    </span>
   )
 }

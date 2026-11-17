@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { SendHorizontal, Sparkles } from 'lucide-react'
+import { MessagesSquare, SendHorizontal, Sparkles } from 'lucide-react'
 import {
   authoringScopeKey,
   completedAuthoringExchanges,
@@ -19,7 +19,10 @@ import {
 } from '@/entities/ai-authoring'
 import { useInitializeDefaultSelections, useStageSelection } from '@/entities/model-catalog'
 import {
+  ActionMenu,
   AppFailureMessage,
+  Chat,
+  ChatComposer,
   TextField,
   Button,
   Checkbox,
@@ -32,6 +35,7 @@ import {
   Textarea,
   Typography,
   buttonStyles,
+  type ChatMessage,
 } from '@/shared/ui'
 import { readableAuthoringProse } from '../lib/readable-prose'
 import { useAuthoring } from '../model/useAuthoring'
@@ -63,6 +67,13 @@ export interface AuthoringEditorProps extends AuthoringScope {
   initialMakeDefault?: boolean
   active?: boolean
   onNavigationChange?: (navigation: StudioNavigation | undefined) => void
+  /** `conversation` lays the same flow out as a chat beside its live draft: the owner says what
+   *  they want, the AI drafts it, every later message refines it, and 저장 publishes. The steps
+   *  a chat has no words for — choosing the one recommended draft, reviewing it, opening
+   *  refinement — are taken for the owner. Paid work still waits behind the same estimate. */
+  layout?: 'steps' | 'conversation'
+  /** The picture the conversation's empty draft pane shows before anything is drafted. */
+  draftIllustration?: string
 }
 export interface AuthoringInspectionContext {
   ownerId: string
@@ -107,8 +118,11 @@ function ScopedEditor({
   initialMakeDefault = false,
   active = true,
   onNavigationChange,
+  layout = 'steps',
+  draftIllustration,
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
+  const conversation = layout === 'conversation'
   const scope = { ownerId, kind, targetId }
   const scopeKey = authoringScopeKey(scope)
   // Navigation never mounts a second operation consumer, poller or save queue.
@@ -195,18 +209,46 @@ function ScopedEditor({
       if (view === 'refining') setRefiningPane('input')
     }
   }
+  const [saveAsk, setSaveAsk] = useState(false)
+  // The conversation takes the steps it has no words for. The one recommended draft is chosen, a
+  // draft under review or a saved one opens straight into refinement, and a publication that
+  // could not go through returns to the chat. None of these calls a model.
+  useEffect(() => {
+    if (!conversation || !active || busy || state.command || state.phase === 'checking') return
+    if (view === 'choices') {
+      const pick = state.session?.selected?.id ?? state.session?.candidates[0]?.id
+      if (pick) send({ type: 'CHOOSE', scopeKey, candidateId: pick })
+    } else if (view === 'review' || (view === 'existing' && !controller.readFailure))
+      send({ type: 'OPEN_REFINEMENT', scopeKey })
+    else if (view === 'publication' && !saveAsk) send({ type: 'BACK', scopeKey })
+  }, [
+    conversation,
+    active,
+    busy,
+    state.command,
+    state.phase,
+    state.session?.selected?.id,
+    state.session?.candidates,
+    controller.readFailure,
+    view,
+    saveAsk,
+    scopeKey,
+    send,
+  ])
   const guidelineKind = kind === 'post-guideline' || kind === 'video-guideline'
   const id = useId()
   const heading = useRef<HTMLDivElement>(null)
   const previousView = useRef(view)
   const previouslyActive = useRef(active)
   useEffect(() => {
-    if (active && (previousView.current !== view || !previouslyActive.current)) {
+    // A conversation keeps the owner's focus in its field: the steps it takes for them are not
+    // new screens to announce.
+    if (!conversation && active && (previousView.current !== view || !previouslyActive.current)) {
       heading.current?.querySelector('h2')?.focus()
     }
     previousView.current = view
     previouslyActive.current = active
-  }, [view, active])
+  }, [view, active, conversation])
   const goBack = useCallback(() => send({ type: 'BACK', scopeKey }), [scopeKey, send])
   const canGoBack = flow.can({ type: 'BACK', scopeKey })
   useEffect(() => {
@@ -351,6 +393,432 @@ function ScopedEditor({
       {t(`inputProblems.${flow.context.problem}`)}
     </FieldMessage>
   )
+  const dialogs = (
+    <>
+      <Dialog
+        open={state.phase === 'confirming' || state.phase === 'starting'}
+        title={
+          conversation
+            ? t(
+                state.command?.mode === 'refine'
+                  ? 'conversation.confirmRevise'
+                  : 'conversation.confirmDraft',
+              )
+            : t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
+                count: state.command?.candidateCount ?? candidateCount,
+              })
+        }
+        onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
+        confirmLabel={t('confirm')}
+        cancelLabel={t('back')}
+        pending={state.phase === 'starting'}
+        onConfirm={() => void controller.confirm()}
+      >
+        <Typography variant="body">
+          {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
+        </Typography>
+      </Dialog>
+      <Dialog
+        open={flow.context.resetOpen}
+        title={t('resetNamed', named)}
+        onClose={() => event('DISMISS_RESET')}
+        confirmLabel={t('discard')}
+        cancelLabel={t('back')}
+        onConfirm={() => event('CONFIRM_RESET')}
+      >
+        <Typography variant="body">{t('resetWarning', named)}</Typography>
+      </Dialog>
+      <Dialog
+        open={flow.matches({ working: 'confirmingCancellation' })}
+        title={t('cancelTitle')}
+        onClose={() => event('DISMISS_CANCEL')}
+        confirmLabel={t('cancel')}
+        cancelLabel={t('keepWorking')}
+        onConfirm={() => event('CONFIRM_CANCEL')}
+      >
+        <Typography variant="body">{t('cancelHelp')}</Typography>
+      </Dialog>
+    </>
+  )
+  if (conversation && view !== 'direct') {
+    const draft = selected ?? state.session?.workingSource
+    const draftName = draft?.name || state.session?.savedBaseline?.name || targetName || ''
+    const working = view === 'working'
+    const asking = view === 'purpose'
+    const composing = asking || view === 'refining' || working
+    const asked = !asking ? flow.context.purpose.trim() : ''
+    const viewDraft = (
+      <Button
+        variant="secondary"
+        size="compact"
+        className="mt-3 @3xl:hidden"
+        onClick={() => setRefiningPane('preview')}
+      >
+        {t('conversation.viewDraft')}
+      </Button>
+    )
+    const messages: ChatMessage[] = []
+    if (targetId || (state.session?.savedBaseline && !asked))
+      messages.push({
+        id: 'loaded',
+        sender: 'partner',
+        content: t('conversation.loaded', { name: draftName || name }),
+      })
+    else
+      messages.push({
+        id: 'intro',
+        sender: 'partner',
+        content: (
+          <>
+            {t(`conversation.intro.${kind}`)}
+            {asking && kind === 'post-template' && (
+              <span
+                role="group"
+                aria-label={t('conversation.examplesAria')}
+                className="mt-3 flex flex-col items-start gap-2 whitespace-normal"
+              >
+                {(['a', 'b', 'c'] as const).map((key) => (
+                  <Button
+                    key={key}
+                    variant="secondary"
+                    size="compact"
+                    className="h-auto max-w-full py-1.5 text-left"
+                    disabled={blocked}
+                    onClick={() =>
+                      send({
+                        type: 'PURPOSE_CHANGED',
+                        scopeKey,
+                        text: t(`conversation.examples.${key}`),
+                      })
+                    }
+                  >
+                    {t(`conversation.examples.${key}`)}
+                  </Button>
+                ))}
+              </span>
+            )}
+          </>
+        ),
+      })
+    if (asked) messages.push({ id: 'asked', sender: 'owner', content: asked })
+    if (draft && !targetId && !state.session?.savedBaseline)
+      messages.push({
+        id: 'draft',
+        sender: 'partner',
+        content: (
+          <>
+            {t('conversation.draftReady', { name: draftName || name })}
+            {!state.session?.turns.length && viewDraft}
+          </>
+        ),
+      })
+    state.session?.turns.forEach((turn, index, turns) => {
+      messages.push({ id: turn.id + '-request', sender: 'owner', content: turn.request })
+      if (turn.status === 'done')
+        messages.push({
+          id: turn.id + '-reply',
+          sender: 'partner',
+          content: (
+            <>
+              {turn.reply && readableAuthoringProse(turn.reply)
+                ? turn.reply
+                : t('conversation.revised')}
+              {index === turns.length - 1 && viewDraft}
+            </>
+          ),
+        })
+    })
+    if (working)
+      messages.push({
+        id: 'working',
+        sender: 'partner',
+        content: (
+          <span className="flex flex-col items-start gap-3">
+            <span className="flex items-center gap-2">
+              <span aria-hidden="true" className="relative flex size-3">
+                <span className="bg-promo-stroke animate-promo-glow absolute -inset-1 rounded-full blur-sm" />
+                <span className="bg-button-cta-bg relative size-3 rounded-full" />
+              </span>
+              {state.phase === 'active' || state.phase === 'starting'
+                ? t('conversation.drafting')
+                : workingStatus}
+            </span>
+            {state.phase === 'active' && state.session?.activeJobId && (
+              <Button variant="secondary" size="compact" onClick={() => event('ASK_CANCEL')}>
+                {t('cancel')}
+              </Button>
+            )}
+          </span>
+        ),
+      })
+    const draftPane = (
+      <div className="flex min-w-0 flex-col gap-3">
+        <Typography variant="eyebrow" as="h3">
+          {t('conversation.draft')}
+        </Typography>
+        {draft ? (
+          <div
+            key={state.session?.revision ?? 0}
+            className={
+              'animate-rise relative min-w-0 transition-opacity ' + (working ? 'opacity-60' : '')
+            }
+          >
+            {working && (
+              <span
+                aria-hidden="true"
+                className="bg-promo-stroke animate-promo-glow pointer-events-none absolute -inset-2 -z-10 rounded-3xl opacity-40 blur-2xl"
+              />
+            )}
+            {draft.description && (
+              <Typography variant="body" className="text-content-secondary mb-4 break-words">
+                {draft.description}
+              </Typography>
+            )}
+            {renderPreview ? (
+              renderPreview(draft, selected === draft ? undefined : selected)
+            ) : (
+              <AuthoringPreview kind={kind} artifact={draft} />
+            )}
+          </div>
+        ) : working ? (
+          <div aria-hidden="true" className="relative">
+            <span className="bg-promo-stroke animate-promo-glow pointer-events-none absolute inset-6 -z-10 rounded-3xl opacity-40 blur-2xl" />
+            <div className="bg-card-bg mx-auto flex w-full max-w-sm flex-col gap-4 rounded-2xl px-5 py-6 shadow-sm">
+              <span className="bg-surface-recessed loading-skeleton h-5 w-3/4 rounded-md" />
+              {[0, 1, 2].map((block) => (
+                <span key={block} className="flex flex-col gap-1.5">
+                  <span className="bg-badge-accent-bg loading-skeleton h-3 w-1/3 rounded-full" />
+                  <span className="bg-surface-recessed loading-skeleton h-2 w-full rounded-full" />
+                  <span className="bg-surface-recessed loading-skeleton h-2 w-11/12 rounded-full" />
+                  <span className="bg-surface-recessed loading-skeleton h-2 w-3/5 rounded-full" />
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="border-divider flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
+            {draftIllustration ? (
+              <img
+                src={draftIllustration}
+                alt=""
+                aria-hidden="true"
+                className="size-24 object-contain opacity-80"
+              />
+            ) : (
+              <MessagesSquare aria-hidden="true" className="text-content-tertiary size-10" />
+            )}
+            <Typography variant="body" className="text-content-secondary">
+              {t('conversation.draftEmpty')}
+            </Typography>
+          </div>
+        )}
+      </div>
+    )
+    return (
+      <section
+        aria-labelledby={id + '-title'}
+        className={'@container min-w-0 ' + (className ?? '')}
+      >
+        <div
+          className={
+            draft ? 'border-divider flex flex-wrap items-center gap-2 border-b pb-3' : 'contents'
+          }
+        >
+          <div className={draft ? 'min-w-0 flex-1 basis-40' : 'sr-only'}>
+            <Typography variant="meta" as="p">
+              {t(`kinds.${kind}`)}
+            </Typography>
+            <Typography variant="title" as="h2" id={id + '-title'} className="truncate">
+              {draftName || t('conversation.log', { kind: t(`kinds.${kind}`) })}
+            </Typography>
+          </div>
+          {draft && (
+            <ActionMenu
+              label={t('conversation.more')}
+              triggerVariant="ghost"
+              triggerLabel={t('conversation.more')}
+              disabled={blocked}
+              items={[
+                {
+                  id: 'direct',
+                  label: t('conversation.direct'),
+                  onSelect: () => event('OPEN_DIRECT'),
+                },
+                ...(state.session?.turns.length
+                  ? [
+                      {
+                        id: 'fresh',
+                        label: t('conversation.fresh'),
+                        description: t('freshHelp', named),
+                        onSelect: () => event('FRESH'),
+                      },
+                    ]
+                  : []),
+                ...(state.session?.savedBaseline
+                  ? [
+                      {
+                        id: 'reset',
+                        label: t('conversation.reset'),
+                        onSelect: () => event('ASK_RESET'),
+                      },
+                    ]
+                  : []),
+              ]}
+            />
+          )}
+          {draft && (
+            <Button
+              variant="cta"
+              disabled={blocked || !canSaveDraft}
+              pending={recoveredSave || state.phase === 'saving'}
+              onClick={() => setSaveAsk(true)}
+            >
+              {targetId ? t('conversation.save') : t('conversation.saveNew')}
+            </Button>
+          )}
+        </div>
+        {draftInvalid && !needsVoiceExample && (
+          <Notice tone="danger" className="mt-4">
+            {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
+          </Notice>
+        )}
+        {hasFailure && (
+          <Notice tone="danger" role="alert" className="mt-4">
+            {conflict ? (
+              t('conflict')
+            ) : failure ? (
+              <AppFailureMessage failure={failure} />
+            ) : (
+              t('failed')
+            )}
+          </Notice>
+        )}
+        {hasFailure && retry}
+        {controller.readFailure && (
+          <Notice tone="danger" role="alert" className="mt-4">
+            <AppFailureMessage failure={controller.readFailure} />
+            <Button variant="ghost" className="mt-3" onClick={controller.retryRead}>
+              {t('retryRead')}
+            </Button>
+          </Notice>
+        )}
+        {(draft || working) && (
+          <SegmentedControl
+            value={refiningPane}
+            onChange={setRefiningPane}
+            ariaLabel={t('conversation.panes')}
+            options={[
+              { value: 'input', label: t('conversation.chat') },
+              { value: 'preview', label: t('conversation.draft') },
+            ]}
+            className="mt-4 @3xl:hidden"
+          />
+        )}
+        <div className="mt-4 grid gap-8 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] @3xl:items-start @3xl:gap-10">
+          <div
+            onFocusCapture={() => setRefiningPane('input')}
+            className={'min-w-0 ' + (refiningPane === 'preview' ? 'hidden @3xl:block' : '')}
+          >
+            <Chat
+              messages={messages}
+              label={t('conversation.log', { kind: t(`kinds.${kind}`) })}
+              partnerLabel={t('conversation.ai')}
+              ownerLabel={t('conversation.you')}
+              composer={
+                composing && !historyFull ? (
+                  <ChatComposer
+                    value={asking ? flow.context.purpose : state.text}
+                    onChange={(text) =>
+                      send({
+                        type: asking ? 'PURPOSE_CHANGED' : 'CHAT_CHANGED',
+                        scopeKey,
+                        text,
+                      })
+                    }
+                    onSubmit={(submit) => {
+                      submit.preventDefault()
+                      event(asking ? 'RECOMMEND' : 'REFINE')
+                    }}
+                    label={t(
+                      asking
+                        ? kind === 'video-template'
+                          ? 'conversation.firstPlaceholderVideo'
+                          : 'conversation.firstPlaceholder'
+                        : 'conversation.refinePlaceholder',
+                    )}
+                    placeholder={t(
+                      asking
+                        ? kind === 'video-template'
+                          ? 'conversation.firstPlaceholderVideo'
+                          : 'conversation.firstPlaceholder'
+                        : 'conversation.refinePlaceholder',
+                    )}
+                    sendLabel={asking ? t('conversation.first') : t('send')}
+                    pending={working}
+                    disabled={ai !== 'ready' || blocked || frozenPublication}
+                    invalid={!!flow.context.problem}
+                    feedback={
+                      <>
+                        {inputFeedback}
+                        {aiAvailability}
+                      </>
+                    }
+                  />
+                ) : historyFull ? (
+                  <Typography variant="body" className="text-content-secondary">
+                    {t('historyFull')}
+                  </Typography>
+                ) : undefined
+              }
+            />
+            {active &&
+              state.session &&
+              renderInspection?.({
+                ownerId,
+                sessionId: state.session.id,
+                kind,
+                revision: state.session.revision,
+                mode: asking || state.session.turns.length === 0 ? 'recommend' : 'refine',
+                prompt: asking ? flow.context.purpose : state.text,
+                model: write.selected ?? undefined,
+                candidateCount,
+                operationId: state.session.activeJobId,
+                sourceDirty: Boolean(state.sourceDirty),
+              })}
+          </div>
+          <aside
+            aria-label={t('conversation.draft')}
+            className={
+              'lg:top-chrome min-w-0 lg:sticky ' +
+              (refiningPane === 'input' ? 'hidden @3xl:block' : '')
+            }
+          >
+            {draftPane}
+          </aside>
+        </div>
+        <Dialog
+          open={saveAsk}
+          title={t('conversation.saveTitle', { name: draftName || name })}
+          onClose={() => setSaveAsk(false)}
+          confirmLabel={t('conversation.save')}
+          cancelLabel={t('back')}
+          onConfirm={() => {
+            setSaveAsk(false)
+            send({ type: 'FINISH_REFINEMENT', scopeKey })
+            send({ type: 'OPEN_PUBLICATION', scopeKey })
+            send({ type: 'PUBLISH', scopeKey })
+          }}
+        >
+          <Typography variant="body">
+            {kind === 'writing-voice'
+              ? t('voiceCopy')
+              : t(targetId ? `publicationPreserves.${kind}` : `publicationCreates.${kind}`)}
+          </Typography>
+        </Dialog>
+        {dialogs}
+      </section>
+    )
+  }
   return (
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
@@ -942,41 +1410,7 @@ function ScopedEditor({
           </Button>
         </div>
       )}
-      <Dialog
-        open={state.phase === 'confirming' || state.phase === 'starting'}
-        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
-          count: state.command?.candidateCount ?? candidateCount,
-        })}
-        onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
-        confirmLabel={t('confirm')}
-        cancelLabel={t('back')}
-        pending={state.phase === 'starting'}
-        onConfirm={() => void controller.confirm()}
-      >
-        <Typography variant="body">
-          {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
-        </Typography>
-      </Dialog>
-      <Dialog
-        open={flow.context.resetOpen}
-        title={t('resetNamed', named)}
-        onClose={() => event('DISMISS_RESET')}
-        confirmLabel={t('discard')}
-        cancelLabel={t('back')}
-        onConfirm={() => event('CONFIRM_RESET')}
-      >
-        <Typography variant="body">{t('resetWarning', named)}</Typography>
-      </Dialog>
-      <Dialog
-        open={flow.matches({ working: 'confirmingCancellation' })}
-        title={t('cancelTitle')}
-        onClose={() => event('DISMISS_CANCEL')}
-        confirmLabel={t('cancel')}
-        cancelLabel={t('keepWorking')}
-        onConfirm={() => event('CONFIRM_CANCEL')}
-      >
-        <Typography variant="body">{t('cancelHelp')}</Typography>
-      </Dialog>
+      {dialogs}
     </section>
   )
 }

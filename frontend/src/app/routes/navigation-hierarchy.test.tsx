@@ -67,20 +67,18 @@ function legacyEntry(target: string, path: string, ownerKey = 'alice') {
   )
 }
 
-it('traverses the five tabs as sibling destinations without paid work', async () => {
+it('traverses the four tabs as sibling destinations without paid work', async () => {
   const user = userEvent.setup()
   const view = renderLegacyModelRoute('/posts', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   expectRoot()
-  // Guide: five verb tabs; the account panel still reaches 나.
+  // Guide: four places; 설정 is reached through the avatar and lights no tab.
   for (const [label, pathname, navLabel, viaAccount] of [
-    ['무엇을 만들까요?', '/create', '만들기', false],
-    ['내 콘텐츠', '/my', '내 콘텐츠', false],
-    ['내 스타일', '/style', '내 스타일', false],
-    ['AI 고르기', '/ai-models', 'AI 고르기', false],
-    ['나', '/settings', '나', true],
-    ['내 콘텐츠', '/my', '내 콘텐츠', false],
-    ['나', '/settings', '나', false],
+    [/고품질의 글을/, '/', '홈', false],
+    ['AI 토너먼트', '/ai-models', 'AI 토너먼트', false],
+    ['설정', '/settings', '', true],
+    ['영상', '/clips', '영상', false],
+    ['네이버 블로그', '/posts', '글', false],
   ] as const) {
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
     if (viaAccount) {
@@ -93,18 +91,21 @@ it('traverses the five tabs as sibling destinations without paid work', async ()
     } else await user.click(primary.getByRole('link', { name: navLabel }))
     await waitFor(() => expect(view.router.state.location.pathname).toBe(pathname))
     await screen.findByRole('heading', { name: label, level: 1 })
-    expectRoot()
-    expect(primary.getByRole('link', { name: navLabel })).toHaveAttribute('aria-current', 'page')
-    expect(
-      primary.queryAllByRole('link').filter((link) => link.hasAttribute('aria-current')),
-    ).toHaveLength(1)
+    if (pathname !== '/settings') expectRoot()
+    const current = primary
+      .queryAllByRole('link')
+      .filter((link) => link.hasAttribute('aria-current'))
+    if (navLabel) {
+      expect(primary.getByRole('link', { name: navLabel })).toHaveAttribute('aria-current', 'page')
+      expect(current).toHaveLength(1)
+    } else expect(current).toHaveLength(0)
   }
   expect(paidActions(view.procedures)).toEqual([])
 })
 
 it.each([
   ['/clips', '영상'],
-  ['/settings', '나'],
+  ['/ai-models', 'AI 토너먼트'],
   ['/posts', '네이버 블로그'],
 ])(
   'ignores an old cross-destination origin on direct load and reload of %s',
@@ -223,14 +224,14 @@ it('does not offer a source-post return after the source is missing or inaccessi
   expect(paidActions(view.procedures)).toEqual([])
 })
 
-it('does not propagate a sibling visit into a settings child origin', async () => {
+it('does not propagate a sibling visit into a kit screen origin', async () => {
   const view = renderLegacyModelRoute('/posts', { user: { id: 'alice' } })
   await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
   await act(() => view.router.navigate({ to: '/templates' }))
   await screen.findByRole('heading', { name: '템플릿', level: 1 })
-  expect(backHref()).toBeUndefined()
+  // A kit screen's way back is 홈, the picture that holds it, not the list visited before.
+  expect(backHref()).toBe('/')
   expect(readNavigationEntry('alice', '/templates')?.path).not.toBe('/library')
-  expect(screen.queryByRole('link', { name: '돌아가기' })).toBeNull()
   expect(paidActions(view.procedures)).toEqual([])
 })
 
@@ -272,7 +273,7 @@ it.each([
 // The old Instagram list is one 영상 list now: its address lands there, still a root.
 it.each([
   ['/posts/', '네이버 블로그', undefined],
-  ['/settings/', '나', undefined],
+  ['/ai-models/', 'AI 토너먼트', undefined],
   ['/clips/', '영상', '/clips'],
   ['/naver-blog/', '네이버 블로그', '/posts'],
   ['/naver-clip/', '영상', '/clips'],
@@ -292,10 +293,10 @@ it('retains the Instagram scope through shared templates, child navigation, relo
     calls,
   })
   await screen.findByRole('heading', { name: '영상 템플릿', level: 1 })
-  // Guide: 템플릿's 글 · 영상 switch keeps the channel the page was opened under.
+  // Guide: 영상 템플릿 is one of 영상's chips, marked current.
   expect(
-    within(screen.getByRole('navigation', { name: '글 · 영상' })).getByRole('link', {
-      name: '영상',
+    within(screen.getByRole('navigation', { name: '나누어 보기' })).getByRole('link', {
+      name: '영상 템플릿',
     }),
   ).toHaveAttribute('aria-current', 'page')
   expect(backHref()).toBeUndefined()
@@ -341,67 +342,39 @@ it('keeps a directly opened Instagram project channel when visiting shared video
 })
 
 it.each([
-  ['템플릿', '/templates', '영상 템플릿'],
-  ['지침', '/guidelines', '영상 지침'],
-])('opens the %s 영상 side with no channel in its link', async (section, from, heading) => {
+  ['/video-templates', '영상 템플릿'],
+  ['/video-guidelines', '영상 지침'],
+])('opens %s as a page of 영상 with no way back', async (path, heading) => {
   const calls: string[] = []
-  const view = renderAppAt(`${from}`, { user: { id: 'alice' }, calls })
-  const kinds = await screen.findByRole('navigation', { name: '글 · 영상' })
-  const href = within(kinds).getByRole('link', { name: '영상' }).getAttribute('href')!
-  expect(href).not.toContain('channel=')
-  view.unmount()
-  sessionStorage.clear()
-  renderAppAt(href, { transport: view.transport })
+  renderAppAt(path, { user: { id: 'alice' }, calls })
   await screen.findByRole('heading', { name: heading, level: 1 })
   expect(backHref()).toBeUndefined()
   const nav = screen.getByRole('navigation', { name: '주요' })
-  expect(within(nav).getByRole('link', { name: '내 스타일' })).toHaveAttribute(
-    'aria-current',
-    'page',
-  )
-  // The section's creation button carries no channel (THEME-67).
-  expect(
-    await screen.findByRole('link', { name: section === '템플릿' ? '새 템플릿' : '새 지침' }),
-  ).not.toHaveAttribute('href', expect.stringContaining('channel='))
+  expect(within(nav).getByRole('link', { name: '영상' })).toHaveAttribute('aria-current', 'page')
   expect(paidActions(calls)).toEqual([])
 })
 
-// Guide: 내 스타일's five sections are siblings in one chip row, whatever channel a page names.
-const STYLE_HREFS = ['/voices', '/templates', '/guidelines', '/memories', '/spoken-voices']
+// Guide: the kit's screens hang off 홈, which draws them all; each lights 홈 and leads back to it.
 it.each([
-  ['/templates', '내 스타일', '템플릿', STYLE_HREFS],
-  ['/voices', '내 스타일', '말투', STYLE_HREFS],
-  ['/memories', '내 스타일', '기억', STYLE_HREFS],
-  ['/posts', '내 콘텐츠', '글', ['/my', '/posts', '/clips']],
-] as const)(
-  'places the %s section in its hub as a sibling with no way back',
-  async (path, channel, section, hrefs) => {
-    const view = renderAppAt(path, { user: { id: 'alice' } })
-    const sections = await screen.findByRole('navigation', { name: '나누어 보기' })
-    expect(
-      within(sections)
-        .getAllByRole('link')
-        .map((link) => link.getAttribute('href')),
-    ).toEqual(hrefs)
-    expect(within(sections).getByRole('link', { name: section })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
-    expect(
-      within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {
-        name: channel,
-      }),
-    ).toHaveAttribute('aria-current', 'page')
-    expect(backHref()).toBeUndefined()
-    await userEvent.click(within(sections).getAllByRole('link')[0])
-    await waitFor(() => expect(view.router.state.location.pathname).toBe(hrefs[0]))
-    expect(readNavigationEntry('alice', hrefs[0])).toBeUndefined()
-  },
-)
+  ['/templates', '템플릿'],
+  ['/voices', '말투'],
+  ['/memories', '기억'],
+  ['/guidelines', '지침'],
+] as const)('places %s under 홈 with one way back to it', async (path, heading) => {
+  const view = renderAppAt(path, { user: { id: 'alice' } })
+  await screen.findByRole('heading', { name: heading, level: 1 })
+  expect(screen.queryByRole('navigation', { name: '나누어 보기' })).toBeNull()
+  expect(
+    within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', { name: '홈' }),
+  ).toHaveAttribute('aria-current', 'page')
+  expect(backHref()).toBe('/')
+  await userEvent.click(backLink()!)
+  await waitFor(() => expect(view.router.state.location.pathname).toBe('/'))
+})
 
-it('returns a voice page opened from an Instagram 말투 list to that list', async () => {
+it('returns a voice page opened from the 말투 screen to that screen', async () => {
   const view = renderAppAt('/voices', { user: { id: 'alice' } })
-  await screen.findByRole('navigation', { name: '나누어 보기' })
+  await screen.findByRole('heading', { name: '말투', level: 1 })
   await act(() =>
     view.router.navigate({ to: '/voices/$voiceId', params: { voiceId: 'voice-default' } }),
   )
@@ -411,7 +384,7 @@ it('returns a voice page opened from an Instagram 말투 list to that list', asy
   expect(screen.queryByRole('navigation', { name: '나누어 보기' })).toBeNull()
   expect(
     within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', {
-      name: '내 스타일',
+      name: '홈',
     }),
   ).toHaveAttribute('aria-current', 'page')
 })

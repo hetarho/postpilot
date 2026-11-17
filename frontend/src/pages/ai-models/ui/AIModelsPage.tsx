@@ -19,11 +19,12 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 
-/** Guide: AI 고르기 — model choice made friendly. It opens on the AI in use for each stage as
+/** Guide: AI 토너먼트 — models compete on the owner's own work, and the winners are the ones in
+ *  use. It opens on the two comparisons as two equal cards — writing and photo reading are the
+ *  same kind of test — with 지난 비교 beside their heading; then the AI in use for each stage as
  *  plain rows (글 쓰기 · 사진 보기 · 말투 분석) whose 바꾸기 opens a picker, with 추천으로 적용
- *  beside the heading opening the operator's 추천 조합 in one sheet; then the two comparisons as
- *  two equal cards — writing and photo reading are the same kind of test — with 지난 비교 beside
- *  their heading; then, apart from them, the default candidates a two-model test starts from. */
+ *  beside the heading; then, apart from them, the default candidates a two-model test starts
+ *  from. */
 export function AIModelsPage() {
   const { t } = useTranslation('models')
   const [recommending, setRecommending] = useState(false)
@@ -31,31 +32,9 @@ export function AIModelsPage() {
     <main className={pageStyles({ width: 'prose', className: 'pt-4 sm:pt-10' })}>
       <Typography variant="largeTitle">{t('page.guideTitle')}</Typography>
 
-      <section aria-labelledby="ai-in-use" className="mt-8">
-        <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
-          <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
-            {t('page.inUse')}
-          </Typography>
-          <Button variant="secondary" size="compact" onClick={() => setRecommending(true)}>
-            <Sparkles aria-hidden className="size-4" />
-            {t('page.applyRecommendation')}
-          </Button>
-        </div>
-        <div
-          className={cardStyles({
-            padding: 'none',
-            className: 'divide-divider divide-y overflow-hidden shadow-sm',
-          })}
-        >
-          <StageModelRow stage="write" />
-          <StageModelRow stage="observe" />
-          <StageModelRow stage="analyze" />
-        </div>
-        <PostCreditEstimate className="mt-3 px-4" />
-      </section>
-      <RecommendationSheet open={recommending} onClose={() => setRecommending(false)} />
-
-      <section aria-labelledby="compare-heading" className="mt-10">
+      {/* Guide: the tournament first — two AIs on the same job, the owner picks the better one —
+          then the AIs that won, in use for each stage. */}
+      <section aria-labelledby="compare-heading" className="mt-8">
         <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
           <Typography variant="title" as="h2" id="compare-heading">
             {t('page.compareTitle')}
@@ -90,6 +69,30 @@ export function AIModelsPage() {
           {t('page.compareNoRun')}
         </Typography>
       </section>
+
+      <section aria-labelledby="ai-in-use" className="mt-10">
+        <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
+          <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
+            {t('page.inUse')}
+          </Typography>
+          <Button variant="secondary" size="compact" onClick={() => setRecommending(true)}>
+            <Sparkles aria-hidden className="size-4" />
+            {t('page.applyRecommendation')}
+          </Button>
+        </div>
+        <div
+          className={cardStyles({
+            padding: 'none',
+            className: 'divide-divider divide-y overflow-hidden shadow-sm',
+          })}
+        >
+          <StageModelRow stage="write" />
+          <StageModelRow stage="observe" />
+          <StageModelRow stage="analyze" />
+        </div>
+        <PostCreditEstimate className="mt-3 px-4" />
+      </section>
+      <RecommendationSheet open={recommending} onClose={() => setRecommending(false)} />
 
       {/* Which two AIs a new two-model test starts from is a setting of its own, not part of
           either comparison's invitation. */}
