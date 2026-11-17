@@ -3,8 +3,15 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, Clapperboard } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
-import { KitRing, WritingKit, useKitText, useWritingKit } from '@/widgets/writing-kit'
-import { Typography, buttonStyles, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  KIT_HASH,
+  KIT_NEXT_HREF,
+  KitRing,
+  WritingKit,
+  useKitText,
+  useWritingKit,
+} from '@/widgets/writing-kit'
+import { Button, Typography, buttonStyles, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** Guide: 홈 — "고품질의 글을, 내 언어로." over the owner's writing kit drawn as one picture.
  *  The pen in its middle is the screen's 글쓰기; each piece around it opens the screen that makes
@@ -14,7 +21,7 @@ import { Typography, buttonStyles, pageStyles, typographyStyles } from '@/shared
  *  A new account lands here too, on the empty kit: the picture and its next step are the
  *  onboarding, so no setup gate stands in front of them (setup stays one row away in 설정). */
 export function HomePage() {
-  const { t } = useTranslation('creation')
+  const { t } = useTranslation(['creation', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const kit = useWritingKit(ownerId)
@@ -48,16 +55,36 @@ export function HomePage() {
         aria-label={t('home.nextAria')}
         className="flex flex-col items-start gap-3 lg:col-start-1 lg:row-start-2"
       >
-        <Typography variant="body" as="p" role="status" className="text-content-secondary">
-          {kit.summary.loading
-            ? ' '
-            : kit.summary.complete
-              ? t('kit.allReady')
-              : t('kit.progress', { count: kit.summary.ready, total: kit.summary.total })}
-        </Typography>
+        <div className="flex flex-wrap items-center gap-x-2">
+          <Typography variant="body" as="p" role="status" className="text-content-secondary">
+            {kit.summary.loading
+              ? ' '
+              : kit.summary.failed
+                ? t('kit.loadFailed')
+                : kit.summary.complete
+                  ? t('kit.allReady')
+                  : t('kit.progress', { count: kit.summary.ready, total: kit.summary.total })}
+          </Typography>
+          {!kit.summary.loading && kit.summary.failed && (
+            <Button variant="ghost" onClick={kit.retry} pending={kit.retrying}>
+              {t('action.retry', { ns: 'common' })}
+            </Button>
+          )}
+        </div>
+        {/* The next step's place is held while the kit loads, so nothing below it jumps. */}
+        {kit.summary.loading && (
+          <span
+            aria-hidden="true"
+            className="loading-skeleton bg-surface-recessed block h-15 w-full max-w-md rounded-2xl"
+          />
+        )}
         {!kit.summary.loading && kit.next && (
           <Link
-            to={kit.next.href}
+            to={KIT_NEXT_HREF[kit.next.key] ?? kit.next.href}
+            // Its way back is 홈, where it was started, even where it opens past the kit screen;
+            // the writing AI's place is a tab of its own, which needs no way back.
+            search={kit.next.key === 'ai' ? {} : { entry: '/' }}
+            hash={KIT_HASH[kit.next.key]}
             className="bg-card-bg hover:bg-card-bg-hover active:bg-card-bg-active animate-rise flex w-full max-w-md min-w-0 items-center gap-3 rounded-2xl py-2 pr-4 pl-2 shadow-sm"
           >
             <KitRing kitKey={kit.next.key} state={kit.next.state} fill={kit.next.fill} size="sm" />
@@ -66,7 +93,7 @@ export function HomePage() {
               <span
                 className={typographyStyles({
                   variant: 'label',
-                  className: 'text-content-primary truncate',
+                  className: 'text-content-primary text-pretty break-keep',
                 })}
               >
                 {text.next(kit.next)}

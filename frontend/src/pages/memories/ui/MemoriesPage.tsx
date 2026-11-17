@@ -92,7 +92,7 @@ export function MemoriesPage() {
         />
       )}
       {!isError && !isPending && (
-        <div className="mt-8 grid gap-10 lg:grid-cols-2 lg:gap-8">
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2 lg:gap-8">
           {(['always', 'keyword'] as const).map((zone) => {
             const items = memories.filter((memory) => zoneOf(memory.kind) === zone)
             return (
@@ -173,7 +173,7 @@ function ZoneSection({
           </Typography>
         </p>
       ) : (
-        <ul className="grid gap-3">
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
           {items.map((memory, index) => (
             <MemoryRow
               key={memory.id}

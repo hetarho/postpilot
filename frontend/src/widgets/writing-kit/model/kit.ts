@@ -9,7 +9,8 @@
  *  rest of the circle. */
 export const KIT_KEYS = ['voice', 'template', 'guideline', 'ai', 'memory'] as const
 export type KitKey = (typeof KIT_KEYS)[number]
-export type KitState = 'loading' | 'empty' | 'partial' | 'ready'
+/** `failed`: the piece's data could not be read, so nothing is claimed about it either way. */
+export type KitState = 'loading' | 'failed' | 'empty' | 'partial' | 'ready'
 
 export const KIT_HREF: Record<KitKey, string> = {
   voice: '/voices',
@@ -19,9 +20,18 @@ export const KIT_HREF: Record<KitKey, string> = {
   memory: '/memories',
 }
 
+/** Where on its screen a piece is made ready, when that is not the screen's top: the writing AI
+ *  is chosen under AI 토너먼트's 지금 쓰는 AI, below the comparisons that open the tab. */
+export const KIT_HASH: Partial<Record<KitKey, string>> = { ai: 'ai-in-use' }
+
+/** Where 홈's 다음 opens when it can go straight to the making: a template has one way to be
+ *  made — the conversation — so its next step starts it rather than the list it will join. */
+export const KIT_NEXT_HREF: Partial<Record<KitKey, string>> = { template: '/templates/new' }
+
 /** What an element's one fact line names. Never a figure the account does not hold. */
 export type KitFact =
   | { kind: 'loading' }
+  | { kind: 'failed' }
   | { kind: 'none' }
   | { kind: 'voice'; name: string; percent: number; made: boolean }
   | { kind: 'count'; count: number; lead?: string }
@@ -44,6 +54,15 @@ const LOADING = (key: KitKey): KitElement => ({
   state: 'loading',
   fill: 0,
   fact: { kind: 'loading' },
+})
+
+/** A piece whose list could not be read: neither ready nor missing, and never the next step. */
+export const failedElement = (key: KitKey): KitElement => ({
+  key,
+  href: KIT_HREF[key],
+  state: 'failed',
+  fill: 0,
+  fact: { kind: 'failed' },
 })
 
 interface VoiceLike {
@@ -159,6 +178,8 @@ export function kitSummary(elements: readonly KitElement[]) {
   const ready = elements.filter((element) => element.state === 'ready').length
   return {
     loading,
+    /** Some piece could not be read: the count would undercount it, so the screen says so. */
+    failed: elements.some((element) => element.state === 'failed'),
     ready,
     total: elements.length,
     complete: !loading && ready === elements.length,

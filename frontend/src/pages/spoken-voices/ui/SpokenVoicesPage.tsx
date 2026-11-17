@@ -8,7 +8,9 @@ import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
 import { KitScreenHeader } from '@/widgets/writing-kit'
 import { spokenIllustration } from '@/shared/assets'
 import {
+  Button,
   LoadingState,
+  Notice,
   Typography,
   buttonStyles,
   cardStyles,
@@ -22,7 +24,7 @@ import {
  *  An account with none sees how one is made — describe it, listen to the AI's candidates, pick
  *  one — over the one way to start, so the empty screen says what the thing is. */
 export function SpokenVoicesPage() {
-  const { t } = useTranslation('spokenVoices')
+  const { t } = useTranslation(['spokenVoices', 'common'])
   const { t: model } = useTranslation('models')
   const { user } = useSession()
   const ownerId = user?.id ?? ''
@@ -48,12 +50,25 @@ export function SpokenVoicesPage() {
           </Link>
         }
       />
+      {/* A failed read says so with its retry, as every kit screen's list does. */}
+      {(library.voicesQuery.isError || library.draftsQuery.isError) && (
+        <Notice tone="danger" role="alert" className="mt-6">
+          <span>{t('failed')}</span>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (library.voicesQuery.isError) void library.voicesQuery.refetch()
+              if (library.draftsQuery.isError) void library.draftsQuery.refetch()
+            }}
+            pending={library.voicesQuery.isFetching || library.draftsQuery.isFetching}
+            className="text-notice-danger-fg underline"
+          >
+            {t('action.retry', { ns: 'common' })}
+          </Button>
+        </Notice>
+      )}
       <Typography role="status" as="p" variant="meta" className="mt-4 min-h-5">
-        {library.voicesQuery.isError || library.draftsQuery.isError
-          ? t('failed')
-          : status
-            ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-            : ' '}
+        {status ? t(status as 'renameFailed' | 'renamed' | 'playFailed') : ' '}
       </Typography>
       {!library.voicesQuery.isError && library.voicesQuery.isPending && (
         <LoadingState variant="list" label={t('loading')} className="mt-2" />
@@ -139,7 +154,10 @@ export function SpokenVoicesPage() {
           <Typography variant="eyebrow" as="h2" id="spoken-saved">
             {t('saved')}
           </Typography>
-          <ul className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('title')}>
+          <ul
+            className="mt-2 grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3"
+            aria-label={t('title')}
+          >
             {library.voices.map((voice) => (
               <li
                 key={voice.id}

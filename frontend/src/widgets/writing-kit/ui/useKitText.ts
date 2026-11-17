@@ -9,6 +9,8 @@ export function useKitText() {
     switch (value.kind) {
       case 'loading':
         return t('kit.facts.loading')
+      case 'failed':
+        return t('kit.facts.failed')
       case 'none':
         return t('kit.facts.none')
       case 'voice':

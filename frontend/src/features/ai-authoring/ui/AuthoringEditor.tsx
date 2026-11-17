@@ -381,7 +381,7 @@ function ScopedEditor({
           <Button variant="secondary" onClick={defaults.retry}>
             {t('retryAI')}
           </Button>
-          <Link to="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+          <Link to="/ai-models" hash="ai-in-use" className={buttonStyles({ variant: 'ghost' })}>
             {t('settings')}
           </Link>
         </div>
@@ -717,7 +717,13 @@ function ScopedEditor({
           {draft && (
             <Button
               variant="cta"
-              disabled={blocked || !canSaveDraft}
+              // A saved one opened unchanged has nothing to save until the conversation (or the
+              // source) changes it.
+              disabled={
+                blocked ||
+                !canSaveDraft ||
+                (!!targetId && !!state.session && !state.session.hasUnpublishedChanges)
+              }
               pending={recoveredSave || state.phase === 'saving'}
               onClick={() => setSaveAsk(true)}
             >
@@ -762,7 +768,7 @@ function ScopedEditor({
             className="mt-4 @3xl:hidden"
           />
         )}
-        <div className="mt-4 grid gap-8 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] @3xl:items-start @3xl:gap-10">
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-8 @3xl:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] @3xl:items-start @3xl:gap-10">
           <div
             onFocusCapture={() => setRefiningPane('input')}
             className={'min-w-0 ' + (refiningPane === 'preview' ? 'hidden @3xl:block' : '')}
@@ -805,12 +811,7 @@ function ScopedEditor({
                     pending={working}
                     disabled={ai !== 'ready' || blocked || frozenPublication}
                     invalid={!!flow.context.problem}
-                    feedback={
-                      <>
-                        {inputFeedback}
-                        {aiAvailability}
-                      </>
-                    }
+                    feedback={inputFeedback}
                   />
                 ) : historyFull ? (
                   <Typography variant="body" className="text-content-secondary">
@@ -819,6 +820,9 @@ function ScopedEditor({
                 ) : undefined
               }
             />
+            {/* Under the conversation rather than in the composer, which stays pinned to the
+                screen's foot: a pinned notice would cover the chat once text is enlarged. */}
+            {composing && !historyFull && aiAvailability}
             {active &&
               state.session &&
               renderInspection?.({
@@ -1068,7 +1072,7 @@ function ScopedEditor({
             aria-label={t('suggestionsCount', {
               count: state.session?.candidateCount ?? candidateCount,
             })}
-            className="grid gap-4 @lg:grid-cols-2 @6xl:grid-cols-4"
+            className="grid grid-cols-[minmax(0,1fr)] gap-4 @lg:grid-cols-2 @6xl:grid-cols-4"
           >
             {state.session?.candidates.map((candidate) => (
               <ChoiceButton
@@ -1145,7 +1149,7 @@ function ScopedEditor({
             ]}
             className="mb-4 lg:hidden"
           />
-          <div className="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
             <aside
               className={
                 directPane === 'input'
@@ -1252,7 +1256,7 @@ function ScopedEditor({
             ]}
             className="mb-4 @3xl:hidden"
           />
-          <div className="grid gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-8 @3xl:grid-cols-2 @3xl:items-start @3xl:gap-12">
             <aside className={refiningPane === 'input' ? 'hidden @3xl:block' : ''}>{preview}</aside>
             <div
               onFocusCapture={() => setRefiningPane('input')}

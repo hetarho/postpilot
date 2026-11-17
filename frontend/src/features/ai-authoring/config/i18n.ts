@@ -69,6 +69,8 @@ export const i18n = {
     reviewNamed: '“{{name}}” {{kind}} 확인하기',
     aiNamed: '“{{name}}” AI로 편집하기',
     directNamed: '“{{name}}” 직접 편집하기',
+    editAI: 'AI로 편집',
+    editDirect: '직접 편집',
     continueNamed: '“{{name}}” 이어서 편집하기',
     resetNamed: '저장한 “{{name}}”으로 되돌리기',
     resetWarning:
@@ -143,9 +145,9 @@ export const i18n = {
         '영상 현재 초안의 지침과 직접 선택한 적용 범위를 저장해요. AI 편집은 적용 범위를 바꾸지 않아요.',
     },
     publicationCreates: {
-      'post-template': '새 글 구성으로 저장해요.',
-      'video-template': '새 영상 구성으로 저장해요.',
-      'post-guideline': '새 글쓰기 지침으로 저장해요.',
+      'post-template': '새 템플릿으로 저장해요.',
+      'video-template': '새 영상 템플릿으로 저장해요.',
+      'post-guideline': '새 지침으로 저장해요.',
       'video-guideline': '새 영상 지침으로 저장해요.',
     },
     inputProblems: {
@@ -179,9 +181,9 @@ export const i18n = {
       legacyVoice: '이전에 만든 말투 이어보기',
     },
     kinds: {
-      'post-template': '글 구성',
-      'video-template': '영상 구성',
-      'post-guideline': '작문 지침',
+      'post-template': '템플릿',
+      'video-template': '영상 템플릿',
+      'post-guideline': '지침',
       'video-guideline': '영상 지침',
       'writing-voice': '말투',
     },
@@ -338,6 +340,8 @@ export const i18n = {
     reviewNamed: 'Review “{{name}}” {{kind}}',
     aiNamed: 'Edit “{{name}}” with AI',
     directNamed: 'Edit “{{name}}” directly',
+    editAI: 'Edit with AI',
+    editDirect: 'Edit directly',
     continueNamed: 'Continue editing “{{name}}”',
     resetNamed: 'Reset to saved “{{name}}”',
     resetWarning:
@@ -414,9 +418,9 @@ export const i18n = {
         'Save the draft video text and explicitly chosen scope. AI editing preserves the scope.',
     },
     publicationCreates: {
-      'post-template': 'Save as a new post structure.',
-      'video-template': 'Save as a new video structure.',
-      'post-guideline': 'Save as a new writing guideline.',
+      'post-template': 'Save as a new template.',
+      'video-template': 'Save as a new video template.',
+      'post-guideline': 'Save as a new guideline.',
       'video-guideline': 'Save as a new video guideline.',
     },
     inputProblems: {
@@ -450,9 +454,9 @@ export const i18n = {
       legacyVoice: 'Continue a previous writing style',
     },
     kinds: {
-      'post-template': 'post structure',
-      'video-template': 'video structure',
-      'post-guideline': 'writing guideline',
+      'post-template': 'template',
+      'video-template': 'video template',
+      'post-guideline': 'guideline',
       'video-guideline': 'video guideline',
       'writing-voice': 'writing style',
     },

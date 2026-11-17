@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react'
 import { clsx } from 'clsx'
+import { twMerge } from '@/shared/lib'
 import { Check, Plus } from 'lucide-react'
 import {
   aiIllustration,
@@ -51,12 +52,14 @@ export function KitRing({
   const { box, stroke, badge } = SIZES[size]
   const ready = state === 'ready'
   const missing = state === 'empty'
+  // A piece that could not be read is drawn faded on a plain track: not ready, not missing either.
+  const faded = missing || state === 'failed'
   const radius = 50 - stroke / 2 - 0.5
   const circumference = 2 * Math.PI * radius
   return (
     <span
       aria-hidden="true"
-      className={clsx('relative inline-flex shrink-0 rounded-full', box, className)}
+      className={twMerge(clsx('relative inline-flex shrink-0 rounded-full', box, className))}
     >
       <svg viewBox="0 0 100 100" className="absolute inset-0 size-full -rotate-90">
         <circle
@@ -86,7 +89,7 @@ export function KitRing({
       <span
         className={clsx(
           'absolute inset-[11%] rounded-full',
-          missing || state === 'loading' ? 'bg-surface-recessed' : 'bg-surface-raised shadow-sm',
+          faded || state === 'loading' ? 'bg-surface-recessed' : 'bg-surface-raised shadow-sm',
           state === 'loading' && 'loading-skeleton',
         )}
       />
@@ -96,7 +99,7 @@ export function KitRing({
           alt=""
           className={clsx(
             'duration-slow ease-standard absolute inset-[17%] size-[66%] object-contain transition-[filter,opacity]',
-            missing && 'opacity-45 grayscale',
+            faded && 'opacity-45 grayscale',
           )}
         />
       )}

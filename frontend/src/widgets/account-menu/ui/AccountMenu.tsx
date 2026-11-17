@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import {
   CreditCard,
   LogOut,
@@ -88,8 +88,11 @@ function MenuRow({
   close: () => void
   children: ReactNode
 }) {
+  // The avatar sits above every screen, so each place it opens returns to the screen it was opened
+  // over — the shell reads `entry` as that way back (THEME-58).
+  const here = useLocation({ select: (location) => location.href })
   return (
-    <Link to={to} onClick={close} className={rowStyles}>
+    <Link to={to} search={{ entry: here }} onClick={close} className={rowStyles}>
       <Icon aria-hidden="true" className="size-4 shrink-0" />
       {children}
     </Link>
@@ -128,8 +131,8 @@ function AccountPanel({
   }
 
   return (
-    <div className="divide-divider grid divide-y">
-      <section className="grid gap-3 pb-3">
+    <div className="divide-divider grid grid-cols-[minmax(0,1fr)] divide-y">
+      <section className="grid grid-cols-[minmax(0,1fr)] gap-3 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="grid min-w-0 gap-0.5">
             <Typography variant="meta" as="p">
@@ -148,7 +151,10 @@ function AccountPanel({
         <CreditSummary myPlan={myPlan} isPending={isPending} isError={isError} />
       </section>
 
-      <nav aria-label={t('links.more', { ns: 'auth' })} className="grid gap-0.5 py-2">
+      <nav
+        aria-label={t('links.more', { ns: 'auth' })}
+        className="grid grid-cols-[minmax(0,1fr)] gap-0.5 py-2"
+      >
         <MenuRow to="/settings" icon={SlidersHorizontal} close={close}>
           {t('settings', { ns: 'nav' })}
         </MenuRow>
@@ -176,7 +182,7 @@ function AccountPanel({
           live here at every width — the header holds the brand and this avatar, nothing else. */}
       {preferences && <section className="py-3">{preferences}</section>}
 
-      <div className="grid gap-2 pt-2">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-2 pt-2">
         {/* The same row shape as the destinations above — widened into the padding, icon first —
             so the one action reads as the menu's last row rather than as a form's submit. */}
         <Button
@@ -249,7 +255,7 @@ function CreditSummary({
     )
 
   return (
-    <div className="grid gap-2">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-2">
       {/* The meter fills against everything the account was GRANTED, not against the monthly
           figure alone: a signup bonus makes the balance larger than one month's grant, and a bar
           that read 100/50 would be nonsense. */}
@@ -317,7 +323,7 @@ function CreditSummary({
       {/* The lots behind the total, in the order they will be spent. A single number cannot say
           that half the balance lapses at the month boundary and half does not, which is the one
           thing a bonus holder needs to know. */}
-      <ul className="grid gap-0.5">
+      <ul className="grid grid-cols-[minmax(0,1fr)] gap-0.5">
         {balance.lots.map((lot, index) => (
           <li key={`${lot.kind}-${index}`} className="flex items-baseline justify-between gap-2">
             <Typography variant="meta">

@@ -513,7 +513,11 @@ function ScopedPreparation(props: PrepareWritingVoiceProps) {
                     <Button variant="secondary" onClick={modelDefaults.retry}>
                       {t('retryAI')}
                     </Button>
-                    <Link to="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+                    <Link
+                      to="/ai-models"
+                      hash="ai-in-use"
+                      className={buttonStyles({ variant: 'ghost' })}
+                    >
                       {t('checkSettings')}
                     </Link>
                   </>

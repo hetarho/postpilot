@@ -189,7 +189,12 @@ function TemplateAuthoringPage({
           </Button>
         </Notice>
       ) : stored && method === null ? (
-        <section aria-labelledby="template-review" className="mt-4 flex flex-col gap-6 sm:mt-6">
+        // The review keeps a reading column under the title, so its three actions sit beside the
+        // post they change rather than across the conversation's two-pane width.
+        <section
+          aria-labelledby="template-review"
+          className="mt-4 flex max-w-3xl flex-col gap-6 sm:mt-6"
+        >
           <div className="border-divider flex flex-wrap items-center gap-2 border-b pb-3">
             {/* The frame's title already names it; this row says how many posts use it and
                 holds the three things to do with it, wrapping under the count on a phone. */}

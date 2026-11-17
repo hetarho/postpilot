@@ -16,10 +16,11 @@ export const i18n = {
       },
       facts: {
         loading: '확인 중',
+        failed: '불러오지 못했어요',
         none: '아직 없어요',
         voice: '{{name}}',
-        voiceMaking: '{{name}} · {{percent}}%',
-        voiceAnalyse: '{{name}} · 분석 전',
+        voiceMaking: '{{percent}}% · {{name}}',
+        voiceAnalyse: '분석 전 · {{name}}',
         count: '{{count}}개',
         count_one: '{{count}}개',
         count_other: '{{count}}개',
@@ -29,12 +30,14 @@ export const i18n = {
       },
       state: {
         loading: '확인 중',
+        failed: '확인하지 못함',
         empty: '아직 없음',
         partial: '만드는 중',
         ready: '준비됨',
       },
       status: {
         loading: '확인 중',
+        failed: '확인하지 못함',
         empty: '아직 없음',
         partial: '만드는 중',
         ready: '준비됨',
@@ -44,6 +47,7 @@ export const i18n = {
       writeVideo: '영상 만들기',
       progress: '{{total}}가지 중 {{count}}가지 준비됐어요',
       allReady: '모두 준비됐어요. 이제 쓰기만 하면 돼요.',
+      loadFailed: '일부를 불러오지 못했어요.',
       next: {
         ai: '글 쓰는 AI 고르기',
         voice: '내 말투 만들기',
@@ -68,10 +72,11 @@ export const i18n = {
       },
       facts: {
         loading: 'Checking',
+        failed: 'Could not load',
         none: 'Not yet',
         voice: '{{name}}',
-        voiceMaking: '{{name}} · {{percent}}%',
-        voiceAnalyse: '{{name}} · to analyse',
+        voiceMaking: '{{percent}}% · {{name}}',
+        voiceAnalyse: 'To analyse · {{name}}',
         count: '{{count}}',
         count_one: '{{count}}',
         count_other: '{{count}}',
@@ -81,12 +86,14 @@ export const i18n = {
       },
       state: {
         loading: 'checking',
+        failed: 'not checked',
         empty: 'not yet',
         partial: 'in progress',
         ready: 'ready',
       },
       status: {
         loading: 'Checking',
+        failed: 'Not checked',
         empty: 'Not yet',
         partial: 'In progress',
         ready: 'Ready',
@@ -96,6 +103,7 @@ export const i18n = {
       writeVideo: 'Make a video',
       progress: '{{count}} of {{total}} ready',
       allReady: 'Everything is ready. Now just write.',
+      loadFailed: 'Some of it could not be loaded.',
       next: {
         ai: 'Choose the writing AI',
         voice: 'Make your style',

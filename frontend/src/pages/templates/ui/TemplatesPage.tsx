@@ -134,7 +134,7 @@ export function TemplatesPage() {
           <h2 id="templates-saved" className="sr-only">
             {t('page.saved')}
           </h2>
-          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((template, index) => (
               <TemplateTile
                 key={template.id}

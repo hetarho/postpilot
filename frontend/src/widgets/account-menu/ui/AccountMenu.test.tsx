@@ -41,9 +41,10 @@ describe('AccountMenu', () => {
     const panel = await openAccountPopover(user)
     expect(within(panel).getByText('로그인한 계정')).toBeInTheDocument()
     expect(within(panel).getByText('alice')).toBeInTheDocument()
+    // Each destination returns to the screen the avatar was opened over.
     expect(within(panel).getByRole('link', { name: '계정 설정' })).toHaveAttribute(
       'href',
-      '/account',
+      '/account?entry=%2Fposts',
     )
     expect(within(panel).getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
   })
@@ -131,7 +132,7 @@ describe('AccountMenu', () => {
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '결제 관리' })).toHaveAttribute(
       'href',
-      '/billing',
+      '/billing?entry=%2Fposts',
     )
 
     // The meter is never the only signal: it carries its own figure as text.

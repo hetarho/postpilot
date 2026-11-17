@@ -6,6 +6,8 @@ export { useWritingKit } from './model/useWritingKit'
 export {
   KIT_KEYS,
   KIT_HREF,
+  KIT_HASH,
+  KIT_NEXT_HREF,
   aiElement,
   guidelineElement,
   kitSummary,

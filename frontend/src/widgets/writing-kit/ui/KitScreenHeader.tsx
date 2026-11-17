@@ -106,11 +106,13 @@ function KitStatus({ kit }: { kit: KitKey }) {
       >
         {text.status(element)}
       </span>
-      {element.state !== 'loading' && element.fact.kind !== 'none' && (
-        <span className={typographyStyles({ variant: 'meta', className: 'min-w-0 break-words' })}>
-          {text.fact(element)}
-        </span>
-      )}
+      {element.state !== 'loading' &&
+        element.state !== 'failed' &&
+        element.fact.kind !== 'none' && (
+          <span className={typographyStyles({ variant: 'meta', className: 'min-w-0 break-words' })}>
+            {text.fact(element)}
+          </span>
+        )}
     </p>
   )
 }

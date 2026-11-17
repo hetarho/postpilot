@@ -2,7 +2,7 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
-import { Check, FileText, Plus, Sparkles } from 'lucide-react'
+import { Check, FileText, MessagesSquare, PencilLine, Plus, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadges,
@@ -406,7 +406,7 @@ export function GuidelineDirectory({
               <Typography variant="title" as="h2" id="guideline-unsaved-heading">
                 {t('authoringState.unsavedHeading', { ns: 'guidelines' })}
               </Typography>
-              <ul className="mt-3 grid gap-3">
+              <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
@@ -536,7 +536,9 @@ function GuidelineLayers({
             className="text-content-secondary border-divider mt-6 rounded-xl border border-dashed px-4 py-5"
           >
             {t('layers.ownEmpty')}
-            <span className="text-content-primary mt-2 block">{t(`${page}.example`)}</span>
+            <span className="text-content-primary mt-2 block">
+              {t('layers.example', { text: t(`${page}.example`) })}
+            </span>
           </Typography>
         )}
       </Layer>
@@ -654,7 +656,7 @@ function SentenceTitle({
         <span
           className={typographyStyles({
             variant: 'body',
-            className: 'text-content-primary text-pretty break-words',
+            className: 'text-content-primary text-pretty break-words whitespace-pre-line',
           })}
         >
           {sentence}
@@ -805,20 +807,27 @@ function GuidelineRow({
           <SentenceTitle name={guideline.title} sentence={guideline.text} />
         }
       >
+        {/* The closed row already reads the rule in full; open, it adds where it applies and
+            what can be done with it. */}
         <div className="pb-3 pl-6">
-          <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
-            {guideline.text}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-3">
-            {authoringText('savedUsable', named)}
-          </Typography>
           <GuidelineScopeBadges guideline={guideline} />
           <div className="mt-4 flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => open('ai')}>
-              {authoringText('aiNamed', named)}
+            {/* Inside the rule's own row its name goes without saying; it stays in the names. */}
+            <Button
+              variant="secondary"
+              aria-label={authoringText('aiNamed', named)}
+              onClick={() => open('ai')}
+            >
+              <MessagesSquare aria-hidden="true" className="size-4" />
+              {authoringText('editAI')}
             </Button>
-            <Button variant="secondary" onClick={() => open('direct')}>
-              {authoringText('directNamed', named)}
+            <Button
+              variant="secondary"
+              aria-label={authoringText('directNamed', named)}
+              onClick={() => open('direct')}
+            >
+              <PencilLine aria-hidden="true" className="size-4" />
+              {authoringText('editDirect')}
             </Button>
             {summary &&
               (summary.hasUnpublishedChanges ||

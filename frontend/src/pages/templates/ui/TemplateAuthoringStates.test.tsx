@@ -113,7 +113,7 @@ describe('batched named template states', () => {
       },
     })
     expect(
-      await screen.findByText('“저장된 구성” 글 구성의 변경사항을 저장했어요.'),
+      await screen.findByText('“저장된 구성” 템플릿의 변경사항을 저장했어요.'),
     ).toBeInTheDocument()
   })
 })

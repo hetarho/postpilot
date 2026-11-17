@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   aiElement,
+  failedElement,
   guidelineElement,
   kitSummary,
   listElement,
@@ -94,5 +95,18 @@ describe('the writing kit reads readiness from the account’s own data', () => 
     ]
     expect(nextKitStep(ready)).toBeUndefined()
     expect(kitSummary(ready)).toMatchObject({ ready: 5, complete: true, fill: 1 })
+  })
+
+  it('never calls a piece that could not be read missing, nor points at it next', () => {
+    const elements = [
+      voiceElement([voice({ made: true })], false),
+      failedElement('template'),
+      guidelineElement(1, 0, false),
+      aiElement('AI', false, false),
+      listElement('memory', [], false),
+    ]
+    expect(elements[1]).toMatchObject({ state: 'failed', fill: 0, fact: { kind: 'failed' } })
+    expect(nextKitStep(elements)?.key).toBe('memory')
+    expect(kitSummary(elements)).toMatchObject({ failed: true, ready: 3, complete: false })
   })
 })

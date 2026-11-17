@@ -425,7 +425,7 @@ it('saves the template the conversation drafted once and moves setup on', async 
     providers: WRITE_MODEL,
   })
   const user = userEvent.setup()
-  await draftAndSave(user, '글 구성 만드는 대화', { example: /조립이 필요한 제품 리뷰/ })
+  await draftAndSave(user, '템플릿 만드는 대화', { example: /조립이 필요한 제품 리뷰/ })
   expect(
     await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' }),
   ).toBeInTheDocument()
@@ -442,7 +442,7 @@ it('saves a video template from the conversation once before offering completion
     providers: WRITE_MODEL,
   })
   const user = userEvent.setup()
-  await draftAndSave(user, '영상 구성 만드는 대화', {
+  await draftAndSave(user, '영상 템플릿 만드는 대화', {
     field: '어떤 영상인지 말해 주세요',
     text: '카페 디저트를 보여 주는 짧은 영상',
   })

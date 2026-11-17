@@ -131,7 +131,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           </Typography>
           {state.step === 'ready' && (
             // The last answer as three big tiles: where to go now.
-            <div className="mt-8 grid gap-3">
+            <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-3">
               {(
                 [
                   ['/', 'setup.ready.home', House],
@@ -178,7 +178,10 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           <div className={clsx(templateStep && 'flex flex-1 flex-col')}>
             {state.step === 'welcome' && state.plan.length > 0 && (
               // What the conversation will ask, as numbered cards.
-              <ol aria-label={t('setup.overview.label')} className="grid gap-3">
+              <ol
+                aria-label={t('setup.overview.label')}
+                className="grid grid-cols-[minmax(0,1fr)] gap-3"
+              >
                 {state.plan.map((form, position) => (
                   <li
                     key={form}

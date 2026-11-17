@@ -24,6 +24,7 @@ export const i18n = {
       learningMore: '글을 조금 더 보여 주면 이 말투가 완성돼요',
       learningFull: '배울 글이 다 모였어요. 분석하면 이 말투가 완성돼요',
       continueLearning: '학습 이어가기',
+      goAnalyse: '분석하러 가기',
       openVoice: '자세히 보기',
       none: '아직 내 말투가 없어요. 글을 보여 주거나 AI와 이야기해서 하나 만들어 보세요.',
       empty: '아직 말투가 없어요. 직접 쓴 글이나 문항 답으로 나만의 말투를 만들어 보세요.',
@@ -59,6 +60,7 @@ export const i18n = {
       learningMore: 'Show a little more of your writing to finish this style',
       learningFull: 'Enough writing is in. Analyse it to finish this style',
       continueLearning: 'Keep teaching',
+      goAnalyse: 'Go to analysis',
       openVoice: 'Open',
       none: 'No style of your own yet. Show your writing or talk to the AI to make one.',
       empty:

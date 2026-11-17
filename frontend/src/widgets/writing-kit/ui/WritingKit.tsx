@@ -7,7 +7,7 @@ import { POST_LIST_PATH, rememberPostEntry } from '@/entities/post'
 import { useSession } from '@/entities/session'
 import { typographyStyles } from '@/shared/ui'
 import { penIllustration } from '@/shared/assets'
-import type { KitElement, KitKey } from '../model/kit'
+import { KIT_HASH, type KitElement, type KitKey } from '../model/kit'
 import { KitRing } from './KitRing'
 import { useKitText } from './useKitText'
 
@@ -117,7 +117,9 @@ export function WritingKit({
             onClick={remember}
             className={clsx(
               typographyStyles({ variant: 'label', className: 'text-button-cta-fg' }),
-              'bg-button-cta-bg hover:bg-button-cta-bg-hover active:bg-button-cta-bg-active focus-visible:ring-focus-ring duration-base ease-standard relative flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 shadow-lg transition focus-visible:ring-4 focus-visible:outline-none',
+              // The app's own focus outline (unlayered, hence the `!`), set clear of the orbit
+              // pen's ring: the ring IS its border there, so a ring-coloured focus would not show.
+              'bg-button-cta-bg hover:bg-button-cta-bg-hover active:bg-button-cta-bg-active duration-base ease-standard relative flex min-h-14 w-full items-center justify-center gap-2 rounded-full px-6 shadow-lg transition @xs:focus-visible:outline-offset-8!',
               '@xs:bg-surface-raised @xs:text-badge-accent-fg @xs:ring-button-cta-bg @xs:hover:bg-surface-raised @xs:active:bg-surface-raised @xs:size-24 @xs:flex-col @xs:gap-0 @xs:px-0 @xs:ring-4 @xs:hover:scale-105 @xs:active:scale-100 @md:size-32',
             )}
           >
@@ -159,9 +161,10 @@ export function WritingKit({
               >
                 <Link
                   to={element.href}
+                  hash={KIT_HASH[element.key]}
                   aria-label={text.label(element)}
                   className={clsx(
-                    'hover:bg-row-bg-hover active:bg-row-bg-active group flex min-h-16 items-center gap-4 rounded-2xl px-3 py-2 @xs:gap-1.5 @xs:p-0 @xs:hover:bg-transparent @xs:active:bg-transparent',
+                    'hover:bg-row-bg-hover active:bg-row-bg-active group flex min-h-16 items-center gap-3 rounded-2xl px-3 py-2 @xs:gap-1.5 @xs:p-0 @xs:hover:bg-transparent @xs:active:bg-transparent',
                     // The top piece's spoke runs straight down from its ring, so its words sit
                     // above the ring rather than across the spoke.
                     point.y < 30 ? '@xs:flex-col-reverse' : '@xs:flex-col',
@@ -172,14 +175,16 @@ export function WritingKit({
                       kitKey={element.key}
                       state={element.state}
                       fill={element.fill}
-                      className="@md:size-20"
+                      // As a row the ring yields its room to the words, which wrap rather
+                      // than cut when the text is enlarged; on the orbit it is the picture.
+                      className="size-12 @xs:size-16 @md:size-20"
                     />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col @xs:w-full @xs:items-center @xs:text-center">
                     <span
                       className={typographyStyles({
                         variant: 'label',
-                        className: 'text-content-primary truncate @xs:max-w-full',
+                        className: 'text-content-primary break-keep @xs:max-w-full @xs:truncate',
                       })}
                     >
                       {text.name(element)}
@@ -188,7 +193,7 @@ export function WritingKit({
                       className={typographyStyles({
                         variant: 'meta',
                         className: clsx(
-                          'truncate @xs:max-w-full',
+                          'break-words @xs:max-w-full @xs:truncate',
                           element.state === 'ready' && 'text-content-secondary',
                         ),
                       })}
@@ -198,7 +203,7 @@ export function WritingKit({
                   </span>
                   <ChevronRight
                     aria-hidden="true"
-                    className="text-content-tertiary size-5 shrink-0 @xs:hidden"
+                    className="text-content-tertiary size-4 shrink-0 @xs:hidden"
                   />
                 </Link>
               </li>

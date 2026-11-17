@@ -216,7 +216,7 @@ describe('the template conversation', () => {
         selections: [{ stage: Stage.WRITE, providerId: 'stub', modelId: 'recommended' }],
       },
     })
-    const log = await screen.findByRole('log', { name: '글 구성 만드는 대화' })
+    const log = await screen.findByRole('log', { name: '템플릿 만드는 대화' })
     await user.click(within(log).getByRole('button', { name: /조립이 필요한 제품 리뷰/ }))
     const field = screen.getByRole('textbox', { name: '어떤 글인지 말해 주세요' })
     expect(field).toHaveValue('조립이 필요한 제품 리뷰. 구성품, 조립 순서, 써 본 느낌 순으로요.')

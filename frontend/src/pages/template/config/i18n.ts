@@ -25,7 +25,7 @@ export const i18n = {
       range: '{{min}}에서 {{max}} 사이로 적어 주세요.',
     },
     screen: {
-      reviewKind: '글 구성 확인',
+      reviewKind: '템플릿 확인',
       advanced: '고급',
       editAI: 'AI로 편집',
       editDirect: '직접 편집',
@@ -101,7 +101,7 @@ export const i18n = {
       range: 'Enter a number between {{min}} and {{max}}.',
     },
     screen: {
-      reviewKind: 'Review post template',
+      reviewKind: 'Review template',
       advanced: 'Advanced',
       editAI: 'Edit with AI',
       editDirect: 'Edit directly',

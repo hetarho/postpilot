@@ -18,6 +18,7 @@ export const i18n = {
       none: '아직 없어요',
       ownEmpty:
         '내가 쓴 규칙이 아직 없어요. 받아 본 글에서 매번 고치던 부분을 한 번만 적어 두세요.',
+      example: '예: {{text}}',
       newMenu: '새 지침',
       methodAi: 'AI와 대화로 만들기',
       methodAiHelp: '바라는 점을 말하면 AI가 규칙 문장으로 다듬어요',
@@ -84,6 +85,7 @@ export const i18n = {
       none: 'Nothing yet',
       ownEmpty:
         'No rules of your own yet. Write down, once, what you keep fixing in the posts you get.',
+      example: 'e.g. {{text}}',
       newMenu: 'New rule',
       methodAi: 'Make it by talking to AI',
       methodAiHelp: 'Say what you want and the AI turns it into a rule',

@@ -31,7 +31,7 @@ export function AIModelsPage() {
   return (
     // The same width and title row as 글 and 영상, so moving between the tabs never shifts the
     // page under the owner; the content keeps a reading width below it.
-    <main className={pageStyles({ width: 'wide', className: 'pt-4 sm:pt-6' })}>
+    <main className={pageStyles({ width: 'wide', className: 'pt-2 sm:pt-6' })}>
       <Typography variant="largeTitle">{t('page.guideTitle')}</Typography>
       <Typography variant="body" as="p" className="text-content-secondary mt-1">
         {t('page.guideLead')}
@@ -40,7 +40,7 @@ export function AIModelsPage() {
         {/* Guide: the tournament first — two AIs on the same job, the owner picks the better one —
           then the AIs that won, in use for each stage. */}
         <section aria-labelledby="compare-heading" className="mt-8">
-          <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+          <div className="mb-3 flex min-h-11 flex-wrap items-center justify-between gap-x-3">
             <Typography variant="title" as="h2" id="compare-heading">
               {t('page.compareTitle')}
             </Typography>
@@ -56,7 +56,7 @@ export function AIModelsPage() {
               {t('page.testHistory')}
             </Link>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:grid-cols-2">
             <CompareCard
               icon={Columns2}
               title={t('page.compareWrite')}
@@ -75,9 +75,11 @@ export function AIModelsPage() {
           </Typography>
         </section>
 
-        <section aria-labelledby="ai-in-use" className="mt-10">
-          <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
-            <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
+        {/* 홈's 글 쓰는 AI lands here, below the sticky header. */}
+        <section id="ai-in-use" aria-labelledby="ai-in-use-heading" className="mt-10 scroll-mt-24">
+          {/* The same heading row as 비교해 보기: two sections of one page, read at one level. */}
+          <div className="mb-3 flex min-h-11 flex-wrap items-center justify-between gap-x-3">
+            <Typography variant="title" as="h2" id="ai-in-use-heading">
               {t('page.inUse')}
             </Typography>
             <Button variant="secondary" size="compact" onClick={() => setRecommending(true)}>
@@ -197,7 +199,7 @@ function RecommendationSheet({ open, onClose }: { open: boolean; onClose: () => 
             {t('page.recommendationEmpty')}
           </Typography>
         ) : (
-          <ul className="grid gap-4">
+          <ul className="grid grid-cols-[minmax(0,1fr)] gap-4">
             {recommendations.sets.map((set) => (
               <li key={set.id} className={cardStyles({ className: 'shadow-sm' })}>
                 <ApplyRecommendation recommendation={set} />

@@ -105,7 +105,7 @@ describe('named owned guideline editing', () => {
     expect(creates).toHaveLength(0)
     await publishAuthoringDraft(user)
     await waitFor(() => expect(creates).toHaveLength(1))
-    expect(await screen.findByText('“가격 표기” 작문 지침을 새로 저장했어요.')).toBeInTheDocument()
+    expect(await screen.findByText('“가격 표기” 지침을 새로 저장했어요.')).toBeInTheDocument()
     expect(creates[0]).toMatchObject({
       title: '가격 표기',
       text: '가격은 원 단위까지 그대로',
@@ -841,7 +841,7 @@ describe('/guidelines?new=1', () => {
       },
     })
     const sheet = await screen.findByRole('dialog', {
-      name: '마음에 드는 작문 지침, 함께 만들어요',
+      name: '마음에 드는 지침, 함께 만들어요',
     })
     expect(within(sheet).queryByLabelText('지침')).not.toBeInTheDocument()
     expect(await within(sheet).findByRole('button', { name: '8가지 추천받기' })).toBeEnabled()
@@ -851,7 +851,7 @@ describe('/guidelines?new=1', () => {
     await user.keyboard('{Escape}')
     await waitFor(() =>
       expect(
-        screen.queryByRole('dialog', { name: '마음에 드는 작문 지침, 함께 만들어요' }),
+        screen.queryByRole('dialog', { name: '마음에 드는 지침, 함께 만들어요' }),
       ).not.toBeInTheDocument(),
     )
     await waitFor(() => expect(router.state.location.search).toEqual({}))

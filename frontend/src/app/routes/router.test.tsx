@@ -693,7 +693,10 @@ describe('theme preferences in the real route tree', () => {
     expect(within(menu).getByRole('tablist', { name: '테마' })).toBeInTheDocument()
     expect(within(menu).getByRole('tablist', { name: '언어' })).toBeInTheDocument()
     expect(await within(menu).findByText('남은 크레딧')).toBeInTheDocument()
-    expect(within(menu).getByRole('link', { name: '플랜 보기' })).toHaveAttribute('href', '/plans')
+    expect(within(menu).getByRole('link', { name: '플랜 보기' })).toHaveAttribute(
+      'href',
+      '/plans?entry=%2Fspoken-voices',
+    )
     expect(calls).toContain('GetMyPlan')
     expect(calls.filter((call) => /^(Start|Analyze|Generate)/u.test(call))).toEqual([])
     await user.keyboard('{Escape}')

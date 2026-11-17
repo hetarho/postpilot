@@ -112,7 +112,7 @@ export function VideoTemplatesPage() {
                 {t('directory.saved', { ns: 'clips' })}
               </Typography>
               {/* Saved resources share one card composition with the writing catalog. */}
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2 lg:gap-4">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -137,7 +137,7 @@ export function VideoTemplatesPage() {
               <Typography variant="title" as="h2" id="video-templates-unsaved-heading">
                 {t('directory.unsavedWork', { ns: 'clips' })}
               </Typography>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2 lg:gap-4">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
@@ -183,11 +183,15 @@ export function VideoTemplatesPage() {
 function EmptyState() {
   const { t } = useTranslation('clips')
   return (
-    <section aria-labelledby="video-templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="video-templates-empty-heading">
+    // The same dashed sheet 템플릿 shows when it has none, so the two directories read alike.
+    <section
+      aria-labelledby="video-templates-empty-heading"
+      className="border-divider mt-8 flex flex-col items-start gap-3 rounded-3xl border border-dashed px-6 py-8"
+    >
+      <Typography variant="title" as="h2" id="video-templates-empty-heading">
         {t('directory.empty')}
       </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+      <Typography variant="body" as="p" className="text-content-secondary max-w-measure">
         {t('directory.emptyHelp')}
       </Typography>
     </section>
@@ -229,15 +233,11 @@ function TemplateRow({
       }
       description={<ClipTemplateDescription template={template} className="line-clamp-2" />}
       status={summary && <EditingStatus summary={summary} />}
+      // A saved template is simply usable; only how many videos use it is worth a badge.
       metadata={
-        <>
-          <Badge tone="neutral">
-            {t('directory.projectCount', { count: template.projectCount })}
-          </Badge>
-          <Typography variant="meta" as="span">
-            {t('directory.savedAvailable')}
-          </Typography>
-        </>
+        <Badge tone="neutral">
+          {t('directory.projectCount', { count: template.projectCount })}
+        </Badge>
       }
       actions={
         <DeleteClipTemplateButton

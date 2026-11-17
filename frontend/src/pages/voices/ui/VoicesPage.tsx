@@ -155,7 +155,7 @@ export function VoicesPage() {
         </Typography>
       )}
       {!isError && !isPending && writing && (
-        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-8">
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-8">
           <section aria-labelledby="voice-current">
             <Typography variant="eyebrow" as="h2" id="voice-current">
               {t('page.current')}
@@ -301,7 +301,11 @@ function VoicePortrait({ ownerId, voice }: { ownerId: string; voice: Voice }) {
           className: 'self-start',
         })}
       >
-        {voice.made ? t('page.openVoice') : t('page.continueLearning')}
+        {voice.made
+          ? t('page.openVoice')
+          : voice.readinessPercent >= 100
+            ? t('page.goAnalyse')
+            : t('page.continueLearning')}
         <ChevronRight aria-hidden="true" className="size-4" />
       </Link>
     </article>

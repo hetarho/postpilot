@@ -105,6 +105,7 @@ function ScopedMakeVoice({ ownerId, voiceId, profile, onStarted }: MakeVoiceProp
           {noModel && ready && !profile.voice.deleted && (
             <Link
               to="/ai-models"
+              hash="ai-in-use"
               className={typographyStyles({
                 variant: 'label',
                 className: 'text-link-fg hover:text-link-fg-hover underline',
