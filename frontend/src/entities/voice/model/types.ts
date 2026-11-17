@@ -12,6 +12,8 @@ export interface VoiceSample {
   /** Empty for an answer, whose prompt text is product copy. */
   label: string
   promptKey: string
+  /** The experience a thread answer belongs to (VOICE-78); empty or absent for a post and a situation. */
+  experienceId?: string
   hasPhoto: boolean
   chars: number
   createdAt: string

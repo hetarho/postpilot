@@ -1,5 +1,11 @@
-import { assign, getInitialSnapshot, getNextSnapshot, setup, type SnapshotFrom } from 'xstate'
-import { VOICE_INITIAL_QUESTION_COUNT, type VoicePromptPart } from '@/entities/voice'
+import { and, assign, getInitialSnapshot, getNextSnapshot, setup, type SnapshotFrom } from 'xstate'
+import {
+  VOICE_EXPERIENCE_REPLIES,
+  VOICE_EXPERIENCE_PART_QUOTA,
+  VOICE_INITIAL_QUESTION_COUNT,
+  type VoiceExperienceKindName,
+  type VoicePromptPart,
+} from '@/entities/voice'
 
 export const QUESTIONNAIRE_BATCH_SIZE = VOICE_INITIAL_QUESTION_COUNT
 
@@ -8,12 +14,24 @@ export interface QuestionnaireQuestion {
   photo: boolean
   starter?: boolean
   part?: VoicePromptPart
+  /** Set on a thread question; a situation carries none. */
+  experienceKind?: VoiceExperienceKindName
+}
+export interface QuestionnaireExperience {
+  id: string
+  kind: VoiceExperienceKindName
 }
 export interface QuestionnaireState {
   ownerId: string
   voiceId: string
-  phase: 'loading' | 'answering' | 'saving' | 'failed' | 'complete'
+  phase:
+    'loading' | 'choosing' | 'starting' | 'offer' | 'answering' | 'saving' | 'failed' | 'complete'
   mode: 'starter' | 'more'
+  /** Which kind of question the chat asks now: the owner's experience, imagined situations, or
+   *  undecided until the first route is taken. */
+  track: 'none' | 'experience' | 'situations'
+  experiences: readonly QuestionnaireExperience[]
+  experienceId: string
   catalog: readonly QuestionnaireQuestion[]
   saved: readonly string[]
   coveredParts: readonly VoicePromptPart[]
@@ -24,7 +42,7 @@ export interface QuestionnaireState {
   cursor: number
   drafts: Readonly<Record<string, string>>
   operation: number
-  completion: 'ten' | 'exhausted' | null
+  completion: 'ten' | 'exhausted' | 'saved' | null
   reviewing: boolean
 }
 
@@ -38,7 +56,12 @@ export type QuestionnaireEvent = Identity &
         made: boolean
         answeredQuestions?: number
         missingParts?: readonly VoicePromptPart[]
+        experiences?: readonly QuestionnaireExperience[]
       }
+    | { type: 'start-experience' }
+    | { type: 'experience-started'; experience: QuestionnaireExperience; operation: number }
+    | { type: 'experience-failed'; operation: number }
+    | { type: 'situations' | 'another-experience' | 'review-saved' }
     | { type: 'draft'; key: string; body: string }
     | { type: 'begin'; key: string }
     | { type: 'success' | 'failure'; key: string; operation: number }
@@ -51,6 +74,9 @@ function initialQuestionnaireStateData(ownerId: string, voiceId: string): Questi
     ownerId,
     voiceId,
     mode: 'starter',
+    track: 'none',
+    experiences: [],
+    experienceId: '',
     catalog: [],
     saved: [],
     coveredParts: [],
@@ -72,9 +98,79 @@ export function questionnaireSavedCount(state: QuestionnaireContext): number {
 export function questionnaireCurrentKey(state: QuestionnaireContext): string {
   return state.history[state.cursor] ?? ''
 }
+
+const TURN_SEPARATOR = '::'
+/** A thread answer is identified by its experience and question (VOICE-65); a situation by its
+ *  question alone. */
+export function answerTurnKey(experienceId: string | undefined, promptKey: string): string {
+  return experienceId ? `${experienceId}${TURN_SEPARATOR}${promptKey}` : promptKey
+}
+export function parseTurnKey(turnKey: string): { experienceId: string; promptKey: string } {
+  const at = turnKey.indexOf(TURN_SEPARATOR)
+  return at < 0
+    ? { experienceId: '', promptKey: turnKey }
+    : {
+        experienceId: turnKey.slice(0, at),
+        promptKey: turnKey.slice(at + TURN_SEPARATOR.length),
+      }
+}
+function questionAt(context: QuestionnaireContext, turnKey: string) {
+  const { promptKey } = parseTurnKey(turnKey)
+  return context.catalog.find((question) => question.key === promptKey)
+}
+function threadOf(context: QuestionnaireContext, experienceId: string) {
+  const kind = context.experiences.find((experience) => experience.id === experienceId)?.kind
+  return kind ? context.catalog.filter((question) => question.experienceKind === kind) : []
+}
+/** How many replies this experience has saved. */
+export function experienceReplies(context: QuestionnaireContext, experienceId: string): number {
+  return context.saved.filter((key) => parseTurnKey(key).experienceId === experienceId).length
+}
+function threadNextKey(
+  context: QuestionnaireContext,
+  experienceId: string,
+  part?: VoicePromptPart,
+): string | undefined {
+  const taken = (turnKey: string) =>
+    context.saved.includes(turnKey) ||
+    context.skipped.includes(turnKey) ||
+    context.history.includes(turnKey)
+  const assigned = (candidate: VoicePromptPart | undefined) =>
+    new Set(
+      [...context.saved, ...context.history].filter(
+        (turnKey) =>
+          parseTurnKey(turnKey).experienceId === experienceId &&
+          !context.skipped.includes(turnKey) &&
+          questionAt(context, turnKey)?.part === candidate,
+      ),
+    ).size
+  return threadOf(context, experienceId)
+    .map((question) => ({ question, turnKey: answerTurnKey(experienceId, question.key) }))
+    .find(
+      ({ question, turnKey }) =>
+        !taken(turnKey) &&
+        (part !== undefined
+          ? question.part === part
+          : question.part !== undefined &&
+            assigned(question.part) < VOICE_EXPERIENCE_PART_QUOTA[question.part]),
+    )?.turnKey
+}
+function unfinishedExperience(context: QuestionnaireContext): string {
+  const open = [...context.experiences]
+    .reverse()
+    .find((experience) => experienceReplies(context, experience.id) < VOICE_EXPERIENCE_REPLIES)
+  return open && threadNextKey(context, open.id) ? open.id : ''
+}
+/** The question that follows now on the chosen track. */
+function nextTurnKey(context: QuestionnaireContext, part?: VoicePromptPart) {
+  return context.track === 'experience'
+    ? threadNextKey(context, context.experienceId, part)
+    : nextKey(context, part)
+}
 function nextKey(state: QuestionnaireContext, part?: VoicePromptPart): string | undefined {
   const available = state.catalog.filter(
     (question) =>
+      !question.experienceKind &&
       (state.mode !== 'starter' || !question.photo) &&
       (part === undefined || question.part === part) &&
       !state.saved.includes(question.key) &&
@@ -107,7 +203,7 @@ function owns(context: QuestionnaireContext, event: QuestionnaireEvent) {
 function confirmed(context: QuestionnaireContext): QuestionnaireContext {
   const key = questionnaireCurrentKey(context)
   const wasSaved = context.saved.includes(key)
-  const part = context.catalog.find((question) => question.key === key)?.part
+  const part = questionAt(context, key)?.part
   return {
     ...context,
     saved: wasSaved ? context.saved : [...context.saved, key],
@@ -120,10 +216,19 @@ function confirmed(context: QuestionnaireContext): QuestionnaireContext {
 }
 function replacement(context: QuestionnaireContext) {
   const key = questionnaireCurrentKey(context)
-  return nextKey(
-    { ...context, skipped: [...context.skipped, key] },
-    context.catalog.find((q) => q.key === key)?.part,
-  )
+  const swapped = { ...context, skipped: [...context.skipped, key] }
+  const { experienceId } = parseTurnKey(key)
+  const part = questionAt(context, key)?.part
+  return experienceId ? threadNextKey(swapped, experienceId, part) : nextKey(swapped, part)
+}
+/** Whether any imagined situation is still left to ask. */
+export function questionnaireHasSituations(state: QuestionnaireContext): boolean {
+  return !!nextKey(state)
+}
+/** Whether `다른 얘기 할래요` has another question to offer for the one on screen. */
+export function questionnaireCanSkip(state: QuestionnaireContext): boolean {
+  const key = questionnaireCurrentKey(state)
+  return !state.saved.includes(key) && !state.reviewing && !!replacement(state)
 }
 const editableQuestion = {
   draft: { guard: 'currentQuestion', actions: 'draft' },
@@ -173,16 +278,41 @@ export const questionnaireMachine = setup({
       context.cursor < context.history.length - 1,
     reviewing: ({ context, event }) => owns(context, event) && context.reviewing,
     previous: ({ context, event }) => owns(context, event) && context.cursor > 0,
+    hasSaved: ({ context, event }) => owns(context, event) && context.saved.length > 0,
     hasHistory: ({ context, event }) => owns(context, event) && context.history.length > 0,
     canReview: ({ context, event }) =>
       owns(context, event) &&
       event.type === 'review' &&
       context.saved.includes(event.key) &&
-      context.catalog.some((q) => q.key === event.key),
+      !!questionAt(context, event.key),
     skippable: ({ context, event }) =>
       owns(context, event) &&
+      !parseTurnKey(questionnaireCurrentKey(context)).experienceId &&
       !context.saved.includes(questionnaireCurrentKey(context)) &&
       !context.reviewing,
+    startsExperience: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'experience-started' &&
+      event.operation === context.operation,
+    failsExperience: ({ context, event }) =>
+      owns(context, event) &&
+      event.type === 'experience-failed' &&
+      event.operation === context.operation,
+    onExperience: ({ context }) => context.track === 'experience',
+    onSituations: ({ context }) => context.track === 'situations',
+    resumesExperience: ({ context }) => context.track === 'none' && !!unfinishedExperience(context),
+    continuesSituations: ({ context }) =>
+      context.track === 'none' &&
+      context.mode === 'starter' &&
+      context.experiences.length === 0 &&
+      context.saved.length > 0 &&
+      !!nextKey(context),
+    asksFirstExperience: ({ context }) =>
+      context.track === 'none' &&
+      context.mode === 'starter' &&
+      context.experiences.length === 0 &&
+      context.saved.length === 0,
+    hasThreadNext: ({ context }) => !!threadNextKey(context, context.experienceId),
     replaceable: ({ context, event }) =>
       owns(context, event) &&
       !context.saved.includes(questionnaireCurrentKey(context)) &&
@@ -207,28 +337,48 @@ export const questionnaireMachine = setup({
       return {
         catalog,
         saved,
+        experiences: event.experiences ?? [],
         coveredParts: event.missingParts
           ? (['opening', 'description', 'closing'] as const).filter(
               (part) => !event.missingParts!.includes(part),
             )
           : [
               ...new Set(
-                catalog
-                  .filter((q) => saved.includes(q.key) && q.part !== undefined)
-                  .map((q) => q.part!),
+                saved.flatMap((turnKey) => {
+                  const part = catalog.find((q) => q.key === parseTurnKey(turnKey).promptKey)?.part
+                  return part ? [part] : []
+                }),
               ),
             ],
         mode: event.made ? ('more' as const) : ('starter' as const),
         baselineAnswered: event.made ? 0 : Math.min(QUESTIONNAIRE_BATCH_SIZE, count),
       }
     }),
+    resume: assign(({ context }) => ({
+      track: 'experience' as const,
+      experienceId: unfinishedExperience(context),
+    })),
+    chooseSituations: assign({ track: 'situations' as const }),
+    startedExperience: assign(({ context, event }) =>
+      event.type === 'experience-started'
+        ? {
+            track: 'experience' as const,
+            experienceId: event.experience.id,
+            experiences: [
+              ...context.experiences.filter((experience) => experience.id !== event.experience.id),
+              event.experience,
+            ],
+          }
+        : {},
+    ),
     next: assign(({ context }) => ({
-      history: [...context.history, nextKey(context)!],
+      history: [...context.history, nextTurnKey(context)!],
       cursor: context.history.length,
       completion: null,
     })),
     ten: assign({ completion: 'ten' as const }),
     exhausted: assign({ completion: 'exhausted' as const }),
+    saved: assign({ completion: 'saved' as const }),
     confirmed: assign(({ context }) => confirmed(context)),
     stopReview: assign({ reviewing: false }),
     previous: assign(({ context }) => ({ cursor: context.cursor - 1 })),
@@ -254,6 +404,8 @@ export const questionnaireMachine = setup({
     ),
     restart: assign(({ context }) => ({
       mode: 'more' as const,
+      track: 'none' as const,
+      experienceId: '',
       baselineAnswered: 0,
       sessionSaved: [],
       skipped: [],
@@ -273,9 +425,44 @@ export const questionnaireMachine = setup({
     routing: {
       always: [
         { guard: 'ten', target: 'complete', actions: 'ten' },
-        { guard: 'hasNext', target: 'answering', actions: 'next' },
-        { target: 'complete', actions: 'exhausted' },
+        { guard: and(['onExperience', 'hasThreadNext']), target: 'answering', actions: 'next' },
+        { guard: 'onExperience', target: 'offer' },
+        { guard: and(['onSituations', 'hasNext']), target: 'answering', actions: 'next' },
+        { guard: 'onSituations', target: 'complete', actions: 'exhausted' },
+        { guard: 'resumesExperience', target: 'answering', actions: ['resume', 'next'] },
+        {
+          guard: 'continuesSituations',
+          target: 'answering',
+          actions: ['chooseSituations', 'next'],
+        },
+        { guard: 'asksFirstExperience', target: 'choosing' },
+        { target: 'offer' },
       ],
+    },
+    choosing: {
+      on: {
+        'start-experience': { guard: 'owned', target: 'starting', actions: 'begin' },
+        situations: { guard: 'owned', target: 'routing', actions: 'chooseSituations' },
+        back: { guard: 'hasHistory', target: 'answering', actions: 'last' },
+      },
+    },
+    starting: {
+      on: {
+        'experience-started': {
+          guard: 'startsExperience',
+          target: 'routing',
+          actions: 'startedExperience',
+        },
+        'experience-failed': { guard: 'failsExperience', target: 'choosing' },
+      },
+    },
+    offer: {
+      on: {
+        'another-experience': { guard: 'owned', target: 'choosing' },
+        situations: { guard: 'owned', target: 'routing', actions: 'chooseSituations' },
+        'review-saved': { guard: 'hasSaved', target: 'complete', actions: 'saved' },
+        back: { guard: 'hasHistory', target: 'answering', actions: 'last' },
+      },
     },
     answering: { on: editableQuestion },
     failed: { on: editableQuestion },

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { chooseSituations } from '@/test/voice-chat'
 import { initializeI18n } from '@/app/providers/i18n'
 import { renderAppAt } from '@/test/app'
 import { ProtoVoiceOrigin } from '@/shared/api'
@@ -68,7 +69,8 @@ describe('the 말투 분석 tab', () => {
     expect(await screen.findByRole('log', { name: '말투 학습 대화' })).toBeVisible()
     expect(router.state.location.pathname).toBe(`${DEFAULT}/materials`)
     expect(router.state.location.search).toEqual({ learn: 'chat' })
-    expect(screen.getByLabelText('답')).toHaveValue('')
+    await chooseSituations(user)
+    expect(await screen.findByLabelText('답')).toHaveValue('')
     expect(calls.filter((call) => /^(Create|Analyze|Answer|Start)/.test(call))).toEqual([])
   })
 

@@ -82,8 +82,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
-| T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
 | T888 | Group template questions by template and point every refusal at its field | MODEL THEME ARCH | - | todo |
 | T889 | Choose model contestants from one checklist with credits per post | MODEL QUOTA ARCH | T888 | todo |
@@ -104,4 +102,4 @@
 
 ## next
 - gusta-implement-task T888
-- gusta-implement-task T887
+- no runnable task: resolve blocked, parked or deps

@@ -6,6 +6,7 @@ import { Stage } from '@/shared/api'
 import type { VoicePrompt } from '@/entities/voice'
 import { renderAppAt, type RenderAppOptions } from '@/test/app'
 import type { FakeVoiceOptions } from '@/test/voice'
+import { chooseSituations } from '@/test/voice-chat'
 import { putPhoto } from '@/features/answer-voice-prompt/api/photo'
 
 // The browser conversion and the storage PUT are the device's and the bucket's; the tab only
@@ -105,6 +106,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '자료 더 보태기' }))
     const sheet = within(await screen.findByRole('region', { name: '대화로 내 말투 알아보기' }))
+    await chooseSituations(user)
     expect(sheet.getByText('0 / 10개 답변 저장')).toBeInTheDocument()
     await user.click(sheet.getByLabelText('답'))
     await user.paste(sentences(12))
@@ -264,6 +266,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await chooseSituations(user)
     expect(await sheet.findByText(/블로그 글을 시작할 때 쓰는 첫인사/)).toBeInTheDocument()
     expect(sheet.getByText('0 / 10개 답변 저장')).toBeInTheDocument()
     expect(sheet.getByRole('button', { name: '다른 얘기 할래요' })).toBeEnabled()
@@ -282,6 +285,7 @@ describe('the 학습 데이터 screen', () => {
     expect(sheet.getByLabelText('답')).not.toHaveFocus()
     await user.click(sheet.getByRole('button', { name: '닫기' }))
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
+    await chooseSituations(user)
     expect(
       await within(screen.getByRole('dialog')).findByText(/가격이나 양, 가성비/),
     ).toBeInTheDocument()
@@ -309,6 +313,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await chooseSituations(user)
     expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '다음에 또 만나요!')
     await user.click(sheet.getByRole('button', { name: '보내기' }))
@@ -347,6 +352,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await chooseSituations(user)
     expect(await sheet.findByText(/글을 마무리할 때 쓰는 끝인사/)).toBeInTheDocument()
     expect(sheet.getByRole('button', { name: '다른 얘기 할래요' })).toBeEnabled()
     expect(sheet.queryByRole('button', { name: '문항 목록' })).not.toBeInTheDocument()
@@ -407,6 +413,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await user.click(await sheet.findByRole('button', { name: '저장한 답변 보기' }))
     await user.click(await sheet.findByRole('button', { name: '답변을 더 보태거나 고치기' }))
     await user.click(await sheet.findByRole('combobox', { name: /저장한 답변 다시 보기/ }))
     await user.click(
@@ -427,7 +434,7 @@ describe('the 학습 데이터 screen', () => {
         },
       ]),
     )
-    expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
+    expect(await sheet.findByText('저장한 답변을 살펴볼 수 있어요.')).toBeInTheDocument()
     expect(sheet.queryByLabelText('답')).toBeNull()
     await user.click(sheet.getByRole('combobox', { name: /저장한 답변 다시 보기/ }))
     await user.click(await screen.findByRole('option', { name: /음식이나 음료 사진/ }))
@@ -444,7 +451,7 @@ describe('the 학습 데이터 screen', () => {
         uploadId: '',
       }),
     )
-    expect(await sheet.findByText('모든 문항에 답했어요.')).toBeInTheDocument()
+    expect(await sheet.findByText('저장한 답변을 살펴볼 수 있어요.')).toBeInTheDocument()
     expect(sheet.queryByLabelText('답')).toBeNull()
   })
 
@@ -464,6 +471,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await chooseSituations(user)
     expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '짜장면이 맛있었어요.')
     // Without a photo there is nothing to answer on.
@@ -499,6 +507,7 @@ describe('the 학습 데이터 screen', () => {
 
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
     const sheet = within(await screen.findByRole('dialog'))
+    await chooseSituations(user)
     expect(await sheet.findByText(/음식이나 음료 사진/)).toBeInTheDocument()
     await user.type(sheet.getByLabelText('답'), '짜장면이 맛있었어요.')
     await user.upload(

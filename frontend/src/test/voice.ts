@@ -40,6 +40,12 @@ import {
   CreateVoicePhotoUploadResponseSchema,
   AnswerVoicePromptResponseSchema,
   AnalyzeVoiceResponseSchema,
+  type ProtoVoiceExperience,
+  VoiceExperienceKind,
+  VoiceExperienceKindInfoSchema,
+  VoiceExperienceSchema,
+  ListVoiceExperiencesResponseSchema,
+  StartVoiceExperienceResponseSchema,
 } from '@/shared/api'
 import { connectAppError } from './app-error'
 
@@ -60,6 +66,16 @@ export interface FakeVoiceSampleRow {
 
 /** The shared prompt set as the fake serves it: a subset with every part and a photo prompt,
  *  which is all a screen test needs to tell groups and photos apart. */
+/** The six experience kinds the chat offers first (VOICE-78), as the fake serves them. */
+export const FAKE_EXPERIENCE_KINDS = [
+  { kind: VoiceExperienceKind.FOOD, label: '맛집', plain: '그곳' },
+  { kind: VoiceExperienceKind.CAFE, label: '카페', plain: '그곳' },
+  { kind: VoiceExperienceKind.BEAUTY, label: '뷰티', plain: '그곳' },
+  { kind: VoiceExperienceKind.STAY, label: '숙소', plain: '그곳' },
+  { kind: VoiceExperienceKind.LEISURE, label: '체험·여가', plain: '그곳' },
+  { kind: VoiceExperienceKind.PRODUCT, label: '제품', plain: '그 제품' },
+]
+
 export const FAKE_VOICE_PROMPTS = [
   {
     key: 'starter_day_open',
@@ -2069,6 +2085,8 @@ export interface FakeVoicePrompt {
   scene?: string
   hint?: string
   starter?: boolean
+  /** A thread question's kind (VOICE-78); its text carries `{experience}`. */
+  experienceKind?: VoiceExperienceKind | 'food' | 'cafe' | 'beauty' | 'stay' | 'leisure' | 'product'
 }
 export interface FakeVoiceRow {
   origin?: 'personal' | 'synthetic'
@@ -2093,6 +2111,8 @@ export const DEFAULT_FAKE_VOICE: FakeVoiceRow = {
 
 export interface FakeVoiceOptions {
   prompts?: readonly FakeVoicePrompt[]
+  /** Experiences the default voice already holds (VOICE-78). */
+  experiences?: ReadonlyArray<{ id: string; kind: VoiceExperienceKind; name: string }>
   createFails?: boolean
   createGate?: Promise<void>
 
@@ -2136,7 +2156,7 @@ export interface FakeVoiceOptions {
   /** 말투 만들기 / 다시 분석 starts, with the model each named. */
   analyses?: Array<{ voiceId: string; model: string }>
   /** Answers the fake received, with the upload each named. */
-  answers?: Array<{ promptKey: string; body: string; uploadId: string }>
+  answers?: Array<{ promptKey: string; body: string; uploadId: string; experienceId?: string }>
   /** The job an AnalyzeVoice answers with. */
   analyzeJobId?: string
   /** ②'s comparison per post slug (POST-102); a slug not listed answers not applicable. */
@@ -2235,7 +2255,7 @@ const toSampleKind = (kind: FakeVoiceSampleRow['kind']) =>
   kind === 'answer' ? VoiceSampleKind.ANSWER : VoiceSampleKind.POST
 
 export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOptions = {}) {
-  const promptBank = options.prompts ?? FAKE_VOICE_PROMPTS
+  const promptBank: readonly FakeVoicePrompt[] = options.prompts ?? FAKE_VOICE_PROMPTS
   const { rpc } = router
   let sequence = options.samples?.length ?? 0
   let profileReads = 0
@@ -2680,9 +2700,47 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     options.calls?.push('ListVoicePrompts')
     return create(ListVoicePromptsResponseSchema, {
       prompts: promptBank.map((prompt) =>
-        create(VoicePromptSchema, { ...prompt, part: PART_TO_PROTO[prompt.part] }),
+        create(VoicePromptSchema, {
+          ...prompt,
+          part: PART_TO_PROTO[prompt.part],
+          experienceKind:
+            typeof prompt.experienceKind === 'string'
+              ? VoiceExperienceKind[prompt.experienceKind.toUpperCase() as 'FOOD']
+              : prompt.experienceKind,
+        }),
       ),
+      kinds: FAKE_EXPERIENCE_KINDS.map((info) => create(VoiceExperienceKindInfoSchema, info)),
     })
+  })
+
+  // The learning chat's own experiences (VOICE-78), per voice in the order they were started.
+  const experiences = new Map<string, ProtoVoiceExperience[]>([
+    [
+      DEFAULT_FAKE_VOICE.id,
+      (options.experiences ?? []).map((row) =>
+        create(VoiceExperienceSchema, { ...row, createdAt: NOW }),
+      ),
+    ],
+  ])
+  rpc(VoiceService.method.listVoiceExperiences, (request) => {
+    options.calls?.push('ListVoiceExperiences')
+    owned(request.voiceId)
+    return create(ListVoiceExperiencesResponseSchema, {
+      experiences: experiences.get(request.voiceId) ?? [],
+    })
+  })
+  rpc(VoiceService.method.startVoiceExperience, (request) => {
+    options.calls?.push('StartVoiceExperience')
+    active(request.voiceId)
+    const rows = experiences.get(request.voiceId) ?? []
+    const experience = create(VoiceExperienceSchema, {
+      id: `experience-${request.voiceId}-${rows.length + 1}`,
+      kind: request.kind,
+      name: request.name.trim(),
+      createdAt: NOW,
+    })
+    experiences.set(request.voiceId, [...rows, experience])
+    return create(StartVoiceExperienceResponseSchema, { experience })
   })
 
   let uploadSequence = 0
@@ -2712,7 +2770,10 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
     if (!body) throw connectAppError('VOICE_ANSWER_REQUIRED', Code.InvalidArgument)
     // A second answer rewrites the first, on its photo unless another is uploaded (VOICE-60).
     const rows = materialsOf(request.voiceId)
-    const previous = rows.find((row) => row.sample.promptKey === prompt.key)
+    const previous = rows.find(
+      (row) =>
+        row.sample.promptKey === prompt.key && row.sample.experienceId === request.experienceId,
+    )
     const keepsPhoto = !request.uploadId && previous?.sample.hasPhoto === true
     if (prompt.photo && !keepsPhoto && pendingUploads.get(request.uploadId) !== prompt.key) {
       throw connectAppError('VOICE_PHOTO_REQUIRED', Code.FailedPrecondition)
@@ -2722,7 +2783,12 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
         request.voiceId,
         rows.filter((row) => row !== previous),
       )
-    options.answers?.push({ promptKey: prompt.key, body, uploadId: request.uploadId })
+    options.answers?.push({
+      promptKey: prompt.key,
+      body,
+      uploadId: request.uploadId,
+      ...(request.experienceId ? { experienceId: request.experienceId } : {}),
+    })
     pendingUploads.delete(request.uploadId)
     sequence += 1
     const sample = create(VoiceSampleSchema, {
@@ -2730,6 +2796,7 @@ export function registerVoiceService(router: ConnectRouter, options: FakeVoiceOp
       kind: VoiceSampleKind.ANSWER,
       contentRevision: (previous?.sample.contentRevision ?? 0n) + 1n,
       promptKey: prompt.key,
+      experienceId: request.experienceId,
       hasPhoto: prompt.photo,
       chars: Array.from(body).length,
       createdAt: NOW,

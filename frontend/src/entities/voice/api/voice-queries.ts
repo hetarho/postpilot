@@ -73,6 +73,7 @@ export function toVoiceSample(sample: ProtoVoiceSample): VoiceSample {
     kind: requireSampleKind(sample.kind),
     label: sample.label,
     promptKey: sample.promptKey,
+    experienceId: sample.experienceId,
     hasPhoto: sample.hasPhoto,
     chars: sample.chars,
     createdAt: sample.createdAt,

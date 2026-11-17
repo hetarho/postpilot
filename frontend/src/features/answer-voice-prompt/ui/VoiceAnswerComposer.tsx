@@ -17,6 +17,7 @@ export function VoiceAnswerComposer({
   ownerId,
   voiceId,
   prompt,
+  experienceId,
   presentation = 'chat',
   initialBody = '',
   bodyValue,
@@ -37,6 +38,8 @@ export function VoiceAnswerComposer({
   ownerId: string
   voiceId: string
   prompt: VoicePrompt
+  /** The experience a thread question is answered about (VOICE-78). */
+  experienceId?: string
   presentation?: 'form' | 'chat'
   initialBody?: string
   /** Session-owned text survives Back without keeping every question form mounted. */
@@ -137,7 +140,12 @@ export function VoiceAnswerComposer({
           setUploading(false)
         }
       }
-      const response = await answer.answer({ promptKey: prompt.key, body, photo: uploaded })
+      const response = await answer.answer({
+        promptKey: prompt.key,
+        body,
+        experienceId,
+        photo: uploaded,
+      })
       if (!response.sample?.id || response.sample.promptKey !== prompt.key) {
         setConfirmationFailed(true)
         onFailure?.()

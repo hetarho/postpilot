@@ -2,7 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import { emptyVoice, type VoiceProfile, type VoicePrompt, type VoiceSample } from '@/entities/voice'
+import {
+  emptyVoice,
+  type VoiceExperience,
+  type VoiceExperienceKindInfo,
+  type VoiceProfile,
+  type VoicePrompt,
+  type VoiceSample,
+} from '@/entities/voice'
 import { Button } from '@/shared/ui'
 import { VoiceLearningChat } from './VoiceLearningChat'
 import { AnswerForm } from './AnswerForm'
@@ -10,14 +17,29 @@ import { preparePhoto } from '../api/photo'
 
 const fake = vi.hoisted(() => ({
   prompts: [] as VoicePrompt[],
+  kinds: [] as VoiceExperienceKindInfo[],
+  experiences: [] as VoiceExperience[],
+  startExperience: vi.fn(),
   answer: vi.fn(),
   upload: vi.fn(),
   put: vi.fn(),
 }))
 vi.mock('@/entities/voice', async (original) => ({
   ...(await original<typeof import('@/entities/voice')>()),
+  useVoiceExperiences: () => ({
+    experiences: fake.experiences,
+    isPending: false,
+    isError: false,
+    refetch: vi.fn(),
+  }),
+  useStartVoiceExperience: () => ({
+    start: fake.startExperience,
+    isError: false,
+    errorMessage: '',
+  }),
   useVoicePrompts: () => ({
     prompts: fake.prompts,
+    kinds: fake.kinds,
     isPending: false,
     isError: false,
     refetch: vi.fn(),
@@ -66,6 +88,22 @@ function profile(saved: string[] = [], made = false): VoiceProfile {
 
 beforeEach(() => {
   initializeI18n('ko')
+  fake.kinds = [
+    { kind: 'food', label: '맛집', plain: '그곳' },
+    { kind: 'cafe', label: '카페', plain: '그곳' },
+    { kind: 'product', label: '제품', plain: '그 제품' },
+  ]
+  fake.experiences = []
+  fake.startExperience.mockReset().mockImplementation(async (kind: string, name: string) => {
+    const experience = {
+      id: `experience-${fake.experiences.length + 1}`,
+      kind,
+      name,
+      createdAt: '',
+    }
+    fake.experiences = [...fake.experiences, experience as VoiceExperience]
+    return experience
+  })
   fake.prompts = Array.from({ length: 240 }, (_, index) => ({
     key: `question-${index}`,
     text: `${index + 1}번째 상황을 친구에게 말해 볼까요?`,
@@ -80,6 +118,18 @@ beforeEach(() => {
       { register: 'eumseum', text: '예시 음슴체 문장임.' },
     ],
   }))
+  fake.prompts.push(
+    ...(['opening', 'description', 'description', 'description', 'closing'] as const).map(
+      (part, index) => ({
+        key: `thread_food_${part}_${index}`,
+        text: `{experience}, ${index + 1}번째 이야기를 들려 주세요.`,
+        part,
+        photo: false,
+        experienceKind: 'food' as const,
+        examples: [{ register: 'haeyo' as const, text: '예시 해요체 문장이에요.' }],
+      }),
+    ),
+  )
   fake.answer.mockReset().mockImplementation(async (input) => ({
     sample: { id: 'saved-answer', promptKey: input.promptKey },
   }))
@@ -114,6 +164,14 @@ function mount(current = profile(), ownerId = 'alice', onAnalyze = vi.fn()) {
 function expectSavedCount(saved: number) {
   expect(screen.getByText(`${saved} / 10개 답변 저장`)).toBeInTheDocument()
 }
+/** `생각나는 게 없어요` on the first turn: the imagined situations. */
+async function toSituations(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '생각나는 게 없어요' }))
+}
+/** A later chat opens on the experience offer; `다른 장면으로 답하기` takes the situations. */
+async function toLaterSituations(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '다른 장면으로 답하기' }))
+}
 async function answer(
   user: ReturnType<typeof userEvent.setup>,
   text = '친구에게 평소처럼 말했어요.',
@@ -125,9 +183,79 @@ async function answer(
 }
 
 describe('scripted voice learning chat', () => {
+  it('opens on one experience and asks its first thread question with the name in the text', async () => {
+    mount()
+    const user = userEvent.setup()
+    expect(
+      await screen.findByText('최근에 다녀왔거나 써 본 것 하나만 떠올려 볼까요?'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('0 / 40자')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '보내기' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: '맛집' }))
+    await user.type(screen.getByLabelText('이름 (선택)'), '회사 앞 칼국숫집')
+    expect(screen.getByText('9 / 40자')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '보내기' }))
+    expect(await screen.findByText('회사 앞 칼국숫집, 1번째 이야기를 들려 주세요.')).toBeVisible()
+    expect(fake.startExperience).toHaveBeenCalledExactlyOnceWith('food', '회사 앞 칼국숫집')
+    expect(screen.getAllByText('회사 앞 칼국숫집')).toHaveLength(1)
+    await answer(user, '점심마다 가는 단골집이에요.')
+    await waitFor(() => expect(fake.answer).toHaveBeenCalledOnce())
+    expect(fake.answer.mock.calls[0][0]).toMatchObject({
+      promptKey: 'thread_food_opening_0',
+      experienceId: 'experience-1',
+    })
+    expect(await screen.findByText('회사 앞 칼국숫집, 2번째 이야기를 들려 주세요.')).toBeVisible()
+    expectSavedCount(1)
+  })
+
+  it('shows the kind label as the owner’s line and reads the plain word for an unnamed experience', async () => {
+    mount()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '맛집' }))
+    await user.click(screen.getByRole('button', { name: '보내기' }))
+    expect(await screen.findByText('그곳, 1번째 이야기를 들려 주세요.')).toBeVisible()
+    expect(screen.getAllByText('맛집').length).toBeGreaterThan(0)
+    expect(fake.startExperience).toHaveBeenCalledWith('food', '')
+    expect(screen.queryByText(/\{experience\}/)).toBeNull()
+  })
+
+  it('continues an unfinished experience at its next unanswered question', async () => {
+    fake.experiences = [{ id: 'e1', kind: 'food', name: '칼국숫집', createdAt: '' }]
+    const current = profile()
+    current.samples = [
+      {
+        id: 'sample-0',
+        kind: 'answer',
+        label: '',
+        promptKey: 'thread_food_opening_0',
+        experienceId: 'e1',
+        hasPhoto: false,
+        chars: 12,
+        createdAt: '',
+      },
+    ]
+    current.readiness.answeredQuestions = 1
+    mount(current)
+    expect(await screen.findByText('칼국숫집, 2번째 이야기를 들려 주세요.')).toBeVisible()
+    expectSavedCount(1)
+  })
+
+  it('offers another experience or other scenes after five thread replies', async () => {
+    mount()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: '맛집' }))
+    await user.click(screen.getByRole('button', { name: '보내기' }))
+    await screen.findByText('그곳, 1번째 이야기를 들려 주세요.')
+    for (let reply = 0; reply < 5; reply++) await answer(user)
+    expect(await screen.findByRole('button', { name: '경험 하나 더 이야기하기' })).toBeVisible()
+    expect(screen.getByRole('button', { name: '다른 장면으로 답하기' })).toBeVisible()
+    expectSavedCount(5)
+  })
+
   it('offers the current question three collapsed examples that never reach the reply', async () => {
     mount()
     const user = userEvent.setup()
+    await toSituations(user)
     const toggle = await screen.findByRole('button', { name: '다른 사람들은 이렇게 말했어요' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByText('예시 해요체 문장이에요.')).toBeNull()
@@ -173,6 +301,7 @@ describe('scripted voice learning chat', () => {
   it('keeps the actor and unsaved answer when its collection view is hidden and shown again', async () => {
     const { props, rerender } = mount()
     const user = userEvent.setup()
+    await toSituations(user)
     await user.type(await screen.findByLabelText('답'), '돌아와서 이어 쓸 내 답변이에요.')
     rerender(<VoiceLearningChat {...props} active={false} />)
     rerender(<VoiceLearningChat {...props} active />)
@@ -186,6 +315,7 @@ describe('scripted voice learning chat', () => {
     current.readiness.percent = 100
     const { onAnalyze } = mount(current)
     const user = userEvent.setup()
+    await toSituations(user)
     expect(await screen.findByText('친구가 오늘 기분이 어땠는지 물었어요.')).toBeInTheDocument()
     expect(screen.getByText('기억에 남은 장면 하나만 편하게 이야기해 주세요.')).toBeInTheDocument()
     expect(screen.getAllByRole('textbox')).toHaveLength(1)
@@ -212,6 +342,7 @@ describe('scripted voice learning chat', () => {
     for (let index = 0; index < 7; index++) await answer(user)
     await user.click(await screen.findByRole('button', { name: '답변을 더 보태거나 고치기' }))
     await user.click(screen.getByRole('button', { name: '질문 10개 더 답하기' }))
+    await toLaterSituations(user)
     expect(screen.getByText('11번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
     expectSavedCount(0)
     expect(fake.answer.mock.calls.map(([input]) => input.promptKey)).toEqual(
@@ -227,6 +358,7 @@ describe('scripted voice learning chat', () => {
       ),
     )
     const user = userEvent.setup()
+    await toLaterSituations(user)
     expect(await screen.findByText('16번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
     for (let index = 0; index < 10; index++) await answer(user)
     expect(await screen.findByText('열 개의 답변이 모였어요.')).toBeInTheDocument()
@@ -238,6 +370,7 @@ describe('scripted voice learning chat', () => {
   it('retains unsaved text across Back and counts an explicitly changed answer only once', async () => {
     mount()
     const user = userEvent.setup()
+    await toSituations(user)
     await screen.findByLabelText('답')
     await answer(user, '첫 답변이에요.')
     await user.type(screen.getByLabelText('답'), '둘째 답변을 쓰는 중이에요.')
@@ -259,6 +392,7 @@ describe('scripted voice learning chat', () => {
     )
     const { onAnalyze } = mount()
     const user = userEvent.setup()
+    await toSituations(user)
     await user.type(await screen.findByLabelText('답'), '연결이 끊겨도 남아 있어요.')
     await user.dblClick(screen.getByRole('button', { name: '보내기' }))
     expect(fake.answer).toHaveBeenCalledOnce()
@@ -282,6 +416,7 @@ describe('scripted voice learning chat', () => {
   it('replaces a skipped question without an RPC or a completed-answer count', async () => {
     mount()
     const user = userEvent.setup()
+    await toSituations(user)
     await user.type(await screen.findByLabelText('답'), '아직 떠오르지 않아요.')
     await user.click(screen.getByRole('button', { name: '다른 얘기 할래요' }))
     expect(screen.getByText('4번째 상황을 친구에게 말해 볼까요?')).toBeInTheDocument()
@@ -295,6 +430,7 @@ describe('scripted voice learning chat', () => {
     })
     mount()
     const user = userEvent.setup()
+    await toSituations(user)
     await user.type(await screen.findByLabelText('답'), '저장 확인 전에는 남아 있어요.')
     await user.click(screen.getByRole('button', { name: '보내기' }))
     expect(await screen.findByText(/답변이 저장됐는지 확인하지 못했어요/)).toBeInTheDocument()
@@ -313,9 +449,11 @@ describe('scripted voice learning chat', () => {
     )
     const { rerender, props } = mount()
     const user = userEvent.setup()
+    await toSituations(user)
     await user.type(await screen.findByLabelText('답'), '앨리스의 답이에요.')
     await user.click(screen.getByRole('button', { name: '보내기' }))
     rerender(<VoiceLearningChat {...props} ownerId="bob" />)
+    await toSituations(user)
     await screen.findByLabelText('답')
     resolve()
     await waitFor(() => expectSavedCount(0))
@@ -328,6 +466,7 @@ describe('scripted voice learning chat', () => {
     fake.put.mockRejectedValueOnce(new Error('offline'))
     const { onAnalyze } = mount(profile([], true))
     const user = userEvent.setup()
+    await toLaterSituations(user)
     await user.type(await screen.findByLabelText('답'), '사진 속 빵이 맛있어 보여요.')
     await user.upload(
       screen.getByLabelText('사진 고르기'),
