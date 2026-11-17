@@ -1,5 +1,5 @@
 import { create } from '@bufbuild/protobuf'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -7,6 +7,7 @@ import type { WritingTest } from '@/entities/writing-test'
 import { toNaver } from '@/features/export-naver'
 import { writingTestI18n } from '@/features/writing-test'
 import { BlockSchema, BlockType, PostContentSchema } from '@/shared/api'
+import { completedObservationFixture } from './observation-fixture.test-support'
 import { WritingTestChampionOutput } from './WritingTestChampionOutput'
 
 function fixture(): WritingTest {
@@ -121,4 +122,40 @@ it('retains an exact selectable champion copy fallback when clipboard permission
   expect(fallback).toHaveValue(toNaver(test.candidates[1]!.output!, [], 'en'))
   expect(fallback.selectionEnd).toBe(fallback.value.length)
   expect(fallback).toHaveFocus()
+})
+
+it('names the revealed champion and reads its observations photo by photo with no post action or export', () => {
+  const test = completedObservationFixture()
+  render(<WritingTestChampionOutput test={test} ownerId="alice" />)
+  const section = screen.getByRole('region', { name: '우승 관찰 결과' })
+  expect(within(section).getByRole('heading', { name: '우승 관찰 결과' })).toBeVisible()
+  expect(within(section).getAllByText(/Frozen model 1/).length).toBeGreaterThan(0)
+  expect(within(section).queryByText(/Frozen model 2/)).not.toBeInTheDocument()
+  expect(within(section).getAllByRole('img')).toHaveLength(2)
+  expect(section).toHaveTextContent('Scene 0 of dish.jpg')
+  expect(section).toHaveTextContent('Scene 0 of sign.jpg')
+  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  expect(screen.queryByText(/네이버|글 복사|원본 글|확정한 글/)).not.toBeInTheDocument()
+})
+
+it('keeps only the retained metadata under the expired notice once the private payload is purged', () => {
+  const test = completedObservationFixture()
+  test.contentExpiresAt = '2020-01-01T00:00:00Z'
+  render(<WritingTestChampionOutput test={test} ownerId="alice" />)
+  const section = screen.getByRole('region', { name: '우승 관찰 결과' })
+  expect(section).toHaveTextContent('Frozen model 1')
+  expect(section).toHaveTextContent('비교한 사진 2장')
+  expect(within(section).getByRole('status')).toHaveTextContent(
+    '사진과 관찰 결과의 보관 기간이 지났어요',
+  )
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Scene 0/)).not.toBeInTheDocument()
+})
+
+it('states a champion that failed to observe instead of showing an empty result', () => {
+  const test = completedObservationFixture()
+  test.candidates[0]!.status = 'failed'
+  render(<WritingTestChampionOutput test={test} ownerId="alice" />)
+  expect(screen.getByRole('status')).toHaveTextContent('요청을 완료하지 못했어요')
+  expect(screen.queryByRole('img')).not.toBeInTheDocument()
 })

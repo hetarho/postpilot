@@ -217,9 +217,13 @@ export interface WritingTestClient {
 export function writingTestBusy(test?: WritingTest): boolean {
   return !!test && (test.status === 'queued' || test.status === 'running')
 }
+/** What a contestant stored: its post, or, in a photo observation test, its observations. */
+export function writingTestCandidateReadable(candidate: WritingTestCandidate): boolean {
+  return !!candidate.output || !!candidate.observations?.length
+}
 export function writingTestPayloadAvailable(test: WritingTest, now = Date.now()): boolean {
   return (
     (!test.contentExpiresAt || Date.parse(test.contentExpiresAt) > now) &&
-    test.candidates.some((candidate) => !!candidate.output || !!candidate.observations?.length)
+    test.candidates.some(writingTestCandidateReadable)
   )
 }

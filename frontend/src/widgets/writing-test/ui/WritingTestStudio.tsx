@@ -554,6 +554,9 @@ function OwnedStudio({
   ])
 
   const quoteCount = flow.context.retryEstimate?.candidateIds.length ?? test?.count ?? plan.count
+  // A photo observation test holds observations, never posts, so it words its states that way.
+  const observing = test?.output === 'observation'
+  const wording = (post: string, observation: string) => (observing ? observation : post)
   const workTitle = t(
     flow.phase === 'quoting'
       ? 'checkingCost'
@@ -567,7 +570,7 @@ function OwnedStudio({
               ? 'starting'
               : flow.phase === 'deciding'
                 ? 'confirmingDecision'
-                : 'working',
+                : wording('working', 'observation.working'),
   )
   const title =
     flow.view === 'factor'
@@ -579,18 +582,24 @@ function OwnedStudio({
           : flow.view === 'estimate'
             ? t('estimateTitle', { count: quoteCount })
             : flow.view === 'compare'
-              ? t('compareTitle')
+              ? t(wording('compareTitle', 'observation.compareTitle'))
               : flow.view === 'champion'
-                ? t(`winnerTitle.${test?.factor ?? plan.factor}`)
+                ? t(
+                    observing
+                      ? 'observation.winnerTitle'
+                      : `winnerTitle.${test?.factor ?? plan.factor}`,
+                  )
                 : flow.view === 'publication'
-                  ? t('publicationTitle', { kind: t(`factor.${test?.factor ?? plan.factor}`) })
+                  ? observing
+                    ? t('observation.adopt')
+                    : t('publicationTitle', { kind: t(`factor.${test?.factor ?? plan.factor}`) })
                   : flow.view === 'work'
                     ? workTitle
                     : t(
                         flow.phase === 'partial'
-                          ? 'partial'
+                          ? wording('partial', 'observation.partial')
                           : flow.phase === 'expired'
-                            ? 'expired'
+                            ? wording('expired', 'observation.expired')
                             : flow.phase === 'cancelled'
                               ? 'cancelled'
                               : flow.phase === 'conflict'
@@ -661,6 +670,7 @@ function OwnedStudio({
     !!winner &&
     test.sourcePostSlug === plan.context.sourcePostSlug &&
     !!test.sourcePostSlug &&
+    !observing &&
     !!source.data &&
     ['draft', 'review'].includes(source.data.status) &&
     source.data.context.expectedInputRevision === plan.context.expectedInputRevision &&
@@ -1353,7 +1363,10 @@ function OwnedStudio({
           {['running', 'starting', 'retrying'].includes(flow.phase) && (
             <>
               <Typography variant="body" role="status">
-                {t('progress', { ready, total: test?.count ?? plan.count })}
+                {t(wording('progress', 'observation.progress'), {
+                  ready,
+                  total: test?.count ?? plan.count,
+                })}
               </Typography>
               <Typography variant="body">{t('leaveHelp')}</Typography>
             </>
@@ -1402,7 +1415,7 @@ function OwnedStudio({
           <Typography variant="body">{t('winnerHelp')}</Typography>
           {settingPublished ? (
             <Notice tone="success" role="status">
-              {t('confirmed', {
+              {t(wording('confirmed', 'observation.confirmed'), {
                 kind: t(`factor.${test.factor}`),
                 name:
                   flow.context.publication?.action === 'save-setting'
@@ -1412,9 +1425,11 @@ function OwnedStudio({
             </Notice>
           ) : (
             <Button variant="cta" onClick={openPublication}>
-              {t(test.factor === 'model' ? 'adoptModel' : 'saveWinner', {
-                kind: t(`factor.${test.factor}`),
-              })}
+              {observing
+                ? t('observation.adopt')
+                : t(test.factor === 'model' ? 'adoptModel' : 'saveWinner', {
+                    kind: t(`factor.${test.factor}`),
+                  })}
             </Button>
           )}
           {sourceApplicable && (
@@ -1553,18 +1568,20 @@ function OwnedStudio({
                 pending={flow.phase === 'publishing'}
                 onClick={publish}
               >
-                {test.factor === 'model'
-                  ? t('adoptModel')
-                  : flow.presentation.choices.action === 'use-setting'
-                    ? t('useNamedWinner', {
-                        kind: t(`factor.${test.factor}`),
-                        name: winner.identity?.label ?? publicationName,
-                      })
-                    : test.factor !== 'guideline' && !publicationName.trim()
-                      ? t('enterName')
-                      : t('save', {
-                          name: publicationName || t('factor.guideline'),
-                        })}
+                {observing
+                  ? t('observation.adopt')
+                  : test.factor === 'model'
+                    ? t('adoptModel')
+                    : flow.presentation.choices.action === 'use-setting'
+                      ? t('useNamedWinner', {
+                          kind: t(`factor.${test.factor}`),
+                          name: winner.identity?.label ?? publicationName,
+                        })
+                      : test.factor !== 'guideline' && !publicationName.trim()
+                        ? t('enterName')
+                        : t('save', {
+                            name: publicationName || t('factor.guideline'),
+                          })}
               </Button>
             </StepBarActions>
           </StepBar>

@@ -1,4 +1,5 @@
 import { assign, fromPromise, setup, type SnapshotFrom } from 'xstate'
+import { writingTestCandidateReadable } from '@/entities/writing-test'
 import type {
   WritingTest,
   WritingTestClient,
@@ -129,7 +130,9 @@ export function currentWritingTestMatch(test?: WritingTest): WritingTestMatch | 
 export function allOutputsSucceeded(test: WritingTest): boolean {
   return (
     test.candidates.length === test.count &&
-    test.candidates.every((candidate) => candidate.status === 'succeeded' && !!candidate.output)
+    test.candidates.every(
+      (candidate) => candidate.status === 'succeeded' && writingTestCandidateReadable(candidate),
+    )
   )
 }
 function owned(context: WritingTestOperationContext, event: WritingTestOperationEvent): boolean {
@@ -146,7 +149,9 @@ function expired(test: WritingTest | undefined, now: number): boolean {
   return (
     !!test &&
     ((!!test.contentExpiresAt && Date.parse(test.contentExpiresAt) <= now) ||
-      test.candidates.some((candidate) => candidate.status === 'succeeded' && !candidate.output))
+      test.candidates.some(
+        (candidate) => candidate.status === 'succeeded' && !writingTestCandidateReadable(candidate),
+      ))
   )
 }
 function confirmedChampion(test: WritingTest | undefined): test is WritingTest {

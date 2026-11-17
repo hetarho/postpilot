@@ -12,6 +12,7 @@ import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
 import { toNaver } from '@/features/export-naver'
 import { copyText } from '@/shared/lib'
 import { ActionBar, Button, Notice, SegmentedControl, Textarea, Typography } from '@/shared/ui'
+import { WritingTestObservationPair } from './WritingTestObservationPair'
 
 interface WritingTestPairProps {
   ownerId?: string
@@ -25,8 +26,23 @@ interface WritingTestPairProps {
   onReading: (candidateId: string, position: number) => void
 }
 
-/** Exactly the server's current pair. Reading or copying never starts generation or decides a match. */
-export function WritingTestPair({
+/** Exactly the server's current pair. A photo observation test compares observations photo by
+ *  photo instead of two posts (MODEL-97); every other test compares complete posts. */
+export function WritingTestPair(props: WritingTestPairProps) {
+  if (props.test.output === 'observation')
+    return (
+      <WritingTestObservationPair
+        test={props.test}
+        match={props.match}
+        pending={props.pending}
+        onWinner={props.onWinner}
+      />
+    )
+  return <WritingTestPostPair {...props} />
+}
+
+/** Reading or copying never starts generation or decides a match. */
+function WritingTestPostPair({
   ownerId,
   test,
   match,

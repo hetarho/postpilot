@@ -3,7 +3,12 @@ import { useMemo, useState } from 'react'
 import { useExperiments } from '@/entities/model-experiment'
 import { useVoiceChecks, useVoiceChecksQueryKey } from '@/entities/voice'
 import { ProgressLine, FailureNotice, isTerminal, useJob } from '@/entities/generation-job'
-import { useWritingTests, type TestList, type WritingTest } from '@/entities/writing-test'
+import {
+  useWritingTests,
+  writingTestCandidateReadable,
+  type TestList,
+  type WritingTest,
+} from '@/entities/writing-test'
 import { formatDateTime } from '@/shared/lib'
 import {
   Badge,
@@ -199,16 +204,26 @@ const labels: Record<WritingTest['status'], string> = {
   cancelled: 'cancelled',
   failed: 'failed',
 }
+/** A photo observation test (MODEL-97) words its states by what it holds: observations. */
+const observationLabels: Partial<Record<WritingTest['status'], string>> = {
+  queued: 'observation.working',
+  running: 'observation.working',
+  partial: 'observation.partial',
+  review: 'observation.compareTitle',
+  completed: 'observation.winnerTitle',
+}
 function TestRecord({ test, href }: { test: WritingTest; href: string }) {
   const { t } = useWritingTestTranslation()
   const [observedAt] = useState(() => Date.now())
-  const kind = t(`factor.${test.factor}`)
+  const observing = test.output === 'observation'
+  const kind = observing ? t('observation.label') : t(`factor.${test.factor}`)
   const champion = test.revealed
     ? test.candidates.find((candidate) => candidate.id === test.winnerCandidateId)
     : undefined
   const expired =
     (!!test.contentExpiresAt && Date.parse(test.contentExpiresAt) <= observedAt) ||
-    (test.status === 'completed' && test.candidates.every((candidate) => !candidate.output))
+    (test.status === 'completed' &&
+      test.candidates.every((candidate) => !writingTestCandidateReadable(candidate)))
   return (
     <li className="grid min-w-0 gap-4 py-5 sm:grid-cols-[minmax(0,1fr)_auto]">
       <div className="min-w-0">
@@ -217,9 +232,11 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
         </Typography>
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <Badge tone={tones[test.status]}>
-            {t(test.status === 'completed' ? `winnerTitle.${test.factor}` : labels[test.status], {
-              kind,
-            })}
+            {t(
+              (observing ? observationLabels[test.status] : undefined) ??
+                (test.status === 'completed' ? `winnerTitle.${test.factor}` : labels[test.status]),
+              { kind },
+            )}
           </Badge>
           {(test.createdAt || test.updatedAt) && (
             <Typography variant="meta" as="time" dateTime={test.createdAt || test.updatedAt}>
@@ -228,7 +245,7 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
           )}
         </div>
         <Typography variant="body" className="mt-3">
-          {t('progress', {
+          {t(observing ? 'observation.progress' : 'progress', {
             ready: test.candidates.filter((candidate) => candidate.status === 'succeeded').length,
             total: test.count,
           })}
@@ -248,7 +265,8 @@ function TestRecord({ test, href }: { test: WritingTest; href: string }) {
         )}
         {expired && (
           <Typography variant="body" className="text-content-secondary mt-2">
-            {t('expired')} · {t('expiredHelp')}
+            {t(observing ? 'observation.expired' : 'expired')} ·{' '}
+            {t(observing ? 'observation.expiredHelp' : 'expiredHelp')}
           </Typography>
         )}
       </div>
