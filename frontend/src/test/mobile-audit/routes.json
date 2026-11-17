@@ -232,7 +232,7 @@
     },
     "return": {
       "href": "/posts",
-      "name": "네이버 블로그로 돌아가기"
+      "name": "글로 돌아가기"
     }
   },
   "/posts/experiments/record": {
@@ -263,7 +263,7 @@
     },
     "return": {
       "href": "/posts",
-      "name": "네이버 블로그로 돌아가기"
+      "name": "글로 돌아가기"
     }
   },
   "/voices": {

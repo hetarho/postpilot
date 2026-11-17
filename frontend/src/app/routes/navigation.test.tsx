@@ -150,7 +150,7 @@ it('opens kit pages on the kit title and their sibling chips, with no back link'
       '목소리',
     ]),
   )
-  expect(screen.getByText('글쓰기 키트')).toBeInTheDocument()
+  expect(screen.getByText('내 스타일')).toBeInTheDocument()
   expect(styleChips.getByRole('link', { name: '템플릿' })).toHaveAttribute('aria-current', 'page')
   const kinds = within(screen.getByRole('navigation', { name: '글 · 영상' }))
   expect(kinds.getByRole('link', { name: '글' })).toHaveAttribute('aria-current', 'page')
@@ -211,11 +211,11 @@ it('retains a 설정 origin through reload and restores its document position on
 })
 // Home draws the kit from the lists the kit's screens read, and holds one creation entry.
 it.each([
-  ['ko', '글쓰기', '템플릿'],
-  ['en', 'Write', 'Templates'],
+  ['ko', '글쓰기', '템플릿', '내 스타일'],
+  ['en', 'Write', 'Template', 'My style'],
 ] as const)(
   'draws the writing kit with one creation entry in %s without object writes',
-  async (locale, write, template) => {
+  async (locale, write, template, legend) => {
     viewport(true)
     initializeI18n(locale)
     const calls: string[] = []
@@ -225,7 +225,10 @@ it.each([
       'href',
       '/posts/new',
     )
-    const kit = within(within(main).getByRole('figure'))
+    // The kit is drawn once as the post it writes (one image) and keyed by a legend whose four
+    // rows open the four screens.
+    expect(within(main).getByRole('img', { name: new RegExp(template) })).toBeInTheDocument()
+    const kit = within(within(main).getByRole('navigation', { name: legend }))
     expect(kit.getAllByRole('link')).toHaveLength(4)
     expect(kit.getByRole('link', { name: new RegExp('^' + template) })).toBeInTheDocument()
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)

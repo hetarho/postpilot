@@ -439,7 +439,8 @@ function ScopedEditor({
     const talkArtifact = state.session?.workingSource ?? selected
     const failureMessage = hasFailure ? (
       <div className="space-y-3">
-        <p>
+        {/* A div, not a p: the failure message renders its own block. */}
+        <div>
           {conflict ? (
             t('conflict')
           ) : failure ? (
@@ -447,7 +448,7 @@ function ScopedEditor({
           ) : (
             t('failed')
           )}
-        </p>
+        </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="cta" size="compact" onClick={() => event('RETRY')}>
             {t(frozenPublication ? 'saveRetry' : 'retry')}

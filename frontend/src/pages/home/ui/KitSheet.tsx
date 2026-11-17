@@ -1,242 +1,154 @@
-import type { ComponentType, ReactNode } from 'react'
-import { Link } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import {
-  AlertTriangle,
-  Brain,
-  Check,
-  ChevronRight,
-  LayoutList,
-  Plus,
-  Quote,
-  ShieldCheck,
-} from 'lucide-react'
+import { Check } from 'lucide-react'
 import { TemplateOutline } from '@/entities/template'
-import { Badge, Skeleton, Typography, typographyStyles } from '@/shared/ui'
-import type { KitElement, KitLevel, KitReadiness } from '../model/readiness'
+import { Typography, typographyStyles } from '@/shared/ui'
+import type { KitElement, KitReadiness } from '../model/readiness'
 import type { WritingKit } from '../model/useWritingKit'
+import { KIT_TONES } from '../model/kit-tones'
+import { KitMarker } from './kit-marks'
 
-const ICONS: Record<KitElement, ComponentType<{ className?: string }>> = {
-  template: LayoutList,
-  voice: Quote,
-  memory: Brain,
-  guideline: ShieldCheck,
-}
-
-/** Where each layer leads: its own screen once it holds something, or straight into making the
- *  first one while it is empty. */
-const DESTINATIONS: Record<
-  KitElement,
-  { ready: string; empty: { to: string; search?: Record<string, unknown> } }
-> = {
-  template: { ready: '/templates', empty: { to: '/templates/new' } },
-  voice: { ready: '/voices', empty: { to: '/voices', search: { new: 1 } } },
-  memory: { ready: '/memories', empty: { to: '/memories', search: { new: 1 } } },
-  guideline: { ready: '/guidelines', empty: { to: '/guidelines', search: { new: 1 } } },
-}
-
-/** Guide: the readiness graphic — a sheet of paper that IS the post the kit makes. Each element
- *  of the kit is one layer of that post, drawn from the owner's own data: the template is the
- *  structure (its headings), the voice is the sentence (its own sample), the memories are the
- *  facts woven in, the guidelines are the rules in the margin. A layer that is not ready is drawn
- *  as its dashed outline, so the owner sees the hole in the page rather than a percentage. A spine
- *  down the left joins the layers, its node saying ready, almost or empty; the next layer to fill
- *  carries a still accent ring with a breathing halo behind it (motion only in the halo). The
- *  whole layer is the way to its screen. */
+/** Guide: the readiness graphic — one sheet of paper that IS the post the kit writes, drawn from
+ *  the owner's own data. The template is its skeleton (the template's own headings, through the
+ *  shared `TemplateOutline`); under the headings the voice writes the sentence (its own sample,
+ *  habits marked), the memories are the facts highlighted in the text, and the rules are the
+ *  stamps in the margin. Each part carries its mark in the left gutter, in the element's ink; a
+ *  part that is not ready is drawn as its dashed hole, so the owner sees what their post lacks
+ *  rather than a percentage. A second sheet lies under it, and the halo behind it warms as the kit
+ *  fills — still shapes, with motion only in the halos.
+ *
+ *  The drawing is one image to assistive technology (its label lists every part's state); the
+ *  legend beside it (`KitLegend`) is where each part is opened. */
 export function KitSheet({ data }: { data: WritingKit }) {
   const { t } = useTranslation('creation')
-  const next = data.summary.settled ? data.summary.next : undefined
+  const settled = data.summary.settled
+  const next = settled ? data.summary.next : undefined
+  const item = (element: KitElement) =>
+    data.kit.find((entry) => entry.element === element) as KitReadiness
+  const states = data.kit
+    .map((entry) => `${t(`home.elements.${entry.element}.name`)} ${t(`home.level.${entry.level}`)}`)
+    .join(', ')
+  const parts: { element: Exclude<KitElement, 'template'>; body: ReactNode }[] = [
+    { element: 'voice', body: <VoiceBody item={item('voice')} data={data} /> },
+    { element: 'memory', body: <MemoryBody item={item('memory')} data={data} /> },
+    { element: 'guideline', body: <GuidelineBody item={item('guideline')} data={data} /> },
+  ]
+  const template = item('template')
   return (
-    <figure aria-labelledby="home-sheet-caption" className="relative isolate min-w-0">
-      {/* The halo: the kit's warmth grows with what is ready — still when reduced motion asks. */}
+    <div
+      role="img"
+      aria-label={t('home.sheetLabel', { states })}
+      className="relative isolate mx-auto w-full max-w-lg"
+    >
+      {/* The halo: the kit's warmth grows with what is ready. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -inset-4 -z-10 sm:-inset-8"
-        style={{ opacity: 0.35 + 0.15 * data.summary.ready }}
+        className="pointer-events-none absolute -inset-6 -z-20 sm:-inset-10"
+        style={{ opacity: 0.2 + 0.12 * data.summary.ready }}
       >
         <div className="bg-promo-aurora-1 animate-promo-glow absolute top-0 left-0 size-2/3 rounded-full blur-3xl" />
         <div className="bg-promo-aurora-2 animate-promo-glow absolute right-0 bottom-0 size-2/3 rounded-full blur-3xl [animation-delay:1.6s]" />
       </div>
-      <div className="bg-surface-raised ring-divider rounded-3xl p-4 shadow-xl ring-1 sm:p-6">
-        <figcaption
-          id="home-sheet-caption"
-          className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1"
-        >
-          <Typography variant="eyebrow" as="span">
-            {t('home.sheet')}
-          </Typography>
-          <span aria-hidden="true" className="flex gap-1.5">
-            <span className="bg-divider size-2 rounded-full" />
-            <span className="bg-divider size-2 rounded-full" />
-            <span className="bg-divider size-2 rounded-full" />
-          </span>
-        </figcaption>
-        <ol className="relative mt-3">
-          {data.kit.map((item, index) => (
-            <li
-              key={item.element}
-              className="animate-rise relative"
-              style={{ animationDelay: `${index * 90}ms` }}
-            >
-              {/* The spine between this node and the next. */}
-              {index < data.kit.length - 1 && (
-                <span
-                  aria-hidden="true"
-                  className={clsx(
-                    'absolute top-11 bottom-0 left-[1.6875rem] w-0.5 rounded-full sm:left-[1.9375rem]',
-                    item.level === 'ready' ? 'bg-badge-done-bg/50' : 'bg-divider',
-                  )}
-                />
-              )}
-              <KitLayer item={item} data={data} next={next === item.element} />
-            </li>
-          ))}
-        </ol>
-      </div>
-    </figure>
-  )
-}
-
-function KitLayer({ item, data, next }: { item: KitReadiness; data: WritingKit; next: boolean }) {
-  const { t } = useTranslation('creation')
-  const Icon = ICONS[item.element]
-  const filled = item.level === 'ready' || item.level === 'partial'
-  const destination = filled
-    ? { to: DESTINATIONS[item.element].ready }
-    : DESTINATIONS[item.element].empty
-  const name = t(`home.elements.${item.element}.name`)
-  return (
-    <Link
-      to={destination.to}
-      search={destination.search}
-      aria-label={`${name} · ${levelText(t, item)}`}
-      className={clsx(
-        'group relative grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 rounded-2xl p-3 sm:gap-x-4 sm:p-4',
-        'hover:bg-row-bg-hover active:bg-row-bg-active duration-fast ease-standard transition-colors',
-        next && 'ring-stroke-accent bg-surface-raised ring-2',
-      )}
-    >
-      {next && (
-        <span
-          aria-hidden="true"
-          className="bg-promo-aurora-1 animate-promo-glow pointer-events-none absolute -inset-1 -z-10 rounded-3xl opacity-25 blur-xl"
-        />
-      )}
-      <Node level={item.level} icon={Icon} />
-      <span className="flex min-w-0 flex-col gap-2">
-        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+      {/* The post under this one: the kit writes every post, not one. */}
+      <div
+        aria-hidden="true"
+        className="bg-surface-raised ring-divider absolute inset-x-5 top-4 -bottom-3 -z-10 rotate-[2.5deg] rounded-[1.75rem] shadow-md ring-1"
+      />
+      <div
+        aria-hidden="true"
+        className="bg-surface-raised ring-divider relative isolate overflow-hidden rounded-[1.75rem] px-5 pt-5 pb-6 shadow-xl ring-1 sm:px-7 sm:pt-6 sm:pb-8"
+      >
+        <PostHead caption={t('home.sheet')} />
+        <div className="relative mt-5 pl-10">
+          {/* The template shapes the post from its title down: its mark stands at the title. */}
+          <KitMarker
+            item={template}
+            next={next === 'template'}
+            className="absolute -top-1.5 left-0"
+          />
           <span
-            className={typographyStyles({ variant: 'label', className: 'text-content-primary' })}
-          >
-            {name}
-          </span>
-          <span className={typographyStyles({ variant: 'meta', className: 'min-w-0' })}>
-            {t(`home.elements.${item.element}.role`)}
-          </span>
-          <span className="ml-auto flex items-center gap-1">
-            {next && <Badge tone="accent">{t('home.next')}</Badge>}
-            <LevelBadge item={item} />
-          </span>
-        </span>
-        <span className="block min-w-0">
-          <LayerBody item={item} data={data} />
-        </span>
-        <span
-          className={typographyStyles({
-            variant: 'label',
-            className:
-              'text-link-fg group-hover:text-link-fg-hover inline-flex items-center gap-0.5 self-end',
-          })}
-        >
-          {t(`home.open.${item.level === 'ready' ? 'ready' : filled ? 'partial' : 'empty'}`)}
-          <ChevronRight aria-hidden="true" className="size-4" />
-        </span>
-      </span>
-    </Link>
+            className={clsx(
+              'block h-4 w-4/5 rounded-full',
+              template.level === 'ready' || template.level === 'loading'
+                ? 'bg-content-tertiary/25'
+                : DASHED,
+            )}
+          />
+          <span className="mt-6 block" />
+          {!settled ? (
+            <LoadingBody />
+          ) : (
+            <TemplateOutline
+              template={template.level === 'ready' ? data.template?.first : undefined}
+              max={parts.length}
+              fill
+            >
+              {(index) => (
+                <Part item={item(parts[index].element)} next={next === parts[index].element}>
+                  {parts[index].body}
+                </Part>
+              )}
+            </TemplateOutline>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 
-function levelText(t: ReturnType<typeof useTranslation<'creation'>>['t'], item: KitReadiness) {
-  if (item.level === 'partial' && item.percent !== undefined)
-    return t('home.level.making', { percent: item.percent })
-  if (item.level === 'loading') return '…'
-  return t(`home.level.${item.level}`)
-}
-
-function LevelBadge({ item }: { item: KitReadiness }) {
-  const { t } = useTranslation('creation')
-  if (item.level === 'loading')
-    return (
-      <span aria-hidden="true" className="loading-reveal block">
-        <Skeleton className="h-5 w-14" />
+/** The top of a post: who wrote it, and its title — the parts no kit element decides. */
+function PostHead({ caption }: { caption: string }) {
+  return (
+    <span className="flex flex-col">
+      <span className="flex items-center gap-3">
+        <span className="bg-badge-accent-bg block size-8 shrink-0 rounded-full" />
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="bg-divider block h-2 w-20 rounded-full" />
+          <span className="bg-divider block h-2 w-12 rounded-full opacity-70" />
+        </span>
+        <Typography variant="eyebrow" as="span" className="shrink-0">
+          {caption}
+        </Typography>
       </span>
-    )
-  const tone = ({ ready: 'done', partial: 'warning', empty: 'neutral', failed: 'danger' } as const)[
-    item.level
-  ]
-  return <Badge tone={tone}>{levelText(t, item)}</Badge>
+    </span>
+  )
 }
 
-function Node({
-  level,
-  icon: Icon,
+/** One part of the post a kit element writes: its mark in the gutter, a bracket in its ink down
+ *  the part, and what it puts on the page. */
+function Part({
+  item,
+  next,
+  children,
 }: {
-  level: KitLevel
-  icon: ComponentType<{ className?: string }>
+  item: KitReadiness
+  next: boolean
+  children: ReactNode
 }) {
   return (
-    <span
-      aria-hidden="true"
-      className={clsx(
-        'relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full',
-        level === 'ready' && 'bg-badge-done-bg text-badge-done-fg',
-        level === 'partial' && 'bg-notice-warning-bg text-notice-warning-fg',
-        level === 'empty' && 'border-content-tertiary text-content-tertiary border-2 border-dashed',
-        level === 'failed' && 'bg-notice-danger-bg text-notice-danger-fg',
-        level === 'loading' && 'bg-badge-neutral-bg text-content-tertiary',
-      )}
-    >
-      {level === 'ready' ? (
-        <Check className="size-4" />
-      ) : level === 'empty' ? (
-        <Plus className="size-4" />
-      ) : level === 'failed' ? (
-        <AlertTriangle className="size-4" />
-      ) : (
-        <Icon className="size-4" />
-      )}
+    <span className="relative block">
+      <KitMarker item={item} next={next} className="absolute top-0 -left-10" />
+      <span
+        className={clsx(
+          'absolute top-9 bottom-0 -left-[1.6875rem] w-0.5 rounded-full',
+          item.level === 'ready' || item.level === 'partial'
+            ? [KIT_TONES[item.element].line, item.level === 'ready' ? 'opacity-40' : 'opacity-20']
+            : 'bg-divider',
+        )}
+      />
+      <span className="block min-h-7">{children}</span>
     </span>
   )
 }
 
-/** The dashed outline of a layer that is missing: the shape it would take, and one line on what
- *  the page lacks without it. */
-function Missing({ lines, children }: { lines: number[]; children: ReactNode }) {
+function Bars({ widths, className }: { widths: number[]; className?: string }) {
   return (
     <span className="flex flex-col gap-2">
-      {lines.map((width, index) => (
-        <span
-          key={index}
-          aria-hidden="true"
-          className="border-content-tertiary/50 block h-3 rounded-full border border-dashed"
-          style={{ width: `${width}%` }}
-        />
-      ))}
-      <span className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}>
-        {children}
-      </span>
-    </span>
-  )
-}
-
-function Lines({ widths }: { widths: number[] }) {
-  return (
-    <span aria-hidden="true" className="flex flex-col gap-1.5">
       {widths.map((width, index) => (
         <span
           key={index}
-          className="bg-divider block h-2 rounded-full"
+          className={clsx('block h-2.5 rounded-full', className ?? 'bg-divider')}
           style={{ width: `${width}%` }}
         />
       ))}
@@ -244,169 +156,171 @@ function Lines({ widths }: { widths: number[] }) {
   )
 }
 
-function LayerBody({ item, data }: { item: KitReadiness; data: WritingKit }) {
-  const { t } = useTranslation('creation')
-  if (item.level === 'loading')
+const DASHED = 'border-content-tertiary/50 border border-dashed bg-transparent'
+
+function LoadingBody() {
+  return (
+    <span className="loading-reveal flex flex-col gap-5">
+      {[0, 1, 2].map((index) => (
+        <span key={index} className="flex flex-col gap-2">
+          <span className="bg-divider block h-3 w-2/5 rounded-full" />
+          <Bars widths={[94, 72]} />
+        </span>
+      ))}
+    </span>
+  )
+}
+
+/** The voice writes the sentence: its own sample with its habits marked, or the lines it will
+ *  write once it is made. */
+function VoiceBody({ item, data }: { item: KitReadiness; data: WritingKit }) {
+  const voice = data.voice
+  if (item.level === 'ready' && voice?.sample)
     return (
-      <span aria-hidden="true" className="loading-reveal flex flex-col gap-2">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="h-4 w-1/2" />
-      </span>
-    )
-  if (item.level === 'failed') return null
-  switch (item.element) {
-    case 'template':
-      return data.template ? (
-        <span className="flex flex-col gap-2">
-          <span
-            className={typographyStyles({
-              variant: 'fieldTitle',
-              className: 'text-content-primary break-words',
-            })}
-          >
-            {data.template.first.name}
-          </span>
-          <TemplateOutline template={data.template.first} max={3} />
-          {data.template.count > 1 && (
-            <span className={typographyStyles({ variant: 'meta' })}>
-              {t('home.elements.template.count', { count: data.template.count })}
-            </span>
-          )}
+      <span className="flex flex-col gap-2">
+        <span
+          className={typographyStyles({
+            variant: 'body',
+            className: 'text-content-primary line-clamp-3 break-words',
+          })}
+        >
+          <Marked text={voice.sample} phrases={voice.phrases} />
         </span>
-      ) : (
-        <Missing lines={[70, 45, 60]}>{t('home.elements.template.empty')}</Missing>
-      )
-    case 'voice':
-      if (item.level === 'empty')
-        return <Missing lines={[95, 85, 60]}>{t('home.elements.voice.empty')}</Missing>
-      if (data.voice?.sample && item.level === 'ready')
-        return (
-          <span className="flex flex-col gap-2">
-            <span
-              className={typographyStyles({
-                variant: 'fieldTitle',
-                className: 'text-content-primary break-words',
-              })}
-            >
-              “{data.voice.sample}”
-            </span>
-            {data.voice.phrases.length > 0 && (
-              <span className="flex flex-wrap gap-1.5">
-                {data.voice.phrases.map((phrase) => (
-                  <span
-                    key={phrase}
-                    className={typographyStyles({
-                      variant: 'meta',
-                      className:
-                        'bg-voice-habit-highlight text-voice-habit-foreground rounded-md px-2 py-0.5',
-                    })}
-                  >
-                    {phrase}
-                  </span>
-                ))}
-              </span>
-            )}
-            <span className={typographyStyles({ variant: 'meta' })}>
-              {t('home.elements.voice.defaultName', { name: data.voice.voice.name })}
-            </span>
-          </span>
-        )
-      if (item.level === 'ready' && data.voice)
-        return (
-          <span className="flex flex-col gap-2">
-            <Lines widths={[95, 88, 70]} />
-            <span className={typographyStyles({ variant: 'body' })}>
-              {t('home.elements.voice.noSample', { name: data.voice.voice.name })}
-            </span>
-          </span>
-        )
-      return (
-        <span className="flex flex-col gap-2">
-          <Lines widths={[95, 88, 70]} />
-          {item.percent !== undefined && (
-            <span
-              aria-hidden="true"
-              className="bg-meter-track block h-1.5 w-full overflow-hidden rounded-full"
-            >
-              <span
-                className="bg-meter-fill block h-full rounded-full"
-                style={{ width: `${item.percent}%` }}
-              />
-            </span>
-          )}
-          <span
-            className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}
-          >
-            {t(
-              item.percent === undefined
-                ? 'home.elements.voice.noDefault'
-                : item.percent >= 100
-                  ? 'home.elements.voice.readyToMake'
-                  : 'home.elements.voice.making',
-            )}
-          </span>
-        </span>
-      )
-    case 'memory':
-      return data.memories.count > 0 ? (
-        <span className="flex flex-col gap-2">
-          <span className="flex flex-wrap gap-1.5">
-            {data.memories.shown.map((memory) => (
-              <span
-                key={memory.id}
-                className={typographyStyles({
-                  variant: 'body',
-                  className:
-                    'bg-origin-owner-highlight text-origin-owner-foreground line-clamp-1 max-w-full rounded-lg px-2.5 py-1 break-all',
-                })}
-              >
-                {memory.text}
-              </span>
-            ))}
-          </span>
-          {data.memories.count > data.memories.shown.length && (
-            <span className={typographyStyles({ variant: 'meta' })}>
-              {t('home.elements.memory.more', {
-                count: data.memories.count - data.memories.shown.length,
-              })}
-            </span>
-          )}
-        </span>
-      ) : (
-        <Missing lines={[40]}>{t('home.elements.memory.empty')}</Missing>
-      )
-    case 'guideline':
-      return data.guidelines.shown.length > 0 ? (
-        <span className="flex flex-col gap-2">
-          <span className="flex flex-col gap-1">
-            {data.guidelines.shown.map((rule) => (
-              <span key={rule.key} className="flex min-w-0 items-start gap-2">
-                <Check aria-hidden="true" className="text-badge-done-bg mt-1 size-4 shrink-0" />
+        {!voice.phrases.some((phrase) => voice.sample?.includes(phrase)) &&
+          voice.phrases.length > 0 && (
+            <span className="flex flex-wrap gap-1.5">
+              {voice.phrases.slice(0, 2).map((phrase) => (
                 <span
+                  key={phrase}
                   className={typographyStyles({
-                    variant: 'body',
-                    className: 'text-content-primary line-clamp-1 min-w-0 flex-1',
+                    variant: 'meta',
+                    className:
+                      'bg-voice-habit-highlight text-voice-habit-foreground max-w-full truncate rounded-md px-2 py-0.5',
                   })}
                 >
-                  {rule.text}
+                  {phrase}
                 </span>
-                {rule.builtIn && (
-                  <Badge tone="neutral" className="shrink-0">
-                    {t('home.elements.guideline.defaultBadge')}
-                  </Badge>
-                )}
-              </span>
-            ))}
+              ))}
+            </span>
+          )}
+      </span>
+    )
+  if (item.level === 'ready')
+    return <Bars widths={[96, 90, 58]} className="bg-voice-habit-highlight" />
+  if (item.level === 'partial')
+    return (
+      <span className="flex flex-col gap-3">
+        <Bars widths={[96, 90, 58]} />
+        {item.percent !== undefined && (
+          <span className="bg-meter-track block h-1 w-full overflow-hidden rounded-full">
+            <span
+              className="bg-kit-ink-voice block h-full rounded-full"
+              style={{ width: `${Math.min(100, item.percent)}%` }}
+            />
           </span>
-          <span className={typographyStyles({ variant: 'meta' })}>
-            {[
-              t('home.elements.guideline.own', { count: data.guidelines.own }),
-              t('home.elements.guideline.defaults', { count: data.guidelines.defaults }),
-            ].join(' · ')}
-          </span>
+        )}
+      </span>
+    )
+  return <Bars widths={[96, 90, 58]} className={DASHED} />
+}
+
+/** The voice's habit phrases, marked where they occur in its sample. */
+function Marked({ text, phrases }: { text: string; phrases: string[] }) {
+  const found = phrases.filter((phrase) => phrase && text.includes(phrase))
+  if (!found.length) return <>{text}</>
+  const pattern = new RegExp(
+    `(${found.map((phrase) => phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+  )
+  return (
+    <>
+      {text.split(pattern).map((piece, index) =>
+        found.includes(piece) ? (
+          <mark
+            key={index}
+            className="bg-voice-habit-highlight text-voice-habit-foreground rounded px-0.5"
+          >
+            {piece}
+          </mark>
+        ) : (
+          piece
+        ),
+      )}
+    </>
+  )
+}
+
+/** The memories are the facts the post is told: highlighted in the running text. */
+function MemoryBody({ item, data }: { item: KitReadiness; data: WritingKit }) {
+  if (item.level === 'ready' && data.memories.shown.length > 0)
+    return (
+      <span className="flex flex-col gap-2">
+        <Bars widths={[88]} />
+        <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+          {data.memories.shown.slice(0, 2).map((memory) => (
+            <span
+              key={memory.id}
+              className={typographyStyles({
+                variant: 'body',
+                className:
+                  'bg-origin-owner-highlight text-origin-owner-foreground max-w-full truncate rounded-md px-2',
+              })}
+            >
+              {memory.text}
+            </span>
+          ))}
+          {data.memories.count > 2 && (
+            <span className={typographyStyles({ variant: 'meta' })}>
+              +{data.memories.count - 2}
+            </span>
+          )}
+        </span>
+        <Bars widths={[64]} />
+      </span>
+    )
+  return (
+    <span className="flex flex-col gap-2">
+      <Bars widths={[88]} />
+      <span className="flex items-center gap-2">
+        <span className="bg-divider block h-2.5 w-1/5 rounded-full" />
+        <span className={clsx('block h-6 w-2/5 rounded-md', DASHED)} />
+        <span className="bg-divider block h-2.5 w-1/4 rounded-full" />
+      </span>
+    </span>
+  )
+}
+
+/** The rules are what the post was checked against: stamps under its last lines. */
+function GuidelineBody({ item, data }: { item: KitReadiness; data: WritingKit }) {
+  const shown = data.guidelines.shown.slice(0, 2)
+  return (
+    <span className="flex flex-col gap-2.5">
+      <Bars widths={[92, 70]} />
+      {(item.level === 'ready' || item.level === 'partial') && shown.length > 0 ? (
+        <span className="flex min-w-0 flex-wrap gap-1.5">
+          {shown.map((rule) => (
+            <span
+              key={rule.key}
+              className={typographyStyles({
+                variant: 'meta',
+                className: clsx(
+                  'inline-flex max-w-full items-center gap-1 rounded-full px-2.5 py-1',
+                  rule.builtIn
+                    ? 'ring-origin-ai-foreground/40 text-content-secondary ring-1 ring-inset'
+                    : 'bg-origin-ai-highlight text-origin-ai-foreground',
+                ),
+              })}
+            >
+              <Check className="size-3.5 shrink-0" />
+              <span className="truncate">{rule.text}</span>
+            </span>
+          ))}
         </span>
       ) : (
-        <Missing lines={[65, 50]}>{t('home.elements.guideline.empty')}</Missing>
-      )
-  }
+        <span className="flex gap-1.5">
+          <span className={clsx('block h-7 w-24 rounded-full', DASHED)} />
+          <span className={clsx('block h-7 w-16 rounded-full', DASHED)} />
+        </span>
+      )}
+    </span>
+  )
 }

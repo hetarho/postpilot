@@ -781,7 +781,7 @@ describe('localized registered-route smoke', () => {
       analysis: 'Voice analysis',
       materials: 'Training data',
       models: 'AI tournament',
-      home: /High-quality writing/,
+      home: /Great posts/,
       clips: 'Videos',
       retry: 'Try again',
       kind: 'What kind of post is this?',

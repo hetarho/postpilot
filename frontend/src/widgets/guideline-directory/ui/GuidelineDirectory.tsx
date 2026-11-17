@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
+import { clsx } from 'clsx'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
 import { Check, FileText, Sparkles } from 'lucide-react'
@@ -266,13 +267,10 @@ export function GuidelineDirectory({
                 </Button>
               </div>
               <Typography variant="body" className="text-content-secondary mt-1">
-                {t('bands.own.lead', { ns: 'guidelines' })}
+                {t(kind === 'clip' ? 'bands.own.clipLead' : 'bands.own.lead', { ns: 'guidelines' })}
               </Typography>
               {guidelines.length > 0 ? (
-                <ul
-                  aria-label={t(`${page}.listAria`, { ns: 'guidelines' })}
-                  className="mt-3 grid gap-3"
-                >
+                <ul aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className={ruleSheet}>
                   {guidelines.map((guideline, index) => (
                     <GuidelineRow
                       key={guideline.id}
@@ -295,7 +293,9 @@ export function GuidelineDirectory({
                 </ul>
               ) : (
                 <Typography variant="body" className="text-content-tertiary mt-3">
-                  {t('bands.own.empty', { ns: 'guidelines' })}
+                  {t(kind === 'clip' ? 'bands.own.clipEmpty' : 'bands.own.empty', {
+                    ns: 'guidelines',
+                  })}
                 </Typography>
               )}
             </section>
@@ -318,10 +318,12 @@ export function GuidelineDirectory({
                 </span>
               </div>
               <Typography variant="body" className="text-content-secondary mt-1">
-                {t('bands.defaults.lead', { ns: 'guidelines' })}
+                {t(kind === 'clip' ? 'bands.defaults.clipLead' : 'bands.defaults.lead', {
+                  ns: 'guidelines',
+                })}
               </Typography>
               {inUse.length > 0 ? (
-                <ul className="mt-3 grid gap-3">
+                <ul className={ruleSheet}>
                   {inUse.map((guideline, index) => (
                     <DefaultGuidelineItem
                       key={guideline.key}
@@ -417,16 +419,24 @@ function SentenceTitle({
   sentence,
   name,
   badge,
+  builtIn = false,
 }: {
   sentence: string
   name?: string
   badge?: ReactNode
+  /** A 기본 지침: its check is an outline, the owner's own is the warm stamp home's sheet draws. */
+  builtIn?: boolean
 }) {
   return (
     <span className="flex min-w-0 items-start gap-3 py-1">
       <span
         aria-hidden="true"
-        className="bg-badge-accent-bg text-badge-accent-fg mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full"
+        className={clsx(
+          'mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full',
+          builtIn
+            ? 'ring-divider text-content-tertiary ring-1 ring-inset'
+            : 'bg-origin-ai-highlight text-origin-ai-foreground',
+        )}
       >
         <Check className="size-4" />
       </span>
@@ -450,8 +460,13 @@ function SentenceTitle({
   )
 }
 
-/** The card a rule row sits on. */
-const ruleCard = cardStyles({ padding: 'none', className: 'px-4 py-2 sm:px-5 sm:py-3' })
+/** Guide: a band is one page of a rulebook — one sheet, its rules ruled off from each other —
+ *  rather than a card per rule, so the band reads as the set the AI keeps to. */
+const ruleSheet = cardStyles({
+  padding: 'none',
+  className: 'divide-divider mt-3 divide-y overflow-hidden',
+})
+const ruleCard = 'px-4 py-2 sm:px-5 sm:py-3'
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
@@ -514,7 +529,7 @@ function DefaultGuidelineItem({
         headingLevel={3}
         title={
           // A closed rule is its sentence alone; what kind of rule it is shows once it is open.
-          <SentenceTitle sentence={guideline.name} />
+          <SentenceTitle sentence={guideline.name} builtIn />
         }
       >
         <div className="pb-3 pl-6">
@@ -630,8 +645,10 @@ function GuidelineRow({
           />
         </div>
       </Disclosure>
-      <div className="pb-3 pl-6">
-        <Typography variant="body" className="text-content-secondary">
+      {/* The rule's state, quietly under it: saved and in use, and anything unusual — a draft in
+          progress, a job, a conflict. */}
+      <div className="pb-2 pl-15">
+        <Typography variant="meta" as="p">
           {t('authoringState.savedAvailable')}
         </Typography>
         <EditingStatus summary={summary} />

@@ -33,9 +33,11 @@ import {
   workCardStyles,
   workCardFooterClass,
 } from '@/widgets/work-list'
+import { WORK_ILLUSTRATIONS } from '@/shared/assets'
 import { appFailureFromConnect } from '@/shared/api'
 import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
+  EmptySlot,
   AppFailureMessage,
   Badge,
   Button,
@@ -181,13 +183,14 @@ export function ClipHistoryPage() {
 
       {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
       {!projects.isError && !projects.isPending && listed.length === 0 && (
-        <Typography
-          variant="body"
-          role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
+        <EmptySlot
+          variant="open"
+          status
+          image={WORK_ILLUSTRATIONS.clips}
+          className="px-4 sm:px-6 lg:px-8"
         >
           {historyText('empty')}
-        </Typography>
+        </EmptySlot>
       )}
 
       {/* A narrowing that matches nothing is NOT the same screen as an account with no clips: it

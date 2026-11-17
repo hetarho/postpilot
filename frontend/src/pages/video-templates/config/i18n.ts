@@ -26,7 +26,8 @@ export const i18n = {
         '인트로·아웃트로와 자막 스타일을 바꿔요. 이름과 구성 편집은 저장된 템플릿에서 AI 편집 또는 직접 편집을 골라 주세요.',
       backToSaved: '저장된 영상 템플릿 “{{name}}” 보기',
       title: '영상 템플릿',
-      description: '클립에 받을 정보, 순서대로 담을 구성과 시작 디자인을 저장해 두세요.',
+      lead: '영상이 이 흐름으로 이어져요',
+      description: 'AI와 대화해서 만들고, 영상을 만들 때 골라 써요.',
       saved: '저장된 영상 템플릿',
       empty: '아직 저장된 영상 템플릿이 없어요',
       emptyHelp:
@@ -61,8 +62,8 @@ export const i18n = {
         'Change intro, outro and caption styles. Choose AI editing or direct editing on the saved template to change its name and structure.',
       backToSaved: 'View saved video template “{{name}}”',
       title: 'Video templates',
-      description:
-        'Save what a clip asks for, the outline it follows in order and the design it starts in.',
+      lead: 'Your videos follow this flow',
+      description: 'Make one by talking to the AI, then pick it when you make a video.',
       saved: 'Saved video templates',
       empty: 'No video templates yet',
       emptyHelp:

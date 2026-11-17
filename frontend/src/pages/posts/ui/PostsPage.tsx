@@ -29,9 +29,11 @@ import {
   workCardStyles,
   workCardFooterClass,
 } from '@/widgets/work-list'
+import { WORK_ILLUSTRATIONS } from '@/shared/assets'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
 import {
+  EmptySlot,
   Badge,
   Button,
   Notice,
@@ -186,13 +188,14 @@ export function PostsPage() {
 
       {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
       {!isError && isEmpty && !isNarrowed && (
-        <Typography
-          variant="body"
-          role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
+        <EmptySlot
+          variant="open"
+          status
+          image={WORK_ILLUSTRATIONS.posts}
+          className="px-4 sm:px-6 lg:px-8"
         >
           {t('list.empty', { ns: 'posts' })}
-        </Typography>
+        </EmptySlot>
       )}
 
       {/* A narrowing that matches nothing is NOT the same screen as an account with no posts

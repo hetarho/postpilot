@@ -22,15 +22,35 @@ import {
 } from '@/shared/ui'
 import type { VoiceLearningNavigation } from '@/features/prepare-writing-voice'
 import { VoiceSetup } from './VoiceSetup'
-import { TemplateSetup } from './TemplateSetup'
+import { TemplateSetup, type SetupTemplateRenderer } from './TemplateSetup'
 
-export function CreationSetup({ restart = false }: { restart?: boolean }) {
+export function CreationSetup({
+  restart = false,
+  renderTemplate,
+}: {
+  restart?: boolean
+  /** The template questions' conversation, composed by the page that holds setup. */
+  renderTemplate: SetupTemplateRenderer
+}) {
   const { user } = useSession()
   return (
-    <AccountSetup key={`${user?.id ?? ''}:${restart}`} ownerId={user?.id ?? ''} restart={restart} />
+    <AccountSetup
+      key={`${user?.id ?? ''}:${restart}`}
+      ownerId={user?.id ?? ''}
+      restart={restart}
+      renderTemplate={renderTemplate}
+    />
   )
 }
-function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean }) {
+function AccountSetup({
+  ownerId,
+  restart,
+  renderTemplate,
+}: {
+  ownerId: string
+  restart: boolean
+  renderTemplate: SetupTemplateRenderer
+}) {
   const { t } = useTranslation('creation')
   const navigate = useNavigate()
   const controller = useSetup(ownerId, restart)
@@ -165,15 +185,14 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
               ))}
             </div>
           )}
-          {/* A template step's foot is the wizard's step bar, so its note stands up here. */}
-          {(introStep || templateStep) && (
+          {introStep && (
             <Typography variant="meta" className="mt-6 block">
               {t('setup.optional')}
             </Typography>
           )}
         </section>
-        {/* A template wizard ends on its own step bar, which meets the screen's bottom edge only
-            down a chain of flex columns. */}
+        {/* A template question's conversation fills the screen down to the step bar, through a
+            chain of flex columns. */}
         <div className={clsx('min-w-0', templateStep && 'flex flex-1 flex-col')}>
           <div className={clsx(templateStep && 'flex flex-1 flex-col')}>
             {state.step === 'welcome' && state.plan.length > 0 && (
@@ -224,24 +243,11 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                 ownerId={ownerId}
                 kind={state.step}
                 controller={controller}
-                host={{
-                  back: controller.back,
-                  backDisabled: busy,
-                  footer: (
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      disabled={busy}
-                      onClick={controller.skip}
-                    >
-                      {t('setup.skip')}
-                    </Button>
-                  ),
-                }}
+                render={renderTemplate}
               />
             )}
           </div>
-          {!introStep && !templateStep && (
+          {!introStep && (
             <Typography variant="meta" className="mt-4 block md:mt-8">
               {t('setup.optional')}
             </Typography>
@@ -249,8 +255,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
         </div>
       </div>
       {/* The thumb zone, on the step bar every stepped screen shares: the screen's one big
-          answer on the welcome, and the way back and the skip on the voice question. A template
-          question's bar is its wizard's, which carries setup's way back and skip. */}
+          answer on the welcome, and the way back and the skip on every question. */}
       {state.step === 'welcome' && (
         <StepBar>
           <StepBarActions>
@@ -261,7 +266,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           </Button>
         </StepBar>
       )}
-      {state.step !== 'welcome' && state.step !== 'ready' && !templateStep && (
+      {state.step !== 'welcome' && state.step !== 'ready' && (
         <StepBar>
           <StepBarActions
             back={

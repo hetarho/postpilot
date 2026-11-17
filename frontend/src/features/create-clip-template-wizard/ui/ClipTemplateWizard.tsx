@@ -30,6 +30,7 @@ import {
   Typography,
   WizardFrame,
   WizardPreviewDock,
+  typographyStyles,
 } from '@/shared/ui'
 import { clipStageSeeds, subjectOf } from '../config/catalog'
 import { toClipWizardBody } from '../lib/to-composition'
@@ -399,30 +400,23 @@ function OwnedClipTemplateWizard({
           back,
           next,
           children: (
+            // The order is read, not built: a template's stages are not dragged or moved here.
+            // It follows the clip it was started from; changing it is a matter of asking the AI
+            // on the saved template.
             <ol className="space-y-2">
               {selected.map((stage, index) => (
-                <li key={stage.id} className="flex min-h-11 items-center justify-between gap-2">
+                <li key={stage.id} className="flex min-h-11 items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className={typographyStyles({
+                      variant: 'label',
+                      className:
+                        'bg-badge-accent-bg text-badge-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full',
+                    })}
+                  >
+                    {index + 1}
+                  </span>
                   <Typography variant="body">{stage.name}</Typography>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="compact"
-                      disabled={index === 0}
-                      aria-label={t('up', { ns: 'clipWizard', name: stage.name })}
-                      onClick={() => send({ type: 'reorder', from: index, to: index - 1 })}
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="compact"
-                      disabled={index === selected.length - 1}
-                      aria-label={t('down', { ns: 'clipWizard', name: stage.name })}
-                      onClick={() => send({ type: 'reorder', from: index, to: index + 1 })}
-                    >
-                      ↓
-                    </Button>
-                  </div>
                 </li>
               ))}
             </ol>

@@ -14,12 +14,14 @@ import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
 import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
 import { RestoreVoiceButton } from '@/features/restore-voice'
+import { KIT_ILLUSTRATIONS } from '@/shared/assets'
 import { ChevronRight, Plus, Quote } from 'lucide-react'
 import {
   ActionBar,
   ActionMenu,
   Badge,
   Button,
+  EmptySlot,
   Notice,
   LoadingState,
   LoadingStatus,
@@ -102,25 +104,17 @@ export function VoicesPage() {
           </Button>
         </Notice>
       )}
-      <LoadingStatus
-        label={
-          isError
-            ? ''
-            : isPending
-              ? t('state.loading', { ns: 'common' })
-              : active.length === 0
-                ? t('page.empty', { ns: 'voices' })
-                : ''
-        }
-        className={
-          !isError && !isPending && active.length === 0
-            ? typographyStyles({
-                variant: 'body',
-                className: 'text-content-tertiary mt-8 block px-4 sm:px-6 lg:px-8',
-              })
-            : 'sr-only'
-        }
-      />
+      {!isError && !isPending && active.length === 0 ? (
+        // No voice at all: the dashed place the first one will stand, its pen faded. The words
+        // are the screen's status, filled once it has settled.
+        <div className="mt-6 px-4 sm:px-6 lg:px-8">
+          <EmptySlot image={KIT_ILLUSTRATIONS.voice}>
+            <LoadingStatus label={t('page.empty', { ns: 'voices' })} className="" />
+          </EmptySlot>
+        </div>
+      ) : (
+        <LoadingStatus label={isError || !isPending ? '' : t('state.loading', { ns: 'common' })} />
+      )}
       {!isError && isPending && (
         <div aria-hidden="true">
           <LoadingState
@@ -144,15 +138,12 @@ export function VoicesPage() {
             active.length > 0 && (
               // The slot the voice in use will fill: its outline, and what fills it.
               <div className="mt-6 px-4 sm:px-6 lg:px-8">
-                <div className="border-divider flex flex-col gap-3 rounded-2xl border-2 border-dashed p-5 sm:p-6">
-                  <Quote aria-hidden="true" className="text-content-tertiary size-7" />
-                  <Typography variant="fieldTitle" as="p">
-                    {t('page.noInUse', { ns: 'voices' })}
-                  </Typography>
-                  <Typography variant="body" className="text-content-secondary">
-                    {t('page.noInUseHelp', { ns: 'voices' })}
-                  </Typography>
-                </div>
+                <EmptySlot
+                  image={KIT_ILLUSTRATIONS.voice}
+                  title={t('page.noInUse', { ns: 'voices' })}
+                >
+                  {t('page.noInUseHelp', { ns: 'voices' })}
+                </EmptySlot>
               </div>
             )
           )}
@@ -372,10 +363,10 @@ function OtherVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
             </span>
           )
         ) : (
-          <span className="flex items-center gap-2">
+          <span className="flex min-w-0 flex-col gap-1.5">
             <span
               aria-hidden="true"
-              className="bg-meter-track block h-1.5 w-24 overflow-hidden rounded-full"
+              className="bg-meter-track block h-1.5 w-full max-w-60 overflow-hidden rounded-full"
             >
               <span
                 className="bg-meter-fill block h-full rounded-full"

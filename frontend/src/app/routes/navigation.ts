@@ -31,7 +31,7 @@ export function isFocusedFlow(pathname: string): boolean {
   )
 }
 
-/** The one hub that holds several sibling pages: the 글쓰기 키트 (말투 · 템플릿 · 지침 · 기억 ·
+/** The one hub that holds several sibling pages: the 내 스타일 kit (말투 · 템플릿 · 지침 · 기억 ·
  *  목소리), which home draws as its readiness graphic. Its pages share a large title and a chip row;
  *  each is top-level within the hub, with no back link and no recorded return, and the 홈 tab is
  *  the one that is lit while they are open. */

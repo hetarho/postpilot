@@ -30,11 +30,11 @@ export const i18n = {
         },
         'post-template': {
           title: '자주 쓰는 글 구성',
-          description: '마음에 드는 시작, 사진 배치, 마무리를 골라요.',
+          description: '어떤 글을 올리는지 말하면 AI가 글의 순서를 짜 줘요.',
         },
         'clip-template': {
           title: '영상이 이어지는 흐름',
-          description: '첫 장면부터 마지막 자막까지 어울리는 구성을 골라요.',
+          description: '어떤 영상을 만드는지 말하면 AI가 흐름을 짜 줘요.',
         },
       },
       welcome: {
@@ -76,17 +76,17 @@ export const i18n = {
       'post-template': {
         title: '자주 쓰는 글의 구성을 정해요.',
         description:
-          '도입, 사진, 본문처럼 글에 반복해서 쓰는 순서를 만들어 보세요. 자세한 조정은 나중에 해도 괜찮아요.',
+          '어떤 글을 올리는지 AI에게 말해 주세요. AI가 그린 초안을 대화로 다듬어 저장해요. 자세한 조정은 나중에 해도 괜찮아요.',
       },
       'clip-template': {
         title: '영상에도 나만의 흐름을 담아요.',
         description:
-          '처음과 끝, 자막에 어떤 내용을 담을지 정해 두세요. 클립마다 자유롭게 바꿀 수 있어요.',
+          '어떤 영상을 만드는지 AI에게 말해 주세요. 처음과 끝, 자막의 흐름을 대화로 정해요. 영상마다 자유롭게 바꿀 수 있어요.',
       },
       ready: {
         title: '이제, 당신의 이야기를 만들어요.',
         description:
-          '준비한 설정은 다음에도 그대로예요. 나중에 바꾸고 싶다면 메뉴의 설정에서 찾아 주세요.',
+          '준비한 것은 다음에도 그대로예요. 홈에서 언제든 내 스타일을 살펴보고 고칠 수 있어요.',
         home: '만들러 가기',
         post: '첫 글 작성하기',
         clip: '첫 클립 만들기',
@@ -122,11 +122,11 @@ export const i18n = {
         },
         'post-template': {
           title: 'Your familiar post structure',
-          description: 'Choose an opening, photo arrangement, and ending you like.',
+          description: 'Say what you post and the AI drafts its order.',
         },
         'clip-template': {
           title: 'The flow of your videos',
-          description: 'Choose a structure from the first scene to the final caption.',
+          description: 'Say what videos you make and the AI drafts their flow.',
         },
       },
       welcome: {
@@ -168,17 +168,17 @@ export const i18n = {
       'post-template': {
         title: 'Give your posts a familiar shape.',
         description:
-          'Build the opening, photos and sections you often use. Fine-tune the details later.',
+          'Tell the AI what you post. Refine the draft it draws by talking, then save it. Fine-tune the details later.',
       },
       'clip-template': {
         title: 'Give your videos a personal flow.',
         description:
-          'Choose what your opening, captions and ending say. You can change them for each clip.',
+          'Tell the AI what videos you make and settle the opening, captions and ending by talking. You can change them for each video.',
       },
       ready: {
         title: 'Your story starts here.',
         description:
-          'Your settings will be here next time. To change them, open Settings from the menu.',
+          'What you set up stays for next time. Look over and change your style from Home any time.',
         home: 'Start creating',
         post: 'Write my first post',
         clip: 'Create my first clip',

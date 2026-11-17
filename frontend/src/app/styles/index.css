@@ -270,6 +270,12 @@
      the blue ramp at steps of its own; its thick solid underline and the view's label carry it. */
   --evidence-voice-habit-foreground: var(--palette-blue-200);
   --evidence-voice-habit-highlight: var(--palette-blue-900);
+  /* The writing kit's four inks (home's readiness sheet): one hue per element, at the step where
+     a dot or a thin bracket still reads on the ground. Decorative only — never text. */
+  --kit-ink-template: var(--palette-violet-400);
+  --kit-ink-voice: var(--palette-blue-300);
+  --kit-ink-memory: var(--palette-green-300);
+  --kit-ink-guideline: var(--palette-gold-300);
 
   /* interaction + physical light */
   --interaction-focus: var(--palette-violet-300);
@@ -346,6 +352,10 @@
   --evidence-unconfirmed-highlight: var(--palette-mauve-100);
   --evidence-voice-habit-foreground: var(--palette-blue-800);
   --evidence-voice-habit-highlight: var(--palette-blue-100);
+  --kit-ink-template: var(--palette-violet-500);
+  --kit-ink-voice: var(--palette-blue-500);
+  --kit-ink-memory: var(--palette-green-500);
+  --kit-ink-guideline: var(--palette-gold-400);
 
   --interaction-focus: var(--palette-violet-500);
   --physical-scrim: var(--palette-mauve-950);
@@ -989,6 +999,10 @@
   --color-origin-unconfirmed-highlight: var(--origin-unconfirmed-highlight);
   --color-voice-habit-foreground: var(--voice-habit-foreground);
   --color-voice-habit-highlight: var(--voice-habit-highlight);
+  --color-kit-ink-template: var(--kit-ink-template);
+  --color-kit-ink-voice: var(--kit-ink-voice);
+  --color-kit-ink-memory: var(--kit-ink-memory);
+  --color-kit-ink-guideline: var(--kit-ink-guideline);
 
   /* system interaction */
   --color-focus-ring: var(--focus-ring);

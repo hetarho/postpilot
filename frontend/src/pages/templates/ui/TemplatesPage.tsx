@@ -7,9 +7,11 @@ import { TemplateOutline, useTemplates, type Template } from '@/entities/templat
 import { DeleteTemplateButton } from '@/features/delete-template'
 import { ChannelActions } from '@/widgets/channel-actions'
 import { LayoutList } from 'lucide-react'
+import { KIT_ILLUSTRATIONS } from '@/shared/assets'
 import {
   Badge,
   DirectoryItem,
+  EmptySlot,
   Button,
   Notice,
   LoadingState,
@@ -175,13 +177,16 @@ export function TemplatesPage() {
 function EmptyState() {
   const { t } = useTranslation('templates')
   return (
+    // The dashed place the first template will stand, its drawing faded.
     <section aria-labelledby="templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="templates-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+      <EmptySlot
+        image={KIT_ILLUSTRATIONS.template}
+        title={t('page.empty')}
+        titleAs="h2"
+        titleId="templates-empty-heading"
+      >
         {t('page.emptyHelp')}
-      </Typography>
+      </EmptySlot>
     </section>
   )
 }
@@ -223,7 +228,15 @@ function TemplateRow({
       // its own line of description under that, so the list is read for structure, not names.
       description={
         <span className="mt-1 flex flex-col gap-2">
-          <TemplateOutline template={template} />
+          <TemplateOutline template={template} className="gap-2.5">
+            {(index) => (
+              <span
+                aria-hidden="true"
+                className="bg-divider block h-2 rounded-full"
+                style={{ width: `${[86, 72, 80, 64][index % 4]}%` }}
+              />
+            )}
+          </TemplateOutline>
           {template.description && (
             <Typography variant="meta" as="span" className="line-clamp-2">
               {template.description}

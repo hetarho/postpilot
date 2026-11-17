@@ -14,7 +14,7 @@ export const navigationI18n = {
     closeOverflow: '이동 메뉴 닫기',
     returnLabel: '돌아가기',
     sections: '나누어 보기',
-    hub: { style: '글쓰기 키트' },
+    hub: { style: '내 스타일' },
     style: {
       voices: '말투',
       templates: '템플릿',
@@ -86,7 +86,7 @@ export const navigationI18n = {
     closeOverflow: 'Close navigation menu',
     returnLabel: 'Return',
     sections: 'Show',
-    hub: { style: 'Writing kit' },
+    hub: { style: 'My style' },
     style: {
       voices: 'Styles',
       templates: 'Templates',

@@ -7,6 +7,7 @@ import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
 import { MemoryEditForm } from '@/features/edit-memory'
+import { KIT_ILLUSTRATIONS } from '@/shared/assets'
 import {
   ActionBar,
   Badge,
@@ -15,6 +16,7 @@ import {
   LoadingState,
   TextField,
   Typography,
+  EmptySlot,
   cardStyles,
   pageStyles,
   typographyStyles,
@@ -184,7 +186,14 @@ export function MemoriesPage() {
                                 />
                               </div>
                               {group.length > 0 && (
-                                <ul className="mt-2 grid gap-2">
+                                // One sheet per kind, its facts ruled off from each other: the
+                                // group reads as one page of what the AI knows, not a pile of cards.
+                                <ul
+                                  className={cardStyles({
+                                    padding: 'none',
+                                    className: 'divide-divider mt-2 divide-y overflow-hidden',
+                                  })}
+                                >
                                   {group.map((memory) => (
                                     <MemoryRow
                                       key={memory.id}
@@ -248,16 +257,17 @@ function buttonNamed(root: Element | null | undefined, name: string) {
 function EmptyState() {
   const { t } = useTranslation('memories')
   return (
+    // The dashed place the first fact will stand, its drawing faded, with one example of a fact.
     <section aria-labelledby="memories-empty-heading" className="mt-8">
-      <Typography variant="title" id="memories-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.emptyHelp')}
-      </Typography>
-      <Typography variant="body" className="text-content-primary mt-3">
-        {t('page.example')}
-      </Typography>
+      <EmptySlot
+        image={KIT_ILLUSTRATIONS.memory}
+        title={t('page.empty')}
+        titleAs="h2"
+        titleId="memories-empty-heading"
+      >
+        <p>{t('page.emptyHelp')}</p>
+        <p className="text-content-primary mt-2">{t('page.example')}</p>
+      </EmptySlot>
     </section>
   )
 }
@@ -295,7 +305,7 @@ function MemoryRow({
 
   if (form.editing)
     return (
-      <li data-memory-row className={cardStyles({ padding: 'sm' })}>
+      <li data-memory-row className="px-4 py-3 sm:px-5">
         <MemoryEditForm
           memory={memory}
           save={update.save}
@@ -310,7 +320,7 @@ function MemoryRow({
     )
 
   return (
-    <li data-memory-row className={cardStyles({ padding: 'sm' })}>
+    <li data-memory-row className="px-4 py-3 sm:px-5">
       <div className="flex flex-wrap items-start gap-1">
         <Typography
           variant="fieldTitle"

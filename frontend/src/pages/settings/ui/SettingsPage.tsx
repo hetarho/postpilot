@@ -30,7 +30,7 @@ type Icon = ComponentType<{ className?: string }>
 /** Guide: 설정 — the owner's own page, reached from the avatar at the top right (it is no longer a
  *  tab). It opens on what they most often come here for, the credits
  *  left, as one big figure with ONE 충전 action; under it the rest are iOS-style grouped rows, each
- *  drilling into a one-topic screen. What the owner taught the AI lives in the 글쓰기 키트 and model
+ *  drilling into a one-topic screen. What the owner taught the AI lives in 내 스타일 and model
  *  choice in AI 토너먼트, so nothing here is about writing. */
 export function SettingsPage() {
   const { t } = useTranslation(['creation', 'plans'])

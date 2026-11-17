@@ -17,7 +17,6 @@ import {
   PromoStage,
   TabBar,
   Typography,
-  chipStyles,
   pageStyles,
   typographyStyles,
   useMediaQuery,
@@ -27,6 +26,7 @@ import { AccountMenu } from '@/widgets/account-menu'
 import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 import { CLIP_LIST_PATH } from '@/entities/clip-project'
+import { KIT_ILLUSTRATIONS } from '@/shared/assets'
 import { endSession } from '../model/end-session'
 import {
   entryHref,
@@ -48,6 +48,15 @@ import {
   TAB_DESTINATIONS,
 } from './navigation'
 import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
+
+/** The hub's five objects, drawn as the set home's kit is keyed with. */
+const STYLE_ILLUSTRATIONS = {
+  voices: KIT_ILLUSTRATIONS.voice,
+  templates: KIT_ILLUSTRATIONS.template,
+  guidelines: KIT_ILLUSTRATIONS.guideline,
+  memories: KIT_ILLUSTRATIONS.memory,
+  spoken: KIT_ILLUSTRATIONS.spoken,
+} as const
 
 /** Guide: one glyph per tab, so a destination is found by shape before it is read. */
 const TAB_ICONS = {
@@ -403,26 +412,48 @@ export function AuthenticatedLayout() {
             over the hub's title (THEME-58). */}
         {section && backNav}
         {section && (
-          // The directory column's own width, so the title and chips line up with the list.
+          // The directory column's own width, so the shelf and the switch line up with the list.
           <div className={pageStyles({ width: 'wide', className: 'pt-2 pb-0 sm:pt-6 sm:pb-0' })}>
-            <p
-              aria-hidden="true"
-              className={typographyStyles({ variant: 'largeTitle', className: 'truncate' })}
-            >
+            {/* Guide: the hub's name, small, over a SHELF of its five objects — the same drawings
+                home's kit is keyed with — so the page's own heading below is the screen's title
+                and each section is found by its object before its word. */}
+            <p aria-hidden="true" className={typographyStyles({ variant: 'groupLabel' })}>
               {t(`hub.${section.hub}`)}
             </p>
             <nav
               aria-label={t('sections')}
-              className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
+              className="-mx-4 mt-2 flex gap-1 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:gap-2 sm:px-0"
             >
               {chips.map((chip) => (
                 <Link
                   key={chip.key}
                   to={chip.href}
                   aria-current={chip.current ? 'page' : undefined}
-                  className={chipStyles({ current: chip.current })}
+                  className={clsx(
+                    'duration-fast ease-standard flex min-w-16 flex-1 shrink-0 flex-col items-center gap-1 rounded-2xl px-2 pt-2 pb-1.5 transition-colors sm:w-24 sm:flex-none',
+                    chip.current
+                      ? 'bg-badge-accent-bg text-badge-accent-fg ring-stroke-accent/40 ring-1 ring-inset'
+                      : 'hover:bg-row-bg-hover active:bg-row-bg-active text-content-secondary',
+                  )}
                 >
-                  {chip.label}
+                  <img
+                    src={STYLE_ILLUSTRATIONS[chip.key]}
+                    alt=""
+                    width={40}
+                    height={40}
+                    className="size-10 object-contain"
+                  />
+                  <span
+                    className={typographyStyles({
+                      variant: 'label',
+                      className: clsx(
+                        'max-w-full truncate',
+                        chip.current ? 'text-badge-accent-fg' : 'text-content-secondary',
+                      ),
+                    })}
+                  >
+                    {chip.label}
+                  </span>
                 </Link>
               ))}
             </nav>

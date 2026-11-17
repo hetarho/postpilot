@@ -44,7 +44,12 @@ export function VideoTemplatesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
+      {/* Guide: as the 글 side does, the page leads with what a video template does — the flow a
+          video follows — and how one is made, by talking to the AI. */}
+      <h1 className="sr-only">{t('directory.title', { ns: 'clips' })}</h1>
+      <Typography variant="display" as="p" aria-hidden="true">
+        {t('directory.lead', { ns: 'clips' })}
+      </Typography>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('directory.description', { ns: 'clips' })}
       </Typography>

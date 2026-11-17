@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { AudioLines, Plus } from 'lucide-react'
+import { KIT_ILLUSTRATIONS } from '@/shared/assets'
 import { useSession } from '@/entities/session'
 import { SPOKEN_AUDITION_TEXT, SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
 import {
   ActionBar,
   DirectoryItem,
+  EmptySlot,
   LoadingState,
   Typography,
   pageStyles,
@@ -51,16 +53,10 @@ export function SpokenVoicesPage() {
       {!library.voicesQuery.isError &&
         !library.voicesQuery.isPending &&
         library.voices.length === 0 && (
-          // The empty slot of a voice: a play button with nothing to play yet, and the line a
-          // voice will read once there is one.
-          <div className="border-divider mt-2 flex flex-col gap-4 rounded-2xl border-2 border-dashed p-5 sm:p-6">
-            <span
-              aria-hidden="true"
-              className="border-content-tertiary text-content-tertiary flex size-12 items-center justify-center rounded-full border-2 border-dashed"
-            >
-              <AudioLines className="size-5" />
-            </span>
-            <figure>
+          // The empty slot of a voice: its microphone, faded, and the line a voice will read
+          // once there is one.
+          <EmptySlot image={KIT_ILLUSTRATIONS.spoken} className="mt-2">
+            <figure className="min-w-0">
               <figcaption className={typographyStyles({ variant: 'label' })}>
                 {t('reads')}
               </figcaption>
@@ -73,7 +69,7 @@ export function SpokenVoicesPage() {
                 “{SPOKEN_AUDITION_TEXT}”
               </blockquote>
             </figure>
-          </div>
+          </EmptySlot>
         )}
       {!library.voicesQuery.isError && library.voicesQuery.isPending && (
         <LoadingState variant="list" label={t('loading')} className="mt-4" />
