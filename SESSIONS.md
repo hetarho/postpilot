@@ -178,7 +178,6 @@
 - 261117 decided T897: MODEL-97 T897: the writing-test machine judged a candidate readable only by its post output, so an observation test never opened its pair, expired at once and refused adoption → one shared entity judgment (output or observations) now serves the machine, the widgets and the payload check (alt: a second observation-only machine | leaving the compare gate to the widget); edited outside the touches because the acceptance cannot pass otherwise.
 - 261117 decided T897: MODEL-97 T897: how does a phone read the pair photo by photo? → both observations stay stacked under each photo with explicit winner buttons in the dock, so no candidate tab or per-candidate reading position is needed (alt: the post pairs candidate tabs with a saved scroll position per candidate, which would compare the same photo out of view).
 - 261117 parked T897: shared integration waits only on the perf6 participant from another device (status working since 2026-11-16T16:29Z, no live session); wtform, wtform2 and both lchat sessions are ready. Finish or close perf6 on that device (vibe integration close --tag perf6 in its worktree), then resume here with vibe loop --tag wtform2 to run the batch gate and land
-- 261117 suggest -: gusta CLI follow-ups for /gusta-send-issue: a unit receipt with an abbreviated candidate SHA marks finished work failed and stops the loop; a failed-stop report omits ## next so the next preflight fails spec lint; and a corrected report cannot be resumed under the same tag
 - 261117 decided T897: the owner said to ignore perf6 and merge → set only the perf6 participant to withdrawn (reason owner-approved-skip) in the shared integration record, leaving its branch and work untouched; it re-registers on its next ready (alt: merge this session by hand outside the shared gate | keep waiting)
 
 ## unlanded
@@ -231,6 +230,7 @@
 
 ## log
 - 261117 reworded without a markdown heading token (it truncated report sections)
+- 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 T897 done
 - 261117 T896 done
 - 261117 T895 done
@@ -249,4 +249,3 @@
 - 261117 fix writing-tests: setting tests send no model stage (400 WRITING_TEST_FACTOR_INVALID); 4 files incl. one test fixture correction, over the 3-file light limit
 - 261117 gusta-update-ssot ARCH r26 complete: future task checks use affected units and changed-file fast static checks, full frontend TypeScript remains in existing shared batch build. No code task generated. Spec published to planning main as 4fe6f9246; runbook committed separately as fa6a59a81 on owned update branch. Lint passes with 58 inherited warnings plus T887 ARCH freshness warning; submitted task evidence preserved.
 - 261117 gusta-create-task ARCH r26 no-op (no code impact): ARCH-24 and verification runbook assign full frontend TypeScript to existing shared batch build; ARCH tasked=rev, no task generated, unrelated pending INFRA and submitted T878/T879 preserved. T887 needs ARCH freshness review before further implementation.
-- 261117 gusta-update-ssot ARCH start: owner approved future task checks using affected unit and fast static checks; full frontend TypeScript checking belongs to existing shared batch build. Preserve submitted T878/T879 evidence.
