@@ -330,11 +330,36 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-wtform2-c523edbc",
-      "head": "69c86561c3288f428a0d9574431bd7228254faf2",
+      "head": "eb38251ba49fc0b3344761ecd17f88c76717d57b",
       "land": "main",
       "status": "working",
-      "at": "2026-11-17T07:44:05.976Z",
-      "agentChecks": [],
+      "at": "2026-11-17T07:44:55.346Z",
+      "agentChecks": [
+        {
+          "id": "T897-AC5",
+          "scenario": "Photo observation test end to end in a browser: finish an A/B photo test, compare photo by photo, pick a winner, reveal, adopt as the observe AI and see it on /ai-models, at desktop 1280 and phone 390.",
+          "steps": [
+            "Against a dev stack with T890-T896, open /tests/photos, pick two observe models, upload photos and start the test.",
+            "On /tests/$testId at 1280 px, read both observations beside each other for every photo and pick a winner; repeat the view at 390 px with the observations stacked under each photo.",
+            "After the reveal, confirm the champion view names the models and offers 사진 보는 AI로 쓰기 with no post application or export; adopt it.",
+            "Open /ai-models and confirm the adopted model is the active 사진 보는 AI."
+          ],
+          "expected": "Both viewports compare photo by photo with blind labels until the reveal; the champion adopts as the observe-stage AI only on the explicit action and shows on /ai-models; no post is applied or exported.",
+          "observed": "Not run: this unit has no browser host. The same flow is covered by unit-level tests over the real actor and the studio fixture (WritingTestObservationReview, WritingTestObservationPair, WritingTestChampionOutput, WritingTestHistory and writing-test-machine tests).",
+          "evidence": [
+            "frontend/src/widgets/writing-test/ui/WritingTestObservationReview.test.tsx",
+            "frontend/src/widgets/writing-test/ui/WritingTestObservationPair.test.tsx"
+          ],
+          "status": "not-run",
+          "reason": "No browser host is available in this unit; the desktop and phone browser observation is handed to the integration owner.",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host",
+          "candidate": "05aa28d07eab3749acac25d089a0567b7768e302",
+          "duplicationReason": "Replaces no automated e2e; the unit tests cover component and actor behaviour only, not real browser layout, photo loading or the cross-page adoption on /ai-models."
+        }
+      ],
       "verificationCommands": []
     }
   },
