@@ -284,10 +284,11 @@
       "branch": "chore/gusta-update-0.17.4-20261117",
       "head": "e44a8572e8a563d7ef1ca6824174b5722c2610f6",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-17T04:42:51.979Z",
+      "status": "withdrawn",
+      "at": "2026-11-17T04:46:54.804Z",
       "agentChecks": [],
-      "verificationCommands": []
+      "verificationCommands": [],
+      "reason": "gusta-update finished; installation commit remains on owned branch; no implementation contribution to shared cohort"
     }
   },
   "gate": null,
