@@ -83,7 +83,7 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
-| T898 | Give reasoning observers room to finish an observation batch | MODEL QUOTA ARCH | - | todo |
+| T898 | Give reasoning observers room to finish an observation batch | MODEL QUOTA ARCH | - | doing@261117.obsfix |
 | T899 | Show each contestant's state and word retries and match progress in the test's own terms | MODEL ARCH | - | todo |
 
 ## work

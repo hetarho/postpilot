@@ -96,6 +96,11 @@ const (
 	// only their writing budget leaves a full ordinary writing budget visible after an
 	// 8,116-token reasoning pass against the former 8,192 floor.
 	writeReasoningHeadroomFactor = 2
+	// A model that reasons spends its thinking inside the observation cap too, and the ones
+	// with no effort control think freely: measured 261117, four of them used the whole
+	// 2,048-token batch budget before writing an entry, while the finished entries took
+	// 359-526 tokens. Four times the batch budget is the clip observer's 8,192 (MODEL-100).
+	observeReasoningHeadroomFactor = 4
 	// writeBudgetCeilingFactor bounds a derived budget at this multiple of the configured
 	// fallback. It exists so a mistyped target length cannot ask a provider for an
 	// effectively unbounded completion, and it is a multiple rather than its own number so
@@ -157,8 +162,14 @@ func (b LLMCompletionBudget) Short(nativeEffort bool) int {
 	return b.withReasoningHeadroom(min(b.WriteFloor, b.Ceiling), nativeEffort)
 }
 
-// Observation is one observation batch's budget, independent of the writer's.
-func (b LLMCompletionBudget) Observation() int { return b.Observe }
+// Observation is one observation batch's budget, independent of the writer's. An observer
+// that reasons gets the observation headroom (MODEL-100), bounded by the ceiling.
+func (b LLMCompletionBudget) Observation(reasons bool) int {
+	if !reasons {
+		return b.Observe
+	}
+	return min(b.Observe*observeReasoningHeadroomFactor, b.Ceiling)
+}
 
 func (b LLMCompletionBudget) forChars(chars int) int {
 	budget := b.WriteFloor

@@ -372,6 +372,9 @@ type StartRequest struct {
 	// photo count — and the credit hold has to price every call, not every photo.
 	ObserveCalls      int
 	WriteNativeEffort bool
+	// ObserveReasons: the observe model reasons, so the hold prices its observation headroom
+	// (MODEL-100).
+	ObserveReasons bool
 	// FromStoryline is 이 스토리로 글 쓰기 / 다시 쓰기: the run writes along the stored storyline
 	// and observes exactly what it holds (GEN-70).
 	FromStoryline bool

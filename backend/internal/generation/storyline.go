@@ -27,6 +27,8 @@ type StartStorylineRequest struct {
 	TargetLanguage          Language
 	VoiceID                 string
 	ObserveCalls            int
+	// ObserveReasons prices each observation call with its headroom (MODEL-100).
+	ObserveReasons bool
 	// WriteNativeEffort is frozen from the write model at enqueue, as Start freezes it, so the
 	// hold prices exactly the cap the call sends (GEN-22).
 	WriteNativeEffort bool
@@ -93,6 +95,7 @@ func (s *Service) StartStoryline(ctx context.Context, request StartStorylineRequ
 	request.WriteNativeEffort = in.write.ReasoningNativeEffort
 	request.ObserveModel = in.observe.model
 	request.ObserveCalls = in.observe.calls
+	request.ObserveReasons = in.observe.reasons
 	material, err := s.freezeStorylineMaterial(ctx, in.post)
 	if err != nil {
 		return "", err

@@ -110,6 +110,7 @@ func (s *Service) setCache(rows []Model) {
 			Reasoning:             stageReasoningOf(row),
 			ReasoningEfforts:      efforts,
 			ReasoningNativeEffort: row.NativeEffort,
+			Reasons:               row.Reasons,
 			Stages:                stagesOf(row),
 			Levels:                stageLevelsOf(row),
 			Delisted:              !row.Listed,

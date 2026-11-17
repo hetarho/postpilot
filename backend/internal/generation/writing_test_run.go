@@ -437,7 +437,7 @@ type writingTestFrozenBudget struct {
 	observe, write int
 }
 
-func (b writingTestFrozenBudget) Observation() int     { return b.observe }
+func (b writingTestFrozenBudget) Observation(bool) int { return b.observe }
 func (b writingTestFrozenBudget) Write(*int, bool) int { return b.write }
 
 type writingTestFrozenProfiles struct{ Profiles }

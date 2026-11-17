@@ -57,7 +57,7 @@ func TestEachStageSendsItsOwnCompletionBudget(t *testing.T) {
 	for _, call := range models.calls {
 		budgets[call.request.Stage] = call.request.MaxTokens
 	}
-	if got, want := budgets[llm.StageNameObserve], testBudget.Observation(); got != want {
+	if got, want := budgets[llm.StageNameObserve], testBudget.Observation(false); got != want {
 		t.Errorf("observe budget = %d, want %d", got, want)
 	}
 	if got, want := budgets[llm.StageNameWrite], testBudget.Write(&target, false); got != want {

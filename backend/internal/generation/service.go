@@ -66,8 +66,9 @@ type CompletionBudget interface {
 	// Storyline is a storyline call's cap. The answer is short and does not grow with a target
 	// length, but a native-effort model reasons inside the same cap (GEN-22).
 	Storyline(nativeEffort bool) int
-	// Observation is one observation batch's cap, independent of the writer's.
-	Observation() int
+	// Observation is one observation batch's cap, independent of the writer's; an observer
+	// that reasons gets room for its thinking (MODEL-100).
+	Observation(reasons bool) int
 }
 
 // Deps are the collaborators from other contexts a generation run reads or writes
@@ -212,6 +213,7 @@ func (s *Service) Start(ctx context.Context, request StartRequest) (string, erro
 	request.WriteNativeEffort = in.write.ReasoningNativeEffort
 	request.ObserveModel = in.observe.model
 	request.ObserveCalls = in.observe.calls
+	request.ObserveReasons = in.observe.reasons
 	profile, err := s.profileForTopic(ctx, request.UserID, in.voiceID, in.language, post.Title+" "+post.Memo, contentTags(post.Content))
 	if err != nil {
 		return "", fmt.Errorf("freeze writing voice: %w", err)

@@ -223,3 +223,36 @@ func TestObservationTestEntrantsObserveIndependentlyResumeAndRetryWithoutWriting
 		t.Fatalf("forged checkpoint: %v", err)
 	}
 }
+
+// MODEL-100: a reasoning contestant freezes the observation headroom, another the batch budget,
+// and the plan prices each frozen budget.
+func TestObservationTestFreezesReasoningHeadroomPerObserver(t *testing.T) {
+	factory, ports, models, sources, _, _ := observationTestFixture(t, 4)
+	request := observationTestRequest(t, ports, models, sources, 2)
+	reasoning := llm.ModelRef{ProviderID: "p", ModelID: "observer-0"}
+	info := ports.models[reasoning]
+	info.Reasons = true
+	ports.models[reasoning], models.infos[reasoning] = info, info
+	snapshot, err := factory.FreezeWritingTest(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, variants, err := decodeWritingTestSnapshot(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if variants[0].ObserveCompletionTokens != testBudget.Observation(true) || variants[1].ObserveCompletionTokens != testBudget.Observation(false) {
+		t.Fatalf("frozen observe budgets = %d, %d; want %d, %d", variants[0].ObserveCompletionTokens, variants[1].ObserveCompletionTokens, testBudget.Observation(true), testBudget.Observation(false))
+	}
+	calls, err := factory.PlanWritingTest(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	priced := map[string]int{}
+	for _, call := range calls {
+		priced[call.Ref.ModelID] = call.CompletionTokens
+	}
+	if priced["observer-0"] != testBudget.Observation(true) || priced["observer-1"] != testBudget.Observation(false) {
+		t.Fatalf("plan priced %v, want the frozen budgets", priced)
+	}
+}

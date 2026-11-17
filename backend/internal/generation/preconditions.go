@@ -81,6 +81,9 @@ type observePlan struct {
 	observations []Observation
 	// calls is how many observation calls the frozen set takes.
 	calls int
+	// reasons: the observe model reasons, so each call gets the observation headroom
+	// (MODEL-100) and the hold prices it.
+	reasons bool
 }
 
 // startPreconditions is the one precondition chain every generation start runs, in this order,
@@ -185,8 +188,9 @@ func (s *Service) planObserve(post PostInput, stage startStage, storyline []Stor
 	} else {
 		files, carried = freezeObserveSelection(post.Images, post.Observations, stage.observeFiles)
 	}
+	info, _ := s.models.Resolve(observe)
 	return observePlan{
-		model: stage.observeModel, files: &files, observations: carried,
+		model: stage.observeModel, files: &files, observations: carried, reasons: info.Reasons,
 		// Priced over the FROZEN set, never over the attached count: a run that reuses every
 		// observation makes no observation call and must not be held for fifteen of them.
 		calls: s.observeCalls(observeTargets(post.Images, &files)),

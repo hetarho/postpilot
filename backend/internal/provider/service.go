@@ -131,7 +131,7 @@ func (s *Service) ListModels(ctx context.Context, userID string) ([]CatalogModel
 		if err != nil {
 			continue
 		}
-		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1, Stage: quotedStage, NativeEffort: info.ReasoningNativeEffort}})
+		required := s.credits.ForCalls([]PlannedCall{{Ref: info.Ref, Count: 1, Stage: quotedStage, NativeEffort: info.ReasoningNativeEffort, Reasons: info.Reasons}})
 		unavailable := required < 0
 		if unavailable {
 			required = 0

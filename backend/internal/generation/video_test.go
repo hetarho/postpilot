@@ -132,7 +132,7 @@ func TestObserveRunsOneCallPerVideoAfterThePhotoBatches(t *testing.T) {
 		if files := strings.TrimPrefix(parts[len(parts)-1].Text, "files: "); strings.Contains(files, ",") {
 			t.Errorf("video call %d named more than one file: %q", i, files)
 		}
-		if call.request.MaxTokens != testBudget.Observation() {
+		if call.request.MaxTokens != testBudget.Observation(false) {
 			t.Errorf("video call %d budget = %d, want one full batch's", i, call.request.MaxTokens)
 		}
 	}

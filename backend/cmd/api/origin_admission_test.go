@@ -18,7 +18,7 @@ func TestOriginAdmissionUsesFrozenCapsAndAddsInputAllowanceBeforeHolding(t *test
 	}
 	request.OriginProtocolVersion = generation.OriginProtocolVersion
 	counts, current := generationCalls(request, budget)
-	if len(current) != 2 || current[1].CompletionTokens != request.CompletionTokens || current[1].PromptTokens != int(usage.HoldPromptTokenBound(0))+generation.OriginPromptTokenOverhead || current[0].CompletionTokens != budget.Observation() || current[0].PromptTokens != int(usage.HoldPromptTokenBound(0))+generation.ObserveOriginPromptTokenOverhead || counts[request.ObserveModel] != 2 {
+	if len(current) != 2 || current[1].CompletionTokens != request.CompletionTokens || current[1].PromptTokens != int(usage.HoldPromptTokenBound(0))+generation.OriginPromptTokenOverhead || current[0].CompletionTokens != budget.Observation(false) || current[0].PromptTokens != int(usage.HoldPromptTokenBound(0))+generation.ObserveOriginPromptTokenOverhead || counts[request.ObserveModel] != 2 {
 		t.Fatalf("new protocol repriced in flight or added a call: %+v %+v", counts, current)
 	}
 	revision := generation.StartRevisionRequest{WriteModel: request.WriteModel, ContentChars: 8000, OriginProtocolVersion: generation.OriginProtocolVersion, CompletionTokens: 16384}

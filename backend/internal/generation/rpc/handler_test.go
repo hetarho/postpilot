@@ -237,7 +237,7 @@ type startBudget struct{}
 func (startBudget) Write(*int, bool) int       { return 1000 }
 func (startBudget) Revise(int, *int, bool) int { return 1000 }
 func (startBudget) Storyline(bool) int         { return 1000 }
-func (startBudget) Observation() int           { return 1000 }
+func (startBudget) Observation(bool) int       { return 1000 }
 
 type startBriefs struct{}
 

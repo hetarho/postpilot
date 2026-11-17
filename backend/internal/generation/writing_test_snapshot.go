@@ -181,7 +181,7 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 			if err != nil {
 				return WritingTestSnapshot{}, err
 			}
-			common.ObserveModel, common.ObservePromptTokens, common.ObserveCompletionTokens = material.ObserveModel, sharedObserver.PromptTokens+ObserveOriginPromptTokenOverhead, f.service.budget.Observation()
+			common.ObserveModel, common.ObservePromptTokens, common.ObserveCompletionTokens = material.ObserveModel, sharedObserver.PromptTokens+ObserveOriginPromptTokenOverhead, f.service.budget.Observation(sharedObserver.Info.Reasons)
 			common.ObserveStructuredOutput = sharedObserver.Info.StructuredOutput
 		}
 	}
@@ -219,7 +219,7 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 				variant.WriteModel, variant.WritePromptTokens, variant.WriteStructuredOutput = ref.Model, info.PromptTokens+OriginPromptTokenOverhead, info.Info.StructuredOutput
 				variant.Snapshot.Post.WriteNativeEffort = info.Info.ReasoningNativeEffort
 			} else {
-				variant.ObserveModel, variant.ObservePromptTokens, variant.ObserveCompletionTokens = ref.Model, info.PromptTokens+ObserveOriginPromptTokenOverhead, f.service.budget.Observation()
+				variant.ObserveModel, variant.ObservePromptTokens, variant.ObserveCompletionTokens = ref.Model, info.PromptTokens+ObserveOriginPromptTokenOverhead, f.service.budget.Observation(info.Info.Reasons)
 				variant.ObserveStructuredOutput = info.Info.StructuredOutput
 				variant.Snapshot.ObserveModel, variant.Snapshot.ObserveFiles, variant.Snapshot.Observations, variant.Snapshot.Prepared = ref.Model.String(), nil, nil, false
 			}
@@ -343,7 +343,7 @@ func (f *WritingTestFactory) freezeObservationTest(ctx context.Context, request 
 		if err != nil {
 			return WritingTestSnapshot{}, err
 		}
-		variant := writingTestVariant{Reference: ref, Revision: ref.Model.String(), ObserveModel: ref.Model, ObservePromptTokens: info.PromptTokens + ObserveOriginPromptTokenOverhead, ObserveCompletionTokens: f.service.budget.Observation(), ObserveStructuredOutput: info.Info.StructuredOutput}
+		variant := writingTestVariant{Reference: ref, Revision: ref.Model.String(), ObserveModel: ref.Model, ObservePromptTokens: info.PromptTokens + ObserveOriginPromptTokenOverhead, ObserveCompletionTokens: f.service.budget.Observation(info.Info.Reasons), ObserveStructuredOutput: info.Info.StructuredOutput}
 		variant.SemanticKey = writingTestSemanticKey(struct {
 			Stage string
 			Ref   llm.ModelRef
@@ -425,7 +425,7 @@ func (f *WritingTestFactory) prepareModel(ctx context.Context, user, stage strin
 		if len(videosOf(images)) > 0 && (!value.Info.VideoInput || !value.Info.VideoDelivery.SignedVideoURL) {
 			return WritingTestModel{}, &VideoUnsupportedError{Model: ref.String()}
 		}
-		if f.service.budget.Observation() <= 0 {
+		if f.service.budget.Observation(value.Info.Reasons) <= 0 {
 			return WritingTestModel{}, ErrWritingTestMaterial
 		}
 	}

@@ -66,6 +66,9 @@ type ModelInfo struct {
 	OutputUSDPerMillion   string
 	PricingCheckedAt      string
 	ReasoningNativeEffort bool
+	// Reasons: the source publishes a reasoning object for this model, so its thinking may
+	// share an observation's completion cap (MODEL-100).
+	Reasons bool
 	// Stages this model may serve, passed through from the source verbatim (see
 	// SourceModel.Stages). Empty means no user-facing stage lists it.
 	Stages []string
@@ -108,6 +111,8 @@ type SourceModel struct {
 	// headroom for writing and revision.
 	ReasoningEfforts      []ReasoningEffort
 	ReasoningNativeEffort bool
+	// Reasons: the source publishes a reasoning object for this model (MODEL-100).
+	Reasons bool
 	// Stages this model is registered to serve, in the stable string form the StageName
 	// constants spell ("observe"/"write"/"analyze"). The strings are the
 	// source's to define — the registry passes them through without interpreting them, the
@@ -398,6 +403,7 @@ func (r *Registry) describe(m SourceModel) ModelInfo {
 		OutputUSDPerMillion:   m.OutputUSDPerMillion,
 		PricingCheckedAt:      m.PricingCheckedAt,
 		ReasoningNativeEffort: m.ReasoningNativeEffort,
+		Reasons:               m.Reasons,
 		Stages:                append([]string(nil), m.Stages...),
 		Levels:                maps.Clone(m.Levels),
 	}

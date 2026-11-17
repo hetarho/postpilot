@@ -377,13 +377,14 @@ func (s *Service) preparePhotoObservationRequest(parts []llm.Part, batch []Image
 		request = appendOriginContract(request, sources, nil, observationOriginContract)
 	}
 	request.Reasoning = s.reasoning.Observe
-	request.MaxTokens = s.budget.Observation()
+	info, resolved := s.models.Resolve(model)
+	request.MaxTokens = s.budget.Observation(resolved && info.Reasons)
 	schema := ObservationsSchema()
 	if protocol == 0 {
 		schema = LegacyObservationsSchema()
 	}
 	setOriginOutput(&request, "Observations", schema, protocol)
-	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
+	if resolved && info.StructuredOutput {
 		request.JSONSchema = schema
 	}
 	return request, sources
@@ -404,13 +405,14 @@ func (s *Service) prepareVideoObservationRequest(video Image, url string, model 
 		request = appendOriginContract(request, sources, nil, observationOriginContract)
 	}
 	request.Reasoning = s.reasoning.Observe
-	request.MaxTokens = s.budget.Observation()
+	info, resolved := s.models.Resolve(model)
+	request.MaxTokens = s.budget.Observation(resolved && info.Reasons)
 	schema := VideoObservationsSchema()
 	if protocol == 0 {
 		schema = LegacyVideoObservationsSchema()
 	}
 	setOriginOutput(&request, "VideoObservations", schema, protocol)
-	if info, ok := s.models.Resolve(model); ok && info.StructuredOutput {
+	if resolved && info.StructuredOutput {
 		request.JSONSchema = schema
 	}
 	return request, sources

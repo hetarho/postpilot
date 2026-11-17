@@ -509,7 +509,7 @@ func (a generationJobs) EnqueueStoryline(ctx context.Context, request generation
 // no voice and no write call, so admission lists only the observation calls its frozen set makes
 // — none when nothing is missing.
 func (a generationJobs) EnqueueObservation(ctx context.Context, request generation.StartObservationRequest, payload []byte) (string, error) {
-	counts, pricing := observeWriteCalls(request.ObserveModel, "", request.ObserveCalls, 0, a.budget)
+	counts, pricing := observeWriteCalls(request.ObserveModel, "", request.ObserveCalls, request.ObserveReasons, 0, a.budget)
 	subjects, guards := postVoiceWork(job.KindObserve, request.UserID, request.PostSlug, "")
 	id, err := a.queue.Enqueue(ctx, job.NewJob{
 		Kind: job.KindObserve, UserID: request.UserID, Subjects: subjects, Guards: guards,
@@ -551,7 +551,7 @@ func generationEnqueueError(err error) error {
 //     user who can afford the write-only retry the picker exists to make cheap.
 //   - pricing is the observe calls the frozen set will make, then the write-stage call at the cap
 //     it will send.
-func observeWriteCalls(observeModel, writeModel string, observeCalls, writeCap int, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
+func observeWriteCalls(observeModel, writeModel string, observeCalls int, observeReasons bool, writeCap int, budget config.LLMCompletionBudget) (map[string]int, []job.PlannedCall) {
 	counts := map[string]int{}
 	if observeModel != "" {
 		total := observeCalls
@@ -563,7 +563,7 @@ func observeWriteCalls(observeModel, writeModel string, observeCalls, writeCap i
 	pricing := make([]job.PlannedCall, 0, 2)
 	if observeModel != "" && observeCalls > 0 {
 		pricing = append(pricing, job.PlannedCall{
-			Ref: observeModel, Stage: "observe", Count: observeCalls, CompletionTokens: budget.Observation(),
+			Ref: observeModel, Stage: "observe", Count: observeCalls, CompletionTokens: budget.Observation(observeReasons),
 		})
 	}
 	if writeModel != "" {
@@ -579,7 +579,7 @@ func generationCalls(request generation.StartRequest, budget config.LLMCompletio
 	if request.OriginProtocolVersion == generation.OriginProtocolVersion && request.CompletionTokens > 0 {
 		completion = request.CompletionTokens
 	}
-	counts, pricing := observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, completion, budget)
+	counts, pricing := observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, request.ObserveReasons, completion, budget)
 	return counts, originPricingAllowance(pricing, request.OriginProtocolVersion)
 }
 
@@ -591,7 +591,7 @@ func storylineCalls(request generation.StartStorylineRequest, budget config.LLMC
 	if request.OriginProtocolVersion == generation.OriginProtocolVersion && request.CompletionTokens > 0 {
 		completion = request.CompletionTokens
 	}
-	counts, pricing := observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, completion, budget)
+	counts, pricing := observeWriteCalls(request.ObserveModel, request.WriteModel, request.ObserveCalls, request.ObserveReasons, completion, budget)
 	return counts, originPricingAllowance(pricing, request.OriginProtocolVersion)
 }
 

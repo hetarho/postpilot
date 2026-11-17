@@ -68,7 +68,7 @@ type promptEvaluationBudget struct{}
 func (promptEvaluationBudget) Write(*int, bool) int       { return 8192 }
 func (promptEvaluationBudget) Revise(int, *int, bool) int { return 8192 }
 func (promptEvaluationBudget) Storyline(bool) int         { return 4096 }
-func (promptEvaluationBudget) Observation() int           { return 2048 }
+func (promptEvaluationBudget) Observation(bool) int       { return 2048 }
 
 type promptEvaluationMaterial struct {
 	post        PostInput

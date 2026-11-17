@@ -296,7 +296,7 @@ func (a providerCredits) ForCalls(calls []provider.PlannedCall) int {
 		completionTokens := 0
 		switch call.Stage {
 		case provider.StageObserve:
-			completionTokens = a.budget.Observation()
+			completionTokens = a.budget.Observation(call.Reasons)
 		case provider.StageWrite:
 			completionTokens = a.budget.Write(nil, call.NativeEffort)
 		}

@@ -739,7 +739,13 @@ func (b fakeBudget) Storyline(nativeEffort bool) int {
 	return b.withHeadroom(min(b.floor, b.ceiling), nativeEffort)
 }
 
-func (b fakeBudget) Observation() int { return b.observe }
+// Observation applies the same ×4 reasoning headroom as the real policy (MODEL-100).
+func (b fakeBudget) Observation(reasons bool) int {
+	if reasons {
+		return b.observe * 4
+	}
+	return b.observe
+}
 
 func (b fakeBudget) forChars(chars int) int {
 	budget := b.floor

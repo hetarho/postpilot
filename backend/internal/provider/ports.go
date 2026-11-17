@@ -53,6 +53,8 @@ type PlannedCall struct {
 	Count        int
 	Stage        Stage
 	NativeEffort bool
+	// Reasons prices an observe call with its reasoning headroom (MODEL-100).
+	Reasons bool
 }
 
 // Credits prices work for the calling account.

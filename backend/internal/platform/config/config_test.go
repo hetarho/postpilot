@@ -172,8 +172,16 @@ func TestLoadDefaults(t *testing.T) {
 		t.Errorf("MailDriver = %q, want log", cfg.MailDriver)
 	}
 	// A7: the observation budget is derived from the batch size, not from the writer's.
-	if got, want := cfg.LLMCompletionBudget.Observation(), 4*observeBudgetPerPhoto; got != want {
+	if got, want := cfg.LLMCompletionBudget.Observation(false), 4*observeBudgetPerPhoto; got != want {
 		t.Errorf("observation budget = %d, want %d for a batch of 4", got, want)
+	}
+	// MODEL-100: a reasoning observer gets four batch budgets, 8,192 for a batch of 4, bounded
+	// by the ceiling; the writer's budgets are untouched by it.
+	if got, want := cfg.LLMCompletionBudget.Observation(true), min(4*observeBudgetPerPhoto*observeReasoningHeadroomFactor, cfg.LLMCompletionBudget.Ceiling); got != want || got != 8192 {
+		t.Errorf("reasoning observation budget = %d, want %d (8192)", got, want)
+	}
+	if capped := (LLMCompletionBudget{Observe: 4096, Ceiling: 10000}).Observation(true); capped != 10000 {
+		t.Errorf("reasoning observation budget = %d, want the 10000 ceiling", capped)
 	}
 	// The effective write budget was raised to 8,192 to stop write-stage truncation (GEN-22).
 	// A post that requests no length must still be sent exactly that, plus the storyline's
@@ -303,14 +311,14 @@ func TestObservationBudgetFollowsTheBatchSize(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if big.LLMCompletionBudget.Observation() <= small.LLMCompletionBudget.Observation() {
+	if big.LLMCompletionBudget.Observation(false) <= small.LLMCompletionBudget.Observation(false) {
 		t.Errorf("a batch of 12 got %d, not more than a batch of 1's %d",
-			big.LLMCompletionBudget.Observation(), small.LLMCompletionBudget.Observation())
+			big.LLMCompletionBudget.Observation(false), small.LLMCompletionBudget.Observation(false))
 	}
 	// A batch of one is still floored to a usable entry.
-	if small.LLMCompletionBudget.Observation() != observeBudgetFloor {
+	if small.LLMCompletionBudget.Observation(false) != observeBudgetFloor {
 		t.Errorf("a batch of 1 got %d, want the floor %d",
-			small.LLMCompletionBudget.Observation(), observeBudgetFloor)
+			small.LLMCompletionBudget.Observation(false), observeBudgetFloor)
 	}
 }
 
@@ -406,8 +414,8 @@ func TestWritingBudgetFollowsTheRequestedLength(t *testing.T) {
 	}
 	// The observation stage is independent of the writer's, which is the whole point of the
 	// split: a stage given headroom it does not need hands a reasoning model room to fill.
-	if budget.Observation() >= budget.Write(nil, false) {
-		t.Errorf("observation %d is not smaller than the writer's floor %d", budget.Observation(), budget.Write(nil, false))
+	if budget.Observation(false) >= budget.Write(nil, false) {
+		t.Errorf("observation %d is not smaller than the writer's floor %d", budget.Observation(false), budget.Write(nil, false))
 	}
 	if got := budget.Write(nil, true); got != 2*(8192+StorylineCompletionAllowance) {
 		t.Errorf("a native-effort writer got %d, want twice the floor and allowance", got)

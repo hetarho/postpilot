@@ -17,6 +17,8 @@ type StartObservationRequest struct {
 	ObserveModel          string
 	ObserveFiles          *[]string
 	ObserveCalls          int
+	// ObserveReasons prices each call with the observation headroom (MODEL-100).
+	ObserveReasons bool
 }
 
 // ObservationJob is one queued observation job as the worker hands it over.
@@ -66,6 +68,7 @@ func (s *Service) StartObservation(ctx context.Context, request StartObservation
 	request.OriginProtocolVersion = s.originProtocol
 	request.ObserveModel = in.observe.model
 	request.ObserveCalls = in.observe.calls
+	request.ObserveReasons = in.observe.reasons
 	payload, err := encodeObservePayload(observeOptions{
 		OriginProtocolVersion: s.originProtocol,
 		ObserveFiles:          in.observe.files, Observations: in.observe.observations,

@@ -54,7 +54,7 @@ type adapterBudget struct{}
 func (adapterBudget) Write(*int, bool) int       { return 2048 }
 func (adapterBudget) Revise(int, *int, bool) int { return 2048 }
 func (adapterBudget) Storyline(bool) int         { return 512 }
-func (adapterBudget) Observation() int           { return 512 }
+func (adapterBudget) Observation(bool) int       { return 512 }
 
 type adapterFactoryPorts struct {
 	sourceReads, rightsChecks, voiceReads int
