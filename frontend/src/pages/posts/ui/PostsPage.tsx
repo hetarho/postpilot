@@ -19,6 +19,7 @@ import { VoiceRefLabel } from '@/entities/voice'
 import { ChannelActions } from '@/widgets/channel-actions'
 import {
   WorkListBody,
+  WorkListHeading,
   WorkListToolbar,
   WorkListLoading,
   FindSheet,
@@ -151,9 +152,8 @@ export function PostsPage() {
         className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
-      {/* The channel opens straight onto this list: the marked channel link names the place, so
-          the heading is for assistive technology only (THEME-38, POST-43). */}
-      <h1 className="sr-only">{t('list.mine', { ns: 'posts' })}</h1>
+      {/* The 글 tab opens on what it holds; its groups (작성 중 · 완성) say the rest. */}
+      <WorkListHeading kind="posts" className="px-4 pt-2 pb-4 sm:px-6 sm:pt-6 lg:px-8" />
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
           the list opens on its work. The button is there at every post count, and says how many

@@ -166,7 +166,7 @@ describe('spoken voice creation and reuse', () => {
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent('이미 만들어진 음성과 영상은 그대로 남아요.')
     await user.click(within(dialog).getByRole('button', { name: '목록에서 제거' }))
-    await screen.findByText('아직 확정한 목소리가 없어요.')
+    await screen.findByText('아직 목소리가 없어요')
     expect(f.calls.filter((c) => c.startsWith('start'))).toHaveLength(0)
   })
   it.each(['unresolved', 'received', 'cancelled'] as const)(

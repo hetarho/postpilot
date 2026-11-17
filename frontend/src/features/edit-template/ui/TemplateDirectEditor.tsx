@@ -1,16 +1,12 @@
-import { useId, useState } from 'react'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthoringArtifact } from '@/entities/ai-authoring'
 import {
   TEMPLATE_LIMITS,
   TEMPLATE_PARSE_OPTIONS,
-  TemplateComposition,
   TemplateSource,
   parseTemplate,
-  askFields,
   remainingChars,
-  readCompositionWorkingState,
-  type CompositionWorkingState,
   type TemplateArea,
 } from '@/entities/template'
 import {
@@ -23,17 +19,18 @@ import {
 } from '@/entities/post'
 import {
   Checkbox,
-  Disclosure,
   FieldCount,
   FieldLabel,
   FieldMessage,
-  SegmentedControl,
   TextField,
   Textarea,
   Typography,
 } from '@/shared/ui'
 import { readBuilderMetadata } from '../model/builder-metadata'
 
+/** The template's own text, typed directly — the secondary path beside the conversation. There
+ *  is no block builder: nothing is dragged, moved or reordered by hand; the order of a post is the
+ *  order of its text, and the AI changes it when asked. */
 export function TemplateDirectEditor({
   source,
   onChange,
@@ -45,15 +42,7 @@ export function TemplateDirectEditor({
 }) {
   const { t } = useTranslation(['templates', 'common'])
   const id = useId()
-  const [mode, setMode] = useState<'builder' | 'source'>('builder')
-  const [advanced, setAdvanced] = useState(false)
-  const [focusSource, setFocusSource] = useState<TemplateArea | null>(null)
   const parsed = parseTemplate(source.titleArea, source.body, TEMPLATE_PARSE_OPTIONS)
-  const titleAskLabels = new Set(
-    askFields(source.titleArea, { ...TEMPLATE_PARSE_OPTIONS, titleArea: true }).map(
-      (field) => field.label,
-    ),
-  )
   const failureIn = (area: TemplateArea) =>
     !parsed.ok && parsed.failure.area === area ? parsed.failure : null
   const working = readBuilderMetadata(source.builderState)
@@ -72,18 +61,6 @@ export function TemplateDirectEditor({
         numberMemory: { ...numberMemory, [field]: last },
       }),
     })
-  const composition = (area: TemplateArea, state: CompositionWorkingState) => {
-    onChange({
-      ...source,
-      [area === 'body' ? 'body' : 'titleArea']: state.source,
-      builderState: JSON.stringify({ ...working, [area]: state }),
-    })
-  }
-  const fix = (area: TemplateArea) => {
-    setAdvanced(true)
-    setFocusSource(area)
-    setMode('source')
-  }
   return (
     <div className="min-w-0 space-y-6">
       <div>
@@ -113,6 +90,32 @@ export function TemplateDirectEditor({
         />
         <FieldCount left={remainingChars(source.description, TEMPLATE_LIMITS.description)} />
       </div>
+      <section aria-labelledby={id + '-title-area'}>
+        <Typography variant="fieldTitle" as="h3" id={id + '-title-area'}>
+          {t('screen.titleArea.heading', { ns: 'templates' })}{' '}
+          {t('form.optional', { ns: 'common' })}
+        </Typography>
+        <TemplateSource
+          area="title_area"
+          value={source.titleArea}
+          disabled={disabled}
+          failure={failureIn('title_area')}
+          onChange={(value) => change('titleArea', value)}
+          className="mt-3"
+        />
+      </section>
+      <section aria-labelledby={id + '-body'}>
+        <Typography variant="fieldTitle" as="h3" id={id + '-body'}>
+          {t('create.body', { ns: 'templates' })}
+        </Typography>
+        <TemplateSource
+          value={source.body}
+          disabled={disabled}
+          failure={failureIn('body')}
+          onChange={(value) => change('body', value)}
+          className="mt-3"
+        />
+      </section>
       <NumberField
         id={id + '-length'}
         value={source.targetLength ?? ''}
@@ -122,7 +125,6 @@ export function TemplateDirectEditor({
         disabled={disabled}
         tick={t('numbers.targetLengthTick', { ns: 'templates' })}
         label={t('numbers.targetLength', { ns: 'templates' })}
-        help={t('numbers.targetLengthHelp', { ns: 'templates' })}
         min={POST_TARGET_LENGTH_MIN}
         max={POST_TARGET_LENGTH_MAX}
         fallback={POST_TARGET_LENGTH_DEFAULT}
@@ -135,103 +137,11 @@ export function TemplateDirectEditor({
         disabled={disabled}
         tick={t('numbers.tagCountTick', { ns: 'templates' })}
         label={t('numbers.tagCount', { ns: 'templates' })}
-        help={t('numbers.tagCountHelp', { ns: 'templates' })}
         min={POST_TAG_COUNT_MIN}
         max={POST_TAG_COUNT_MAX}
         fallback={POST_TAG_COUNT_DEFAULT}
         onChange={(value, last) => numberChange('tagCount', value, last)}
       />
-      <Disclosure
-        title={t('screen.advanced', { ns: 'templates' })}
-        size="row"
-        headingLevel={3}
-        open={advanced}
-        onOpenChange={(open) => {
-          setAdvanced(open)
-          if (!open) {
-            setMode('builder')
-            setFocusSource(null)
-          }
-        }}
-      >
-        <SegmentedControl
-          value={mode}
-          options={[
-            { value: 'builder', label: t('screen.mode.builder', { ns: 'templates' }) },
-            { value: 'source', label: t('screen.mode.source', { ns: 'templates' }) },
-          ]}
-          onChange={(next) => {
-            setMode(next)
-            setFocusSource(null)
-          }}
-          disabled={disabled}
-          ariaLabel={t('screen.mode.aria', { ns: 'templates' })}
-        />
-      </Disclosure>
-      <section aria-labelledby={id + '-title-area'}>
-        <Typography variant="fieldTitle" as="h3" id={id + '-title-area'}>
-          {t('screen.titleArea.heading', { ns: 'templates' })}{' '}
-          {t('form.optional', { ns: 'common' })}
-        </Typography>
-        <Typography variant="body" as="p" className="text-content-secondary mt-2">
-          {t('screen.titleArea.help', { ns: 'templates' })}
-        </Typography>
-        {mode === 'source' ? (
-          <TemplateSource
-            area="title_area"
-            value={source.titleArea}
-            disabled={disabled}
-            failure={failureIn('title_area')}
-            autoFocus={focusSource === 'title_area'}
-            onChange={(value) => change('titleArea', value)}
-            className="mt-3"
-          />
-        ) : (
-          <TemplateComposition
-            area="title_area"
-            value={source.titleArea}
-            disabled={disabled}
-            failure={failureIn('title_area')}
-            workingState={readCompositionWorkingState(working.title_area, source.titleArea)}
-            onWorkingChange={(state) => composition('title_area', state)}
-            onChange={(value) => change('titleArea', value)}
-            onFixInSource={() => fix('title_area')}
-            className="mt-3"
-          />
-        )}
-      </section>
-      <section aria-labelledby={id + '-body'}>
-        <Typography variant="fieldTitle" as="h3" id={id + '-body'}>
-          {t('create.body', { ns: 'templates' })}
-        </Typography>
-        <Typography variant="body" as="p" className="text-content-secondary mt-2">
-          {t(mode === 'source' ? 'screen.sourceHelp' : 'screen.compositionHelp', {
-            ns: 'templates',
-          })}
-        </Typography>
-        {mode === 'source' ? (
-          <TemplateSource
-            value={source.body}
-            disabled={disabled}
-            failure={failureIn('body')}
-            autoFocus={focusSource === 'body'}
-            onChange={(value) => change('body', value)}
-            className="mt-3"
-          />
-        ) : (
-          <TemplateComposition
-            value={source.body}
-            takenAskTitles={titleAskLabels}
-            disabled={disabled}
-            failure={failureIn('body')}
-            workingState={readCompositionWorkingState(working.body, source.body)}
-            onWorkingChange={(state) => composition('body', state)}
-            onChange={(value) => change('body', value)}
-            onFixInSource={() => fix('body')}
-            className="mt-3"
-          />
-        )}
-      </section>
     </div>
   )
 }
@@ -242,7 +152,6 @@ function NumberField({
   remembered,
   tick,
   label,
-  help,
   min,
   max,
   fallback,
@@ -254,7 +163,6 @@ function NumberField({
   remembered?: string
   tick: string
   label: string
-  help: string
   min: number
   max: number
   fallback: number
@@ -280,9 +188,6 @@ function NumberField({
           {tick}
         </Typography>
       </label>
-      <Typography variant="body" as="p" className="text-content-secondary mt-2">
-        {help}
-      </Typography>
       {enabled && (
         <div className="mt-3">
           <FieldLabel htmlFor={id}>{label}</FieldLabel>

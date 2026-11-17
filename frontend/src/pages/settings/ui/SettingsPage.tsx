@@ -23,14 +23,13 @@ import {
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
-import { InterfacePreferences } from '@/widgets/interface-preferences'
 
 type Icon = ComponentType<{ className?: string }>
 
-/** Guide: 나 — the owner's own tab. It opens on what they most often come here for, the credits
- *  left, as one big figure with ONE 충전 action; under it the rest are iOS-style grouped rows, each
- *  drilling into a one-topic screen. What the owner taught the AI lives in 내 스타일 and model
- *  choice in AI 고르기, so nothing here is about writing. */
+/** Guide: 내 설정 — behind the avatar at the top right, no longer a tab. It opens on what the
+ *  owner most often comes here for, the credits left, as one big figure with ONE 충전 action;
+ *  under it the rest are iOS-style grouped rows, each drilling into a one-topic screen. The theme
+ *  and the language live in the avatar's menu itself; the writing kit lives on 홈. */
 export function SettingsPage() {
   const { t } = useTranslation(['creation', 'plans'])
   const { user } = useSession()
@@ -108,17 +107,6 @@ export function SettingsPage() {
             {user?.plan === 'master' && <li>{row('/admin', t('settings.admin'), ShieldCheck)}</li>}
           </ListGroup>
         </nav>
-        <section aria-labelledby="settings-screen" className="min-w-0">
-          <h2
-            id="settings-screen"
-            className={typographyStyles({ variant: 'groupLabel', className: 'mb-2 px-4' })}
-          >
-            {t('settings.screen')}
-          </h2>
-          <div className={cardStyles({ padding: 'sm', className: 'shadow-sm' })}>
-            <InterfacePreferences layout="rows" />
-          </div>
-        </section>
       </div>
     </main>
   )

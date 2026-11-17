@@ -1,5 +1,4 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { ChannelActions } from '@/widgets/channel-actions'
 import { GuidelineDirectory } from '@/widgets/guideline-directory'
 
 /** /video-guidelines: a clip's 영상 지침, the same directory as /guidelines (GUIDE-44) and the 지침
@@ -13,7 +12,7 @@ export function VideoGuidelinesPage() {
       kind="clip"
       createOpen={search.new === 1 || search.new === '1'}
       onCreateClosed={() => void navigate({ to: '/video-guidelines', search: {}, replace: true })}
-      dock={<ChannelActions video section="guidelines" />}
+      createMenu
     />
   )
 }

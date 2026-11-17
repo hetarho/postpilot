@@ -17,7 +17,7 @@ export const i18n = {
         row: '{{voice}} · {{prompt}}',
       },
       modelSettings: '모델 변경',
-      guideTitle: 'AI 고르기',
+      guideTitle: 'AI 토너먼트',
       inUse: '지금 쓰는 AI',
       writingTests: '두 AI에게 같은 글을 맡겨 보기',
       writingTestsHelp:
@@ -103,7 +103,7 @@ export const i18n = {
         row: '{{voice}} · {{prompt}}',
       },
       modelSettings: 'Change models',
-      guideTitle: 'Pick AI',
+      guideTitle: 'AI tournament',
       inUse: 'AI in use',
       writingTests: 'Give two AIs the same post',
       writingTestsHelp:

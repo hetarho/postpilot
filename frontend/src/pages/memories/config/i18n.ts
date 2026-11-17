@@ -18,6 +18,19 @@ export const i18n = {
       example: '예: 매운 음식을 잘 못 먹는다',
       noTags: '태그 없음',
     },
+    notebook: {
+      tags: '태그로 찾기',
+      all: '전체 {{count}}',
+      add: '추가',
+      addKind: '{{kind}} 기억 추가',
+      empty: {
+        preference: '좋아하는 것, 못 먹는 것, 자주 가는 곳',
+        persona: '나는 어떤 사람인지, 무슨 일을 하는지',
+        place: '내 가게, 동네, 자주 쓰는 장소',
+        person: '글에 자주 나오는 사람',
+        history: '전에 해 본 것, 지나온 일',
+      },
+    },
   },
   en: {
     title: 'Memories',
@@ -33,6 +46,19 @@ export const i18n = {
         'Finish a post and press 기억으로 저장 in ③ to extract some, or write one here by hand.',
       example: 'For example: cannot handle spicy food',
       noTags: 'No tags',
+    },
+    notebook: {
+      tags: 'Find by tag',
+      all: 'All {{count}}',
+      add: 'Add',
+      addKind: 'Add a {{kind}} memory',
+      empty: {
+        preference: 'What you like, cannot eat, keep going back to',
+        persona: 'Who you are, what you do',
+        place: 'Your shop, your area, places you use',
+        person: 'People who often appear in your posts',
+        history: 'Things you have done before',
+      },
     },
   },
 } as const satisfies I18nFragment

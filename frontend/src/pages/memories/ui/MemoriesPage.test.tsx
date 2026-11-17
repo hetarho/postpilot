@@ -46,33 +46,47 @@ async function row(text: string) {
 }
 
 describe('the memory directory', () => {
-  // MEM-23/MEM-24: the screen reads and edits authored facts and nothing else.
-  it('lists the memories in the server order with their kind and tags, and asks no model anything', async () => {
+  // MEM-23/MEM-24: the screen reads and edits authored facts and nothing else. The facts are kept
+  // as a notebook with one page per kind, each keeping the server's order inside it.
+  it('files the memories under their kind with their tags, and asks no model anything', async () => {
     const calls: string[] = []
-    renderMemories({}, calls)
+    renderMemories(
+      {
+        memories: [
+          ...MEMORIES,
+          {
+            id: 'memory-preference-2',
+            text: '커피는 산미 있는 쪽',
+            kind: ProtoMemoryKind.PREFERENCE,
+          },
+        ],
+      },
+      calls,
+    )
 
-    const list = within(await screen.findByRole('region', { name: '저장된 기억' }))
-    const items = list.getAllByRole('listitem')
-    expect(items.map((item) => item.textContent?.includes('연남동에 자주 간다'))).toEqual([
-      true,
-      false,
-    ])
-    const place = await row('연남동에 자주 간다')
-    expect(place.getByText('장소')).toBeInTheDocument()
-    expect(place.getByText('연남동')).toBeInTheDocument()
-    expect(place.getByText('산책')).toBeInTheDocument()
-    // A memory with no tags says so rather than rendering an empty row of chips.
-    expect((await row('매운 음식을 못 먹는다')).getByText('태그 없음')).toBeInTheDocument()
+    await screen.findByRole('region', { name: '저장된 기억' })
+    const place = within(await screen.findByRole('region', { name: '장소 1' }))
+    expect(place.getByText('연남동에 자주 간다')).toBeInTheDocument()
+    expect(place.getByRole('button', { name: '#연남동' })).toBeInTheDocument()
+    expect(place.getByRole('button', { name: '#산책' })).toBeInTheDocument()
+    const preference = within(screen.getByRole('region', { name: '취향 2' }))
+    expect(
+      preference.getAllByRole('listitem').map((item) => item.querySelector('p')?.textContent),
+    ).toEqual(['매운 음식을 못 먹는다', '커피는 산미 있는 쪽'])
+    // Every kind is a page of the notebook, even an empty one.
+    expect(screen.getByRole('region', { name: '인물 0' })).toBeInTheDocument()
 
     // Reading the directory starts no job and calls no model: a memory is authored text.
     await waitFor(() => expect(calls).toContain('ListMemories'))
     expect(calls.filter((call) => call.startsWith('Start'))).toEqual([])
   })
 
-  it('says so, and offers no rows, when the account has no memories', async () => {
+  it('opens on the empty notebook, a page to fill per kind, when the account has no memories', async () => {
     renderMemories({ memories: [] })
-    expect(await screen.findByRole('heading', { name: '아직 기억이 없어요' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: '취향 0' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /기억 추가$/ })).toHaveLength(5)
     expect(screen.queryByRole('region', { name: '저장된 기억' })).not.toBeInTheDocument()
+    expect(within(screen.getByRole('main')).queryAllByRole('listitem')).toEqual([])
     // The one committing action is still there: a fact the author knows on day one does not
     // require generating a post first (MEM-25).
     expect(await screen.findByRole('button', { name: '새 기억' })).toBeInTheDocument()
@@ -98,7 +112,10 @@ describe('the memory directory', () => {
   it('keeps a row to its text, one 수정 and one 삭제, and a badge line', async () => {
     renderMemories()
     const place = await row('연남동에 자주 간다')
-    expect(place.getAllByRole('button')).toHaveLength(2)
+    // Its one 수정 and one 삭제; the rest are its tags, each a way to narrow the notebook.
+    expect(
+      place.getAllByRole('button').filter((button) => !button.textContent?.startsWith('#')),
+    ).toHaveLength(2)
     expect(place.getByRole('button', { name: '기억 수정' })).toBeInTheDocument()
     expect(place.getByRole('button', { name: '이 기억 삭제' })).toBeInTheDocument()
     expect(place.queryByRole('textbox')).not.toBeInTheDocument()
@@ -130,8 +147,10 @@ describe('the memory directory', () => {
       // Duplicates collapse before they are sent, exactly as the server collapses them.
       tags: ['연남동', '저녁'],
     })
+    // The fact moves to the page of its new kind.
+    const preference = within(await screen.findByRole('region', { name: '취향 2' }))
+    expect(preference.getByText('연남동에서 산책한다')).toBeInTheDocument()
     const edited = await row('연남동에서 산책한다')
-    expect(edited.getByText('취향')).toBeInTheDocument()
     expect(edited.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
@@ -283,8 +302,10 @@ describe('the memory directory', () => {
       ],
     })
 
+    // The notebook reads 취향 · 장소 · 인물: the trash now in the deleted row's place takes focus,
+    // and after the last row, the one above it.
     await deleteByKeyboard(user, '매운 음식을 못 먹는다')
-    const next = (await row('동생과 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
+    const next = (await row('연남동에 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
     await waitFor(() => expect(next).toHaveFocus())
 
     await deleteByKeyboard(user, '동생과 자주 간다')
@@ -300,7 +321,7 @@ describe('the memory directory', () => {
 
     await deleteByKeyboard(user, '연남동에 자주 간다')
     expect(deletions).toEqual(['memory-place'])
-    expect(await screen.findByRole('heading', { name: '아직 기억이 없어요' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: '장소 0' })).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '새 기억' })).toHaveFocus())
   })
 })

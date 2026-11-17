@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, screen, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { myPlanQueryKey } from '@/entities/plan'
 import { ProtoPlan } from '@/shared/api'
@@ -103,12 +103,12 @@ describe('AccountMenu', () => {
     })
 
     await screen.findByRole('button', { name: '내 계정' })
-    // The shell's credit control reads the balance now (QUOTA-27), so the figure is already
-    // on screen and opening the panel adds no request of its own.
-    await screen.findByRole('link', { name: /플랜 Free/ })
-    expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
+    // Plan and credits live behind the avatar now: the header shows no balance of its own, and
+    // opening the panel is what reads it (QUOTA-27) — once.
+    expect(screen.queryByRole('link', { name: /플랜 Free/ })).toBeNull()
 
     const panel = await openAccountPopover(user)
+    await within(panel).findByText('962 크레딧')
     expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
     // The tier chip sits in the identity block's corner, beside the id rather than under the
     // links, so the panel opens on who this is and what they are on.
@@ -184,11 +184,13 @@ describe('AccountMenu', () => {
         lots: [{ kind: 'daily', granted: 85, remaining: 8, expiresAt: '2026-10-01T00:00:00Z' }],
       },
     }
+    const user = userEvent.setup()
     const { queryClient, transport } = renderAppAt('/posts', {
       user: { ...USER, plan: ProtoPlan.PRO },
       plans,
     })
-    expect(await screen.findByRole('link', { name: '플랜 Pro, 남은 크레딧 8' })).toBeInTheDocument()
+    const panel = await openAccountPopover(user)
+    expect(await within(panel).findByRole('meter')).toHaveAttribute('aria-valuetext', '8 크레딧')
     // The server has atomically settled the admitted job across the boundary. A refetch
     // replaces the displayed position; the browser does not mint the next daily grant.
     plans.balance.credits = 3
@@ -196,7 +198,9 @@ describe('AccountMenu', () => {
       { kind: 'daily', granted: 85, remaining: 3, expiresAt: '2026-10-02T00:00:00Z' },
     ]
     await act(() => queryClient.invalidateQueries({ queryKey: myPlanQueryKey(transport) }))
-    expect(await screen.findByRole('link', { name: '플랜 Pro, 남은 크레딧 3' })).toBeInTheDocument()
+    await waitFor(() =>
+      expect(within(panel).getByRole('meter')).toHaveAttribute('aria-valuetext', '3 크레딧'),
+    )
   })
 
   // An unlimited account is stated, not drawn as an empty bar that reads as "none left".
@@ -240,6 +244,17 @@ describe('AccountMenu', () => {
     const panel = await openAccountPopover(user)
     await within(panel).findByText('남은 크레딧')
     expect(within(panel).queryByRole('link', { name: '운영 관리' })).not.toBeInTheDocument()
+  })
+
+  // Theme and language moved from the header into the avatar's menu, at every width.
+  it('holds the theme and the language switches at every width', async () => {
+    mockDesktopMedia()
+    const user = userEvent.setup()
+    renderAppAt('/posts', { user: { ...USER, plan: ProtoPlan.FREE } })
+    await screen.findByRole('button', { name: '내 계정' })
+    expect(screen.queryByRole('group', { name: '인터페이스 환경설정' })).toBeNull()
+    const panel = await openAccountPopover(user)
+    expect(within(panel).getByRole('group', { name: '인터페이스 환경설정' })).toBeInTheDocument()
   })
 
   it('says so when the balance cannot be read', async () => {

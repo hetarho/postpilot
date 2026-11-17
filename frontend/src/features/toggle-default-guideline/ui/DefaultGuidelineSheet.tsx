@@ -14,14 +14,31 @@ import { Button, FieldMessage, Sheet, Typography } from '@/shared/ui'
  *  product's order, each with its text, so choosing one is informed — the closed list shows names
  *  only. One out of use carries `추가`; one in use reads `적용 중`. Adding keeps the sheet open,
  *  because adding several is one visit, and taking one out of use happens on its row, never here. */
-export function DefaultGuidelineSheet({ ownerId, kind }: { ownerId: string; kind: GuidelineKind }) {
+/** `open`/`onOpenChange` let a caller open the sheet from a control of its own (the 새 지침 menu);
+ *  without them the sheet carries its own trigger. */
+export function DefaultGuidelineSheet({
+  ownerId,
+  kind,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  ownerId: string
+  kind: GuidelineKind
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
   const { t } = useTranslation('guidelines')
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = controlledOpen !== undefined
+  const open = controlledOpen ?? ownOpen
+  const setOpen = onOpenChange ?? setOwnOpen
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        {t('defaults.open')}
-      </Button>
+      {!controlled && (
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          {t('defaults.open')}
+        </Button>
+      )}
       {open && (
         <DefaultGuidelinePanel ownerId={ownerId} kind={kind} onClose={() => setOpen(false)} />
       )}

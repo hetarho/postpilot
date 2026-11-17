@@ -5,7 +5,7 @@ export const libraryRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/library',
   beforeLoad: () => {
-    throw redirect({ to: '/my', replace: true })
+    throw redirect({ to: '/posts', replace: true })
   },
 })
 export const settingsRoute = createRoute({
@@ -19,22 +19,28 @@ export const setupRoute = createRoute({
   validateSearch: setupSearchSchema,
   component: lazyRouteComponent(() => import('@/pages/setup'), 'SetupPage'),
 })
-/** Guide: the three tabs that are new places rather than renamed ones — 만들기 (one question),
- *  내 글 (every post and clip) and 내 스타일 (what the owner taught the AI). */
+/** The earlier hubs replace themselves with the places that took their jobs: 만들기 and 내 스타일
+ *  with 홈 (the kit and its 글쓰기), 내 콘텐츠 with the 글 tab. */
 export const createPageRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/create',
-  component: lazyRouteComponent(() => import('@/pages/create'), 'CreatePage'),
+  beforeLoad: () => {
+    throw redirect({ to: '/', replace: true })
+  },
 })
 export const myWorkRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/my',
-  component: lazyRouteComponent(() => import('@/pages/my-work'), 'MyWorkPage'),
+  beforeLoad: () => {
+    throw redirect({ to: '/posts', replace: true })
+  },
 })
 export const styleRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/style',
-  component: lazyRouteComponent(() => import('@/pages/style'), 'StylePage'),
+  beforeLoad: () => {
+    throw redirect({ to: '/', replace: true })
+  },
 })
 export const creationRoutes = [
   libraryRoute,

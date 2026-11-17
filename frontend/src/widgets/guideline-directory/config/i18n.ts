@@ -5,6 +5,18 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'guidelines',
   ko: {
+    reach: {
+      all: '모든 글에',
+      allClip: '모든 영상에',
+      templates: '고른 템플릿에서만',
+      fields: '고른 분야에서만',
+      nowhere: '지금은 어디에도 적용되지 않아요',
+    },
+    newMenu: {
+      aria: '새 지침 만드는 방법',
+      byTalk: 'AI와 대화로 만들기',
+      byTyping: '직접 쓰기',
+    },
     principles: {
       title: 'Postpilot 원칙',
       summary: '항상 적용돼요',
@@ -52,6 +64,18 @@ export const i18n = {
     },
   },
   en: {
+    reach: {
+      all: 'On every post',
+      allClip: 'On every video',
+      templates: 'Only with chosen templates',
+      fields: 'Only in chosen fields',
+      nowhere: 'Applies nowhere right now',
+    },
+    newMenu: {
+      aria: 'Ways to add a rule',
+      byTalk: 'Make it by talking to the AI',
+      byTyping: 'Type it myself',
+    },
     principles: {
       title: 'Postpilot principles',
       summary: 'Always applied',

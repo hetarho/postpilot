@@ -4,6 +4,28 @@ import { clsx } from 'clsx'
 import { LoadingStatus, Skeleton, Typography, cardStyles, typographyStyles } from '@/shared/ui'
 
 /** Every My work section reserves the same toolbar, including the aggregate without filters. */
+/** Guide: a list tab's head — what the tab holds, in its own words, so 글 and 영상 each say what they
+ *  show (owner 2026-11-17: 내 콘텐츠 was unclear about it). The list's groups say the rest. */
+export function WorkListHeading({
+  kind,
+  className,
+}: {
+  kind: 'posts' | 'videos'
+  className?: string
+}) {
+  const { t } = useTranslation('channel')
+  return (
+    <div className={className}>
+      <Typography variant="largeTitle" as="h1">
+        {t(`heading.${kind}.title`)}
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-1">
+        {t(`heading.${kind}.lead`)}
+      </Typography>
+    </div>
+  )
+}
+
 export function WorkListToolbar({
   children,
   summary,

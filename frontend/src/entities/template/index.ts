@@ -38,6 +38,7 @@ export {
   type TemplateNode,
 } from './lib/grammar'
 export { savedHeadingLines } from './lib/heading-references'
+export { templateOutline, type OutlineRow } from './lib/outline'
 export { useFormatGuide } from './api/useFormatGuide'
 export {
   useCancelTemplateRequest,

@@ -2,9 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
+import { openConversationDirect } from '@/test/authoring-ui'
 const preview = () => within(screen.getByRole('article', { name: '미리보기' }))
-// A new template is made through the guided wizard (TMPL-71), so the shared editor's preview is
-// exercised on a saved template's direct editing.
+// The draft pane beside the conversation is the shared preview; typing the template's text
+// directly redraws it.
 const PLAIN = {
   id: 'plain',
   name: '빈 구성',
@@ -14,22 +15,13 @@ const PLAIN = {
 }
 async function mount(user: ReturnType<typeof userEvent.setup>) {
   renderAppAt('/templates/plain', { user: { id: 'alice' }, templates: { templates: [PLAIN] } })
-  await user.click(await screen.findByRole('button', { name: /빈 구성.*직접 편집하기/ }))
+  await openConversationDirect(user)
   await screen.findByLabelText('이름')
 }
 describe('live shared template preview', () => {
-  it('redraws builder/source edits and retains its last valid parse while source is incomplete', async () => {
+  it('redraws source edits and retains its last valid parse while source is incomplete', async () => {
     const user = userEvent.setup()
     await mount(user)
-    await user.click(
-      within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
-        name: /^AI가 쓰는 글/,
-      }),
-    )
-    await user.type(screen.getByLabelText('이 자리에 오는 것'), '메뉴 소개')
-    expect(preview().getByText('메뉴 소개')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
     fireEvent.change(screen.getByLabelText('원문'), {
       target: { value: '<write>메뉴 소개</write>\n안녕하세요' },
     })
@@ -37,19 +29,17 @@ describe('live shared template preview', () => {
     fireEvent.change(screen.getByLabelText('원문'), { target: { value: '<write>unfinished' } })
     expect(preview().getByText('안녕하세요')).toBeInTheDocument()
   })
-  it('has phone input/preview tabs and keeps the same controlled editor mounted across panes', async () => {
+  it('has phone edit/draft panes and keeps the same controlled editor mounted across them', async () => {
     const user = userEvent.setup()
     await mount(user)
     const name = screen.getByLabelText('이름')
     await user.clear(name)
     await user.type(name, '보관할 이름')
-    const tabs = screen.getByRole('tablist', { name: '편집과 미리 보기' })
-    expect(tabs).toHaveClass('lg:hidden')
-    await user.click(within(tabs).getByRole('tab', { name: '미리 보기' }))
+    const panes = screen.getByRole('tablist', { name: '대화와 초안' })
+    expect(panes).toHaveClass('@3xl:hidden')
+    await user.click(within(panes).getByRole('tab', { name: '초안' }))
     expect(name).toHaveValue('보관할 이름')
-    expect(name.closest('form')).toHaveClass('hidden', 'lg:block')
-    await user.click(within(tabs).getByRole('tab', { name: '편집' }))
+    await user.click(within(panes).getByRole('tab', { name: '직접 고치기' }))
     expect(screen.getByLabelText('이름')).toBe(name)
-    expect(name.closest('form')).not.toHaveClass('hidden')
   })
 })

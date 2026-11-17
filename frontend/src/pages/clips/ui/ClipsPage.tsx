@@ -23,6 +23,7 @@ import { ChannelActions } from '@/widgets/channel-actions'
 import { clsx } from 'clsx'
 import {
   WorkListBody,
+  WorkListHeading,
   WorkListToolbar,
   WorkListLoading,
   FindSheet,
@@ -133,9 +134,8 @@ export function ClipHistoryPage() {
         className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
-      {/* The channel opens straight onto this list: the marked channel link names the place, so
-          the heading is for assistive technology only (THEME-38, CLIP-41). */}
-      <h1 className="sr-only">{historyText('videos')}</h1>
+      {/* The 영상 tab opens on what it holds; its groups say the rest. */}
+      <WorkListHeading kind="videos" className="px-4 pt-2 pb-4 sm:px-6 sm:pt-6 lg:px-8" />
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
           the list opens on its work. */}

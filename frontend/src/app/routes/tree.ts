@@ -1,6 +1,11 @@
 import type { Transport } from '@connectrpc/connect'
 import type { QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, createRoute, redirect } from '@tanstack/react-router'
+import {
+  createRootRouteWithContext,
+  createRoute,
+  lazyRouteComponent,
+  redirect,
+} from '@tanstack/react-router'
 import { loadSession } from '@/entities/session'
 import { SIGNED_IN_HOME } from '@/shared/lib'
 import { AuthenticatedLayout } from './AuthenticatedLayout'
@@ -43,12 +48,11 @@ export const authenticatedRoute = createRoute({
   component: AuthenticatedLayout,
 })
 
+/** 홈: the writing kit's readiness and the one 글쓰기 (the signed-in landing, SIGNED_IN_HOME). */
 export const indexRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/',
-  beforeLoad: () => {
-    throw redirect({ to: SIGNED_IN_HOME, replace: true })
-  },
+  component: lazyRouteComponent(() => import('@/pages/home'), 'HomePage'),
 })
 
 /** Every master-only administration screen is redirected rather than refused, because the

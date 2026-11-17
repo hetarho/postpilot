@@ -11,7 +11,7 @@ const TEMPLATES: FakeTemplateRow[] = [
     id: 'template-review',
     name: '정보성 식당 리뷰',
     description: '협찬 방문 리뷰',
-    body: '<write>사진마다 설명</write>',
+    body: '어쩌다 가게 됐냐면요\n<slot kind="photo" count="2"/>\n<write>사진마다 설명</write>\n<ask label="메뉴와 가격"/>',
     postCount: 2,
   },
   { id: 'template-diary', name: '일기', body: '<write>그날 있었던 일</write>' },
@@ -25,110 +25,76 @@ function renderTemplates(templates: FakeTemplatesOptions = {}, calls: string[] =
   })
 }
 
-const section = async (name: string) => within(await screen.findByRole('region', { name }))
-
-async function row(name: string) {
-  const list = await section('저장된 템플릿')
-  const found = list
-    .getAllByRole('listitem')
-    .find((item) => within(item).queryByText(name) !== null)
-  if (!found) throw new Error(`no row named ${name}`)
-  return within(found)
-}
+const WRITES = /^(Start|Create|Generate|Analyze|Save|Update|Delete|Estimate)/
 
 describe('the template directory', () => {
-  // A1: the screen is a list and one action. Nothing that edits a template lives here any more.
-  it('lists the templates with their post counts and offers only the add action', async () => {
+  // Each template is drawn as the outline of the post it makes, so the list is read as shapes.
+  it('draws each template as the outline of its post and offers only the add action', async () => {
     const calls: string[] = []
     renderTemplates({}, calls)
 
-    const list = await section('저장된 템플릿')
-    const items = list.getAllByRole('listitem')
+    const list = within(await screen.findByRole('region', { name: '저장된 템플릿' }))
+    const items = list
+      .getAllByRole('listitem', { name: undefined })
+      .filter((item) => item.querySelector('a[href^="/templates/"]'))
     expect(items).toHaveLength(2)
-    expect(within(items[0]).getByRole('link', { name: '일기' })).toHaveAttribute(
+    expect(list.getByRole('link', { name: '일기' })).toHaveAttribute(
       'href',
       '/templates/template-diary',
     )
-    expect(within(items[1]).getByText('협찬 방문 리뷰')).toBeInTheDocument()
-    expect(within(items[1]).getByText('글 2개')).toBeInTheDocument()
+    const outline = list.getByRole('list', { name: '정보성 식당 리뷰의 순서' })
+    expect(
+      within(outline)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['어쩌다 가게 됐냐면요', '사진 2장', 'AI가 쓰는 글', '물어볼 것 · 메뉴와 가격'])
+    expect(list.getByText('글 2개')).toBeInTheDocument()
 
-    // The create form, the block palette and the mode switch are all gone from this screen.
+    // Nothing that edits or deletes a template lives here; a card is the way into it.
+    expect(screen.queryByRole('button', { name: /삭제/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
-    // The add action is the section's one creation button, straight to the wizard (THEME-67).
+    // The add action is the section's one creation button, straight to the conversation.
     expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
       'href',
       '/templates/new',
     )
-
-    // A12: the shell prepares model defaults; the list calls no AI and enqueues nothing ([I5]).
-    const allowed = [
-      'InitializeDefaultSelections',
-      'GetMe',
-      'GetMyPlan',
-      'ListTemplates',
-      'ListAuthoringSummaries',
-    ]
-    expect(calls.filter((call) => !allowed.includes(call))).toEqual([])
+    // Reads only: the list calls no AI and enqueues nothing ([I5]).
+    await waitFor(() => expect(calls).toContain('ListAuthoringSummaries'))
+    expect(calls.filter((call) => WRITES.test(call))).toEqual([])
   })
 
-  // A1: the empty state says what a template is FOR. The grammar is what the write prompt reads,
-  // never something shown to the user (A9).
-  it('explains templates in plain language and shows no grammar when there are none', async () => {
+  it('opens on the empty sheet a first conversation fills, with no grammar', async () => {
     renderTemplates({ templates: [] })
 
     expect(await screen.findByText('아직 저장된 템플릿이 없어요')).toBeInTheDocument()
-    expect(within(screen.getByRole('main')).queryByRole('listitem')).not.toBeInTheDocument()
     expect(screen.queryByRole('region', { name: '저장된 템플릿' })).not.toBeInTheDocument()
     const page = document.body.textContent ?? ''
-    for (const syntax of ['<write', '<repeat', '<slot', '<note', '{작성}', '{반복}', '{자리}']) {
+    for (const syntax of ['<write', '<repeat', '<slot', '<ask', '{작성}', '{반복}', '{자리}']) {
       expect(page).not.toContain(syntax)
     }
-    // The add action is still the way out of an empty list.
     expect(screen.getByRole('link', { name: '새 템플릿' })).toBeInTheDocument()
   })
 
-  // A9: no grammar on the populated list either — a row shows the name and the description.
-  it('renders no grammar syntax on a populated list', async () => {
-    renderTemplates()
-    await section('저장된 템플릿')
-    const page = document.body.textContent ?? ''
-    for (const syntax of ['<write', '<repeat', '<slot', '<note']) {
-      expect(page).not.toContain(syntax)
-    }
-  })
-
-  it('names how many posts lose their template before deleting it', async () => {
+  // Deleting moved onto the template's own screen; the sheet still says how many posts lose it.
+  it('deletes from the template screen, naming how many posts lose their template', async () => {
     const user = userEvent.setup()
-    renderTemplates()
-
-    const review = await row('정보성 식당 리뷰')
-    await user.click(review.getByRole('button', { name: '정보성 식당 리뷰 삭제' }))
-
+    const { router } = renderAppAt('/templates/template-review', {
+      user: USER,
+      templates: { templates: TEMPLATES },
+    })
+    await user.click(await screen.findByRole('button', { name: '정보성 식당 리뷰 삭제' }))
     const dialog = within(await screen.findByRole('dialog'))
     expect(dialog.getByText(/2개의 글에서 템플릿이 해제됩니다/)).toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '삭제' }))
-
+    await waitFor(() => expect(router.state.location.pathname).toBe('/templates'))
     await waitFor(() => expect(screen.queryByText('정보성 식당 리뷰')).not.toBeInTheDocument())
-  })
-
-  it('says so plainly when nothing references the template', async () => {
-    const user = userEvent.setup()
-    renderTemplates()
-
-    const diary = await row('일기')
-    await user.click(diary.getByRole('button', { name: '일기 삭제' }))
-
-    const dialog = within(await screen.findByRole('dialog'))
-    expect(dialog.getByText(/이 템플릿을 쓰는 글이 없어요/)).toBeInTheDocument()
   })
 
   // `post_count` is a projection over POSTS, so no template mutation can invalidate it.
   it('re-reads the directory on mount rather than serving a cached post count', async () => {
     const calls: string[] = []
     const { queryClient, transport } = renderTemplates({}, calls)
-    await section('저장된 템플릿')
+    await screen.findByRole('region', { name: '저장된 템플릿' })
     await waitFor(() => expect(calls.filter((call) => call === 'ListTemplates')).toHaveLength(1))
     expect(queryClient.getQueryData(['templates', transport, USER.id])).toBeDefined()
   })

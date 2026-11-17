@@ -1,57 +1,75 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ComponentType } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil } from 'lucide-react'
-import { useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
+import { History, Heart, MapPin, Pencil, Plus, UserRound, Users } from 'lucide-react'
+import {
+  MEMORY_KINDS,
+  useMemories,
+  useUpdateMemoryCall,
+  type Memory,
+  type MemoryKind,
+} from '@/entities/memory'
 import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
 import { MemoryEditForm } from '@/features/edit-memory'
+import { KitHeader } from '@/widgets/writing-kit'
 import {
   ActionBar,
-  Badge,
   Button,
   Notice,
   LoadingState,
   Typography,
-  cardStyles,
+  ChipToggle,
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
 
-/** The account's 기억 (MEM-24). Composition only — every action is its own feature.
+const KIND_ICONS: Record<MemoryKind, ComponentType<{ className?: string }>> = {
+  preference: Heart,
+  persona: UserRound,
+  place: MapPin,
+  person: Users,
+  history: History,
+}
+
+/** Guide: 기억 — what the AI knows about the owner, kept as a notebook with one page per kind of
+ *  fact (취향 · 설정 · 장소 · 인물 · 이력). Every kind is always there, so an empty one reads as a
+ *  page still to fill and its 추가 starts a fact of THAT kind. The tags the facts carry are the way
+ *  to find one: a tag narrows the notebook to the facts that carry it. A fact is changed or removed
+ *  in place. Within a kind, facts keep the server's order — the order a post is given them.
  *
- *  Nothing on this screen calls a model or enqueues a job: a memory is an authored fact, and
- *  reading, editing or deleting one is a plain CRUD round trip ([I5], MEM-23). The list is
- *  rendered in the server's order because that order is the one a post that opted in would be
- *  given: most recently used first, then most recently created. */
+ *  Nothing on this screen calls a model or enqueues a job ([I5], MEM-23). */
 export function MemoriesPage() {
   const { t } = useTranslation(['memories', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { memories, isPending, isError, isFetching, refetch } = useMemories(ownerId)
   const page = useRef<HTMLElement>(null)
-  const list = useRef<HTMLUListElement>(null)
-  // A confirmed delete hands focus back to the trash button, then the re-read list removes the row
-  // holding it, which drops focus to <body> and sends a keyboard user to the top of the page. The
-  // delete does not await that re-read, so the move waits until the row has left the list.
+  const [tag, setTag] = useState<string>()
+  const [adding, setAdding] = useState<MemoryKind>()
+  // A confirmed delete removes the row holding the focused trash button; focus moves to the
+  // trash button now in its place, or to 새 기억 when the notebook is empty (MEM-24).
   const [removed, setRemoved] = useState<Removal | null>(null)
   const settled = useRef<Removal | null>(null)
+  const tags = tagsByUse(memories)
+  const activeTag = tag && tags.includes(tag) ? tag : undefined
+  const shown = activeTag ? memories.filter((memory) => memory.tags.includes(activeTag)) : memories
+  const ordered = MEMORY_KINDS.flatMap((kind) => shown.filter((memory) => memory.kind === kind))
 
   useEffect(() => {
     if (!removed || settled.current === removed) return
     if (memories.some((memory) => memory.id === removed.id)) return
     settled.current = removed
-    // Only while focus is lost, the rule Editable follows: focus the user moved elsewhere in the
-    // meantime stays where they put it.
     const active = document.activeElement
     if (active && active !== document.body) return
+    const trash = Array.from(page.current?.querySelectorAll('button') ?? []).filter(
+      (button) => button.getAttribute('aria-label') === t('delete.aria', { ns: 'memories' }),
+    )
     const target =
-      memories.length > 0
-        ? buttonNamed(
-            list.current?.children[Math.min(removed.index, memories.length - 1)],
-            t('delete.aria', { ns: 'memories' }),
-          )
-        : buttonNamed(page.current, t('create.open', { ns: 'memories' }))
+      trash[Math.min(removed.index, trash.length - 1)] ??
+      Array.from(page.current?.querySelectorAll('button') ?? []).find(
+        (button) => button.textContent?.trim() === t('create.open', { ns: 'memories' }),
+      )
     target?.focus()
   }, [removed, memories, t])
 
@@ -60,12 +78,7 @@ export function MemoriesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      {/* Guide: the hub's title and the 기억 chip say where this is; the page leads with what the
-          list IS — what the AI remembers — and the facts themselves. */}
-      <h1 className="sr-only">{t('title', { ns: 'memories' })}</h1>
-      <Typography variant="display" as="p" aria-hidden="true">
-        {t('page.lead', { ns: 'memories' })}
-      </Typography>
+      <KitHeader part="memory" />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -82,46 +95,67 @@ export function MemoriesPage() {
       )}
       {!isError && isPending && (
         <LoadingState
-          variant="cards"
+          variant="list"
           label={t('state.loading', { ns: 'common' })}
-          className="mt-8 [&>.loading-reveal]:gap-3 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
+          className="mt-8"
         />
       )}
 
       {!isError && !isPending && (
         <>
-          {memories.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-6">
-              <h2 className="flex items-baseline gap-2">
-                <span className={typographyStyles({ variant: 'title' })}>
-                  {t('page.saved', { ns: 'memories' })}
-                </span>
-                <span className={typographyStyles({ variant: 'label' })}>{memories.length}</span>
-              </h2>
-              <Typography variant="meta" as="p" className="mt-1">
-                {t('page.order', { ns: 'memories' })}
-              </Typography>
-              {/* Guide: each fact on its own card, its kind and tags under it. */}
-              <ul ref={list} className="mt-3 grid gap-3 lg:grid-cols-2">
-                {memories.map((memory, index) => (
-                  <MemoryRow
-                    key={memory.id}
-                    ownerId={ownerId}
-                    memory={memory}
-                    onDeleted={() => setRemoved({ id: memory.id, index })}
-                  />
-                ))}
-              </ul>
-            </section>
+          {tags.length > 0 && (
+            <div
+              role="group"
+              aria-label={t('notebook.tags', { ns: 'memories' })}
+              className="-mx-4 mt-6 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-1 sm:mx-0 sm:flex-wrap sm:px-0"
+            >
+              <ChipToggle pressed={!activeTag} onClick={() => setTag(undefined)}>
+                {t('notebook.all', { ns: 'memories', count: memories.length })}
+              </ChipToggle>
+              {tags.map((name) => (
+                <ChipToggle
+                  key={name}
+                  pressed={activeTag === name}
+                  onClick={() => setTag(activeTag === name ? undefined : name)}
+                >
+                  #{name}
+                </ChipToggle>
+              ))}
+            </div>
           )}
+          <section
+            aria-label={memories.length > 0 ? t('page.saved', { ns: 'memories' }) : undefined}
+            className="mt-6 grid items-start gap-4 lg:grid-cols-2"
+          >
+            {MEMORY_KINDS.map((kind) => {
+              const facts = shown.filter((memory) => memory.kind === kind)
+              if (activeTag && facts.length === 0) return null
+              return (
+                <KindPage
+                  key={kind}
+                  kind={kind}
+                  facts={facts}
+                  ownerId={ownerId}
+                  onAdd={() => setAdding(kind)}
+                  onDeleted={(memory) =>
+                    setRemoved({ id: memory.id, index: ordered.indexOf(memory) })
+                  }
+                  onTag={setTag}
+                />
+              )
+            })}
+          </section>
         </>
       )}
-      {/* The page is the list; authoring happens behind this one trigger, the shape every
-              sibling directory uses (MEM-24, THEME-24). */}
-      {/* The full width on a phone and a right-aligned pill from `sm:`, like every section's
-              creation button (THEME-67). */}
+      <CreateMemorySheet
+        ownerId={ownerId}
+        open={adding !== undefined}
+        onOpenChange={(open) => {
+          if (!open) setAdding(undefined)
+        }}
+        initialKind={adding}
+      />
+      {/* The one creation, the shape every sibling section uses (THEME-67). */}
       <ActionBar
         dock="list"
         ariaLabel={t('create.dockAria', { ns: 'memories' })}
@@ -133,73 +167,118 @@ export function MemoriesPage() {
   )
 }
 
-/** A deleted memory and the position its row held. */
+/** A deleted memory and the position its row held, counted across the notebook. */
 type Removal = { id: string; index: number }
 
-/** The button named `name` inside `root`. The rows repeat the same names and carry no ids, so a
- *  name means something only within the one row (or the page) that should hold it. */
-function buttonNamed(root: Element | null | undefined, name: string) {
-  return Array.from(root?.querySelectorAll('button') ?? []).find(
-    (button) => (button.getAttribute('aria-label') ?? button.textContent?.trim()) === name,
-  )
+/** Every tag the facts carry, most used first. */
+function tagsByUse(memories: readonly Memory[]): string[] {
+  const counts = new Map<string, number>()
+  for (const memory of memories)
+    for (const tag of memory.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1)
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([tag]) => tag)
 }
 
-/** Copy, not a row: nothing here creates a memory the user did not author — there is no seeded
- *  library and nothing is inferred (MEM-23). */
-function EmptyState() {
-  const { t } = useTranslation('memories')
+/** One kind's page of the notebook: its facts as sentences, and the 추가 that starts one more. */
+function KindPage({
+  kind,
+  facts,
+  ownerId,
+  onAdd,
+  onDeleted,
+  onTag,
+}: {
+  kind: MemoryKind
+  facts: Memory[]
+  ownerId: string
+  onAdd: () => void
+  onDeleted: (memory: Memory) => void
+  onTag: (tag: string) => void
+}) {
+  const { t } = useTranslation(['memories', 'common'])
+  const Icon = KIND_ICONS[kind]
   return (
-    <section aria-labelledby="memories-empty-heading" className="mt-8">
-      <Typography variant="title" id="memories-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.emptyHelp')}
-      </Typography>
-      <Typography variant="body" className="text-content-primary mt-3">
-        {t('page.example')}
-      </Typography>
+    <section
+      aria-label={`${t(`kind.${kind}`, { ns: 'memories' })} ${facts.length}`}
+      className="bg-card-bg flex flex-col rounded-2xl px-4 pt-3 pb-2 shadow-sm sm:px-5"
+    >
+      <div className="flex min-h-11 items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="bg-badge-accent-bg text-badge-accent-fg flex size-9 shrink-0 items-center justify-center rounded-full"
+        >
+          <Icon className="size-4.5" />
+        </span>
+        <h2 className="flex min-w-0 flex-1 items-baseline gap-2">
+          <span className={typographyStyles({ variant: 'fieldTitle' })}>
+            {t(`kind.${kind}`, { ns: 'memories' })}
+          </span>
+          <span className={typographyStyles({ variant: 'label' })}>{facts.length}</span>
+        </h2>
+        <Button
+          variant="ghost"
+          onClick={onAdd}
+          aria-label={t('notebook.addKind', {
+            ns: 'memories',
+            kind: t(`kind.${kind}`, { ns: 'memories' }),
+          })}
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          {t('notebook.add', { ns: 'memories' })}
+        </Button>
+      </div>
+      {facts.length === 0 ? (
+        <Typography variant="meta" as="p" className="pb-3 pl-12">
+          {t(`notebook.empty.${kind}`, { ns: 'memories' })}
+        </Typography>
+      ) : (
+        <ul className="divide-divider divide-y">
+          {facts.map((memory) => (
+            <MemoryRow
+              key={memory.id}
+              ownerId={ownerId}
+              memory={memory}
+              onDeleted={() => onDeleted(memory)}
+              onTag={onTag}
+            />
+          ))}
+        </ul>
+      )}
     </section>
   )
 }
 
-/** One saved memory (MEM-30): its text with 수정 and 삭제 at the end of the text line, over one
- *  line of its kind and tags. The list is read to see what the account knows, so a fact keeps to
- *  one short row; 수정 turns the whole row into one form for the text, the kind and the tags. */
+/** One saved fact (MEM-30): its sentence with 수정 and 삭제 at the end of the line, its tags under
+ *  it — each a way to narrow the notebook to that tag. 수정 turns the row into one form. */
 function MemoryRow({
   ownerId,
   memory,
   onDeleted,
+  onTag,
 }: {
   ownerId: string
   memory: Memory
   onDeleted: () => void
+  onTag: (tag: string) => void
 }) {
   const { t } = useTranslation(['memories', 'common'])
   const update = useUpdateMemoryCall(ownerId, memory.id)
-  // Closing the form takes the focused 취소 or 저장 out of the document, which drops focus to
-  // <body>, so a close carries the move back to the pencil. State, not a ref: `onDone` is handed
-  // to the form during render.
   const [form, setForm] = useState({ editing: false, refocus: false })
   const pencil = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    // Only while focus is lost, as in Editable: focus the user moved elsewhere stays there.
     const active = document.activeElement
     if (!form.refocus || (active && active !== document.body)) return
-    // A collapsing form must not scroll the page to the pencil.
     pencil.current?.focus({ preventScroll: true })
   }, [form])
 
   if (form.editing)
     return (
-      <li className={cardStyles({ padding: 'sm' })}>
+      <li className="py-3">
         <MemoryEditForm
           memory={memory}
           save={update.save}
           errorMessage={update.errorMessage}
           pending={update.isPending}
-          // Closing when already closed changes nothing, as before.
           onDone={() =>
             setForm((current) => (current.editing ? { editing: false, refocus: true } : current))
           }
@@ -208,10 +287,10 @@ function MemoryRow({
     )
 
   return (
-    <li className={cardStyles({ padding: 'sm' })}>
-      <div className="flex flex-wrap items-start gap-1">
+    <li className="py-2 pl-12">
+      <div className="flex items-start gap-1">
         <Typography
-          variant="fieldTitle"
+          variant="body"
           as="p"
           className="text-content-primary min-w-0 flex-1 pt-2 whitespace-pre-wrap"
         >
@@ -232,17 +311,21 @@ function MemoryRow({
         </Button>
         <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} onDeleted={onDeleted} />
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <Badge tone="accent">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
-        {memory.tags.map((tag) => (
-          <Badge key={tag}>{tag}</Badge>
-        ))}
-        {memory.tags.length === 0 && (
-          <Typography variant="meta" as="span">
-            {t('page.noTags', { ns: 'memories' })}
-          </Typography>
-        )}
-      </div>
+      {memory.tags.length > 0 && (
+        <div className="-mt-1 flex flex-wrap gap-x-2">
+          {memory.tags.map((tag) => (
+            <Button
+              key={tag}
+              variant="ghost"
+              size="compact"
+              onClick={() => onTag(tag)}
+              className="-ml-2 px-2"
+            >
+              #{tag}
+            </Button>
+          ))}
+        </div>
+      )}
     </li>
   )
 }

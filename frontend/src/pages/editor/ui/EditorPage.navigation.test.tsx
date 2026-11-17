@@ -285,11 +285,13 @@ it('preserves the post return of a standalone guidelines URL', async () => {
 })
 
 // The guidelines page reached from its own tab is a hub section with no way back (THEME-58).
-it('shows no back link on the guidelines page opened from its tab', async () => {
+// Opened on its own (from 홈's kit), the guidelines page goes back to 홈, never to a post.
+it('returns the guidelines page opened on its own to 홈, not to a post', async () => {
   renderAppAt('/guidelines', { user: USER })
   await screen.findByRole('main')
   expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('navigation', { name: '돌아가기' })).not.toBeInTheDocument()
+  const back = await screen.findByRole('navigation', { name: '돌아가기' })
+  expect(within(back).getByRole('link', { name: '홈' })).toHaveAttribute('href', '/')
 })
 
 // 내용 opened on the title as bare display-size text with its name hidden: a second, larger

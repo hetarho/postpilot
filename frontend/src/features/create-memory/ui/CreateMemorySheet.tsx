@@ -27,23 +27,56 @@ import {
  *
  *  A fact the author knows on day one should not require generating a post first (MEM-25), which
  *  is what this is for: the same field rules as an approval, with no post behind it. */
-export function CreateMemorySheet({ ownerId, className }: { ownerId: string; className?: string }) {
+export function CreateMemorySheet({
+  ownerId,
+  className,
+  open: controlledOpen,
+  onOpenChange,
+  initialKind = 'preference',
+}: {
+  ownerId: string
+  className?: string
+  /** Controlled from a control of the caller's own (a kind's 추가); then no trigger is drawn. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** The kind the form starts on — the kind whose 추가 opened it. */
+  initialKind?: MemoryKind
+}) {
   const { t } = useTranslation('memories')
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = controlledOpen !== undefined
+  const open = controlledOpen ?? ownOpen
+  const setOpen = onOpenChange ?? setOwnOpen
   return (
     <>
-      <Button variant="cta" size="hero" className={className} onClick={() => setOpen(true)}>
-        <Plus aria-hidden="true" className="size-6 shrink-0" />
-        {t('create.open')}
-      </Button>
-      {open && <CreateMemoryPanel ownerId={ownerId} onClose={() => setOpen(false)} />}
+      {!controlled && (
+        <Button variant="cta" size="hero" className={className} onClick={() => setOpen(true)}>
+          <Plus aria-hidden="true" className="size-6 shrink-0" />
+          {t('create.open')}
+        </Button>
+      )}
+      {open && (
+        <CreateMemoryPanel
+          ownerId={ownerId}
+          initialKind={initialKind}
+          onClose={() => setOpen(false)}
+        />
+      )}
     </>
   )
 }
 
 /** Mounted only while the sheet is open, so it starts blank on each visit and a refused
  *  attempt's message does not greet the next one. */
-function CreateMemoryPanel({ ownerId, onClose }: { ownerId: string; onClose: () => void }) {
+function CreateMemoryPanel({
+  ownerId,
+  initialKind,
+  onClose,
+}: {
+  ownerId: string
+  initialKind: MemoryKind
+  onClose: () => void
+}) {
   const { t } = useTranslation(['memories', 'common'])
   const id = useId()
   const titleId = `${id}-title`
@@ -54,7 +87,7 @@ function CreateMemoryPanel({ ownerId, onClose }: { ownerId: string; onClose: () 
   const [text, setText] = useState('')
   // 취향 first: a standing preference is the kind a fact is most often, and it is also the one
   // whose retrieval half (a candidate for every post) is the safe reading of an unsure choice.
-  const [kind, setKind] = useState<MemoryKind>('preference')
+  const [kind, setKind] = useState<MemoryKind>(initialKind)
   const [tagsValue, setTagsValue] = useState('')
   const create = useCreateMemoryCall(ownerId)
 

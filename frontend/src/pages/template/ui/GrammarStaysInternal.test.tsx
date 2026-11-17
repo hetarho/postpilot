@@ -3,6 +3,7 @@ import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import type { FakeTemplateRow } from '@/test/templates'
+import { openConversationDirect } from '@/test/authoring-ui'
 
 const USER = { id: 'alice' }
 
@@ -48,113 +49,42 @@ function expectNoGrammar() {
   }
 }
 
-/** The grammar is the contract between the builder and the WRITE PROMPT, and r3 gives it exactly
- *  ONE place to be visible: 원문. Everywhere else — the list, the builder with every row open, the
- *  unreadable state before the user asks to fix it — it stays internal (TMPL-26, TMPL-30).
+/** The grammar is the contract between the template and the WRITE PROMPT. With templates made by
+ *  talking, the one place it is visible is the secondary path that types the template's text
+ *  directly (원문); the list, the template's own screen and its conversation keep it internal.
  *
  *  The assertions are on what is RENDERED rather than on the absence of a component, so a source
  *  view re-appearing anywhere else fails here. */
 describe('the template grammar is visible in 원문 and nowhere else', () => {
-  it('renders no grammar on the list, including its empty state', async () => {
+  it('renders no grammar on the list, including its outlines', async () => {
     renderAppAt('/templates', { user: USER, templates: { templates: [EVERY_CONSTRUCT] } })
     await screen.findByRole('heading', { level: 1, name: '템플릿' })
+    expect(await screen.findByRole('list', { name: '전부의 순서' })).toBeInTheDocument()
     expectNoGrammar()
   })
 
-  it('renders no grammar in the builder, with every construct and every row open in both areas', async () => {
-    const user = userEvent.setup()
+  it('renders no grammar on the template screen, its conversation or its preview', async () => {
     renderAppAt('/templates/template-all', {
       user: USER,
       templates: { templates: [EVERY_CONSTRUCT] },
     })
-
-    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
-    await screen.findByLabelText('이름')
-    expectNoGrammar()
-
-    // Nor while a block of each kind is open for editing: a field shows the block's own text,
-    // never the tags that carry it.
-    const toggles = screen
-      .getAllByRole('button')
-      .filter((button) => button.getAttribute('aria-expanded') !== null)
-    // Both areas' rows are here: the title's three and the body's.
-    expect(
-      toggles.filter((control) =>
-        control.closest('section')?.querySelector('h3')?.textContent?.includes('제목 형식'),
-      ),
-    ).toHaveLength(3)
-    for (const control of toggles) {
-      await user.click(control)
-      expectNoGrammar()
-    }
-  })
-
-  // The live preview draws every construct as its stand-in and never as the tags that carry it
-  // (TMPL-65, TMPL-66): beside the builder, and on the phone's 미리보기 panel alike.
-  it('renders no grammar in the live preview', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/templates/template-all', {
-      user: USER,
-      templates: { templates: [EVERY_CONSTRUCT] },
-    })
-    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
-    await screen.findByLabelText('이름')
-
-    await user.click(screen.getByRole('tab', { name: '미리 보기' }))
-    const preview = within(screen.getByRole('article', { name: '미리보기' }))
+    const preview = within(await screen.findByRole('article', { name: '미리보기' }))
     expect(preview.getAllByText('사진 그룹마다 반복').length).toBeGreaterThan(0)
     expect(preview.getAllByText('네이버 지도').length).toBeGreaterThan(0)
+    expect(screen.getByRole('log')).toBeInTheDocument()
     expectNoGrammar()
   })
 
-  it('renders no grammar on a body it cannot parse until the user asks to fix it', async () => {
-    renderAppAt('/templates/template-broken', {
-      user: USER,
-      templates: {
-        templates: [
-          {
-            id: 'template-broken',
-            name: '옛 템플릿',
-            body: '<write>닫히지 않음',
-            titleArea: '<repeat each="photo"><write>톤</write></repeat>',
-          },
-        ],
-      },
-    })
-
-    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
-    expect(await screen.findByText(/구성을 읽을 수 없어요/)).toBeInTheDocument()
-    expect(screen.getByText(/제목 형식을 읽을 수 없어요/)).toBeInTheDocument()
-    // The state that OFFERS the source view still shows none of it.
-    expectNoGrammar()
-  })
-
-  // Source and its format guide are reachable only through the advanced entry.
-  it('keeps the mode switch behind 고급 and shows the body only inside 원문', async () => {
+  it('shows the body only inside 원문, the direct path', async () => {
     const user = userEvent.setup()
     renderAppAt('/templates/template-all', {
       user: USER,
       templates: { templates: [EVERY_CONSTRUCT] },
     })
-    await userEvent.setup().click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
-    await screen.findByLabelText('이름')
-
-    expect(screen.queryByRole('tablist', { name: '구성 편집 방식' })).not.toBeInTheDocument()
-    expectNoGrammar()
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    expect(screen.getByRole('tablist', { name: '구성 편집 방식' })).toBeInTheDocument()
-    expect(screen.getByRole('tab', { name: '블록' })).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: '원문' }))
-    expect(screen.getByLabelText('제목 원문')).toHaveValue(EVERY_CONSTRUCT.titleArea)
-    expect(screen.getByLabelText('원문')).toHaveValue(EVERY_CONSTRUCT.body)
-    // And the guide that teaches the same grammar is here too, and only here.
-    expect(screen.getByText('형식 안내 보기')).toBeInTheDocument()
-
-    await user.click(screen.getByRole('tab', { name: '블록' }))
-    expect(screen.queryByLabelText('제목 원문')).not.toBeInTheDocument()
+    await screen.findByRole('log')
     expect(screen.queryByLabelText('원문')).not.toBeInTheDocument()
-    expect(screen.queryByText('형식 안내 보기')).not.toBeInTheDocument()
-    expectNoGrammar()
+    await openConversationDirect(user)
+    expect(await screen.findByLabelText('제목 원문')).toHaveValue(EVERY_CONSTRUCT.titleArea)
+    expect(screen.getByLabelText('원문')).toHaveValue(EVERY_CONSTRUCT.body)
   })
 })

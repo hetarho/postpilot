@@ -6,20 +6,43 @@ import { Button, Sheet } from '@/shared/ui'
 import { GeneratedWritingVoices } from './GeneratedWritingVoices'
 
 /** Opening this settings surface only reads durable work. Generation stays explicit. */
-export function GeneratedWritingVoicesSheet({ ownerId }: { ownerId: string }) {
-  return <AccountSheet key={ownerId} ownerId={ownerId} />
+/** `open`/`onOpenChange` let a caller open the sheet from a control of its own (a menu choice);
+ *  without them the sheet carries its own trigger. */
+export function GeneratedWritingVoicesSheet({
+  ownerId,
+  open,
+  onOpenChange,
+}: {
+  ownerId: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
+  return <AccountSheet key={ownerId} ownerId={ownerId} open={open} onOpenChange={onOpenChange} />
 }
 
-function AccountSheet({ ownerId }: { ownerId: string }) {
+function AccountSheet({
+  ownerId,
+  open: controlledOpen,
+  onOpenChange,
+}: {
+  ownerId: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+}) {
   const { t } = useTranslation('voices')
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const [ownOpen, setOwnOpen] = useState(false)
+  const controlled = controlledOpen !== undefined
+  const open = controlledOpen ?? ownOpen
+  const setOpen = onOpenChange ?? setOwnOpen
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        <Sparkles aria-hidden="true" className="size-4 shrink-0" />
-        {t('candidateFlow.open')}
-      </Button>
+      {!controlled && (
+        <Button variant="secondary" onClick={() => setOpen(true)}>
+          <Sparkles aria-hidden="true" className="size-4 shrink-0" />
+          {t('candidateFlow.open')}
+        </Button>
+      )}
       {open && (
         <Sheet
           open

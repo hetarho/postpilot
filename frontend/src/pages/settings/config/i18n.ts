@@ -3,7 +3,7 @@ export const i18n = {
   namespace: 'creation',
   ko: {
     settings: {
-      title: '나',
+      title: '내 설정',
       credits: '남은 크레딧',
       charge: '충전하기',
       planGroup: '이용',
@@ -17,7 +17,7 @@ export const i18n = {
   },
   en: {
     settings: {
-      title: 'Me',
+      title: 'My settings',
       credits: 'Credits left',
       charge: 'Top up',
       planGroup: 'Plan',

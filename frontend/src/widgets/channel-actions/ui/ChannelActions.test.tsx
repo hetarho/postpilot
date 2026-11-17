@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, screen, waitFor } from '@testing-library/react'
+import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
 import { readClipReturnContext } from '@/entities/clip-project'
@@ -37,16 +37,41 @@ it.each([
 // Each section's button opens that section's creation directly, carrying no channel (an old link's is ignored).
 it.each([
   ['/templates', '새 템플릿', '/templates/new'],
-  ['/voices', '새 말투', '/voices?new=1'],
-  ['/guidelines', '새 지침', '/guidelines?new=1'],
-  ['/voices', '새 말투', '/voices?new=1'],
-  ['/video-guidelines', '새 지침', '/video-guidelines?new=1'],
   ['/video-templates', '새 템플릿', '/video-templates/new'],
 ] as const)('offers %s its own creation only', async (path, label, href) => {
   renderAppAt(path, { user: { id: 'alice' } })
   expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
   expect(screen.queryByRole('menu')).toBeNull()
   expect(document.querySelector('[data-action-bar="list"] [aria-haspopup]')).toBeNull()
+})
+
+// 말투 and 지침 can each be made several ways; the ways open from the one creation in the dock
+// (owner: a choice opens from the control that needs it), and opening them starts nothing.
+it.each([
+  [
+    '/voices',
+    '새 말투 만드는 방법',
+    ['내가 쓴 글로 학습시키기', 'AI와 대화로 만들기', '추천 말투에서 고르기'],
+  ],
+  ['/guidelines', '새 지침 만드는 방법', ['AI와 대화로 만들기', '직접 쓰기', '기본 지침']],
+  ['/video-guidelines', '새 지침 만드는 방법', ['AI와 대화로 만들기', '직접 쓰기', '기본 지침']],
+] as const)('opens the ways to create on %s from its one creation', async (path, label, ways) => {
+  const user = userEvent.setup()
+  const calls: string[] = []
+  renderAppAt(path, { user: { id: 'alice' }, calls })
+  const dock = await waitFor(() => {
+    const found = document.querySelector('[data-action-bar="list"]')
+    expect(found).not.toBeNull()
+    return found as HTMLElement
+  })
+  await user.click(within(dock).getByRole('button', { name: label }))
+  const menu = await screen.findByRole('menu', { name: label })
+  expect(
+    within(menu)
+      .getAllByRole('menuitem')
+      .map((item) => item.textContent),
+  ).toEqual(expect.arrayContaining(ways.map((way) => expect.stringContaining(way))))
+  expect(calls.filter((call) => /^(Start|Create|Generate|Analyze|Save)/.test(call))).toEqual([])
 })
 
 it.each(['/posts/new', '/clips/new'])(

@@ -41,6 +41,7 @@ import {
   type StudioAIAvailability,
 } from '../model/studio-flow-machine'
 import { AuthoringPreview } from './AuthoringPreview'
+import { AuthoringConversation } from './AuthoringConversation'
 
 export interface AuthoringDirectEditorProps {
   source: AuthoringArtifact
@@ -63,6 +64,14 @@ export interface AuthoringEditorProps extends AuthoringScope {
   initialMakeDefault?: boolean
   active?: boolean
   onNavigationChange?: (navigation: StudioNavigation | undefined) => void
+  /** `conversation` presents the same flow as a talk with the AI beside the live draft: the
+   *  owner's first message asks for ONE draft, every later one refines it, and saving is one
+   *  press in the heading row. Direct text editing stays one menu choice away. The steps, the
+   *  estimate before any paid request and every guard are the same as the stepped layout's. */
+  layout?: 'steps' | 'conversation'
+  /** The saved setting as the conversation's draft pane shows it before a draft is loaded, so an
+   *  existing setting opens on itself rather than on an empty sheet. Conversation only. */
+  savedPreview?: ReactNode
 }
 export interface AuthoringInspectionContext {
   ownerId: string
@@ -98,7 +107,7 @@ function ScopedEditor({
   referencePost,
   renderDirectEditor,
   targetName,
-  candidateCount = 8,
+  candidateCount: requestedCount,
   onSaved,
   onBusyChange,
   renderPreview,
@@ -107,8 +116,12 @@ function ScopedEditor({
   initialMakeDefault = false,
   active = true,
   onNavigationChange,
+  layout = 'steps',
+  savedPreview,
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
+  const conversation = layout === 'conversation'
+  const candidateCount: AuthoringCandidateCount = requestedCount ?? (conversation ? 1 : 8)
   const scope = { ownerId, kind, targetId }
   const scopeKey = authoringScopeKey(scope)
   // Navigation never mounts a second operation consumer, poller or save queue.
@@ -201,12 +214,13 @@ function ScopedEditor({
   const previousView = useRef(view)
   const previouslyActive = useRef(active)
   useEffect(() => {
-    if (active && (previousView.current !== view || !previouslyActive.current)) {
+    // A conversation keeps focus in its composer: the view changes under the owner's typing.
+    if (!conversation && active && (previousView.current !== view || !previouslyActive.current)) {
       heading.current?.querySelector('h2')?.focus()
     }
     previousView.current = view
     previouslyActive.current = active
-  }, [view, active])
+  }, [view, active, conversation])
   const goBack = useCallback(() => send({ type: 'BACK', scopeKey }), [scopeKey, send])
   const canGoBack = flow.can({ type: 'BACK', scopeKey })
   useEffect(() => {
@@ -351,6 +365,146 @@ function ScopedEditor({
       {t(`inputProblems.${flow.context.problem}`)}
     </FieldMessage>
   )
+  // The estimate before any paid request, the reset and the stop are the same in both layouts.
+  const dialogs = (
+    <>
+      <Dialog
+        open={state.phase === 'confirming' || state.phase === 'starting'}
+        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
+          count: state.command?.candidateCount ?? candidateCount,
+        })}
+        onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
+        confirmLabel={t('confirm')}
+        cancelLabel={t('back')}
+        pending={state.phase === 'starting'}
+        onConfirm={() => void controller.confirm()}
+      >
+        <Typography variant="body">
+          {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
+        </Typography>
+      </Dialog>
+      <Dialog
+        open={flow.context.resetOpen}
+        title={t('resetNamed', named)}
+        onClose={() => event('DISMISS_RESET')}
+        confirmLabel={t('discard')}
+        cancelLabel={t('back')}
+        onConfirm={() => event('CONFIRM_RESET')}
+      >
+        <Typography variant="body">{t('resetWarning', named)}</Typography>
+      </Dialog>
+      <Dialog
+        open={flow.matches({ working: 'confirmingCancellation' })}
+        title={t('cancelTitle')}
+        onClose={() => event('DISMISS_CANCEL')}
+        confirmLabel={t('cancel')}
+        cancelLabel={t('keepWorking')}
+        onConfirm={() => event('CONFIRM_CANCEL')}
+      >
+        <Typography variant="body">{t('cancelHelp')}</Typography>
+      </Dialog>
+    </>
+  )
+  if (conversation)
+    return (
+      <AuthoringConversation
+        kind={kind}
+        targetId={targetId}
+        name={targetName || state.session?.savedBaseline?.name || selected?.name || ''}
+        named={named}
+        view={view}
+        flow={flow}
+        send={send}
+        scopeKey={scopeKey}
+        controller={controller}
+        blocked={blocked}
+        busy={busy}
+        ai={ai}
+        hasFailure={hasFailure}
+        frozenPublication={frozenPublication}
+        canSaveDraft={canSaveDraft}
+        historyFull={historyFull}
+        workingStatus={workingStatus}
+        preview={preview}
+        savedPreview={savedPreview}
+        retry={retry}
+        aiAvailability={aiAvailability}
+        inputFeedback={inputFeedback}
+        inspection={
+          active && state.session
+            ? renderInspection?.({
+                ownerId,
+                sessionId: state.session.id,
+                kind,
+                revision: state.session.revision,
+                mode: view === 'purpose' || view === 'choices' ? 'recommend' : 'refine',
+                prompt: view === 'purpose' ? flow.context.purpose : state.text,
+                model: write.selected ?? undefined,
+                candidateCount,
+                operationId: state.session.activeJobId,
+                sourceDirty: Boolean(state.sourceDirty),
+              })
+            : null
+        }
+        notices={
+          <>
+            {draftInvalid && !needsVoiceExample && (
+              <Notice tone="danger" className="mt-4">
+                {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
+              </Notice>
+            )}
+            {hasFailure && (
+              <Notice tone="danger" role="alert" className="mt-4">
+                {conflict ? (
+                  t('conflict')
+                ) : failure ? (
+                  <AppFailureMessage failure={failure} />
+                ) : (
+                  t('failed')
+                )}
+              </Notice>
+            )}
+            {controller.readFailure && (
+              <Notice tone="danger" role="alert" className="mt-4">
+                <AppFailureMessage failure={controller.readFailure} />
+                <Button variant="ghost" className="mt-3" onClick={controller.retryRead}>
+                  {t('retryRead')}
+                </Button>
+              </Notice>
+            )}
+          </>
+        }
+        directEditor={
+          view === 'direct' && source ? (
+            <form
+              className="min-w-0 space-y-4 sm:space-y-6"
+              onSubmit={(e) => {
+                e.preventDefault()
+                event('FINISH_DIRECT')
+              }}
+            >
+              {renderDirectEditor?.({
+                source,
+                onChange: controller.setSource,
+                disabled: blocked,
+              })}
+              <div className="flex flex-wrap gap-3">
+                <Button variant="cta" type="submit">
+                  {t('keepDirect')}
+                </Button>
+                <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
+                  {t('conversation.backToChat')}
+                </Button>
+              </div>
+            </form>
+          ) : null
+        }
+        headingRef={heading}
+        titleId={id + '-title'}
+        className={className}
+        dialogs={dialogs}
+      />
+    )
   return (
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
@@ -942,41 +1096,7 @@ function ScopedEditor({
           </Button>
         </div>
       )}
-      <Dialog
-        open={state.phase === 'confirming' || state.phase === 'starting'}
-        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
-          count: state.command?.candidateCount ?? candidateCount,
-        })}
-        onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
-        confirmLabel={t('confirm')}
-        cancelLabel={t('back')}
-        pending={state.phase === 'starting'}
-        onConfirm={() => void controller.confirm()}
-      >
-        <Typography variant="body">
-          {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
-        </Typography>
-      </Dialog>
-      <Dialog
-        open={flow.context.resetOpen}
-        title={t('resetNamed', named)}
-        onClose={() => event('DISMISS_RESET')}
-        confirmLabel={t('discard')}
-        cancelLabel={t('back')}
-        onConfirm={() => event('CONFIRM_RESET')}
-      >
-        <Typography variant="body">{t('resetWarning', named)}</Typography>
-      </Dialog>
-      <Dialog
-        open={flow.matches({ working: 'confirmingCancellation' })}
-        title={t('cancelTitle')}
-        onClose={() => event('DISMISS_CANCEL')}
-        confirmLabel={t('cancel')}
-        cancelLabel={t('keepWorking')}
-        onConfirm={() => event('CONFIRM_CANCEL')}
-      >
-        <Typography variant="body">{t('cancelHelp')}</Typography>
-      </Dialog>
+      {dialogs}
     </section>
   )
 }

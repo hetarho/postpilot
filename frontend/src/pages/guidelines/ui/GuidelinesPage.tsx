@@ -1,6 +1,6 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { ChannelActions } from '@/widgets/channel-actions'
 import { GuidelineDirectory } from '@/widgets/guideline-directory'
+import { KitHeader } from '@/widgets/writing-kit'
 
 /** /guidelines: a post's 작문 지침 (GUIDE-20), the 지침 section of 네이버 블로그. `?new=1` opens an
  *  empty new one at once — where the channel's 새 지침 (THEME-67) and the template request's
@@ -16,7 +16,8 @@ export function GuidelinesPage() {
       onCreateClosed={() =>
         void navigate({ to: '/guidelines', search: { post: search.post }, replace: true })
       }
-      dock={<ChannelActions section="guidelines" />}
+      header={<KitHeader part="guideline" />}
+      createMenu
     />
   )
 }

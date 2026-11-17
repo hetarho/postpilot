@@ -62,11 +62,14 @@ describe('session guard', () => {
 })
 
 describe('the app home', () => {
-  it('renders creation choices at the root', async () => {
+  it('renders the writing kit and 글쓰기 at the root', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
-    expect(await screen.findByRole('link', { name: '글' })).toHaveAttribute('href', '/posts/new')
-    expect(screen.getByRole('link', { name: '영상' })).toHaveAttribute('href', '/clips/new')
-    expect(router.state.location.pathname).toBe('/create')
+    expect(await screen.findByRole('link', { name: '글쓰기' })).toHaveAttribute(
+      'href',
+      '/posts/new',
+    )
+    expect(screen.getByRole('figure', { name: '글쓰기 준비 상태' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/')
   })
 })
 
@@ -237,14 +240,10 @@ describe('logout', () => {
 
 // Guide: templates are a section of 내 스타일, one chip away from 말투.
 describe('the template management route', () => {
-  it('opens templates from the 내 스타일 section chips', async () => {
-    const { router } = renderAppAt('/voices', { user: { id: 'alice' } })
-    await screen.findByRole('heading', { level: 1, name: '말투' })
-    await userEvent.click(
-      within(screen.getByRole('navigation', { name: '나누어 보기' })).getByRole('link', {
-        name: '템플릿',
-      }),
-    )
+  it('opens templates from the writing kit on 홈', async () => {
+    const { router } = renderAppAt('/', { user: { id: 'alice' } })
+    const kit = within(await screen.findByRole('figure', { name: '글쓰기 준비 상태' }))
+    await userEvent.click(kit.getByRole('link', { name: /^템플릿/ }))
     await screen.findByRole('heading', { level: 1, name: '템플릿' })
     expect(router.state.location.pathname).toBe('/templates')
   })
@@ -381,13 +380,10 @@ describe('About consumes the shared locale and theme runtimes', () => {
 
 // Guide: guidelines are 내 스타일's 지침 section, right after templates.
 describe('the guideline management route', () => {
-  it('opens guidelines from the 내 스타일 section chips', async () => {
-    const { router } = renderAppAt('/templates', { user: { id: 'alice' } })
-    await screen.findByRole('heading', { level: 1, name: '템플릿' })
-    const sections = within(screen.getByRole('navigation', { name: '나누어 보기' }))
-    const hrefs = sections.getAllByRole('link').map((item) => item.getAttribute('href'))
-    expect(hrefs.indexOf('/guidelines')).toBe(hrefs.indexOf('/templates') + 1)
-    await userEvent.click(sections.getByRole('link', { name: '지침' }))
+  it('opens guidelines from the writing kit on 홈', async () => {
+    const { router } = renderAppAt('/', { user: { id: 'alice' } })
+    const kit = within(await screen.findByRole('figure', { name: '글쓰기 준비 상태' }))
+    await userEvent.click(kit.getByRole('link', { name: /^지침/ }))
     await screen.findByRole('heading', { level: 1, name: '지침' })
     expect(router.state.location.pathname).toBe('/guidelines')
   })
@@ -403,10 +399,9 @@ describe('lazily loaded routes', () => {
     ['/templates', '템플릿'],
     ['/guidelines', '지침'],
     ['/about', '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로'],
-    ['/ai-models', 'AI 고르기'],
-    ['/create', '무엇을 만들까요?'],
-    ['/my', '내 콘텐츠'],
-    ['/style', '내 스타일'],
+    ['/ai-models', 'AI 토너먼트'],
+    ['/', /고품질의 글을/],
+    ['/memories', '기억'],
   ])('renders %s on a direct load', async (path, heading) => {
     const { router } = renderAppAt(path, { user: { id: 'alice' } })
 
@@ -443,7 +438,7 @@ describe('lazily loaded routes', () => {
   it('renders the editor after navigating to it from another page', async () => {
     const posts = { posts: [{ slug: 'jeju-trip', title: '제주 3일' }] }
     const { router } = renderAppAt('/posts', { user: { id: 'alice' }, posts })
-    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
 
     await act(() => router.navigate({ to: '/posts/$slug', params: { slug: 'jeju-trip' } }))
     expect(await screen.findByDisplayValue('제주 3일')).toBeInTheDocument()
@@ -472,17 +467,6 @@ describe('theme preferences in the real route tree', () => {
       readyRole: 'button' as const,
       readyName: '로그인',
       expectedCalls: ['GetMe'],
-    },
-    {
-      surface: 'authenticated',
-      at: '/posts?view=recent#preferences',
-      user: { id: 'alice' },
-      readyRole: 'heading' as const,
-      readyName: '네이버 블로그',
-      // The shell reads the balance for its credit control (QUOTA-27), so the authenticated
-      // surface also prepares active model defaults; this case pins that the preferences add
-      // none of their own.
-      expectedCalls: ['GetMe', 'GetMyPlan', 'ListPosts', 'InitializeDefaultSelections'],
     },
   ])(
     'reaches and applies all three preferences on the $surface surface without an RPC',
@@ -535,6 +519,38 @@ describe('theme preferences in the real route tree', () => {
     },
   )
 
+  // Signed in, the theme lives behind the avatar at every width, as a three-way switch.
+  it('reaches and applies all three preferences behind the avatar without an RPC', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    const theme = createThemeTestEnvironment({ prefersDark: false })
+    const { router } = renderAppAt('/posts?view=recent#preferences', {
+      user: { id: 'alice' },
+      calls,
+      theme: theme.ports,
+    })
+    expect(await screen.findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '테마' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '내 계정' }))
+    const panel = within(await screen.findByRole('dialog', { name: '내 계정' }))
+    await waitFor(() => expect(calls).toContain('GetMyPlan'))
+    const callsBeforePreferences = [...calls]
+    const locationBeforePreferences = router.state.location.href
+    const themes = within(panel.getByRole('tablist', { name: '테마' }))
+    expect(themes.getByRole('tab', { name: '시스템' })).toHaveAttribute('aria-selected', 'true')
+    await user.click(themes.getByRole('tab', { name: '밝게' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+    expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('light')
+    await user.click(themes.getByRole('tab', { name: '어둡게' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+    expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBe('dark')
+    await user.click(themes.getByRole('tab', { name: '시스템' }))
+    expect(document.documentElement).toHaveAttribute('data-theme', 'day')
+    expect(theme.storage.getItem(THEME_PREFERENCE_STORAGE_KEY)).toBeNull()
+    expect(router.state.location.href).toBe(locationBeforePreferences)
+    expect(calls).toEqual(callsBeforePreferences)
+  })
+
   it('persists an explicit choice across navigation, logout/login, and a fresh app mount', async () => {
     const user = userEvent.setup()
     const theme = createThemeTestEnvironment()
@@ -543,10 +559,15 @@ describe('theme preferences in the real route tree', () => {
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '테마' }))
-    await user.click(await screen.findByRole('menuitemradio', { name: '어둡게' }))
+    expect(await screen.findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '내 계정' }))
+    await user.click(
+      within(await screen.findByRole('tablist', { name: '테마' })).getByRole('tab', {
+        name: '어둡게',
+      }),
+    )
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
+    await user.keyboard('{Escape}')
 
     await act(() => first.router.navigate({ to: '/posts/new' }))
     expect(
@@ -579,12 +600,14 @@ describe('theme preferences in the real route tree', () => {
       user: { id: 'alice' },
       theme: theme.ports,
     })
-    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
-    await user.click(screen.getByRole('button', { name: '테마' }))
+    await user.click(screen.getByRole('button', { name: '내 계정' }))
     expect(
-      await screen.findByRole('menuitemradio', { name: '어둡게', checked: true }),
-    ).toBeInTheDocument()
+      within(await screen.findByRole('tablist', { name: '테마' })).getByRole('tab', {
+        name: '어둡게',
+      }),
+    ).toHaveAttribute('aria-selected', 'true')
     reloaded.unmount()
   })
 
@@ -626,22 +649,24 @@ describe('theme preferences in the real route tree', () => {
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: 'Naver Blog' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Posts' })).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('ListPosts'))
+    await user.click(screen.getByRole('button', { name: 'My account' }))
+    const themes = await screen.findByRole('tablist', { name: 'Theme' })
+    await waitFor(() => expect(calls).toContain('GetMyPlan'))
     const callsBeforeSelection = [...calls]
     const locationBeforeSelection = router.state.location.href
 
-    await user.click(screen.getByRole('button', { name: 'Theme' }))
-    await user.click(await screen.findByRole('menuitemradio', { name: 'Dark' }))
+    await user.click(within(themes).getByRole('tab', { name: 'Dark' }))
 
     expect(document.documentElement.lang).toBe('en')
     expect(router.state.location.href).toBe(locationBeforeSelection)
     expect(calls).toEqual(callsBeforeSelection)
   })
 
-  // Guide: a slim top bar (brand · account), the destinations as a bottom tab bar where the thumb
-  // is, and the channel's sections as a chip row under its large title.
-  it('keeps the phone top bar slim, the tab bar at the bottom and the section chips under the title', async () => {
+  // Guide: a slim top bar (brand · avatar), the destinations as a bottom tab bar where the thumb
+  // is, and a kit screen's way back to 홈 with its 글 · 영상 switch over the page.
+  it('keeps the phone top bar slim, the tab bar at the bottom and the kit screen under 홈', async () => {
     Object.defineProperty(window, 'innerWidth', { configurable: true, value: 320 })
     window.dispatchEvent(new Event('resize'))
     const user = userEvent.setup()
@@ -651,39 +676,30 @@ describe('theme preferences in the real route tree', () => {
     expect(await screen.findByRole('heading', { name: '템플릿', level: 1 })).toBeInTheDocument()
     const header = screen.getByRole('banner')
     const account = within(header).getByRole('button', { name: '내 계정' })
-    expect(header.querySelector('a[href="/create"]')).not.toBeNull()
+    expect(header.querySelector('a[href="/"]')).not.toBeNull()
     expect(within(header).queryByRole('navigation')).toBeNull()
     const navigation = screen.getByRole('navigation', { name: '주요' })
     expect(
       within(navigation)
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['만들기', '내 콘텐츠', '내 스타일', 'AI 고르기', '나'])
+    ).toEqual(['홈', '글', '영상', 'AI 토너먼트'])
     // The tab bar is the last thing in the shell, after the page.
     expect(
       screen.getByRole('main').compareDocumentPosition(navigation) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).not.toBe(0)
     expect(navigation.closest('[data-tab-bar="shown"]')).not.toBeNull()
-    const sections = screen.getByRole('navigation', { name: '나누어 보기' })
-    expect(header.compareDocumentPosition(sections) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
-    expect(sections).toHaveClass('overflow-x-auto', 'overscroll-x-contain')
-    expect(
-      within(sections)
-        .getAllByRole('link')
-        .map((link) => link.textContent),
-    ).toEqual(['말투', '템플릿', '지침', '기억', '목소리'])
-    expect(within(sections).getByRole('link', { name: '템플릿' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    )
+    const back = screen.getByRole('navigation', { name: '돌아가기' })
+    expect(header.compareDocumentPosition(back) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0)
+    expect(within(back).getByRole('link', { name: '홈' })).toHaveAttribute('href', '/')
+    const kinds = screen.getByRole('navigation', { name: '글 · 영상' })
+    expect(within(kinds).getByRole('link', { name: '글' })).toHaveAttribute('aria-current', 'page')
     expect(within(header).queryByRole('navigation', { name: '현재 위치' })).toBeNull()
     expect(within(header).queryByRole('link', { name: /플랜/ })).toBeNull()
+    expect(within(header).queryByRole('group', { name: '인터페이스 환경설정' })).toBeNull()
     expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
-    expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
-    await user.click(within(sections).getByRole('link', { name: '기억' }))
-    await screen.findByRole('heading', { name: '기억', level: 1 })
-    expect(within(navigation).getByRole('link', { name: '내 스타일' })).toHaveAttribute(
+    expect(within(navigation).getByRole('link', { name: '홈' })).toHaveAttribute(
       'aria-current',
       'page',
     )
@@ -729,36 +745,32 @@ describe('localized registered-route smoke', () => {
   const copy = {
     ko: {
       login: '로그인',
-      posts: '네이버 블로그',
+      posts: '글',
       voices: '말투',
       templates: '템플릿',
       guidelines: '지침',
       about: '체험단 사진과 메모를 내 말투의 네이버 블로그 글이나 클립으로',
       analysis: '말투 분석',
       materials: '학습 데이터',
-      models: 'AI 고르기',
-      create: '무엇을 만들까요?',
-      mine: '내 콘텐츠',
+      models: 'AI 토너먼트',
+      home: /고품질의 글을/,
       clips: '영상',
-      style: '내 스타일',
       retry: '다시 시도',
       kind: '어떤 글을 쓰시나요?',
     },
     en: {
       login: 'Log in',
-      posts: 'Naver Blog',
-      voices: 'Voices',
+      posts: 'Posts',
+      voices: 'Styles',
       templates: 'Templates',
       guidelines: 'Guidelines',
       about:
         'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
       analysis: 'Voice analysis',
       materials: 'Training data',
-      models: 'Pick AI',
-      create: 'What shall we make?',
-      mine: 'My content',
+      models: 'AI tournament',
+      home: /High-quality posts/,
       clips: 'Videos',
-      style: 'My style',
       retry: 'Try again',
       kind: 'What kind of post is this?',
     },
@@ -786,13 +798,7 @@ describe('localized registered-route smoke', () => {
         { path: '/login', role: 'button', name: text.login },
         // Public: the only entry in this table with no session.
         { path: '/about', role: 'heading', name: text.about },
-        {
-          path: '/',
-          role: 'heading',
-          name: locale === 'ko' ? /무엇을 만들까요/ : /What shall we make/,
-          signedIn: true,
-          expectedPath: '/create',
-        },
+        { path: '/', role: 'heading', name: text.home, signedIn: true },
         { path: '/posts', role: 'heading', name: text.posts, signedIn: true },
         {
           path: '/naver-blog',
@@ -838,10 +844,17 @@ describe('localized registered-route smoke', () => {
           expectedPath: '/voices/voice-default/materials',
         },
         { path: '/ai-models', role: 'heading', name: text.models, signedIn: true },
-        { path: '/create', role: 'heading', name: text.create, signedIn: true },
-        { path: '/my', role: 'heading', name: text.mine, signedIn: true },
-        { path: '/style', role: 'heading', name: text.style, signedIn: true },
-        { path: '/library', role: 'heading', name: text.mine, signedIn: true, expectedPath: '/my' },
+        // The retired hubs land on the places that took their jobs.
+        { path: '/create', role: 'heading', name: text.home, signedIn: true, expectedPath: '/' },
+        { path: '/my', role: 'heading', name: text.posts, signedIn: true, expectedPath: '/posts' },
+        { path: '/style', role: 'heading', name: text.home, signedIn: true, expectedPath: '/' },
+        {
+          path: '/library',
+          role: 'heading',
+          name: text.posts,
+          signedIn: true,
+          expectedPath: '/posts',
+        },
         { path: '/clips', role: 'heading', name: text.clips, signedIn: true },
         // Videos are one list: both earlier clip addresses land on it.
         {
@@ -936,10 +949,10 @@ describe('localized registered-route smoke', () => {
       const shell = main.parentElement
       expect(shell).toHaveClass('flex', 'flex-1', 'flex-col')
       expect(shell?.querySelectorAll('[class~="overflow-y-auto"]')).toHaveLength(0)
-      // Guide: five verb tabs — 만들기 · 내 콘텐츠 · 내 스타일 · AI 고르기 · 나.
+      // Guide: four places — 홈 · 글 · 영상 · AI 토너먼트.
       expect(
         within(screen.getByRole('navigation', { name: '주요' })).getAllByRole('link'),
-      ).toHaveLength(5)
+      ).toHaveLength(4)
       expect(document.querySelector('aside')).toBeNull()
       expect(screen.queryByRole('button', { name: '이동 메뉴' })).toBeNull()
     },
@@ -954,9 +967,7 @@ describe('retired publishing route', () => {
     const calls: string[] = []
     const { router } = renderAppAt('/publishing-agents', { user: account, calls })
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '네이버 블로그' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/posts')
     expect(hrefs()).not.toContain('/publishing-agents')
     expect(calls.filter((call) => /publish/i.test(call))).toEqual([])
@@ -973,9 +984,9 @@ describe('retired publishing route', () => {
   })
 
   it('keeps voice and model settings for the free tier', async () => {
-    // Guide: what the owner taught the AI is 내 스타일, model choice is its own tab.
-    renderAppAt('/style', { user: { id: 'alice', plan: ProtoPlan.FREE } })
-    await screen.findByRole('heading', { level: 1, name: '내 스타일' })
+    // Guide: what the owner taught the AI is the kit on 홈; model choice is its own tab.
+    renderAppAt('/', { user: { id: 'alice', plan: ProtoPlan.FREE } })
+    await screen.findByRole('figure', { name: '글쓰기 준비 상태' })
     for (const destination of ['/memories', '/spoken-voices', '/voices', '/ai-models']) {
       expect(hrefs()).toContain(destination)
     }

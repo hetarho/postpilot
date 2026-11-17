@@ -2,10 +2,11 @@ import type { TFunction } from 'i18next'
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
-import { Check, FileText, Sparkles } from 'lucide-react'
+import { Check, FileText, Plus, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadges,
+  isOrphanedScope,
   useGuidelineCandidates,
   useGuidelines,
   type BulkReviewOutcome,
@@ -33,6 +34,8 @@ import {
   StopDefaultGuidelineButton,
 } from '@/features/toggle-default-guideline'
 import {
+  ActionBar,
+  ActionMenu,
   Badge,
   GuideProgress,
   Button,
@@ -67,6 +70,8 @@ export function GuidelineDirectory({
   onCreateClosed,
   dock,
   embedded = false,
+  header,
+  createMenu = false,
 }: {
   kind: GuidelineKind
   /** Open an empty new guideline — as the screen mounts (TMPL-61's 지침 만들기) or when the
@@ -77,6 +82,11 @@ export function GuidelineDirectory({
   dock?: ReactNode
   /** The editor's guideline Sheet shares the same rules without another page frame. */
   embedded?: boolean
+  /** The screen's own head in place of the one-line lead (the kit screen's). */
+  header?: ReactNode
+  /** The three ways to add a rule — talking to the AI, typing it, picking a 기본 지침 — open from
+   *  the one 새 지침 in the dock instead of standing in a row over the list. */
+  createMenu?: boolean
 }) {
   const { t } = useTranslation(['guidelines', 'common'])
   const { user } = useSession()
@@ -90,13 +100,28 @@ export function GuidelineDirectory({
   // 기본 지침 in use and the owner's own.
   const principles = defaults.filter((guideline) => guideline.principle)
   const inUse = defaults.filter((guideline) => !guideline.principle && guideline.enabled)
+  // Guide: the rules are grouped by WHERE they change a post — every post, only some templates'
+  // posts, only some fields' posts, or (a scope whose templates are gone) none — keeping the
+  // server's order inside each group, which is the order the writer is given them (GUIDE-14).
+  const reach = (guideline: Guideline): Reach =>
+    isOrphanedScope(guideline)
+      ? 'nowhere'
+      : guideline.scope === 'templates'
+        ? 'templates'
+        : guideline.scope === 'fields'
+          ? 'fields'
+          : 'all'
+  const owned = (['all', 'templates', 'fields', 'nowhere'] as const).flatMap((group) =>
+    guidelines.filter((guideline) => reach(guideline) === group),
+  )
   // The two kinds of row may carry the same raw id. Keep their mixed list identities distinct,
   // in the exact order already rendered, and focus the existing disclosure rather than an action
   // hidden inside a closed row.
   const rowKeys = [
     ...inUse.map((guideline) => `default:${guideline.key}`),
-    ...guidelines.map((guideline) => `owned:${guideline.id}`),
+    ...owned.map((guideline) => `owned:${guideline.id}`),
   ]
+  const [defaultsOpen, setDefaultsOpen] = useState(false)
   const disclosures = useRef(new Map<string, HTMLButtonElement>())
   const defaultAction = useRef<HTMLButtonElement | null>(null)
   const requestRemoval = useListRemovalFocus({
@@ -147,15 +172,19 @@ export function GuidelineDirectory({
     >
       {/* Guide: the hub's large title and the 지침 chip say where this is; the page leads with
           what the list IS — the plain sentences the AI always keeps to. */}
-      {!embedded && <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>}
-      <Typography
-        variant={embedded ? 'body' : 'display'}
-        as="p"
-        aria-hidden={embedded ? undefined : true}
-        className="text-balance"
-      >
-        {t(`${page}.always`, { ns: 'guidelines' })}
-      </Typography>
+      {header ?? (
+        <>
+          {!embedded && <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>}
+          <Typography
+            variant={embedded ? 'body' : 'display'}
+            as="p"
+            aria-hidden={embedded ? undefined : true}
+            className="text-balance"
+          >
+            {t(`${page}.always`, { ns: 'guidelines' })}
+          </Typography>
+        </>
+      )}
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -177,23 +206,38 @@ export function GuidelineDirectory({
         ref={(actions) => {
           // The existing first action opens the default-guidelines sheet. Read its actual
           // button without adding a wrapper, translated selector or another control.
-          defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
+          if (!createMenu)
+            defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
         }}
-        className="mt-6 flex flex-wrap items-center gap-3"
+        className={createMenu ? 'contents' : 'mt-6 flex flex-wrap items-center gap-3'}
       >
-        <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setCreationSession(undefined)
-            setCreateMethod('direct')
-            setAuthoringOpen(true)
-          }}
-        >
-          {t(kind === 'clip' ? 'authoringState.createVideoDirect' : 'authoringState.createDirect', {
-            ns: 'guidelines',
-          })}
-        </Button>
+        {createMenu ? (
+          <DefaultGuidelineSheet
+            ownerId={ownerId}
+            kind={kind}
+            open={defaultsOpen}
+            onOpenChange={setDefaultsOpen}
+          />
+        ) : (
+          <>
+            <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setCreationSession(undefined)
+                setCreateMethod('direct')
+                setAuthoringOpen(true)
+              }}
+            >
+              {t(
+                kind === 'clip'
+                  ? 'authoringState.createVideoDirect'
+                  : 'authoringState.createDirect',
+                { ns: 'guidelines' },
+              )}
+            </Button>
+          </>
+        )}
         <AuthoringSheet
           open={authoringOpen}
           onOpenChange={(open) => {
@@ -260,43 +304,65 @@ export function GuidelineDirectory({
             <EmptyState kind={kind} />
           ) : (
             <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className="mt-6">
-              <Typography variant="meta" as="p">
-                {t(`${page}.order`, { ns: 'guidelines' })}
-              </Typography>
-              {/* Guide: each rule is one card holding its plain sentence; tapping it opens the
-                  rule's own reading view with its scope and the way to edit it. */}
-              <ul className="mt-3 grid gap-3">
-                {inUse.map((guideline, index) => (
-                  <DefaultGuidelineItem
-                    key={guideline.key}
-                    ownerId={ownerId}
-                    kind={kind}
-                    guideline={guideline}
-                    onRefused={setStopRefusal}
-                    rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
-                    onRemoving={() => requestRemoval(rowKeys[index], index)}
-                  />
-                ))}
-                {guidelines.map((guideline, index) => (
-                  <GuidelineRow
-                    key={guideline.id}
-                    ownerId={ownerId}
-                    guideline={guideline}
-                    rowRef={(row) => rememberDisclosure(rowKeys[inUse.length + index], row)}
-                    onDeleted={() =>
-                      requestRemoval(rowKeys[inUse.length + index], inUse.length + index)
-                    }
-                    summary={summaries.data?.find(
-                      (row) =>
-                        row.targetId === guideline.id || row.lastPublication?.id === guideline.id,
-                    )}
-                    onPublished={(saved) => {
-                      void refetch()
-                      setSavedOutcome({ ownerId, ref: saved })
-                    }}
-                  />
-                ))}
-              </ul>
+              {(['all', 'templates', 'fields', 'nowhere'] as const).map((group) => {
+                const own = owned.filter((guideline) => reach(guideline) === group)
+                const builtIn = group === 'all' ? inUse : []
+                if (own.length + builtIn.length === 0) return null
+                return (
+                  <section
+                    key={group}
+                    aria-labelledby={`guidelines-reach-${group}`}
+                    className="mt-6 first:mt-0"
+                  >
+                    <h2 id={`guidelines-reach-${group}`} className="flex items-baseline gap-2 px-1">
+                      <span className={typographyStyles({ variant: 'groupLabel' })}>
+                        {t(
+                          kind === 'clip' && group === 'all' ? 'reach.allClip' : `reach.${group}`,
+                          { ns: 'guidelines' },
+                        )}
+                      </span>
+                      <span className={typographyStyles({ variant: 'meta' })}>
+                        {own.length + builtIn.length}
+                      </span>
+                    </h2>
+                    <ul className="mt-2 grid gap-3">
+                      {builtIn.map((guideline, index) => (
+                        <DefaultGuidelineItem
+                          key={guideline.key}
+                          ownerId={ownerId}
+                          kind={kind}
+                          guideline={guideline}
+                          onRefused={setStopRefusal}
+                          rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
+                          onRemoving={() => requestRemoval(rowKeys[index], index)}
+                        />
+                      ))}
+                      {own.map((guideline) => {
+                        const index = inUse.length + owned.indexOf(guideline)
+                        return (
+                          <GuidelineRow
+                            key={guideline.id}
+                            ownerId={ownerId}
+                            guideline={guideline}
+                            scoped={group !== 'all'}
+                            rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
+                            onDeleted={() => requestRemoval(rowKeys[index], index)}
+                            summary={summaries.data?.find(
+                              (row) =>
+                                row.targetId === guideline.id ||
+                                row.lastPublication?.id === guideline.id,
+                            )}
+                            onPublished={(saved) => {
+                              void refetch()
+                              setSavedOutcome({ ownerId, ref: saved })
+                            }}
+                          />
+                        )
+                      })}
+                    </ul>
+                  </section>
+                )
+              })}
             </section>
           )}
 
@@ -351,10 +417,61 @@ export function GuidelineDirectory({
           )}
         </>
       )}
-      {dock}
+      {createMenu ? (
+        <ActionBar dock="list" className="mt-auto w-full sm:w-fit">
+          {/* With every rule gone, focus lands on the one way to add another. */}
+          <span
+            className="contents"
+            ref={(dock) => {
+              defaultAction.current = dock?.querySelector<HTMLButtonElement>('button') ?? null
+            }}
+          >
+            <ActionMenu
+              label={t('newMenu.aria', { ns: 'guidelines' })}
+              triggerVariant="cta"
+              triggerLabel={
+                <>
+                  <Plus aria-hidden="true" className="size-6 shrink-0" />
+                  {t(kind === 'clip' ? 'create.openClip' : 'create.open', { ns: 'guidelines' })}
+                </>
+              }
+              className="w-full sm:w-auto [&>button]:w-full"
+              items={[
+                {
+                  id: 'talk',
+                  label: t('newMenu.byTalk', { ns: 'guidelines' }),
+                  onSelect: () => {
+                    setCreationSession(undefined)
+                    setCreateMethod('ai')
+                    setAuthoringOpen(true)
+                  },
+                },
+                {
+                  id: 'direct',
+                  label: t('newMenu.byTyping', { ns: 'guidelines' }),
+                  onSelect: () => {
+                    setCreationSession(undefined)
+                    setCreateMethod('direct')
+                    setAuthoringOpen(true)
+                  },
+                },
+                {
+                  id: 'defaults',
+                  label: t('defaults.open', { ns: 'guidelines' }),
+                  onSelect: () => setDefaultsOpen(true),
+                },
+              ]}
+            />
+          </span>
+        </ActionBar>
+      ) : (
+        dock
+      )}
     </Frame>
   )
 }
+
+type Reach = 'all' | 'templates' | 'fields' | 'nowhere'
 
 /** A closed row's one line: the name or title cut to the row, then its badge. The whole line is
  *  the disclosure's button, so its name is what a screen reader lists. */
@@ -506,8 +623,11 @@ function GuidelineRow({
   summary,
   rowRef,
   onDeleted,
+  scoped = false,
 }: {
   ownerId: string
+  /** Reaches only some posts: the closed row names where. */
+  scoped?: boolean
   guideline: Guideline
   onPublished: (ref: AuthoringSavedRef) => void
   summary?: AuthoringSummary
@@ -532,8 +652,13 @@ function GuidelineRow({
         size="row"
         headingLevel={3}
         title={
-          // The scope is stated in full once the row is open (GuidelineScopeBadges below).
-          <SentenceTitle name={guideline.title} sentence={guideline.text} />
+          // A narrowed rule names where it applies while closed; every rule states its scope in
+          // full once open (GuidelineScopeBadges below).
+          <SentenceTitle
+            name={guideline.title}
+            sentence={guideline.text}
+            badge={scoped ? <GuidelineScopeBadges guideline={guideline} /> : undefined}
+          />
         }
       >
         <div className="pb-3 pl-6">

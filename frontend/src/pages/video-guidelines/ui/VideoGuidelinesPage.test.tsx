@@ -40,8 +40,15 @@ function renderVideoGuidelines(guidelines: FakeGuidelinesOptions = {}, calls: st
 
 const section = async (name: string) => within(await screen.findByRole('region', { name }))
 
+/** The ways to add a rule open from the one 새 지침 in the dock. */
+const NEW_RULE = '새 지침 만드는 방법'
+async function chooseWay(user: ReturnType<typeof userEvent.setup>, way: string) {
+  await user.click(await screen.findByRole('button', { name: NEW_RULE }))
+  await user.click(await screen.findByRole('menuitem', { name: way }))
+}
+
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '새 영상 지침 직접 쓰기' }))
+  await chooseWay(user, '직접 쓰기')
   const dialog = within(await screen.findByRole('dialog'))
   await dialog.findByLabelText('지침')
   return dialog
@@ -68,15 +75,25 @@ describe('/video-guidelines', () => {
     expect(within(items[0]).getByText('과장 금지')).toBeInTheDocument()
     expect(list.queryByText('글 기본')).not.toBeInTheDocument()
     expect(within(items[1]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
-    // A closed row is its sentence alone; 추천 and the scope show once it is open (GUIDE-47).
-    for (const badge of ['추천', '전역', '영상 템플릿', '가게 소개', '적용 대상 없음'])
+    // A closed row is its sentence alone; 추천 and an every-video scope show once it is open
+    // (GUIDE-47). A rule that reaches only some videos — or none — names where while closed,
+    // under the group that says so.
+    for (const badge of ['추천', '전역', '영상 템플릿'])
       expect(list.queryByText(badge)).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: /^고른 템플릿에서만/ })).getByText('가게 소개'),
+    ).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('region', { name: /^지금은 어디에도 적용되지 않아요/ })).getByText(
+        '적용 대상 없음',
+      ),
+    ).toBeInTheDocument()
     for (const item of items)
       await user.click(within(item).getByRole('button', { expanded: false }))
     expect(within(items[0]).getByText('추천')).toBeInTheDocument()
     expect(within(items[1]).getByText('전역')).toBeInTheDocument()
-    expect(within(items[2]).getByText('가게 소개')).toBeInTheDocument()
-    expect(within(items[3]).getByText('적용 대상 없음')).toBeInTheDocument()
+    expect(within(items[2]).getAllByText('가게 소개').length).toBeGreaterThan(0)
+    expect(within(items[3]).getAllByText('적용 대상 없음').length).toBeGreaterThan(0)
     expect(screen.queryByText('없는 사실을 쓰지 않기')).not.toBeInTheDocument()
 
     const allowed = [
@@ -171,7 +188,7 @@ describe('/video-guidelines', () => {
       defaultSwitches,
     })
 
-    await user.click(await screen.findByRole('button', { name: '기본 지침' }))
+    await chooseWay(user, '기본 지침')
     const sheet = within(await screen.findByRole('dialog', { name: '기본 지침' }))
     expect(sheet.queryByText('글 기본')).not.toBeInTheDocument()
     await user.click(sheet.getByRole('button', { name: '과장 금지 추가' }))
@@ -424,7 +441,7 @@ describe('directory removal keyboard focus', () => {
     await confirmFocusDelete(user, name)
     await waitFor(() => expect(queryDisclosure(name)).toBeNull())
     expect(
-      next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+      next ? getDisclosure(next) : screen.getByRole('button', { name: NEW_RULE }),
     ).toHaveFocus()
   })
 
@@ -445,7 +462,7 @@ describe('directory removal keyboard focus', () => {
       await stopByKeyboard(user, name)
       await waitFor(() => expect(queryDisclosure(name)).toBeNull())
       expect(
-        next ? getDisclosure(next) : screen.getByRole('button', { name: '기본 지침' }),
+        next ? getDisclosure(next) : screen.getByRole('button', { name: NEW_RULE }),
       ).toHaveFocus()
     },
   )
@@ -469,7 +486,7 @@ describe('directory removal keyboard focus', () => {
     await confirmFocusDelete(user, 'Owned Middle')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(queryDisclosure('Owned Middle')).toBeInTheDocument()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: NEW_RULE })
     target.focus()
     await act(() => queryClient.invalidateQueries())
     expect(target).toHaveFocus()
@@ -511,7 +528,7 @@ describe('directory removal keyboard focus', () => {
     await stopByKeyboard(user, 'Default First')
     await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
     expect(getDisclosure('Owned First')).toHaveFocus()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: NEW_RULE })
     target.focus()
     await act(async () => releaseSwitch())
     await act(() => queryClient.invalidateQueries())
@@ -532,7 +549,7 @@ describe('directory removal keyboard focus', () => {
     await stopByKeyboard(user, 'Default First')
     await waitFor(() => expect(queryDisclosure('Default First')).toBeNull())
     expect(getDisclosure('Owned First')).toHaveFocus()
-    const target = screen.getByRole('button', { name: '기본 지침' })
+    const target = screen.getByRole('button', { name: NEW_RULE })
     target.focus()
     await act(async () => releaseSwitch())
     expect(await screen.findByText('기본 지침을 찾을 수 없어요.')).toBeInTheDocument()

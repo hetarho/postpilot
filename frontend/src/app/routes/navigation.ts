@@ -1,16 +1,15 @@
 import { CLIP_LIST_PATH } from '@/entities/clip-project'
 import type { navigationI18n } from './navigation-i18n'
 
-/** Guide: five VERBS, not five product areas — what a busy owner came to do. 만들기 asks what to
- *  make; 내 글 holds every post and clip; 내 스타일 is everything the owner has taught the AI;
- *  AI 고르기 picks and compares models; 나 is credits, plan and settings. They are the bottom tab
- *  bar on a phone and a floating pill on the desk, visible at every width (no hamburger). */
+/** Guide: four places, each a thing the owner holds — 홈 is the writing kit and the one 글쓰기,
+ *  글 every post, 영상 every video, AI 토너먼트 the models that compete to write them. Account,
+ *  plan, credits, theme and language live behind the avatar at the top right, not in a tab. They
+ *  are the bottom tab bar on a phone and a floating pill on the desk, visible at every width. */
 export const TAB_DESTINATIONS = [
-  { to: '/create', labelKey: 'tabs.create' },
-  { to: '/my', labelKey: 'tabs.mine' },
-  { to: '/style', labelKey: 'tabs.style' },
+  { to: '/', labelKey: 'tabs.home' },
+  { to: '/posts', labelKey: 'tabs.posts' },
+  { to: '/clips', labelKey: 'tabs.videos' },
   { to: '/ai-models', labelKey: 'tabs.ai' },
-  { to: '/settings', labelKey: 'tabs.me' },
 ] as const
 export type PrimaryDestination = (typeof TAB_DESTINATIONS)[number]['to']
 
@@ -31,49 +30,27 @@ export function isFocusedFlow(pathname: string): boolean {
   )
 }
 
-/** The two tabs that hold several sibling pages: 내 글 (all work, or one channel's) and 내 스타일
- *  (말투 · 템플릿 · 지침 · 기억 · 목소리). Their pages share a large title and a chip row; each is
- *  top-level within its hub, with no back link and no recorded return. */
-export type Hub = 'mine' | 'style'
-export type MineSection = 'all' | 'posts' | 'videos'
-export type StyleSection = 'voices' | 'templates' | 'guidelines' | 'memories' | 'spoken'
-export type HubSection =
-  { hub: 'mine'; key: MineSection } | { hub: 'style'; key: StyleSection; kind?: 'post' | 'video' }
-const SECTION_PATHS: Readonly<Record<string, HubSection>> = {
-  '/my': { hub: 'mine', key: 'all' },
-  '/posts': { hub: 'mine', key: 'posts' },
-  '/clips': { hub: 'mine', key: 'videos' },
-  // The earlier list addresses replace themselves with these two; until they have, the hub chrome
-  // stays mounted rather than flashing away and back (THEME-72).
-  '/naver-blog': { hub: 'mine', key: 'posts' },
-  '/naver-clip': { hub: 'mine', key: 'videos' },
-  '/insta-clip': { hub: 'mine', key: 'videos' },
-  '/voices': { hub: 'style', key: 'voices' },
-  '/templates': { hub: 'style', key: 'templates', kind: 'post' },
-  '/video-templates': { hub: 'style', key: 'templates', kind: 'video' },
-  '/guidelines': { hub: 'style', key: 'guidelines', kind: 'post' },
-  '/video-guidelines': { hub: 'style', key: 'guidelines', kind: 'video' },
-  '/memories': { hub: 'style', key: 'memories' },
-  '/spoken-voices': { hub: 'style', key: 'spoken' },
+/** The writing kit: what the owner prepares before writing (말투 · 템플릿 · 지침 · 기억 · 목소리).
+ *  Each is its own screen under 홈 — the readiness graphic is the way in — and carries one way
+ *  back to it. 템플릿 and 지침 each have a 글 side and a 영상 side. */
+export type KitSection = 'voices' | 'templates' | 'guidelines' | 'memories' | 'spoken'
+export interface KitPage {
+  key: KitSection
+  kind?: 'post' | 'video'
 }
-export function currentSection(pathname: string): HubSection | undefined {
+const KIT_PATHS: Readonly<Record<string, KitPage>> = {
+  '/voices': { key: 'voices' },
+  '/templates': { key: 'templates', kind: 'post' },
+  '/video-templates': { key: 'templates', kind: 'video' },
+  '/guidelines': { key: 'guidelines', kind: 'post' },
+  '/video-guidelines': { key: 'guidelines', kind: 'video' },
+  '/memories': { key: 'memories' },
+  '/spoken-voices': { key: 'spoken' },
+}
+export function currentKitPage(pathname: string): KitPage | undefined {
   const path = navigationPathname(pathname)
-  return Object.hasOwn(SECTION_PATHS, path) ? SECTION_PATHS[path] : undefined
+  return Object.hasOwn(KIT_PATHS, path) ? KIT_PATHS[path] : undefined
 }
-/** The chip row of one hub, in its order. */
-export const MINE_SECTIONS: readonly { key: MineSection; href: string }[] = [
-  { key: 'all', href: '/my' },
-  { key: 'posts', href: '/posts' },
-  // One 영상 section: a video is a video, whichever channel it is posted to (owner 2026-11-16).
-  { key: 'videos', href: CLIP_LIST_PATH },
-]
-export const STYLE_SECTIONS: readonly { key: StyleSection; href: string }[] = [
-  { key: 'voices', href: '/voices' },
-  { key: 'templates', href: '/templates' },
-  { key: 'guidelines', href: '/guidelines' },
-  { key: 'memories', href: '/memories' },
-  { key: 'spoken', href: '/spoken-voices' },
-]
 /** 템플릿 and 지침 each have a 글 side and a 영상 side; a video has no channel, so the switch
  *  links carry none (THEME-38). */
 export function styleKinds(
@@ -99,7 +76,7 @@ export interface RouteLocation {
   ancestors: LocationAncestor[]
   destination?: PrimaryDestination
 }
-const HOME: LocationAncestor = { href: '/', key: 'creation' }
+const HOME: LocationAncestor = { href: '/', key: 'home' }
 const POSTS: LocationAncestor = { href: '/posts', key: 'posts' }
 const ME: LocationAncestor = { href: '/settings', key: 'settings' }
 const AI_PICK: LocationAncestor = { href: '/ai-models', key: 'models' }
@@ -110,8 +87,6 @@ const SPOKEN_VOICES: LocationAncestor = { href: '/spoken-voices', key: 'spokenVo
 function tabOf(root: string): PrimaryDestination | undefined {
   const path = navigationPathname(root)
   if (TAB_DESTINATIONS.some((tab) => tab.to === path)) return path as PrimaryDestination
-  const section = currentSection(path)
-  if (section) return section.hub === 'mine' ? '/my' : '/style'
   return undefined
 }
 
@@ -120,11 +95,12 @@ function structuralLocation(path: string): Omit<RouteLocation, 'destination'> {
     href: CLIP_LIST_PATH,
     key: 'videos',
   }
-  if (path === '/') return { current: 'creation', ancestors: [] }
+  if (path === '/') return { current: 'home', ancestors: [] }
   if (path === '/create') return { current: 'create', ancestors: [] }
-  if (path === '/my') return { current: 'mine', ancestors: [] }
-  if (path === '/style') return { current: 'style', ancestors: [] }
-  if (path === '/posts') return { current: 'posts', ancestors: [] }
+  if (path === '/posts' || path === '/naver-blog' || path === '/my')
+    return { current: 'posts', ancestors: [] }
+  if (path === '/naver-clip' || path === '/insta-clip') return { current: 'videos', ancestors: [] }
+  if (path === '/style') return { current: 'home', ancestors: [] }
   if (path === CLIP_LIST_PATH) return { current: 'videos', ancestors: [] }
   if (
     path.startsWith('/tests/records/') ||
@@ -147,10 +123,10 @@ function structuralLocation(path: string): Omit<RouteLocation, 'destination'> {
     return { current: 'tests', ancestors: [AI_PICK] }
   if (/^\/tests\/[^/]+$/.test(path)) return { current: 'test', ancestors: [AI_PICK, TESTS] }
   if (path === '/settings') return { current: 'settings', ancestors: [] }
-  if (path === '/voices') return { current: 'voices', ancestors: [] }
+  if (path === '/voices') return { current: 'voices', ancestors: [HOME] }
   if (path.startsWith('/voices/')) {
     const root = path.split('/').slice(0, 3).join('/')
-    const parents: LocationAncestor[] = [{ href: '/voices', key: 'voices' }]
+    const parents: LocationAncestor[] = [HOME, { href: '/voices', key: 'voices' }]
     const tail = path.split('/')[3]
     return tail
       ? {
@@ -165,22 +141,23 @@ function structuralLocation(path: string): Omit<RouteLocation, 'destination'> {
   ] as const)
     if (path === root || path.startsWith(root + '/'))
       return path === root
-        ? { current: directory, ancestors: [] }
+        ? { current: directory, ancestors: [HOME] }
         : {
             current: path === root + '/new' ? add : item,
             ancestors: [
+              HOME,
               {
                 href: root,
                 key: directory,
               },
             ],
           }
-  if (path === '/guidelines') return { current: 'guidelines', ancestors: [] }
-  if (path === '/memories') return { current: 'memories', ancestors: [] }
-  if (path === '/video-guidelines') return { current: 'videoGuidelines', ancestors: [] }
-  if (path === '/spoken-voices') return { current: 'spokenVoices', ancestors: [] }
+  if (path === '/guidelines') return { current: 'guidelines', ancestors: [HOME] }
+  if (path === '/memories') return { current: 'memories', ancestors: [HOME] }
+  if (path === '/video-guidelines') return { current: 'videoGuidelines', ancestors: [HOME] }
+  if (path === '/spoken-voices') return { current: 'spokenVoices', ancestors: [HOME] }
   if (path === '/spoken-voices/new')
-    return { current: 'newSpokenVoice', ancestors: [SPOKEN_VOICES] }
+    return { current: 'newSpokenVoice', ancestors: [HOME, SPOKEN_VOICES] }
   if (path === '/ai-models') return { current: 'models', ancestors: [] }
   for (const [url, key] of [
     ['/account', 'account'],
@@ -229,11 +206,7 @@ export function navigationPathname(href: string): string {
 }
 export function isTopLevelDestination(pathname: string): boolean {
   const path = navigationPathname(pathname)
-  return (
-    path === '/' ||
-    TAB_DESTINATIONS.some((item) => item.to === path) ||
-    currentSection(pathname) !== undefined
-  )
+  return path === '/' || path === '/settings' || TAB_DESTINATIONS.some((item) => item.to === path)
 }
 export function isStructuralNavigationEntry(target: string, entry: string): boolean {
   const targetPath = navigationPathname(target)

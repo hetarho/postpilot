@@ -5,4 +5,4 @@ export {
   workCardStyles,
   workCardFooterClass,
 } from './ui/workCardStyles'
-export { WorkListToolbar, WorkListBody, WorkListLoading } from './ui/WorkListFrame'
+export { WorkListHeading, WorkListToolbar, WorkListBody, WorkListLoading } from './ui/WorkListFrame'

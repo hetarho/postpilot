@@ -361,9 +361,10 @@ it('lists every video on the one 영상 list', async () => {
 
 // THEME-38, CLIP-41: the 영상 list opens straight onto its history with its 새 영상 button, and the
 // old Instagram address lands on it.
-it('opens the 영상 history with no visible heading and its creation button', async () => {
+it('opens the 영상 tab on its title, what it holds and its creation button', async () => {
   const view = renderAppAt('/clips', { user: { id: 'alice' }, clips: { projects: [] } })
-  expect(await screen.findByRole('heading', { level: 1, name: '영상' })).toHaveClass('sr-only')
+  expect(await screen.findByRole('heading', { level: 1, name: '영상' })).not.toHaveClass('sr-only')
+  expect(screen.getByText('만들고 있는 세로 영상과 완성한 영상')).toBeInTheDocument()
   expect(view.router.state.location.pathname).toBe('/clips')
   // The 영상 section's one creation opens the clip workspace (THEME-67).
   expect(screen.getByRole('link', { name: '새 영상' })).toHaveAttribute('href', '/clips/new')

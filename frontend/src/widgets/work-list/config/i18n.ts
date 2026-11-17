@@ -4,6 +4,10 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'channel',
   ko: {
+    heading: {
+      posts: { title: '글', lead: '쓰고 있는 블로그 글과 완성한 글' },
+      videos: { title: '영상', lead: '만들고 있는 세로 영상과 완성한 영상' },
+    },
     work: {
       continueAction: '계속하기',
       newestFirst: '최근 수정 순',
@@ -26,6 +30,10 @@ export const i18n = {
     },
   },
   en: {
+    heading: {
+      posts: { title: 'Posts', lead: 'Blog posts you are writing and posts you finished' },
+      videos: { title: 'Videos', lead: 'Vertical videos you are making and videos you finished' },
+    },
     work: {
       continueAction: 'Continue',
       newestFirst: 'Latest changes first',

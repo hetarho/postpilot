@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { createRouterTransport } from '@connectrpc/connect'
 import { withProviders, createTestQueryClient } from '@/test/session'
 import { registerTemplateService } from '@/test/templates'
@@ -9,7 +8,7 @@ import { TemplateDirectEditor } from './TemplateDirectEditor'
 
 afterEach(cleanup)
 
-it('keeps 원문 behind 고급 and round-trips edited source without a mode-switch write', async () => {
+it('edits the template as its own text, byte for byte, with no builder to drag', async () => {
   const onChange = vi.fn()
   function Editor() {
     const [source, setSource] = useState({
@@ -33,22 +32,18 @@ it('keeps 원문 behind 고급 and round-trips edited source without a mode-swit
   }
   const transport = createRouterTransport((router) => registerTemplateService(router))
   render(<Editor />, { wrapper: withProviders(transport, createTestQueryClient()) })
-  const user = userEvent.setup()
-  expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()
-  expect(screen.queryByLabelText('원문')).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: '고급' }))
-  await user.click(screen.getByRole('tab', { name: '원문' }))
+  // No mode switch and no block rows: the source is the editor.
+  expect(screen.queryByRole('button', { name: '고급' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
+  expect(screen.queryAllByRole('button', { name: /위로|아래로|끌어서/ })).toEqual([])
   expect(screen.getByLabelText('원문')).toHaveValue('  고정 문구\n<write>Visit</write>  ')
-  expect(screen.getByText('형식 안내 보기')).toBeInTheDocument()
+  expect(screen.getByLabelText('제목 원문')).toHaveValue('<write>Title</write>')
   expect(onChange).not.toHaveBeenCalled()
   const edited = '  고정 문구\n<write>Changed</write>  '
   fireEvent.change(screen.getByLabelText('원문'), { target: { value: edited } })
-  await user.click(screen.getByRole('button', { name: '고급' }))
-  expect(screen.queryByLabelText('원문')).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: '고급' }))
-  await user.click(screen.getByRole('tab', { name: '원문' }))
   expect(screen.getByLabelText('원문')).toHaveValue(edited)
   expect(onChange).toHaveBeenCalledTimes(1)
+  expect(onChange.mock.calls[0][0]).toMatchObject({ body: edited })
 })
 
 it.each(['null', '[]', 'true', '42', '"text"', '{'])(
@@ -68,6 +63,12 @@ it.each(['null', '[]', 'true', '42', '"text"', '{'])(
         onChange={onChange}
         disabled={false}
       />,
+      {
+        wrapper: withProviders(
+          createRouterTransport((router) => registerTemplateService(router)),
+          createTestQueryClient(),
+        ),
+      },
     )
     expect(screen.getByDisplayValue('Review')).toBeInTheDocument()
     expect(onChange).not.toHaveBeenCalled()
