@@ -206,6 +206,7 @@
 | T879 | lchat | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 2026-11-17T01:09Z |
 
 ## log
+- 261117 gusta-update-ssot ARCH start: owner approved future task checks using affected unit and fast static checks; full frontend TypeScript checking belongs to existing shared batch build. Preserve submitted T878/T879 evidence.
 - 261117 T879 done
 - 261117 T878 done
 - 261116 onev: one video kind with no clip channel (T856-T868, CLIP r80 THEME r47 POST r51 GUIDE r28 MKT r13) landed and pushed 0715db3bb; CI, Deploy backend and Verify media green
@@ -225,4 +226,3 @@
 - 261116 T872 done
 - 261116 T871 done
 - 261116 T881 done
-- 261116 T880 done
