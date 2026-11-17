@@ -183,6 +183,7 @@
 - 261117 suggest -: gusta CLI follow-ups for /gusta-send-issue: an abbreviated candidate SHA in a unit receipt marks finished work failed and stops the loop; a failed-stop report omits its next section so the next preflight fails spec lint; a corrected report cannot be resumed under the same tag; an inbox line containing a markdown heading token drops the following report sections
 
 ## log
+- 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
 - 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 T897 done
@@ -202,4 +203,3 @@
 - 261117 fix writing-tests: unchosen model slots keep their placeholder after one slot is chosen
 - 261117 fix writing-tests: setting tests send no model stage (400 WRITING_TEST_FACTOR_INVALID); 4 files incl. one test fixture correction, over the 3-file light limit
 - 261117 gusta-update-ssot ARCH r26 complete: future task checks use affected units and changed-file fast static checks, full frontend TypeScript remains in existing shared batch build. No code task generated. Spec published to planning main as 4fe6f9246; runbook committed separately as fa6a59a81 on owned update branch. Lint passes with 58 inherited warnings plus T887 ARCH freshness warning; submitted task evidence preserved.
-- 261117 gusta-create-task ARCH r26 no-op (no code impact): ARCH-24 and verification runbook assign full frontend TypeScript to existing shared batch build; ARCH tasked=rev, no task generated, unrelated pending INFRA and submitted T878/T879 preserved. T887 needs ARCH freshness review before further implementation.
