@@ -315,8 +315,8 @@
       "branch": "gusta-session-start-wtform-501eaa2b",
       "head": "156049c2cd61ce6c0d20fee598bd06525174f64d",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-17T06:23:47.320Z",
+      "status": "ready",
+      "at": "2026-11-17T06:23:54.306Z",
       "agentChecks": [],
       "verificationCommands": []
     }
