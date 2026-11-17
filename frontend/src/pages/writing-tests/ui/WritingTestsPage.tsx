@@ -124,11 +124,11 @@ export function WritingTestPage() {
   return (
     <PageFrame width="workspace" className="flex flex-1 flex-col pb-0 sm:pb-0">
       <WritingTestStudio
-        heading={
+        heading={(output) => (
           <Typography variant="title" as="h1" className="truncate">
-            {t('title')}
+            {t(output === 'observation' ? 'photoTestTitle' : 'title')}
           </Typography>
-        }
+        )}
         ownerId={user?.id ?? ''}
         seedKey={`test:${testId}`}
         testId={testId}

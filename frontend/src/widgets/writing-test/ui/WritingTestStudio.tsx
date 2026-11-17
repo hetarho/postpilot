@@ -108,8 +108,9 @@ const choiceKey = (entrant: TestEntrant) =>
       : `ai:${entrant.authoring.sessionId}:${entrant.authoring.candidateId}:${entrant.authoring.revision}`
 
 export interface WritingTestStudioProps {
-  /** The page's heading, set beside ← on the studio's top row. */
-  heading?: ReactNode
+  /** The page's heading, set beside ← on the studio's top row. A function receives the loaded
+   *  test's output, so one detail route can name a photo observation test as such (MODEL-97). */
+  heading?: ReactNode | ((output: 'post' | 'observation') => ReactNode)
   ownerId: string
   seedKey: string
   initialPlan: WritingTestPlan
@@ -744,7 +745,13 @@ function OwnedStudio({
     <div className="flex min-w-0 flex-1 flex-col">
       <div className="flex min-h-11 flex-wrap items-center gap-2">
         <ContextualReturn />
-        {heading && <div className="min-w-0 flex-1">{heading}</div>}
+        {heading && (
+          <div className="min-w-0 flex-1">
+            {typeof heading === 'function'
+              ? heading(test?.output ?? plan.output ?? 'post')
+              : heading}
+          </div>
+        )}
       </div>
       <Typography
         variant="stepTitle"

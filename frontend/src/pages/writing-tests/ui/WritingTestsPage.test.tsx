@@ -14,6 +14,7 @@ import { initializeI18n } from '@/app/providers/i18n'
 import { contentLanguageToProto, Stage } from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
+import { wireObservationTest } from '@/entities/writing-test/api/fixtures.test-support'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { WritingTestHistoryPage, WritingTestPage, WritingTestsPage } from './WritingTestsPage'
 
@@ -196,6 +197,14 @@ it('opens a deep test link with its real actor and private server match without 
   expect(fixture.votes).toHaveLength(0)
   expect(fixture.preparations).toHaveLength(0)
   expect(fixture.publications).toHaveLength(0)
+})
+it('names a photo observation test as such on its deep link (MODEL-97)', async () => {
+  const fixture = createWritingTestStudioFixture()
+  fixture.restoreTest(wireObservationTest(['photo-1'], 2))
+  mount('/tests/test', fixture)
+  await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
+  expect(screen.getByRole('heading', { level: 1, name: '사진 관찰 테스트' })).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { level: 1, name: '글쓰기 테스트' })).toBeNull()
 })
 it('mounts common and one selected voice history as read-only and offers an explicit fresh draft action', async () => {
   const fixture = createWritingTestStudioFixture({ readableTest: true })
