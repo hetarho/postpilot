@@ -553,7 +553,13 @@ function ScopedEditor({
       })
     const draftPane = (
       <div className="flex min-w-0 flex-col gap-3">
-        <Typography variant="eyebrow" as="h3">
+        {/* A post template's preview names itself (미리보기); over it, this would be a second
+            heading saying the same. */}
+        <Typography
+          variant="eyebrow"
+          as="h3"
+          className={draft && kind === 'post-template' ? 'sr-only' : undefined}
+        >
           {t('conversation.draft')}
         </Typography>
         {draft ? (
@@ -580,36 +586,73 @@ function ScopedEditor({
               <AuthoringPreview kind={kind} artifact={draft} />
             )}
           </div>
-        ) : working ? (
-          <div aria-hidden="true" className="relative">
-            <span className="bg-promo-stroke animate-promo-glow pointer-events-none absolute inset-6 -z-10 rounded-3xl opacity-40 blur-2xl" />
-            <div className="bg-card-bg mx-auto flex w-full max-w-sm flex-col gap-4 rounded-2xl px-5 py-6 shadow-sm">
-              <span className="bg-surface-recessed loading-skeleton h-5 w-3/4 rounded-md" />
-              {[0, 1, 2].map((block) => (
-                <span key={block} className="flex flex-col gap-1.5">
-                  <span className="bg-badge-accent-bg loading-skeleton h-3 w-1/3 rounded-full" />
-                  <span className="bg-surface-recessed loading-skeleton h-2 w-full rounded-full" />
-                  <span className="bg-surface-recessed loading-skeleton h-2 w-11/12 rounded-full" />
-                  <span className="bg-surface-recessed loading-skeleton h-2 w-3/5 rounded-full" />
-                </span>
-              ))}
-            </div>
-          </div>
         ) : (
-          <div className="border-divider flex flex-col items-center gap-3 rounded-2xl border border-dashed px-6 py-10 text-center">
-            {draftIllustration ? (
-              <img
-                src={draftIllustration}
-                alt=""
+          // Before the first draft, the pane holds the shape of one: a blank page the conversation
+          // will fill. While the AI drafts, the same page shimmers in a halo; then the draft
+          // arrives in its place.
+          <div className="flex flex-col items-center gap-4">
+            <div className="relative w-full max-w-sm">
+              {working && (
+                <span
+                  aria-hidden="true"
+                  className="bg-promo-stroke animate-promo-glow pointer-events-none absolute inset-6 -z-10 rounded-3xl opacity-40 blur-2xl"
+                />
+              )}
+              <div
                 aria-hidden="true"
-                className="size-24 object-contain opacity-80"
-              />
-            ) : (
-              <MessagesSquare aria-hidden="true" className="text-content-tertiary size-10" />
+                className={
+                  'bg-card-bg duration-slow flex w-full flex-col gap-4 rounded-2xl px-5 py-6 shadow-sm transition-opacity ' +
+                  (working ? '' : 'opacity-60')
+                }
+              >
+                <span
+                  className={
+                    'bg-surface-recessed h-5 w-3/4 rounded-md ' +
+                    (working ? 'loading-skeleton' : '')
+                  }
+                />
+                {[0, 1, 2].map((block) => (
+                  <span key={block} className="flex flex-col gap-1.5">
+                    <span
+                      className={
+                        'bg-badge-accent-bg h-3 w-1/3 rounded-full ' +
+                        (working ? 'loading-skeleton' : '')
+                      }
+                    />
+                    {['w-full', 'w-11/12', 'w-3/5'].map((width) => (
+                      <span
+                        key={width}
+                        className={
+                          'bg-surface-recessed h-2 rounded-full ' +
+                          width +
+                          (working ? ' loading-skeleton' : '')
+                        }
+                      />
+                    ))}
+                  </span>
+                ))}
+              </div>
+              {!working && (
+                <span className="absolute inset-0 flex items-center justify-center">
+                  {draftIllustration ? (
+                    <img
+                      src={draftIllustration}
+                      alt=""
+                      aria-hidden="true"
+                      className="animate-rise size-24 object-contain drop-shadow-md"
+                    />
+                  ) : (
+                    <MessagesSquare aria-hidden="true" className="text-content-tertiary size-10" />
+                  )}
+                </span>
+              )}
+            </div>
+            {/* While drafting, the chat says so; the page's shimmer is enough here. */}
+            {!working && (
+              <Typography variant="body" className="text-content-secondary text-center">
+                {t('conversation.draftEmpty')}
+              </Typography>
             )}
-            <Typography variant="body" className="text-content-secondary">
-              {t('conversation.draftEmpty')}
-            </Typography>
           </div>
         )}
       </div>
@@ -624,7 +667,11 @@ function ScopedEditor({
             draft ? 'border-divider flex flex-wrap items-center gap-2 border-b pb-3' : 'contents'
           }
         >
-          <div className={draft ? 'min-w-0 flex-1 basis-40' : 'sr-only'}>
+          {/* A saved one is already named by the page around it; the name shows here once it is
+              a new draft's, or once the conversation has renamed it. */}
+          <div
+            className={draft && draftName !== targetName ? 'min-w-0 flex-1 basis-40' : 'sr-only'}
+          >
             <Typography variant="meta" as="p">
               {t(`kinds.${kind}`)}
             </Typography>
@@ -632,6 +679,7 @@ function ScopedEditor({
               {draftName || t('conversation.log', { kind: t(`kinds.${kind}`) })}
             </Typography>
           </div>
+          {draft && draftName === targetName && <span aria-hidden="true" className="flex-1" />}
           {draft && (
             <ActionMenu
               label={t('conversation.more')}
@@ -822,18 +870,32 @@ function ScopedEditor({
   return (
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
-        {canGoBack && !onNavigationChange && (
-          <Button
-            variant="secondary"
-            size="icon"
-            aria-label={t('back')}
-            title={t('back')}
-            className="mb-2 sm:mb-6"
-            onClick={() => event('BACK')}
-          >
-            <ReturnIcon />
-          </Button>
-        )}
+        {canGoBack &&
+          !onNavigationChange &&
+          (conversation ? (
+            // Inside a conversation the page already has its own way back; this one returns to
+            // the chat, and says so, so the two are never mistaken for each other.
+            <Button
+              variant="secondary"
+              size="compact"
+              className="mb-4 gap-2 sm:mb-6"
+              onClick={() => event('BACK')}
+            >
+              <MessagesSquare aria-hidden="true" className="size-4" />
+              {t('conversation.backToChat')}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label={t('back')}
+              title={t('back')}
+              className="mb-2 sm:mb-6"
+              onClick={() => event('BACK')}
+            >
+              <ReturnIcon />
+            </Button>
+          ))}
         <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">
           {t('namedSetting', named)}
         </Typography>

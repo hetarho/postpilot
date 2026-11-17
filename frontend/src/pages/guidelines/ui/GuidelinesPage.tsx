@@ -2,7 +2,6 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { GuidelineDirectory } from '@/widgets/guideline-directory'
 import { KitScreenHeader } from '@/widgets/writing-kit'
-import { guidelineIllustration } from '@/shared/assets'
 
 /** /guidelines: a post's 작문 지침 (GUIDE-20), one piece of the writing kit. The page opens on
  *  what a guideline does to a post, with the ONE 새 지침 menu in its heading row, over the rules
@@ -25,7 +24,6 @@ export function GuidelinesPage() {
           kit="guideline"
           title={t('page.title')}
           statement={t('statement')}
-          illustration={guidelineIllustration}
           actions={actions}
           className="pt-2 sm:pt-4"
         />

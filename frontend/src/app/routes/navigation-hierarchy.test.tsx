@@ -85,7 +85,7 @@ it('traverses the four tabs as sibling destinations without paid work', async ()
       await user.click(screen.getByRole('button', { name: '내 계정' }))
       await user.click(
         within(screen.getByRole('dialog', { name: '내 계정' })).getByRole('link', {
-          name: '내 설정',
+          name: '설정',
         }),
       )
     } else await user.click(primary.getByRole('link', { name: navLabel }))

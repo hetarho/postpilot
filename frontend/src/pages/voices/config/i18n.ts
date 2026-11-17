@@ -5,6 +5,7 @@ export const i18n = {
   namespace: 'voices',
   ko: {
     page: {
+      title: '말투',
       statement: '내 글이 이 말투로 써져요. 어미와 말버릇, 자주 쓰는 표현까지 배워 둬요.',
       current: '지금 글에 쓰는 말투',
       others: '다른 말투',
@@ -38,6 +39,7 @@ export const i18n = {
   },
   en: {
     page: {
+      title: 'Writing style',
       statement:
         'Your posts are written in this style — its endings, its habits, the phrases you reach for.',
       current: 'The style your posts use',

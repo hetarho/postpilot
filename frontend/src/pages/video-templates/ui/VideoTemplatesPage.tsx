@@ -1,4 +1,4 @@
-import { Clapperboard } from 'lucide-react'
+import { Clapperboard, Plus } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRef, type Ref } from 'react'
@@ -10,7 +10,8 @@ import {
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
-import { ChannelActions } from '@/widgets/channel-actions'
+import { KitScreenHeader } from '@/widgets/writing-kit'
+import { templateIllustration } from '@/shared/assets'
 import {
   Badge,
   DirectoryItem,
@@ -18,6 +19,7 @@ import {
   Notice,
   LoadingState,
   Typography,
+  buttonStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
@@ -44,10 +46,23 @@ export function VideoTemplatesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('directory.description', { ns: 'clips' })}
-      </Typography>
+      {/* The same opening as its siblings under 영상 — 영상 지침 and 목소리 — with the one way to
+          make a template in the heading row. */}
+      <KitScreenHeader
+        size="section"
+        title={t('directory.title', { ns: 'clips' })}
+        statement={t('directory.statement', { ns: 'clips' })}
+        illustration={templateIllustration}
+        actions={
+          <Link
+            to="/video-templates/new"
+            className={buttonStyles({ variant: 'cta', className: 'gap-2' })}
+          >
+            <Plus aria-hidden="true" className="size-5 shrink-0" />
+            {t('directory.new', { ns: 'clips' })}
+          </Link>
+        }
+      />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -159,8 +174,6 @@ export function VideoTemplatesPage() {
           )}
         </>
       )}
-      {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions video section="templates" />
     </main>
   )
 }

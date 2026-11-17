@@ -49,7 +49,6 @@ export {
   type TemplateRequestModel,
   type TemplateRequestResult,
 } from './api/useTemplateRequest'
-export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'
 export { TemplatePreview } from './ui/TemplatePreview'
 export {

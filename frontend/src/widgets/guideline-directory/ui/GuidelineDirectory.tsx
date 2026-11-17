@@ -363,7 +363,7 @@ export function GuidelineDirectory({
                   </Typography>
                   {/* Guide: each rule is one card holding its plain sentence; tapping it opens the
                       rule's own reading view with its scope and the way to edit it. */}
-                  <ul className="mt-3 grid gap-3">
+                  <ul className={ruleGroup + ' mt-3'}>
                     {inUse.map((guideline, index) => (
                       <DefaultGuidelineItem
                         key={guideline.key}
@@ -523,7 +523,7 @@ function GuidelineLayers({
         action={defaultsAction}
       >
         {defaults.length > 0 ? (
-          <ul className="grid gap-2">{defaults}</ul>
+          <ul className={ruleGroup}>{defaults}</ul>
         ) : (
           <Typography variant="meta" as="p">
             {t('layers.none')}
@@ -548,7 +548,7 @@ function GuidelineLayers({
           title={layer.title}
           how={layer.how}
         >
-          <ul className="grid gap-2">{layer.rows}</ul>
+          <ul className={ruleGroup}>{layer.rows}</ul>
         </Layer>
       ))}
     </section>
@@ -636,19 +636,24 @@ function SentenceTitle({
     <span className="flex min-w-0 items-start gap-3 py-1">
       <span
         aria-hidden="true"
-        className="bg-badge-accent-bg text-badge-accent-fg mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full"
+        className="bg-badge-accent-bg text-badge-accent-fg mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full"
       >
-        <Check className="size-4" />
+        <Check className="size-3.5" />
       </span>
-      <span className="flex min-w-0 flex-col gap-1">
+      <span className="flex min-w-0 flex-col gap-0.5">
         {name && name !== sentence && (
-          <span className={typographyStyles({ variant: 'label', className: 'truncate' })}>
+          <span
+            className={typographyStyles({
+              variant: 'meta',
+              className: 'text-content-secondary truncate',
+            })}
+          >
             {name}
           </span>
         )}
         <span
           className={typographyStyles({
-            variant: 'fieldTitle',
+            variant: 'body',
             className: 'text-content-primary text-pretty break-words',
           })}
         >
@@ -660,8 +665,13 @@ function SentenceTitle({
   )
 }
 
-/** The card a rule row sits on. */
-const ruleCard = cardStyles({ padding: 'none', className: 'px-4 py-2 sm:px-5 sm:py-3' })
+/** A layer's rules share one card, a hairline apart, so the stack reads as a few sheets of rules
+ *  rather than a pile of cards; each rule is one row of it. */
+const ruleGroup = cardStyles({
+  padding: 'none',
+  className: 'divide-divider divide-y overflow-hidden shadow-sm',
+})
+const ruleCard = 'px-4 py-1 sm:px-5'
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
@@ -774,7 +784,6 @@ function GuidelineRow({
   rowRef: Ref<HTMLLIElement>
   onDeleted: () => void
 }) {
-  const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
   const [method, setMethod] = useState<'ai' | 'direct'>('ai')
   const [authoringOpen, setAuthoringOpen] = useState(false)
@@ -847,27 +856,38 @@ function GuidelineRow({
           />
         </div>
       </Disclosure>
-      <div className="pb-3 pl-6">
-        <Typography variant="body" className="text-content-secondary">
-          {t('authoringState.savedAvailable')}
-        </Typography>
-        <EditingStatus summary={summary} />
-      </div>
+      {/* A saved rule is simply in the stack; only unfinished editing is worth a line. */}
+      <EditingStatus summary={summary} unfinishedOnly className="mt-0 pb-3 pl-8" />
     </li>
   )
 }
 
-function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
+function EditingStatus({
+  summary,
+  unfinishedOnly = false,
+  className = 'mt-2',
+}: {
+  summary?: AuthoringSummary
+  /** Leave out the last publication: a saved rule in the stack already says it was saved. */
+  unfinishedOnly?: boolean
+  className?: string
+}) {
   const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
   if (!summary) return null
+  const unfinished =
+    summary.hasUnpublishedChanges ||
+    summary.activeJobId ||
+    summary.publicationPending ||
+    summary.targetConflict
+  if (unfinishedOnly && !unfinished) return null
   const named = {
     kind: authoringText(`kinds.${summary.kind}`),
     name: summary.displayName || authoringText(`kinds.${summary.kind}`),
   }
   return (
-    <div role="status" className="mt-2 space-y-2">
-      {summary.lastPublication?.outcome && (
+    <div role="status" className={'space-y-2 ' + className}>
+      {!unfinishedOnly && summary.lastPublication?.outcome && (
         <Typography variant="body">
           {t('authoringState.lastPublication', {
             result: authoringText(

@@ -746,14 +746,14 @@ describe('localized registered-route smoke', () => {
     en: {
       login: 'Log in',
       posts: 'Naver Blog',
-      voices: 'Voices',
+      voices: 'Writing style',
       templates: 'Templates',
       guidelines: 'Guidelines',
       about:
         'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
       analysis: 'Voice analysis',
       materials: 'Training data',
-      models: 'AI tournament',
+      models: 'AI Arena',
       memories: 'Memories',
       spoken: 'Voices',
       clips: 'Videos',

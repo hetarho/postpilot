@@ -16,7 +16,6 @@ import { RestoreVoiceButton } from '@/features/restore-voice'
 import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
 import { KitScreenHeader } from '@/widgets/writing-kit'
-import { voiceIllustration } from '@/shared/assets'
 import {
   ActionMenu,
   Badge,
@@ -72,13 +71,14 @@ export function VoicesPage() {
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-4 sm:pt-8' })}>
       <KitScreenHeader
         kit="voice"
-        title={t('title')}
+        title={t('page.title')}
         statement={t('page.statement')}
-        illustration={voiceIllustration}
         actions={
           <ActionMenu
             label={t('page.newMenu')}
-            triggerVariant="cta"
+            // A second voice is the rarer errand: once one exists, its own card holds the screen's
+            // main action and this steps back.
+            triggerVariant={writing || isPending ? 'secondary' : 'cta'}
             triggerLabel={
               <>
                 <Plus aria-hidden="true" className="size-5 shrink-0" />
@@ -337,6 +337,7 @@ function OtherVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
       <span className="relative shrink-0">
         <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
       </span>
+      <ChevronRight aria-hidden="true" className="text-content-tertiary size-5 shrink-0" />
     </li>
   )
 }

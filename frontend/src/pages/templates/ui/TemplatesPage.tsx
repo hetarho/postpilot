@@ -5,7 +5,6 @@ import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
 import { KitScreenHeader } from '@/widgets/writing-kit'
-import { templateIllustration } from '@/shared/assets'
 import {
   Badge,
   Button,
@@ -41,7 +40,6 @@ export function TemplatesPage() {
         kit="template"
         title={t('title')}
         statement={t('page.statement')}
-        illustration={templateIllustration}
         actions={
           <Link
             to="/templates/new"
@@ -124,16 +122,10 @@ export function TemplatesPage() {
           <Typography variant="title" as="h2" id="templates-empty">
             {t('page.emptyTitle')}
           </Typography>
+          {/* The way to make one is the heading row's; the empty space only says what to bring. */}
           <Typography variant="body" as="p" className="text-content-secondary max-w-measure">
             {t('page.emptyBody')}
           </Typography>
-          <Link
-            to="/templates/new"
-            className={buttonStyles({ variant: 'secondary', className: 'mt-2 gap-2' })}
-          >
-            <Sparkles aria-hidden="true" className="size-4 shrink-0" />
-            {t('page.create')}
-          </Link>
         </section>
       )}
 

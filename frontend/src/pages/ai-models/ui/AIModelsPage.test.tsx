@@ -28,7 +28,7 @@ async function openRecommendations(user: ReturnType<typeof userEvent.setup>) {
 }
 
 const destinations = [
-  ['/ai-models', '/ai-models', 'AI 토너먼트', 'AI tournament'],
+  ['/ai-models', '/ai-models', 'AI 토너먼트', 'AI Arena'],
   ['/ai-models/compare', '/tests', '글쓰기 테스트', 'Writing tests'],
   ['/ai-models/experiments', '/tests/history', '테스트 기록', 'Test history'],
   ['/ai-models/leaderboard', '/tests/history', '테스트 기록', 'Test history'],

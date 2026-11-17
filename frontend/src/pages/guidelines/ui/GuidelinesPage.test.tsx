@@ -77,7 +77,8 @@ describe('named owned guideline editing', () => {
     renderGuidelines({}, calls)
     const list = await section('지침 목록')
     expect(list.getAllByRole('listitem')).toHaveLength(3)
-    expect(list.getAllByText('저장되어 사용할 수 있어요')).toHaveLength(3)
+    // A saved rule is simply in the stack: no row repeats that it was saved.
+    expect(list.queryByText('저장되어 사용할 수 있어요')).not.toBeInTheDocument()
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListAuthoringSummaries')).toHaveLength(1),
     )

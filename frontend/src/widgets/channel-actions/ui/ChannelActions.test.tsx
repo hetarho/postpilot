@@ -16,7 +16,7 @@ afterEach(() => {
 // the channel it was started from (THEME-58), and pressing it starts no paid work. Videos are one
 // list: the old Instagram address lands on it, and a video started there returns to it.
 it.each([
-  ['/posts', '새 글', '/posts/new', '네이버 블로그로 돌아가기', '/posts'],
+  ['/posts', '새 글', '/posts/new', '내 글로 돌아가기', '/posts'],
   ['/clips', '새 영상', '/clips/new', '영상으로 돌아가기', '/clips'],
 ] as const)(
   'starts creation from %s at once and keeps the list as its origin',

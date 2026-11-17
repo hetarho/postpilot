@@ -126,7 +126,7 @@ it.each([false, true])('keeps the four places one tap away, desktop=%s', async (
   const panel = within(screen.getByRole('dialog', { name: '내 계정' }))
   // The theme and the language are inside the avatar, at every width.
   expect(panel.getByRole('group', { name: '인터페이스 환경설정' })).toBeInTheDocument()
-  await user.click(panel.getByRole('link', { name: '내 설정' }))
+  await user.click(panel.getByRole('link', { name: '설정' }))
   await screen.findByRole('heading', { name: '설정', level: 1 })
   const bar = screen.getByRole('navigation', { name: '주요' })
   expect(bar.querySelector('[aria-current]')).toBeNull()
@@ -214,7 +214,7 @@ it('retains a 설정 origin through reload and restores its document position on
 // and 영상 만들기 is the quiet second way in. Looking at it writes nothing.
 it.each([
   ['ko', '글쓰기', '영상 만들기', /^말투/],
-  ['en', 'Write', 'Make a video', /^Style/],
+  ['en', 'Write', 'Make a video', /^Writing style/],
 ] as const)(
   'starts a post from the kit on 홈 in %s without object writes',
   async (locale, write, video, voice) => {

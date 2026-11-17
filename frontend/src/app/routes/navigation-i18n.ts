@@ -61,7 +61,7 @@ export const navigationI18n = {
     },
   },
   en: {
-    tabs: { home: 'Home', posts: 'Posts', videos: 'Videos', tournament: 'Tournament' },
+    tabs: { home: 'Home', posts: 'Posts', videos: 'Videos', tournament: 'AI Arena' },
     tests: 'Try a comparison',
     history: 'Work history',
     overflow: 'Navigation menu',
@@ -76,7 +76,7 @@ export const navigationI18n = {
     videos: {
       list: 'Videos',
       templates: 'Video templates',
-      guidelines: 'Video rules',
+      guidelines: 'Video guidelines',
       spoken: 'Voices',
     },
     location: {
@@ -101,7 +101,7 @@ export const navigationI18n = {
       videoGuidelines: 'Video guidelines',
       spokenVoices: 'Speaking voices',
       newSpokenVoice: 'New speaking voice',
-      models: 'AI tournament',
+      models: 'AI Arena',
       tests: 'Writing tests',
       testHistory: 'Test history',
       test: 'Test result',

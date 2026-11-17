@@ -29,76 +29,82 @@ export function AIModelsPage() {
   const { t } = useTranslation('models')
   const [recommending, setRecommending] = useState(false)
   return (
-    <main className={pageStyles({ width: 'prose', className: 'pt-4 sm:pt-10' })}>
+    // The same width and title row as 글 and 영상, so moving between the tabs never shifts the
+    // page under the owner; the content keeps a reading width below it.
+    <main className={pageStyles({ width: 'wide', className: 'pt-4 sm:pt-6' })}>
       <Typography variant="largeTitle">{t('page.guideTitle')}</Typography>
-
-      {/* Guide: the tournament first — two AIs on the same job, the owner picks the better one —
+      <Typography variant="body" as="p" className="text-content-secondary mt-1">
+        {t('page.guideLead')}
+      </Typography>
+      <div className="max-w-3xl">
+        {/* Guide: the tournament first — two AIs on the same job, the owner picks the better one —
           then the AIs that won, in use for each stage. */}
-      <section aria-labelledby="compare-heading" className="mt-8">
-        <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
-          <Typography variant="title" as="h2" id="compare-heading">
-            {t('page.compareTitle')}
+        <section aria-labelledby="compare-heading" className="mt-8">
+          <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+            <Typography variant="title" as="h2" id="compare-heading">
+              {t('page.compareTitle')}
+            </Typography>
+            <Link
+              to="/tests/history"
+              search={{ entry: '/ai-models' }}
+              className={typographyStyles({
+                variant: 'label',
+                className:
+                  'text-content-secondary hover:text-content-primary inline-flex min-h-11 items-center',
+              })}
+            >
+              {t('page.testHistory')}
+            </Link>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <CompareCard
+              icon={Columns2}
+              title={t('page.compareWrite')}
+              help={t('page.compareWriteHelp')}
+              stage="write"
+            />
+            <CompareCard
+              icon={ScanEye}
+              title={t('page.compareObserve')}
+              help={t('page.compareObserveHelp')}
+              stage="observe"
+            />
+          </div>
+          <Typography variant="meta" as="p" className="text-content-tertiary mt-3 px-1">
+            {t('page.compareNoRun')}
           </Typography>
-          <Link
-            to="/tests/history"
-            search={{ entry: '/ai-models' }}
-            className={typographyStyles({
-              variant: 'label',
-              className:
-                'text-content-secondary hover:text-content-primary inline-flex min-h-11 items-center',
+        </section>
+
+        <section aria-labelledby="ai-in-use" className="mt-10">
+          <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
+            <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
+              {t('page.inUse')}
+            </Typography>
+            <Button variant="secondary" size="compact" onClick={() => setRecommending(true)}>
+              <Sparkles aria-hidden className="size-4" />
+              {t('page.applyRecommendation')}
+            </Button>
+          </div>
+          <div
+            className={cardStyles({
+              padding: 'none',
+              className: 'divide-divider divide-y overflow-hidden shadow-sm',
             })}
           >
-            {t('page.testHistory')}
-          </Link>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <CompareCard
-            icon={Columns2}
-            title={t('page.compareWrite')}
-            help={t('page.compareWriteHelp')}
-            stage="write"
-          />
-          <CompareCard
-            icon={ScanEye}
-            title={t('page.compareObserve')}
-            help={t('page.compareObserveHelp')}
-            stage="observe"
-          />
-        </div>
-        <Typography variant="meta" as="p" className="text-content-tertiary mt-3 px-1">
-          {t('page.compareNoRun')}
-        </Typography>
-      </section>
+            <StageModelRow stage="write" />
+            <StageModelRow stage="observe" />
+            <StageModelRow stage="analyze" />
+          </div>
+          <PostCreditEstimate className="mt-3 px-4" />
+        </section>
+        <RecommendationSheet open={recommending} onClose={() => setRecommending(false)} />
 
-      <section aria-labelledby="ai-in-use" className="mt-10">
-        <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
-          <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
-            {t('page.inUse')}
-          </Typography>
-          <Button variant="secondary" size="compact" onClick={() => setRecommending(true)}>
-            <Sparkles aria-hidden className="size-4" />
-            {t('page.applyRecommendation')}
-          </Button>
-        </div>
-        <div
-          className={cardStyles({
-            padding: 'none',
-            className: 'divide-divider divide-y overflow-hidden shadow-sm',
-          })}
-        >
-          <StageModelRow stage="write" />
-          <StageModelRow stage="observe" />
-          <StageModelRow stage="analyze" />
-        </div>
-        <PostCreditEstimate className="mt-3 px-4" />
-      </section>
-      <RecommendationSheet open={recommending} onClose={() => setRecommending(false)} />
-
-      {/* Which two AIs a new two-model test starts from is a setting of its own, not part of
+        {/* Which two AIs a new two-model test starts from is a setting of its own, not part of
           either comparison's invitation. */}
-      <section className={cardStyles({ className: 'mt-10 shadow-sm' })}>
-        <OptionalTestPair />
-      </section>
+        <section className={cardStyles({ className: 'mt-10 shadow-sm' })}>
+          <OptionalTestPair />
+        </section>
+      </div>
     </main>
   )
 }

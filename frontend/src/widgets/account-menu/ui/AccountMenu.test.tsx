@@ -61,7 +61,7 @@ describe('AccountMenu', () => {
     const menu = within(panel).getByRole('navigation', { name: '계정 메뉴' })
     const rows = within(menu).getAllByRole('link')
     expect(rows.map((row) => row.textContent)).toEqual([
-      '내 설정',
+      '설정',
       '계정 설정',
       '플랜 보기',
       '결제 관리',
@@ -223,7 +223,7 @@ describe('AccountMenu', () => {
       within(menu)
         .getAllByRole('link')
         .map((row) => row.textContent),
-    ).toEqual(['내 설정', '계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
+    ).toEqual(['설정', '계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
     // The ladder is reachable from every tier: this link used to live inside the "has a
     // meter" branch, which left the operator account with no way to `/plans` (QUOTA-27).
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()

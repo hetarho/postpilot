@@ -41,7 +41,6 @@ export const i18n = {
       unsaved: '저장하기 전에는 글이나 영상에 적용되지 않아요.',
       createDirect: '새 지침 직접 쓰기',
       createVideoDirect: '새 영상 지침 직접 쓰기',
-      savedAvailable: '저장되어 사용할 수 있어요',
       lastPublication: '마지막으로 확인한 저장: {{result}}',
     },
     page: {
@@ -109,7 +108,6 @@ export const i18n = {
       unsaved: 'These do not apply to posts or videos until saved.',
       createDirect: 'Write a new guideline directly',
       createVideoDirect: 'Write a new video guideline directly',
-      savedAvailable: 'Saved and available',
       lastPublication: 'Last confirmed save: {{result}}',
     },
     page: {

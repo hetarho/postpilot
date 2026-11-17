@@ -56,7 +56,7 @@ export function WritingKit({
     })
   return (
     <div className={clsx('@container', className)}>
-      <div className="relative flex flex-col gap-4 @xs:block @xs:aspect-square @xs:w-full">
+      <div className="relative flex flex-col gap-4 @xs:mb-6 @xs:block @xs:aspect-square @xs:w-full">
         {/* The orbit and the spokes. Percent coordinates, a stroke that never scales. */}
         <svg
           aria-hidden="true"
@@ -149,10 +149,12 @@ export function WritingKit({
                   } as CSSProperties
                 }
                 className={clsx(
-                  'animate-rise @xs:pointer-events-auto @xs:absolute @xs:top-(--kit-y) @xs:left-(--kit-x) @xs:w-28 @xs:-translate-x-1/2',
-                  // Anchor the RING on the orbit point: its words hang below it, or above it for
-                  // the top piece.
-                  point.y < 30 ? '@xs:-translate-y-[calc(100%-1.75rem)]' : '@xs:-translate-y-7',
+                  'animate-rise @xs:pointer-events-auto @xs:absolute @xs:top-(--kit-y) @xs:left-(--kit-x) @xs:w-28 @xs:-translate-x-1/2 @md:w-36',
+                  // Anchor the RING's centre on the orbit point: its words hang below it, or above
+                  // it for the top piece. Half the ring: 2rem, and 2.5rem once it grows.
+                  point.y < 30
+                    ? '@xs:-translate-y-[calc(100%-2rem)] @md:-translate-y-[calc(100%-2.5rem)]'
+                    : '@xs:-translate-y-8 @md:-translate-y-10',
                 )}
               >
                 <Link
@@ -165,8 +167,13 @@ export function WritingKit({
                     point.y < 30 ? '@xs:flex-col-reverse' : '@xs:flex-col',
                   )}
                 >
-                  <span className="duration-base ease-standard rounded-full transition-transform @xs:group-hover:scale-110">
-                    <KitRing kitKey={element.key} state={element.state} fill={element.fill} />
+                  <span className="duration-base ease-standard rounded-full transition-transform @xs:group-hover:scale-105">
+                    <KitRing
+                      kitKey={element.key}
+                      state={element.state}
+                      fill={element.fill}
+                      className="@md:size-20"
+                    />
                   </span>
                   <span className="flex min-w-0 flex-1 flex-col @xs:w-full @xs:items-center @xs:text-center">
                     <span

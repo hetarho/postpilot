@@ -4,7 +4,7 @@ export const nav = {
 
   launch: '새로 만들기',
   library: '보관함',
-  settings: '내 설정',
+  settings: '설정',
   menu: '메뉴',
 
   spokenVoices: '목소리',

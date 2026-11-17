@@ -35,10 +35,12 @@ import {
 } from '@/widgets/work-list'
 import { appFailureFromConnect } from '@/shared/api'
 import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
+import { videoIllustration } from '@/shared/assets'
 import {
   AppFailureMessage,
   Badge,
   Button,
+  ListEmptyState,
   Notice,
   Typography,
   buttonStyles,
@@ -181,13 +183,9 @@ export function ClipHistoryPage() {
 
       {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
       {!projects.isError && !projects.isPending && listed.length === 0 && (
-        <Typography
-          variant="body"
-          role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
-        >
+        <ListEmptyState illustration={videoIllustration} className="mt-6">
           {historyText('empty')}
-        </Typography>
+        </ListEmptyState>
       )}
 
       {/* A narrowing that matches nothing is NOT the same screen as an account with no clips: it

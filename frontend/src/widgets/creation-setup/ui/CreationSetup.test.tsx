@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest'
 import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Code, ConnectError, type Transport } from '@connectrpc/connect'
+import { Stage } from '@/shared/api'
 import { initializeI18n } from '@/app/providers/i18n'
 import {
   emptySetupProgress,
@@ -178,18 +179,18 @@ it('omits made voices and existing templates, showing only the missing clip temp
     await screen.findByRole('heading', { name: '이제, 당신의 이야기를 만들어요.' }),
   ).toBeInTheDocument()
 })
-// A template question keeps ONE step bar, its wizard's: setup's way back stands in it on the
-// wizard's first question and setup's skip under its row, where they used to be a second bar
-// under the wizard's own 이전 / 다음.
-it('keeps one step bar on a template question, carrying setup’s way back and skip', async () => {
+// A template question is the same AI conversation 템플릿 opens, under setup's own one step bar:
+// setup's way back and its skip, and nothing of a wizard's.
+it('asks for a template in the AI conversation under setup’s one step bar', async () => {
   resumeSetup()
   renderAppAt('/setup', { ...READY, clips: { templates: [] } })
   const user = await start()
   await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' })
+  expect(await screen.findByText(/어떤 영상을 자주 만드세요\?/)).toBeInTheDocument()
   const bars = document.querySelectorAll<HTMLElement>('[data-action-bar="step"]')
   expect(bars).toHaveLength(1)
   const bar = within(bars[0]!)
-  expect(bar.getByRole('button', { name: '다음' })).toBeDisabled()
+  expect(bar.queryByRole('button', { name: '다음' })).toBeNull()
   expect(bar.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
   await user.click(bar.getByRole('button', { name: '이전' }))
   expect(await screen.findByRole('button', { name: '내 작업 공간 준비하기' })).toBeInTheDocument()
@@ -311,59 +312,24 @@ it('retains the failed step and returns to all three methods on explicit Back wi
   expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
   expect(calls).not.toContain('AnalyzeVoice')
 })
-async function finishPostWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(await screen.findByRole('button', { name: /^맛집/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(await screen.findByRole('button', { name: /^식사/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('heading', { name: '이런 글은 보통 이렇게 구성돼요' })
-  for (const box of screen.getAllByRole('checkbox')) {
-    if (!box.closest('label')?.textContent?.startsWith('방문 계기')) await user.click(box)
-  }
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.type(await screen.findByLabelText('템플릿 이름'), name)
-}
-it('saves a post through the wizard, retaining all answers on a server refusal', async () => {
+// The post template question drafts nothing by itself: the conversation waits for the owner's
+// words, and nothing is created, started or saved before they send (every send is quoted first).
+it('opens the post template question on the AI conversation without starting any work', async () => {
   resumeSetup('post-template')
-  const creates: FakeTemplatesOptions['creates'] = []
-  const calls: string[] = []
-  mountFresh({ voice: READY.voice, templates: { creates, calls, createFails: true } })
-  const user = userEvent.setup()
-  await finishPostWizard(user, '일상 글')
-  await user.click(screen.getByRole('button', { name: '저장' }))
-  await waitFor(() => expect(calls).toContain('CreateTemplate'))
-  await screen.findByText(/연결|네트워크|요청을 마치지/)
-  expect(screen.getByLabelText('템플릿 이름')).toHaveValue('일상 글')
-  expect(screen.getByRole('article', { name: '미리보기' })).toHaveTextContent('방문 계기')
-  expect(creates).toEqual([])
-  expect(calls).not.toContain('CreateAuthoringSession')
-  expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
-})
-it('keeps setup on the post step and blocks duplicate saves until its saved identity arrives', async () => {
-  resumeSetup('post-template')
-  let release!: () => void
-  const createGate = new Promise<void>((resolve) => {
-    release = resolve
+  const templateCalls: string[] = []
+  const authoringCalls: string[] = []
+  mountFresh({
+    voice: READY.voice,
+    templates: { calls: templateCalls },
+    authoring: { calls: authoringCalls },
   })
-  const calls: string[] = []
-  const creates: FakeTemplatesOptions['creates'] = []
-  mountFresh({ voice: READY.voice, templates: { creates, calls, createGate } })
-  const user = userEvent.setup()
-  await finishPostWizard(user, '내 구성')
-  await user.dblClick(screen.getByRole('button', { name: '저장' }))
-  await waitFor(() => expect(calls.filter((call) => call === 'CreateTemplate')).toHaveLength(1))
-  expect(screen.getByLabelText('템플릿 이름')).toBeDisabled()
-  expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
-  expect(
-    screen.queryByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' }),
-  ).not.toBeInTheDocument()
-  expect(creates).toEqual([])
-  await act(async () => release())
-  await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' })
-  expect(creates).toHaveLength(1)
+  expect(await screen.findByText(/어떤 글을 자주 올리세요\?/)).toBeInTheDocument()
+  expect(screen.getByRole('group', { name: '이렇게 말해 볼 수 있어요' })).toBeInTheDocument()
+  expect(screen.queryByLabelText('템플릿 이름')).toBeNull()
+  expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
+  expect(authoringCalls).not.toContain('StartAuthoringOperation')
+  expect(authoringCalls).not.toContain('SaveAuthoringSession')
+  expect(templateCalls).not.toContain('CreateTemplate')
 })
 it('recovers a running voice analysis after reload without starting another paid job', async () => {
   resumeSetup('voice')
@@ -418,83 +384,74 @@ it('offers setup again only on an explicit settings entry after completion', asy
   expect(router.state.location.search.restart).toBe(true)
 })
 
-it('creates a valid post template exactly once and advances from its confirmed saved identity', async () => {
+const WRITE_MODEL: RenderAppOptions['providers'] = {
+  models: [{ providerId: 'stub', modelId: 'recommended', label: '추천 AI', stages: [Stage.WRITE] }],
+  selections: [{ stage: Stage.WRITE, providerId: 'stub', modelId: 'recommended' }],
+}
+/** Says what the owner posts, accepts the quote, and saves the one draft the AI made — all on
+ *  the test's fake services, where nothing is charged. */
+async function draftAndSave(
+  user: ReturnType<typeof userEvent.setup>,
+  log: string,
+  ask: { example: RegExp } | { field: string; text: string },
+) {
+  await screen.findByRole('log', { name: log })
+  if ('example' in ask)
+    await user.click(
+      within(screen.getByRole('log', { name: log })).getByRole('button', { name: ask.example }),
+    )
+  else await user.type(screen.getByRole('textbox', { name: ask.field }), ask.text)
+  const send = screen.getByRole('button', { name: '초안 만들기' })
+  await waitFor(() => expect(send).toBeEnabled())
+  await user.click(send)
+  const quote = await screen.findByRole('dialog', { name: '이 이야기로 초안을 만들까요?' })
+  await user.click(within(quote).getByRole('button', { name: '이대로 요청하기' }))
+  const save = await screen.findByRole('button', { name: '템플릿으로 저장' })
+  await waitFor(() => expect(save).toBeEnabled())
+  await user.click(save)
+  const confirm = await screen.findByRole('dialog', { name: /저장할까요\?$/ })
+  await user.dblClick(within(confirm).getByRole('button', { name: '저장' }))
+}
+// Saving the conversation's template is the step's one canonical save: it creates the template
+// once and moves setup on to the next question.
+it('saves the template the conversation drafted once and moves setup on', async () => {
   resumeSetup('post-template')
   const creates: FakeTemplatesOptions['creates'] = []
-  const first = mountFresh({ voice: READY.voice, templates: { creates } })
+  const calls: string[] = []
+  mountFresh({
+    voice: READY.voice,
+    templates: { creates },
+    authoring: { calls },
+    providers: WRITE_MODEL,
+  })
   const user = userEvent.setup()
-  await finishPostWizard(user, '내 글 구성')
-  await user.dblClick(screen.getByRole('button', { name: '저장' }))
+  await draftAndSave(user, '글 구성 만드는 대화', { example: /조립이 필요한 제품 리뷰/ })
   expect(
     await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' }),
   ).toBeInTheDocument()
   expect(creates).toHaveLength(1)
-  expect(creates![0]).toMatchObject({
-    name: '내 글 구성',
-    body: '방문 계기\n<write>이곳을 찾게 된 이유와 기대를 씁니다</write>',
-  })
-  first.unmount()
-  resumeSetup()
-  renderAppAt('/setup', {
-    ...READY,
-    templates: {
-      templates: [{ id: 'saved-post', name: creates![0]!.name, body: creates![0]!.body }],
-    },
-    clips: { templates: [] },
-  })
-  const nextUser = await start()
-  await nextUser.click(screen.getByRole('button', { name: '지금은 건너뛰기' }))
-  expect(
-    await screen.findByRole('heading', { name: '이제, 당신의 이야기를 만들어요.' }),
-  ).toBeInTheDocument()
+  expect(creates![0]).toMatchObject({ body: '<write>주제 1</write>' })
+  expect(calls.filter((call) => call === 'StartAuthoringOperation')).toHaveLength(1)
 })
-async function finishClipWizard(user: ReturnType<typeof userEvent.setup>, name: string) {
-  await user.click(await screen.findByRole('button', { name: /^카페/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(await screen.findByRole('button', { name: /^디저트/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
-  for (const box of screen.getAllByRole('checkbox')) {
-    if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)
-  }
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('heading', { name: '영상의 디자인을 골라요' })
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.type(await screen.findByLabelText('영상 템플릿 이름'), name)
-}
-it('saves a clip template once before offering completion', async () => {
+it('saves a video template from the conversation once before offering completion', async () => {
   resumeSetup('clip-template')
   const calls: string[] = []
-  const { router } = renderAppAt('/setup', { ...READY, clips: { templates: [], calls } })
+  const { router } = renderAppAt('/setup', {
+    ...READY,
+    clips: { templates: [], calls },
+    providers: WRITE_MODEL,
+  })
   const user = userEvent.setup()
-  await finishClipWizard(user, '내 영상 구성')
-  await user.dblClick(screen.getByRole('button', { name: '저장' }))
+  await draftAndSave(user, '영상 구성 만드는 대화', {
+    field: '어떤 영상인지 말해 주세요',
+    text: '카페 디저트를 보여 주는 짧은 영상',
+  })
   expect(
     await screen.findByRole('heading', { name: '이제, 당신의 이야기를 만들어요.' }),
   ).toBeInTheDocument()
   expect(calls.filter((call) => call === 'CreateVideoTemplate')).toHaveLength(1)
   await user.click(screen.getByRole('button', { name: '만들러 가기' }))
-  expect(
-    await within(screen.getByRole('main')).findByRole('link', { name: '영상 만들기' }),
-  ).toBeInTheDocument()
-  expect(router.state.location.pathname).toBe('/')
-})
-it('retains a clip template after a failed save', async () => {
-  resumeSetup('clip-template')
-  const calls: string[] = []
-  renderAppAt('/setup', { ...READY, clips: { templates: [], calls, saveFails: true } })
-  const user = userEvent.setup()
-  await finishClipWizard(user, '내 영상 구성')
-  await user.click(screen.getByRole('button', { name: '저장' }))
-  await waitFor(() => expect(calls).toContain('CreateVideoTemplate'))
-  await waitFor(() => expect(screen.getByRole('button', { name: '저장' })).toBeEnabled())
-  expect(screen.getByLabelText('영상 템플릿 이름')).toHaveValue('내 영상 구성')
-  expect(
-    screen.getByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' }),
-  ).toBeInTheDocument()
+  await waitFor(() => expect(router.state.location.pathname).toBe('/'))
 })
 
 it('starts with writing identity while available recommended models are prepared automatically', async () => {

@@ -7,7 +7,6 @@ import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
 import { MemoryEditForm } from '@/features/edit-memory'
 import { KitScreenHeader } from '@/widgets/writing-kit'
-import { memoryIllustration } from '@/shared/assets'
 import {
   Badge,
   Button,
@@ -70,12 +69,7 @@ export function MemoriesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-4 sm:pt-8' })}
     >
-      <KitScreenHeader
-        kit="memory"
-        title={t('title')}
-        statement={t('page.statement')}
-        illustration={memoryIllustration}
-      />
+      <KitScreenHeader kit="memory" title={t('title')} statement={t('page.statement')} />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -163,17 +157,21 @@ function ZoneSection({
           initialKind={ZONE_KINDS[zone][0]}
           label={t(`page.${zone}.add`)}
           variant="secondary"
-          className="w-full sm:w-auto"
+          // Under its half's heading at every width: two halves side by side on the desk leave
+          // a heading no room to share its row.
+          className="w-full"
         />
       </header>
       {items.length === 0 ? (
-        <Typography
-          variant="body"
-          as="p"
-          className="text-content-tertiary border-divider rounded-xl border border-dashed px-4 py-6 text-center"
-        >
-          {t('page.none')}
-        </Typography>
+        // An empty half shows the kind of thing that belongs in it, in the shape a saved one takes.
+        <p className="border-divider flex flex-col gap-1 rounded-xl border border-dashed px-4 py-5">
+          <Typography variant="label" as="span" className="text-content-tertiary">
+            {t('page.none')}
+          </Typography>
+          <Typography variant="body" as="span" className="text-content-secondary">
+            {t(`page.${zone}.example`)}
+          </Typography>
+        </p>
       ) : (
         <ul className="grid gap-3">
           {items.map((memory, index) => (

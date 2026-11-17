@@ -94,14 +94,18 @@ export function SpokenVoicesPage() {
           <h2 id="spoken-how" className="sr-only">
             {t('howAria')}
           </h2>
-          <ol className="grid gap-3 sm:grid-cols-3">
+          {/* The three steps as one short path, each a hairline apart: what the owner does, not
+              three cards to read. */}
+          <ol
+            className={cardStyles({
+              padding: 'none',
+              className: 'divide-divider max-w-xl divide-y overflow-hidden shadow-sm',
+            })}
+          >
             {(['describe', 'listen', 'pick'] as const).map((step, index) => (
               <li
                 key={step}
-                className={cardStyles({
-                  padding: 'md',
-                  className: 'animate-rise flex flex-col gap-2',
-                })}
+                className="animate-rise flex items-start gap-3 px-4 py-3 sm:px-5"
                 style={{ animationDelay: `${index * 60}ms` }}
               >
                 <span
@@ -109,19 +113,21 @@ export function SpokenVoicesPage() {
                   className={typographyStyles({
                     variant: 'label',
                     className:
-                      'bg-badge-accent-bg text-badge-accent-fg flex size-8 items-center justify-center rounded-full',
+                      'bg-badge-accent-bg text-badge-accent-fg flex size-7 shrink-0 items-center justify-center rounded-full',
                   })}
                 >
                   {index + 1}
                 </span>
-                <Typography variant="fieldTitle" as="p">
-                  {t(`how.${step}`)}
-                </Typography>
-                {step === 'describe' && (
-                  <Typography variant="body" as="p" className="text-content-secondary">
-                    {t('how.describeExample')}
+                <span className="flex min-w-0 flex-col gap-0.5 pt-0.5">
+                  <Typography variant="body" as="span" className="text-content-primary">
+                    {t(`how.${step}`)}
                   </Typography>
-                )}
+                  {step === 'describe' && (
+                    <Typography variant="meta" as="span">
+                      {t('how.describeExample')}
+                    </Typography>
+                  )}
+                </span>
               </li>
             ))}
           </ol>

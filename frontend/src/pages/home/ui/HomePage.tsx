@@ -24,7 +24,7 @@ export function HomePage() {
       className={pageStyles({
         width: 'wide',
         className:
-          'grid flex-1 grid-cols-[minmax(0,1fr)] content-start gap-6 pt-4 sm:pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-8 lg:pt-16',
+          'grid flex-1 grid-cols-[minmax(0,1fr)] content-start gap-6 pt-4 sm:pt-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] lg:grid-rows-[auto_auto] lg:content-center lg:gap-x-16 lg:gap-y-8 lg:pt-8 lg:pb-28',
       })}
     >
       <header className="flex flex-col gap-2 lg:self-end">
