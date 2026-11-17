@@ -246,8 +246,8 @@
       "branch": "gusta-session-start-lchat-fe660cf1",
       "head": "3d610e4d05962e1e09ccb7d1df7e12f9d1ec7bc3",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-17T01:11:37.044Z",
+      "status": "ready",
+      "at": "2026-11-17T01:11:43.795Z",
       "agentChecks": [
         {
           "id": "T878-chat-experience-walk",
