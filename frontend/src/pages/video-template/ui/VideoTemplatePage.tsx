@@ -175,7 +175,9 @@ function VideoTemplateHost({
           })}
         </Typography>
       )}
-      {guided ? (
+      {guided && fromClip ? (
+        // Saving an existing clip's storyline and design as a template (CLIP-233) still starts
+        // from that clip; every other new video template is made by talking.
         <div className="mt-4 flex flex-1 flex-col sm:mt-8">
           <SeededClipTemplateWizard
             ownerId={ownerId}
@@ -186,6 +188,21 @@ function VideoTemplateHost({
             }}
           />
         </div>
+      ) : guided ? (
+        // Guide: a new video template is made by talking, from scratch — the same conversation
+        // as a post template's, with the draft drawn beside it (no wizard, nothing to drag).
+        <AIAuthoringStudio
+          layout="conversation"
+          ownerId={ownerId}
+          kind="video-template"
+          candidateCount={1}
+          startFromSaved
+          onSaved={(saved) => {
+            onPublished()
+            void openCreated(saved.id)
+          }}
+          className="mt-4 flex-1 sm:mt-6"
+        />
       ) : method === null ? (
         <section className="mt-4 flex flex-col sm:mt-8">
           <Typography variant="stepTitle" as="h2">
@@ -347,6 +364,8 @@ function VideoTemplateHost({
         </section>
       ) : (
         <AIAuthoringStudio
+          layout="conversation"
+          candidateCount={1}
           ownerId={ownerId}
           kind="video-template"
           targetId={stored?.id}

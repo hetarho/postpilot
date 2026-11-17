@@ -37,13 +37,16 @@ export function SortableList({
 }: {
   items: readonly SortableItem[]
   disabled?: boolean
-  /** Moves the item at `from` so it sits at `to`. The caller owns the list. */
-  onReorder: (from: number, to: number) => void
+  /** Moves the item at `from` so it sits at `to`. The caller owns the list. A surface that does
+   *  not let its owner reorder passes none: the rows then carry no grip and no move buttons, and
+   *  nothing can be dragged. */
+  onReorder?: (from: number, to: number) => void
   labels: { drag: string; up: string; down: string }
   density?: SortableDensity
   className?: string
 }) {
   const compact = density === 'compact'
+  const fixed = !onReorder
   const [dragging, setDragging] = useState<number | null>(null)
   const [over, setOver] = useState<number | null>(null)
 
@@ -57,9 +60,9 @@ export function SortableList({
       {items.map((item, index) => (
         <li
           key={item.id}
-          draggable={!disabled}
+          draggable={!disabled && !fixed}
           onDragStart={(event) => {
-            if (disabled) {
+            if (disabled || fixed) {
               event.preventDefault()
               return
             }
@@ -84,7 +87,7 @@ export function SortableList({
             if (dragging === null) return
             event.stopPropagation()
             event.preventDefault()
-            if (dragging !== index) onReorder(dragging, index)
+            if (dragging !== index) onReorder?.(dragging, index)
             finish()
           }}
           onDragEnd={finish}
@@ -97,44 +100,48 @@ export function SortableList({
             over === index && dragging !== null && dragging !== index && 'bg-surface-raised',
           )}
         >
-          <span
-            aria-hidden
-            // A compact row aligns its controls to the row's own FIRST LINE, which is a 44px
-            // target — so they centre inside that line rather than on the whole item.
-            className={twMerge(
-              'text-content-tertiary flex shrink-0 cursor-grab active:cursor-grabbing',
-              compact ? 'min-h-11 items-center' : 'mt-1',
-            )}
-            title={labels.drag}
-          >
-            <GripVertical className="size-5" />
-          </span>
+          {!fixed && (
+            <span
+              aria-hidden
+              // A compact row aligns its controls to the row's own FIRST LINE, which is a 44px
+              // target — so they centre inside that line rather than on the whole item.
+              className={twMerge(
+                'text-content-tertiary flex shrink-0 cursor-grab active:cursor-grabbing',
+                compact ? 'min-h-11 items-center' : 'mt-1',
+              )}
+              title={labels.drag}
+            >
+              <GripVertical className="size-5" />
+            </span>
+          )}
           <div className="min-w-0 flex-1">{item.content}</div>
-          <div
-            className={twMerge(
-              'flex shrink-0',
-              compact ? 'min-h-11 flex-row items-center' : 'flex-col',
-            )}
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={labels.up}
-              disabled={disabled || index === 0}
-              onClick={() => onReorder(index, index - 1)}
+          {!fixed && (
+            <div
+              className={twMerge(
+                'flex shrink-0',
+                compact ? 'min-h-11 flex-row items-center' : 'flex-col',
+              )}
             >
-              <ChevronUp className="size-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={labels.down}
-              disabled={disabled || index === items.length - 1}
-              onClick={() => onReorder(index, index + 1)}
-            >
-              <ChevronDown className="size-5" />
-            </Button>
-          </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={labels.up}
+                disabled={disabled || index === 0}
+                onClick={() => onReorder?.(index, index - 1)}
+              >
+                <ChevronUp className="size-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={labels.down}
+                disabled={disabled || index === items.length - 1}
+                onClick={() => onReorder?.(index, index + 1)}
+              >
+                <ChevronDown className="size-5" />
+              </Button>
+            </div>
+          )}
         </li>
       ))}
     </ul>

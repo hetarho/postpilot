@@ -46,23 +46,26 @@ async function row(text: string) {
 }
 
 describe('the memory directory', () => {
-  // MEM-23/MEM-24: the screen reads and edits authored facts and nothing else.
-  it('lists the memories in the server order with their kind and tags, and asks no model anything', async () => {
+  // MEM-23/MEM-24: the screen reads and edits authored facts and nothing else. Guide: it is drawn
+  // by how a fact reaches a post (MEM-6) — every post, or only on a tag match — and by kind.
+  it('groups the memories by how they reach a post, with their tags, and asks no model anything', async () => {
     const calls: string[] = []
     renderMemories({}, calls)
 
-    const list = within(await screen.findByRole('region', { name: '저장된 기억' }))
-    const items = list.getAllByRole('listitem')
-    expect(items.map((item) => item.textContent?.includes('연남동에 자주 간다'))).toEqual([
-      true,
-      false,
-    ])
+    const saved = await screen.findByRole('region', { name: '저장된 기억' })
+    const always = within(within(saved).getByRole('region', { name: '모든 글에 떠올려요' }))
+    const tagged = within(within(saved).getByRole('region', { name: '태그가 맞을 때만 떠올려요' }))
+    expect(always.getByText('매운 음식을 못 먹는다')).toBeInTheDocument()
+    expect(always.getByText('취향')).toBeInTheDocument()
+    expect(tagged.getByText('연남동에 자주 간다')).toBeInTheDocument()
+    expect(tagged.getByText('장소')).toBeInTheDocument()
     const place = await row('연남동에 자주 간다')
-    expect(place.getByText('장소')).toBeInTheDocument()
-    expect(place.getByText('연남동')).toBeInTheDocument()
-    expect(place.getByText('산책')).toBeInTheDocument()
-    // A memory with no tags says so rather than rendering an empty row of chips.
-    expect((await row('매운 음식을 못 먹는다')).getByText('태그 없음')).toBeInTheDocument()
+    // A tagged fact's tags are the words that bring it into a post.
+    expect(place.getByText('이 단어가 나오면')).toBeInTheDocument()
+    expect(place.getByText('#연남동')).toBeInTheDocument()
+    expect(place.getByText('#산책')).toBeInTheDocument()
+    // A kind with nothing in it still offers its own 추가, opened on that kind.
+    expect(always.getByRole('button', { name: '설정 추가' })).toBeInTheDocument()
 
     // Reading the directory starts no job and calls no model: a memory is authored text.
     await waitFor(() => expect(calls).toContain('ListMemories'))
@@ -131,7 +134,12 @@ describe('the memory directory', () => {
       tags: ['연남동', '저녁'],
     })
     const edited = await row('연남동에서 산책한다')
-    expect(edited.getByText('취향')).toBeInTheDocument()
+    // Now a 취향, the fact moves to the band recalled for every post.
+    expect(
+      within(screen.getByRole('region', { name: '모든 글에 떠올려요' })).getByText(
+        '연남동에서 산책한다',
+      ),
+    ).toBeInTheDocument()
     expect(edited.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
@@ -270,8 +278,8 @@ describe('the memory directory', () => {
   }
 
   // The confirmation hands focus back to the trash button, and the re-read list then removes the
-  // row that holds it. Focus goes to the row that took the deleted one's place, or to the one
-  // above it when the last row went.
+  // row that holds it. Focus goes to the row that took the deleted one's place in the drawn order
+  // (band by band, kind by kind), or to the one above it when the last row went.
   it('keeps keyboard focus in the list after a memory is deleted', async () => {
     const user = userEvent.setup()
     const deletions: string[] = []
@@ -284,7 +292,7 @@ describe('the memory directory', () => {
     })
 
     await deleteByKeyboard(user, '매운 음식을 못 먹는다')
-    const next = (await row('동생과 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
+    const next = (await row('연남동에 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
     await waitFor(() => expect(next).toHaveFocus())
 
     await deleteByKeyboard(user, '동생과 자주 간다')

@@ -107,6 +107,8 @@ export function ClipTemplateDirectEditor({
         </div>
       ) : (
         <CompositionBuilder
+          // Hand editing changes what an entry says; the order is the AI's, by asking.
+          reorder={false}
           source={source.body || '<clip version="1"/>'}
           onChange={(body) => onChange({ ...source, body })}
         />

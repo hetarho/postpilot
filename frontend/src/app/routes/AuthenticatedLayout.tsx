@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { Bot, CircleUserRound, Files, Palette, SquarePen } from 'lucide-react'
+import { Clapperboard, FileText, House, Trophy } from 'lucide-react'
 import { takePendingGift } from '@/features/redeem-voucher'
 import {
   Button,
@@ -26,6 +26,7 @@ import {
 import { AccountMenu } from '@/widgets/account-menu'
 import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
+import { CLIP_LIST_PATH } from '@/entities/clip-project'
 import { endSession } from '../model/end-session'
 import {
   entryHref,
@@ -36,10 +37,10 @@ import {
 import {
   currentDestination,
   currentSection,
+  currentWorkTab,
   isFocusedFlow,
   isStructuralNavigationEntry,
   isTopLevelDestination,
-  MINE_SECTIONS,
   navigationPathname,
   routeLocation,
   STYLE_SECTIONS,
@@ -50,11 +51,10 @@ import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './naviga
 
 /** Guide: one glyph per tab, so a destination is found by shape before it is read. */
 const TAB_ICONS = {
-  '/create': SquarePen,
-  '/my': Files,
-  '/style': Palette,
-  '/ai-models': Bot,
-  '/settings': CircleUserRound,
+  '/': House,
+  '/posts': FileText,
+  [CLIP_LIST_PATH]: Clapperboard,
+  '/ai-models': Trophy,
 } as const
 
 function NavigationLink({ href, children, className, onClick, ...rest }: NavigationLinkProps) {
@@ -168,7 +168,7 @@ export function AuthenticatedLayout() {
           ? t(`location.${routeLocation(returnHref).current}`)
           : undefined
   const immersive = pathname === '/plans'
-  const quiet = pathname === '/create' || pathname === '/setup'
+  const quiet = pathname === '/' || pathname === '/setup'
   const setup = pathname === '/setup'
   // The editor, the clip workspace and the writing tests carry their own way back in their top
   // row; every other child route gets exactly one here (THEME-58).
@@ -330,22 +330,15 @@ export function AuthenticatedLayout() {
     icon: TAB_ICONS[to],
     current: current === to,
   }))
-  const chips =
-    section?.hub === 'mine'
-      ? MINE_SECTIONS.map(({ key, href }) => ({
-          key,
-          href,
-          label: t(`mine.${key}`),
-          current: section.key === key,
-        }))
-      : section?.hub === 'style'
-        ? STYLE_SECTIONS.map(({ key, href }) => ({
-            key,
-            href,
-            label: t(`style.${key}`),
-            current: section.key === key,
-          }))
-        : []
+  const workTab = currentWorkTab(pathname)
+  const chips = section
+    ? STYLE_SECTIONS.map(({ key, href }) => ({
+        key,
+        href,
+        label: t(`style.${key}`),
+        current: section.key === key,
+      }))
+    : []
   const kinds =
     section?.hub === 'style' && (section.key === 'templates' || section.key === 'guidelines')
       ? styleKinds(section.key).map(({ key, href }) => ({
@@ -382,19 +375,16 @@ export function AuthenticatedLayout() {
               in the bottom tab bar, where the thumb is. */}
           <div className="h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
             <Link
-              to="/create"
+              to="/"
               aria-label={t('home')}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
             >
               <Logo className="h-5 max-w-full sm:h-6" />
             </Link>
+            {/* The theme and the language live inside the avatar at every width: the header holds
+                the brand, the balance on the desk, and the one account control. */}
             <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
               {!quiet && wide && <CreditBadge />}
-              {wide && (
-                <div className="flex">
-                  <InterfacePreferences />
-                </div>
-              )}
               <AccountMenu
                 preferences={<InterfacePreferences layout="rows" />}
                 onLoggedOut={() => {
@@ -460,6 +450,26 @@ export function AuthenticatedLayout() {
                 ))}
               </nav>
             )}
+          </div>
+        )}
+        {workTab && (
+          // Guide: the 글 and 영상 tabs open on what they hold, said once in the tab's own words
+          // over the list: a large title and one line naming the kind of work and its stages.
+          <div className={pageStyles({ width: 'wide', className: 'pt-2 pb-0 sm:pt-6 sm:pb-0' })}>
+            <p
+              aria-hidden="true"
+              className={typographyStyles({ variant: 'largeTitle', className: 'truncate' })}
+            >
+              {t(`work.${workTab}.title`)}
+            </p>
+            <p
+              className={typographyStyles({
+                variant: 'body',
+                className: 'text-content-secondary mt-1',
+              })}
+            >
+              {t(`work.${workTab}.lead`)}
+            </p>
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">

@@ -41,6 +41,7 @@ import {
   type StudioAIAvailability,
 } from '../model/studio-flow-machine'
 import { AuthoringPreview } from './AuthoringPreview'
+import { AuthoringConversation } from './AuthoringConversation'
 
 export interface AuthoringDirectEditorProps {
   source: AuthoringArtifact
@@ -63,6 +64,10 @@ export interface AuthoringEditorProps extends AuthoringScope {
   initialMakeDefault?: boolean
   active?: boolean
   onNavigationChange?: (navigation: StudioNavigation | undefined) => void
+  /** `conversation` lays the same flow out as a talk beside a live preview (`AuthoringConversation`):
+   *  the owner describes, the AI drafts, they refine by talking and save from the heading row. The
+   *  default `steps` is one question per screen. Direct editing keeps its own screen in both. */
+  layout?: 'steps' | 'conversation'
 }
 export interface AuthoringInspectionContext {
   ownerId: string
@@ -107,6 +112,7 @@ function ScopedEditor({
   initialMakeDefault = false,
   active = true,
   onNavigationChange,
+  layout = 'steps',
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
   const scope = { ownerId, kind, targetId }
@@ -200,13 +206,16 @@ function ScopedEditor({
   const heading = useRef<HTMLDivElement>(null)
   const previousView = useRef(view)
   const previouslyActive = useRef(active)
+  const conversation = layout === 'conversation'
   useEffect(() => {
-    if (active && (previousView.current !== view || !previouslyActive.current)) {
+    // A conversation keeps focus in its composer: moving it to the heading on every reply would
+    // take the owner out of the field they are typing in.
+    if (!conversation && active && (previousView.current !== view || !previouslyActive.current)) {
       heading.current?.querySelector('h2')?.focus()
     }
     previousView.current = view
     previouslyActive.current = active
-  }, [view, active])
+  }, [view, active, conversation])
   const goBack = useCallback(() => send({ type: 'BACK', scopeKey }), [scopeKey, send])
   const canGoBack = flow.can({ type: 'BACK', scopeKey })
   useEffect(() => {
@@ -293,30 +302,41 @@ function ScopedEditor({
     )
       send({ type, scopeKey })
   }
+  // In a conversation a drafted setting is always open to the next request: the review step is
+  // the talk itself, and a single AI draft is taken as the one to refine. Both are the editor's
+  // own transitions; choosing a draft is a free selection, never a request.
+  const onlyCandidate =
+    state.session?.candidates.length === 1 ? state.session.candidates[0] : undefined
+  useEffect(() => {
+    if (!conversation || !active || busy || state.command) return
+    if (view === 'review') send({ type: 'OPEN_REFINEMENT', scopeKey })
+    else if (view === 'choices' && onlyCandidate && selected?.id !== onlyCandidate.id)
+      send({ type: 'CHOOSE', scopeKey, candidateId: onlyCandidate.id })
+  }, [conversation, active, busy, state.command, view, onlyCandidate, selected?.id, scopeKey, send])
   const previewArtifact = view === 'direct' ? source : selected
-  const preview = previewArtifact && (
+  const previewOf = (
+    artifact: AuthoringArtifact,
+    fallback = view === 'direct' ? selected : undefined,
+  ) => (
     <div className="min-w-0">
       <Typography variant="fieldTitle" as="h3" className="break-words">
-        {previewArtifact.name || name}
+        {artifact.name || name}
       </Typography>
-      {previewArtifact.description && (
+      {artifact.description && (
         <Typography variant="body" className="text-content-secondary mt-3 break-words">
-          {previewArtifact.description}
+          {artifact.description}
         </Typography>
       )}
       <div className="mt-6">
         {renderPreview ? (
-          renderPreview(previewArtifact, view === 'direct' ? selected : undefined)
+          renderPreview(artifact, fallback)
         ) : (
-          <AuthoringPreview
-            kind={kind}
-            artifact={previewArtifact}
-            fallbackArtifact={view === 'direct' ? selected : undefined}
-          />
+          <AuthoringPreview kind={kind} artifact={artifact} fallbackArtifact={fallback} />
         )}
       </div>
     </div>
   )
+  const preview = previewArtifact && previewOf(previewArtifact)
   const retry = hasFailure && (
     <div className="mt-8 flex flex-wrap items-center gap-4">
       <Button variant="cta" onClick={() => event('RETRY')}>
@@ -346,11 +366,182 @@ function ScopedEditor({
       )}
     </div>
   )
+  const inspection =
+    active &&
+    state.session &&
+    renderInspection?.({
+      ownerId,
+      sessionId: state.session.id,
+      kind,
+      revision: state.session.revision,
+      mode:
+        view === 'purpose' ||
+        view === 'choices' ||
+        state.session.phase === 'generating' ||
+        (view !== 'refining' &&
+          view !== 'direct' &&
+          state.session.phase !== 'refining' &&
+          state.session.turns.length === 0)
+          ? 'recommend'
+          : 'refine',
+      prompt: view === 'purpose' ? flow.context.purpose : state.text,
+      model: write.selected ?? undefined,
+      candidateCount,
+      operationId: state.session.activeJobId,
+      sourceDirty: Boolean(state.sourceDirty),
+    })
   const inputFeedback = flow.context.problem && (
     <FieldMessage id={id + '-error'} className="mt-3">
       {t(`inputProblems.${flow.context.problem}`)}
     </FieldMessage>
   )
+  const dialogs = (
+    <>
+      <Dialog
+        open={state.phase === 'confirming' || state.phase === 'starting'}
+        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
+          count: state.command?.candidateCount ?? candidateCount,
+        })}
+        onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
+        confirmLabel={t('confirm')}
+        cancelLabel={t('back')}
+        pending={state.phase === 'starting'}
+        onConfirm={() => void controller.confirm()}
+      >
+        <Typography variant="body">
+          {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
+        </Typography>
+      </Dialog>
+      <Dialog
+        open={flow.context.resetOpen}
+        title={t('resetNamed', named)}
+        onClose={() => event('DISMISS_RESET')}
+        confirmLabel={t('discard')}
+        cancelLabel={t('back')}
+        onConfirm={() => event('CONFIRM_RESET')}
+      >
+        <Typography variant="body">{t('resetWarning', named)}</Typography>
+      </Dialog>
+      <Dialog
+        open={flow.matches({ working: 'confirmingCancellation' })}
+        title={t('cancelTitle')}
+        onClose={() => event('DISMISS_CANCEL')}
+        confirmLabel={t('cancel')}
+        cancelLabel={t('keepWorking')}
+        onConfirm={() => event('CONFIRM_CANCEL')}
+      >
+        <Typography variant="body">{t('cancelHelp')}</Typography>
+      </Dialog>
+    </>
+  )
+  if (conversation && view !== 'direct' && view !== 'restoring') {
+    // The latest words of the draft, drawn over its last valid shape while they do not parse.
+    const talkArtifact = state.session?.workingSource ?? selected
+    const failureMessage = hasFailure ? (
+      <div className="space-y-3">
+        <p>
+          {conflict ? (
+            t('conflict')
+          ) : failure ? (
+            <AppFailureMessage failure={failure} />
+          ) : (
+            t('failed')
+          )}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="cta" size="compact" onClick={() => event('RETRY')}>
+            {t(frozenPublication ? 'saveRetry' : 'retry')}
+          </Button>
+          {conflict && flow.can({ type: 'CONTINUE', scopeKey }) && (
+            <Button variant="ghost" size="compact" onClick={() => event('CONTINUE')}>
+              {t('continueNamed', named)}
+            </Button>
+          )}
+        </div>
+      </div>
+    ) : controller.readFailure ? (
+      <div className="space-y-3">
+        <AppFailureMessage failure={controller.readFailure} />
+        <Button variant="ghost" size="compact" onClick={controller.retryRead}>
+          {t('retryRead')}
+        </Button>
+      </div>
+    ) : undefined
+    return (
+      <section
+        aria-labelledby={id + '-title'}
+        className={'@container flex min-w-0 flex-col ' + (className ?? '')}
+      >
+        <AuthoringConversation
+          kind={kind}
+          titleId={id + '-title'}
+          name={selected?.name || name}
+          existing={!!targetId}
+          view={view}
+          session={state.session}
+          selected={selected}
+          purpose={flow.context.purpose}
+          chat={state.text}
+          working={view === 'working'}
+          workingStatus={workingStatus}
+          cancellable={state.phase === 'active' && !!state.session?.activeJobId}
+          invalid={!!flow.context.problem}
+          composerDisabled={blocked || frozenPublication}
+          historyFull={view === 'refining' && historyFull}
+          canSave={
+            canSaveDraft &&
+            !blocked &&
+            !hasFailure &&
+            (view === 'refining' || view === 'review' || view === 'publication')
+          }
+          canDirect={view !== 'working' && view !== 'confirmed'}
+          aiReady={ai === 'ready'}
+          preview={
+            talkArtifact && (talkArtifact.body.trim() || talkArtifact.titleArea.trim())
+              ? previewOf(talkArtifact, selected)
+              : undefined
+          }
+          feedback={
+            (inputFeedback || aiAvailability) && (
+              <>
+                {inputFeedback}
+                {aiAvailability}
+              </>
+            )
+          }
+          failure={
+            failureMessage ??
+            (draftInvalid && !needsVoiceExample ? (
+              <div className="space-y-3">
+                <p>{t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}</p>
+                <Button variant="secondary" size="compact" onClick={() => event('OPEN_DIRECT')}>
+                  {t('fixSource')}
+                </Button>
+              </div>
+            ) : undefined)
+          }
+          inspection={inspection}
+          confirmedName={state.session?.saved?.name}
+          onPurpose={(text) => send({ type: 'PURPOSE_CHANGED', scopeKey, text })}
+          onChat={(text) => send({ type: 'CHAT_CHANGED', scopeKey, text })}
+          onSend={() => event(view === 'purpose' ? 'RECOMMEND' : 'REFINE')}
+          onChoose={(candidateId) => send({ type: 'CHOOSE', scopeKey, candidateId })}
+          onSave={() => {
+            // Saving is one tap from the talk: the editor's own review and publication steps,
+            // taken in order, each still behind its guard.
+            if (view === 'refining') event('FINISH_REFINEMENT')
+            if (view === 'refining' || view === 'review') event('OPEN_PUBLICATION')
+            event('PUBLISH')
+          }}
+          onDirect={() => event('OPEN_DIRECT')}
+          onCancel={() => event('ASK_CANCEL')}
+          onContinue={() => event('CONTINUE')}
+          onOpenExisting={() => event('OPEN_REFINEMENT')}
+        />
+        {dialogs}
+      </section>
+    )
+  }
   return (
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
@@ -443,29 +634,7 @@ function ScopedEditor({
           </Button>
         </Notice>
       )}
-      {active &&
-        state.session &&
-        renderInspection?.({
-          ownerId,
-          sessionId: state.session.id,
-          kind,
-          revision: state.session.revision,
-          mode:
-            view === 'purpose' ||
-            view === 'choices' ||
-            state.session.phase === 'generating' ||
-            (view !== 'refining' &&
-              view !== 'direct' &&
-              state.session.phase !== 'refining' &&
-              state.session.turns.length === 0)
-              ? 'recommend'
-              : 'refine',
-          prompt: view === 'purpose' ? flow.context.purpose : state.text,
-          model: write.selected ?? undefined,
-          candidateCount,
-          operationId: state.session.activeJobId,
-          sourceDirty: Boolean(state.sourceDirty),
-        })}
+      {inspection}
       {view === 'purpose' && (
         <form
           className="max-w-measure mt-8"
@@ -942,41 +1111,7 @@ function ScopedEditor({
           </Button>
         </div>
       )}
-      <Dialog
-        open={state.phase === 'confirming' || state.phase === 'starting'}
-        title={t(state.command?.mode === 'refine' ? 'confirmRefine' : 'confirmRecommendCount', {
-          count: state.command?.candidateCount ?? candidateCount,
-        })}
-        onClose={state.phase === 'starting' ? () => {} : controller.dismissQuote}
-        confirmLabel={t('confirm')}
-        cancelLabel={t('back')}
-        pending={state.phase === 'starting'}
-        onConfirm={() => void controller.confirm()}
-      >
-        <Typography variant="body">
-          {state.estimate?.free ? t('free') : t('quote', { credits: state.estimate?.credits ?? 0 })}
-        </Typography>
-      </Dialog>
-      <Dialog
-        open={flow.context.resetOpen}
-        title={t('resetNamed', named)}
-        onClose={() => event('DISMISS_RESET')}
-        confirmLabel={t('discard')}
-        cancelLabel={t('back')}
-        onConfirm={() => event('CONFIRM_RESET')}
-      >
-        <Typography variant="body">{t('resetWarning', named)}</Typography>
-      </Dialog>
-      <Dialog
-        open={flow.matches({ working: 'confirmingCancellation' })}
-        title={t('cancelTitle')}
-        onClose={() => event('DISMISS_CANCEL')}
-        confirmLabel={t('cancel')}
-        cancelLabel={t('keepWorking')}
-        onConfirm={() => event('CONFIRM_CANCEL')}
-      >
-        <Typography variant="body">{t('cancelHelp')}</Typography>
-      </Dialog>
+      {dialogs}
     </section>
   )
 }

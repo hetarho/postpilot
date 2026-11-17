@@ -28,7 +28,7 @@ async function mount(
     },
     authoring,
   })
-  await user.click(await screen.findByRole('button', { name: /리뷰.*직접 편집하기/ }))
+  await user.click(await screen.findByRole('button', { name: '직접 고치기' }))
   await screen.findByLabelText('이름')
 }
 describe('owner template generation numbers in shared drafts', () => {
@@ -89,8 +89,8 @@ describe('owner template generation numbers in shared drafts', () => {
     fireEvent.change(screen.getByLabelText('목표 글자 수'), { target: { value: '2500' } })
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
-    await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
+    await screen.findByRole('textbox', { name: '무엇을 바꿀지 말해 주세요' })
+    await user.click(screen.getByRole('button', { name: '직접 고치기' }))
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     expect(screen.getByLabelText('목표 글자 수')).toHaveValue('2500')
   })

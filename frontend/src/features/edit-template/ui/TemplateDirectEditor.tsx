@@ -188,6 +188,8 @@ export function TemplateDirectEditor({
           />
         ) : (
           <TemplateComposition
+            // Hand editing changes what a row says; the order is the AI's to change, by asking.
+            reorder={false}
             area="title_area"
             value={source.titleArea}
             disabled={disabled}
@@ -220,6 +222,8 @@ export function TemplateDirectEditor({
           />
         ) : (
           <TemplateComposition
+            // Hand editing changes what a row says; the order is the AI's to change, by asking.
+            reorder={false}
             value={source.body}
             takenAskTitles={titleAskLabels}
             disabled={disabled}

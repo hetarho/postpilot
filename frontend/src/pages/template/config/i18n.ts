@@ -25,6 +25,13 @@ export const i18n = {
       range: '{{min}}에서 {{max}} 사이로 적어 주세요.',
     },
     screen: {
+      talk: {
+        edit: 'AI와 대화로 고치기',
+        direct: '직접 고치기',
+        resume: '하던 대화 이어 가기',
+        makes: '이 템플릿으로 쓴 글',
+        newTitle: 'AI와 템플릿 만들기',
+      },
       reviewKind: '글 구성 확인',
       advanced: '고급',
       editAI: 'AI로 편집',
@@ -99,6 +106,13 @@ export const i18n = {
       range: 'Enter a number between {{min}} and {{max}}.',
     },
     screen: {
+      talk: {
+        edit: 'Change it by talking to AI',
+        direct: 'Edit by hand',
+        resume: 'Pick up the conversation',
+        makes: 'A post written with it',
+        newTitle: 'Make a template with AI',
+      },
       reviewKind: 'Review post template',
       advanced: 'Advanced',
       editAI: 'Edit with AI',

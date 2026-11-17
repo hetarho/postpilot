@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil } from 'lucide-react'
-import { useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
+import { useNavigate, useSearch } from '@tanstack/react-router'
+import { Pencil, Search } from 'lucide-react'
+import { useMemories, useUpdateMemoryCall, type Memory, type MemoryKind } from '@/entities/memory'
 import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
@@ -12,11 +13,20 @@ import {
   Button,
   Notice,
   LoadingState,
+  TextField,
   Typography,
   cardStyles,
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
+
+/** How a fact reaches a post (MEM-6): 취향 and 설정 are recalled for every post; 장소, 인물 and 이력
+ *  only when the post mentions one of their tags. The page is drawn in these two bands, because
+ *  that is what a memory DOES to the writing. */
+const BANDS: readonly { key: 'always' | 'tagged'; kinds: readonly MemoryKind[] }[] = [
+  { key: 'always', kinds: ['preference', 'persona'] },
+  { key: 'tagged', kinds: ['place', 'person', 'history'] },
+]
 
 /** The account's 기억 (MEM-24). Composition only — every action is its own feature.
  *
@@ -30,12 +40,31 @@ export function MemoriesPage() {
   const ownerId = user?.id ?? ''
   const { memories, isPending, isError, isFetching, refetch } = useMemories(ownerId)
   const page = useRef<HTMLElement>(null)
-  const list = useRef<HTMLUListElement>(null)
+  const list = useRef<HTMLElement>(null)
   // A confirmed delete hands focus back to the trash button, then the re-read list removes the row
   // holding it, which drops focus to <body> and sends a keyboard user to the top of the page. The
   // delete does not await that re-read, so the move waits until the row has left the list.
   const [removed, setRemoved] = useState<Removal | null>(null)
   const settled = useRef<Removal | null>(null)
+  const [query, setQuery] = useState('')
+  // `?new=1` — home's 기억 layer while it is empty — opens the new-memory sheet once and is dropped.
+  const search = useSearch({ strict: false }) as { new?: unknown }
+  const requested = search.new === 1 || search.new === '1'
+  const [openOnArrival] = useState(requested)
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (requested) void navigate({ to: '/memories', search: {}, replace: true })
+  }, [requested, navigate])
+  const needle = query.trim().toLocaleLowerCase()
+  const matches = (memory: Memory) =>
+    needle === '' ||
+    memory.text.toLocaleLowerCase().includes(needle) ||
+    memory.tags.some((tag) => tag.toLocaleLowerCase().includes(needle))
+  const shown = memories.filter(matches)
+  // The order the rows are drawn in: band by band, kind by kind, the server's order inside each.
+  const drawn = BANDS.flatMap((band) =>
+    band.kinds.flatMap((kind) => memories.filter((memory) => memory.kind === kind)),
+  )
 
   useEffect(() => {
     if (!removed || settled.current === removed) return
@@ -48,7 +77,9 @@ export function MemoriesPage() {
     const target =
       memories.length > 0
         ? buttonNamed(
-            list.current?.children[Math.min(removed.index, memories.length - 1)],
+            list.current?.querySelectorAll('[data-memory-row]')[
+              Math.min(removed.index, memories.length - 1)
+            ],
             t('delete.aria', { ns: 'memories' }),
           )
         : buttonNamed(page.current, t('create.open', { ns: 'memories' }))
@@ -93,28 +124,92 @@ export function MemoriesPage() {
           {memories.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-6">
-              <h2 className="flex items-baseline gap-2">
-                <span className={typographyStyles({ variant: 'title' })}>
-                  {t('page.saved', { ns: 'memories' })}
-                </span>
-                <span className={typographyStyles({ variant: 'label' })}>{memories.length}</span>
-              </h2>
-              <Typography variant="meta" as="p" className="mt-1">
-                {t('page.order', { ns: 'memories' })}
-              </Typography>
-              {/* Guide: each fact on its own card, its kind and tags under it. */}
-              <ul ref={list} className="mt-3 grid gap-3 lg:grid-cols-2">
-                {memories.map((memory, index) => (
-                  <MemoryRow
-                    key={memory.id}
-                    ownerId={ownerId}
-                    memory={memory}
-                    onDeleted={() => setRemoved({ id: memory.id, index })}
-                  />
+            <>
+              {/* Finding one fact among many: the text and the tags, as typed. */}
+              <label className="relative mt-6 block max-w-md">
+                <span className="sr-only">{t('page.search', { ns: 'memories' })}</span>
+                <Search
+                  aria-hidden="true"
+                  className="text-content-tertiary pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2"
+                />
+                <TextField
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={t('page.search', { ns: 'memories' })}
+                  className="pl-10"
+                />
+              </label>
+              {needle !== '' && shown.length === 0 && (
+                <Typography variant="body" role="status" className="text-content-tertiary mt-6">
+                  {t('page.noMatch', { ns: 'memories', q: query.trim() })}
+                </Typography>
+              )}
+              <section
+                ref={list}
+                aria-label={t('page.saved', { ns: 'memories' })}
+                className="mt-6 grid gap-10"
+              >
+                {BANDS.map((band) => (
+                  <div key={band.key}>
+                    <section aria-labelledby={`memories-band-${band.key}`}>
+                      <Typography variant="title" as="h2" id={`memories-band-${band.key}`}>
+                        {t(`page.bands.${band.key}.title`, { ns: 'memories' })}
+                      </Typography>
+                      <Typography variant="body" className="text-content-secondary mt-1">
+                        {t(`page.bands.${band.key}.lead`, { ns: 'memories' })}
+                      </Typography>
+                      <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-start">
+                        {band.kinds.map((kind) => {
+                          const group = shown.filter((memory) => memory.kind === kind)
+                          if (needle !== '' && group.length === 0) return null
+                          return (
+                            <div key={kind} className="min-w-0">
+                              <div className="flex min-h-11 flex-wrap items-center gap-2">
+                                <Badge tone="accent">{t(`kind.${kind}`, { ns: 'memories' })}</Badge>
+                                <span className={typographyStyles({ variant: 'meta' })}>
+                                  {group.length > 0
+                                    ? group.length
+                                    : t('page.kindEmpty', { ns: 'memories' })}
+                                </span>
+                                <CreateMemorySheet
+                                  ownerId={ownerId}
+                                  trigger="inline"
+                                  initialKind={kind}
+                                  label={t('page.addKind', {
+                                    ns: 'memories',
+                                    kind: t(`kind.${kind}`, { ns: 'memories' }),
+                                  })}
+                                  className="ml-auto"
+                                />
+                              </div>
+                              {group.length > 0 && (
+                                <ul className="mt-2 grid gap-2">
+                                  {group.map((memory) => (
+                                    <MemoryRow
+                                      key={memory.id}
+                                      ownerId={ownerId}
+                                      memory={memory}
+                                      tagged={band.key === 'tagged'}
+                                      onDeleted={() =>
+                                        setRemoved({
+                                          id: memory.id,
+                                          index: drawn.indexOf(memory),
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </ul>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  </div>
                 ))}
-              </ul>
-            </section>
+              </section>
+            </>
           )}
         </>
       )}
@@ -127,7 +222,11 @@ export function MemoriesPage() {
         ariaLabel={t('create.dockAria', { ns: 'memories' })}
         className="mt-auto w-full sm:w-fit"
       >
-        <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
+        <CreateMemorySheet
+          ownerId={ownerId}
+          defaultOpen={openOnArrival}
+          className="w-full sm:w-auto"
+        />
       </ActionBar>
     </main>
   )
@@ -169,10 +268,13 @@ function EmptyState() {
 function MemoryRow({
   ownerId,
   memory,
+  tagged,
   onDeleted,
 }: {
   ownerId: string
   memory: Memory
+  /** A fact recalled only on a tag match: its tags are the words that bring it in. */
+  tagged: boolean
   onDeleted: () => void
 }) {
   const { t } = useTranslation(['memories', 'common'])
@@ -193,7 +295,7 @@ function MemoryRow({
 
   if (form.editing)
     return (
-      <li className={cardStyles({ padding: 'sm' })}>
+      <li data-memory-row className={cardStyles({ padding: 'sm' })}>
         <MemoryEditForm
           memory={memory}
           save={update.save}
@@ -208,7 +310,7 @@ function MemoryRow({
     )
 
   return (
-    <li className={cardStyles({ padding: 'sm' })}>
+    <li data-memory-row className={cardStyles({ padding: 'sm' })}>
       <div className="flex flex-wrap items-start gap-1">
         <Typography
           variant="fieldTitle"
@@ -232,17 +334,25 @@ function MemoryRow({
         </Button>
         <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} onDeleted={onDeleted} />
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <Badge tone="accent">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
-        {memory.tags.map((tag) => (
-          <Badge key={tag}>{tag}</Badge>
-        ))}
-        {memory.tags.length === 0 && (
-          <Typography variant="meta" as="span">
-            {t('page.noTags', { ns: 'memories' })}
-          </Typography>
-        )}
-      </div>
+      {(tagged || memory.tags.length > 0) && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {tagged && (
+            <Typography variant="meta" as="span">
+              {t('page.trigger', { ns: 'memories' })}
+            </Typography>
+          )}
+          {memory.tags.map((tag) => (
+            <Badge key={tag} tone={tagged ? 'info' : 'neutral'}>
+              #{tag}
+            </Badge>
+          ))}
+          {memory.tags.length === 0 && (
+            <Typography variant="meta" as="span">
+              {t('page.noTags', { ns: 'memories' })}
+            </Typography>
+          )}
+        </div>
+      )}
     </li>
   )
 }

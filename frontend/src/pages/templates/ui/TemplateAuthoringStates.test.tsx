@@ -85,7 +85,7 @@ describe('batched named template states', () => {
       await screen.findByRole('region', { name: '아직 저장하지 않은 새 템플릿' }),
     )
     await user.click(unsaved.getByRole('link', { name: '템플릿 “아직 만드는 구성” 이어서 만들기' }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    await screen.findByRole('textbox', { name: '무엇을 바꿀지 말해 주세요' })
     expect(router.state.location.search).toMatchObject({ session: 'new-work' })
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')

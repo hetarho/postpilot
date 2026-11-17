@@ -71,6 +71,7 @@ export function ChatComposer({
   onSubmit,
   label,
   sendLabel,
+  placeholder,
   pending = false,
   disabled = false,
   invalid = false,
@@ -84,6 +85,8 @@ export function ChatComposer({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   label: string
   sendLabel: string
+  /** An example of what to write, shown while the field is empty. */
+  placeholder?: string
   pending?: boolean
   disabled?: boolean
   invalid?: boolean
@@ -104,6 +107,7 @@ export function ChatComposer({
           value={value}
           onChange={(event) => onChange(event.target.value)}
           aria-label={label}
+          placeholder={placeholder}
           aria-invalid={invalid || undefined}
           disabled={pending}
           autoGrow

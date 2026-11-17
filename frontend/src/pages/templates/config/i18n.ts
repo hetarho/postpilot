@@ -12,7 +12,8 @@ export const i18n = {
       new: '새 템플릿',
       empty: '아직 저장된 템플릿이 없어요',
       emptyHelp:
-        '매번 같은 틀로 쓰는 글이 있다면, 그 틀을 한 번만 만들어 두고 글마다 골라 쓰세요. 인트로·사진 설명·총평처럼 글의 순서를 정해 두면 AI가 매번 그 순서대로 씁니다.',
+        '어떤 글을 올리는지 AI에게 말해 주세요. 처음부터 틀을 짜 드리고, 대화하며 고쳐 저장해요. 글을 쓸 때 골라 쓰면 AI가 매번 그 순서대로 써요.',
+      sub: 'AI와 대화해서 만들고, 글을 쓸 때 골라 써요.',
       name: '이름',
       newDockAria: '새 템플릿 만들기',
     },
@@ -26,7 +27,8 @@ export const i18n = {
       new: 'New template',
       empty: 'There are no saved templates yet',
       emptyHelp:
-        'If you write the same shape of post again and again, build that shape once and pick it per post. Set the order — intro, a description per photo, a verdict — and AI follows it every time.',
+        'Tell the AI what you post. It drafts the shape from scratch, you refine it by talking and save it. Pick it when you write and the AI follows that order every time.',
+      sub: 'Made by talking to the AI, picked when you write.',
       name: 'Name',
       newDockAria: 'Create a new template',
     },

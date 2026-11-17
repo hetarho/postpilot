@@ -29,9 +29,12 @@ function withoutEmpty(attributes: Record<string, string>, key: string, value: st
 export function CompositionBuilder({
   source,
   onChange,
+  reorder = true,
 }: {
   source: string
   onChange: (source: string) => void
+  /** `false` leaves the entries in their order: no grip, no move buttons, nothing to drag. */
+  reorder?: boolean
 }) {
   const { t } = useTranslation('clips')
   const [expanded, setExpanded] = useState('')
@@ -195,25 +198,29 @@ export function CompositionBuilder({
     return (
       <SortableList
         labels={{ drag: t('editor.drag'), up: t('editor.up'), down: t('editor.down') }}
-        onReorder={(from, to) => {
-          const children = [...parent.children]
-          const a = children.indexOf(nodes[from]),
-            b = children.indexOf(nodes[to])
-          children.splice(b, 0, children.splice(a, 1)[0])
-          patch(parent, { ...parent, children })
-          // The open row follows its entry to where it now stands, and a row inside a moved
-          // group follows the group.
-          const open = parent.children.find((child) =>
-            [`${path}.${parent.children.indexOf(child)}`].some(
-              (key) => expanded === key || expanded.startsWith(`${key}.`),
-            ),
-          )
-          if (open) {
-            const before = `${path}.${parent.children.indexOf(open)}`
-            const after = `${path}.${children.indexOf(open)}`
-            setExpanded(after + expanded.slice(before.length))
-          }
-        }}
+        onReorder={
+          reorder
+            ? (from, to) => {
+                const children = [...parent.children]
+                const a = children.indexOf(nodes[from]),
+                  b = children.indexOf(nodes[to])
+                children.splice(b, 0, children.splice(a, 1)[0])
+                patch(parent, { ...parent, children })
+                // The open row follows its entry to where it now stands, and a row inside a moved
+                // group follows the group.
+                const open = parent.children.find((child) =>
+                  [`${path}.${parent.children.indexOf(child)}`].some(
+                    (key) => expanded === key || expanded.startsWith(`${key}.`),
+                  ),
+                )
+                if (open) {
+                  const before = `${path}.${parent.children.indexOf(open)}`
+                  const after = `${path}.${children.indexOf(open)}`
+                  setExpanded(after + expanded.slice(before.length))
+                }
+              }
+            : undefined
+        }
         items={nodes.map((node, i) => {
           const key = `${path}.${parent.children.indexOf(node)}`
           const name = node.name

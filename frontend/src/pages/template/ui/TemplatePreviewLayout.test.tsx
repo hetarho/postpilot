@@ -14,7 +14,7 @@ const PLAIN = {
 }
 async function mount(user: ReturnType<typeof userEvent.setup>) {
   renderAppAt('/templates/plain', { user: { id: 'alice' }, templates: { templates: [PLAIN] } })
-  await user.click(await screen.findByRole('button', { name: /빈 구성.*직접 편집하기/ }))
+  await user.click(await screen.findByRole('button', { name: '직접 고치기' }))
   await screen.findByLabelText('이름')
 }
 describe('live shared template preview', () => {

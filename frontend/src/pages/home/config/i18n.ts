@@ -1,0 +1,152 @@
+import type { I18nFragment } from '@/shared/lib'
+
+/** Home: the product's promise, and how ready the owner's writing kit is to keep it. */
+export const i18n = {
+  namespace: 'creation',
+  ko: {
+    home: {
+      catchFirst: '고품질의 글을,',
+      catchSecond: '내 언어로.',
+      progress: '글쓰기 준비 {{ready}}/{{total}}',
+      message: {
+        loading: '글쓰기 준비를 살펴보는 중이에요.',
+        empty: '말투와 글의 뼈대를 알려 주면, AI가 내 언어로 써요.',
+        partial: '{{next}}만 더 갖추면 더 내 글다워져요.',
+        ready: '모두 준비됐어요. 이제 내 언어로 써 볼까요?',
+      },
+      setup: '한 번에 준비하기',
+      sheet: '내 글이 만들어지는 재료',
+      sheetTitle: '오늘 쓸 글',
+      write: '글쓰기',
+      writer: {
+        label: '쓰는 AI',
+        none: '쓰는 AI 고르기',
+      },
+      level: {
+        ready: '준비됨',
+        partial: '조금 더',
+        making: '학습 글 {{percent}}%',
+        empty: '비어 있음',
+        failed: '못 읽었어요',
+      },
+      next: '다음 준비',
+      open: {
+        ready: '보기',
+        partial: '마저 갖추기',
+        empty: '시작하기',
+      },
+      elements: {
+        template: {
+          name: '템플릿',
+          role: '글의 뼈대',
+          empty: '어떤 순서로 쓸지 아직 정하지 않았어요',
+          count: '템플릿 {{count}}개',
+        },
+        voice: {
+          name: '말투',
+          role: '문장의 결',
+          empty: 'AI가 아직 내 말투를 몰라요',
+          making: '내 글을 조금 더 모으면 말투를 배울 수 있어요',
+          readyToMake: '글은 충분해요. 말투 만들기만 남았어요',
+          noDefault: '기본 말투를 정하면 새 글이 그 말투로 써져요',
+          noSample: '{{name}} 말투로 써요',
+          defaultName: '기본 · {{name}}',
+        },
+        memory: {
+          name: '기억',
+          role: '글에 넣을 내 이야기',
+          empty: 'AI가 기억하는 내 이야기가 없어요',
+          more: '그 밖에 {{count}}개',
+        },
+        guideline: {
+          name: '지침',
+          role: '꼭 지키는 규칙',
+          empty: 'AI가 지킬 규칙이 없어요',
+          own: '내 지침 {{count}}',
+          defaults: '기본 지침 {{count}}',
+          defaultBadge: '기본',
+        },
+      },
+      video: {
+        title: '영상에 쓰는 것',
+        spoken: '목소리',
+        spokenCount: '목소리 {{count}}',
+        templates: '영상 템플릿',
+        guidelines: '영상 지침',
+      },
+    },
+  },
+  en: {
+    home: {
+      catchFirst: 'High-quality writing,',
+      catchSecond: 'in your own words.',
+      progress: 'Writing kit {{ready}}/{{total}}',
+      message: {
+        loading: 'Checking your writing kit.',
+        empty: 'Teach it your voice and your structure, and the AI writes in your own words.',
+        partial: 'Add {{next}} and it will sound even more like you.',
+        ready: 'Everything is ready. Shall we write in your own words?',
+      },
+      setup: 'Set it all up at once',
+      sheet: 'What your posts are made from',
+      sheetTitle: 'Today’s post',
+      write: 'Write',
+      writer: {
+        label: 'Writing AI',
+        none: 'Pick a writing AI',
+      },
+      level: {
+        ready: 'Ready',
+        partial: 'Almost',
+        making: 'Posts {{percent}}%',
+        empty: 'Empty',
+        failed: 'Couldn’t load',
+      },
+      next: 'Next',
+      open: {
+        ready: 'Open',
+        partial: 'Finish',
+        empty: 'Start',
+      },
+      elements: {
+        template: {
+          name: 'Templates',
+          role: 'The structure',
+          empty: 'No order for your posts yet',
+          count: '{{count}} templates',
+        },
+        voice: {
+          name: 'Style',
+          role: 'How sentences sound',
+          empty: 'The AI doesn’t know your style yet',
+          making: 'A few more of your posts and it can learn your style',
+          readyToMake: 'Enough posts. Only making the style is left',
+          noDefault: 'Make one style the default and new posts use it',
+          noSample: 'Written in {{name}}',
+          defaultName: 'Default · {{name}}',
+        },
+        memory: {
+          name: 'Memories',
+          role: 'Your stories to draw on',
+          empty: 'The AI remembers nothing about you yet',
+          more: '{{count}} more',
+        },
+        guideline: {
+          name: 'Rules',
+          role: 'What it always keeps to',
+          empty: 'No rules for the AI yet',
+          own: 'Mine {{count}}',
+          defaults: 'Built-in {{count}}',
+          defaultBadge: 'Built-in',
+        },
+      },
+      video: {
+        title: 'For videos',
+        spoken: 'Voices',
+        spokenCount: 'Voices {{count}}',
+        templates: 'Video templates',
+        guidelines: 'Video rules',
+      },
+    },
+  },
+} as const satisfies I18nFragment

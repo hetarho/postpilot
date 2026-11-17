@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { AudioLines, Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
-import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
+import { SPOKEN_AUDITION_TEXT, SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
 import {
   ActionBar,
@@ -12,6 +12,7 @@ import {
   Typography,
   pageStyles,
   buttonStyles,
+  cardStyles,
   typographyStyles,
 } from '@/shared/ui'
 export function SpokenVoicesPage() {
@@ -22,9 +23,20 @@ export function SpokenVoicesPage() {
     library = useSpokenLibrary(ownerId),
     [status, setStatus] = useState('')
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex min-w-0 flex-1 flex-col' })}>
-      <Typography variant="display">{t('title')}</Typography>
-      <Typography variant="body" className="text-content-secondary mt-4">
+    <main
+      className={pageStyles({
+        width: 'wide',
+        className: 'flex min-w-0 flex-1 flex-col pt-2 sm:pt-4',
+      })}
+    >
+      {/* Guide: the hub's title and the 목소리 chip say where this is; the page leads with what a
+          voice DOES — it reads the video — and each card is something to LISTEN to: the play
+          button first, the line it reads under it. */}
+      <h1 className="sr-only">{t('title')}</h1>
+      <Typography variant="display" as="p" aria-hidden="true">
+        {t('lead')}
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
         {t('about')}
       </Typography>
       <Typography role="status" as="p" variant="meta" className="mt-4 min-h-5">
@@ -36,28 +48,43 @@ export function SpokenVoicesPage() {
               ? t('empty')
               : '\u00a0'}
       </Typography>
+      {!library.voicesQuery.isError &&
+        !library.voicesQuery.isPending &&
+        library.voices.length === 0 && (
+          // The empty slot of a voice: a play button with nothing to play yet, and the line a
+          // voice will read once there is one.
+          <div className="border-divider mt-2 flex flex-col gap-4 rounded-2xl border-2 border-dashed p-5 sm:p-6">
+            <span
+              aria-hidden="true"
+              className="border-content-tertiary text-content-tertiary flex size-12 items-center justify-center rounded-full border-2 border-dashed"
+            >
+              <AudioLines className="size-5" />
+            </span>
+            <figure>
+              <figcaption className={typographyStyles({ variant: 'label' })}>
+                {t('reads')}
+              </figcaption>
+              <blockquote
+                className={typographyStyles({
+                  variant: 'body',
+                  className: 'text-content-tertiary mt-1 line-clamp-2',
+                })}
+              >
+                “{SPOKEN_AUDITION_TEXT}”
+              </blockquote>
+            </figure>
+          </div>
+        )}
       {!library.voicesQuery.isError && library.voicesQuery.isPending && (
         <LoadingState variant="list" label={t('loading')} className="mt-4" />
       )}
       <ul className="mt-6 grid gap-3 lg:grid-cols-2 lg:gap-4" aria-label={t('title')}>
         {library.voices.map((voice) => (
-          <DirectoryItem
+          <li
             key={voice.id}
-            icon={<AudioLines className="size-6" />}
-            title={
-              <Typography variant="fieldTitle" as="h2" className="break-words">
-                {voice.name}
-              </Typography>
-            }
-            description={
-              <Typography variant="meta" as="p" className="break-words">
-                {voice.profile.designLabel} → {voice.profile.speechLabel} ·{' '}
-                {voice.profile.grade
-                  ? model(`level.${voice.profile.grade}`)
-                  : model('catalog.levelUnset')}
-              </Typography>
-            }
-            status={
+            className={cardStyles({ padding: 'md', className: 'flex min-w-0 flex-col gap-4' })}
+          >
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
               <SpokenSamplePlayer
                 ownerId={ownerId}
                 assetId={voice.sampleAssetId}
@@ -65,15 +92,46 @@ export function SpokenVoicesPage() {
                 durationMs={voice.sampleDurationMs}
                 onFailure={() => setStatus('playFailed')}
               />
-            }
-            metadata={
+              <div className="min-w-0 flex-1 basis-40">
+                <Typography variant="fieldTitle" as="h2" className="break-words">
+                  {voice.name}
+                </Typography>
+                {voice.description && (
+                  <Typography variant="body" className="text-content-secondary line-clamp-2">
+                    {voice.description}
+                  </Typography>
+                )}
+              </div>
+            </div>
+            {voice.previewText && (
+              <figure className="bg-card-well rounded-lg px-4 py-3">
+                <figcaption className={typographyStyles({ variant: 'label' })}>
+                  {t('reads')}
+                </figcaption>
+                <blockquote
+                  className={typographyStyles({
+                    variant: 'body',
+                    className: 'text-content-primary mt-1 line-clamp-3 break-words',
+                  })}
+                >
+                  “{voice.previewText}”
+                </blockquote>
+              </figure>
+            )}
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+              <Typography variant="meta" as="p" className="min-w-0 break-words">
+                {voice.profile.designLabel} → {voice.profile.speechLabel} ·{' '}
+                {voice.profile.grade
+                  ? model(`level.${voice.profile.grade}`)
+                  : model('catalog.levelUnset')}
+              </Typography>
               <SpokenVoiceActions
                 ownerId={ownerId}
                 voice={voice}
                 onStatus={(key) => setStatus(key === 'failed' ? 'renameFailed' : key)}
               />
-            }
-          />
+            </div>
+          </li>
         ))}
       </ul>
       {library.drafts.some((d) => !d.confirmedVoiceId) && (

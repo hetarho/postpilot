@@ -4,39 +4,31 @@ import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 
 describe('configuration authoring entrypoints', () => {
-  it('opens /templates/new as the guided wizard without starting or saving work', async () => {
-    const user = userEvent.setup()
-    const calls: string[] = []
-    renderAppAt('/templates/new', { user: { id: 'alice' }, calls, existingSetup: true })
-    expect(
-      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
-    ).toBeVisible()
-    await user.click(screen.getByRole('button', { name: /^맛집/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(await screen.findByRole('heading', { level: 2, name: '어떤 식당인가요?' })).toBeVisible()
-    await user.click(screen.getByRole('button', { name: '이전' }))
-    expect(
-      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
-    ).toBeVisible()
-    expect(
-      calls.filter((name) => /^(Start|Generate|Analyze|Adopt|Create|SaveAuthoring)/.test(name)),
-    ).toEqual([])
-    expect(calls).not.toContain('GetLatestWritingVoiceCandidates')
-  })
-
-  it('opens video-template creation as a wizard without creating an authoring session', async () => {
-    const calls: string[] = []
-    renderAppAt('/video-templates/new', { user: { id: 'alice' }, calls, existingSetup: true })
-    expect(
-      await screen.findByRole('heading', { name: '어떤 체험을 영상으로 남기나요?' }),
-    ).toBeVisible()
-    expect(
-      screen.queryByRole('button', { name: 'AI와 영상 템플릿 만들기' }),
-    ).not.toBeInTheDocument()
-    expect(
-      calls.filter((name) => /^(Start|Generate|Create|Adopt|SaveAuthoring)/.test(name)),
-    ).toEqual([])
-  })
+  // Guide: a new template is made by talking to the AI, from scratch — for posts and for videos.
+  it.each([
+    ['/templates/new', /어떤 글을 올리세요\?/, '어떤 글을 올리는지 말해 주세요'],
+    ['/video-templates/new', /어떤 영상을 만드세요\?/, '어떤 글을 올리는지 말해 주세요'],
+  ])(
+    'opens %s as a conversation without starting or saving work',
+    async (route, greeting, field) => {
+      const user = userEvent.setup()
+      const calls: string[] = []
+      renderAppAt(route, { user: { id: 'alice' }, calls, existingSetup: true })
+      expect(await screen.findByText(greeting)).toBeVisible()
+      const input = screen.getByRole('textbox', { name: field })
+      const starter = screen
+        .getAllByRole('button')
+        .find((button) => /순서로요$/.test(button.textContent ?? ''))!
+      await user.click(starter)
+      expect(input).toHaveValue(starter.textContent)
+      expect(screen.queryByRole('heading', { name: '어떤 체험을 글로 남기나요?' })).toBeNull()
+      expect(screen.queryByRole('heading', { name: '어떤 체험을 영상으로 남기나요?' })).toBeNull()
+      expect(
+        calls.filter((name) => /^(Start|Generate|Analyze|Adopt|Create|SaveAuthoring)/.test(name)),
+      ).toEqual([])
+      expect(calls).not.toContain('GetLatestWritingVoiceCandidates')
+    },
+  )
 
   it.each([
     {
@@ -54,7 +46,7 @@ describe('configuration authoring entrypoints', () => {
     {
       route: '/voices',
       title: '말투',
-      trigger: 'AI 말투 추천받기',
+      trigger: '새 말투',
       goal: '어떤 말투로 이야기하고 싶으세요?',
     },
   ])('opens $route as a readable AI draft without starting or saving work', async (entry) => {
@@ -70,6 +62,9 @@ describe('configuration authoring entrypoints', () => {
     expect(primary).toBeInTheDocument()
     expect(calls).not.toContain('GetLatestAuthoringSession')
     await user.click(primary)
+    // 새 말투's ways of making one open from it; the AI's is one of them.
+    if (entry.route === '/voices')
+      await user.click(await screen.findByRole('menuitem', { name: /AI와 대화로 만들기/ }))
     const dialog = await screen.findByRole('dialog')
     expect(await within(dialog).findByRole('heading', { name: entry.goal })).toBeVisible()
     if (entry.route === '/voices')

@@ -2,6 +2,49 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'authoring',
   ko: {
+    conversation: {
+      label: 'AI와 나눈 대화',
+      partner: 'AI',
+      owner: '나',
+      greeting: {
+        'post-template':
+          '어떤 글을 올리세요? 무엇을 소개하는 글인지, 독자에게 어떤 순서로 보여 주고 싶은지 편하게 말해 주세요. 처음부터 템플릿 초안을 만들어 드릴게요.',
+        'video-template':
+          '어떤 영상을 만드세요? 무엇을 보여 주는지, 어떤 흐름이면 좋을지 말해 주세요. 영상 템플릿 초안을 만들어 드릴게요.',
+        existing: '{{name}}에서 무엇을 바꿀까요? 말해 주시면 고친 초안을 옆에 바로 그려 드릴게요.',
+      },
+      starters: {
+        'post-template': {
+          first: '동네 맛집에 다녀온 후기를 올려요. 가게 소개, 메뉴, 맛, 분위기 순서였으면 해요',
+          second: '조립이 필요한 가구를 리뷰해요. 구성품, 조립 과정, 완성 후 사용감 순서로요',
+          third: '새로 들인 상품을 사진 위주로 보여 주기만 하면 돼요. 글은 짧게요',
+        },
+        'video-template': {
+          first: '가게를 소개하는 30초 영상이에요. 외관, 대표 메뉴, 분위기 순서로요',
+          second: '상품 언박싱 영상이에요. 포장, 구성품, 사용하는 모습 순서로요',
+        },
+      },
+      starterLabel: '이렇게 시작해 보세요',
+      untitled: '새 초안',
+      field: {
+        purpose: '어떤 글을 올리는지 말해 주세요',
+        refine: '무엇을 바꿀지 말해 주세요',
+      },
+      send: '보내기',
+      draftReady: '초안을 만들었어요. 「{{name}}」',
+      draftOpen: '미리 보기',
+      choose: '마음에 드는 초안을 골라 주세요. 고른 초안으로 이어서 다듬어요.',
+      typing: '초안을 그리고 있어요',
+      saved: '「{{name}}」을 저장했어요. 새 글을 쓸 때 고를 수 있어요.',
+      save: '저장',
+      direct: '직접 고치기',
+      fresh: '처음부터 다시',
+      emptyPreview: '대화를 시작하면 여기에 템플릿이 그려져요',
+      drawing: '그리는 중',
+      panes: '대화와 미리 보기',
+      chat: '대화',
+      historyFull: '대화가 길어졌어요. 지금 초안을 저장하거나 직접 고쳐 주세요.',
+    },
     newGlobalScope:
       '새 지침은 전체 글에 적용해요. 저장하기 전에 직접 편집에서 적용 범위를 선택할 수 있어요.',
     scopeGlobal: '적용 범위: 전체',
@@ -227,6 +270,49 @@ export const i18n = {
     previewUnavailable: '읽을 수 있는 초안을 준비하지 못했어요. 이전 제안으로 다시 준비해 주세요.',
   },
   en: {
+    conversation: {
+      label: 'Conversation with the AI',
+      partner: 'AI',
+      owner: 'You',
+      greeting: {
+        'post-template':
+          'What do you post? Tell me what the post introduces and the order you want readers to see it in. I’ll draft a template from scratch.',
+        'video-template':
+          'What video are you making? Tell me what it shows and how it should flow. I’ll draft a video template.',
+        existing: 'What should change in {{name}}? Tell me and I’ll redraw the draft beside us.',
+      },
+      starters: {
+        'post-template': {
+          first: 'I review local restaurants: the place, the menu, the taste, then the mood',
+          second: 'I review furniture you assemble: what’s in the box, assembly, then using it',
+          third: 'I just show a new product in photos. Keep the text short',
+        },
+        'video-template': {
+          first: 'A 30-second shop intro: outside, signature dish, then the mood',
+          second: 'An unboxing: the packaging, what’s inside, then using it',
+        },
+      },
+      starterLabel: 'Start like this',
+      untitled: 'New draft',
+      field: {
+        purpose: 'Tell me what you post',
+        refine: 'Tell me what to change',
+      },
+      send: 'Send',
+      draftReady: 'Here’s a draft: “{{name}}”',
+      draftOpen: 'Preview',
+      choose: 'Pick the draft you like. We’ll keep refining that one.',
+      typing: 'Drawing the draft',
+      saved: 'Saved “{{name}}”. You can pick it when you write a post.',
+      save: 'Save',
+      direct: 'Edit by hand',
+      fresh: 'Start over',
+      emptyPreview: 'Start talking and your template appears here',
+      drawing: 'Drawing',
+      panes: 'Conversation and preview',
+      chat: 'Conversation',
+      historyFull: 'This conversation is long. Save the draft now or edit it by hand.',
+    },
     newGlobalScope:
       'The new guideline applies globally. Choose its scope through direct editing before saving.',
     scopeGlobal: 'Scope: global',

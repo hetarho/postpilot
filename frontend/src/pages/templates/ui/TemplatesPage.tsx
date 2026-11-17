@@ -3,7 +3,7 @@ import { useRef, type Ref } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
-import { useTemplates, type Template } from '@/entities/template'
+import { TemplateOutline, useTemplates, type Template } from '@/entities/template'
 import { DeleteTemplateButton } from '@/features/delete-template'
 import { ChannelActions } from '@/widgets/channel-actions'
 import { LayoutList } from 'lucide-react'
@@ -49,6 +49,9 @@ export function TemplatesPage() {
       <h1 className="sr-only">{t('title', { ns: 'templates' })}</h1>
       <Typography variant="display" as="p" aria-hidden="true">
         {t('page.lead', { ns: 'templates' })}
+      </Typography>
+      <Typography variant="body" className="text-content-secondary mt-2">
+        {t('page.sub', { ns: 'templates' })}
       </Typography>
 
       {isError && (
@@ -216,12 +219,17 @@ function TemplateRow({
           {template.name}
         </Link>
       }
+      // Guide: a template is listed as the SHAPE it gives a post — its sections in order — with
+      // its own line of description under that, so the list is read for structure, not names.
       description={
-        template.description && (
-          <Typography variant="body" as="span" className="line-clamp-2">
-            {template.description}
-          </Typography>
-        )
+        <span className="mt-1 flex flex-col gap-2">
+          <TemplateOutline template={template} />
+          {template.description && (
+            <Typography variant="meta" as="span" className="line-clamp-2">
+              {template.description}
+            </Typography>
+          )}
+        </span>
       }
       status={summary && <EditingStatus summary={summary} />}
       metadata={

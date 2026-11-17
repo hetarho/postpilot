@@ -37,8 +37,10 @@ afterEach(() => {
 function resumeSetup(resume: 'welcome' | 'voice' | 'post-template' | 'clip-template' = 'welcome') {
   writeSetupProgress(OWNER, { ...emptySetupProgress(), skipped: [], resume })
 }
+/** Home no longer sends a new account into setup; setup is opened from home's empty kit, at its own
+ *  address. */
 function mountFresh(extra: RenderAppOptions = {}) {
-  return renderAppAt('/', {
+  return renderAppAt('/setup', {
     user: { id: OWNER },
     firstUseSetup: true,
     voice: { voices: [] },
@@ -63,7 +65,7 @@ function guideStep(name: string) {
 const SETUP_PROGRESS = '나만의 작업 공간 준비'
 const ANSWER_PROGRESS = '이번 대화의 저장한 답변 수'
 
-it('offers setup after missing settings were read without creating content or paid work', async () => {
+it('reads the missing settings without creating content or paid work, and home offers it', async () => {
   const calls: string[] = []
   const { router } = mountFresh({
     voice: { voices: [], calls },
@@ -77,14 +79,20 @@ it('offers setup after missing settings were read without creating content or pa
   expect(calls).toContain('ListTemplates')
   expect(calls).toContain('ListVideoTemplates')
   expect(calls.filter((call) => /Create|Start|Analyze|Save/.test(call))).toEqual([])
+  // Home shows an empty kit as itself, offering the setup that fills several layers at once.
+  await act(() => router.navigate({ to: '/' }))
+  expect(await screen.findByRole('link', { name: '한 번에 준비하기' })).toHaveAttribute(
+    'href',
+    '/setup?restart=false',
+  )
 })
-it('shows the two-choice launch for configured users and acknowledges that browser', async () => {
+it('opens home on the kit and 글쓰기 for configured users, with no setup offer', async () => {
   renderAppAt('/', READY)
   expect(
-    await within(await screen.findByRole('main')).findByRole('link', { name: '글' }),
+    await within(await screen.findByRole('main')).findByRole('link', { name: '글쓰기' }),
   ).toHaveAttribute('href', '/posts/new')
   expect(screen.queryByRole('heading', { name: /처음 한 번/ })).toBeNull()
-  expect(readSetupProgress(OWNER).completed).toBe(true)
+  expect(screen.queryByRole('link', { name: '한 번에 준비하기' })).toBeNull()
 })
 it('does not intercept existing drafts or protected creation deep links', async () => {
   const { router } = renderAppAt('/posts/new', {
@@ -103,7 +111,7 @@ it('distinguishes failed directory reads from missing settings and offers explic
   expect(screen.queryByRole('button', { name: '내 작업 공간 준비하기' })).toBeNull()
   await user.click(screen.getByRole('button', { name: '먼저 시작하기' }))
   expect(
-    await within(await screen.findByRole('main')).findByRole('link', { name: '글' }),
+    await within(await screen.findByRole('main')).findByRole('link', { name: '글쓰기' }),
   ).toBeInTheDocument()
   expect(readSetupProgress(OWNER).completed).toBe(true)
 })
@@ -161,7 +169,7 @@ it.each(['pending', 'failed'] as const)(
 )
 it('omits made voices and existing templates, showing only the missing clip template after welcome', async () => {
   resumeSetup()
-  renderAppAt('/', { ...READY, clips: { templates: [] } })
+  renderAppAt('/setup', { ...READY, clips: { templates: [] } })
   const user = await start()
   expect(
     await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' }),
@@ -177,7 +185,7 @@ it('omits made voices and existing templates, showing only the missing clip temp
 // under the wizard's own 이전 / 다음.
 it('keeps one step bar on a template question, carrying setup’s way back and skip', async () => {
   resumeSetup()
-  renderAppAt('/', { ...READY, clips: { templates: [] } })
+  renderAppAt('/setup', { ...READY, clips: { templates: [] } })
   const user = await start()
   await screen.findByRole('heading', { name: '영상에도 나만의 흐름을 담아요.' })
   const bars = document.querySelectorAll<HTMLElement>('[data-action-bar="step"]')
@@ -188,20 +196,17 @@ it('keeps one step bar on a template question, carrying setup’s way back and s
   await user.click(bar.getByRole('button', { name: '이전' }))
   expect(await screen.findByRole('button', { name: '내 작업 공간 준비하기' })).toBeInTheDocument()
 })
-it('defers once, survives reload and does not share the acknowledgement with another account', async () => {
+it('defers to home and keeps that browser’s deferral to its own account', async () => {
   const user = userEvent.setup()
   const first = mountFresh()
   await user.click(await screen.findByRole('button', { name: '나중에 설정할게요' }))
-  await within(await screen.findByRole('main')).findByRole('link', { name: '글' })
+  await within(await screen.findByRole('main')).findByRole('link', { name: '글쓰기' })
+  expect(first.router.state.location.pathname).toBe('/')
+  expect(readSetupProgress(OWNER).completed).toBe(true)
   first.unmount()
-  const second = mountFresh()
-  await within(await screen.findByRole('main')).findByRole('link', { name: '글' })
-  expect(second.router.state.location.pathname).toBe('/create')
-  second.unmount()
+  // Another account on the same browser is offered its own setup from its own empty kit.
   renderAppAt('/', { user: { id: 'setup-bob' }, firstUseSetup: true, voice: { voices: [] } })
-  expect(
-    await screen.findByRole('heading', { name: '처음 한 번, 나답게 준비해요.' }),
-  ).toBeInTheDocument()
+  expect(await screen.findByRole('link', { name: '한 번에 준비하기' })).toBeInTheDocument()
 })
 it('skips optional setup without entity writes and finishes at the explicitly chosen creation destination', async () => {
   const calls: string[] = []
@@ -242,7 +247,7 @@ it('finishes at home with no creation handoff', async () => {
     await user.click(await screen.findByRole('button', { name: '지금은 건너뛰기' }))
   await user.click(await screen.findByRole('button', { name: '만들러 가기' }))
 
-  await waitFor(() => expect(router.state.location.pathname).toBe('/create'))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/'))
   expect(router.state.location.search).not.toHaveProperty('from')
 })
 it('resumes an unfinished voice rather than creating another one', async () => {
@@ -423,7 +428,7 @@ it('creates a valid post template exactly once and advances from its confirmed s
   })
   first.unmount()
   resumeSetup()
-  renderAppAt('/', {
+  renderAppAt('/setup', {
     ...READY,
     templates: {
       templates: [{ id: 'saved-post', name: creates![0]!.name, body: creates![0]!.body }],
@@ -456,7 +461,7 @@ async function finishClipWizard(user: ReturnType<typeof userEvent.setup>, name: 
 it('saves a clip template once before offering completion', async () => {
   resumeSetup('clip-template')
   const calls: string[] = []
-  const { router } = renderAppAt('/', { ...READY, clips: { templates: [], calls } })
+  const { router } = renderAppAt('/setup', { ...READY, clips: { templates: [], calls } })
   const user = userEvent.setup()
   await finishClipWizard(user, '내 영상 구성')
   await user.dblClick(screen.getByRole('button', { name: '저장' }))
@@ -466,14 +471,14 @@ it('saves a clip template once before offering completion', async () => {
   expect(calls.filter((call) => call === 'CreateVideoTemplate')).toHaveLength(1)
   await user.click(screen.getByRole('button', { name: '만들러 가기' }))
   expect(
-    await within(screen.getByRole('main')).findByRole('link', { name: '영상' }),
+    await within(screen.getByRole('main')).findByRole('link', { name: '글쓰기' }),
   ).toBeInTheDocument()
-  expect(router.state.location.pathname).toBe('/create')
+  expect(router.state.location.pathname).toBe('/')
 })
 it('retains a clip template after a failed save', async () => {
   resumeSetup('clip-template')
   const calls: string[] = []
-  renderAppAt('/', { ...READY, clips: { templates: [], calls, saveFails: true } })
+  renderAppAt('/setup', { ...READY, clips: { templates: [], calls, saveFails: true } })
   const user = userEvent.setup()
   await finishClipWizard(user, '내 영상 구성')
   await user.click(screen.getByRole('button', { name: '저장' }))

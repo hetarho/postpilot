@@ -70,11 +70,15 @@ export function TemplateComposition({
   failure = null,
   workingState,
   onWorkingChange,
+  reorder = true,
 }: {
   value: string
   onChange: (body: string) => void
   disabled?: boolean
   className?: string
+  /** `false` leaves the rows in the order they are: no grip, no move buttons, nothing to drag.
+   *  The order is then changed by asking the AI, or in 원문. */
+  reorder?: boolean
   /** Switches the screen to 원문 with the caret in the text. Absent when there is no source mode
    *  to switch to, which is why the clear action can never be the only way out. */
   onFixInSource?: () => void
@@ -109,6 +113,7 @@ export function TemplateComposition({
       failure={failure}
       workingState={workingState}
       onWorkingChange={onWorkingChange}
+      reorder={reorder}
     />
   ) : (
     <Unreadable
@@ -176,6 +181,7 @@ function Composition({
   failure,
   workingState,
   onWorkingChange,
+  reorder,
 }: {
   value: string
   onChange: (body: string) => void
@@ -187,6 +193,7 @@ function Composition({
   failure: ParseFailure | null
   workingState?: CompositionWorkingState
   onWorkingChange?: (state: CompositionWorkingState) => void
+  reorder: boolean
 }) {
   const { t } = useTranslation('templates')
   const id = useId()
@@ -266,6 +273,7 @@ function Composition({
   const context: RowContext = {
     area,
     disabled,
+    reorder,
     nested: false,
     duplicates,
     openId,
@@ -347,6 +355,8 @@ interface RowContext {
   /** Which text the rows belong to; the title area's fields are all single-line. */
   area: TemplateArea
   disabled: boolean
+  /** Whether rows may be moved at all (see `TemplateComposition`'s `reorder`). */
+  reorder: boolean
   openId: string | null
   aimedAt: string | null
   onOpen: (blockId: string) => void
@@ -387,11 +397,15 @@ function BlockList({
           />
         ),
       }))}
-      onReorder={(from, to) => {
-        // A reorder is a touch too: the aim follows the block the user just moved.
-        context.onTouch(blocks[from].id)
-        onChange(reorder(blocks, from, to))
-      }}
+      onReorder={
+        context.reorder
+          ? (from, to) => {
+              // A reorder is a touch too: the aim follows the block the user just moved.
+              context.onTouch(blocks[from].id)
+              onChange(reorder(blocks, from, to))
+            }
+          : undefined
+      }
       labels={{
         drag: t('builder.block.drag'),
         up: t('builder.block.moveUp'),

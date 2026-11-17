@@ -173,49 +173,28 @@ export function GuidelineDirectory({
       {!isError && !isPending && <CandidateSection ownerId={ownerId} kind={kind} />}
       {/* 새 지침 itself is the section's creation button (THEME-67); the 기본 지침 sheet and
               writing one directly stay on the page, above the list (GUIDE-44). */}
-      <div
-        ref={(actions) => {
-          // The existing first action opens the default-guidelines sheet. Read its actual
-          // button without adding a wrapper, translated selector or another control.
-          defaultAction.current = actions?.querySelector<HTMLButtonElement>('button') ?? null
+      {/* The sheet both bands' ways of writing a rule open. */}
+      <AuthoringSheet
+        open={authoringOpen}
+        onOpenChange={(open) => {
+          setAuthoringOpen(open)
+          if (!open) onCreateClosed?.()
         }}
-        className="mt-6 flex flex-wrap items-center gap-3"
-      >
-        <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setCreationSession(undefined)
-            setCreateMethod('direct')
-            setAuthoringOpen(true)
-          }}
-        >
-          {t(kind === 'clip' ? 'authoringState.createVideoDirect' : 'authoringState.createDirect', {
-            ns: 'guidelines',
-          })}
-        </Button>
-        <AuthoringSheet
-          open={authoringOpen}
-          onOpenChange={(open) => {
-            setAuthoringOpen(open)
-            if (!open) onCreateClosed?.()
-          }}
-          ownerId={ownerId}
-          kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
-          sessionId={creationSession}
-          startFromSaved={!creationSession}
-          initialMethod={createMethod}
-          renderDirectEditor={(props) => (
-            <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
-          )}
-          onSaved={(saved) => {
-            setSavedOutcome({ ownerId, ref: saved })
-            refetch()
-            setAuthoringOpen(false)
-            onCreateClosed?.()
-          }}
-        />
-      </div>
+        ownerId={ownerId}
+        kind={kind === 'clip' ? 'video-guideline' : 'post-guideline'}
+        sessionId={creationSession}
+        startFromSaved={!creationSession}
+        initialMethod={createMethod}
+        renderDirectEditor={(props) => (
+          <GuidelineDirectEditor ownerId={ownerId} kind={kind} {...props} />
+        )}
+        onSaved={(saved) => {
+          setSavedOutcome({ ownerId, ref: saved })
+          refetch()
+          setAuthoringOpen(false)
+          onCreateClosed?.()
+        }}
+      />
       {!isError && isPending && (
         <LoadingState
           variant="list"
@@ -255,50 +234,114 @@ export function GuidelineDirectory({
               </Typography>
             )}
           </div>
-          {principles.length > 0 && <PrincipleCard principles={principles} />}
-          {inUse.length === 0 && guidelines.length === 0 ? (
-            <EmptyState kind={kind} />
-          ) : (
-            <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })} className="mt-6">
-              <Typography variant="meta" as="p">
-                {t(`${page}.order`, { ns: 'guidelines' })}
+          {/* Guide: two bands, by who wrote the rule — the owner's own first, since those are
+              what they came to manage, then the ones Postpilot keeps by default with the switch
+              for more, and the always-on principles closing that band. Each band holds its own
+              way to add: 직접 쓰기 for the owner's, the 기본 지침 sheet for the built-in ones. */}
+          {inUse.length === 0 && guidelines.length === 0 && <EmptyState kind={kind} />}
+          <section aria-label={t(`${page}.listAria`, { ns: 'guidelines' })}>
+            <section aria-labelledby={`${page}-own-band`} className="mt-8">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <Typography variant="title" as="h2" id={`${page}-own-band`}>
+                  {t('bands.own.title', { ns: 'guidelines' })}
+                </Typography>
+                <span className={typographyStyles({ variant: 'label' })}>{guidelines.length}</span>
+                <Button
+                  aria-label={t(
+                    kind === 'clip'
+                      ? 'authoringState.createVideoDirect'
+                      : 'authoringState.createDirect',
+                    { ns: 'guidelines' },
+                  )}
+                  variant="ghost"
+                  size="compact"
+                  className="ml-auto"
+                  onClick={() => {
+                    setCreationSession(undefined)
+                    setCreateMethod('direct')
+                    setAuthoringOpen(true)
+                  }}
+                >
+                  {t('bands.direct', { ns: 'guidelines' })}
+                </Button>
+              </div>
+              <Typography variant="body" className="text-content-secondary mt-1">
+                {t('bands.own.lead', { ns: 'guidelines' })}
               </Typography>
-              {/* Guide: each rule is one card holding its plain sentence; tapping it opens the
-                  rule's own reading view with its scope and the way to edit it. */}
-              <ul className="mt-3 grid gap-3">
-                {inUse.map((guideline, index) => (
-                  <DefaultGuidelineItem
-                    key={guideline.key}
-                    ownerId={ownerId}
-                    kind={kind}
-                    guideline={guideline}
-                    onRefused={setStopRefusal}
-                    rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
-                    onRemoving={() => requestRemoval(rowKeys[index], index)}
-                  />
-                ))}
-                {guidelines.map((guideline, index) => (
-                  <GuidelineRow
-                    key={guideline.id}
-                    ownerId={ownerId}
-                    guideline={guideline}
-                    rowRef={(row) => rememberDisclosure(rowKeys[inUse.length + index], row)}
-                    onDeleted={() =>
-                      requestRemoval(rowKeys[inUse.length + index], inUse.length + index)
-                    }
-                    summary={summaries.data?.find(
-                      (row) =>
-                        row.targetId === guideline.id || row.lastPublication?.id === guideline.id,
-                    )}
-                    onPublished={(saved) => {
-                      void refetch()
-                      setSavedOutcome({ ownerId, ref: saved })
-                    }}
-                  />
-                ))}
-              </ul>
+              {guidelines.length > 0 ? (
+                <ul
+                  aria-label={t(`${page}.listAria`, { ns: 'guidelines' })}
+                  className="mt-3 grid gap-3"
+                >
+                  {guidelines.map((guideline, index) => (
+                    <GuidelineRow
+                      key={guideline.id}
+                      ownerId={ownerId}
+                      guideline={guideline}
+                      rowRef={(row) => rememberDisclosure(rowKeys[inUse.length + index], row)}
+                      onDeleted={() =>
+                        requestRemoval(rowKeys[inUse.length + index], inUse.length + index)
+                      }
+                      summary={summaries.data?.find(
+                        (row) =>
+                          row.targetId === guideline.id || row.lastPublication?.id === guideline.id,
+                      )}
+                      onPublished={(saved) => {
+                        void refetch()
+                        setSavedOutcome({ ownerId, ref: saved })
+                      }}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <Typography variant="body" className="text-content-tertiary mt-3">
+                  {t('bands.own.empty', { ns: 'guidelines' })}
+                </Typography>
+              )}
             </section>
-          )}
+            <section aria-labelledby={`${page}-default-band`} className="mt-10">
+              <div
+                ref={(actions) => {
+                  // The band's action opens the default-guidelines sheet: the focus fallback when
+                  // the last rule leaves the list.
+                  defaultAction.current =
+                    actions?.querySelector<HTMLButtonElement>('button') ?? null
+                }}
+                className="flex flex-wrap items-center gap-x-3 gap-y-1"
+              >
+                <Typography variant="title" as="h2" id={`${page}-default-band`}>
+                  {t('bands.defaults.title', { ns: 'guidelines' })}
+                </Typography>
+                <span className={typographyStyles({ variant: 'label' })}>{inUse.length}</span>
+                <span className="ml-auto">
+                  <DefaultGuidelineSheet ownerId={ownerId} kind={kind} />
+                </span>
+              </div>
+              <Typography variant="body" className="text-content-secondary mt-1">
+                {t('bands.defaults.lead', { ns: 'guidelines' })}
+              </Typography>
+              {inUse.length > 0 ? (
+                <ul className="mt-3 grid gap-3">
+                  {inUse.map((guideline, index) => (
+                    <DefaultGuidelineItem
+                      key={guideline.key}
+                      ownerId={ownerId}
+                      kind={kind}
+                      guideline={guideline}
+                      onRefused={setStopRefusal}
+                      rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
+                      onRemoving={() => requestRemoval(rowKeys[index], index)}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <Typography variant="body" className="text-content-tertiary mt-3">
+                  {t('bands.defaults.empty', { ns: 'guidelines' })}
+                </Typography>
+              )}
+            </section>
+          </section>
+          {principles.length > 0 && <PrincipleCard principles={principles} />}
 
           {summaries.data?.some((row) => !row.targetId && !row.lastPublication) && (
             <section className="mt-8" aria-labelledby="guideline-unsaved-heading">

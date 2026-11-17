@@ -37,9 +37,7 @@ it.each([
 // Each section's button opens that section's creation directly, carrying no channel (an old link's is ignored).
 it.each([
   ['/templates', '새 템플릿', '/templates/new'],
-  ['/voices', '새 말투', '/voices?new=1'],
   ['/guidelines', '새 지침', '/guidelines?new=1'],
-  ['/voices', '새 말투', '/voices?new=1'],
   ['/video-guidelines', '새 지침', '/video-guidelines?new=1'],
   ['/video-templates', '새 템플릿', '/video-templates/new'],
 ] as const)('offers %s its own creation only', async (path, label, href) => {
@@ -47,6 +45,17 @@ it.each([
   expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
   expect(screen.queryByRole('menu')).toBeNull()
   expect(document.querySelector('[data-action-bar="list"] [aria-haspopup]')).toBeNull()
+})
+
+// 말투 has two ways to make one, so its dock is the one control both open from (owner taste:
+// a choice opens from the control that needs it).
+it('docks the 말투 creation as one control that opens its two ways to make a voice', async () => {
+  const user = userEvent.setup()
+  renderAppAt('/voices', { user: { id: 'alice' } })
+  const dock = await screen.findByRole('button', { name: '새 말투' })
+  expect(dock.closest('[data-action-bar="list"]')).not.toBeNull()
+  await user.click(dock)
+  expect(screen.getAllByRole('menuitem')).toHaveLength(2)
 })
 
 it.each(['/posts/new', '/clips/new'])(

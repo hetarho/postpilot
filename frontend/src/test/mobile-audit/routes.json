@@ -92,25 +92,23 @@
     }
   },
   "/": {
-    "heading": "무엇을 만들까요?",
-    "expectedPath": "/create",
-    "expectedLeaf": "/authenticated/create",
+    "heading": "고품질의 글을, 내 언어로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/create/ui/CreatePage.tsx",
+      "source": "frontend/src/pages/home/ui/HomePage.tsx",
       "status": "changed",
-      "finding": "The authenticated root is an alias for the canonical creation canvas; opening a choice starts no record or AI work.",
+      "finding": "Home draws the writing kit's readiness from the kit's own list reads and holds one 글쓰기 action; it starts no record or AI work.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
   "/library": {
-    "heading": "내 글",
-    "expectedPath": "/my",
-    "expectedLeaf": "/authenticated/my",
+    "heading": "네이버 블로그",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
       "source": "frontend/src/app/routes/creation.ts",
-      "status": "changed",
-      "finding": "The authenticated library alias opens the aggregate My work hub.",
-      "inspectedStates": ["populated", "loading", "failure"]
+      "redirect": "/posts"
     }
   },
   "/settings": {
@@ -996,36 +994,30 @@
     }
   },
   "/create": {
-    "heading": "무엇을 만들까요?",
-    "expectedPath": "/create",
-    "expectedLeaf": "/authenticated/create",
+    "heading": "고품질의 글을, 내 언어로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/create/ui/CreatePage.tsx",
-      "status": "checked",
-      "finding": "Canonical destination inspected for THEME-78 audit.",
-      "inspectedStates": ["populated"]
+      "source": "frontend/src/app/routes/creation.ts",
+      "redirect": "/"
     }
   },
   "/my": {
-    "heading": "내 글",
-    "expectedPath": "/my",
-    "expectedLeaf": "/authenticated/my",
+    "heading": "네이버 블로그",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
-      "source": "frontend/src/pages/my-work/ui/MyWorkPage.tsx",
-      "status": "checked",
-      "finding": "Canonical destination inspected for THEME-78 audit.",
-      "inspectedStates": ["populated"]
+      "source": "frontend/src/app/routes/creation.ts",
+      "redirect": "/posts"
     }
   },
   "/style": {
-    "heading": "내 스타일",
-    "expectedPath": "/style",
-    "expectedLeaf": "/authenticated/style",
+    "heading": "고품질의 글을, 내 언어로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/style/ui/StylePage.tsx",
-      "status": "checked",
-      "finding": "Canonical destination inspected for THEME-78 audit.",
-      "inspectedStates": ["populated"]
+      "source": "frontend/src/app/routes/creation.ts",
+      "redirect": "/"
     }
   }
 }

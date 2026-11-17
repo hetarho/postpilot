@@ -63,20 +63,20 @@ describe('/video-guidelines', () => {
     expect(await screen.findByRole('heading', { level: 1, name: '영상 지침' })).toBeInTheDocument()
     const list = await section('영상 지침 목록')
     const items = list.getAllByRole('listitem')
-    // The clip 기본 지침 in use first, then the owner's, as one list (GUIDE-44).
+    // Guide: the owner's 영상 지침 first, then the clip 기본 지침 in use, in one list region.
     expect(items).toHaveLength(4)
-    expect(within(items[0]).getByText('과장 금지')).toBeInTheDocument()
+    expect(within(items[3]).getByText('과장 금지')).toBeInTheDocument()
     expect(list.queryByText('글 기본')).not.toBeInTheDocument()
-    expect(within(items[1]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
+    expect(within(items[0]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
     // A closed row is its sentence alone; 추천 and the scope show once it is open (GUIDE-47).
     for (const badge of ['추천', '전역', '영상 템플릿', '가게 소개', '적용 대상 없음'])
       expect(list.queryByText(badge)).not.toBeInTheDocument()
     for (const item of items)
       await user.click(within(item).getByRole('button', { expanded: false }))
-    expect(within(items[0]).getByText('추천')).toBeInTheDocument()
-    expect(within(items[1]).getByText('전역')).toBeInTheDocument()
-    expect(within(items[2]).getByText('가게 소개')).toBeInTheDocument()
-    expect(within(items[3]).getByText('적용 대상 없음')).toBeInTheDocument()
+    expect(within(items[3]).getByText('추천')).toBeInTheDocument()
+    expect(within(items[0]).getByText('전역')).toBeInTheDocument()
+    expect(within(items[1]).getByText('가게 소개')).toBeInTheDocument()
+    expect(within(items[2]).getByText('적용 대상 없음')).toBeInTheDocument()
     expect(screen.queryByText('없는 사실을 쓰지 않기')).not.toBeInTheDocument()
 
     const allowed = [
@@ -107,7 +107,7 @@ describe('/video-guidelines', () => {
 
     const list = await section('영상 지침 목록')
     expect(list.queryByText('입력한 사실만')).not.toBeInTheDocument()
-    expect(within(list.getAllByRole('listitem')[0]).getByText('과장 금지')).toBeInTheDocument()
+    expect(within(list.getAllByRole('listitem').at(-1)!).getByText('과장 금지')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: /Postpilot 원칙/ }))
     const principles = within(screen.getByRole('list', { name: 'Postpilot 원칙 목록' }))
     expect(principles.getByText('입력한 사실만 쓰세요.')).toBeInTheDocument()

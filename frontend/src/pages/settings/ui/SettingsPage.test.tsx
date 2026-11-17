@@ -8,10 +8,10 @@ afterEach(() => {
   localStorage.clear()
 })
 // Guide: 나 opens on the credits left with one 충전, then grouped rows that each drill into one
-// topic. What the owner taught the AI lives in 내 스타일, model choice in AI 고르기.
+// topic. What the owner taught the AI lives in the writing kit, model choice in AI 토너먼트.
 it('leads with the credits and one 충전, then groups plan and account rows', async () => {
   renderAppAt('/settings', { user: { id: 'mobile-settings', plan: ProtoPlan.MASTER } })
-  const heading = await screen.findByRole('heading', { name: '나', level: 1 })
+  const heading = await screen.findByRole('heading', { name: '설정', level: 1 })
   const main = heading.closest('main')!
   const credits = within(main).getByRole('region', { name: '남은 크레딧' })
   // Master's 충전 reaches the packs' own disabled state, as a paid tier's does (QUOTA-75).
@@ -48,7 +48,7 @@ it.each([
   [ProtoPlan.FREE, '/plans'],
 ])('sends 충전 by tier: plan %s goes to %s', async (plan, href) => {
   renderAppAt('/settings', { user: { id: 'charge-by-tier', plan }, plans: { plan } })
-  const heading = await screen.findByRole('heading', { name: '나', level: 1 })
+  const heading = await screen.findByRole('heading', { name: '설정', level: 1 })
   const credits = within(heading.closest('main')!).getByRole('region', { name: '남은 크레딧' })
   await waitFor(() =>
     expect(within(credits).getByRole('link', { name: '충전하기' })).toHaveAttribute('href', href),

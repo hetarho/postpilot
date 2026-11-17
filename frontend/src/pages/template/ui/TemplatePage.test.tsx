@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ProtoConfigurationKind, ProtoAuthoringDraftState } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
@@ -38,24 +38,20 @@ async function direct(
   const view = mount(path, templates, authoring, calls)
   await user.click(
     await screen.findByRole('button', {
-      name: path.endsWith('/new') ? '직접 편집' : /식당 리뷰.*직접 편집하기/,
+      name: '직접 고치기',
     }),
   )
   await screen.findByLabelText('이름')
   return view
 }
-const add = (name: string) =>
-  within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
-    name: new RegExp('^' + name),
-  })
 describe('named template shared editing', () => {
   it('opens the saved usable template before a method and reads summaries without a session or paid work', async () => {
     const calls: string[] = []
     mount(undefined, {}, {}, calls)
     await screen.findByRole('heading', { level: 1, name: '식당 리뷰' })
     expect(await screen.findByText('메뉴 소개')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /식당 리뷰.*AI로 편집하기/ })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /식당 리뷰.*직접 편집하기/ })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'AI와 대화로 고치기' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '직접 고치기' })).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('ListAuthoringSummaries'))
     expect(
       calls.filter((name) =>
@@ -84,32 +80,15 @@ describe('named template shared editing', () => {
     expect(calls).not.toContain('StartAuthoringOperation')
     expect(calls).not.toContain('StartTemplateRequest')
   })
-  it('retains incomplete builder rows across source, AI and direct modes and durable recovery', async () => {
+  // Guide: by hand the owner changes what a row says, adds or removes one; the ORDER is changed
+  // by asking the AI. No row can be dragged and no row has move buttons.
+  it('edits a saved template by hand with nothing to drag or reorder', async () => {
     const user = userEvent.setup()
-    const patches: NonNullable<FakeAuthoringOptions['patches']> = []
-    await direct(user, undefined, {}, { patches })
-    await user.click(add('고정 문구'))
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
-    expect(screen.getByLabelText('원문')).toHaveValue(
-      '<write>메뉴 소개</write>\n지도\n<write></write>',
-    )
-    await user.click(screen.getByRole('tab', { name: '블록' }))
-    expect(screen.getByText('들어갈 문구를 적어 주세요')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: /식당 리뷰.*AI로 편집하기/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
-    expect(patches).toHaveLength(1)
-    expect(patches[0].builderState).toContain('"kind":"text"')
-    expect(patches[0].body).toContain('<write></write>')
-    await user.click(screen.getByRole('button', { name: /식당 리뷰.*직접 편집하기/ }))
-    expect(await screen.findByText('들어갈 문구를 적어 주세요')).toBeInTheDocument()
-    const emptyRow = screen
-      .getAllByRole('button')
-      .find((button) => button.textContent?.includes('들어갈 문구를 적어 주세요'))!
-    await user.click(emptyRow)
-    await user.type(screen.getByLabelText('들어갈 문구'), '마무리')
-    await publishAuthoringDraft(user)
-    await screen.findByRole('heading', { level: 1, name: '식당 리뷰' })
+    await direct(user)
+    expect(screen.getByRole('group', { name: '블록 추가' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '위로' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '아래로' })).not.toBeInTheDocument()
+    expect(document.querySelector('[draggable="true"]')).toBeNull()
   })
   it('keeps invalid raw title/body unchanged and publication unavailable', async () => {
     const user = userEvent.setup()
@@ -161,19 +140,30 @@ describe('named template shared editing', () => {
       },
       calls,
     )
-    await user.click(await screen.findByRole('button', { name: /식당 리뷰.*이어서 편집하기/ }))
-    await user.click(await screen.findByRole('button', { name: /식당 리뷰.*직접 편집하기/ }))
+    await user.click(await screen.findByRole('button', { name: '하던 대화 이어 가기' }))
+    await user.click(await screen.findByRole('button', { name: '직접 고치기' }))
     expect(await screen.findByLabelText('이름')).toHaveValue('편집 중 이름')
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')
   })
-  it('opens the wizard for a new template', async () => {
+  // Guide: a new template is made by talking to the AI, from scratch — no wizard. The page opens
+  // on the AI's question with ready-made openings that fill the field, and sends nothing itself.
+  it('opens a new template on the conversation, not a wizard', async () => {
+    const user = userEvent.setup()
     const calls: string[] = []
     mount('/templates/new', { templates: [] }, {}, calls)
+    expect(await screen.findByText(/어떤 글을 올리세요\?/)).toBeInTheDocument()
+    const field = screen.getByRole('textbox', { name: '어떤 글을 올리는지 말해 주세요' })
+    await user.click(screen.getByRole('button', { name: /조립이 필요한 가구를 리뷰해요/ }))
+    expect(field).toHaveValue(
+      '조립이 필요한 가구를 리뷰해요. 구성품, 조립 과정, 완성 후 사용감 순서로요',
+    )
+    // The preview waits for a draft; there is nothing to save yet.
+    expect(screen.getByText('대화를 시작하면 여기에 템플릿이 그려져요')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '저장' })).not.toBeInTheDocument()
     expect(
-      await screen.findByRole('heading', { level: 2, name: '어떤 체험을 글로 남기나요?' }),
-    ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '직접 편집' })).not.toBeInTheDocument()
+      screen.queryByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
+    ).not.toBeInTheDocument()
     expect(calls.filter((call) => /Create|StartAuthoring/.test(call))).toEqual([])
   })
   it('resumes an unsaved creation session', async () => {
@@ -209,7 +199,7 @@ describe('named template shared editing', () => {
       },
       calls,
     )
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    await screen.findByRole('textbox', { name: '무엇을 바꿀지 말해 주세요' })
     expect(calls).toContain('GetAuthoringSession')
     expect(calls.filter((call) => /Create|Start/.test(call))).toEqual([])
     expect(

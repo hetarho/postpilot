@@ -5,6 +5,19 @@ import type { I18nFragment } from '@/shared/lib'
 export const i18n = {
   namespace: 'guidelines',
   ko: {
+    bands: {
+      own: {
+        title: '내가 정한 규칙',
+        lead: 'AI가 글을 쓸 때마다 이 문장을 그대로 읽고 지켜요.',
+        empty: '아직 없어요. 글을 받아 보고 매번 고치던 점을 한 번만 적어 두세요.',
+      },
+      defaults: {
+        title: '기본으로 지키는 것',
+        lead: 'Postpilot이 준비한 규칙이에요. 끄면 그 규칙 없이 써요.',
+        empty: '켜 둔 기본 지침이 없어요.',
+      },
+      direct: '직접 쓰기',
+    },
     principles: {
       title: 'Postpilot 원칙',
       summary: '항상 적용돼요',
@@ -52,6 +65,19 @@ export const i18n = {
     },
   },
   en: {
+    bands: {
+      own: {
+        title: 'Rules you set',
+        lead: 'The AI reads these sentences as written and keeps to them in every post.',
+        empty: 'None yet. Write down once what you keep fixing in your posts.',
+      },
+      defaults: {
+        title: 'Kept by default',
+        lead: 'Rules Postpilot prepared. Turn one off and posts are written without it.',
+        empty: 'No built-in rule is on.',
+      },
+      direct: 'Write one',
+    },
     principles: {
       title: 'Postpilot principles',
       summary: 'Always applied',

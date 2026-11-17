@@ -17,6 +17,21 @@ export const i18n = {
         '글을 완성한 뒤 ③에서 기억으로 저장을 눌러 뽑아내거나, 여기서 직접 적을 수 있어요.',
       example: '예: 매운 음식을 잘 못 먹는다',
       noTags: '태그 없음',
+      bands: {
+        always: {
+          title: '모든 글에 떠올려요',
+          lead: '글을 쓸 때마다 AI가 먼저 떠올리는, 나에 대한 사실이에요.',
+        },
+        tagged: {
+          title: '태그가 맞을 때만 떠올려요',
+          lead: '글의 메모·사진·답변에 태그 단어가 나올 때만 꺼내 써요.',
+        },
+      },
+      search: '기억 찾기',
+      noMatch: '“{{q}}”에 맞는 기억이 없어요',
+      addKind: '{{kind}} 추가',
+      kindEmpty: '아직 없어요',
+      trigger: '이 단어가 나오면',
     },
   },
   en: {
@@ -33,6 +48,21 @@ export const i18n = {
         'Finish a post and press 기억으로 저장 in ③ to extract some, or write one here by hand.',
       example: 'For example: cannot handle spicy food',
       noTags: 'No tags',
+      bands: {
+        always: {
+          title: 'Brought into every post',
+          lead: 'Facts about you the AI recalls whenever it writes.',
+        },
+        tagged: {
+          title: 'Only when a tag matches',
+          lead: 'Used only when a post’s memo, photos or answers mention one of its tags.',
+        },
+      },
+      search: 'Find a memory',
+      noMatch: 'No memory matches “{{q}}”',
+      addKind: 'Add {{kind}}',
+      kindEmpty: 'None yet',
+      trigger: 'When a post says',
     },
   },
 } as const satisfies I18nFragment

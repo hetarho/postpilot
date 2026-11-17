@@ -11,11 +11,13 @@ import {
 } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
+import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
-import { ChannelActions } from '@/widgets/channel-actions'
 import { RestoreVoiceButton } from '@/features/restore-voice'
-import { Quote } from 'lucide-react'
+import { ChevronRight, Plus, Quote } from 'lucide-react'
 import {
+  ActionBar,
+  ActionMenu,
   Badge,
   Button,
   Notice,
@@ -53,6 +55,9 @@ export function VoicesPage() {
     if (requested) void navigate({ to: '/voices', search: {}, replace: true })
   }, [requested, navigate])
   const { t: authoringText } = useTranslation('authoring')
+  const spotlight =
+    active.find((voice) => voice.isDefault && voice.made) ?? active.find((voice) => voice.made)
+  const others = active.filter((voice) => voice.id !== spotlight?.id)
 
   return (
     // The page gutter lives on each block rather than on `main`, so the rows run edge to edge
@@ -71,27 +76,16 @@ export function VoicesPage() {
         <Typography variant="display" as="p" aria-hidden="true">
           {t('page.lead', { ns: 'voices' })}
         </Typography>
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button variant="secondary" onClick={() => setAuthoringOpen(true)}>
-            {authoringText('host.createVoice')}
-          </Button>
-          <AIAuthoringSheet
-            open={authoringOpen}
-            onOpenChange={setAuthoringOpen}
-            ownerId={ownerId}
-            kind="writing-voice"
-            onSaved={() => {
-              refetch()
-              setAuthoringOpen(false)
-            }}
-          />
-          <details>
-            <summary className="text-content-secondary min-h-11 cursor-pointer py-3">
-              {authoringText('host.legacyVoice')}
-            </summary>
-            <GeneratedWritingVoicesSheet ownerId={ownerId} />
-          </details>
-        </div>
+        <AIAuthoringSheet
+          open={authoringOpen}
+          onOpenChange={setAuthoringOpen}
+          ownerId={ownerId}
+          kind="writing-voice"
+          onSaved={() => {
+            refetch()
+            setAuthoringOpen(false)
+          }}
+        />
         <CreateVoiceSheet ownerId={ownerId} open={createOpen} onOpenChange={setCreateOpen} />
       </div>
 
@@ -139,23 +133,45 @@ export function VoicesPage() {
 
       {!isError && !isPending && (
         <>
-          {active.length > 0 && (
-            <ul className="mt-6 grid shrink-0 gap-4 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
-              {active.map((voice) => (
-                <li key={voice.id}>
-                  <Link
-                    to="/voices/$voiceId"
-                    params={{ voiceId: voice.id }}
-                    className={cardStyles({
-                      interactive: true,
-                      className: 'flex h-full flex-col gap-4',
-                    })}
-                  >
-                    <VoiceRowContent ownerId={ownerId} voice={voice} />
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          {/* Guide: the voice in use leads, drawn as how it SOUNDS — its own sentence, large,
+              and the phrases it keeps coming back to — because that is what it does to a post.
+              The others follow as one line each, with 기본으로 in reach on the row. */}
+          {spotlight ? (
+            <div className="mt-6 px-4 sm:px-6 lg:px-8">
+              <VoiceSpotlight ownerId={ownerId} voice={spotlight} />
+            </div>
+          ) : (
+            active.length > 0 && (
+              // The slot the voice in use will fill: its outline, and what fills it.
+              <div className="mt-6 px-4 sm:px-6 lg:px-8">
+                <div className="border-divider flex flex-col gap-3 rounded-2xl border-2 border-dashed p-5 sm:p-6">
+                  <Quote aria-hidden="true" className="text-content-tertiary size-7" />
+                  <Typography variant="fieldTitle" as="p">
+                    {t('page.noInUse', { ns: 'voices' })}
+                  </Typography>
+                  <Typography variant="body" className="text-content-secondary">
+                    {t('page.noInUseHelp', { ns: 'voices' })}
+                  </Typography>
+                </div>
+              </div>
+            )
+          )}
+          {others.length > 0 && (
+            <section aria-labelledby="voices-others" className="mt-10">
+              <Typography
+                variant="title"
+                as="h2"
+                id="voices-others"
+                className="px-4 sm:px-6 lg:px-8"
+              >
+                {t(spotlight ? 'page.others' : 'page.mine', { ns: 'voices' })}
+              </Typography>
+              <ul className="divide-divider mt-3 divide-y">
+                {others.map((voice) => (
+                  <OtherVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
+                ))}
+              </ul>
+            </section>
           )}
 
           {deleted.length > 0 && (
@@ -180,82 +196,204 @@ export function VoicesPage() {
           )}
         </>
       )}
-      {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions section="voices" className="action-list-inset mt-auto" />
+      <details className="mt-6 px-4 sm:px-6 lg:px-8">
+        <summary className="text-content-secondary min-h-11 cursor-pointer py-3">
+          {authoringText('host.legacyVoice')}
+        </summary>
+        <GeneratedWritingVoicesSheet ownerId={ownerId} />
+      </details>
+      {/* The section's one dock (THEME-67): 새 말투, whose two ways of making one open from it. */}
+      <ActionBar dock="list" className="action-list-inset mt-auto w-full sm:w-fit">
+        <ActionMenu
+          label={t('page.new', { ns: 'voices' })}
+          triggerLabel={
+            <>
+              <Plus aria-hidden="true" className="size-6 shrink-0" />
+              {t('page.new', { ns: 'voices' })}
+            </>
+          }
+          triggerVariant="cta"
+          triggerSize="hero"
+          triggerClassName="w-full sm:w-auto"
+          className="w-full sm:w-auto"
+          items={[
+            {
+              id: 'learn',
+              label: t('page.methods.learn.label', { ns: 'voices' }),
+              description: t('page.methods.learn.description', { ns: 'voices' }),
+              onSelect: () => setCreateOpen(true),
+            },
+            {
+              id: 'ai',
+              label: t('page.methods.ai.label', { ns: 'voices' }),
+              description: t('page.methods.ai.description', { ns: 'voices' }),
+              onSelect: () => setAuthoringOpen(true),
+            },
+          ]}
+        />
+      </ActionBar>
     </main>
   )
 }
 
-/** Guide: a voice card leads with how the voice SOUNDS — the analysis's one-line impression and
- *  one of its own example sentences in quotes, then its signature phrases — and only then its
- *  name, the 기본 badge and the meta line (`만드는 중` until it is made, then how many 학습 글 it
- *  holds and the day its analysis was published). A sentence an AI-made style was read from is a
- *  fictional sample, and the card says so over it (VOICE-69). */
-function VoiceRowContent({ voice, ownerId }: { voice: Voice; ownerId: string }) {
+/** The voice new posts are written in, as it sounds: its own sentence large, the impression the
+ *  analysis gave it, the phrases it keeps using, and the facts under it. The whole card opens it. */
+function VoiceSpotlight({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   const { t } = useTranslation(['voices', 'common', 'authoring'])
-  const { profile } = useVoiceProfile(ownerId, voice.made ? voice.id : '')
+  const { profile } = useVoiceProfile(ownerId, voice.id)
   const analysis = profile?.analysis
   const ai = analysis?.ai
   const sample = analysis?.syntheticSample || ai?.examples[0]?.sentence
   const fictional = Boolean(analysis?.syntheticSample) || analysis?.origin === 'synthetic'
   return (
-    <>
-      <span className="flex min-w-0 items-start gap-3">
-        <span
-          aria-hidden="true"
-          className="bg-badge-accent-bg text-badge-accent-fg flex size-11 shrink-0 items-center justify-center rounded-lg"
-        >
-          <Quote className="size-5" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <Typography variant="fieldTitle" as="span" className="text-content-primary truncate">
-            {voice.name}
-          </Typography>
-          <span className="flex min-w-0 flex-wrap items-center gap-2">
-            {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
-            {voice.origin === 'synthetic' && <Badge tone="neutral">{t('origin.synthetic')}</Badge>}
-            {voice.made && <DirectoryFreshness ownerId={ownerId} voiceId={voice.id} />}
-          </span>
-        </span>
+    <Link
+      to="/voices/$voiceId"
+      params={{ voiceId: voice.id }}
+      className={cardStyles({
+        interactive: true,
+        padding: 'lg',
+        className: 'flex flex-col gap-5',
+      })}
+    >
+      <span className="flex flex-wrap items-center gap-2">
+        <Typography variant="eyebrow" as="span">
+          {t('page.inUse', { ns: 'voices' })}
+        </Typography>
+        {voice.isDefault && <Badge tone="accent">{t('state.default', { ns: 'common' })}</Badge>}
+        {voice.origin === 'synthetic' && <Badge tone="neutral">{t('origin.synthetic')}</Badge>}
       </span>
-      {sample && (
-        <span className="bg-card-well flex flex-col gap-1 rounded-lg px-4 py-3">
-          {fictional && (
+      <span className="flex min-w-0 items-start gap-3">
+        <Quote aria-hidden="true" className="text-link-fg mt-1 size-7 shrink-0" />
+        <span className="flex min-w-0 flex-col gap-2">
+          {fictional && sample && (
             <span className={typographyStyles({ variant: 'label' })}>
               {t('fictional', { ns: 'authoring' })}
             </span>
           )}
           <span
-            className={typographyStyles({ variant: 'body', className: 'text-content-primary' })}
+            className={typographyStyles({
+              variant: 'stepTitle',
+              className: 'text-content-primary break-words',
+            })}
           >
-            “{sample}”
+            {sample ?? voice.name}
+          </span>
+          {ai?.impression && (
+            <span
+              className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}
+            >
+              {ai.impression}
+            </span>
+          )}
+        </span>
+      </span>
+      {ai && ai.signaturePhrases.length > 0 && (
+        <span className="flex flex-col gap-2">
+          <span className={typographyStyles({ variant: 'label' })}>
+            {t('page.habits', { ns: 'voices' })}
+          </span>
+          <span className="flex flex-wrap gap-1.5">
+            {ai.signaturePhrases.slice(0, 6).map((phrase) => (
+              <span
+                key={phrase}
+                className={typographyStyles({
+                  variant: 'body',
+                  className:
+                    'bg-voice-habit-highlight text-voice-habit-foreground rounded-md px-2 py-0.5',
+                })}
+              >
+                {phrase}
+              </span>
+            ))}
           </span>
         </span>
       )}
-      {ai?.impression && (
-        <span
-          className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}
+      <span className="border-divider flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-4">
+        <Typography
+          variant="fieldTitle"
+          as="span"
+          className="text-content-primary min-w-0 break-words"
         >
-          {ai.impression}
+          {voice.name}
+        </Typography>
+        <span className={typographyStyles({ variant: 'meta', className: 'min-w-0' })}>
+          {voice.isDefault
+            ? t('page.meta', {
+                ns: 'voices',
+                count: voice.materialCount,
+                date: voiceAnalysisDate(voice.analyzedAt),
+              })
+            : t('page.notDefault', { ns: 'voices' })}
         </span>
-      )}
-      {ai && ai.signaturePhrases.length > 0 && (
-        <span className="flex flex-wrap gap-1.5">
-          {ai.signaturePhrases.slice(0, 3).map((phrase) => (
-            <Badge key={phrase}>{phrase}</Badge>
-          ))}
-        </span>
-      )}
-      <span className={typographyStyles({ variant: 'meta', className: 'mt-auto truncate' })}>
-        {voice.made
-          ? t('page.meta', {
-              ns: 'voices',
-              count: voice.materialCount,
-              date: voiceAnalysisDate(voice.analyzedAt),
-            })
-          : t('page.making', { ns: 'voices', percent: voice.readinessPercent })}
+        <DirectoryFreshness ownerId={ownerId} voiceId={voice.id} />
+        <ChevronRight
+          aria-hidden="true"
+          className="text-content-tertiary ml-auto size-5 shrink-0"
+        />
       </span>
-    </>
+    </Link>
+  )
+}
+
+/** Another voice, in one line: its name, a line of how it sounds (or how far it is made), and
+ *  기본으로 on the row for a made one. The link stretches over the row; the button paints above. */
+function OtherVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
+  const { t } = useTranslation(['voices', 'common'])
+  const { profile } = useVoiceProfile(ownerId, voice.made ? voice.id : '')
+  const sample = profile?.analysis?.syntheticSample || profile?.analysis?.ai?.examples[0]?.sentence
+  return (
+    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative flex min-h-16 flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">
+      <span
+        aria-hidden="true"
+        className="bg-badge-accent-bg text-badge-accent-fg flex size-10 shrink-0 items-center justify-center rounded-lg"
+      >
+        <Quote className="size-5" />
+      </span>
+      <span className="flex min-w-0 flex-1 basis-48 flex-col gap-1">
+        <Link
+          to="/voices/$voiceId"
+          params={{ voiceId: voice.id }}
+          className={typographyStyles({
+            variant: 'fieldTitle',
+            className: 'text-content-primary truncate after:absolute after:inset-0',
+          })}
+        >
+          {voice.name}
+        </Link>
+        {voice.made ? (
+          sample && (
+            <span
+              className={typographyStyles({
+                variant: 'body',
+                className: 'text-content-secondary truncate',
+              })}
+            >
+              “{sample}”
+            </span>
+          )
+        ) : (
+          <span className="flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className="bg-meter-track block h-1.5 w-24 overflow-hidden rounded-full"
+            >
+              <span
+                className="bg-meter-fill block h-full rounded-full"
+                style={{ width: `${voice.readinessPercent}%` }}
+              />
+            </span>
+            <span className={typographyStyles({ variant: 'meta' })}>
+              {voice.readinessPercent >= 100
+                ? t('page.readyToMake', { ns: 'voices' })
+                : t('page.making', { ns: 'voices', percent: voice.readinessPercent })}
+            </span>
+          </span>
+        )}
+      </span>
+      <span className="relative flex shrink-0 flex-wrap items-center gap-2">
+        <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
+      </span>
+    </li>
   )
 }
 

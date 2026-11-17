@@ -52,6 +52,8 @@ export {
 export { TemplateComposition } from './ui/TemplateComposition'
 export { TemplateSource } from './ui/TemplateSource'
 export { TemplatePreview } from './ui/TemplatePreview'
+export { TemplateOutline } from './ui/TemplateOutline'
+export { templateSections } from './lib/template-sections'
 export {
   AnswerChip,
   AnswerStandIn,

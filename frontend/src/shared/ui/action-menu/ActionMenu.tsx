@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { ChevronDown, X } from 'lucide-react'
 import { Button } from '../button/Button'
-import type { ButtonVariant } from '../button/buttonStyles'
+import type { ButtonSize, ButtonVariant } from '../button/buttonStyles'
 import { moveListFocus } from '../focus/listFocus'
 import { Sheet } from '../sheet/Sheet'
 import { SM_MEDIA_QUERY, useMediaQuery } from '../media-query/useMediaQuery'
@@ -31,6 +31,8 @@ export function ActionMenu({
   items,
   triggerLabel,
   triggerVariant = 'secondary',
+  triggerSize = 'default',
+  triggerClassName,
   disabled = false,
   className,
 }: {
@@ -40,6 +42,10 @@ export function ActionMenu({
   /** Visible trigger content; a ▾ glyph alone when absent. */
   triggerLabel?: ReactNode
   triggerVariant?: ButtonVariant
+  /** The trigger's size when it carries a label; a section's dock uses `hero`. */
+  triggerSize?: ButtonSize
+  /** Classes for the trigger itself, e.g. a dock's full phone width. */
+  triggerClassName?: string
   disabled?: boolean
   className?: string
 }) {
@@ -155,7 +161,8 @@ export function ActionMenu({
       <Button
         ref={triggerRef}
         variant={triggerVariant}
-        size={triggerLabel === undefined ? 'icon' : 'default'}
+        size={triggerLabel === undefined ? 'icon' : triggerSize}
+        className={triggerClassName}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}

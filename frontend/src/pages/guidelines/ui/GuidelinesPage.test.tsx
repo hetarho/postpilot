@@ -211,22 +211,30 @@ const DEFAULTS: FakeDefaultGuidelineRow[] = [
 /** GUIDE-20, GUIDE-43, GUIDE-47, GUIDE-48: the 기본 지침 in use are rows of the one list, first and
  *  in registry order; one leaves it by 적용 안함 and comes back from the 기본 지침 sheet. */
 describe('the 기본 지침', () => {
-  it('lists the ones in use first, in registry order, in the same list as the owner’s rows', async () => {
+  // Guide: two bands by who wrote the rule — the owner's own first, then the 기본 지침 in use in
+  // registry order — inside the one list region.
+  it('lists the owner’s rows first, then the ones in use in registry order', async () => {
     renderGuidelines({ defaults: DEFAULTS })
 
     const list = await section('지침 목록')
     const items = list.getAllByRole('listitem')
     // naming is out of use, so it is not a row at all.
     expect(items).toHaveLength(2 + GUIDELINES.length)
+    expect(within(items[0]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
     // A closed row is its sentence alone; 추천 and the scope show once it is open (GUIDE-47).
-    expect(within(items[0]).getByRole('button', { expanded: false })).toHaveTextContent(
+    const firstDefault = items[GUIDELINES.length]
+    expect(within(firstDefault).getByRole('button', { expanded: false })).toHaveTextContent(
       /^재료에 있는 사실만$/,
     )
     expect(list.queryByText('추천')).not.toBeInTheDocument()
     expect(list.queryByText('전역')).not.toBeInTheDocument()
     expect(list.queryByText('적용 대상 없음')).not.toBeInTheDocument()
-    expect(within(items[1]).getByText('자연스러운 한국어 문체')).toBeInTheDocument()
-    expect(within(items[2]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
+    expect(
+      within(items[GUIDELINES.length + 1]).getByText('자연스러운 한국어 문체'),
+    ).toBeInTheDocument()
+    expect(
+      within(list.getByRole('region', { name: '내가 정한 규칙' })).getAllByRole('listitem'),
+    ).toHaveLength(GUIDELINES.length)
     expect(list.queryByText('메모의 이름으로')).not.toBeInTheDocument()
     expect(screen.queryByRole('switch')).not.toBeInTheDocument()
     // Closed rows carry no text and no action.
@@ -334,9 +342,9 @@ describe('the 기본 지침', () => {
 
     await user.click(sheet.getByRole('button', { name: '닫기' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    // In the list at its product position: after facts, before natural_korean.
+    // In the 기본 band at its product position: after facts, before natural_korean.
     const items = (await section('지침 목록')).getAllByRole('listitem')
-    expect(within(items[1]).getByText('메모의 이름으로')).toBeInTheDocument()
+    expect(within(items[GUIDELINES.length + 1]).getByText('메모의 이름으로')).toBeInTheDocument()
   })
 
   // GUIDE-53, GUIDE-48: the 원칙 sit read-only in their own closed card above the list, never as
