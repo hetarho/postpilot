@@ -1,6 +1,13 @@
 import { useWritingTestTranslation } from '@/features/writing-test'
-import { writingTestPayloadAvailable, type WritingTest } from '@/entities/writing-test'
+import {
+  writingTestCandidateReadable,
+  writingTestPayloadAvailable,
+  type WritingTest,
+  type WritingTestCandidate,
+} from '@/entities/writing-test'
 import { Notice, Typography } from '@/shared/ui'
+import { writingTestCandidateLabel } from '../lib/candidate-label'
+import { WritingTestObservationRows } from './WritingTestObservationPair'
 import { WritingTestPost } from './WritingTestPair'
 
 /** Read and copy the server-confirmed champion without applying it or creating a new match. */
@@ -20,6 +27,7 @@ export function WritingTestChampionOutput({
         {t('failed')}
       </Notice>
     )
+  if (test.output === 'observation') return <ChampionObservations test={test} champion={champion} />
   if (!champion.output || !writingTestPayloadAvailable(test))
     return (
       <Notice tone="warning" role="status">
@@ -44,6 +52,48 @@ export function WritingTestChampionOutput({
         candidate={champion}
         label={label}
       />
+    </section>
+  )
+}
+
+/** A photo test's champion is read, never applied to a post or exported (MODEL-97). Once its
+ *  private payload is purged only the retained metadata remains, under the expired notice. */
+function ChampionObservations({
+  test,
+  champion,
+}: {
+  test: WritingTest
+  champion: WritingTestCandidate
+}) {
+  const { t } = useWritingTestTranslation()
+  const label = writingTestCandidateLabel(test, champion.id)
+  const readable = writingTestCandidateReadable(champion) && writingTestPayloadAvailable(test)
+  const photoCount = test.photos?.length ?? 0
+  return (
+    <section aria-label={t('observation.winningObservation')}>
+      <Typography variant="title" as="h2">
+        {t('observation.winningObservation')}
+      </Typography>
+      <Typography variant="label" as="p" className="mt-2 break-words">
+        {t('candidate', { label })}
+        {champion.identity ? ` · ${champion.identity.label}` : ''}
+      </Typography>
+      {readable ? (
+        <div className="mt-4">
+          <WritingTestObservationRows test={test} columns={[{ candidate: champion, label }]} />
+        </div>
+      ) : (
+        <>
+          {photoCount > 0 && (
+            <Typography variant="label" as="p" className="mt-2">
+              {t('observation.photoCount', { count: photoCount })}
+            </Typography>
+          )}
+          <Notice tone="warning" role="status" className="mt-4">
+            {t('observation.expired')} · {t('observation.expiredHelp')}
+          </Notice>
+        </>
+      )}
     </section>
   )
 }

@@ -1048,3 +1048,98 @@ it('settles a canonical earlier publication key from the same champion action wi
   expect(api.saveWinner).toHaveBeenCalledTimes(1)
   ref.stop()
 })
+
+/** A photo observation test stores observations, never a post (MODEL-97). */
+function observationTest(changes: Partial<WritingTest> = {}): WritingTest {
+  const base = test(2, { output: 'observation', modelStage: 'observe', ...changes })
+  base.candidates = base.candidates.map((candidate, index) => ({
+    ...candidate,
+    output: undefined,
+    observations: [
+      {
+        file: 'dish.jpg',
+        scene: `Scene ${index}`,
+        mood: 'calm',
+        visibleText: '',
+        objects: [],
+        peoplePresent: false,
+      },
+    ],
+  }))
+  return base
+}
+it('reads observations as the stored result of a photo test: its pair opens, a vote is sent and the champion is adopted explicitly', async () => {
+  const open = observationTest()
+  expect(currentWritingTestMatch(open)?.id).toBe('match-0')
+  const voteAPI = client(open)
+  const voteRef = actor(voteAPI, { testId: 'test' })
+  await waitFor(voteRef, (s) => s.matches('match'))
+  voteRef.send({
+    type: 'VOTE',
+    scopeKey,
+    testId: 'test',
+    expectedRevision: 1,
+    matchId: 'match-0',
+    winnerCandidateId: 'candidate-1',
+  })
+  await vi.waitFor(() => expect(voteAPI.decide).toHaveBeenCalledTimes(1))
+  voteRef.stop()
+
+  const champion = observationTest({
+    status: 'completed',
+    winnerCandidateId: 'candidate-0',
+    revealed: true,
+  })
+  const api = client(champion)
+  vi.mocked(api.saveWinner).mockImplementation(async (input) => {
+    const publication = {
+      id: 'adopt-receipt',
+      testId: 'test',
+      winnerCandidateId: 'candidate-0',
+      action: 'adopt-model' as const,
+      status: 'confirmed' as const,
+      requestKey: input.requestKey,
+      targetId: 'observe',
+    }
+    return { test: { ...champion, revision: 2, publications: [publication] }, publication }
+  })
+  const ref = actor(api, { testId: 'test' })
+  await waitFor(ref, (s) => s.matches('champion'))
+  expect(api.saveWinner).not.toHaveBeenCalled()
+  ref.send({
+    type: 'PUBLISH',
+    scopeKey,
+    input: {
+      testId: 'test',
+      expectedRevision: 1,
+      winnerCandidateId: 'candidate-0',
+      action: 'adopt-model',
+      makeDefault: false,
+      name: '',
+      scope: '',
+      scopeIds: [],
+    },
+  })
+  await waitFor(ref, (s) => s.matches('published'))
+  expect(api.saveWinner).toHaveBeenCalledTimes(1)
+  expect(api.start).not.toHaveBeenCalled()
+  ref.stop()
+})
+it('expires a photo test whose observations were purged and refuses its decisions', async () => {
+  const purged = observationTest()
+  purged.candidates[0] = { ...purged.candidates[0]!, observations: [] }
+  expect(currentWritingTestMatch(purged)).toBeUndefined()
+  const api = client(purged)
+  const ref = actor(api, { testId: 'test' })
+  await waitFor(ref, (s) => s.matches('expired'))
+  ref.send({
+    type: 'VOTE',
+    scopeKey,
+    testId: 'test',
+    expectedRevision: 1,
+    matchId: 'match-0',
+    winnerCandidateId: 'candidate-0',
+  })
+  expect(api.decide).not.toHaveBeenCalled()
+  ref.stop()
+})

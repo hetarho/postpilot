@@ -1,6 +1,6 @@
 import { create } from '@bufbuild/protobuf'
 import { Code, ConnectError, createRouterTransport } from '@connectrpc/connect'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, expect, it } from 'vitest'
@@ -22,6 +22,7 @@ import {
   ProtoConfigurationKind,
 } from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
+import { wireObservationTest } from '@/entities/writing-test/api/fixtures.test-support'
 import { createTestQueryClient, withProviders } from '@/test/session'
 import { WritingTestHistory } from './WritingTestHistory'
 
@@ -164,6 +165,48 @@ it('shows durable champion and expired metadata beside paid legacy records witho
   expect(
     screen.queryByRole('button', { name: /승자|활성 모델|저장|다시 만들기/ }),
   ).not.toBeInTheDocument()
+})
+it('lists photo tests with a 사진 관찰 label beside writing tests and opens them at /tests/$testId', async () => {
+  const readable = wireObservationTest(['p1', 'p2'], 2, true)
+  readable.id = 'photos-readable'
+  readable.createdAt = '2026-10-08T00:00:00Z'
+  const purged = wireObservationTest(['p1'], 2, true)
+  purged.id = 'photos-purged'
+  purged.createdAt = '2026-10-07T00:00:00Z'
+  purged.contentExpiresAt = '2020-01-01T00:00:00Z'
+  purged.candidates.forEach((candidate) => (candidate.observations = []))
+  const writing = test('writing', 3, 'Writing', '2026-10-06T00:00:00Z')
+  const transport = createRouterTransport(({ rpc }) => {
+    registerEmptyLegacy(rpc)
+    rpc(Service.method.listWritingTests, () =>
+      create(Service.method.listWritingTests.output, { tests: [readable, purged, writing] }),
+    )
+  })
+  render(<WritingTestHistory ownerId="alice" />, {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  await screen.findByText('Writing left')
+  const records = screen.getAllByRole('listitem')
+  expect(records).toHaveLength(3)
+  const [photos, expired, post] = records as [HTMLElement, HTMLElement, HTMLElement]
+  expect(within(photos).getByRole('heading', { name: /^사진 관찰 · A\/B 테스트$/ })).toBeVisible()
+  expect(within(photos).getByText('마음에 드는 사진 보는 AI를 찾았어요')).toBeVisible()
+  expect(within(photos).getByText('2 / 2개 관찰 완료')).toBeVisible()
+  expect(within(photos).getByText('Candidate 1')).toBeVisible()
+  // Observations count as retained payload: only the purged record carries the expired notice.
+  expect(within(photos).queryByText(/보관 기간이 지났어요/)).not.toBeInTheDocument()
+  expect(within(expired).getByRole('heading', { name: /^사진 관찰/ })).toBeVisible()
+  expect(within(expired).getByText(/사진과 관찰 결과의 보관 기간이 지났어요/)).toBeVisible()
+  expect(within(post).getByRole('heading', { name: /^AI 모델 · A\/B 테스트$/ })).toBeVisible()
+  expect(
+    screen
+      .getAllByRole('link', { name: '테스트 이어보기' })
+      .map((link) => link.getAttribute('href')),
+  ).toEqual([
+    '/tests/photos-readable?entry=%2Ftests%2Fhistory',
+    '/tests/photos-purged?entry=%2Ftests%2Fhistory',
+    '/tests/writing?entry=%2Ftests%2Fhistory',
+  ])
 })
 it('loads historical voice checks only for one explicit voice and keeps the result read-only', async () => {
   const voiceIds: string[] = []
