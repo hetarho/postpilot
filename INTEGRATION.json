@@ -364,7 +364,110 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "06cc927e-ab2d-4b8f-970a-d3b72a5d526d",
+    "owner": "wtform2",
+    "via": "merge",
+    "executor": {
+      "host": "DESKTOP-VKPLS8P",
+      "pid": 688642
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "e253e8fc3db955b448e9cc6b857ead6b278f09aa",
+    "cohort": [
+      {
+        "id": "fb3a1cf0d152edc634face9f",
+        "tag": "lchat",
+        "branch": "gusta-session-start-lchat-3d500d0c",
+        "head": "e44a8572e8a563d7ef1ca6824174b5722c2610f6",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      },
+      {
+        "id": "106ee959112c2b36f2fa6c9c",
+        "tag": "lchat",
+        "branch": "gusta-session-start-lchat-fe660cf1",
+        "head": "75fc5110392ec8323ce13b24825d646bd0bc5065",
+        "agentChecks": [
+          {
+            "id": "T878-chat-experience-walk",
+            "scenario": "Browser walk of the learning chat: pick 맛집 with a name, answer five thread questions, start a second experience, reach the analysis offer after ten replies",
+            "steps": [
+              "Open the learning chat on an unmade voice",
+              "Pick 맛집, type a name and send",
+              "Answer the five thread questions, using 다른 얘기 할래요 once",
+              "Choose 경험 하나 더 이야기하기 and answer five more",
+              "Confirm the explicit analysis action appears"
+            ],
+            "expected": "The owner's line shows the name, each question names the experience, a swap does not count, the offer appears after five replies and the analysis action after ten.",
+            "observed": "",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "The T878 unit had no browser tooling and covered the flow with machine and VoiceLearningChat component tests only; its returned check carried an abbreviated candidate SHA and a free-text owner, so the CLI rejected it. Resubmitted unchanged in substance for the capable host on the fixed candidate.",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "host",
+            "candidate": null,
+            "duplicationReason": "No automated e2e covers the chat walk, so this check adds none and replaces no e2e."
+          }
+        ],
+        "verificationCommands": [],
+        "publication": "merge"
+      },
+      {
+        "id": "57003c600520721f5f5a87e1",
+        "tag": "wtform",
+        "branch": "gusta-session-start-wtform-501eaa2b",
+        "head": "0ec8ba25cac2ec0325d9041ce77138208c0e5e76",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      },
+      {
+        "id": "3e71c1a21bb7b72079f6112d",
+        "tag": "wtform2",
+        "branch": "gusta-session-start-wtform2-c523edbc",
+        "head": "6c7dcaead6bc0323e40bc7e76a74a506e019a94a",
+        "agentChecks": [
+          {
+            "id": "T897-AC5",
+            "scenario": "Photo observation test end to end in a browser: finish an A/B photo test, compare photo by photo, pick a winner, reveal, adopt as the observe AI and see it on /ai-models, at desktop 1280 and phone 390.",
+            "steps": [
+              "Against a dev stack with T890-T896, open /tests/photos, pick two observe models, upload photos and start the test.",
+              "On /tests/$testId at 1280 px, read both observations beside each other for every photo and pick a winner; repeat the view at 390 px with the observations stacked under each photo.",
+              "After the reveal, confirm the champion view names the models and offers 사진 보는 AI로 쓰기 with no post application or export; adopt it.",
+              "Open /ai-models and confirm the adopted model is the active 사진 보는 AI."
+            ],
+            "expected": "Both viewports compare photo by photo with blind labels until the reveal; the champion adopts as the observe-stage AI only on the explicit action and shows on /ai-models; no post is applied or exported.",
+            "observed": "Not run: this unit has no browser host. The same flow is covered by unit-level tests over the real actor and the studio fixture (WritingTestObservationReview, WritingTestObservationPair, WritingTestChampionOutput, WritingTestHistory and writing-test-machine tests).",
+            "evidence": [
+              "frontend/src/widgets/writing-test/ui/WritingTestObservationReview.test.tsx",
+              "frontend/src/widgets/writing-test/ui/WritingTestObservationPair.test.tsx"
+            ],
+            "status": "not-run",
+            "reason": "No browser host is available in this unit; the desktop and phone browser observation is handed to the integration owner.",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "host",
+            "candidate": "05aa28d07eab3749acac25d089a0567b7768e302",
+            "duplicationReason": "Replaces no automated e2e; the unit tests cover component and actor behaviour only, not real browser layout, photo loading or the cross-page adoption on /ai-models."
+          }
+        ],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-17T07:56:05.836Z",
+    "deadline": "2026-11-17T08:56:03.328Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "a15b98d3-675b-4085-9904-6b652ef895ff",
