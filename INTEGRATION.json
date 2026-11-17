@@ -314,10 +314,10 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-wtform-501eaa2b",
-      "head": "156049c2cd61ce6c0d20fee598bd06525174f64d",
+      "head": "44958ece9039045213d4b6e07593fe04c096c872",
       "land": "main",
-      "status": "ready",
-      "at": "2026-11-17T06:23:54.306Z",
+      "status": "working",
+      "at": "2026-11-17T06:27:07.777Z",
       "agentChecks": [],
       "verificationCommands": []
     }
