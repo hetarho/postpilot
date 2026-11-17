@@ -83,7 +83,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
-| T899 | Show each contestant's state and word retries and match progress in the test's own terms | MODEL ARCH | - | doing@261117.obsfix |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -92,4 +91,4 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T899
+- no runnable task: resolve blocked, parked or deps
