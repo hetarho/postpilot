@@ -389,9 +389,9 @@
     "via": "merge",
     "executor": {
       "host": "DESKTOP-VKPLS8P",
-      "pid": 801278
+      "pid": 832770
     },
-    "phase": "failed",
+    "phase": "checking",
     "land": "main",
     "base": "5cf54cc4465ecb8e9a40bec86aa68405e0ebb599",
     "cohort": [
@@ -407,7 +407,7 @@
     ],
     "at": "2026-11-17T09:23:09.667Z",
     "deadline": "2026-11-17T10:23:08.038Z",
-    "candidate": "87dd9591b3c2858891b6a6608d9f1464ebf9f176",
+    "candidate": "924a7570653c27e18c9c17ac8e45c6272e8a0c9e",
     "checks": [
       {
         "command": "pnpm test:dev",
