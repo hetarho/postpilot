@@ -10,7 +10,8 @@ import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-templ
 import { useClipProject } from '@/entities/clip-project'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
-import { Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
+import { MessageCircle, PencilLine } from 'lucide-react'
+import { Badge, Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
 
 export function VideoTemplatePage() {
   const { templateId } = useParams({ strict: false }) as { templateId?: string }
@@ -155,14 +156,24 @@ function VideoTemplateHost({
     name: stored?.name ?? t('directory.create', { ns: 'clips' }),
   }
   const guided = !stored && !sessionId
+  const unfinished =
+    !!summary &&
+    (summary.hasUnpublishedChanges ||
+      !!summary.activeJobId ||
+      summary.publicationPending ||
+      summary.targetConflict)
   return (
     <PageFrame
       width="board"
       // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
       className={clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0')}
+      // While a saved one is being changed, the talk's own heading names it, so the frame says
+      // what is happening rather than the name twice.
       title={
         <Typography variant="title" as="h1" className="text-content-secondary truncate">
-          {named.name}
+          {stored && (method === 'ai' || method === 'direct')
+            ? t('directory.editingTitle', { ns: 'clips' })
+            : named.name}
         </Typography>
       }
     >
@@ -204,31 +215,71 @@ function VideoTemplateHost({
           className="mt-4 flex-1 sm:mt-6"
         />
       ) : method === null ? (
-        <section className="mt-4 flex flex-col sm:mt-8">
-          <Typography variant="stepTitle" as="h2">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('directory.reviewKind', { ns: 'clips' })}</span>
-                <span className="hidden sm:inline">
-                  {t('reviewNamed', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('directory.chooseCreation', { ns: 'clips' })
-            )}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-2 sm:mt-4">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('directory.savedAvailable', { ns: 'clips' })}</span>
-                <span className="hidden sm:inline">
-                  {t('savedUsable', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('directory.unsaved', { ns: 'clips' })
-            )}
-          </Typography>
+        // Guide: as a post template does, a saved video template opens on what it MAKES — the
+        // video's flow drawn from it — with the ways to change it in the heading row: talking to
+        // the AI first, by hand second, the earlier talk when one was left unsaved.
+        <section
+          aria-labelledby="video-template-makes"
+          className="mt-4 flex flex-col pb-10 sm:mt-6"
+        >
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-3">
+            <div className="min-w-0 flex-1 basis-56">
+              <Typography variant="stepTitle" as="h2" id="video-template-makes">
+                {stored
+                  ? t('directory.makes', { ns: 'clips' })
+                  : t('directory.chooseCreation', { ns: 'clips' })}
+              </Typography>
+              {stored && stored.projectCount > 0 && (
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <Badge tone="neutral">
+                    {t('directory.projectCount', { ns: 'clips', count: stored.projectCount })}
+                  </Badge>
+                </div>
+              )}
+              {!stored && (
+                <Typography variant="body" className="text-content-secondary mt-2">
+                  {t('directory.unsaved', { ns: 'clips' })}
+                </Typography>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {unfinished && summary && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setActiveSession(summary.sessionId)
+                    setMethod('ai')
+                  }}
+                >
+                  {t('directory.resume', { ns: 'clips' })}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActiveSession(undefined)
+                  setMethod('direct')
+                }}
+              >
+                <PencilLine aria-hidden="true" className="size-4" />
+                {stored
+                  ? t('directory.talkDirect', { ns: 'clips' })
+                  : t('host.manual', { ns: 'authoring' })}
+              </Button>
+              <Button
+                variant="cta"
+                onClick={() => {
+                  setActiveSession(undefined)
+                  setMethod('ai')
+                }}
+              >
+                <MessageCircle aria-hidden="true" className="size-4" />
+                {stored
+                  ? t('directory.talkEdit', { ns: 'clips' })
+                  : t('directory.createAI', { ns: 'clips' })}
+              </Button>
+            </div>
+          </div>
           {summaries.isPending && (
             <LoadingState
               variant="inline"
@@ -244,8 +295,15 @@ function VideoTemplateHost({
               </Button>
             </Notice>
           )}
-          {summary && (
+          {/* Only while something is under way: what it is, and — as its own fact — that the
+              saved template stays usable meanwhile (EDIT-18). */}
+          {unfinished && summary && (
             <div role="status" className="mt-4 space-y-2">
+              {stored && (
+                <Typography variant="meta" as="p">
+                  {t('directory.savedAvailable', { ns: 'clips' })}
+                </Typography>
+              )}
               {summary.hasUnpublishedChanges && (
                 <Typography variant="body">
                   {t('unpublished', { ns: 'authoring', ...named })}
@@ -269,7 +327,7 @@ function VideoTemplateHost({
             </div>
           )}
           {stored && (
-            <div className="mt-4 space-y-6 sm:mt-6">
+            <div className="mt-6 space-y-6 sm:mt-8">
               <ClipTemplateSummary template={stored} />
               <AuthoringPreview
                 kind="video-template"
@@ -281,68 +339,12 @@ function VideoTemplateHost({
                   titleArea: '',
                 }}
               />
-            </div>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
-            <Button
-              aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('ai')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('directory.editAI', { ns: 'clips' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('aiNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('directory.createAI', { ns: 'clips' })
-              )}
-            </Button>
-            <Button
-              aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('direct')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('directory.editDirect', { ns: 'clips' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('directNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('host.manual', { ns: 'authoring' })
-              )}
-            </Button>
-            {summary &&
-              (summary.hasUnpublishedChanges ||
-                summary.activeJobId ||
-                summary.publicationPending ||
-                summary.targetConflict) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setActiveSession(summary.sessionId)
-                    setMethod('ai')
-                  }}
-                >
-                  {t('continueNamed', { ns: 'authoring', ...named })}
-                </Button>
-              )}
-            {stored && (
-              <Button variant="ghost" onClick={() => setMethod('design')}>
+              {/* The video side's own extra: the design a clip made from it starts in. */}
+              <Button variant="ghost" className="-ml-2" onClick={() => setMethod('design')}>
                 {t('directory.editDesign', { ns: 'clips', name: stored.name })}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </section>
       ) : method === 'design' ? (
         <section className="mt-8">

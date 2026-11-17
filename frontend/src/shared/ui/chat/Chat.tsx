@@ -17,6 +17,7 @@ export function Chat({
   partnerLabel,
   ownerLabel,
   composer,
+  openAtEnd = false,
   className,
 }: {
   messages: readonly ChatMessage[]
@@ -24,17 +25,33 @@ export function Chat({
   partnerLabel: string
   ownerLabel: string
   composer?: ReactNode
+  /** Bring the latest exchange into view once, the first time this turns true — a conversation
+   *  resumed with turns already in it, as soon as its composer is there. */
+  openAtEnd?: boolean
   className?: string
 }) {
+  const log = useRef<HTMLDivElement>(null)
   const end = useRef<HTMLDivElement>(null)
   const previousCount = useRef(messages.length)
+  const opened = useRef(false)
   useEffect(() => {
-    if (messages.length > previousCount.current) end.current?.scrollIntoView?.({ block: 'nearest' })
+    if (messages.length > previousCount.current) revealEnd(log.current, end.current)
     previousCount.current = messages.length
   }, [messages.length])
+  useEffect(() => {
+    if (!openAtEnd || opened.current) return
+    opened.current = true
+    revealEnd(log.current, end.current)
+  }, [openAtEnd])
   return (
     <div className={twMerge('flex min-w-0 flex-col gap-4', className)}>
-      <div role="log" aria-label={label} aria-live="polite" aria-relevant="additions text">
+      <div
+        ref={log}
+        role="log"
+        aria-label={label}
+        aria-live="polite"
+        aria-relevant="additions text"
+      >
         <ol className="space-y-4">
           {messages.map((message) => (
             <li
@@ -63,6 +80,15 @@ export function Chat({
       {composer}
     </div>
   )
+}
+
+/** The composer is sticky under the log, so the end is brought into view ABOVE it: scrolled to the
+ *  viewport's bottom edge, the last message would sit behind the composer. */
+function revealEnd(log: HTMLElement | null, anchor: HTMLElement | null) {
+  if (!anchor) return
+  const composer = log?.nextElementSibling
+  anchor.style.scrollMarginBottom = `${(composer?.getBoundingClientRect().height ?? 0) + 16}px`
+  anchor.scrollIntoView?.({ block: 'nearest' })
 }
 
 export function ChatComposer({

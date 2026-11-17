@@ -16,7 +16,6 @@ export const i18n = {
       emptyHelp:
         '글을 완성한 뒤 ③에서 기억으로 저장을 눌러 뽑아내거나, 여기서 직접 적을 수 있어요.',
       example: '예: 매운 음식을 잘 못 먹는다',
-      noTags: '태그 없음',
       bands: {
         always: {
           title: '모든 글에 떠올려요',
@@ -32,6 +31,7 @@ export const i18n = {
       addKind: '{{kind}} 추가',
       kindEmpty: '아직 없어요',
       trigger: '이 단어가 나오면',
+      untriggered: '태그가 없어서 아직 글에 떠올리지 않아요',
     },
   },
   en: {
@@ -47,7 +47,6 @@ export const i18n = {
       emptyHelp:
         'Finish a post and press 기억으로 저장 in ③ to extract some, or write one here by hand.',
       example: 'For example: cannot handle spicy food',
-      noTags: 'No tags',
       bands: {
         always: {
           title: 'Brought into every post',
@@ -63,6 +62,7 @@ export const i18n = {
       addKind: 'Add {{kind}}',
       kindEmpty: 'None yet',
       trigger: 'When a post says',
+      untriggered: 'No tags yet, so no post brings it in',
     },
   },
 } as const satisfies I18nFragment

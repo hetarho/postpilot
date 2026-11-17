@@ -70,12 +70,12 @@ async function openRow(user: ReturnType<typeof userEvent.setup>, label: string) 
 }
 
 describe('named owned guideline editing', () => {
-  it('lists saved availability and injection order using one batch without fetching individual sessions', async () => {
+  it('lists saved rules without a repeated status line, using one batch without fetching individual sessions', async () => {
     const calls: string[] = []
     renderGuidelines({}, calls)
     const list = await section('지침 목록')
     expect(list.getAllByRole('listitem')).toHaveLength(3)
-    expect(list.getAllByText('저장되어 사용할 수 있어요')).toHaveLength(3)
+    expect(list.queryByText('저장된 지침은 그대로 적용돼요')).not.toBeInTheDocument()
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListAuthoringSummaries')).toHaveLength(1),
     )

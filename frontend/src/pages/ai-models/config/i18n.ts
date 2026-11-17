@@ -18,6 +18,7 @@ export const i18n = {
       },
       modelSettings: '모델 변경',
       guideTitle: 'AI 토너먼트',
+      guideLead: '글 쓰는 AI를 고르고, 두 AI를 겨뤄 더 나은 쪽을 골라요',
       inUse: '지금 쓰는 AI',
       writingTests: '두 AI에게 같은 글을 맡겨 보기',
       writingTestsHelp:
@@ -104,6 +105,7 @@ export const i18n = {
       },
       modelSettings: 'Change models',
       guideTitle: 'AI tournament',
+      guideLead: 'Pick the AIs that write, and pit two against each other to find the better one',
       inUse: 'AI in use',
       writingTests: 'Give two AIs the same post',
       writingTestsHelp:

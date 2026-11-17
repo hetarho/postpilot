@@ -152,71 +152,78 @@ export function MemoriesPage() {
                 aria-label={t('page.saved', { ns: 'memories' })}
                 className="mt-6 grid gap-10"
               >
-                {BANDS.map((band) => (
-                  <div key={band.key}>
-                    <section aria-labelledby={`memories-band-${band.key}`}>
-                      <Typography variant="title" as="h2" id={`memories-band-${band.key}`}>
-                        {t(`page.bands.${band.key}.title`, { ns: 'memories' })}
-                      </Typography>
-                      <Typography variant="body" className="text-content-secondary mt-1">
-                        {t(`page.bands.${band.key}.lead`, { ns: 'memories' })}
-                      </Typography>
-                      <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-start">
-                        {band.kinds.map((kind) => {
-                          const group = shown.filter((memory) => memory.kind === kind)
-                          if (needle !== '' && group.length === 0) return null
-                          return (
-                            <div key={kind} className="min-w-0">
-                              <div className="flex min-h-11 flex-wrap items-center gap-2">
-                                <Badge tone="accent">{t(`kind.${kind}`, { ns: 'memories' })}</Badge>
-                                <span className={typographyStyles({ variant: 'meta' })}>
-                                  {group.length > 0
-                                    ? group.length
-                                    : t('page.kindEmpty', { ns: 'memories' })}
-                                </span>
-                                <CreateMemorySheet
-                                  ownerId={ownerId}
-                                  trigger="inline"
-                                  initialKind={kind}
-                                  label={t('page.addKind', {
-                                    ns: 'memories',
-                                    kind: t(`kind.${kind}`, { ns: 'memories' }),
-                                  })}
-                                  className="ml-auto"
-                                />
+                {BANDS.map((band) =>
+                  // While searching, a band with no match is left out whole, not kept as a bare
+                  // heading over nothing.
+                  needle !== '' &&
+                  !shown.some((memory) => band.kinds.includes(memory.kind)) ? null : (
+                    <div key={band.key}>
+                      <section aria-labelledby={`memories-band-${band.key}`}>
+                        <Typography variant="title" as="h2" id={`memories-band-${band.key}`}>
+                          {t(`page.bands.${band.key}.title`, { ns: 'memories' })}
+                        </Typography>
+                        <Typography variant="body" className="text-content-secondary mt-1">
+                          {t(`page.bands.${band.key}.lead`, { ns: 'memories' })}
+                        </Typography>
+                        <div className="mt-4 grid gap-6 lg:grid-cols-2 lg:items-start">
+                          {band.kinds.map((kind) => {
+                            const group = shown.filter((memory) => memory.kind === kind)
+                            if (needle !== '' && group.length === 0) return null
+                            return (
+                              <div key={kind} className="min-w-0">
+                                <div className="flex min-h-11 flex-wrap items-center gap-2">
+                                  <Badge tone="accent">
+                                    {t(`kind.${kind}`, { ns: 'memories' })}
+                                  </Badge>
+                                  <span className={typographyStyles({ variant: 'meta' })}>
+                                    {group.length > 0
+                                      ? group.length
+                                      : t('page.kindEmpty', { ns: 'memories' })}
+                                  </span>
+                                  <CreateMemorySheet
+                                    ownerId={ownerId}
+                                    trigger="inline"
+                                    initialKind={kind}
+                                    label={t('page.addKind', {
+                                      ns: 'memories',
+                                      kind: t(`kind.${kind}`, { ns: 'memories' }),
+                                    })}
+                                    className="ml-auto"
+                                  />
+                                </div>
+                                {group.length > 0 && (
+                                  // One sheet per kind, its facts ruled off from each other: the
+                                  // group reads as one page of what the AI knows, not a pile of cards.
+                                  <ul
+                                    className={cardStyles({
+                                      padding: 'none',
+                                      className: 'divide-divider mt-2 divide-y overflow-hidden',
+                                    })}
+                                  >
+                                    {group.map((memory) => (
+                                      <MemoryRow
+                                        key={memory.id}
+                                        ownerId={ownerId}
+                                        memory={memory}
+                                        tagged={band.key === 'tagged'}
+                                        onDeleted={() =>
+                                          setRemoved({
+                                            id: memory.id,
+                                            index: drawn.indexOf(memory),
+                                          })
+                                        }
+                                      />
+                                    ))}
+                                  </ul>
+                                )}
                               </div>
-                              {group.length > 0 && (
-                                // One sheet per kind, its facts ruled off from each other: the
-                                // group reads as one page of what the AI knows, not a pile of cards.
-                                <ul
-                                  className={cardStyles({
-                                    padding: 'none',
-                                    className: 'divide-divider mt-2 divide-y overflow-hidden',
-                                  })}
-                                >
-                                  {group.map((memory) => (
-                                    <MemoryRow
-                                      key={memory.id}
-                                      ownerId={ownerId}
-                                      memory={memory}
-                                      tagged={band.key === 'tagged'}
-                                      onDeleted={() =>
-                                        setRemoved({
-                                          id: memory.id,
-                                          index: drawn.indexOf(memory),
-                                        })
-                                      }
-                                    />
-                                  ))}
-                                </ul>
-                              )}
-                            </div>
-                          )
-                        })}
-                      </div>
-                    </section>
-                  </div>
-                ))}
+                            )
+                          })}
+                        </div>
+                      </section>
+                    </div>
+                  ),
+                )}
               </section>
             </>
           )}
@@ -346,7 +353,9 @@ function MemoryRow({
       </div>
       {(tagged || memory.tags.length > 0) && (
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          {tagged && (
+          {/* A fact recalled on a tag says the words that bring it in — or, with none, that no
+              post brings it in yet, which is what the missing tags mean for the writing. */}
+          {tagged && memory.tags.length > 0 && (
             <Typography variant="meta" as="span">
               {t('page.trigger', { ns: 'memories' })}
             </Typography>
@@ -358,7 +367,7 @@ function MemoryRow({
           ))}
           {memory.tags.length === 0 && (
             <Typography variant="meta" as="span">
-              {t('page.noTags', { ns: 'memories' })}
+              {t('page.untriggered', { ns: 'memories' })}
             </Typography>
           )}
         </div>

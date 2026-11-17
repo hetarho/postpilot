@@ -11,9 +11,11 @@ import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
 import { ChannelActions } from '@/widgets/channel-actions'
+import { KIT_ILLUSTRATIONS } from '@/shared/assets'
 import {
   Badge,
   DirectoryItem,
+  EmptySlot,
   Button,
   Notice,
   LoadingState,
@@ -175,13 +177,16 @@ export function VideoTemplatesPage() {
 function EmptyState() {
   const { t } = useTranslation('clips')
   return (
+    // The dashed place the first video template will stand, drawn as the 글 side's is.
     <section aria-labelledby="video-templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="video-templates-empty-heading">
-        {t('directory.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+      <EmptySlot
+        image={KIT_ILLUSTRATIONS.template}
+        title={t('directory.empty')}
+        titleAs="h2"
+        titleId="video-templates-empty-heading"
+      >
         {t('directory.emptyHelp')}
-      </Typography>
+      </EmptySlot>
     </section>
   )
 }
@@ -221,15 +226,23 @@ function TemplateRow({
       }
       description={<ClipTemplateDescription template={template} className="line-clamp-2" />}
       status={summary && <EditingStatus summary={summary} />}
+      // As on the 글 side: how many videos it already shaped, and that the saved one stays usable
+      // only while an edit, a job or a conflict is under way (EDIT-18).
       metadata={
-        <>
-          <Badge tone="neutral">
-            {t('directory.projectCount', { count: template.projectCount })}
-          </Badge>
-          <Typography variant="meta" as="span">
-            {t('directory.savedAvailable')}
-          </Typography>
-        </>
+        template.projectCount > 0 || editing(summary) ? (
+          <>
+            {template.projectCount > 0 && (
+              <Badge tone="neutral">
+                {t('directory.projectCount', { count: template.projectCount })}
+              </Badge>
+            )}
+            {editing(summary) && (
+              <Typography variant="meta" as="span">
+                {t('directory.savedAvailable')}
+              </Typography>
+            )}
+          </>
+        ) : undefined
       }
       actions={
         <DeleteClipTemplateButton
@@ -242,6 +255,17 @@ function TemplateRow({
     />
   )
 }
+/** An edit, a job or a conflict is under way on a saved video template. */
+function editing(summary?: AuthoringSummary) {
+  return (
+    !!summary &&
+    (summary.hasUnpublishedChanges ||
+      !!summary.activeJobId ||
+      summary.publicationPending ||
+      summary.targetConflict)
+  )
+}
+
 function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
   const { t } = useTranslation(['clips', 'authoring'])
   if (!summary) return null

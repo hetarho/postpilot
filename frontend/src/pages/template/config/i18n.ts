@@ -31,6 +31,7 @@ export const i18n = {
         resume: '하던 대화 이어 가기',
         makes: '이 템플릿이 짜는 글',
         newTitle: 'AI와 템플릿 만들기',
+        editingTitle: '템플릿 고치기',
       },
       reviewKind: '글 구성 확인',
       advanced: '고급',
@@ -54,7 +55,7 @@ export const i18n = {
       removeReference: '참고 글 빼기',
       unsavedWork: '아직 저장하지 않은 새 템플릿',
       resumeNew: '템플릿 “{{name}}” 이어서 만들기',
-      savedAvailable: '글에 사용할 수 있어요',
+      savedAvailable: '저장된 템플릿은 그대로 쓸 수 있어요',
       lastPublication: '마지막으로 확인한 저장: {{result}}',
       mode: {
         aria: '구성 편집 방식',
@@ -71,8 +72,7 @@ export const i18n = {
         '템플릿을 저장 형식 그대로 보고 고쳐요. 형식 안내를 AI에게 건네 만든 템플릿을 여기에 붙여 넣을 수 있어요.',
       newTitle: '새 템플릿',
       notFound: '이 템플릿을 찾을 수 없어요. 목록에서 다시 골라 주세요.',
-      compositionHelp:
-        '위에서 블록을 더해 글의 순서를 짜세요. 줄을 누르면 내용을 고칠 수 있고, 끌어서 순서를 바꿀 수 있어요.',
+      compositionHelp: '위에서 블록을 더해 글의 순서를 짜세요. 줄을 누르면 내용을 고칠 수 있어요.',
       titleArea: {
         heading: '제목 형식',
         help: '비워 두면 제목은 AI가 정해요. 채우면 글 제목이 이 형식을 따라요.',
@@ -112,6 +112,7 @@ export const i18n = {
         resume: 'Pick up the conversation',
         makes: 'The post it shapes',
         newTitle: 'Make a template with AI',
+        editingTitle: 'Change a template',
       },
       reviewKind: 'Review post template',
       advanced: 'Advanced',
@@ -135,7 +136,7 @@ export const i18n = {
       removeReference: 'Remove reference post',
       unsavedWork: 'New templates not yet saved',
       resumeNew: 'Continue creating template “{{name}}”',
-      savedAvailable: 'Available for posts',
+      savedAvailable: 'The saved template is still usable',
       lastPublication: 'Last confirmed save: {{result}}',
       mode: {
         aria: 'How to edit',
@@ -151,8 +152,7 @@ export const i18n = {
         'See and edit the template in its stored format. Hand the format guide to an AI and paste what it writes here.',
       newTitle: 'New template',
       notFound: 'Could not find this template. Pick one from the list again.',
-      compositionHelp:
-        'Add blocks above to lay out the post. Tap a line to edit it, and drag to reorder.',
+      compositionHelp: 'Add blocks above to lay out the post. Tap a line to edit it.',
       titleArea: {
         heading: 'Title format',
         help: 'Leave it empty and the AI writes the title. Fill it in and the post title follows this format.',

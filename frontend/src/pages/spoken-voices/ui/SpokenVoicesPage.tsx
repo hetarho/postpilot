@@ -46,26 +46,17 @@ export function SpokenVoicesPage() {
           ? t('failed')
           : status
             ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-            : !library.voicesQuery.isPending && !library.voices.length
-              ? t('empty')
-              : '\u00a0'}
+            : '\u00a0'}
       </Typography>
       {!library.voicesQuery.isError &&
         !library.voicesQuery.isPending &&
         library.voices.length === 0 && (
-          // The empty slot of a voice: its microphone, faded, and the line a voice will read
-          // once there is one.
-          <EmptySlot image={KIT_ILLUSTRATIONS.spoken} className="mt-2">
+          // The empty slot of a voice: its microphone, faded, what is missing said inside it like
+          // every kit screen's, and the line a voice will read once there is one.
+          <EmptySlot image={KIT_ILLUSTRATIONS.spoken} title={t('empty')} status className="mt-2">
             <figure className="min-w-0">
-              <figcaption className={typographyStyles({ variant: 'label' })}>
-                {t('reads')}
-              </figcaption>
-              <blockquote
-                className={typographyStyles({
-                  variant: 'body',
-                  className: 'text-content-tertiary mt-1 line-clamp-2',
-                })}
-              >
+              <figcaption className="sr-only">{t('reads')}</figcaption>
+              <blockquote className="text-content-tertiary line-clamp-2">
                 “{SPOKEN_AUDITION_TEXT}”
               </blockquote>
             </figure>

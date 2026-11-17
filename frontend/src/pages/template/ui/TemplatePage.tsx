@@ -161,9 +161,11 @@ function StoredTemplate({
     <PageFrame
       width="board"
       className="flex flex-1 flex-col pt-4 pb-0 sm:pt-8 sm:pb-0"
+      // While it is being changed, the heading row under this one names the template, so the
+      // frame says what is happening rather than the name twice.
       title={
         <Typography variant="title" as="h1" className="text-content-secondary truncate">
-          {stored.name}
+          {method ? t('screen.talk.editingTitle', { ns: 'templates' }) : stored.name}
         </Typography>
       }
     >
@@ -194,9 +196,11 @@ function StoredTemplate({
                 {t('screen.talk.makes', { ns: 'templates' })}
               </Typography>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <Badge tone="neutral">
-                  {t('postCount', { ns: 'templates', count: stored.postCount })}
-                </Badge>
+                {stored.postCount > 0 && (
+                  <Badge tone="neutral">
+                    {t('usedIn', { ns: 'templates', count: stored.postCount })}
+                  </Badge>
+                )}
                 {publication?.outcome && (
                   <Typography variant="meta" as="span" role="status">
                     {t(publication.outcome === 'updated' ? 'confirmedUpdate' : 'confirmedCreate', {
@@ -255,14 +259,18 @@ function StoredTemplate({
               {t('screen.conflict', { ns: 'templates', name: stored.name })}
             </Notice>
           )}
-          <div className="bg-surface-raised ring-divider mt-6 rounded-3xl p-5 shadow-lg ring-1 sm:p-8">
-            {stored.description && (
-              <Typography variant="body" className="text-content-secondary mb-6 break-words">
-                {stored.description}
-              </Typography>
-            )}
-            <TemplatePreview titleArea={stored.titleArea} body={stored.body} />
-          </div>
+          {/* The post it makes is drawn as one page (the preview's own card), not a card in a
+              card; the owner's line about it sits over it. */}
+          {stored.description && (
+            <Typography variant="body" className="text-content-secondary mt-6 break-words">
+              {stored.description}
+            </Typography>
+          )}
+          <TemplatePreview
+            titleArea={stored.titleArea}
+            body={stored.body}
+            className="mt-6 sm:mt-8"
+          />
         </section>
       )}
     </PageFrame>

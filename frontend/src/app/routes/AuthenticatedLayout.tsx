@@ -104,6 +104,7 @@ export function AuthenticatedLayout() {
   const search = location.search as Record<string, unknown>
   const router = useRouter()
   const header = useRef<HTMLElement>(null)
+  const shelf = useRef<HTMLElement>(null)
   const wide = useMediaQuery(NAV_DESKTOP_MEDIA_QUERY)
   const postSlug = /^\/posts\/([^/]+)$/.exec(pathname)?.[1]
   const clipId = /^\/clips\/([^/]+)$/.exec(pathname)?.[1]
@@ -314,6 +315,18 @@ export function AuthenticatedLayout() {
     claimReturn,
   }
   const section = currentSection(pathname)
+  const sectionKey = section?.key
+  useEffect(() => {
+    // The shelf scrolls sideways where its names do not fit (a phone in English): the section
+    // just opened is brought inside it, so its own chip is never the one cut at the edge.
+    const nav = shelf.current
+    const chip = nav?.querySelector<HTMLElement>('[aria-current="page"]')
+    if (!nav || !chip) return
+    const bounds = nav.getBoundingClientRect()
+    const place = chip.getBoundingClientRect()
+    if (place.right > bounds.right) nav.scrollLeft += place.right - bounds.right + 16
+    else if (place.left < bounds.left) nav.scrollLeft -= bounds.left - place.left + 16
+  }, [sectionKey])
   const backLink =
     !!guidelinesPostReturn ||
     (!setup &&
@@ -421,6 +434,7 @@ export function AuthenticatedLayout() {
               {t(`hub.${section.hub}`)}
             </p>
             <nav
+              ref={shelf}
               aria-label={t('sections')}
               className="-mx-4 mt-2 flex gap-1 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:gap-2 sm:px-0"
             >
@@ -430,7 +444,9 @@ export function AuthenticatedLayout() {
                   to={chip.href}
                   aria-current={chip.current ? 'page' : undefined}
                   className={clsx(
-                    'duration-fast ease-standard flex min-w-16 flex-1 shrink-0 flex-col items-center gap-1 rounded-2xl px-2 pt-2 pb-1.5 transition-colors sm:w-24 sm:flex-none',
+                    // A chip is never narrower than its name: a longer word (English) widens it
+                    // and the shelf scrolls sideways, rather than cutting the name short.
+                    'duration-fast ease-standard flex min-w-max flex-1 shrink-0 flex-col items-center gap-1 rounded-2xl px-2 pt-2 pb-1.5 transition-colors sm:min-w-24 sm:flex-none',
                     chip.current
                       ? 'bg-badge-accent-bg text-badge-accent-fg ring-stroke-accent/40 ring-1 ring-inset'
                       : 'hover:bg-row-bg-hover active:bg-row-bg-active text-content-secondary',
@@ -447,7 +463,7 @@ export function AuthenticatedLayout() {
                     className={typographyStyles({
                       variant: 'label',
                       className: clsx(
-                        'max-w-full truncate',
+                        'whitespace-nowrap',
                         chip.current ? 'text-badge-accent-fg' : 'text-content-secondary',
                       ),
                     })}

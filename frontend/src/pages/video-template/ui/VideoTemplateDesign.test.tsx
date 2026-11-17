@@ -68,7 +68,7 @@ describe('separate retained video template design', () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
     mount(writes)
-    await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
+    await user.click(await screen.findByRole('button', { name: '직접 고치기' }))
     await screen.findByLabelText('템플릿 이름')
     if (screen.getByRole('button', { name: '고급' }).getAttribute('aria-expanded') !== 'true')
       await user.click(screen.getByRole('button', { name: '고급' }))

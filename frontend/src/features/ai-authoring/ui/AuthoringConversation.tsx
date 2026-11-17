@@ -43,6 +43,8 @@ export interface AuthoringConversationProps {
   aiReady: boolean
   preview: ReactNode
   feedback: ReactNode
+  /** The AI is not ready yet (no model, or still preparing): said as the AI's last message. */
+  availability?: ReactNode
   failure: ReactNode
   inspection: ReactNode
   confirmedName?: string
@@ -73,6 +75,7 @@ export function AuthoringConversation(props: AuthoringConversationProps) {
       : props.kind === 'video-template'
         ? (['first', 'second'] as const)
         : []
+  const talking = props.view === 'purpose' || props.view === 'refining'
   const messages: ChatMessage[] = []
   messages.push({
     id: 'greeting',
@@ -114,7 +117,7 @@ export function AuthoringConversation(props: AuthoringConversationProps) {
         {props.view === 'existing' && (
           <Button variant="secondary" size="compact" onClick={props.onOpenExisting}>
             <Sparkles aria-hidden="true" className="size-4" />
-            {t('conversation.draftOpen')}
+            {t('conversation.loadSaved')}
           </Button>
         )}
       </div>
@@ -152,7 +155,16 @@ export function AuthoringConversation(props: AuthoringConversationProps) {
       content: (
         <div className="space-y-2">
           <Typography variant="label" as="p" className="text-content-primary">
-            {t('conversation.draftReady', { name: props.selected.name || props.name })}
+            {/* An existing setting opened as it is saved: the AI made nothing yet, so it is
+                shown, not announced as a draft. */}
+            {t(
+              props.existing &&
+                !(props.session?.turns.length ?? 0) &&
+                !props.session?.hasUnpublishedChanges
+                ? 'conversation.savedReady'
+                : 'conversation.draftReady',
+              { name: props.selected.name || props.name },
+            )}
           </Typography>
           {props.selected.description && (
             <p className="text-content-secondary">{props.selected.description}</p>
@@ -205,6 +217,8 @@ export function AuthoringConversation(props: AuthoringConversationProps) {
       ),
     })
   if (props.failure) messages.push({ id: 'failure', sender: 'partner', content: props.failure })
+  if (props.availability && (talking || props.view === 'existing'))
+    messages.push({ id: 'availability', sender: 'partner', content: props.availability })
   if (props.view === 'confirmed')
     messages.push({
       id: 'confirmed',
@@ -219,7 +233,6 @@ export function AuthoringConversation(props: AuthoringConversationProps) {
       ),
     })
 
-  const talking = props.view === 'purpose' || props.view === 'refining'
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       {/* The one heading row: what is being made, and the two ways out of the talk. */}
@@ -272,6 +285,9 @@ export function AuthoringConversation(props: AuthoringConversationProps) {
             partnerLabel={t('conversation.partner')}
             ownerLabel={t('conversation.owner')}
             messages={messages}
+            // A conversation picked up again opens on where it stopped, not on the greeting —
+            // once its composer is there to be scrolled above.
+            openAtEnd={(props.session?.turns.length ?? 0) > 0 && (talking || props.working)}
             className="flex-1"
             composer={
               talking || props.working ? (

@@ -183,7 +183,7 @@ it('omits made voices and existing templates, showing only the missing clip temp
 })
 // A template question is answered by talking to the AI — the conversation that makes a template
 // everywhere else — over the one step bar every question shares: setup's way back and its skip.
-it('asks a template question as the AI conversation, over the one shared step bar', async () => {
+it('asks a template question as the AI conversation, whose composer is the one bottom dock', async () => {
   resumeSetup()
   const calls: string[] = []
   renderAppAt('/setup', { ...READY, calls, clips: { templates: [], calls } })
@@ -193,11 +193,11 @@ it('asks a template question as the AI conversation, over the one shared step ba
   expect(screen.getByRole('button', { name: '직접 고치기' })).toBeInTheDocument()
   // No wizard: nothing to pick from a catalogue, and no wizard 다음.
   expect(screen.queryByRole('button', { name: '다음' })).toBeNull()
-  const bars = document.querySelectorAll<HTMLElement>('[data-action-bar="step"]')
-  expect(bars).toHaveLength(1)
-  const bar = within(bars[0]!)
-  expect(bar.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
-  await user.click(bar.getByRole('button', { name: '이전' }))
+  // The conversation's composer docks at the bottom; the way back and the skip close the page
+  // rather than floating a second dock over it.
+  expect(document.querySelectorAll('[data-action-bar="step"]')).toHaveLength(0)
+  expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: '이전' }))
   expect(await screen.findByRole('button', { name: '내 작업 공간 준비하기' })).toBeInTheDocument()
   // Opening the question calls no model.
   expect(calls.filter((call) => /StartAuthoring|EstimateAuthoring/.test(call))).toEqual([])

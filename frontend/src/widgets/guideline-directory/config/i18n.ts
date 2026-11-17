@@ -21,6 +21,7 @@ export const i18n = {
       },
       direct: '직접 쓰기',
     },
+    row: { ai: 'AI로 편집하기', direct: '직접 편집하기', resume: '이어서 편집하기' },
     principles: {
       title: 'Postpilot 원칙',
       summary: '항상 적용돼요',
@@ -37,7 +38,7 @@ export const i18n = {
       unsaved: '저장하기 전에는 글이나 영상에 적용되지 않아요.',
       createDirect: '새 지침 직접 쓰기',
       createVideoDirect: '새 영상 지침 직접 쓰기',
-      savedAvailable: '저장되어 사용할 수 있어요',
+      savedAvailable: '저장된 지침은 그대로 적용돼요',
       lastPublication: '마지막으로 확인한 저장: {{result}}',
     },
     page: {
@@ -70,7 +71,7 @@ export const i18n = {
   en: {
     bands: {
       own: {
-        title: 'Rules you set',
+        title: 'Guidelines you set',
         lead: 'The AI reads these sentences as written and keeps to them in every post.',
         empty: 'None yet. Write down once what you keep fixing in your posts.',
         clipLead: 'The AI reads these sentences as written and keeps to them in every video.',
@@ -78,16 +79,17 @@ export const i18n = {
       },
       defaults: {
         title: 'Kept by default',
-        lead: 'Rules Postpilot prepared. Turn one off and posts are written without it.',
-        clipLead: 'Rules Postpilot prepared. Turn one off and videos are made without it.',
-        empty: 'No built-in rule is on.',
+        lead: 'Guidelines Postpilot prepared. Turn one off and posts are written without it.',
+        clipLead: 'Guidelines Postpilot prepared. Turn one off and videos are made without it.',
+        empty: 'No built-in guideline is on.',
       },
       direct: 'Write one',
     },
+    row: { ai: 'Edit with AI', direct: 'Edit directly', resume: 'Continue editing' },
     principles: {
       title: 'Postpilot principles',
       summary: 'Always applied',
-      help: 'Principles cannot be switched off and apply to every post and clip before any other guideline. They are the promise to write only what you experienced, honestly.',
+      help: 'Principles cannot be switched off and apply to every post and video before any other guideline. They are the promise to write only what you experienced, honestly.',
       listAria: 'Postpilot principles',
     },
     authoringState: {
@@ -100,7 +102,7 @@ export const i18n = {
       unsaved: 'These do not apply to posts or videos until saved.',
       createDirect: 'Write a new guideline directly',
       createVideoDirect: 'Write a new video guideline directly',
-      savedAvailable: 'Saved and available',
+      savedAvailable: 'The saved guideline still applies',
       lastPublication: 'Last confirmed save: {{result}}',
     },
     page: {

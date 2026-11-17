@@ -22,7 +22,7 @@ async function mount(
   })
   await user.click(
     await screen.findByRole('button', {
-      name: path.endsWith('/new') ? '직접 편집' : /직접 편집하기$/,
+      name: path.endsWith('/new') ? '직접 편집' : '직접 고치기',
     }),
   )
   await screen.findByLabelText('템플릿 이름')

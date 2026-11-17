@@ -119,6 +119,8 @@ export const i18n = {
     },
     postCount_one: '글 {{count}}개',
     postCount_other: '글 {{count}}개',
+    usedIn_one: '글 {{count}}개에 사용',
+    usedIn_other: '글 {{count}}개에 사용',
     detachWarning: {
       used: '{{count}}개의 글에서 템플릿이 해제됩니다. 글과 본문은 그대로 남아요.',
       used_one: '{{count}}개의 글에서 템플릿이 해제됩니다. 글과 본문은 그대로 남아요.',
@@ -238,6 +240,8 @@ export const i18n = {
     },
     postCount_one: '{{count}} post',
     postCount_other: '{{count}} posts',
+    usedIn_one: 'Used in {{count}} post',
+    usedIn_other: 'Used in {{count}} posts',
     detachWarning: {
       used: '{{count}} posts will lose their template. The posts and their content stay.',
       used_one: '{{count}} post will lose its template. The post and its content stay.',

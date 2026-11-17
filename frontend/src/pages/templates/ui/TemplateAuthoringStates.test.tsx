@@ -29,7 +29,8 @@ describe('batched named template states', () => {
       authoring: { summaries: [summary] },
     })
     const directory = within(await screen.findByRole('region', { name: '저장된 템플릿' }))
-    expect(directory.getByText('글에 사용할 수 있어요')).toBeInTheDocument()
+    expect(directory.getByText('글 2개에 사용')).toBeInTheDocument()
+    expect(directory.getByText('저장된 템플릿은 그대로 쓸 수 있어요')).toBeInTheDocument()
     expect(
       await directory.findByText('“저장된 구성”의 편집 내용은 아직 저장하지 않았어요.'),
     ).toBeInTheDocument()

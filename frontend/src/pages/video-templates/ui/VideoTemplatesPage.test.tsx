@@ -31,7 +31,7 @@ it('describes a stored video template by its stages while keeping navigation and
   expect(within(card).getByText('첫인상 · 대표 메뉴')).toBeInTheDocument()
   expect(within(card).queryByText('구성 예시')).toBeNull()
   expect(card).not.toHaveTextContent('인트로 매거진 커버')
-  expect(directory.getByText('클립 3개')).toBeInTheDocument()
+  expect(directory.getByText('영상 3개에 사용')).toBeInTheDocument()
   expect(directory.getByRole('button', { name: '나만의 영상 구성 삭제' }).closest('a')).toBeNull()
   expect(within(link).queryByRole('button')).not.toBeInTheDocument()
 })

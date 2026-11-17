@@ -50,7 +50,7 @@ describe('the template directory', () => {
       '/templates/template-diary',
     )
     expect(within(items[1]).getByText('협찬 방문 리뷰')).toBeInTheDocument()
-    expect(within(items[1]).getByText('글 2개')).toBeInTheDocument()
+    expect(within(items[1]).getByText('글 2개에 사용')).toBeInTheDocument()
 
     // The create form, the block palette and the mode switch are all gone from this screen.
     expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()

@@ -14,7 +14,8 @@ const DESTINATIONS: Record<
   KitElement,
   { ready: string; empty: { to: string; search?: Record<string, unknown> } }
 > = {
-  template: { ready: '/templates', empty: { to: '/templates/new' } },
+  // A new template is its own screen with a way back: it names home as where it was opened from.
+  template: { ready: '/templates', empty: { to: '/templates/new', search: { entry: '/' } } },
   voice: { ready: '/voices', empty: { to: '/voices', search: { new: 1 } } },
   memory: { ready: '/memories', empty: { to: '/memories', search: { new: 1 } } },
   guideline: { ready: '/guidelines', empty: { to: '/guidelines', search: { new: 1 } } },
@@ -45,10 +46,12 @@ export function KitLegend({ data, className }: { data: WritingKit; className?: s
 
 function LegendRow({ item, data, next }: { item: KitReadiness; data: WritingKit; next: boolean }) {
   const { t } = useTranslation('creation')
-  const filled = item.level === 'ready' || item.level === 'partial'
-  const destination = filled
-    ? { to: DESTINATIONS[item.element].ready }
-    : DESTINATIONS[item.element].empty
+  // Only an element KNOWN to be empty opens straight into making one; one that could not be read
+  // (or is still being read) opens its screen, which says so and offers the retry.
+  const destination =
+    item.level === 'empty'
+      ? DESTINATIONS[item.element].empty
+      : { to: DESTINATIONS[item.element].ready }
   const name = t(`home.elements.${item.element}.name`)
   const role = t(`home.elements.${item.element}.role`)
   const state = stateText(t, item, data)

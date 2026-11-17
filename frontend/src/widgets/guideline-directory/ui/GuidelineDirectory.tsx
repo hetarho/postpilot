@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
-import { Check, FileText, Sparkles } from 'lucide-react'
+import { Check, FileText, PencilLine, Sparkles } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadges,
@@ -263,6 +263,7 @@ export function GuidelineDirectory({
                     setAuthoringOpen(true)
                   }}
                 >
+                  <PencilLine aria-hidden="true" className="size-4" />
                   {t('bands.direct', { ns: 'guidelines' })}
                 </Button>
               </div>
@@ -449,7 +450,7 @@ function SentenceTitle({
         <span
           className={typographyStyles({
             variant: 'fieldTitle',
-            className: 'text-content-primary text-pretty break-words',
+            className: 'text-content-primary text-pretty break-words whitespace-pre-line',
           })}
         >
           {sentence}
@@ -579,6 +580,13 @@ function GuidelineRow({
   const [sessionId, setSessionId] = useState<string>()
   const kind = guideline.kind === 'clip' ? 'video-guideline' : 'post-guideline'
   const named = { kind: authoringText(`kinds.${kind}`), name: guideline.title || guideline.text }
+  // An edit, a job or a conflict is under way on the saved rule.
+  const unusual =
+    !!summary &&
+    (summary.hasUnpublishedChanges ||
+      !!summary.activeJobId ||
+      summary.publicationPending ||
+      summary.targetConflict)
   const open = (method: 'ai' | 'direct', session?: string) => {
     setMethod(method)
     setSessionId(session)
@@ -594,30 +602,35 @@ function GuidelineRow({
           <SentenceTitle name={guideline.title} sentence={guideline.text} />
         }
       >
+        {/* Open, the rule is already read in full in its title: what opens is where it reaches
+            and what can be done to it — the sentence is never said again. Each button names its
+            rule to a screen reader, and shows only the verb. */}
         <div className="pb-3 pl-6">
-          <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
-            {guideline.text}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-3">
-            {authoringText('savedUsable', named)}
-          </Typography>
           <GuidelineScopeBadges guideline={guideline} />
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => open('ai')}>
-              {authoringText('aiNamed', named)}
+          <div className="mt-3 flex flex-wrap items-center gap-x-1 gap-y-2">
+            <Button
+              variant="secondary"
+              aria-label={authoringText('aiNamed', named)}
+              onClick={() => open('ai')}
+            >
+              {t('row.ai')}
             </Button>
-            <Button variant="secondary" onClick={() => open('direct')}>
-              {authoringText('directNamed', named)}
+            <Button
+              variant="secondary"
+              aria-label={authoringText('directNamed', named)}
+              onClick={() => open('direct')}
+            >
+              {t('row.direct')}
             </Button>
-            {summary &&
-              (summary.hasUnpublishedChanges ||
-                summary.activeJobId ||
-                summary.publicationPending ||
-                summary.targetConflict) && (
-                <Button variant="ghost" onClick={() => open('ai', summary.sessionId)}>
-                  {authoringText('continueNamed', named)}
-                </Button>
-              )}
+            {unusual && summary && (
+              <Button
+                variant="ghost"
+                aria-label={authoringText('continueNamed', named)}
+                onClick={() => open('ai', summary.sessionId)}
+              >
+                {t('row.resume')}
+              </Button>
+            )}
             <DeleteGuidelineButton
               ownerId={ownerId}
               kind={guideline.kind}
@@ -645,14 +658,20 @@ function GuidelineRow({
           />
         </div>
       </Disclosure>
-      {/* The rule's state, quietly under it: saved and in use, and anything unusual — a draft in
-          progress, a job, a conflict. */}
-      <div className="pb-2 pl-15">
-        <Typography variant="meta" as="p">
-          {t('authoringState.savedAvailable')}
-        </Typography>
-        <EditingStatus summary={summary} />
-      </div>
+      {/* Under the rule, quietly: its last confirmed save (EDIT-22), and anything unusual — a
+          draft in progress, a job, a conflict — with, as its own fact, that the saved rule still
+          applies meanwhile (EDIT-18). A saved rule with nothing going on is every rule here, so
+          "saved and usable" alone is never said. */}
+      {summary && (summary.lastPublication?.outcome || unusual) && (
+        <div className="pb-2 pl-15">
+          {unusual && (
+            <Typography variant="meta" as="p">
+              {t('authoringState.savedAvailable')}
+            </Typography>
+          )}
+          <EditingStatus summary={summary} />
+        </div>
+      )}
     </li>
   )
 }

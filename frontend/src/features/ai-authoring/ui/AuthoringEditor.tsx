@@ -349,23 +349,36 @@ function ScopedEditor({
       )}
     </div>
   )
-  const aiAvailability = ai !== 'ready' && (
-    <div className="mt-6 space-y-3">
-      <Typography variant="body" className="text-content-secondary">
-        {t(ai === 'preparing' ? 'modelPreparing' : 'modelUnavailable')}
-      </Typography>
-      {ai === 'unavailable' && (
-        <div className="flex flex-wrap gap-4">
-          <Button variant="secondary" onClick={defaults.retry}>
-            {t('retryAI')}
-          </Button>
-          <Link to="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
-            {t('settings')}
-          </Link>
-        </div>
-      )}
-    </div>
-  )
+  const availabilityOf = (talk: boolean) =>
+    ai !== 'ready' && (
+      <div className={talk ? 'space-y-3' : 'mt-6 space-y-3'}>
+        {talk ? (
+          <p>{t(ai === 'preparing' ? 'modelPreparing' : 'modelUnavailable')}</p>
+        ) : (
+          <Typography variant="body" className="text-content-secondary">
+            {t(ai === 'preparing' ? 'modelPreparing' : 'modelUnavailable')}
+          </Typography>
+        )}
+        {ai === 'unavailable' && (
+          <div className={talk ? 'flex flex-wrap gap-2' : 'flex flex-wrap gap-4'}>
+            <Button
+              variant="secondary"
+              size={talk ? 'compact' : undefined}
+              onClick={defaults.retry}
+            >
+              {t('retryAI')}
+            </Button>
+            <Link
+              to="/ai-models"
+              className={buttonStyles({ variant: 'ghost', size: talk ? 'compact' : undefined })}
+            >
+              {t('settings')}
+            </Link>
+          </div>
+        )}
+      </div>
+    )
+  const aiAvailability = availabilityOf(false)
   const inspection =
     active &&
     state.session &&
@@ -502,14 +515,10 @@ function ScopedEditor({
               ? previewOf(talkArtifact, selected)
               : undefined
           }
-          feedback={
-            (inputFeedback || aiAvailability) && (
-              <>
-                {inputFeedback}
-                {aiAvailability}
-              </>
-            )
-          }
+          // In the talk, the AI not being ready is said by the AI, as its last message — not
+          // inside the sticky composer, where it would cover the conversation it explains.
+          feedback={inputFeedback || undefined}
+          availability={availabilityOf(true) || undefined}
           failure={
             failureMessage ??
             (draftInvalid && !needsVoiceExample ? (
@@ -546,20 +555,35 @@ function ScopedEditor({
   return (
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
       <div ref={heading}>
-        {canGoBack && !onNavigationChange && (
-          <Button
-            variant="secondary"
-            size="icon"
-            aria-label={t('back')}
-            title={t('back')}
-            className="mb-2 sm:mb-6"
-            onClick={() => event('BACK')}
-          >
-            <ReturnIcon />
-          </Button>
-        )}
+        {canGoBack &&
+          !onNavigationChange &&
+          (conversation ? (
+            // Under the page's own ←, a second round arrow would read as the same way out: from
+            // hand editing, the way back to the talk says where it goes.
+            <Button
+              variant="ghost"
+              size="compact"
+              className="mb-2 -ml-2 sm:mb-4"
+              onClick={() => event('BACK')}
+            >
+              <ReturnIcon />
+              {t('conversation.backToTalk')}
+            </Button>
+          ) : (
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label={t('back')}
+              title={t('back')}
+              className="mb-2 sm:mb-6"
+              onClick={() => event('BACK')}
+            >
+              <ReturnIcon />
+            </Button>
+          ))}
         <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">
-          {t('namedSetting', named)}
+          {/* A setting with no name yet is named by its kind alone, not "작문 지침 · 작문 지침". */}
+          {named.name === named.kind ? named.kind : t('namedSetting', named)}
         </Typography>
         <Typography
           variant="stepTitle"
@@ -574,7 +598,8 @@ function ScopedEditor({
               ? t('reviewNamed', named)
               : t(`steps.${view}`)}
         </Typography>
-        {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && (
+        {/* The talk's hand editing is its secondary path and says nothing more about itself. */}
+        {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && !conversation && (
           <Typography variant="body" className="text-content-secondary max-w-measure mt-2 sm:mt-3">
             {t(`stepHelp.${view}`)}
           </Typography>
@@ -601,11 +626,15 @@ function ScopedEditor({
                 : ''}
         </Typography>
       </div>
-      {state.session?.savedAvailable && view !== 'confirmed' && (
-        <Typography variant="body" className="text-content-secondary mt-4">
-          {t('savedUsable', named)}
-        </Typography>
-      )}
+      {/* The talk's hand editing says the saved one stays usable only while there are edits
+          that are not saved yet — the fact EDIT-18 keeps apart from them. */}
+      {state.session?.savedAvailable &&
+        view !== 'confirmed' &&
+        (!conversation || state.session.hasUnpublishedChanges || state.sourceDirty) && (
+          <Typography variant="body" className="text-content-secondary mt-4">
+            {t('savedUsable', named)}
+          </Typography>
+        )}
       {(state.session?.hasUnpublishedChanges || state.sourceDirty) && (
         <Typography variant="body" role="status" className="mt-4">
           {t('unpublished', named)}

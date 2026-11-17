@@ -28,10 +28,16 @@ export function AIModelsPage() {
   const { t } = useTranslation('models')
   const [recommending, setRecommending] = useState(false)
   return (
-    <main className={pageStyles({ width: 'prose', className: 'pt-4 sm:pt-10' })}>
+    // As a tab, it opens the way 글 and 영상 do: the large title and one line saying what it holds,
+    // in the same column as theirs, so switching tabs moves nothing; the rows below keep the
+    // reading measure.
+    <main className={pageStyles({ width: 'wide', className: 'pt-2 sm:pt-6' })}>
       <Typography variant="largeTitle">{t('page.guideTitle')}</Typography>
+      <Typography variant="body" className="text-content-secondary mt-1">
+        {t('page.guideLead')}
+      </Typography>
 
-      <section aria-labelledby="ai-in-use" className="mt-8">
+      <section aria-labelledby="ai-in-use" className="mt-6 lg:max-w-3xl">
         <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
           <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
             {t('page.inUse')}
@@ -55,7 +61,7 @@ export function AIModelsPage() {
       </section>
       <RecommendationSheet open={recommending} onClose={() => setRecommending(false)} />
 
-      <section aria-labelledby="compare-heading" className="mt-10">
+      <section aria-labelledby="compare-heading" className="mt-10 lg:max-w-3xl">
         <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
           <Typography variant="title" as="h2" id="compare-heading">
             {t('page.compareTitle')}
@@ -93,7 +99,7 @@ export function AIModelsPage() {
 
       {/* Which two AIs a new two-model test starts from is a setting of its own, not part of
           either comparison's invitation. */}
-      <section className={cardStyles({ className: 'mt-10 shadow-sm' })}>
+      <section className={cardStyles({ className: 'mt-10 shadow-sm lg:max-w-3xl' })}>
         <OptionalTestPair />
       </section>
     </main>

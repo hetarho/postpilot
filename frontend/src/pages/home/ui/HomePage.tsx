@@ -83,6 +83,32 @@ export function HomePage() {
         )}
       </header>
 
+      {/* The one action, right after the promise in reading (and keyboard) order. Floating over
+          the tab bar on a phone, like every tab's own creation — `order-last` keeps it at the
+          column's foot there, where its sticky dock belongs; resting under the promise on the
+          desk, where the grid places it. */}
+      <ActionBar
+        dock="list"
+        className="order-last mt-auto w-full pt-8 sm:w-fit lg:static lg:order-none lg:col-start-1 lg:row-start-2 lg:mt-8 lg:ml-0 lg:pt-0"
+      >
+        <Link
+          to="/posts/new"
+          search={{}}
+          onClick={() =>
+            rememberPostEntry(user?.id ?? '', {
+              path: POST_LIST_PATH,
+              section: 'post',
+              filters: {},
+              scrollY: 0,
+            })
+          }
+          className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full sm:w-auto' })}
+        >
+          <PenLine aria-hidden="true" className="size-5 shrink-0" />
+          {t('home.write')}
+        </Link>
+      </ActionBar>
+
       <div className="mt-10 min-w-0 px-1 sm:px-6 lg:col-start-2 lg:row-span-4 lg:row-start-1 lg:mt-2 lg:px-0">
         <KitSheet data={data} />
       </div>
@@ -115,7 +141,8 @@ export function HomePage() {
           <ul className="mt-2 flex flex-wrap gap-2">
             <li>
               <Link to="/spoken-voices" className={chipStyles({})}>
-                {data.spokenCount !== undefined
+                {/* A count only once there is one: "목소리 0" reads as a broken number. */}
+                {data.spokenCount
                   ? t('home.video.spokenCount', { count: data.spokenCount })
                   : t('home.video.spoken')}
               </Link>
@@ -133,30 +160,6 @@ export function HomePage() {
           </ul>
         </nav>
       </div>
-
-      {/* The one action. Floating over the tab bar on a phone, like every tab's own creation;
-          resting under the promise on the desk. */}
-      <ActionBar
-        dock="list"
-        className="mt-auto w-full pt-8 sm:w-fit lg:static lg:col-start-1 lg:row-start-2 lg:mt-8 lg:ml-0 lg:pt-0"
-      >
-        <Link
-          to="/posts/new"
-          search={{}}
-          onClick={() =>
-            rememberPostEntry(user?.id ?? '', {
-              path: POST_LIST_PATH,
-              section: 'post',
-              filters: {},
-              scrollY: 0,
-            })
-          }
-          className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full sm:w-auto' })}
-        >
-          <PenLine aria-hidden="true" className="size-5 shrink-0" />
-          {t('home.write')}
-        </Link>
-      </ActionBar>
     </main>
   )
 }

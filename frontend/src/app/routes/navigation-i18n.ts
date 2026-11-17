@@ -90,7 +90,7 @@ export const navigationI18n = {
     style: {
       voices: 'Styles',
       templates: 'Templates',
-      guidelines: 'Rules',
+      guidelines: 'Guidelines',
       memories: 'Memories',
       spoken: 'Voices',
     },

@@ -118,7 +118,7 @@ it.each([false, true])('keeps the four places one tap away, desktop=%s', async (
   await user.click(screen.getByRole('button', { name: '내 계정' }))
   const panel = screen.getByRole('dialog', { name: '내 계정' })
   expect(within(panel).getByRole('group', { name: '인터페이스 환경설정' })).toBeInTheDocument()
-  await user.click(within(panel).getByRole('link', { name: '내 설정' }))
+  await user.click(within(panel).getByRole('link', { name: '설정' }))
   await screen.findByRole('heading', { name: '설정', level: 1 })
   expect(
     screen.getByRole('navigation', { name: '주요' }).querySelector('[aria-current]'),

@@ -107,6 +107,26 @@ function AccountSetup({
         )}
       </main>
     )
+  // The way back and the skip on every question.
+  const stepActions = state.step !== 'welcome' && state.step !== 'ready' && (
+    <StepBarActions
+      back={
+        <StepBarBack
+          label={t('setup.back')}
+          disabled={busy}
+          onClick={() => {
+            if (state.step === 'voice' && voiceNavigation.current?.back()) return
+            controller.back()
+          }}
+        />
+      }
+      className={templateStep ? 'mt-6 justify-between pb-6' : 'justify-between'}
+    >
+      <Button variant="ghost" disabled={busy} onClick={controller.skip}>
+        {t('setup.skip')}
+      </Button>
+    </StepBarActions>
+  )
   return (
     // Guide: a conversation — one friendly question per screen in one centred column, its answers
     // as big tiles, and the way back and the skip in the thumb zone.
@@ -266,27 +286,10 @@ function AccountSetup({
           </Button>
         </StepBar>
       )}
-      {state.step !== 'welcome' && state.step !== 'ready' && (
-        <StepBar>
-          <StepBarActions
-            back={
-              <StepBarBack
-                label={t('setup.back')}
-                disabled={busy}
-                onClick={() => {
-                  if (state.step === 'voice' && voiceNavigation.current?.back()) return
-                  controller.back()
-                }}
-              />
-            }
-            className="justify-between"
-          >
-            <Button variant="ghost" disabled={busy} onClick={controller.skip}>
-              {t('setup.skip')}
-            </Button>
-          </StepBarActions>
-        </StepBar>
-      )}
+      {/* A template question is a conversation, whose composer is the page's one bottom dock
+          (THEME-24): its way back and its skip close the page instead, rather than a second dock
+          floating over the field being typed in. */}
+      {stepActions && (templateStep ? stepActions : <StepBar>{stepActions}</StepBar>)}
     </main>
   )
 }

@@ -245,13 +245,22 @@ function TemplateRow({
         </span>
       }
       status={summary && <EditingStatus summary={summary} />}
+      // How much the template already shapes: the posts written with it. That a saved template
+      // is usable goes without saying, until an edit, a job or a conflict is under way: then it is
+      // said as its own fact (EDIT-18).
       metadata={
-        <>
-          <Badge tone="neutral">{t('postCount', { count: template.postCount })}</Badge>
-          <Typography variant="meta" as="span">
-            {t('screen.savedAvailable')}
-          </Typography>
-        </>
+        template.postCount > 0 || editing(summary) ? (
+          <>
+            {template.postCount > 0 && (
+              <Badge tone="neutral">{t('usedIn', { count: template.postCount })}</Badge>
+            )}
+            {editing(summary) && (
+              <Typography variant="meta" as="span">
+                {t('screen.savedAvailable')}
+              </Typography>
+            )}
+          </>
+        ) : undefined
       }
       actions={
         <DeleteTemplateButton
@@ -262,6 +271,17 @@ function TemplateRow({
         />
       }
     />
+  )
+}
+
+/** An edit, a job or a conflict is under way on a saved template. */
+function editing(summary?: AuthoringSummary) {
+  return (
+    !!summary &&
+    (summary.hasUnpublishedChanges ||
+      !!summary.activeJobId ||
+      summary.publicationPending ||
+      summary.targetConflict)
   )
 }
 

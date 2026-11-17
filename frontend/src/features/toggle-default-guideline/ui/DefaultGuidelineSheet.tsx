@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { X } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import {
   DefaultGuidelineDetail,
   useGuidelines,
@@ -19,7 +19,10 @@ export function DefaultGuidelineSheet({ ownerId, kind }: { ownerId: string; kind
   const [open, setOpen] = useState(false)
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
+      {/* It adds: the sheet lists every 기본 지침 with 추가, so the opener wears the same plus as
+          every other band's way to add. */}
+      <Button variant="ghost" size="compact" onClick={() => setOpen(true)}>
+        <Plus aria-hidden="true" className="size-4" />
         {t('defaults.open')}
       </Button>
       {open && (
