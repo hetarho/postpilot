@@ -152,6 +152,18 @@
 - 261116 decided CLIP-209 T863: identifier scope? → rename channel and section names only; generic clip names and Naver platform rules (ParseNaverBlogURL, Naver Blog export, Naver Clip upload rules) keep their names (alt: rename clip to video everywhere)
 - 261116 decided CLIP-211 T867: upload-text read shape? → one optional text and one limit set, old repeated fields reserved (alt: keep repeated fields holding at most one)
 - 261116 decided CLIP-209: historical evidence? → docs/handoff, docs/qa, docs/audits, docs/research and earlier SSOT chg lines keep their Instagram and channel wording as history (alt: scrub them)
+- 261116 decided TMPL-76 T870: 참고 생성을 어디에 둘까 → 제목 제안 시트의 제안 받기 옆 보조 버튼 "내 템플릿 소제목 참고해서 제안 받기", 입력한 스타일 요청도 함께 보냄 (alt: 시트 안 체크박스 토글 / 예시 칩 / 소제목 화면의 별도 버튼)
+- 261116 decided TMPL-76 T869 T870: 무엇을 참고 소제목으로 볼까 → 저장된 템플릿 본문의 고정 문구 줄 중 40자 이하, 제목 영역 제외, 목록 순서로 중복 없이 최대 30줄 (alt: 본문 전체 / 위저드로 만든 템플릿만)
+- 261116 decided TMPL-76 T869: 우선순위 → 입력한 스타일 요청 > 내 템플릿 소제목 > 기본 말투, 참고 소제목을 그대로 반복하지 않고 같은 표현 방식으로 새로 씀 (alt: 참고 소제목이 요청보다 우선 / 그대로 재사용 허용)
+- 261116 decided TMPL-76 T870: 영상 템플릿 위저드에도 둘까 → 글 템플릿 위저드만, 영상 위저드는 그대로 (alt: 영상 위저드에도 저장된 영상 템플릿 단계 이름 참고)
+- 261116 decided T869 T870: 참고 줄을 누가 뽑나 → 브라우저가 템플릿 목록에서 뽑아 보내고 서버는 개수·길이·한 줄만 검사, 예상 크레딧은 기존 추정 그대로 (alt: 서버가 계정 템플릿을 직접 읽음 / 참고분만큼 추정 상향)
+- 261116 decided POST-123: Guidelines bounce while changing writing settings: standard saved/new-draft route tests show no runtime error -> open account guideline management in place (alt: retain the full-page detour and request error details). This preserves the editor and removes the reported navigation boundary without changing rule ownership.
+- 261116 decided TMPL-45 T884: 빈 질문 칸 위의 소제목을 어떻게 함께 뺄까 → 빈 줄 없이 칸 바로 위에 붙은 줄(소제목·고정 문구)을 그 칸의 머리말로 보고 칸이 빠질 때 함께 뺌, 붙어 있는 칸 여럿은 모두 빠질 때만 (alt: 문법에 섹션/머리말 속성 추가 / 위저드 템플릿만 표시 / 그대로 둠)
+- 261116 decided TMPL-72 T885: 별점 칸을 어디에 둘까 → 모든 세부 종류의 마지막 파트 "별점"(질문을 바탕으로 작성, 사진 없음, 필수 아님) (alt: 4번째 내용 종류 "별점" / 1~5 별 선택 입력 UI)
+- 261116 decided TMPL-74 T885 T886: 별점 위 고정 문구(평가 기준)를 어떻게 받을까 → 질문을 바탕으로 작성에 선택 입력 고정 문구를 두고 칸 바로 위에 붙여 씀, 기본값은 비움(제품이 완성 문구를 내놓지 않음) (alt: 기본 평가 기준 문구 제공 / 별점 전용 카드)
+- 261116 decided -: Direct self-improve delegation: one behavior-preserving performance/refactor cycle, maximum 60 minutes from 2026-11-16T16:14Z and user deadline 2026-11-16T21:00Z (06:00 KST); prioritize Codex implementation and Claude independent review with both available for fallback. Existing hdref frozen cohort remains owned by hdref; perf6 joins the next gate.
+- 261116 decided review/audio-true-peak-261117 T887: F1 exact true-peak tap reuse adopted over F2 capture-neighbor preprocessing: one whole-track numeric hot path, two allowed files, exact-output invariant, fixed >=15% median improvement above range/median spread, Node24.18.0, seven alternating pairs. F2 deferred for low call frequency and unmeasured user benefit. Shared full verification remains at integration; task brief exceeds40k solely because global ARCH coverage is mandatory, while scope is already one production function.
+- 261116 parked T887 review/audio-true-peak-261117: T887 is measured exact and63.99% faster, Codex implementation87b0aa8e7 independently approved by Claude review4425bdc2. work integrate blocks on64 baseline spec warnings; latest0.17.3 has no supported baseline exception. Concrete historical metadata proposal prepared; user scope/immutability exception requested before altering three archived task records. Preserve approved attempt and evidence; no main publication or guard bypass.
 
 ## unlanded
 | id | tag | branch | commit | at |
@@ -169,25 +181,44 @@
 | T866 | onev | gusta-session-start-onev-54d284a9 | f5d66d92474b | 2026-11-16T10:31Z |
 | T867 | onev | gusta-session-start-onev-54d284a9 | a04e117dc491 | 2026-11-16T10:37Z |
 | T868 | onev | gusta-session-start-onev-54d284a9 | 5cd9855fe | 2026-11-16T10:49Z |
+| T869 | hdref | gusta-session-start-hdref-c3df08ba | 35df02f90e0e | 2026-11-16T14:36Z |
+| T851 | vcx | gusta-session-start-vcx-4f46f7d4 | 5afb20631 | 2026-11-16T14:40Z |
+| T870 | hdref | gusta-session-start-hdref-c3df08ba | 64b47da1f13b | 2026-11-16T14:40Z |
+| T852 | vcx | gusta-session-start-vcx-4f46f7d4 | 31488210c67a | 2026-11-16T14:42Z |
+| T853 | vcx | gusta-session-start-vcx-4f46f7d4 | fc23e2a81bc3 | 2026-11-16T14:44Z |
+| T880 | wopts | gusta-session-start-wopts-7b887426 | 7bb96d876aec | 2026-11-16T14:49Z |
+| T881 | wopts | gusta-session-start-wopts-7b887426 | 129d2a5374a1 | 2026-11-16T14:50Z |
+| T871 | vcx | gusta-session-start-vcx-4f46f7d4 | b1b5fbc8a7b7 | 2026-11-16T14:52Z |
+| T872 | vcx | gusta-session-start-vcx-4f46f7d4 | 0bad70e28 | 2026-11-16T14:55Z |
+| T882 | wopts | gusta-session-start-wopts-7b887426 | 56a04801fff6 | 2026-11-16T15:01Z |
+| T873 | vcx | gusta-session-start-vcx-4f46f7d4 | 64d05b912eef | 2026-11-16T15:03Z |
+| T874 | vcx | gusta-session-start-vcx-4f46f7d4 | a067126f4630 | 2026-11-16T15:12Z |
+| T875 | vcx | gusta-session-start-vcx-4f46f7d4 | 9ca0cd8a2f15 | 2026-11-16T15:15Z |
+| T876 | vcx | gusta-session-start-vcx-4f46f7d4 | 631d35e1f | 2026-11-16T15:17Z |
+| T877 | vcx | gusta-session-start-vcx-4f46f7d4 | 1892f0fcc215 | 2026-11-16T15:20Z |
+| T883 | wopts | gusta-session-start-wopts-7b887426 | e7c56321a26c | 2026-11-16T15:26Z |
+| T884 | hdref | gusta-session-start-hdref-c3df08ba | b2a5313c964f | 2026-11-16T15:38Z |
+| T885 | hdref | gusta-session-start-hdref-c3df08ba | 64fdefcf3a68 | 2026-11-16T15:41Z |
+| T886 | hdref | gusta-session-start-hdref-c3df08ba | 0c7d9a8d91b8 | 2026-11-16T15:43Z |
 
 ## log
 - 261116 onev: one video kind with no clip channel (T856-T868, CLIP r80 THEME r47 POST r51 GUIDE r28 MKT r13) landed and pushed 0715db3bb; CI, Deploy backend and Verify media green
-- 261116 T868 done
-- 261116 T867 done
-- 261116 T866 done
-- 261116 T865 done
-- 261116 T864 done
-- 261116 T863 done
-- 261116 T862 done
-- 261116 T861 done
-- 261116 T860 done
-- 261116 T859 done
-- 261116 T858 done
-- 261116 T857 done
-- 261116 T856 done
-- 261116 T855 done
-- 261116 design ui (dsx): one-row returns via PageFrame, GuideProgress everywhere, 내 콘텐츠 with 글/영상 only, silent autosave, AI 고르기 sheet; merged ddbc5e9a6 (T854), not pushed
-- 261116 gusta-create-task review/tidy-261116 round two FE: T849-T853 (lanes fe-upload fe-render)
-- 261116 gusta-create-task review/tidy-261116 round two: T845-T848 (lane be-shared)
-- 261116 gusta-create-task review/tidy-261116: T837-T844 (lanes be-tidy fe-lib fe-clip)
-- 261116 gusta-create-task review/tidy-261116 start
+- 261116 T886 done
+- 261116 T885 done
+- 261116 T884 done
+- 261116 gusta-update-ssot TMPL GEN start (field lead, 별점 part)
+- 261116 wopts ready at 7641f90be; T880-T883 complete and reviewed. Shared gate awaits both registered vcx working participants. Preserve peer ownership. Cohort integration owner must include conditional ARCH-31 deployment/media checks for backend changes. No full candidate or main publication claimed.
+- 261116 fix creation: align remaining clip and clip-from-post self-paid choice expectations; affected tests and scoped static checks passed
+- 261116 T883 done
+- 261116 T877 done
+- 261116 T876 done
+- 261116 T875 done
+- 261116 T874 done
+- 261116 T873 done
+- 261116 T882 done
+- 261116 T872 done
+- 261116 T871 done
+- 261116 T881 done
+- 261116 T880 done
+- 261116 T853 done
+- 261116 T852 done
