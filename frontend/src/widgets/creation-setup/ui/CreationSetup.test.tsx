@@ -9,6 +9,7 @@ import {
   writeSetupProgress,
 } from '@/features/complete-setup'
 import { renderAppAt, type RenderAppOptions } from '@/test/app'
+import { chooseSituations } from '@/test/voice-chat'
 import type { FakeTemplatesOptions } from '@/test/templates'
 import { createFakeAuthTransport } from '@/test/session'
 
@@ -153,6 +154,7 @@ it.each(['pending', 'failed'] as const)(
     expect(await screen.findByRole('button', { name: '대화하기' })).toBeEnabled()
     expect(screen.queryByRole('heading', { name: '함께 만들 AI를 골라볼까요?' })).toBeNull()
     await user.click(screen.getByRole('button', { name: '대화하기' }))
+    await chooseSituations(user)
     expect(await screen.findByLabelText('답')).toBeEnabled()
     await act(async () => release())
   },
@@ -252,6 +254,7 @@ it('resumes an unfinished voice rather than creating another one', async () => {
   expect(
     await screen.findByRole('heading', { name: '글에 나의 말투를 담아볼까요?' }),
   ).toBeInTheDocument()
+  await chooseSituations(userEvent.setup())
   expect(await screen.findByLabelText('답')).toBeInTheDocument()
   expect(screen.queryByRole('dialog')).toBeNull()
   expect(screen.queryByLabelText('말투 이름')).toBeNull()
@@ -272,6 +275,7 @@ it('creates a personal voice once with an automatic name and holds the funnel wh
   expect(calls.filter((call) => call === 'CreateVoice')).toHaveLength(1)
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()
   await act(async () => release())
+  await chooseSituations(user)
   expect(await screen.findByLabelText('답')).toBeInTheDocument()
   expect(creates).toEqual([{ name: '나의 말투' }])
   expect(screen.getByRole('heading', { name: '글에 나의 말투를 담아볼까요?' })).toBeInTheDocument()
@@ -516,6 +520,7 @@ it('saves ten chat replies through setup and waits for an explicit analysis acti
     },
   })
   const user = userEvent.setup()
+  await chooseSituations(user)
   await screen.findByLabelText('답')
   expect(screen.queryByRole('navigation', { name: '현재 위치' })).not.toBeInTheDocument()
   // One segment per answer the chat asks for; the one being answered now is current.
@@ -565,6 +570,7 @@ it('guards parent navigation while an inline answer save is pending', async () =
   const base = createFakeAuthTransport({ ...options, existingSetup: true })
   renderAppAt('/setup', { ...options, transport: gateProcedure(base, 'AnswerVoicePrompt', gate) })
   const user = userEvent.setup()
+  await chooseSituations(user)
   await user.type(await screen.findByLabelText('답'), '저장 중에도 입력한 내용은 그대로예요.')
   await user.click(screen.getByRole('button', { name: '보내기' }))
   expect(screen.getByRole('button', { name: '지금은 건너뛰기' })).toBeDisabled()

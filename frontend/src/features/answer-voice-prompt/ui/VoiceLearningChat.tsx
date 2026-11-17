@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  promptText,
+  useStartVoiceExperience,
+  useVoiceExperiences,
   useVoicePrompts,
   useVoiceSample,
   VoiceReadinessMeter,
@@ -21,12 +24,17 @@ import {
   type ChatMessage,
 } from '@/shared/ui'
 import {
+  answerTurnKey,
+  parseTurnKey,
+  questionnaireCanSkip,
   questionnaireCurrentKey,
+  questionnaireHasSituations,
   questionnaireSavedCount,
   QUESTIONNAIRE_BATCH_SIZE,
   type QuestionnaireEvent,
 } from '../model/questionnaire-machine'
 import { useQuestionnaire } from '../model/useQuestionnaire'
+import { ExperiencePicker } from './ExperiencePicker'
 import { VoiceAnswerComposer } from './VoiceAnswerComposer'
 import { CHAT_REACTION_KEYS } from '../config'
 
@@ -43,6 +51,11 @@ export interface VoiceLearningChatProps {
   onNavigationChange?: (
     navigation: { canGoBack: boolean; goBack: () => void; startNewBatch: () => void } | undefined,
   ) => void
+}
+
+/** A saved answer's identity: its question, and for a thread answer its experience (VOICE-65). */
+function sampleTurnKey(sample: VoiceSample) {
+  return answerTurnKey(sample.experienceId, sample.promptKey)
 }
 
 /** One mounted form for one scene; saved keys, rather than catalog size, define completion. */
@@ -66,6 +79,8 @@ function AccountLearningChat({
   const titleId = useId()
   const heading = useRef<HTMLElement>(null)
   const query = useVoicePrompts()
+  const experiencesQuery = useVoiceExperiences(ownerId, voiceId)
+  const startExperience = useStartVoiceExperience(ownerId, voiceId)
   const { state, send: actorSend, getSnapshot } = useQuestionnaire(ownerId, voiceId)
   const [moreOpen, setMoreOpen] = useState(false)
   const [savedMessage, setSavedMessage] = useState(false)
@@ -82,19 +97,27 @@ function AccountLearningChat({
       const before = getSnapshot()
       if (!mounted.current) return before
       const next = actorSend(event)
-      if (next !== before) onBusyChange?.(next.phase === 'saving')
+      if (next !== before) onBusyChange?.(next.phase === 'saving' || next.phase === 'starting')
       return next
     },
     [getSnapshot, actorSend, onBusyChange],
   )
   useEffect(() => {
-    if (query.isPending || query.isError || getSnapshot().phase !== 'loading') return
+    if (
+      query.isPending ||
+      query.isError ||
+      experiencesQuery.isPending ||
+      experiencesQuery.isError ||
+      getSnapshot().phase !== 'loading'
+    )
+      return
     send({
       ownerId,
       voiceId,
       type: 'hydrate',
       catalog: query.prompts,
-      saved: samples.filter((sample) => sample.kind === 'answer').map((sample) => sample.promptKey),
+      saved: samples.filter((sample) => sample.kind === 'answer').map(sampleTurnKey),
+      experiences: experiencesQuery.experiences.map(({ id, kind }) => ({ id, kind })),
       made: profile.made,
       answeredQuestions: profile.readiness.answeredQuestions,
       missingParts: profile.readiness.missingParts,
@@ -103,6 +126,9 @@ function AccountLearningChat({
     query.prompts,
     query.isPending,
     query.isError,
+    experiencesQuery.experiences,
+    experiencesQuery.isPending,
+    experiencesQuery.isError,
     samples,
     profile.made,
     profile.readiness.answeredQuestions,
@@ -113,7 +139,18 @@ function AccountLearningChat({
     getSnapshot,
   ])
   const key = questionnaireCurrentKey(state)
-  const prompt = query.prompts.find((question) => question.key === key)
+  const prompt = query.prompts.find((question) => question.key === parseTurnKey(key).promptKey)
+  /** A turn's question text, with its experience named when it is a thread question. */
+  const turnText = (turnKey: string) => {
+    const { experienceId, promptKey } = parseTurnKey(turnKey)
+    const question = query.prompts.find((candidate) => candidate.key === promptKey)
+    if (!question) return ''
+    return promptText(
+      question,
+      query.kinds,
+      experiencesQuery.experiences.find((experience) => experience.id === experienceId),
+    )
+  }
   const previousKey = useRef('')
   useEffect(() => {
     if (active && state.phase !== 'loading' && key !== previousKey.current) {
@@ -123,7 +160,7 @@ function AccountLearningChat({
   }, [key, state.phase, active])
   const identity = { ownerId, voiceId }
   const count = questionnaireSavedCount(state)
-  const busy = state.phase === 'saving'
+  const busy = state.phase === 'saving' || state.phase === 'starting'
   useEffect(() => {
     onNavigationChange?.(
       active
@@ -167,14 +204,34 @@ function AccountLearningChat({
     send({ ...identity, type: 'draft', key, body })
     setSavedMessage(false)
   }
-  const canContinue = state.catalog.some((question) => !state.saved.includes(question.key))
   const answeredSample = samples.find(
-    (sample) => sample.kind === 'answer' && sample.promptKey === key,
+    (sample) => sample.kind === 'answer' && sampleTurnKey(sample) === key,
   )
+  const beginExperience = async (
+    kind: Parameters<typeof startExperience.start>[0],
+    name: string,
+  ) => {
+    if (!active) return
+    const previous = getSnapshot()
+    const next = send({ ...identity, type: 'start-experience' })
+    if (next === previous || next.phase !== 'starting') return
+    try {
+      const experience = await startExperience.start(kind, name)
+      send({
+        ...identity,
+        type: 'experience-started',
+        experience: { id: experience.id, kind: experience.kind },
+        operation: next.operation,
+      })
+    } catch {
+      send({ ...identity, type: 'experience-failed', operation: next.operation })
+    }
+  }
   const formProps = {
     ownerId,
     voiceId,
     prompt: prompt!,
+    experienceId: parseTurnKey(key).experienceId || undefined,
     bodyValue: state.drafts[key],
     onBodyChange: changeBody,
     onEdit: () => setSavedMessage(false),
@@ -186,19 +243,20 @@ function AccountLearningChat({
     backLabel: t('prompts.previous'),
     hideBack: !!onNavigationChange,
     backDisabled: state.cursor === 0 && !state.reviewing,
-    secondaryActions: !state.saved.includes(key) && (
-      <Button
-        variant="ghost"
-        className="min-h-11 min-w-11"
-        disabled={busy}
-        onClick={() => {
-          send({ ...identity, type: 'skip' })
-          setSavedMessage(false)
-        }}
-      >
-        {t('prompts.skip')}
-      </Button>
-    ),
+    secondaryActions: !state.saved.includes(key) &&
+      (!parseTurnKey(key).experienceId || questionnaireCanSkip(state)) && (
+        <Button
+          variant="ghost"
+          className="min-h-11 min-w-11"
+          disabled={busy}
+          onClick={() => {
+            send({ ...identity, type: 'skip' })
+            setSavedMessage(false)
+          }}
+        >
+          {t('prompts.skip')}
+        </Button>
+      ),
   }
   const messages: ChatMessage[] = [
     {
@@ -207,19 +265,46 @@ function AccountLearningChat({
       content: t('prompts.chat.welcome'),
     },
   ]
-  const visibleKeys =
-    state.phase === 'complete' ? state.history : state.history.slice(0, state.cursor + 1)
+  const answering =
+    state.phase === 'answering' || state.phase === 'saving' || state.phase === 'failed'
+  const visibleKeys = answering ? state.history.slice(0, state.cursor + 1) : state.history
+  const askedExperiences = new Set<string>()
+  const askExperience = (experienceId: string, id: string) => {
+    const first = state.experiences.findIndex((experience) => experience.id === experienceId) <= 0
+    messages.push({
+      id: `${id}-ask`,
+      sender: 'partner',
+      content: t(first ? 'prompts.chat.experience.ask' : 'prompts.chat.experience.askAnother'),
+    })
+  }
   for (const turnKey of visibleKeys) {
-    const questionIndex = query.prompts.findIndex((question) => question.key === turnKey)
+    const { experienceId, promptKey } = parseTurnKey(turnKey)
+    const questionIndex = query.prompts.findIndex((question) => question.key === promptKey)
     const question = query.prompts[questionIndex]
     if (!question) continue
+    if (experienceId && !askedExperiences.has(experienceId)) {
+      askedExperiences.add(experienceId)
+      const experience = experiencesQuery.experiences.find(
+        (candidate) => candidate.id === experienceId,
+      )
+      askExperience(experienceId, experienceId)
+      messages.push({
+        id: `${experienceId}-pick`,
+        sender: 'owner',
+        content:
+          experience?.name.trim() ||
+          query.kinds.find((info) => info.kind === (experience?.kind ?? question.experienceKind))
+            ?.label ||
+          '',
+      })
+    }
     messages.push({
       id: `${turnKey}-situation`,
       sender: 'partner',
       content: (
         <div className="space-y-2">
           {question.scene && <p>{question.scene}</p>}
-          <p>{question.text}</p>
+          <p>{turnText(turnKey)}</p>
           {question.hint && <p className="text-content-secondary">{question.hint}</p>}
           {state.phase !== 'complete' && turnKey === key && question.examples.length > 0 && (
             <Disclosure
@@ -245,7 +330,7 @@ function AccountLearningChat({
     })
     if (!state.saved.includes(turnKey)) continue
     const sample = samples.find(
-      (sample) => sample.kind === 'answer' && sample.promptKey === turnKey,
+      (sample) => sample.kind === 'answer' && sampleTurnKey(sample) === turnKey,
     )
     messages.push({
       id: `${turnKey}-answer`,
@@ -270,6 +355,22 @@ function AccountLearningChat({
       content: t(`prompts.chat.reactions.${reaction}`),
     })
   }
+  if (state.phase === 'choosing' || state.phase === 'starting')
+    messages.push({
+      id: `ask-${state.experiences.length}`,
+      sender: 'partner',
+      content: t(
+        state.experiences.length === 0
+          ? 'prompts.chat.experience.ask'
+          : 'prompts.chat.experience.askAnother',
+      ),
+    })
+  if (state.phase === 'offer')
+    messages.push({
+      id: `offer-${state.history.length}`,
+      sender: 'partner',
+      content: t('prompts.chat.experience.offerLead'),
+    })
   return (
     <section ref={heading} aria-labelledby={titleId} className="min-w-0">
       <Typography
@@ -320,7 +421,48 @@ function AccountLearningChat({
             messages={messages}
             className="mt-4"
             composer={
-              state.phase !== 'complete' && prompt ? (
+              state.phase === 'choosing' || state.phase === 'starting' ? (
+                <ExperiencePicker
+                  kinds={query.kinds}
+                  pending={state.phase === 'starting'}
+                  errorMessage={
+                    startExperience.isError
+                      ? startExperience.errorMessage || t('prompts.chat.experience.startFailed')
+                      : undefined
+                  }
+                  onStart={(kind, name) => void beginExperience(kind, name)}
+                  onNothing={
+                    state.experiences.length === 0 && state.history.length === 0
+                      ? () => send({ ...identity, type: 'situations' })
+                      : undefined
+                  }
+                />
+              ) : state.phase === 'offer' ? (
+                <div className="bg-surface-base pb-safe-b sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 pt-3">
+                  {questionnaireHasSituations(state) && (
+                    <Button
+                      variant="secondary"
+                      onClick={() => send({ ...identity, type: 'situations' })}
+                    >
+                      {t('prompts.chat.experience.situations')}
+                    </Button>
+                  )}
+                  {state.saved.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      onClick={() => send({ ...identity, type: 'review-saved' })}
+                    >
+                      {t('prompts.chat.experience.review')}
+                    </Button>
+                  )}
+                  <Button
+                    variant="cta"
+                    onClick={() => send({ ...identity, type: 'another-experience' })}
+                  >
+                    {t('prompts.chat.experience.another')}
+                  </Button>
+                </div>
+              ) : state.phase !== 'complete' && prompt ? (
                 <QuestionAnswerComposer
                   key={key}
                   {...formProps}
@@ -333,7 +475,13 @@ function AccountLearningChat({
           {state.phase === 'complete' && (
             <div className="mt-6 space-y-4">
               <Typography variant="title" as="h3">
-                {t(state.completion === 'ten' ? 'prompts.batchComplete' : 'prompts.complete')}
+                {t(
+                  state.completion === 'ten'
+                    ? 'prompts.batchComplete'
+                    : state.completion === 'saved'
+                      ? 'prompts.savedTitle'
+                      : 'prompts.complete',
+                )}
               </Typography>
               <Typography variant="body" className="text-content-secondary">
                 {t(state.completion === 'ten' ? 'prompts.batchHelp' : 'prompts.exhaustedHelp')}
@@ -352,7 +500,7 @@ function AccountLearningChat({
               >
                 {t('prompts.moreOptions')}
               </Button>
-              {moreOpen && canContinue && (
+              {moreOpen && (
                 <Button
                   variant="secondary"
                   onClick={() => {
@@ -375,9 +523,9 @@ function AccountLearningChat({
                     value=""
                     options={[
                       { value: '', label: t('prompts.chooseReview') },
-                      ...query.prompts
-                        .filter((question) => state.saved.includes(question.key))
-                        .map((question) => ({ value: question.key, label: question.text })),
+                      ...state.saved
+                        .filter((turnKey) => turnText(turnKey) !== '')
+                        .map((turnKey) => ({ value: turnKey, label: turnText(turnKey) })),
                     ]}
                     onChange={(reviewKey) => {
                       if (reviewKey) send({ ...identity, type: 'review', key: reviewKey })

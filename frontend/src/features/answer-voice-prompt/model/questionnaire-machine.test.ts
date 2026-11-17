@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  answerTurnKey,
   initialQuestionnaireState,
+  questionnaireCanSkip,
   questionnaireCurrentKey,
   questionnaireSavedCount,
   questionnaireTransition,
@@ -16,14 +18,20 @@ const catalog = Array.from({ length: 240 }, (_, index) => ({
 }))
 const send = (state: QuestionnaireState, event: Omit<QuestionnaireEvent, 'ownerId' | 'voiceId'>) =>
   questionnaireTransition(state, { ...identity, ...event } as QuestionnaireEvent)
+/** The imagined-situations path: `생각나는 게 없어요` on a first turn, `다른 장면으로 답하기` later. */
+function toSituations(state: QuestionnaireState) {
+  return send(state, { type: 'situations' })
+}
 function start(saved: string[] = [], made = false) {
-  return questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
-    ...identity,
-    type: 'hydrate',
-    catalog,
-    saved,
-    made,
-  })
+  return toSituations(
+    questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
+      ...identity,
+      type: 'hydrate',
+      catalog,
+      saved,
+      made,
+    }),
+  )
 }
 function save(state: QuestionnaireState, body = '평소처럼 써 봤어요.') {
   const key = questionnaireCurrentKey(state)
@@ -66,7 +74,7 @@ describe('ten-question session', () => {
     expect(questionnaireCurrentKey(state)).toBe('question-11')
     for (let index = 0; index < 10; index++) state = save(state)
     expect(state.saved.slice(0, previous.length)).toEqual(previous)
-    state = send(state, { type: 'new-session' })
+    state = toSituations(send(state, { type: 'new-session' }))
     expect(questionnaireCurrentKey(state)).toBe('question-21')
     expect(questionnaireSavedCount(state)).toBe(0)
     for (let index = 0; index < 10; index++) state = save(state)
@@ -120,13 +128,15 @@ describe('ten-question session', () => {
       { key: 'description', photo: false, starter: true, part: 'description' as const },
       { key: 'another-closing', photo: false, part: 'closing' as const },
     ]
-    let state = questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
-      ...identity,
-      type: 'hydrate',
-      catalog: questions,
-      saved: ['opening'],
-      made: false,
-    })
+    let state = toSituations(
+      questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
+        ...identity,
+        type: 'hydrate',
+        catalog: questions,
+        saved: ['opening'],
+        made: false,
+      }),
+    )
     expect(questionnaireCurrentKey(state)).toBe('closing')
     state = send(state, { type: 'skip' })
     expect(questionnaireCurrentKey(state)).toBe('another-closing')
@@ -157,13 +167,15 @@ describe('ten-question session', () => {
   })
 
   it('ends on catalog exhaustion without rewriting and enters saved-answer review only explicitly', () => {
-    let state = questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
-      ...identity,
-      type: 'hydrate',
-      catalog: catalog.slice(1, 3),
-      saved: [],
-      made: false,
-    })
+    let state = toSituations(
+      questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
+        ...identity,
+        type: 'hydrate',
+        catalog: catalog.slice(1, 3),
+        saved: [],
+        made: false,
+      }),
+    )
     state = save(save(state))
     expect(state.phase).toBe('complete')
     expect(state.completion).toBe('exhausted')
@@ -176,14 +188,16 @@ describe('ten-question session', () => {
   })
 
   it('uses the server valid-answer count when some legacy saved keys are not counted', () => {
-    const state = questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
-      ...identity,
-      type: 'hydrate',
-      catalog,
-      saved: ['question-1', 'question-2'],
-      made: false,
-      answeredQuestions: 1,
-    })
+    const state = toSituations(
+      questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
+        ...identity,
+        type: 'hydrate',
+        catalog,
+        saved: ['question-1', 'question-2'],
+        made: false,
+        answeredQuestions: 1,
+      }),
+    )
     expect(questionnaireSavedCount(state)).toBe(1)
     expect(questionnaireCurrentKey(state)).toBe('question-3')
   })
@@ -200,15 +214,17 @@ describe('ten-question session', () => {
       { key: 'description', photo: false, starter: true, part: 'description' as const },
       { key: 'closing', photo: false, starter: true, part: 'closing' as const },
     ]
-    let state = questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
-      ...identity,
-      type: 'hydrate',
-      catalog: questions,
-      saved: questions.slice(0, 8).map((question) => question.key),
-      made: false,
-      answeredQuestions: 8,
-      missingParts: ['opening', 'closing'],
-    })
+    let state = toSituations(
+      questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
+        ...identity,
+        type: 'hydrate',
+        catalog: questions,
+        saved: questions.slice(0, 8).map((question) => question.key),
+        made: false,
+        answeredQuestions: 8,
+        missingParts: ['opening', 'closing'],
+      }),
+    )
     expect(questionnaireCurrentKey(state)).toBe('opening-1')
     state = save(state)
     expect(questionnaireCurrentKey(state)).toBe('closing')
@@ -216,5 +232,156 @@ describe('ten-question session', () => {
     expect(state.phase).toBe('complete')
     expect(state.coveredParts).toEqual(['description', 'opening', 'closing'])
     expect(questionnaireSavedCount(state)).toBe(10)
+  })
+})
+
+describe('experience thread (VOICE-78)', () => {
+  const thread = [
+    ...[
+      'opening',
+      'opening',
+      'description',
+      'description',
+      'description',
+      'description',
+      'description',
+      'closing',
+      'closing',
+    ].map((part, index) => ({
+      key: `thread_food_${part}_${index}`,
+      photo: false,
+      part: part as 'opening' | 'description' | 'closing',
+      experienceKind: 'food' as const,
+    })),
+    ...catalog.slice(1, 12),
+  ]
+  const food = { id: 'e1', kind: 'food' as const }
+  const hydrate = (saved: string[] = [], experiences: (typeof food)[] = [], made = false) =>
+    questionnaireTransition(initialQuestionnaireState('alice', 'personal'), {
+      ...identity,
+      type: 'hydrate',
+      catalog: thread,
+      saved,
+      made,
+      experiences,
+    })
+  const pick = (state: QuestionnaireState, experience = food) => {
+    const starting = send(state, { type: 'start-experience' })
+    return send(starting, {
+      type: 'experience-started',
+      experience,
+      operation: starting.operation,
+    } as QuestionnaireEvent)
+  }
+  const turn = (experienceId: string, index: number) =>
+    answerTurnKey(experienceId, thread[index].key)
+
+  it('asks for the owner’s own experience first and asks its thread in order', () => {
+    let state = hydrate()
+    expect(state.phase).toBe('choosing')
+    state = pick(state)
+    expect(state.phase).toBe('answering')
+    const asked: string[] = []
+    for (let reply = 0; reply < 5; reply++) {
+      asked.push(questionnaireCurrentKey(state))
+      state = save(state)
+    }
+    expect(asked).toEqual([
+      turn('e1', 0),
+      turn('e1', 2),
+      turn('e1', 3),
+      turn('e1', 4),
+      turn('e1', 7),
+    ])
+    expect(state.phase).toBe('offer')
+    expect(questionnaireSavedCount(state)).toBe(5)
+  })
+
+  it('keeps a failed start on the pick and ignores a late or foreign start', () => {
+    const starting = send(hydrate(), { type: 'start-experience' })
+    expect(starting.phase).toBe('starting')
+    const late = { type: 'experience-started', experience: food, operation: starting.operation - 1 }
+    expect(send(starting, late as QuestionnaireEvent)).toBe(starting)
+    const failed = { type: 'experience-failed', operation: starting.operation }
+    expect(send(starting, failed as QuestionnaireEvent).phase).toBe('choosing')
+  })
+
+  it('swaps in the next unused question of the same part without counting the skipped one', () => {
+    let state = pick(hydrate())
+    expect(questionnaireCanSkip(state)).toBe(true)
+    state = send(state, { type: 'skip' })
+    expect(questionnaireCurrentKey(state)).toBe(turn('e1', 1))
+    expect(questionnaireSavedCount(state)).toBe(0)
+    expect(questionnaireCanSkip(state)).toBe(false)
+    expect(send(state, { type: 'skip' })).toBe(state)
+    state = save(state)
+    expect(questionnaireCurrentKey(state)).toBe(turn('e1', 2))
+  })
+
+  it('offers another experience or the situations after the first one, and ten replies end the chat', () => {
+    let state = pick(hydrate())
+    for (let reply = 0; reply < 5; reply++) state = save(state)
+    expect(state.phase).toBe('offer')
+    state = send(state, { type: 'another-experience' })
+    expect(state.phase).toBe('choosing')
+    state = pick(state, { id: 'e2', kind: 'food' })
+    for (let reply = 0; reply < 4; reply++) state = save(state)
+    expect(state.phase).toBe('answering')
+    state = save(state)
+    expect(state.phase).toBe('complete')
+    expect(state.completion).toBe('ten')
+    expect(questionnaireSavedCount(state)).toBe(10)
+    expect(new Set(state.saved).size).toBe(10)
+  })
+
+  it('keeps two experiences of the same kind with separate answers', () => {
+    let state = pick(hydrate())
+    for (let reply = 0; reply < 5; reply++) state = save(state)
+    state = pick(send(state, { type: 'another-experience' }), { id: 'e2', kind: 'food' })
+    expect(questionnaireCurrentKey(state)).toBe(turn('e2', 0))
+    state = save(state)
+    expect(state.saved).toContain(turn('e1', 0))
+    expect(state.saved).toContain(turn('e2', 0))
+    expect(turn('e1', 0)).not.toBe(turn('e2', 0))
+  })
+
+  it('moves to the starter situations when the owner has nothing in mind', () => {
+    const state = send(hydrate(), { type: 'situations' })
+    expect(state.phase).toBe('answering')
+    expect(questionnaireCurrentKey(state)).toBe(catalog[1].key)
+    expect(questionnaireCanSkip(state)).toBe(true)
+  })
+
+  it('resumes an unfinished experience at its next unanswered question', () => {
+    const state = hydrate([turn('e1', 0), turn('e1', 2)], [food])
+    expect(state.phase).toBe('answering')
+    expect(questionnaireCurrentKey(state)).toBe(turn('e1', 3))
+    expect(state.experienceId).toBe('e1')
+  })
+
+  it('resumes a started experience that has no reply yet', () => {
+    expect(questionnaireCurrentKey(hydrate([], [food]))).toBe(turn('e1', 0))
+  })
+
+  it('offers another experience first and situations second on a later chat', () => {
+    let state = hydrate(
+      Array.from({ length: 5 }, (_, i) => turn('e0', [0, 2, 3, 4, 7][i])),
+      [{ id: 'e0', kind: 'food' }],
+      true,
+    )
+    expect(state.phase).toBe('offer')
+    expect(state.mode).toBe('more')
+    state = send(state, { type: 'situations' })
+    expect(questionnaireCurrentKey(state)).toBe(catalog[1].key)
+  })
+
+  it('opens the saved replies for review from the offer only when there are some', () => {
+    expect(send(hydrate([], [], true), { type: 'review-saved' }).phase).toBe('offer')
+    const saved = [0, 2, 3, 4, 7].map((index) => turn('e0', index))
+    const offer = hydrate(saved, [{ id: 'e0', kind: 'food' }], true)
+    expect(offer.phase).toBe('offer')
+    const reviewing = send(offer, { type: 'review-saved' })
+    expect(reviewing.phase).toBe('complete')
+    expect(reviewing.completion).toBe('saved')
   })
 })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { chooseSituations } from '@/test/voice-chat'
 import { Stage } from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 const route = '/voices/voice-default/materials'
@@ -103,6 +104,7 @@ describe('personal learning transport flow', () => {
       providers,
     })
     await user.click(await screen.findByRole('button', { name: '대화하기' }))
+    await chooseSituations(user)
     await user.type(await screen.findByLabelText('답'), '아직 저장하지 않은 내 표현이에요.')
     await user.click(screen.getByRole('button', { name: '다른 방법으로 알려 주기' }))
     await user.click(screen.getByRole('button', { name: '대화하기' }))

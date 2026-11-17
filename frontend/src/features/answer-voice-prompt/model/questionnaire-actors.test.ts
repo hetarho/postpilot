@@ -16,6 +16,7 @@ const catalog = Array.from({ length: 40 }, (_, i) => ({
 it('counts only confirmed answers through an actual actor and fences duplicate saves and late results', () => {
   const actor = createActor(questionnaireMachine, { input: identity }).start()
   actor.send({ ...identity, type: 'hydrate', catalog, saved: [], made: false })
+  actor.send({ ...identity, type: 'situations' })
   const key = questionnaireCurrentKey(questionnaireStateOf(actor.getSnapshot()))
   actor.send({ ...identity, type: 'begin', key })
   const reserved = actor.getSnapshot()
@@ -54,6 +55,8 @@ it('recovers server readiness, reviews existing answers and starts another batch
   actor.send({ ...identity, type: 'back' })
   expect(actor.getSnapshot().matches('complete')).toBe(true)
   actor.send({ ...identity, type: 'new-session' })
+  expect(actor.getSnapshot().matches('offer')).toBe(true)
+  actor.send({ ...identity, type: 'situations' })
   expect(actor.getSnapshot().matches('answering')).toBe(true)
   expect(actor.getSnapshot().context.saved).toEqual(['0'])
   expect(questionnaireSavedCount(questionnaireStateOf(actor.getSnapshot()))).toBe(0)
