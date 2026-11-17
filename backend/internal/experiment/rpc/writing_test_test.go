@@ -87,7 +87,7 @@ func (f *testActionsFake) ListFiltered(_ context.Context, query experiment.TestL
 
 func TestWritingTestHistoryForwardsAuthenticatedContextFilters(t *testing.T) {
 	f := &testActionsFake{found: rpcWritingTest()}
-	h := NewWritingTestHandler(f, f)
+	h := NewWritingTestHandler(f, f, &photoActionsFake{})
 	_, err := h.ListWritingTests(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&v1.ListWritingTestsRequest{PageSize: 3, PageToken: "cursor", SourcePostSlug: "owned-source", VoiceId: "owned-style"}))
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +151,7 @@ func TestWritingTestTransportAcceptsAllExactFormatsAndSavedAxesWithoutAdmittingA
 		for _, count := range []int{2, 4, 8, 16} {
 			t.Run(fmt.Sprintf("%s/%d", factor, count), func(t *testing.T) {
 				f := &testActionsFake{found: rpcWritingTest()}
-				h := NewWritingTestHandler(f, f)
+				h := NewWritingTestHandler(f, f, &photoActionsFake{})
 				ctx := auth.WithUser(context.Background(), "alice")
 				plan := rpcTestPlan(factor, count)
 				quote, err := h.EstimateWritingTest(ctx, connect.NewRequest(&v1.EstimateWritingTestRequest{Plan: plan}))
@@ -187,7 +187,7 @@ func TestWritingTestTransportRejectsUnknownAndMismatchedWireBeforeService(t *tes
 			p := proto.Clone(valid).(*v1.WritingTestPlan)
 			change(p)
 			f := &testActionsFake{}
-			h := NewWritingTestHandler(f, f)
+			h := NewWritingTestHandler(f, f, &photoActionsFake{})
 			_, err := h.EstimateWritingTest(auth.WithUser(context.Background(), "alice"), connect.NewRequest(&v1.EstimateWritingTestRequest{Plan: p}))
 			if err == nil || f.calls != 0 {
 				t.Fatalf("invalid accepted %v calls=%d", err, f.calls)
@@ -219,7 +219,7 @@ func TestWritingTestTransportPreservesObserverAxisAndMixedPreparedReferences(t *
 }
 func TestWritingTestEveryEndpointAuthenticatesBeforePrivateAccess(t *testing.T) {
 	f := &testActionsFake{}
-	h := NewWritingTestHandler(f, f)
+	h := NewWritingTestHandler(f, f, &photoActionsFake{})
 	calls := []func() error{func() error {
 		_, e := h.EstimateWritingTest(context.Background(), connect.NewRequest(&v1.EstimateWritingTestRequest{}))
 		return e

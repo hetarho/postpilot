@@ -357,6 +357,9 @@ type Config struct {
 	ExperimentContentRetention time.Duration
 	// ExperimentSweepInterval is how often terminal experiment content is purged.
 	ExperimentSweepInterval time.Duration
+	// WritingTestPhotoTTL is how long a photo uploaded to a photo observation test may wait
+	// unattached; zero (unset) means the experiment context's own default.
+	WritingTestPhotoTTL time.Duration
 	// Template holds the template field ceilings (TEMPLATE_*), which the composition root
 	// converts into template.Ceilings.
 	Template TemplateCeilings
@@ -521,6 +524,10 @@ func Load() (*Config, error) {
 		return nil, err
 	}
 	cfg.ExperimentSweepInterval = experimentSweep
+	cfg.WritingTestPhotoTTL, err = optionalPositiveDuration("WRITING_TEST_PHOTO_TTL")
+	if err != nil {
+		return nil, err
+	}
 
 	templateName, err := positiveInt("TEMPLATE_NAME_MAX_CHARS", "40")
 	if err != nil {

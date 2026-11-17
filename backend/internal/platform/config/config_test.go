@@ -570,6 +570,28 @@ func TestLoadExperimentRetentionAndSweepIntervals(t *testing.T) {
 	}
 }
 
+func TestLoadWritingTestPhotoTTLIsAnOptionalPositiveDuration(t *testing.T) {
+	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
+	t.Setenv("WRITING_TEST_PHOTO_TTL", "")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.WritingTestPhotoTTL != 0 {
+		t.Fatalf("unset ttl = %v, want 0 so the experiment context's own default applies", cfg.WritingTestPhotoTTL)
+	}
+	t.Setenv("WRITING_TEST_PHOTO_TTL", "6h")
+	if cfg, err = Load(); err != nil || cfg.WritingTestPhotoTTL != 6*time.Hour {
+		t.Fatalf("ttl = %v, %v", cfg.WritingTestPhotoTTL, err)
+	}
+	for _, bad := range []string{"invalid", "0s", "-1h"} {
+		t.Setenv("WRITING_TEST_PHOTO_TTL", bad)
+		if _, err := Load(); err == nil {
+			t.Errorf("WRITING_TEST_PHOTO_TTL=%q was accepted", bad)
+		}
+	}
+}
+
 func TestLoadTemplateLimitDefaultsAndValidation(t *testing.T) {
 	t.Setenv("CORS_ORIGIN", "http://localhost:2564")
 	names := []string{

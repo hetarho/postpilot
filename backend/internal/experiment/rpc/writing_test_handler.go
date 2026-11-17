@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"time"
 
 	"connectrpc.com/connect"
 
@@ -30,16 +31,25 @@ type writingTestPublicationActions interface {
 	SaveWinner(context.Context, experiment.WinnerPublication) (experiment.TestPublication, experiment.WritingTest, error)
 	ApplyOutput(context.Context, experiment.OutputApplication) (experiment.TestPublication, experiment.WritingTest, error)
 }
+
+// The photos an observation test's owner uploads: no RPC accepts or returns image data, only the
+// handshake around a direct PUT (→POST-34).
+type writingTestPhotoActions interface {
+	Create(context.Context, string, string) (experiment.TestPhotoUpload, error)
+	Confirm(context.Context, string, string, int64, int64) (experiment.TestPhoto, error)
+	ViewURL(context.Context, string) (string, time.Time, error)
+}
 type WritingTestHandler struct {
 	tests       writingTestActions
 	publication writingTestPublicationActions
+	photos      writingTestPhotoActions
 }
 
-func NewWritingTestHandler(tests writingTestActions, publication writingTestPublicationActions) *WritingTestHandler {
-	if tests == nil || publication == nil {
-		panic("experiment: writing test actions and publication are required")
+func NewWritingTestHandler(tests writingTestActions, publication writingTestPublicationActions, photos writingTestPhotoActions) *WritingTestHandler {
+	if tests == nil || publication == nil || photos == nil {
+		panic("experiment: writing test actions, publication and photos are required")
 	}
-	return &WritingTestHandler{tests: tests, publication: publication}
+	return &WritingTestHandler{tests: tests, publication: publication, photos: photos}
 }
 func (h *WritingTestHandler) EstimateWritingTest(ctx context.Context, req *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -159,12 +169,35 @@ func (h *WritingTestHandler) ApplyWritingTestOutput(ctx context.Context, req *co
 	return writingPublicationResponse(publication, test, err)
 }
 
-// CreateTestPhotoUpload and ConfirmTestPhotoUpload answer Unimplemented until the photo test storage lands.
-func (h *WritingTestHandler) CreateTestPhotoUpload(context.Context, *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("test photo upload is not available yet"))
+// CreateTestPhotoUpload presigns one photo's PUT for the acting owner and records it pending.
+func (h *WritingTestHandler) CreateTestPhotoUpload(ctx context.Context, req *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error) {
+	user, err := authactor.ActingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	upload, err := h.photos.Create(ctx, user, req.Msg.GetFilename())
+	if err != nil {
+		return nil, writingError(err)
+	}
+	return connect.NewResponse(&v1.CreateTestPhotoUploadResponse{UploadId: upload.Photo.ID, PutUrl: upload.PutURL, ContentType: upload.ContentType, ExpiresAt: formatTime(upload.PutExpires)}), nil
 }
-func (h *WritingTestHandler) ConfirmTestPhotoUpload(context.Context, *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("test photo upload is not available yet"))
+
+// ConfirmTestPhotoUpload records the landed object as a ready photo and answers with a view URL,
+// so the owner sees what was uploaded without reading the test.
+func (h *WritingTestHandler) ConfirmTestPhotoUpload(ctx context.Context, req *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error) {
+	user, err := authactor.ActingUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	photo, err := h.photos.Confirm(ctx, user, req.Msg.GetUploadId(), int64(req.Msg.GetWidth()), int64(req.Msg.GetHeight()))
+	if err != nil {
+		return nil, writingError(err)
+	}
+	url, expires, err := h.photos.ViewURL(ctx, photo.Key)
+	if err != nil {
+		return nil, writingError(err)
+	}
+	return connect.NewResponse(&v1.ConfirmTestPhotoUploadResponse{Photo: &v1.WritingTestPhoto{Id: photo.ID, Filename: photo.Filename, Width: int32(photo.Width), Height: int32(photo.Height), ViewUrl: url, ViewExpiresAt: formatTime(expires)}}), nil
 }
 func writingResponse(found experiment.WritingTest, err error) (*connect.Response[v1.WritingTestResponse], error) {
 	if err != nil {

@@ -38,6 +38,12 @@ func wireWritingTests(ctx context.Context, c *contexts) error {
 	runner := experiment.NewWritingTestRunner(c.experimentStore, preparation)
 	c.writingTestJobs = experimentapp.NewWritingTestJobs(c.jobs, runner, c.experimentStore, usage.NewSettledCharges(usagestore.New(database.Writer, database.Reader)))
 	c.writingTests = experiment.NewWritingTestService(experiment.WritingTestDependencies{Store: c.experimentStore, Variants: resolvers, Preparation: preparation, FailedPreparation: preparation, Pricing: experimentapp.NewWritingTestPricing(c.auth, c.ledger), Queue: c.writingTestJobs}, experiment.WritingTestConfig{Retention: cfg.ExperimentContentRetention})
+	// A photo observation test's photos reuse the post upload limits by name (MODEL-97): the PUT
+	// and GET lifetimes, the object size ceiling and the cap on what one owner may leave waiting.
+	c.writingTestPhotos = experiment.NewTestPhotos(c.experimentStore, experimentObjects{bucket: c.platform.bucket}, experiment.TestPhotoLimits{
+		PutTTL: cfg.PresignPutTTL, GetTTL: cfg.PresignGetTTL, PhotoTTL: cfg.WritingTestPhotoTTL,
+		MaxBytes: cfg.MaxImageBytes, MaxUnattached: cfg.MaxPhotosPerPost,
+	})
 	guard := experimentapp.NewPostTestJobGuard(func(tx *sql.Tx) experimentapp.OrdinaryWriteJobs { return jobstore.NewTx(tx, jobKinds()) }, ordinaryPostWriteKinds())
 	payloadGuard := experimentapp.NewTestPayloadGuard(func(tx *sql.Tx) experimentapp.TestPayloadAvailability { return experimentstore.NewTx(tx) })
 	posts := post.NewTestResultService(poststore.NewFencedTestResultStore(database.Writer, database.Reader, guard, payloadGuard))

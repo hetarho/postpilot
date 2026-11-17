@@ -79,6 +79,8 @@ func serve(ctx context.Context, c *contexts) error {
 	go c.clipSpeech.RunCleanup(ctx, cfg.OrphanSweepInterval, cfg.OrphanMinAge)
 	// A photo prompt's photos, on the post sweep's interval and rules (VOICE-60).
 	go voice.NewPhotoSweeper(voicestore.New(handle.Writer, handle.Reader), voiceObjects{bucket: p.bucket}, cfg.OrphanMinAge).Run(ctx, cfg.OrphanSweepInterval)
+	// The photos uploaded to photo observation tests, on the same interval and rules (MODEL-97).
+	go experiment.NewTestPhotoSweeper(c.experimentStore, experimentObjects{bucket: p.bucket}, cfg.OrphanMinAge).Run(ctx, cfg.OrphanSweepInterval)
 	go c.clipMediaRecovery.Run(ctx)
 	go c.clipAnalysis.Run(ctx)
 	go c.clipAnalysis.RunOrphans(ctx, cfg.OrphanSweepInterval)
@@ -241,7 +243,7 @@ func handlers(c *contexts) []rpcserver.Registrar {
 			return postpilotv1connect.NewModelExperimentServiceHandler(experimentrpc.NewHandler(c.experiment), opts...)
 		},
 		func(opts ...connect.HandlerOption) (string, http.Handler) {
-			return postpilotv1connect.NewWritingTestServiceHandler(experimentrpc.NewWritingTestHandler(c.writingTests, c.writingTestPublications), opts...)
+			return postpilotv1connect.NewWritingTestServiceHandler(experimentrpc.NewWritingTestHandler(c.writingTests, c.writingTestPublications, c.writingTestPhotos), opts...)
 		},
 	}
 }
