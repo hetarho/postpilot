@@ -181,6 +181,7 @@
 - 261117 decided T897: the owner said to ignore perf6 and merge → set only the perf6 participant to withdrawn (reason owner-approved-skip) in the shared integration record, leaving its branch and work untouched; it re-registers on its next ready (alt: merge this session by hand outside the shared gate | keep waiting)
 - 261117 decided T897: the wtform loop cannot resume: its failed-stop report lacks the next section and the runner refuses any edit to it → close that report by hand and run T897 plus the batch gate under tag wtform2 (alt: implement T897 and run the gate by hand | leave the run stopped)
 - 261117 suggest -: gusta CLI follow-ups for /gusta-send-issue: an abbreviated candidate SHA in a unit receipt marks finished work failed and stops the loop; a failed-stop report omits its next section so the next preflight fails spec lint; a corrected report cannot be resumed under the same tag; an inbox line containing a markdown heading token drops the following report sections
+- 261117 decided MODEL-100 T898: how much room does a reasoning observer get? → four times the batch budget (8,192 tokens for four photos, the clip observer budget) for any model whose source publishes a reasoning object, since the truncating models expose no effort control (alt: double it like the writer headroom | raise every observation budget regardless of reasoning)
 
 ## log
 - 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
