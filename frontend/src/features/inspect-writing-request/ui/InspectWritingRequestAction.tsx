@@ -19,6 +19,8 @@ export function InspectWritingRequestAction({
   stages,
   defaultStatus = 'current',
   className,
+  open: openProp,
+  onOpenChange,
 }: {
   target: RequestInspectionTarget | null
   contextKey?: string
@@ -26,6 +28,10 @@ export function InspectWritingRequestAction({
   stages?: readonly string[]
   defaultStatus?: RequestInspectionSelection['status']
   className?: string
+  /** Opened from a control of the host's own (a ⋯ menu row); then no button is drawn here. The
+   *  latch still holds: a new identity closes the sheet and needs a fresh open. */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }) {
   const { t } = useTranslation('requestInspection')
   const id = useId()
@@ -38,31 +44,45 @@ export function InspectWritingRequestAction({
     stages,
     defaultStatus,
   ])
+  const controlled = openProp !== undefined
   const [session, setSession] = useState({ identity, open: false })
   // Invalidate the latch itself, not only this render's visibility. Reverting local material
   // or returning to a previous account must still require a fresh, intentional open.
   if (session.identity !== identity) setSession({ identity, open: false })
-  const open = session.identity === identity && session.open
+  // Controlled, the host's open is granted to the identity it was given for, the same latch.
+  const [granted, setGranted] = useState<string | null>(null)
+  if (controlled && openProp && granted === null) setGranted(identity)
+  if (controlled && !openProp && granted !== null) setGranted(null)
+  const stale = controlled && !!openProp && granted !== null && granted !== identity
+  useEffect(() => {
+    if (stale) onOpenChange?.(false)
+  }, [stale, onOpenChange])
+  const open = controlled
+    ? !!openProp && granted === identity
+    : session.identity === identity && session.open
+  const close = () => (controlled ? onOpenChange?.(false) : setSession({ identity, open: false }))
   return (
     <>
-      <Button
-        variant="ghost"
-        className={className}
-        onClick={() => setSession({ identity, open: true })}
-      >
-        {t('open')}
-      </Button>
+      {!controlled && (
+        <Button
+          variant="ghost"
+          className={className}
+          onClick={() => setSession({ identity, open: true })}
+        >
+          {t('open')}
+        </Button>
+      )}
       <Sheet
         open={open}
         labelledBy={`${id}-title`}
         size="wide"
-        onClose={() => setSession({ identity, open: false })}
+        onClose={close}
         header={
           <div className="mb-4 flex items-start justify-between gap-3">
             <Typography variant="title" as="h2" id={`${id}-title`}>
               {t('title')}
             </Typography>
-            <Button variant="ghost" onClick={() => setSession({ identity, open: false })}>
+            <Button variant="ghost" onClick={close}>
               {t('close')}
             </Button>
           </div>
@@ -76,7 +96,7 @@ export function InspectWritingRequestAction({
             blockedReason={blockedReason}
             stages={stages}
             defaultStatus={defaultStatus}
-            onScopeLost={() => setSession({ identity, open: false })}
+            onScopeLost={close}
           />
         )}
       </Sheet>

@@ -96,9 +96,12 @@ export function ChatComposer({
   actions?: ReactNode
 }) {
   return (
+    // Pinned to the foot of the screen, the composer keeps the dock's own bottom padding plus the
+    // home-indicator inset (`pb-dock-b`); the bare inset is 0 on most screens and left the field
+    // and its send flush against the edge.
     <form
       onSubmit={onSubmit}
-      className="bg-surface-base pb-safe-b sticky bottom-0 z-10 min-w-0 space-y-3 pt-3"
+      className="bg-surface-base pb-dock-b sticky bottom-0 z-10 min-w-0 space-y-3 pt-3"
     >
       {attachment}
       <div className="flex min-w-0 flex-wrap items-end gap-2">

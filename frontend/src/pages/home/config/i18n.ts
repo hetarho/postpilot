@@ -11,6 +11,7 @@ export const i18n = {
       promiseAccent: '내 언어로.',
       phase: {
         empty: '말투 · 템플릿 · 지침 · 기억을 채울수록 AI가 내 글처럼 써요.',
+        failed: '준비 상태를 다 불러오지 못했어요.',
         ready: '모두 준비됐어요. 이제 내 언어로 써 볼까요?',
         voiceLearning: '말투를 {{percent}}% 배웠어요. 내가 쓴 글을 조금 더 넣어 주세요.',
         voiceAnalyze: '말투 학습이 끝났어요. 분석하면 내 말투가 완성돼요.',
@@ -41,6 +42,7 @@ export const i18n = {
       phase: {
         empty:
           'The more of your style, templates, rules and memories you add, the more it reads like you.',
+        failed: 'Some of your kit could not be loaded.',
         ready: 'Everything is ready. Shall we write in your words?',
         voiceLearning: 'Your style is {{percent}}% learned. Add a little more of your writing.',
         voiceAnalyze: 'Your style has learned enough. Analyse it to finish it.',

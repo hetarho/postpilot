@@ -29,6 +29,6 @@ it('draws a stored video template as the video it makes, one link and nothing el
   expect(within(link).getByText('구성 예시')).toBeInTheDocument()
   expect(within(link).getByText(/첫인상 → 대표 메뉴/)).toBeInTheDocument()
   expect(link).toHaveTextContent('인트로 매거진 커버')
-  expect(directory.getByText('클립 3개')).toBeInTheDocument()
+  expect(directory.getByText('영상 3개')).toBeInTheDocument()
   expect(directory.queryByRole('button')).toBeNull()
 })

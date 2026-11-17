@@ -369,10 +369,11 @@ export function AuthoringConversation({
           triggerLabel={<Ellipsis aria-hidden="true" className="size-5" />}
           triggerVariant="ghost"
           chevron={false}
+          placement="below"
           items={menu}
         />
       )}
-      <Button variant="cta" disabled={!canSave} onClick={save}>
+      <Button variant="cta" disabled={!canSave} onClick={save} className="whitespace-nowrap">
         {t(targetId ? 'conversation.saveChanges' : 'conversation.save')}
       </Button>
     </>

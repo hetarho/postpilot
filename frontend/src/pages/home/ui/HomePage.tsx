@@ -19,6 +19,7 @@ import {
 } from '@/widgets/writing-kit'
 import {
   ActionBar,
+  Button,
   LG_MEDIA_QUERY,
   Typography,
   buttonStyles,
@@ -36,7 +37,8 @@ export function HomePage() {
   const { t } = useTranslation('creation')
   const { user } = useSession()
   const ownerId = user?.id ?? ''
-  const { parts, summary } = useWritingKit(ownerId)
+  const { t: common } = useTranslation('common')
+  const { parts, summary, retry } = useWritingKit(ownerId)
   const drafts = usePostList({ q: '' })
   const latest = drafts.posts.find(unfinished)
   const phaseLine = usePhaseLine(parts, summary)
@@ -98,7 +100,7 @@ export function HomePage() {
             className={typographyStyles({ variant: 'label', className: 'tabular-nums' })}
             aria-live="polite"
           >
-            {summary.settled
+            {summary.settled && summary.phase !== 'failed'
               ? t('home.eyebrow', { ready: summary.ready, total: summary.total })
               : ''}
             &nbsp;
@@ -116,6 +118,12 @@ export function HomePage() {
           >
             {phaseLine}
           </Typography>
+          {/* A list the kit could not read is said once here, with the way to read it again. */}
+          {summary.phase === 'failed' && (
+            <Button variant="secondary" size="compact" onClick={retry} className="mt-3">
+              {common('action.retry')}
+            </Button>
+          )}
           {desk && (
             <nav aria-label={t('home.actions')} className="mt-8 flex flex-wrap gap-2">
               {actions}
@@ -150,6 +158,7 @@ export function HomePage() {
 function usePhaseLine(parts: Record<KitPartKey, KitPart>, summary: KitSummary): string {
   const { t } = useTranslation('creation')
   if (summary.phase === 'loading') return ''
+  if (summary.phase === 'failed') return t('home.phase.failed')
   if (summary.phase === 'ready') return t('home.phase.ready')
   if (summary.phase === 'empty') return t('home.phase.empty')
   if (!summary.next) return ''

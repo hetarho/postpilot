@@ -11,7 +11,15 @@ import {
   TemplateCard,
   UnsavedTemplateCard,
 } from '@/widgets/writing-kit'
-import { Badge, Button, Notice, LoadingState, Typography, pageStyles } from '@/shared/ui'
+import {
+  Badge,
+  Button,
+  Notice,
+  LoadingState,
+  Typography,
+  pageStyles,
+  typographyStyles,
+} from '@/shared/ui'
 
 /** Guide: 영상 템플릿 — the shapes the owner's videos take, the 영상 side of 템플릿. Each template is
  *  drawn as the video it makes (its opening and closing design around one example line, and its
@@ -96,10 +104,14 @@ export function VideoTemplatesPage() {
           {templates.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-labelledby="video-templates-heading" className="mt-8">
-              <Typography variant="title" as="h2" id="video-templates-heading">
-                {t('directory.saved', { ns: 'clips' })}
-              </Typography>
+            <section aria-label={t('directory.saved', { ns: 'clips' })} className="mt-8">
+              {/* The same heading as the 글 템플릿 list: what the list holds, and how many. */}
+              <h2 className="flex items-baseline gap-2">
+                <span className={typographyStyles({ variant: 'title' })}>
+                  {t('directory.saved', { ns: 'clips' })}
+                </span>
+                <span className={typographyStyles({ variant: 'label' })}>{templates.length}</span>
+              </h2>
               <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {templates.map((template, index) => (
                   <VideoTemplateShape

@@ -207,7 +207,8 @@ it.each([
       '/voices',
       '/guidelines',
       '/memories',
-      '/ai-models',
+      // 쓰는 AI opens AI 토너먼트 on 지금 쓰는 AI, under the comparisons.
+      '/ai-models#ai-in-use',
       '/spoken-voices',
     ])
     expect(screen.getByRole('link', { name: write })).toHaveAttribute('href', '/posts/new')

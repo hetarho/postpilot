@@ -73,7 +73,13 @@ export function AIModelsPage() {
 
       <section aria-labelledby="ai-in-use" className="mt-10">
         <div className="mb-2 flex min-h-11 items-center justify-between gap-3 pl-4">
-          <Typography variant="label" as="h2" id="ai-in-use" className="text-content-tertiary">
+          {/* 'ai-in-use' is also the home's way in: its 쓰는 AI part opens the page here. */}
+          <Typography
+            variant="label"
+            as="h2"
+            id="ai-in-use"
+            className="text-content-tertiary scroll-mt-28"
+          >
             {t('page.inUse')}
           </Typography>
           <Button variant="secondary" size="compact" onClick={() => setRecommending(true)}>

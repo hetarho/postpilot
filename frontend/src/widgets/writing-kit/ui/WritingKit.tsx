@@ -113,6 +113,7 @@ function Callout({
   return (
     <Link
       to={part.href}
+      hash={part.hash}
       className={clsx(
         'group hover:bg-row-bg-hover active:bg-row-bg-active flex min-h-11 min-w-0 items-center gap-2 rounded-xl py-1 pr-2 transition-colors',
         // Beside a narrow sheet the ring stands over its words; with room, it sits in the line.
@@ -144,7 +145,8 @@ function Callout({
             className={typographyStyles({
               variant: 'meta',
               className: clsx(
-                'break-keep',
+                // A long voice or model name stops at two lines rather than running into the sheet.
+                'line-clamp-2 break-keep',
                 part.state === 'ready' && 'text-content-secondary',
                 isNext && 'text-link-fg',
               ),

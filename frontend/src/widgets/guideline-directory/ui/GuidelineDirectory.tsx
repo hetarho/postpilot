@@ -655,9 +655,9 @@ function DefaultGuidelineItem({
   )
 }
 
-/** One of the owner's guidelines (GUIDE-47): closed, its title — or its text when it has none —
- *  and its scope's kind; open, the text, the scope in full, and 수정 · 삭제. 수정 turns the open
- *  row into one form for the title, the text and the scope. */
+/** One of the owner's guidelines (GUIDE-47): closed, its title over its whole text, and — when
+ *  it reaches only some posts — where; open, the ways to change it (AI로 고치기 · 직접 고치기) and
+ *  삭제. Either way of changing it opens one sheet for the title, the text and the scope. */
 function GuidelineRow({
   ownerId,
   guideline,
@@ -676,6 +676,7 @@ function GuidelineRow({
   rowRef: Ref<HTMLLIElement>
   onDeleted: () => void
 }) {
+  const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
   const [method, setMethod] = useState<'ai' | 'direct'>('ai')
   const [authoringOpen, setAuthoringOpen] = useState(false)
@@ -693,8 +694,8 @@ function GuidelineRow({
         size="row"
         headingLevel={3}
         title={
-          // A narrowed rule names where it applies while closed; every rule states its scope in
-          // full once open (GuidelineScopeBadges below).
+          // A narrowed rule names where it applies right in its title; a rule on every post
+          // leaves that to its group's heading.
           <SentenceTitle
             name={guideline.title}
             sentence={guideline.text}
@@ -702,28 +703,36 @@ function GuidelineRow({
           />
         }
       >
+        {/* The closed row already reads the whole rule, and its group (or, narrowed, its own
+            badge) says where it applies — so the open row holds only what can be done to it. Each
+            action is a word on screen and names the rule it acts on to a screen reader. */}
         <div className="pb-3 pl-6">
-          <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
-            {guideline.text}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-3">
-            {authoringText('savedUsable', named)}
-          </Typography>
-          <GuidelineScopeBadges guideline={guideline} />
-          <div className="mt-4 flex flex-wrap gap-3">
-            <Button variant="secondary" onClick={() => open('ai')}>
-              {authoringText('aiNamed', named)}
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="secondary"
+              aria-label={authoringText('aiNamed', named)}
+              onClick={() => open('ai')}
+            >
+              {t('row.byTalk')}
             </Button>
-            <Button variant="secondary" onClick={() => open('direct')}>
-              {authoringText('directNamed', named)}
+            <Button
+              variant="secondary"
+              aria-label={authoringText('directNamed', named)}
+              onClick={() => open('direct')}
+            >
+              {t('row.byTyping')}
             </Button>
             {summary &&
               (summary.hasUnpublishedChanges ||
                 summary.activeJobId ||
                 summary.publicationPending ||
                 summary.targetConflict) && (
-                <Button variant="ghost" onClick={() => open('ai', summary.sessionId)}>
-                  {authoringText('continueNamed', named)}
+                <Button
+                  variant="ghost"
+                  aria-label={authoringText('continueNamed', named)}
+                  onClick={() => open('ai', summary.sessionId)}
+                >
+                  {t('row.resume')}
                 </Button>
               )}
             <DeleteGuidelineButton

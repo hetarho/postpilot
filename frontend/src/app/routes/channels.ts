@@ -3,7 +3,7 @@ import { clipsSearchSchema } from '@/pages/clips'
 import { PostsPage, postsSearchSchema } from '@/pages/posts'
 import { authenticatedRoute } from './tree'
 
-/** The 글 list and the 영상 list are 내 콘텐츠's own sections (THEME-38, POST-43, CLIP-41). */
+/** The 글 list and the 영상 list are the 글 and 영상 tabs (POST-43, CLIP-41). */
 const postsListRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/posts',

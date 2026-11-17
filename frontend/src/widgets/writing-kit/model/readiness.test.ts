@@ -79,4 +79,14 @@ describe('the writing kit readiness', () => {
     expect(parts.memory).toMatchObject({ state: 'failed', status: { kind: 'failed' } })
     expect(kitSummary(parts)).toMatchObject({ settled: false, next: undefined, phase: 'loading' })
   })
+
+  it('says a list it could not read failed, instead of counting it as empty', () => {
+    const parts = kitParts({
+      ...EMPTY,
+      memories: { isPending: false, isError: true, count: 0 },
+      model: { isPending: false, isError: true, selectedLabel: null, unusable: false },
+    })
+    expect(parts.model).toMatchObject({ state: 'failed', status: { kind: 'failed' } })
+    expect(kitSummary(parts)).toMatchObject({ settled: true, next: undefined, phase: 'failed' })
+  })
 })

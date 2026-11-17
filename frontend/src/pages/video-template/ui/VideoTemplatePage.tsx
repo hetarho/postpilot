@@ -162,7 +162,9 @@ function VideoTemplateConversationPage({
           <div ref={setStatusSlot} />
         </div>
       }
-      actions={<div ref={setControlsSlot} className="flex items-center gap-2" />}
+      actions={
+        <div ref={setControlsSlot} className="flex flex-wrap items-center justify-end gap-2" />
+      }
     >
       {stored && (
         <DeleteClipTemplateButton

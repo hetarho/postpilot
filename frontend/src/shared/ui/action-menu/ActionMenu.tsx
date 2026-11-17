@@ -33,6 +33,7 @@ export function ActionMenu({
   triggerVariant = 'secondary',
   disabled = false,
   chevron = true,
+  placement = 'above',
   className,
 }: {
   /** The trigger's accessible name, and the open list's. */
@@ -45,6 +46,9 @@ export function ActionMenu({
   /** The ▾ after the trigger. A trigger that is a glyph of its own (⋯) leaves it out and stays
    *  a round icon button. */
   chevron?: boolean
+  /** Where the list opens on a wide screen: over a trigger docked at the foot of the screen
+   *  (the default), or under one in a heading row near the top. */
+  placement?: 'above' | 'below'
   className?: string
 }) {
   const { t } = useTranslation('common')
@@ -108,8 +112,8 @@ export function ActionMenu({
       onKeyDown={onListKeyDown}
       className={clsx(
         'select-none',
-        wide &&
-          'bg-surface-highest absolute right-0 bottom-full z-30 mb-2 min-w-56 rounded-lg p-1 shadow-lg',
+        wide && 'bg-surface-highest absolute right-0 z-30 min-w-56 rounded-lg p-1 shadow-lg',
+        wide && (placement === 'below' ? 'top-full mt-2' : 'bottom-full mb-2'),
       )}
     >
       {items.map((item) => {

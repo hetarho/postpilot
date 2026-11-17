@@ -19,6 +19,11 @@ export const i18n = {
       byTalk: 'AI와 대화로 만들기',
       byTyping: '직접 쓰기',
     },
+    row: {
+      byTalk: 'AI로 고치기',
+      byTyping: '직접 고치기',
+      resume: '이어서 고치기',
+    },
     principles: {
       title: 'Postpilot 원칙',
       summary: '항상 적용돼요',
@@ -79,6 +84,11 @@ export const i18n = {
       aria: 'Ways to add a rule',
       byTalk: 'Make it by talking to the AI',
       byTyping: 'Type it myself',
+    },
+    row: {
+      byTalk: 'Edit with AI',
+      byTyping: 'Edit the text',
+      resume: 'Continue editing',
     },
     principles: {
       title: 'Postpilot principles',

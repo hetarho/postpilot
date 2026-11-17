@@ -76,8 +76,8 @@ describe('/video-guidelines', () => {
     expect(within(items[0]).getByText('자막에 가격을 적지 않기')).toBeInTheDocument()
     expect(within(items[1]).getByText('과장 금지')).toBeInTheDocument()
     expect(list.queryByText('글 기본')).not.toBeInTheDocument()
-    // A closed row is its sentence alone; 추천 and an every-video scope show once it is open
-    // (GUIDE-47). A rule that reaches only some videos — or none — names where while closed,
+    // A closed row is its sentence alone; a 기본 지침's 추천 shows once it is open, and an
+    // every-video reach is said by the group (GUIDE-47). A rule that reaches only some videos — or none — names where while closed,
     // under the group that says so.
     for (const badge of ['추천', '전역', '영상 템플릿'])
       expect(list.queryByText(badge)).not.toBeInTheDocument()
@@ -91,7 +91,8 @@ describe('/video-guidelines', () => {
     ).toBeInTheDocument()
     for (const item of items)
       await user.click(within(item).getByRole('button', { expanded: false }))
-    expect(within(items[0]).getByText('전역')).toBeInTheDocument()
+    // The owner's open rule does not repeat its group's reach (모든 영상에).
+    expect(within(items[0]).queryByText('전역')).not.toBeInTheDocument()
     expect(within(items[1]).getByText('추천')).toBeInTheDocument()
     expect(within(items[2]).getAllByText('가게 소개').length).toBeGreaterThan(0)
     expect(within(items[3]).getAllByText('적용 대상 없음').length).toBeGreaterThan(0)

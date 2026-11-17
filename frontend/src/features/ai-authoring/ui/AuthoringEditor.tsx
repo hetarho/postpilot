@@ -82,6 +82,9 @@ export interface AuthoringEditorProps extends AuthoringScope {
   /** The page's own actions on this setting (삭제), as more rows of the conversation's ⋯ menu.
    *  Conversation only. */
   menuItems?: readonly ActionMenuItem[]
+  /** The name of the request inspection, when the host renders one: in the conversation it opens
+   *  from a ⋯ row rather than standing under the composer. Conversation only. */
+  inspectionLabel?: string
 }
 export interface AuthoringInspectionContext {
   ownerId: string
@@ -94,6 +97,9 @@ export interface AuthoringInspectionContext {
   candidateCount: AuthoringCandidateCount
   operationId: string
   sourceDirty: boolean
+  /** Set when the host opens the inspection itself (the conversation's ⋯ row). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 export interface StudioNavigation {
   canGoBack: boolean
@@ -131,9 +137,11 @@ function ScopedEditor({
   initialMessage,
   heading: headingSlots,
   menuItems,
+  inspectionLabel,
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
   const conversation = layout === 'conversation'
+  const [inspecting, setInspecting] = useState(false)
   const candidateCount: AuthoringCandidateCount = requestedCount ?? (conversation ? 1 : 8)
   const scope = { ownerId, kind, targetId }
   const scopeKey = authoringScopeKey(scope)
@@ -366,7 +374,7 @@ function ScopedEditor({
           <Button variant="secondary" onClick={defaults.retry}>
             {t('retryAI')}
           </Button>
-          <Link to="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+          <Link to="/ai-models" hash="ai-in-use" className={buttonStyles({ variant: 'ghost' })}>
             {t('settings')}
           </Link>
         </div>
@@ -418,6 +426,7 @@ function ScopedEditor({
       </Dialog>
     </>
   )
+  const inspectable = active && !!state.session && !!renderInspection
   if (conversation)
     return (
       <AuthoringConversation
@@ -442,7 +451,14 @@ function ScopedEditor({
         savedPreview={savedPreview}
         initialMessage={initialMessage}
         heading={headingSlots}
-        menuItems={menuItems}
+        menuItems={
+          inspectable && inspectionLabel
+            ? [
+                ...(menuItems ?? []),
+                { id: 'inspect', label: inspectionLabel, onSelect: () => setInspecting(true) },
+              ]
+            : menuItems
+        }
         retry={retry}
         aiAvailability={aiAvailability}
         inputFeedback={inputFeedback}
@@ -459,6 +475,7 @@ function ScopedEditor({
                 candidateCount,
                 operationId: state.session.activeJobId,
                 sourceDirty: Boolean(state.sourceDirty),
+                ...(inspectionLabel ? { open: inspecting, onOpenChange: setInspecting } : {}),
               })
             : null
         }
@@ -536,8 +553,9 @@ function ScopedEditor({
             <ReturnIcon />
           </Button>
         )}
+        {/* A setting with no name yet is called by its kind, so the kind is said once. */}
         <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">
-          {t('namedSetting', named)}
+          {name === named.kind ? named.kind : t('namedSetting', named)}
         </Typography>
         <Typography
           variant="stepTitle"

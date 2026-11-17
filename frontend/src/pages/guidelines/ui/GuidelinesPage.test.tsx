@@ -226,8 +226,8 @@ describe('the 기본 지침', () => {
     const items = list.getAllByRole('listitem')
     // naming is out of use, so it is not a row at all.
     expect(items).toHaveLength(2 + GUIDELINES.length)
-    // A closed row is its sentence alone; 추천 and an every-post scope show once it is open
-    // (GUIDE-47). The rules are grouped by where they change a post, and a rule that reaches
+    // A closed row is its sentence alone; a 기본 지침's 추천 shows once it is open, and an
+    // every-post reach is said by the group (GUIDE-47). The rules are grouped by where they change a post, and a rule that reaches
     // only some posts — or none — names where while closed.
     expect(within(items[0]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
     expect(within(items[1]).getByRole('button', { expanded: false })).toHaveTextContent(
@@ -264,8 +264,9 @@ describe('the 기본 지침', () => {
       korean.getByRole('button', { name: '자연스러운 한국어 문체 적용 안함' }),
     ).toBeInTheDocument()
     const owner = await openRow(user, '없는 사실을 쓰지 않기')
-    expect(owner.getByText('전역')).toBeInTheDocument()
-    expect(owner.getByRole('button', { name: /직접 편집하기$/ })).toBeInTheDocument()
+    // The owner's open rule holds only its actions: its group already says it reaches every post.
+    expect(owner.queryByText('전역')).not.toBeInTheDocument()
+    expect(owner.getByRole('button', { name: /직접 편집하기$/ })).toHaveTextContent(/^직접 고치기$/)
     expect(owner.getByRole('button', { name: '지침 삭제' })).toBeInTheDocument()
     // Opening the second left the first open.
     expect(korean.getByText('상투적인 대조를 줄이세요.')).toBeInTheDocument()

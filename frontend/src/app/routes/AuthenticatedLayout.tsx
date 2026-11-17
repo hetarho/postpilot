@@ -315,7 +315,7 @@ export function AuthenticatedLayout() {
   // 템플릿 and 지침 each have a 글 side and a 영상 side: a small two-way switch in the return's
   // row rather than a second row of tabs.
   const kindSwitch = kinds.length > 0 && (
-    <nav aria-label={t('kinds.aria')} className="flex gap-1">
+    <nav aria-label={t('kinds.aria')} className="flex shrink-0 gap-1">
       {kinds.map((kind) => (
         <Link
           key={kind.key}
@@ -324,7 +324,7 @@ export function AuthenticatedLayout() {
           className={typographyStyles({
             variant: 'label',
             className: clsx(
-              'inline-flex min-h-11 items-center rounded-full px-4',
+              'inline-flex min-h-11 shrink-0 items-center rounded-full px-4 whitespace-nowrap',
               kind.current
                 ? 'bg-badge-accent-bg text-badge-accent-fg'
                 : 'text-content-secondary hover:text-content-primary',
@@ -338,7 +338,8 @@ export function AuthenticatedLayout() {
   )
   const showBack = backLink && returnClaims === 0
   const backNav = (showBack || kindSwitch) && (
-    <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 pt-2 sm:px-6 lg:px-8">
+    // At large text the switch takes its own line under the return rather than breaking its words.
+    <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 pt-2 sm:px-6 lg:px-8">
       {showBack && (
         <nav aria-label={t('returnLabel')}>
           <ContextualReturn />

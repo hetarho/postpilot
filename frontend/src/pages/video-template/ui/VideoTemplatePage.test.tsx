@@ -30,7 +30,7 @@ describe('video template workflow', () => {
   it('badges how many clips each template is used by, and docks its creation button', async () => {
     mount('/video-templates')
     const region = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
-    expect(region.getByText('클립 2개')).toBeInTheDocument()
+    expect(region.getByText('영상 2개')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '새 영상 템플릿' })).toBeNull()
     expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
       'href',
@@ -109,7 +109,7 @@ describe('video template workflow', () => {
     await user.click(await screen.findByRole('button', { name: '더 보기' }))
     await user.click(await screen.findByRole('menuitem', { name: '영상 템플릿 삭제' }))
     const dialog = within(await screen.findByRole('dialog'))
-    expect(dialog.getByText(/클립 2개/)).toBeInTheDocument()
+    expect(dialog.getByText(/영상 2개/)).toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '삭제' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
     await waitFor(() =>

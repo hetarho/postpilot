@@ -71,6 +71,20 @@ describe('the app home', () => {
     expect(screen.getByRole('figure', { name: '글쓰기 준비 상태' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/')
   })
+
+  // A kit list that cannot be read is not an empty kit: no count is claimed, and the home reads
+  // the failed list again on request.
+  it('says the kit could not be read instead of counting it, and reads it again', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    renderAppAt('/', { user: { id: 'alice' }, calls, memories: { listFails: true } })
+    expect(await screen.findByText('준비 상태를 다 불러오지 못했어요.')).toBeInTheDocument()
+    expect(screen.queryByText(/글쓰기 준비 \d/)).not.toBeInTheDocument()
+    const reads = () => calls.filter((call) => call === 'ListMemories').length
+    const before = reads()
+    await user.click(screen.getByRole('button', { name: '다시 시도' }))
+    await waitFor(() => expect(reads()).toBeGreaterThan(before))
+  })
 })
 
 describe('login screen', () => {

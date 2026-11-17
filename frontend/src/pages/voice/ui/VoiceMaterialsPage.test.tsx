@@ -183,7 +183,7 @@ describe('the 학습 데이터 screen', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'AI 설정 확인하기' })).toHaveAttribute(
       'href',
-      '/ai-models',
+      '/ai-models#ai-in-use',
     )
     expect(screen.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
     expect(screen.getByRole('button', { name: 'AI 다시 준비하기' })).toBeEnabled()

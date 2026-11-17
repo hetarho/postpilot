@@ -14,6 +14,9 @@
  *    is partial.
  *  - 목소리 (spoken): at least one confirmed spoken voice; an unfinished one is partial. It reads
  *    videos, so it is shown with the kit but not counted in the writing readiness. */
+/** The id of AI 토너먼트's 지금 쓰는 AI section, where 쓰는 AI is chosen. */
+const AI_IN_USE_ANCHOR = 'ai-in-use'
+
 export type KitPartKey = 'voice' | 'template' | 'guideline' | 'memory' | 'model' | 'spoken'
 export type KitState = 'loading' | 'failed' | 'empty' | 'partial' | 'ready'
 
@@ -24,6 +27,8 @@ export interface KitPart {
   /** Which status line the part shows, with its values. */
   status: KitStatus
   href: string
+  /** The place on that screen where the part is made ready, when it is not the screen's top. */
+  hash?: string
   /** Something waiting for the owner here (guideline suggestions to review). */
   attention?: number
 }
@@ -58,7 +63,7 @@ export interface KitInput {
   templates: Query & { count: number; drafts: number }
   guidelines: Query & { own: number; defaultsInUse: number; suggestions: number }
   memories: Query & { count: number }
-  model: { isPending: boolean; selectedLabel: string | null; unusable: boolean }
+  model: { isPending: boolean; isError?: boolean; selectedLabel: string | null; unusable: boolean }
   spoken: Query & { count: number; drafts: number }
 }
 
@@ -157,17 +162,21 @@ export function kitParts(input: KitInput): Record<KitPartKey, KitPart> {
     const { selectedLabel, unusable } = input.model
     const status: KitStatus = input.model.isPending
       ? { kind: 'loading' }
-      : selectedLabel
-        ? { kind: 'named', name: selectedLabel }
-        : unusable
-          ? { kind: 'unusable' }
-          : { kind: 'none' }
+      : input.model.isError
+        ? { kind: 'failed' }
+        : selectedLabel
+          ? { kind: 'named', name: selectedLabel }
+          : unusable
+            ? { kind: 'unusable' }
+            : { kind: 'none' }
     return {
       key: 'model',
       state: stateOf(status, !!selectedLabel, unusable),
       progress: selectedLabel ? 1 : 0,
       status,
       href: '/ai-models',
+      // The tournament opens on its comparisons; the writing AI in use sits under them.
+      hash: AI_IN_USE_ANCHOR,
     }
   }
   const spoken = (): KitPart => {
@@ -200,14 +209,17 @@ export interface KitSummary {
   settled: boolean
   /** The first writing part that is not ready, in kit order — the one the graphic lights. */
   next: KitPartKey | undefined
-  phase: 'loading' | 'empty' | 'partial' | 'ready'
+  /** `failed`: a part's list could not be read, so the kit cannot be judged — not a count of
+   *  nothing, and no part is lit as next. */
+  phase: 'loading' | 'failed' | 'empty' | 'partial' | 'ready'
 }
 
 export function kitSummary(parts: Record<KitPartKey, KitPart>): KitSummary {
   const writing = WRITING_PARTS.map((key) => parts[key])
   const settled = writing.every((part) => part.state !== 'loading')
   const ready = writing.filter((part) => part.state === 'ready').length
-  const next = settled ? writing.find((part) => part.state !== 'ready')?.key : undefined
+  const failed = writing.some((part) => part.state === 'failed')
+  const next = settled && !failed ? writing.find((part) => part.state !== 'ready')?.key : undefined
   // A new account already has the product's 기본 지침 and usually a prepared write model, so
   // "started" counts only what the owner made: a voice, a template, a memory or a rule of their own.
   const started = writing.some(
@@ -222,10 +234,12 @@ export function kitSummary(parts: Record<KitPartKey, KitPart>): KitSummary {
     next,
     phase: !settled
       ? 'loading'
-      : ready === writing.length
-        ? 'ready'
-        : started
-          ? 'partial'
-          : 'empty',
+      : failed
+        ? 'failed'
+        : ready === writing.length
+          ? 'ready'
+          : started
+            ? 'partial'
+            : 'empty',
   }
 }

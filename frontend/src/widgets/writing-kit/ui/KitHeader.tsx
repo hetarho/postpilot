@@ -71,7 +71,16 @@ function KitHead({
             <h1 className={typographyStyles({ variant: 'largeTitle', className: 'break-keep' })}>
               {title ?? (side ? t(`kit.videoParts.${side}`) : t(`kit.parts.${key}`))}
             </h1>
-            {status && <Badge tone={part.state === 'ready' ? 'accent' : 'neutral'}>{status}</Badge>}
+            {/* A long voice name gives way inside the chip, not past the screen's edge. */}
+            {status && (
+              <Badge
+                tone={part.state === 'ready' ? 'accent' : 'neutral'}
+                title={status}
+                className="max-w-full min-w-0"
+              >
+                <span className="min-w-0 truncate">{status}</span>
+              </Badge>
+            )}
           </div>
           <p className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}>
             {side ? t(`kit.videoDoes.${side}`) : t(`kit.does.${key}`)}

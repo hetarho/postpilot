@@ -124,14 +124,14 @@ describe('spoken voice creation and reuse', () => {
     await user.click(screen.getByRole('button', { name: '선택한 목소리 확정' }))
     await screen.findByText('선택한 목소리를 저장합니다. 확정 비용은 0 크레딧이에요.')
     await user.click(screen.getByRole('button', { name: '승인하고 시작' }))
-    await screen.findByRole('link', { name: '내 목소리 목록' })
+    await screen.findByRole('link', { name: '목소리 목록' })
     expect(f.calls.filter((c) => c === 'start-design')).toHaveLength(1)
     expect(f.calls.filter((c) => c === 'start-confirm')).toHaveLength(1)
     expect(fetch).toHaveBeenCalledWith(
       expect.stringContaining('/spoken/audio/'),
       expect.objectContaining({ credentials: 'include', cache: 'no-store' }),
     )
-    await user.click(screen.getByRole('link', { name: '내 목소리 목록' }))
+    await user.click(screen.getByRole('link', { name: '목소리 목록' }))
     await screen.findByRole('heading', { name: '내 더빙 목소리' })
     expect(f.voices.values().next().value?.sampleAssetId).toBe('5'.repeat(32))
     const starts = f.calls.filter((c) => c.startsWith('start')).length
@@ -160,7 +160,7 @@ describe('spoken voice creation and reuse', () => {
       '모델을 선택하세요',
     )
     expect(f.calls).not.toContain('create')
-    await user.click(screen.getByRole('link', { name: '내 목소리' }))
+    await user.click(screen.getByRole('link', { name: '목소리' }))
     await screen.findByRole('button', { name: '목록에서 제거' })
     await user.click(screen.getByRole('button', { name: '목록에서 제거' }))
     const dialog = await screen.findByRole('dialog')

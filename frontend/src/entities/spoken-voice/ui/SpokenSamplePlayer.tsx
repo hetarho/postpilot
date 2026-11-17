@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Play, Square } from 'lucide-react'
 import { Button, Typography } from '@/shared/ui'
 import { useSpokenActions } from '../api/hooks'
 import { SPOKEN_MAX_AUDIO_BYTES } from '../config/limits'
@@ -9,6 +10,9 @@ interface Props {
   name: string
   durationMs: number
   disabled?: boolean
+  /** Beside the voice's own name: the button says only 듣기 / 멈추기 behind a play glyph, and
+   *  names the voice to a screen reader. */
+  compact?: boolean
   onPlayed?: (playbackId: string) => Promise<void>
   onFailure?: (error: unknown) => void
 }
@@ -21,6 +25,7 @@ function SamplePlayer({
   name,
   durationMs,
   disabled,
+  compact = false,
   onPlayed,
   onFailure,
 }: Props) {
@@ -107,12 +112,26 @@ function SamplePlayer({
         variant="secondary"
         disabled={disabled}
         pending={loading}
+        aria-label={compact ? (playing ? t('stop') : t('play', { name })) : undefined}
         onClick={() => {
           if (playing) audio.current?.pause()
           else void play()
         }}
       >
-        {playing ? t('stop') : t('play', { name })}
+        {compact ? (
+          <>
+            {playing ? (
+              <Square aria-hidden="true" className="size-4 shrink-0" />
+            ) : (
+              <Play aria-hidden="true" className="size-4 shrink-0" />
+            )}
+            {playing ? t('stopShort') : t('listen')}
+          </>
+        ) : playing ? (
+          t('stop')
+        ) : (
+          t('play', { name })
+        )}
       </Button>
       <Typography variant="meta">
         {t('duration', { seconds: (durationMs / 1000).toFixed(1) })}

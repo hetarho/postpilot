@@ -113,6 +113,7 @@ export function SpokenVoicesPage() {
                   assetId={voice.sampleAssetId}
                   name={voice.name}
                   durationMs={voice.sampleDurationMs}
+                  compact
                   onFailure={() => setStatus('playFailed')}
                 />
                 <Wave />
@@ -160,7 +161,8 @@ function Wave({ muted = false }: { muted?: boolean }) {
       className={
         muted
           ? 'flex h-10 w-40 items-center justify-center gap-1'
-          : 'flex h-10 min-w-0 flex-1 items-center gap-1'
+          : // Kept at least this wide: in a narrow tile the duration wraps under 듣기 instead.
+            'flex h-10 min-w-16 flex-1 items-center gap-1'
       }
     >
       {WAVE.map((height, index) => (

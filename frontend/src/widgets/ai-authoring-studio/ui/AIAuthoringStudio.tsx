@@ -32,13 +32,18 @@ function AuthoringInspection(context: AuthoringInspectionContext) {
       stages={['setting-authoring']}
       blockedReason={context.sourceDirty ? t('unsavedSource') : undefined}
       className="mt-4"
+      open={context.open}
+      onOpenChange={context.onOpenChange}
     />
   )
 }
 export function AIAuthoringStudio(props: AIAuthoringStudioProps) {
+  const { t } = useTranslation('requestInspection')
   return (
     <AuthoringEditor
       {...props}
+      // The conversation opens the inspection from its ⋯ menu; the stepped layout keeps its button.
+      inspectionLabel={props.layout === 'conversation' ? t('open') : undefined}
       renderInspection={(context) => <AuthoringInspection {...context} />}
       renderPreview={(artifact, lastValid) => (
         <AuthoringPreview kind={props.kind} artifact={artifact} fallbackArtifact={lastValid} />

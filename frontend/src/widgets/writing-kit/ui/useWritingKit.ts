@@ -1,3 +1,5 @@
+import { useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useAuthoringSummaries } from '@/entities/ai-authoring'
 import { useClipTemplates } from '@/entities/clip-template'
 import { useGuidelineCandidates, useGuidelines } from '@/entities/guideline'
@@ -57,7 +59,12 @@ function useModelInput(): KitInput['model'] {
           model.ref.modelId === write.selected?.modelId,
       )?.label ?? write.selected.modelId)
     : null
-  return { isPending: write.isPending, selectedLabel, unusable: !!write.unavailable }
+  return {
+    isPending: write.isPending,
+    isError: write.isError,
+    selectedLabel,
+    unusable: !!write.unavailable,
+  }
 }
 function useSpokenInput(ownerId: string): KitInput['spoken'] {
   const spoken = useSpokenLibrary(ownerId)
@@ -78,8 +85,18 @@ const SETTLED_EMPTY: KitInput = {
   spoken: { isPending: false, isError: false, count: 0, drafts: 0 },
 }
 
-/** Every part of the kit, folded into parts and a summary — the home's graphic. */
+/** Every part of the kit, folded into parts and a summary — the home's graphic — and `retry`,
+ *  which reads again only the lists that failed. */
 export function useWritingKit(ownerId: string) {
+  const client = useQueryClient()
+  const retry = useCallback(
+    () =>
+      void client.refetchQueries({
+        type: 'active',
+        predicate: (query) => query.state.status === 'error',
+      }),
+    [client],
+  )
   const suggestions = useGuidelineCandidates(ownerId, 'post')
   const parts = kitParts({
     voices: useVoiceInput(ownerId),
@@ -89,7 +106,7 @@ export function useWritingKit(ownerId: string) {
     model: useModelInput(),
     spoken: useSpokenInput(ownerId),
   })
-  return { parts, summary: kitSummary(parts) }
+  return { parts, summary: kitSummary(parts), retry }
 }
 
 function useVoicePartInput(ownerId: string): Partial<KitInput> {

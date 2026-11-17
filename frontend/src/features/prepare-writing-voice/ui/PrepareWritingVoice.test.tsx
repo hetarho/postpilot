@@ -13,11 +13,10 @@ const providers = {
 }
 describe('personal learning transport flow', () => {
   it.each([
-    ['만들기', '/create'],
-    ['내 콘텐츠', '/my'],
-    ['내 스타일', '/style'],
-    ['AI 고르기', '/ai-models'],
-    ['나', '/settings'],
+    ['홈', '/'],
+    ['글', '/posts'],
+    ['영상', '/clips'],
+    ['AI 토너먼트', '/ai-models'],
   ])('leaves an unmade voice through the %s navigation link', async (label, destination) => {
     const user = userEvent.setup()
     const calls: string[] = []

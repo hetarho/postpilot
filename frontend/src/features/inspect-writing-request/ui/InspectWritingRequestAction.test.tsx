@@ -168,6 +168,31 @@ afterEach(() => {
 })
 
 describe('optional technical request inspection', () => {
+  // A host may open the inspection from a control of its own (the conversation's ⋯ row): no
+  // button is drawn here, closing hands the state back, and a new identity closes it.
+  it('opens from the host when controlled, hands the close back, and closes on a new identity', async () => {
+    const user = userEvent.setup()
+    const backend = harness()
+    const onOpenChange = vi.fn()
+    const { rerender } = render(
+      <InspectWritingRequestAction target={authoring} open onOpenChange={onOpenChange} />,
+      { wrapper: backend.wrapper },
+    )
+    expect(screen.queryByRole('button', { name: '요청 기술 보기' })).not.toBeInTheDocument()
+    const sheet = screen.getByRole('dialog', { name: '요청 기술 보기' })
+    await user.click(within(sheet).getByRole('button', { name: '닫기' }))
+    expect(onOpenChange).toHaveBeenLastCalledWith(false)
+    onOpenChange.mockClear()
+    rerender(
+      <InspectWritingRequestAction
+        target={{ ...authoring, revision: 4 }}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    )
+    await waitFor(() => expect(onOpenChange).toHaveBeenLastCalledWith(false))
+  })
+
   it('opens named technical evidence with ordered wire roles and independent ownership, and keeps grammar inside the view', async () => {
     const user = userEvent.setup()
     const backend = harness()
