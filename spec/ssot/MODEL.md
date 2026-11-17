@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r42 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
+> r43 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -129,7 +129,7 @@
   - photos are uploaded into the test, never into a post: photos only, at least one, through the post photo selection gate, conversion and per-post count (→!POST-31–33); videos are not accepted
   - the photos step is the writing editor's own photo slot: each photo a tile that opens large (→=POST-100), can be deleted and moved, with the upload progress beside the picker; deleting or moving changes only the test's draft, and no turn is offered ← the owner judges an observation against photos they can see, and one job keeps one surface
   - every contestant observes the same frozen photos independently with the ordinary observation request and no writing material
-  - review shows one photo at a time, held still, beside one contestant's observation card, named like 후보 A · 사진 3: a photo switcher and a contestant switcher each step previous/next and open a dropdown of every photo or contestant, a sideways swipe of the card moves to the other contestant, and every switch shows its card at once without a fetch; the explicit winner controls stay docked; a champion's or a done contestant's observations read in the same viewer without the contestant switcher ← two long observation columns under every photo made the same photo hard to compare
+  - review shows one photo at a time, held still, beside one contestant's observation card, named like 후보 A · 사진 3: a photo switcher and a contestant switcher each step previous/next and open a dropdown of every photo or contestant, a sideways swipe of the card moves to the other contestant, and every switch shows its card at once without a fetch; the explicit winner controls stay docked; a champion's observations read in the same viewer without the contestant switcher, and the contestant progress list is the same viewer over every contestant (→=MODEL-101) ← two long observation columns under every photo made the same photo hard to compare
   - format, blindness, concurrency, progress, failure recovery, champion, adoption as the observe stage's active model, usage, ownership and retention follow the writing-test rules (→!MODEL-32–36 →!MODEL-39–42 →!MODEL-75 →!MODEL-89 →!MODEL-91); the uploaded photos are private test input, purged with the test's payload
   - its estimate prices the observation calls only, through the ordinary test estimate and explicit approval
   - its records appear in 지난 비교 beside writing tests and open at /tests/$testId
@@ -150,7 +150,9 @@
   - ordinary observation, its quote and hold, and observation frozen into tests use the same budget (→QUOTA-32 →MODEL-30 →MODEL-97)
   - the reasoning signal reaches the budget decision without a catalog type crossing the `internal/llm` boundary
 - MODEL-101 [o] a running or partly failed test shows each blind contestant by its letter as working, done or failed with its normalized failure reason, never an identity (→!MODEL-32); a summary line alone does not stand in for the list
-  - a done contestant opens in place to its stored output, read with the review's own renderer — observations photo by photo, a post as the pair shows it — still blind; nothing opens once the payload is purged ← a status word alone hides what the paid call returned
+  - a done contestant's stored output reads in place with the review's own renderer, still blind; once the payload is purged nothing opens and each letter shows its status alone ← a status word alone hides what the paid call returned
+  - a writing test's done contestant opens in place to its post as the pair shows it
+  - a photo observation test's list is the review's observation viewer over every contestant (→=MODEL-97): the contestant switcher's dropdown names each letter with its status, a contestant without observations states its status and failure reason in its card, and the viewer opens on the first contestant with observations ← one row to open per contestant made comparing contestants on the same photo a matter of collapsing and expanding rows
   - a running test's poll refreshes the list in place: the title, progress and 테스트 끝내기 stay on screen and a cancel is taken mid-read, never a flash of the loading state
   - match progress (decisions made of the format's N-1) appears only once matches are ready, worded as match progress
   - a failed-only retry names what it reruns in the test's own unit — posts for a writing test, observations for a photo observation test — with its estimate (→MODEL-35 →MODEL-97)
@@ -336,6 +338,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r43 261118 MODEL-101✎ a photo observation test's done contestants one row each, opening to a one-contestant viewer→the review's viewer over every contestant, the switcher's dropdown naming each with its status and a card stating a contestant's status in place of observations; MODEL-97✎ done contestants read without the contestant switcher→the progress list is the viewer over every contestant
 - r42 261117 MODEL-97✎ review two observation columns under every photo→one held photo beside one contestant's card (후보 A · 사진 3) with photo and contestant switchers, dropdowns and a swipe; MODEL-98✎ a card per model with a grade badge→compact rows under grade headings, the same list as MODEL-96; MODEL-96✎ radio cards→compact radio rows under grade headings, 균형 tie to the lower grade, 가격 먼저 without headings
 - r41 261117 MODEL-97✎ photos step a picker with a count→the writing editor's photo slot (tiles, large view, delete, move); MODEL-101✎ done contestants a status only→open to their output with the review's renderer; a running test's poll passed through loading→refreshes in place
 - r40 261117 MODEL-46✎ observation keeps its batch budget→follows MODEL-100; MODEL-100+ reasoning observers get an observation reasoning multiplier; MODEL-101+ per-contestant progress with failure reasons, match progress only once ready, retry named in the test's unit
