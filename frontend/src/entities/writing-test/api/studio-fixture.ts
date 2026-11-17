@@ -9,6 +9,7 @@ import {
   ProtoConfigurationKind,
   ProtoPlan,
   ProviderService,
+  PostCreditsBasis,
   Stage,
   TemplateService,
   TemplateSchema,
@@ -134,6 +135,14 @@ export function createWritingTestStudioFixture(
           structuredOutput: true,
           affordable: true,
           stages: [Stage.WRITE, Stage.OBSERVE],
+          // Only the first model has a per-post figure, so a row without one shows 가격 확인 불가.
+          postCredits:
+            index === 0
+              ? [
+                  { stage: Stage.WRITE, credits: 12, basis: PostCreditsBasis.RECENT_USAGE },
+                  { stage: Stage.OBSERVE, credits: 30, basis: PostCreditsBasis.ESTIMATE },
+                ]
+              : [],
           levels: [Stage.WRITE, Stage.OBSERVE].map((stage) => ({ stage, level: 'balanced' })),
           access: [Stage.WRITE, Stage.OBSERVE].map((stage) => ({
             stage,

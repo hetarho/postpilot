@@ -15,7 +15,6 @@ import { contentLanguageToProto, Stage } from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
 import { createTestQueryClient, withProviders } from '@/test/session'
-import { chooseOption } from '@/test/listbox'
 import { WritingTestHistoryPage, WritingTestPage, WritingTestsPage } from './WritingTestsPage'
 
 beforeEach(() => {
@@ -53,7 +52,7 @@ function mount(path: string, fixture: ReturnType<typeof createWritingTestStudioF
 /** A tile only chooses the factor; the step bar's 다음 moves on to the candidates. */
 async function chooseFactor(label: string, user: Pick<typeof userEvent, 'click'> = userEvent) {
   await user.click(screen.getByRole('button', { name: label }))
-  expect(screen.queryByRole('combobox', { name: /^후보 1/ })).toBeNull()
+  expect(screen.queryByRole('checkbox', { name: /^Model/ })).toBeNull()
   await user.click(screen.getByRole('button', { name: '다음' }))
 }
 /** A reload never runs React's cleanup, while leaving the setup does and forgets it: keep the
@@ -77,31 +76,20 @@ function savedPair(stage: Stage, a = 'model-0', b = 'model-1') {
     extraCandidates: [{ providerId: 'openrouter', modelId: 'model-15' }],
   }
 }
-it.each([
-  ['write', Stage.WRITE],
-  ['observe', Stage.OBSERVE],
-] as const)(
-  'prefills exactly the eligible saved A/B pair for a new two-model %s test without spending',
-  async (stage, wireStage) => {
-    const fixture = createWritingTestStudioFixture({ comparisonPairs: [savedPair(wireStage)] })
-    mount(`/tests?stage=${stage}`, fixture)
-    await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
-    if (stage === 'observe') {
-      // Photo reading compares AIs only: it opens on its candidates, and its way out is the
-      // page's ←, not a step back to a question it never asked.
-      await screen.findByRole('combobox', { name: /^후보 1/ })
-      expect(screen.queryByRole('button', { name: 'AI 모델' })).toBeNull()
-      expect(screen.queryByRole('button', { name: '이전 단계' })).toBeNull()
-    } else await chooseFactor('AI 모델')
-    expect(screen.getByRole('combobox', { name: /^후보 1/ })).toHaveTextContent('Model 1')
-    expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('Model 2')
-    expect(screen.queryByRole('combobox', { name: /^후보 3/ })).toBeNull()
-    expect(fixture.calls).toContain('GetComparisonPairs')
-    expect(fixture.estimates).toHaveLength(0)
-    expect(fixture.admissions).toHaveLength(0)
-    expect(fixture.publications).toHaveLength(0)
-  },
-)
+it('prefills exactly the eligible saved A/B pair for a new two-model test without spending', async () => {
+  const fixture = createWritingTestStudioFixture({ comparisonPairs: [savedPair(Stage.WRITE)] })
+  mount('/tests?stage=write', fixture)
+  await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+  await chooseFactor('AI 모델')
+  expect(await screen.findByRole('checkbox', { name: 'Model 1' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 2' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 3' })).not.toBeChecked()
+  expect(screen.getByText('2 / 2개 선택')).toBeVisible()
+  expect(fixture.calls).toContain('GetComparisonPairs')
+  expect(fixture.estimates).toHaveLength(0)
+  expect(fixture.admissions).toHaveLength(0)
+  expect(fixture.publications).toHaveLength(0)
+})
 it('keeps an owner/entry recovered test draft ahead of a newly changed saved pair', async () => {
   const options = { comparisonPairs: [savedPair(Stage.WRITE)] }
   const fixture = createWritingTestStudioFixture(options)
@@ -109,14 +97,17 @@ it('keeps an owner/entry recovered test draft ahead of a newly changed saved pai
   mount('/tests?draft=retained-work', fixture)
   await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
   await chooseFactor('AI 모델', user)
-  await chooseOption(user, screen.getByRole('combobox', { name: /^후보 1/ }), 'Model 3')
-  await chooseOption(user, screen.getByRole('combobox', { name: /^후보 2/ }), 'Model 4')
+  await user.click(await screen.findByRole('checkbox', { name: 'Model 1' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Model 2' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Model 3' }))
+  await user.click(screen.getByRole('checkbox', { name: 'Model 4' }))
   reloadAfter(cleanup)
   options.comparisonPairs = [savedPair(Stage.WRITE, 'model-4', 'model-5')]
   mount('/tests?draft=retained-work', fixture)
   await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
-  expect(await screen.findByRole('combobox', { name: /^후보 1/ })).toHaveTextContent('Model 3')
-  expect(screen.getByRole('combobox', { name: /^후보 2/ })).toHaveTextContent('Model 4')
+  expect(await screen.findByRole('checkbox', { name: 'Model 3' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 4' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 1' })).not.toBeChecked()
   expect(fixture.estimates).toHaveLength(0)
   expect(fixture.admissions).toHaveLength(0)
 })
@@ -130,10 +121,10 @@ it.each([4, 8, 16] as const)(
     mount(`/tests?count=${count}`, fixture)
     await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
     await chooseFactor('AI 모델')
-    for (let index = 1; index <= count; index++)
-      expect(
-        screen.getByRole('combobox', { name: new RegExp(`^후보 ${index}(?:\\s|$)`) }),
-      ).toHaveTextContent('선택해 주세요')
+    expect(await screen.findByText(`0 / ${count}개 선택`)).toBeVisible()
+    expect(screen.getAllByRole('checkbox').some((box) => (box as HTMLInputElement).checked)).toBe(
+      false,
+    )
     expect(fixture.calls).not.toContain('GetComparisonPairs')
     expect(fixture.estimates).toHaveLength(0)
     expect(fixture.admissions).toHaveLength(0)
@@ -168,12 +159,8 @@ it('preloads the actual source context before authoring and quotes its real revi
   mount('/tests?count=4&source=owned-source', fixture)
   await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
   await chooseFactor('AI 모델')
-  for (let index = 0; index < 4; index++) {
-    await userEvent.click(
-      screen.getByRole('combobox', { name: new RegExp(`^후보 ${index + 1}(?:\\s|$)`) }),
-    )
-    await userEvent.click(screen.getByRole('option', { name: `Model ${index + 1}` }))
-  }
+  for (let index = 0; index < 4; index++)
+    await userEvent.click(await screen.findByRole('checkbox', { name: `Model ${index + 1}` }))
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
   expect(await screen.findByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'Real recorded material',

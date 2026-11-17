@@ -1,10 +1,9 @@
 import { ReturnIcon, StepBarActions, StepBarReason } from '@/shared/ui'
-import { useWritingTestTranslation } from '@/features/writing-test'
+import { ModelContestantList, useWritingTestTranslation } from '@/features/writing-test'
 import {
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,7 +16,9 @@ import {
   useStageSelection,
   filterForStage,
   modelChoiceIssue,
+  postCreditLabel,
   refKey,
+  stagePostFigure,
   type CatalogModel,
 } from '@/entities/model-catalog'
 import { useVoices } from '@/entities/voice'
@@ -82,6 +83,8 @@ const SETTING_KIND: Record<Exclude<TestFactor, 'model'>, TestSettingKind> = {
   guideline: 'post-guideline',
 }
 const COUNTS: readonly TestCount[] = [2, 4, 8, 16]
+/** A writing test's model factor is always the write stage; photo reading is its own test (MODEL-97). */
+const MODEL_STAGE: TestStage = 'write'
 interface SettingChoice {
   id: string
   name: string
@@ -144,8 +147,6 @@ function OwnedStudio({
   const flow = useWritingTestFlow({ ownerId, seedKey, initialDraft: initialPlan, testId, client })
   const plan = flow.context.draft ?? initialPlan
   const test = flow.context.test
-  // The photo-reading comparison: AIs are its only factor.
-  const observing = plan.factor === 'model' && plan.modelStage === 'observe'
   const kind: TestSettingKind =
     plan.factor === 'model' ? 'writing-voice' : SETTING_KIND[plan.factor]
   const preparation = useCandidatePreparation({
@@ -176,12 +177,6 @@ function OwnedStudio({
   const sourceName = source.data?.name
   const { send } = flow
   const draft = useCallback((next: WritingTestPlan) => send({ type: 'DRAFT', draft: next }), [send])
-  // Photo reading compares AIs and nothing else, so it has no "what to compare" question: it opens
-  // on its candidates (owner 2026-11-16). Before paint, so the question never flashes.
-  const { sendPresentation } = flow
-  useLayoutEffect(() => {
-    if (observing && flow.view === 'factor') sendPresentation({ type: 'NEXT' })
-  }, [observing, flow.view, sendPresentation])
   const context = (patch: Partial<WritingTestPlan['context']>) =>
     draft({ ...plan, context: { ...plan.context, ...patch } })
   const prepBusy = ['quoting', 'creating', 'starting', 'reading', 'running', 'cancelling'].includes(
@@ -223,9 +218,13 @@ function OwnedStudio({
   const modelOptions = (stage: TestStage) =>
     filterForStage(models.models, stage).map((m) => {
       const issue = modelIssue(m, stage)
+      const figure = stagePostFigure(m, stage)
+      const cost =
+        m.access?.[stage]?.grade === 'free' ? t('free') : figure ? postCreditLabel(figure) : ''
+      const named = cost ? `${m.label} · ${cost}` : m.label
       return {
         value: refKey(m.ref),
-        label: issue ? `${m.label} · ${issue}` : m.label,
+        label: issue ? `${named} · ${issue}` : named,
         disabled: !!issue,
       }
     })
@@ -234,15 +233,12 @@ function OwnedStudio({
     plan.entrants.some(
       (entrant) =>
         entrant.type === 'model' &&
-        !filterForStage(models.models, plan.modelStage).some(
-          (model) =>
-            refKey(model.ref) === refKey(entrant.model) && !modelIssue(model, plan.modelStage),
+        !filterForStage(models.models, MODEL_STAGE).some(
+          (model) => refKey(model.ref) === refKey(entrant.model) && !modelIssue(model, MODEL_STAGE),
         ),
     )
-  const writerFixed = !(plan.factor === 'model' && plan.modelStage === 'write')
-  const observerFixed =
-    plan.context.material.attachmentIds.length > 0 &&
-    !(plan.factor === 'model' && plan.modelStage === 'observe')
+  const writerFixed = plan.factor !== 'model'
+  const observerFixed = plan.context.material.attachmentIds.length > 0
   const placeholder = useCallback(
     (): TestEntrant =>
       plan.factor === 'model'
@@ -257,11 +253,8 @@ function OwnedStudio({
     const current = plan.entrants[position]
     if (current?.type === 'authoring' && choiceKey(current) === value) entrant = current
     else if (plan.factor === 'model') {
-      const model = filterForStage(models.models, plan.modelStage).find(
-        (m) => refKey(m.ref) === value,
-      )
-      if (model && !modelIssue(model, plan.modelStage))
-        entrant = { type: 'model', model: model.ref }
+      const model = filterForStage(models.models, MODEL_STAGE).find((m) => refKey(m.ref) === value)
+      if (model && !modelIssue(model, MODEL_STAGE)) entrant = { type: 'model', model: model.ref }
     } else {
       const owned = choices.find((c) => c.id === value)
       if (owned)
@@ -371,8 +364,8 @@ function OwnedStudio({
     }
     const { material } = plan.context
     const hasAttachments = material.attachmentIds.length > 0
-    if (!hasAttachments && (observing || !material.text.trim()))
-      refuse('test-material', t('material'), t(observing ? 'requiredObserver' : 'requiredMaterial'))
+    if (!hasAttachments && !material.text.trim())
+      refuse('test-material', t('material'), t('requiredMaterial'))
     const length = plan.context.targetLength
     if (
       !Number.isInteger(length) ||
@@ -449,19 +442,11 @@ function OwnedStudio({
     if (flow.phase !== 'editing' || flow.context.test) return
     const next = { ...plan.context }
     let changed = false
-    if (
-      !(plan.factor === 'model' && plan.modelStage === 'write') &&
-      !next.writeModel &&
-      writer.selected
-    ) {
+    if (plan.factor !== 'model' && !next.writeModel && writer.selected) {
       next.writeModel = writer.selected
       changed = true
     }
-    if (
-      !(plan.factor === 'model' && plan.modelStage === 'observe') &&
-      !next.observeModel &&
-      observer.selected
-    ) {
+    if (!next.observeModel && observer.selected) {
       next.observeModel = observer.selected
       changed = true
     }
@@ -794,7 +779,7 @@ function OwnedStudio({
                     draft({
                       ...plan,
                       factor,
-                      modelStage: factor === 'model' ? plan.modelStage : 'write',
+                      modelStage: MODEL_STAGE,
                       entrants: [],
                       context: {
                         ...plan.context,
@@ -802,10 +787,7 @@ function OwnedStudio({
                         templateId: factor === 'template' ? '' : plan.context.templateId,
                         guidelineSlotId:
                           factor === 'guideline' ? WRITING_TEST_NEW_GUIDELINE_SLOT : '',
-                        writeModel:
-                          factor === 'model' && plan.modelStage === 'write'
-                            ? undefined
-                            : (writer.selected ?? undefined),
+                        writeModel: factor === 'model' ? undefined : (writer.selected ?? undefined),
                       },
                     })
                   setAttempted(false)
@@ -871,30 +853,6 @@ function OwnedStudio({
               appliedPreparation.current = ''
             }}
           />
-          {plan.factor === 'model' && (
-            <WritingSelect
-              label={t('modelStage')}
-              disabled={prepLocked}
-              value={plan.modelStage}
-              options={(['write', 'observe'] as const).map((stage) => ({
-                value: stage,
-                label: t(`stage.${stage}`),
-              }))}
-              onChange={(value) =>
-                draft({
-                  ...plan,
-                  modelStage: value as TestStage,
-                  entrants: [],
-                  context: {
-                    ...plan.context,
-                    writeModel: value === 'write' ? undefined : (writer.selected ?? undefined),
-                    observeModel:
-                      value === 'observe' ? undefined : (observer.selected ?? undefined),
-                  },
-                })
-              }
-            />
-          )}
           {plan.factor !== 'model' && <Typography variant="body">{t('slotHelp')}</Typography>}
           {
             <>
@@ -919,35 +877,54 @@ function OwnedStudio({
                   </Button>
                 </Notice>
               )}
-              <div className="grid min-w-0 grid-cols-2 gap-4">
-                {Array.from({ length: plan.count }, (_, index) => (
-                  <WritingSelect
-                    key={index}
-                    label={t('contender', { number: index + 1 })}
-                    value={emptySlot(plan.entrants[index]) ? '' : choiceKey(plan.entrants[index])}
-                    options={[
-                      { value: '', label: t(plan.factor === 'model' ? 'choose' : 'autoAI') },
-                      ...(plan.entrants[index]?.type === 'authoring'
-                        ? [
-                            {
-                              value: choiceKey(plan.entrants[index]),
-                              label: `${t('generatedCandidate')} · ${preparedMetadata(plan.entrants[index])?.name ?? t('preparedSlot')}`,
-                            },
-                          ]
-                        : []),
-                      ...(plan.factor === 'model'
-                        ? modelOptions(plan.modelStage)
-                        : choices.map((c) => ({ value: c.id, label: c.name }))),
-                    ]}
-                    disabled={prepLocked}
-                    onChange={(value) => choose(index, value)}
-                  />
-                ))}
-              </div>
+              {plan.factor === 'model' ? (
+                <ModelContestantList
+                  id="test-model-contestants"
+                  stage={MODEL_STAGE}
+                  count={plan.count}
+                  models={models.models}
+                  selected={plan.entrants.flatMap((entrant) =>
+                    entrant.type === 'model' && !emptySlot(entrant) ? [entrant.model] : [],
+                  )}
+                  issue={(model) => modelIssue(model, MODEL_STAGE)}
+                  disabled={prepLocked}
+                  onChange={(refs) =>
+                    draft({
+                      ...plan,
+                      modelStage: MODEL_STAGE,
+                      entrants: refs.map((model) => ({ type: 'model', model })),
+                    })
+                  }
+                />
+              ) : (
+                <div className="grid min-w-0 grid-cols-2 gap-4">
+                  {Array.from({ length: plan.count }, (_, index) => (
+                    <WritingSelect
+                      key={index}
+                      label={t('contender', { number: index + 1 })}
+                      value={emptySlot(plan.entrants[index]) ? '' : choiceKey(plan.entrants[index])}
+                      options={[
+                        { value: '', label: t('autoAI') },
+                        ...(plan.entrants[index]?.type === 'authoring'
+                          ? [
+                              {
+                                value: choiceKey(plan.entrants[index]),
+                                label: `${t('generatedCandidate')} · ${preparedMetadata(plan.entrants[index])?.name ?? t('preparedSlot')}`,
+                              },
+                            ]
+                          : []),
+                        ...choices.map((c) => ({ value: c.id, label: c.name })),
+                      ]}
+                      disabled={prepLocked}
+                      onChange={(value) => choose(index, value)}
+                    />
+                  ))}
+                </div>
+              )}
               {!choices.length && plan.factor !== 'model' && (
                 <Typography variant="body">{t('emptyChoices')}</Typography>
               )}
-              {plan.factor === 'model' && !modelOptions(plan.modelStage).length && (
+              {plan.factor === 'model' && !modelOptions(MODEL_STAGE).length && (
                 <Typography variant="body">
                   {t('noModels')}{' '}
                   <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
@@ -1046,23 +1023,20 @@ function OwnedStudio({
           <StepBar ariaLabel={title}>
             <StepBarProblem id={`${headingId}-choices-reason`} text={choicesReason} />
             <StepBarActions className="flex-wrap">
-              {/* The photo comparison's first screen is this one; its way out is the page's ←. */}
-              {(!observing || preparation.phase === 'quoted') && (
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={t('back')}
-                  title={t('back')}
-                  disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
-                  onClick={() =>
-                    preparation.phase === 'quoted'
-                      ? preparation.send({ type: 'BACK' })
-                      : flow.sendPresentation({ type: 'BACK' })
-                  }
-                >
-                  <ReturnIcon />
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('back')}
+                title={t('back')}
+                disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
+                onClick={() =>
+                  preparation.phase === 'quoted'
+                    ? preparation.send({ type: 'BACK' })
+                    : flow.sendPresentation({ type: 'BACK' })
+                }
+              >
+                <ReturnIcon />
+              </Button>
               {['quoted', 'created'].includes(preparation.phase) && plan.factor !== 'model' ? (
                 <Button
                   variant="cta"
