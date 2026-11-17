@@ -210,14 +210,30 @@ it('opens the stage picker free first and applies 품질 먼저 only when picked
       .map(
         (radio) => radio.textContent?.match(/(Free|Value One|Value Two|Balanced|Top|Plain)/)?.[0],
       )
+  const headings = () =>
+    sheet.queryAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
   await waitFor(() =>
     expect(order()).toEqual(['Free', 'Value One', 'Value Two', 'Balanced', 'Top', 'Plain']),
   )
+  // Compact rows under one heading per grade (MODEL-96 →MODEL-98).
+  expect(headings()).toEqual(['무료', '가성비', '밸런스', '최고', '등급 미정'])
   for (const lens of ['품질 먼저', '균형', '가격 먼저'])
     expect(sheet.getByRole('tab', { name: lens })).toHaveAttribute('aria-selected', 'false')
   await user.click(sheet.getByRole('tab', { name: '품질 먼저' }))
   expect(sheet.getByRole('tab', { name: '품질 먼저' })).toHaveAttribute('aria-selected', 'true')
   expect(order()).toEqual(['Top', 'Balanced', 'Value One', 'Value Two', 'Free', 'Plain'])
+  expect(headings()).toEqual(['최고', '밸런스', '가성비', '무료', '등급 미정'])
+  // 균형 puts the lower of two equally near grades first, so each grade keeps one heading.
+  await user.click(sheet.getByRole('tab', { name: '균형' }))
+  expect(order()).toEqual(['Balanced', 'Value One', 'Value Two', 'Free', 'Top', 'Plain'])
+  expect(headings()).toEqual(['밸런스', '가성비', '무료', '최고', '등급 미정'])
+  // 가격 먼저 mixes the grades: no headings, and each row names its own grade.
+  await user.click(sheet.getByRole('tab', { name: '가격 먼저' }))
+  expect(headings()).toEqual([])
+  expect(sheet.getByRole('radio', { name: /Value One/ })).toHaveAccessibleName(
+    /^Value One 가성비 · /,
+  )
+  expect(sheet.getByRole('radio', { name: /Free/ })).toHaveAccessibleName(/^Free 무료 · /)
 })
 
 // MODEL-24: a failed catalog read is a failure with a retry, never 고르지 않음 — that would read

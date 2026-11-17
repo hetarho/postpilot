@@ -1,10 +1,8 @@
-import { SurfaceButton } from '@/shared/ui'
 import { useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { clsx } from 'clsx'
-import { Check } from 'lucide-react'
 import {
   LEVELS,
+  ModelChoiceList,
   levelOf,
   modelChoiceIssue,
   orderModelsForStage,
@@ -26,7 +24,6 @@ import {
   SegmentedControl,
   Sheet,
   Typography,
-  cardStyles,
   typographyStyles,
 } from '@/shared/ui'
 
@@ -64,7 +61,15 @@ function orderByLens(
         : levelRank(model, stage) < 0
           ? LEVELS.length
           : Math.abs(levelRank(model, stage) - middle)
-  return [...models].sort((a, b) => key(a) - key(b))
+  // 균형 ties two grades equally near 밸런스; the lower one goes first so each grade stays under
+  // one heading (MODEL-96). The ungraded share the last rank, as they do in every other lens.
+  const tie = (model: CatalogModel) =>
+    lens === 'balanced'
+      ? levelRank(model, stage) < 0
+        ? LEVELS.length
+        : levelRank(model, stage)
+      : 0
+  return [...models].sort((a, b) => key(a) - key(b) || tie(a) - tie(b))
 }
 
 /** A failed catalog or selections read is its own answer (MODEL-24): neither one may read as
@@ -82,9 +87,10 @@ function useCatalogRead() {
 }
 
 /** Guide: one stage's AI as a row — the plain name of the stage, the model in use with its grade
- *  and what one post costs — whose 바꾸기 opens the picker as a bottom sheet. The picker is a
- *  list of big radio cards, opening free first and resorted by what the owner says matters first
- *  (품질 · 균형 · 가격), and a tap saves the choice at once: the same save the old dropdown made. */
+ *  and what one post costs — whose 바꾸기 opens the picker as a bottom sheet. The picker is the
+ *  shared compact model list under grade headings, opening free first and resorted by what the
+ *  owner says matters first (품질 · 균형 · 가격), and a tap saves the choice at once: the same save
+ *  the old dropdown made. */
 export function StageModelRow({ stage }: { stage: StageName }) {
   const { t } = useTranslation(['models', 'common'])
   const active = useStageSelection(stage)
@@ -166,7 +172,8 @@ export function StageModelRow({ stage }: { stage: StageName }) {
 }
 
 /** The picker itself: a lens switch, none of whose lenses is on until the owner picks one, and
- *  the stage's models as radio cards. */
+ *  the stage's models as radio rows under grade headings — none under 가격 먼저, whose order
+ *  mixes the grades, so each row names its own. */
 export function ModelPicker({ stage }: { stage: StageName }) {
   const { t } = useTranslation(['models', 'common'])
   const active = useStageSelection(stage)
@@ -205,61 +212,22 @@ export function ModelPicker({ stage }: { stage: StageName }) {
       <div
         role="radiogroup"
         aria-label={t('picker.choices', { stage: t(`picker.stage.${stage}`) })}
-        className="flex flex-col gap-3"
       >
-        {models.map((model) => {
-          const key = refKey(model.ref)
-          const issue = modelChoiceIssue(model, stage)
-          const level = levelOf(model, stage)
-          const figure = stagePostFigure(model, stage)
-          const free = model.access?.[stage]?.grade === 'free'
-          const checked = (pendingKey || selectedKey) === key
-          return (
-            <SurfaceButton
-              presentation="card"
-              padding="none"
-              key={key}
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              disabled={!!issue || save.isPending}
-              onClick={() => void save.save(stage, model.ref)}
-              className={cardStyles({
-                padding: 'sm',
-                interactive: !issue,
-                className: clsx(
-                  'flex w-full items-center gap-3 text-left disabled:cursor-not-allowed',
-                  checked && 'ring-interaction-focus ring-2',
-                  issue && 'opacity-60',
-                ),
-              })}
-            >
-              <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="flex flex-wrap items-center gap-2">
-                  {level && <Badge tone="accent">{t(`level.${level}`)}</Badge>}
-                  {checked && <Badge tone="success">{t('picker.inUse')}</Badge>}
-                </span>
-                <span
-                  className={typographyStyles({ variant: 'fieldTitle', className: 'break-words' })}
-                >
-                  {model.label}
-                </span>
-                <span className={typographyStyles({ variant: 'meta' })}>
-                  {issue || (free ? t('picker.free') : figure ? postCreditLabel(figure) : '')}
-                </span>
-              </span>
-              <span
-                aria-hidden="true"
-                className={clsx(
-                  'flex size-7 shrink-0 items-center justify-center rounded-full',
-                  checked ? 'bg-button-cta-bg text-button-cta-fg' : 'bg-progress-step-todo',
-                )}
-              >
-                {checked && <Check className="size-4" />}
-              </span>
-            </SurfaceButton>
-          )
-        })}
+        <ModelChoiceList
+          stage={stage}
+          models={models}
+          mode="radio"
+          grouped={lens !== 'price'}
+          checked={(model) => (pendingKey || selectedKey) === refKey(model.ref)}
+          issue={(model) => modelChoiceIssue(model, stage)}
+          onPick={(model) => void save.save(stage, model.ref)}
+          disabled={save.isPending}
+          mark={(model) =>
+            (pendingKey || selectedKey) === refKey(model.ref) && (
+              <Badge tone="success">{t('picker.inUse')}</Badge>
+            )
+          }
+        />
       </div>
       {save.failure && (
         <Typography variant="body" as="div" role="alert" className="text-field-error">

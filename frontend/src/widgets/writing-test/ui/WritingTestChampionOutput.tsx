@@ -7,7 +7,7 @@ import {
 } from '@/entities/writing-test'
 import { Notice, Typography } from '@/shared/ui'
 import { writingTestCandidateLabel } from '../lib/candidate-label'
-import { WritingTestObservationRows } from './WritingTestObservationPair'
+import { WritingTestObservationViewer } from './WritingTestObservationPair'
 import { WritingTestPost } from './WritingTestPair'
 
 /** Read and copy the server-confirmed champion without applying it or creating a new match. */
@@ -80,7 +80,7 @@ function ChampionObservations({
       </Typography>
       {readable ? (
         <div className="mt-4">
-          <WritingTestObservationRows test={test} columns={[{ candidate: champion, label }]} />
+          <WritingTestObservationViewer test={test} columns={[{ candidate: champion, label }]} />
         </div>
       ) : (
         <>

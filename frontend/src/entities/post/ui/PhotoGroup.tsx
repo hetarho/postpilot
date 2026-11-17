@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { GalleryLayout, type Block } from '@/shared/api'
-import { prefersReducedMotion } from '@/shared/lib'
-import { Button, RotatedImage, Typography } from '@/shared/ui'
+import { Button, Carousel, RotatedImage, Typography } from '@/shared/ui'
 import type { PostImage } from '@/entities/image/@x/post'
 
 interface PhotoGroupProps {
@@ -110,7 +109,7 @@ export function PhotoGroup({
   )
 }
 
-/** 슬라이드: one photo at a time in a horizontal snap strip (THEME-25's strip exception), with the
+/** 슬라이드: one photo at a time in the shared snap strip (THEME-25's strip exception), with the
  *  position and previous/next buttons beside the swipe — a swipe alone is unreachable with a
  *  mouse (POST-105). */
 function SlideStrip({
@@ -124,66 +123,25 @@ function SlideStrip({
 }) {
   const { t } = useTranslation('posts')
   const [current, setCurrent] = useState(0)
-  const stripRef = useRef<HTMLDivElement>(null)
-
-  // An IntersectionObserver rather than a scroll handler, as the contact sheet does: the slide
-  // that is mostly on screen is the one the snap settled on, and nothing reads layout per frame.
-  useEffect(() => {
-    const strip = stripRef.current
-    if (!strip || typeof IntersectionObserver === 'undefined') return
-    const slides = Array.from(strip.children)
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0]
-        if (!visible) return
-        const index = slides.indexOf(visible.target)
-        if (index >= 0) setCurrent(index)
-      },
-      { root: strip, threshold: 0.6 },
-    )
-    for (const slide of slides) observer.observe(slide)
-    return () => observer.disconnect()
-  }, [files])
-
-  const go = (index: number) => {
-    const strip = stripRef.current
-    if (!strip) return
-    // The observer moves the indicator once the snap settles; setting it here as well keeps the
-    // buttons right where no observer runs.
-    setCurrent(index)
-    strip.scrollTo({
-      left: index * strip.clientWidth,
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-    })
-  }
 
   return (
     <div>
-      <div
-        ref={stripRef}
-        className="flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-lg"
+      <Carousel
+        index={current}
+        onIndexChange={setCurrent}
+        className="rounded-lg"
+        slideClassName={custom ? undefined : 'bg-surface-recessed aspect-square'}
       >
         {files.map((file, position) => (
-          <div
-            key={`${file}:${position}`}
-            className={
-              custom
-                ? 'w-full shrink-0 snap-center'
-                : 'bg-surface-recessed aspect-square w-full shrink-0 snap-center'
-            }
-          >
-            {cell(file, position, 'contain')}
-          </div>
+          <Fragment key={`${file}:${position}`}>{cell(file, position, 'contain')}</Fragment>
         ))}
-      </div>
+      </Carousel>
       <div className="mt-2 flex items-center justify-between gap-2">
         <Button
           variant="ghost"
           aria-label={t('photoGroup.previous')}
           disabled={current === 0}
-          onClick={() => go(current - 1)}
+          onClick={() => setCurrent(current - 1)}
         >
           ‹
         </Button>
@@ -194,7 +152,7 @@ function SlideStrip({
           variant="ghost"
           aria-label={t('photoGroup.next')}
           disabled={current >= files.length - 1}
-          onClick={() => go(current + 1)}
+          onClick={() => setCurrent(current + 1)}
         >
           ›
         </Button>

@@ -13,7 +13,7 @@ UI that does the same job is ONE component, used everywhere that job appears. Ne
 - A cut-down substitute is a bug, not a simplification: a count line ("N장 준비됨", "2장 올라감") in place of the photo strip, a status word ("관찰 완료") in place of the result it stands for, a second picker beside the existing one. A surface may leave out actions it cannot support (pass no handler); it never re-implements the ones it keeps.
 - New behaviour goes into the shared component as an optional prop, never into a copy.
 - Reviews refuse a change that adds a parallel component for a job an existing one already does.
-- Reference: the photo observation test's photos step is `PhotoAttachments` (`features/upload-photos`), the writing editor's own photo slot; a test's contestant list reads results with the review's renderers (`WritingTestObservationRows`, `WritingTestPost`).
+- Reference: the photo observation test's photos step is `PhotoAttachments` (`features/upload-photos`), the writing editor's own photo slot; a test's contestant list reads results with the review's renderers (`WritingTestObservationViewer`, `WritingTestPost`).
 
 <!-- gusta:begin managed by gusta: do not edit inside this block (gusta-update rewrites it with "gusta agent-block"); write project rules outside it -->
 ## GUSTA

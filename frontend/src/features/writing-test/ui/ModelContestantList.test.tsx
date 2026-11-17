@@ -96,8 +96,11 @@ it('lists the stage rows in grade order with credits per post, 무료 and an unk
   expect(screen.getByRole('checkbox', { name: 'no-figure' })).toHaveAccessibleDescription(
     '가격 확인 불가',
   )
-  expect(screen.getByText('가성비')).toBeVisible()
-  expect(screen.getByText('최고')).toBeVisible()
+  // Compact rows under one heading per grade, never a card per model with its own grade badge.
+  expect(
+    screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent),
+  ).toEqual(['무료', '가성비', '고급', '최고'])
+  expect(screen.getAllByText('고급')).toHaveLength(1)
 })
 
 it('keeps a locked model as a disabled row stating its reason', () => {

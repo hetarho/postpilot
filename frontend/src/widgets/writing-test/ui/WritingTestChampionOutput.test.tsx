@@ -124,17 +124,29 @@ it('retains an exact selectable champion copy fallback when clipboard permission
   expect(fallback).toHaveFocus()
 })
 
-it('names the revealed champion and reads its observations photo by photo with no post action or export', () => {
+it('names the revealed champion and reads its observations photo by photo with no post action or export', async () => {
   const test = completedObservationFixture()
   render(<WritingTestChampionOutput test={test} ownerId="alice" />)
   const section = screen.getByRole('region', { name: '우승 관찰 결과' })
   expect(within(section).getByRole('heading', { name: '우승 관찰 결과' })).toBeVisible()
   expect(within(section).getAllByText(/Frozen model 1/).length).toBeGreaterThan(0)
   expect(within(section).queryByText(/Frozen model 2/)).not.toBeInTheDocument()
-  expect(within(section).getAllByRole('img')).toHaveLength(2)
-  expect(section).toHaveTextContent('Scene 0 of dish.jpg')
-  expect(section).toHaveTextContent('Scene 0 of sign.jpg')
-  expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  expect(within(section).getAllByRole('img')).toHaveLength(1)
+  expect(within(section).getAllByRole('img', { hidden: true })).toHaveLength(2)
+  expect(
+    within(section).getByRole('region', { name: '후보 A · 사진 1 · Frozen model 1' }),
+  ).toHaveTextContent('Scene 0 of dish.jpg')
+  // One column: the photo switcher is the only control — no candidate switcher, post action or
+  // export.
+  expect(
+    screen
+      .getAllByRole('button')
+      .map((button) => button.getAttribute('aria-label') || button.textContent),
+  ).toEqual(['이전 사진', '사진 1 / 2', '다음 사진'])
+  await userEvent.click(screen.getByRole('button', { name: '다음 사진' }))
+  expect(
+    within(section).getByRole('region', { name: '후보 A · 사진 2 · Frozen model 1' }),
+  ).toHaveTextContent('Scene 0 of sign.jpg')
   expect(screen.queryByText(/네이버|글 복사|원본 글|확정한 글/)).not.toBeInTheDocument()
 })
 

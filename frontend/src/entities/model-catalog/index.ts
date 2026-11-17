@@ -12,6 +12,7 @@ export type {
 } from './model/speech'
 export { useSpeechProfiles, useAdminSpeechProfiles } from './api/useSpeechProfiles'
 export { SpeechProfilePicker } from './ui/SpeechProfilePicker'
+export { ModelChoiceList, type ModelChoiceListProps } from './ui/ModelChoiceList'
 export { useAssignEstimatorCombo } from './api/useAssignEstimatorCombo'
 export type {
   AdminCatalogEntry,

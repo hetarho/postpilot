@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   writingTestCandidateReadable,
   writingTestPayloadAvailable,
@@ -8,7 +9,7 @@ import {
   type WritingTestPhoto,
 } from '@/entities/writing-test'
 import { currentWritingTestMatch, useWritingTestTranslation } from '@/features/writing-test'
-import { ActionBar, Button, Notice, Typography } from '@/shared/ui'
+import { ActionBar, Button, Carousel, Menu, Notice, Typography, cardStyles } from '@/shared/ui'
 import { writingTestCandidateLabel } from '../lib/candidate-label'
 
 const readyCandidates = (test: WritingTest) =>
@@ -28,8 +29,9 @@ interface WritingTestObservationPairProps {
   onWinner: (candidateId: string) => void
 }
 
-/** Exactly the server's current pair, photo by photo. Reading never starts work or decides a match;
- *  the contestants stay blind until the champion is confirmed (MODEL-32). */
+/** Exactly the server's current pair, one photo and one candidate's card at a time. Reading never
+ *  starts work or decides a match; the contestants stay blind until the champion is confirmed
+ *  (MODEL-32). */
 export function WritingTestObservationPair({
   test,
   match,
@@ -91,7 +93,7 @@ export function WritingTestObservationPair({
         {t('observation.compareHelp')}
       </Typography>
       <div role="group" aria-label={t('observation.compareTitle')} className="mt-6">
-        <WritingTestObservationRows test={test} columns={columns} />
+        <WritingTestObservationViewer key={match.id} test={test} columns={columns} />
       </div>
       <ActionBar ariaLabel={t('observation.compareTitle')}>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -114,9 +116,12 @@ export function WritingTestObservationPair({
   )
 }
 
-/** One row per frozen photo, with each column's observation of it: side by side from `sm:` up,
- *  stacked under the photo on phones so the same photo is never compared out of view. */
-export function WritingTestObservationRows({
+/** One frozen photo at a time, held still beside one column's observation card, named like
+ *  후보 A · 사진 3 (MODEL-97). The photo switcher and the candidate switcher each step previous/next
+ *  and open a menu of every photo or candidate; a sideways swipe of the card moves to the other
+ *  candidate. Every photo and every card stays mounted, so a switch shows at once. One column —
+ *  the champion, a done contestant — reads the same viewer without the candidate switcher. */
+export function WritingTestObservationViewer({
   test,
   columns,
 }: {
@@ -124,43 +129,132 @@ export function WritingTestObservationRows({
   columns: ObservationColumn[]
 }) {
   const { t } = useWritingTestTranslation()
+  const photos = test.photos ?? []
+  const [photoIndex, setPhotoIndex] = useState(0)
+  const [columnIndex, setColumnIndex] = useState(0)
+  const current = Math.min(photoIndex, Math.max(photos.length - 1, 0))
+  const column = Math.min(columnIndex, Math.max(columns.length - 1, 0))
+  const photo = photos[current]
+  if (!photo || !columns.length) return null
   return (
-    <ol className="divide-divider grid gap-0 divide-y">
-      {(test.photos ?? []).map((photo, index) => (
-        <li key={photo.id} className="grid min-w-0 gap-4 py-6 first:pt-0">
-          <Typography variant="fieldTitle" as="h3" className="break-words">
-            {t('observation.photoName', { number: index + 1, name: photo.filename })}
-          </Typography>
-          <ObservationPhoto photo={photo} />
-          <div className={`grid items-start gap-4 ${columns.length > 1 ? 'sm:grid-cols-2' : ''}`}>
-            {columns.map(({ candidate, label }) => (
-              <ObservationCell
-                key={candidate.id}
-                test={test}
-                candidate={candidate}
-                label={label}
-                photo={photo}
-              />
-            ))}
-          </div>
-        </li>
-      ))}
-    </ol>
+    <div className="grid min-w-0 gap-4 md:grid-cols-2 md:items-start">
+      <div className="flex min-w-0 flex-col gap-2">
+        <ObservationSwitcher
+          label={t('observation.photoMenu')}
+          previousLabel={t('observation.previousPhoto')}
+          nextLabel={t('observation.nextPhoto')}
+          triggerLabel={t('observation.photoPosition', {
+            current: current + 1,
+            total: photos.length,
+          })}
+          index={current}
+          options={photos.map((each, index) =>
+            t('observation.photoName', { number: index + 1, name: each.filename }),
+          )}
+          onChange={setPhotoIndex}
+        />
+        <div className="bg-surface-recessed flex h-64 min-w-0 items-center justify-center overflow-hidden rounded-lg sm:h-80">
+          {photos.map((each, index) => (
+            <ObservationPhoto key={each.id} photo={each} hidden={index !== current} />
+          ))}
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
+        {columns.length > 1 && (
+          <ObservationSwitcher
+            label={t('observation.candidateMenu')}
+            previousLabel={t('observation.previousCandidate')}
+            nextLabel={t('observation.nextCandidate')}
+            triggerLabel={t('candidate', { label: columns[column]!.label })}
+            index={column}
+            options={columns.map(({ label }) => t('candidate', { label }))}
+            onChange={setColumnIndex}
+          />
+        )}
+        <Carousel
+          index={column}
+          onIndexChange={setColumnIndex}
+          label={t('observation.cards')}
+          className="-mx-1 gap-3 p-1"
+        >
+          {columns.map(({ candidate, label }) => (
+            <ObservationCard
+              key={candidate.id}
+              test={test}
+              candidate={candidate}
+              label={label}
+              photo={photo}
+              number={current + 1}
+            />
+          ))}
+        </Carousel>
+      </div>
+    </div>
   )
 }
 
-function ObservationPhoto({ photo }: { photo: WritingTestPhoto }) {
+/** ‹ the current photo or candidate as a menu › — the previous and next steps stop at the ends. */
+function ObservationSwitcher({
+  label,
+  previousLabel,
+  nextLabel,
+  triggerLabel,
+  index,
+  options,
+  onChange,
+}: {
+  label: string
+  previousLabel: string
+  nextLabel: string
+  triggerLabel: string
+  index: number
+  options: readonly string[]
+  onChange: (index: number) => void
+}) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2">
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={previousLabel}
+        title={previousLabel}
+        disabled={index === 0}
+        onClick={() => onChange(index - 1)}
+      >
+        <ChevronLeft aria-hidden="true" className="size-5" />
+      </Button>
+      <Menu
+        label={label}
+        triggerLabel={triggerLabel}
+        triggerIcon={null}
+        value={String(index)}
+        options={options.map((option, position) => ({ value: String(position), label: option }))}
+        onChange={(value) => onChange(Number(value))}
+      />
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={nextLabel}
+        title={nextLabel}
+        disabled={index >= options.length - 1}
+        onClick={() => onChange(index + 1)}
+      >
+        <ChevronRight aria-hidden="true" className="size-5" />
+      </Button>
+    </div>
+  )
+}
+
+function ObservationPhoto({ photo, hidden }: { photo: WritingTestPhoto; hidden: boolean }) {
   const { t } = useWritingTestTranslation()
   // A signed view link can lapse while the page stays open; the frame then says so.
   const [failedUrl, setFailedUrl] = useState('')
   const url = photo.viewUrl ?? ''
   if (!url || failedUrl === url)
     return (
-      <div className="bg-surface-recessed rounded-lg p-4">
-        <Typography variant="label" as="p" role="status">
-          {t('observation.photoUnavailable')}
-        </Typography>
-      </div>
+      <Typography variant="label" as="p" role="status" hidden={hidden} className="p-4">
+        {t('observation.photoUnavailable')}
+      </Typography>
     )
   return (
     <img
@@ -168,34 +262,41 @@ function ObservationPhoto({ photo }: { photo: WritingTestPhoto }) {
       alt={t('observation.photoAlt', { name: photo.filename })}
       width={photo.width || undefined}
       height={photo.height || undefined}
-      className="bg-surface-recessed h-auto max-h-80 w-auto max-w-full rounded-lg object-contain"
+      hidden={hidden}
+      className="h-auto max-h-full w-auto max-w-full object-contain"
       onError={() => setFailedUrl(url)}
     />
   )
 }
 
-function ObservationCell({
+function ObservationCard({
   test,
   candidate,
   label,
   photo,
+  number,
 }: {
   test: WritingTest
   candidate: WritingTestCandidate
   label: string
   photo: WritingTestPhoto
+  number: number
 }) {
   const { t } = useWritingTestTranslation()
+  const titleId = useId()
   const observation = candidate.observations?.find((entry) => entry.file === photo.filename)
   const none = t('observation.absent')
   return (
-    <section aria-label={`${t('candidate', { label })} · ${photo.filename}`} className="min-w-0">
-      <Typography variant="label" as="p" className="text-content-primary break-words">
-        {t('candidate', { label })}
+    <section
+      aria-labelledby={titleId}
+      className={cardStyles({ padding: 'sm', className: 'h-full min-w-0 shadow-sm' })}
+    >
+      <Typography id={titleId} variant="fieldTitle" as="p" className="break-words">
+        {t('observation.cardTitle', { candidate: t('candidate', { label }), number })}
         {test.revealed && candidate.identity ? ` · ${candidate.identity.label}` : ''}
       </Typography>
       {observation ? (
-        <dl className="mt-2 grid gap-2">
+        <dl className="mt-3 grid gap-2">
           {[
             { key: 'scene', value: observation.scene || none },
             { key: 'mood', value: observation.mood || none },
@@ -214,7 +315,7 @@ function ObservationCell({
           ))}
         </dl>
       ) : (
-        <Typography variant="body" as="p" className="text-content-secondary mt-2">
+        <Typography variant="body" as="p" className="text-content-secondary mt-3">
           {t('observation.missing')}
         </Typography>
       )}

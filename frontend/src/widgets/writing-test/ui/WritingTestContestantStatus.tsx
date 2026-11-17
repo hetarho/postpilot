@@ -8,7 +8,7 @@ import {
 import { formatAppFailure } from '@/shared/lib/localization'
 import { Disclosure, Typography } from '@/shared/ui'
 import { writingTestCandidateLabel } from '../lib/candidate-label'
-import { WritingTestObservationRows } from './WritingTestObservationPair'
+import { WritingTestObservationViewer } from './WritingTestObservationPair'
 import { WritingTestPost } from './WritingTestPair'
 
 /** Each blind contestant by its letter as waiting, working, done or failed with its normalized
@@ -60,7 +60,7 @@ export function WritingTestContestantStatus({
                 >
                   <div className="pt-2 pb-4">
                     {unit === 'observation' ? (
-                      <WritingTestObservationRows test={test} columns={[{ candidate, label }]} />
+                      <WritingTestObservationViewer test={test} columns={[{ candidate, label }]} />
                     ) : (
                       <div lang={test.targetLanguage}>
                         <WritingTestPost

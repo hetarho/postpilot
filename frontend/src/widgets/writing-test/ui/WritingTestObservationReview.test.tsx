@@ -44,9 +44,12 @@ it('compares photo by photo, reveals the models, and adopts the champion as the 
   ).toBeVisible()
   expect(screen.getAllByRole('img').map((image) => image.getAttribute('src'))).toEqual([
     'https://storage.test/p1',
-    'https://storage.test/p2',
   ])
-  expect(screen.getByRole('region', { name: '후보 B · p2.jpg' })).toHaveTextContent('Scene 1')
+  expect(
+    screen.getAllByRole('img', { hidden: true }).map((image) => image.getAttribute('src')),
+  ).toEqual(['https://storage.test/p1', 'https://storage.test/p2'])
+  await userEvent.click(screen.getByRole('button', { name: '다음 사진' }))
+  expect(screen.getByRole('region', { name: '후보 B · 사진 2' })).toHaveTextContent('Scene 1')
   expect(screen.queryByText(/model-0|model-1|Frozen setting/)).not.toBeInTheDocument()
   expect(fixture.votes).toHaveLength(0)
 
@@ -59,7 +62,8 @@ it('compares photo by photo, reveals the models, and adopts the champion as the 
   ).toBeVisible()
   expect(screen.getAllByText(/Frozen setting 2/).length).toBeGreaterThan(0)
   const result = screen.getByRole('region', { name: '우승 관찰 결과' })
-  expect(within(result).getAllByRole('img')).toHaveLength(2)
+  expect(within(result).getAllByRole('img')).toHaveLength(1)
+  expect(within(result).getAllByRole('img', { hidden: true })).toHaveLength(2)
   expect(result).toHaveTextContent('Scene 1')
   // A photo test's champion never reaches a post: no application, copy or post-model wording.
   expect(

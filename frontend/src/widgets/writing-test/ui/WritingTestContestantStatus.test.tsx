@@ -42,9 +42,16 @@ it('opens a done contestant to its observation, photo by photo, without naming t
   expect(screen.queryByText('Scene 0 of dish.jpg')).toBeNull()
   await userEvent.click(open)
   expect(open).toHaveAttribute('aria-expanded', 'true')
-  expect(screen.getByText('Scene 0 of dish.jpg')).toBeInTheDocument()
-  expect(screen.getByText('Scene 0 of sign.jpg')).toBeInTheDocument()
+  expect(screen.getByRole('region', { name: '후보 A · 사진 1' })).toHaveTextContent(
+    'Scene 0 of dish.jpg',
+  )
   expect(screen.getByRole('img', { name: '비교용 사진 dish.jpg' })).toBeInTheDocument()
+  // The review's own viewer, one column: a photo switcher and no candidate switcher.
+  expect(screen.queryByRole('button', { name: '다음 후보' })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: '다음 사진' }))
+  expect(screen.getByRole('region', { name: '후보 A · 사진 2' })).toHaveTextContent(
+    'Scene 0 of sign.jpg',
+  )
   // Blind until the reveal (MODEL-32).
   expect(screen.queryByText(/Hidden provider/)).toBeNull()
   expect(screen.queryByText(/hidden-supplier/)).toBeNull()

@@ -7,6 +7,7 @@ import { typographyStyles } from '../typography/typographyStyles'
 export function ListGroup({
   heading,
   headingId,
+  headingLevel = 2,
   children,
   footer,
   className,
@@ -14,20 +15,23 @@ export function ListGroup({
   heading?: ReactNode
   /** The heading's id, for a `section`/`nav` that names itself by it. */
   headingId?: string
+  /** The heading's level, for a group that sits under a page's own section heading. */
+  headingLevel?: 2 | 3 | 4
   /** The rows: `li` elements (or any block children) carrying `listRowStyles`. */
   children: ReactNode
   footer?: ReactNode
   className?: string
 }) {
+  const Heading = `h${headingLevel}` as const
   return (
     <div className={twMerge('min-w-0', className)}>
       {heading && (
-        <h2
+        <Heading
           id={headingId}
           className={typographyStyles({ variant: 'groupLabel', className: 'mb-2 px-4' })}
         >
           {heading}
-        </h2>
+        </Heading>
       )}
       <ul className="bg-card-bg divide-divider divide-y overflow-hidden rounded-xl shadow-sm">
         {children}
