@@ -1389,7 +1389,7 @@ function OwnedStudio({
       )}
       {flow.view === 'work' && (
         <section className="mt-5 flex flex-1 flex-col gap-5">
-          {['running', 'starting', 'retrying'].includes(flow.phase) && (
+          {['running', 'refreshing', 'starting', 'retrying'].includes(flow.phase) && (
             <>
               <Typography variant="body" role="status">
                 {t(wording('progress', 'observation.progress'), {
@@ -1400,7 +1400,7 @@ function OwnedStudio({
               <Typography variant="body">{t('leaveHelp')}</Typography>
             </>
           )}
-          {test && <WritingTestContestantStatus test={test} />}
+          {test && <WritingTestContestantStatus test={test} ownerId={ownerId} />}
           <a href="/tests/history" className={buttonStyles({ variant: 'ghost' })}>
             {t('history')}
           </a>
@@ -1650,7 +1650,7 @@ function OwnedStudio({
             </Button>
           )}
           {test && ['partial', 'failed'].includes(flow.phase) && (
-            <WritingTestContestantStatus test={test} />
+            <WritingTestContestantStatus test={test} ownerId={ownerId} />
           )}
           {flow.phase === 'quoteExpired' && (
             <Button variant="cta" onClick={() => flow.send({ type: 'ESTIMATE' })}>

@@ -1143,3 +1143,29 @@ it('expires a photo test whose observations were purged and refuses its decision
   expect(api.decide).not.toHaveBeenCalled()
   ref.stop()
 })
+
+it('polls a running test in place, never through the loading screen, and still takes a cancel', async () => {
+  const running = test(2, { status: 'running' })
+  running.candidates[1] = { ...running.candidates[1]!, status: 'running', output: undefined }
+  const api = client(running)
+  const ref = actor(api, { testId: 'test' })
+  await waitFor(ref, (s) => s.matches('running'))
+  const seen: string[] = []
+  const subscription = ref.subscribe((snapshot) => seen.push(String(snapshot.value)))
+  let answer: (value: typeof running) => void = () => {}
+  vi.mocked(api.get).mockImplementation(() => new Promise((resolve) => (answer = resolve)))
+  send(ref, { type: 'RELOAD' })
+  expect(ref.getSnapshot().value).toBe('refreshing')
+  answer({ ...running, revision: 2 })
+  await waitFor(ref, (s) => s.matches('running') && s.context.test?.revision === 2)
+  expect(seen).not.toContain('loading')
+
+  // A cancel confirmed while a poll is out is not dropped.
+  vi.mocked(api.get).mockImplementation(() => new Promise(() => {}))
+  send(ref, { type: 'RELOAD' })
+  expect(ref.getSnapshot().value).toBe('refreshing')
+  ref.send({ type: 'CANCEL', scopeKey, testId: 'test', expectedRevision: 2 })
+  expect(ref.getSnapshot().value).toBe('cancelling')
+  subscription.unsubscribe()
+  ref.stop()
+})

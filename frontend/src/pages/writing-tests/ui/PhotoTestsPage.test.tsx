@@ -1,4 +1,4 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {
   createMemoryHistory,
@@ -107,8 +107,17 @@ it('checks observe models, uploads test photos, confirms the cost and opens the 
     new File(['a'], 'a.jpg', { type: 'image/jpeg' }),
     new File(['b'], 'b.heic', { type: 'image/heic' }),
   ])
-  expect(await screen.findByText('2장 준비됨')).toBeInTheDocument()
+  // The writing editor's own photo slot: each photo is a tile, not a count (POST-100).
+  const strip = await screen.findByRole('list', { name: '사진과 영상' })
+  await waitFor(() => expect(within(strip).getAllByRole('img')).toHaveLength(2))
   expect(fixture.calls.filter((call) => call === 'ConfirmTestPhotoUpload')).toHaveLength(2)
+  // Deleting a tile takes the photo out of the test; a new pick takes its place.
+  await userEvent.click(within(strip).getByRole('button', { name: 'a.jpg 삭제' }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: '삭제' }))
+  await waitFor(() => expect(within(strip).getAllByRole('img')).toHaveLength(1))
+  await userEvent.upload(input, [new File(['c'], 'c.jpg', { type: 'image/jpeg' })])
+  await waitFor(() => expect(within(strip).getAllByRole('img')).toHaveLength(2))
+  expect(within(strip).queryByRole('img', { name: 'a.jpg' })).toBeNull()
 
   await userEvent.click(screen.getByRole('button', { name: '관찰 비용 확인' }))
   expect(

@@ -95,6 +95,7 @@ export type WritingTestPhase =
   | 'quoteExpired'
   | 'starting'
   | 'running'
+  | 'refreshing'
   | 'partial'
   | 'match'
   | 'deciding'
@@ -609,6 +610,9 @@ const work = {
   onError: { target: 'workFailure', actions: 'workFailed' as const },
 }
 const reload = { guard: 'canReload' as const, target: 'loading', actions: 'reload' as const }
+// A running test's poll reads in place: it keeps the running screen and its controls, so the
+// page does not blink to 내용을 확인하고 있어요 and back every poll (MODEL-101).
+const poll = { guard: 'canReload' as const, target: 'refreshing', actions: 'reload' as const }
 
 /** Owns every request and durable fact. A resumed actor reads, never replays a mutation. */
 export const writingTestMachine = setup({
@@ -1076,9 +1080,13 @@ export const writingTestMachine = setup({
     },
     running: {
       on: {
-        RELOAD: reload,
+        RELOAD: poll,
         CANCEL: { guard: 'canCancel', target: 'cancelling', actions: 'freezeCancel' },
       },
+    },
+    refreshing: {
+      invoke: read,
+      on: { CANCEL: { guard: 'canCancel', target: 'cancelling', actions: 'freezeCancel' } },
     },
     partial: {
       on: {

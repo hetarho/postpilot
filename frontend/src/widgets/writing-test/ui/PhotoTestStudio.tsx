@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 import { useModels, filterForStage, modelChoiceIssue, refKey } from '@/entities/model-catalog'
 import type { PostImage } from '@/entities/image'
 import {
@@ -12,12 +12,7 @@ import {
   useWritingTestFlow,
   useWritingTestTranslation,
 } from '@/features/writing-test'
-import {
-  PhotoPicker,
-  SkippedList,
-  UploadProgress,
-  useKeyedPhotoUploads,
-} from '@/features/upload-photos'
+import { PhotoAttachments, useKeyedPhotoUploads } from '@/features/upload-photos'
 import {
   AppFailureMessage,
   Button,
@@ -38,6 +33,36 @@ import { WritingFieldLabel } from './WritingTestTemplateFacts'
 const COUNTS: readonly TestCount[] = [2, 4, 8, 16]
 const CONTESTANTS_ID = 'photo-test-contestants'
 const PHOTOS_ID = 'photo-test-photos'
+const photosKey = (ownerId: string, seedKey: string) =>
+  `postpilot:photo-test-photos:${JSON.stringify([ownerId, seedKey])}`
+
+/** The confirmed photos' tiles survive a reload like the draft's ids do (MODEL-91); a browser that
+ *  keeps nothing still has the ids, and the strip then shows only what this page confirmed. */
+function restorePhotos(key: string): PostImage[] {
+  try {
+    const raw = globalThis.sessionStorage?.getItem(key)
+    const value: unknown = raw ? JSON.parse(raw) : []
+    return Array.isArray(value)
+      ? value.filter(
+          (photo): photo is PostImage =>
+            !!photo &&
+            typeof photo === 'object' &&
+            typeof (photo as PostImage).id === 'string' &&
+            typeof (photo as PostImage).filename === 'string',
+        )
+      : []
+  } catch {
+    return []
+  }
+}
+function storePhotos(key: string, photos: readonly PostImage[]): void {
+  try {
+    if (photos.length) globalThis.sessionStorage?.setItem(key, JSON.stringify(photos))
+    else globalThis.sessionStorage?.removeItem(key)
+  } catch {
+    /* The draft's ids still hold the test's photos. */
+  }
+}
 
 export interface PhotoTestStudioProps {
   /** The page's heading, set beside ← on the studio's top row. */
@@ -69,13 +94,33 @@ function OwnedPhotoStudio({
   const handshake = useTestPhotoHandshake()
   const flow = useWritingTestFlow({ ownerId, seedKey, initialDraft: initialPlan, client })
   const plan = flow.context.draft ?? initialPlan
-  const photoIds = plan.context.photoIds ?? []
+  const draftPhotoIds = plan.context.photoIds
+  const photoIds = useMemo(() => draftPhotoIds ?? [], [draftPhotoIds])
   const headingId = useId()
   const [attempted, setAttempted] = useState(false)
   const [focusRequest, setFocusRequest] = useState<{ id: string } | null>(null)
-  const [filenames, setFilenames] = useState<string[]>([])
+  const storageKey = photosKey(ownerId, seedKey)
+  const [confirmed, setConfirmed] = useState<PostImage[]>(() => restorePhotos(storageKey))
+  // The strip shows the draft's photos in the draft's order: the ids are the truth, the tiles
+  // follow them.
+  const photos = useMemo(
+    () =>
+      photoIds.flatMap((id) => {
+        const photo = confirmed.find((each) => each.id === id)
+        return photo ? [photo] : []
+      }),
+    [photoIds, confirmed],
+  )
+  useEffect(() => storePhotos(storageKey, photos), [storageKey, photos])
   const { send, sendPresentation, actorRef } = flow
   const draft = useCallback((next: WritingTestPlan) => send({ type: 'DRAFT', draft: next }), [send])
+  const setPhotoIds = useCallback(
+    (ids: string[]) => {
+      const current = actorRef.getSnapshot().context.draft ?? initialPlan
+      draft({ ...current, context: { ...current.context, photoIds: ids } })
+    },
+    [actorRef, initialPlan, draft],
+  )
 
   // There is no factor to choose: the setup opens on its candidates.
   useEffect(() => {
@@ -101,7 +146,7 @@ function OwnedPhotoStudio({
       const current = actorRef.getSnapshot().context.draft ?? initialPlan
       const ids = current.context.photoIds ?? []
       if (ids.includes(image.id)) return
-      setFilenames((previous) => [...previous, image.filename])
+      setConfirmed((previous) => [...previous, image])
       draft({ ...current, context: { ...current.context, photoIds: [...ids, image.id] } })
     },
     [actorRef, initialPlan, draft],
@@ -109,10 +154,20 @@ function OwnedPhotoStudio({
   const uploads = useKeyedPhotoUploads({
     batchKey: `test-photos:${seedKey}`,
     handshake,
-    taken: filenames,
+    taken: photos.map((photo) => photo.filename),
     held: photoIds.length,
     onConfirmed,
   })
+  // Before the test starts a photo is only named by the draft: taking it out of the draft is the
+  // whole delete, and the test photo sweep reclaims the unattached upload (→POST-40).
+  const removePhoto = (image: PostImage) => setPhotoIds(photoIds.filter((id) => id !== image.id))
+  const movePhoto = (from: number, to: number) => {
+    const ids = photos.map((photo) => photo.id)
+    const [moved] = ids.splice(from, 1)
+    if (!moved) return
+    ids.splice(to, 0, moved)
+    setPhotoIds(ids)
+  }
   const uploading = uploads.items.some(
     (item) => item.status !== 'skipped' && item.status !== 'failed',
   )
@@ -286,18 +341,17 @@ function OwnedPhotoStudio({
             <WritingFieldLabel id={`${PHOTOS_ID}-label`} htmlFor={PHOTOS_ID} required>
               {t('photoTest.photos')}
             </WritingFieldLabel>
-            <div className="flex flex-wrap items-center gap-3">
-              <PhotoPicker photosOnly onFiles={uploads.addFiles} />
-            </div>
-            <Typography variant="label" as="p" role="status">
-              {t('photoTest.photoCount', { count: photoIds.length })}
-            </Typography>
-            <UploadProgress items={uploads.items} completed={uploads.completed} />
+            <PhotoAttachments
+              photosOnly
+              images={photos}
+              upload={uploads}
+              onDelete={removePhoto}
+              onMove={movePhoto}
+            />
             {photosMessage && (
               <FieldMessage id={`${PHOTOS_ID}-message`}>{photosMessage}</FieldMessage>
             )}
           </div>
-          <SkippedList items={uploads.items} onDismiss={uploads.dismiss} />
           <StepBar ariaLabel={title}>
             {flow.context.failure && (
               <Notice tone="danger" role="alert">

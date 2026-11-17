@@ -103,7 +103,8 @@ export const testFlowMachine = setup({
     quoted: ({ context }) => context.phase === 'quoted',
     work: ({ context }) =>
       (writingTestOperationBusy(context.phase) && context.phase !== 'deciding') ||
-      context.phase === 'running',
+      context.phase === 'running' ||
+      context.phase === 'refreshing',
     compare: ({ context }) => context.phase === 'match' || context.phase === 'deciding',
     champion: ({ context }) => context.phase === 'champion' || context.phase === 'published',
     recovery: ({ context }) => recoveryPhase(context.phase),
