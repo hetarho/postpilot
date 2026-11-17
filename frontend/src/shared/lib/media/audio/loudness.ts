@@ -118,15 +118,22 @@ export function truePeak48k(channels: readonly Float32Array[]) {
       const sample = index < channel.length ? channel[index] : 0
       if (!Number.isFinite(sample)) throw new Error('Non-finite audio sample')
       peak = Math.max(peak, Math.abs(sample))
-      for (let phase = 0; phase < 4; phase++) {
-        let interpolated = 0
-        for (let tap = 0; tap < PEAK_FIR.length; tap++) {
-          const source = index - tap
-          if (source >= 0 && source < channel.length)
-            interpolated += channel[source] * PEAK_FIR[tap][phase]
+      let phase0 = 0,
+        phase1 = 0,
+        phase2 = 0,
+        phase3 = 0
+      for (let tap = 0; tap < PEAK_FIR.length; tap++) {
+        const source = index - tap
+        if (source >= 0 && source < channel.length) {
+          const value = channel[source]
+          const coefficients = PEAK_FIR[tap]
+          phase0 += value * coefficients[0]
+          phase1 += value * coefficients[1]
+          phase2 += value * coefficients[2]
+          phase3 += value * coefficients[3]
         }
-        peak = Math.max(peak, Math.abs(interpolated))
       }
+      peak = Math.max(peak, Math.abs(phase0), Math.abs(phase1), Math.abs(phase2), Math.abs(phase3))
     }
   }
   return 20 * Math.log10(peak)
