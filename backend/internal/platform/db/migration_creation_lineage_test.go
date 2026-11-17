@@ -62,10 +62,10 @@ func seedCreationPreservation(t *testing.T, h *DB, writing bool) {
 func creationRows(t *testing.T, h *DB, table string) [][]string {
 	t.Helper()
 	projection := "*"
-	if table == "posts" || table == "voice_samples" || table == "configuration_authoring_operations" {
+	if table == "posts" || table == "voice_samples" || table == "configuration_authoring_operations" || table == "writing_tests" {
 		// Compare every historical field even when an additive migration appends
 		// result sidecars. Their required NULL upgrade state is asserted separately.
-		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info(?) WHERE name NOT IN ('content_origins','storyline_origins','request_capture','capture_revision','capture_purged','campaign','advertiser_guide','advertiser_keywords','advertiser_min_chars','advertiser_min_photos','advertiser_hashtags','checklist_ticks','experience_id') ORDER BY cid", table)
+		columns, err := h.Reader.Query("SELECT name FROM pragma_table_info(?) WHERE name NOT IN ('content_origins','storyline_origins','request_capture','capture_revision','capture_purged','campaign','advertiser_guide','advertiser_keywords','advertiser_min_chars','advertiser_min_photos','advertiser_hashtags','checklist_ticks','experience_id','output') ORDER BY cid", table)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -118,6 +118,41 @@ func creationRows(t *testing.T, h *DB, table string) [][]string {
 	return result
 }
 
+const photoObservationMigrationFile = "0170_photo_observation_tests.sql"
+
+// SQLite stores a column added later inside its table's CREATE statement, right after the
+// last column and before the table constraints, so a guarded table that a later migration
+// extended is compared with that column placed there in the guarded text.
+func withLaterColumn(t *testing.T, fsys fs.FS, up, table, lastColumn, migration string) string {
+	t.Helper()
+	later, err := creationUp(fsys, migration)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, addition := range creationAlter.FindAllStringSubmatch(later, -1) {
+		if addition[1] != table {
+			continue
+		}
+		start := strings.Index(up, "CREATE TABLE "+table+" (")
+		if start < 0 {
+			t.Fatal("guarded schema has no table", table)
+		}
+		column := strings.Index(up[start:], "\n "+lastColumn+" ")
+		if column < 0 {
+			t.Fatal("guarded table has no column", table, lastColumn)
+		}
+		column += start
+		lineEnd := column + 1 + strings.Index(up[column+1:], "\n")
+		cut := strings.LastIndex(up[:lineEnd], ",")
+		if cut < column {
+			t.Fatal("guarded column is not followed by another definition", table, lastColumn)
+		}
+		up = up[:cut] + ", " + addition[2] + " " + addition[3] + up[cut:]
+		lastColumn = addition[2]
+	}
+	return up
+}
+
 func assertMergedCreationSchemas(t *testing.T, h *DB) {
 	t.Helper()
 	tx, err := h.Writer.BeginTx(t.Context(), nil)
@@ -133,6 +168,9 @@ func assertMergedCreationSchemas(t *testing.T, h *DB) {
 		up, err := creationUp(sub, name)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if name == writingMigrationFile {
+			up = withLaterColumn(t, sub, up, "writing_tests", "content_expires_at", photoObservationMigrationFile)
 		}
 		present, err := creationSchemaPresent(t.Context(), tx, up)
 		if err != nil || !present {

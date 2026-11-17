@@ -7,6 +7,7 @@ export const i18n = {
     upload: {
       add: '사진·영상 추가',
       addPhotosOrVideos: '사진·영상 추가',
+      addPhotos: '사진 추가',
       camera: '촬영',
       drop: '여기에 놓으면 사진과 영상이 추가돼요',
       skipped: '건너뜀',
@@ -59,6 +60,7 @@ export const i18n = {
     upload: {
       add: 'Add photos',
       addPhotosOrVideos: 'Add photos or videos',
+      addPhotos: 'Add photos',
       camera: 'Take photo',
       drop: 'Drop here to add photos and videos',
       skipped: 'Skipped',

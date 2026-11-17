@@ -94,6 +94,7 @@ export function createWritingTestClient(transport: Transport): WritingTestClient
         await client.startWritingTest({ ...input, plan: planToProto(input.plan) }, { signal }),
       )
       if (
+        result.output !== (input.plan.output ?? 'post') ||
         result.factor !== input.plan.factor ||
         result.count !== input.plan.count ||
         result.modelStage !== input.plan.modelStage ||

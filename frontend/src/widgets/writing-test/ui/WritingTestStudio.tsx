@@ -1,10 +1,9 @@
-import { ReturnIcon, StepBarActions } from '@/shared/ui'
-import { useWritingTestTranslation } from '@/features/writing-test'
+import { ReturnIcon, StepBarActions, StepBarReason } from '@/shared/ui'
+import { ModelContestantList, useWritingTestTranslation } from '@/features/writing-test'
 import {
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -17,7 +16,9 @@ import {
   useStageSelection,
   filterForStage,
   modelChoiceIssue,
+  postCreditLabel,
   refKey,
+  stagePostFigure,
   type CatalogModel,
 } from '@/entities/model-catalog'
 import { useVoices } from '@/entities/voice'
@@ -41,7 +42,6 @@ import {
   useWritingTestFlow,
   useCandidatePreparation,
   currentWritingTestMatch,
-  writingTestDraftProblem,
   writingTestOperationBusy,
   WRITING_TEST_DIRECTION_MAX_CHARS,
   WRITING_TEST_NEW_GUIDELINE_SLOT,
@@ -74,6 +74,8 @@ import { BLOG_FIELD_IDS } from '@/entities/blog-field'
 import { WritingTestPair } from './WritingTestPair'
 import { WritingTestBracket } from './WritingTestBracket'
 import { WritingTestChampionOutput } from './WritingTestChampionOutput'
+import { WritingFieldLabel, WritingTestTemplateFacts } from './WritingTestTemplateFacts'
+import { factAnswered, factFieldId, type FactGroup } from '../lib/template-facts'
 
 const SETTING_KIND: Record<Exclude<TestFactor, 'model'>, TestSettingKind> = {
   voice: 'writing-voice',
@@ -81,6 +83,8 @@ const SETTING_KIND: Record<Exclude<TestFactor, 'model'>, TestSettingKind> = {
   guideline: 'post-guideline',
 }
 const COUNTS: readonly TestCount[] = [2, 4, 8, 16]
+/** A writing test's model factor is always the write stage; photo reading is its own test (MODEL-97). */
+const MODEL_STAGE: TestStage = 'write'
 interface SettingChoice {
   id: string
   name: string
@@ -143,8 +147,6 @@ function OwnedStudio({
   const flow = useWritingTestFlow({ ownerId, seedKey, initialDraft: initialPlan, testId, client })
   const plan = flow.context.draft ?? initialPlan
   const test = flow.context.test
-  // The photo-reading comparison: AIs are its only factor.
-  const observing = plan.factor === 'model' && plan.modelStage === 'observe'
   const kind: TestSettingKind =
     plan.factor === 'model' ? 'writing-voice' : SETTING_KIND[plan.factor]
   const preparation = useCandidatePreparation({
@@ -175,12 +177,6 @@ function OwnedStudio({
   const sourceName = source.data?.name
   const { send } = flow
   const draft = useCallback((next: WritingTestPlan) => send({ type: 'DRAFT', draft: next }), [send])
-  // Photo reading compares AIs and nothing else, so it has no "what to compare" question: it opens
-  // on its candidates (owner 2026-11-16). Before paint, so the question never flashes.
-  const { sendPresentation } = flow
-  useLayoutEffect(() => {
-    if (observing && flow.view === 'factor') sendPresentation({ type: 'NEXT' })
-  }, [observing, flow.view, sendPresentation])
   const context = (patch: Partial<WritingTestPlan['context']>) =>
     draft({ ...plan, context: { ...plan.context, ...patch } })
   const prepBusy = ['quoting', 'creating', 'starting', 'reading', 'running', 'cancelling'].includes(
@@ -222,9 +218,13 @@ function OwnedStudio({
   const modelOptions = (stage: TestStage) =>
     filterForStage(models.models, stage).map((m) => {
       const issue = modelIssue(m, stage)
+      const figure = stagePostFigure(m, stage)
+      const cost =
+        m.access?.[stage]?.grade === 'free' ? t('free') : figure ? postCreditLabel(figure) : ''
+      const named = cost ? `${m.label} · ${cost}` : m.label
       return {
         value: refKey(m.ref),
-        label: issue ? `${m.label} · ${issue}` : m.label,
+        label: issue ? `${named} · ${issue}` : named,
         disabled: !!issue,
       }
     })
@@ -233,25 +233,12 @@ function OwnedStudio({
     plan.entrants.some(
       (entrant) =>
         entrant.type === 'model' &&
-        !filterForStage(models.models, plan.modelStage).some(
-          (model) =>
-            refKey(model.ref) === refKey(entrant.model) && !modelIssue(model, plan.modelStage),
+        !filterForStage(models.models, MODEL_STAGE).some(
+          (model) => refKey(model.ref) === refKey(entrant.model) && !modelIssue(model, MODEL_STAGE),
         ),
     )
-  const fixedModelProblem =
-    (!(plan.factor === 'model' && plan.modelStage === 'write') &&
-      !!plan.context.writeModel &&
-      !filterForStage(models.models, 'write').some(
-        (model) =>
-          refKey(model.ref) === refKey(plan.context.writeModel!) && !modelIssue(model, 'write'),
-      )) ||
-    (plan.context.material.attachmentIds.length > 0 &&
-      !(plan.factor === 'model' && plan.modelStage === 'observe') &&
-      !!plan.context.observeModel &&
-      !filterForStage(models.models, 'observe').some(
-        (model) =>
-          refKey(model.ref) === refKey(plan.context.observeModel!) && !modelIssue(model, 'observe'),
-      ))
+  const writerFixed = plan.factor !== 'model'
+  const observerFixed = plan.context.material.attachmentIds.length > 0
   const placeholder = useCallback(
     (): TestEntrant =>
       plan.factor === 'model'
@@ -266,11 +253,8 @@ function OwnedStudio({
     const current = plan.entrants[position]
     if (current?.type === 'authoring' && choiceKey(current) === value) entrant = current
     else if (plan.factor === 'model') {
-      const model = filterForStage(models.models, plan.modelStage).find(
-        (m) => refKey(m.ref) === value,
-      )
-      if (model && !modelIssue(model, plan.modelStage))
-        entrant = { type: 'model', model: model.ref }
+      const model = filterForStage(models.models, MODEL_STAGE).find((m) => refKey(m.ref) === value)
+      if (model && !modelIssue(model, MODEL_STAGE)) entrant = { type: 'model', model: model.ref }
     } else {
       const owned = choices.find((c) => c.id === value)
       if (owned)
@@ -308,28 +292,49 @@ function OwnedStudio({
       ),
     [preparation.context.artifacts, preparation.context.session],
   )
-  const asks = useMemo(() => {
-    const entries =
-      plan.factor === 'template'
-        ? plan.entrants.flatMap<{ body?: string; titleArea?: string }>((entrant) => {
-            if (entrant.type === 'setting')
-              return choices.filter((c) => c.id === entrant.setting.id)
-            if (entrant.type === 'authoring')
-              return preparedMetadata(entrant) ? [preparedMetadata(entrant)!] : []
-            return []
-          })
-        : templates.templates.filter((item) => item.id === plan.context.templateId)
-    const found = new Map<string, { label: string; required: boolean; prompt: string }>()
-    for (const entry of entries)
-      for (const ask of templateAskFields(
-        entry.titleArea ?? '',
-        entry.body ?? '',
-        TEMPLATE_PARSE_OPTIONS,
-      )) {
-        const prior = found.get(ask.label)
-        found.set(ask.label, { ...ask, required: ask.required || prior?.required === true })
+  const askGroups = useMemo<FactGroup[]>(() => {
+    // One group per distinct contestant template, in slot order; a fixed template is one group.
+    const owners: { key: string; name: string; body?: string; titleArea?: string }[] = []
+    if (plan.factor === 'template') {
+      for (const entrant of plan.entrants) {
+        if (entrant.type === 'setting') {
+          const saved = choices.find((c) => c.id === entrant.setting.id)
+          if (saved) owners.push({ ...saved, key: `setting:${saved.id}` })
+        } else if (entrant.type === 'authoring') {
+          const prepared = preparedMetadata(entrant)
+          if (prepared)
+            owners.push({
+              key: choiceKey(entrant),
+              name: prepared.name ?? t('preparedSlot'),
+              body: prepared.body,
+              titleArea: prepared.titleArea,
+            })
+        }
       }
-    return [...found.values()]
+    } else {
+      const fixed = templates.templates.find((item) => item.id === plan.context.templateId)
+      if (fixed) owners.push({ ...fixed, key: `fixed:${fixed.id}` })
+    }
+    // Two slots holding one template are one group.
+    const groups = [...new Map(owners.map((owner) => [owner.key, owner])).values()]
+      .map((owner) => ({
+        key: owner.key,
+        name: owner.name,
+        asks: templateAskFields(owner.titleArea ?? '', owner.body ?? '', TEMPLATE_PARSE_OPTIONS),
+      }))
+      .filter((group) => group.asks.length > 0)
+    const askedIn = new Map<string, number>()
+    for (const group of groups)
+      for (const ask of group.asks) askedIn.set(ask.label, (askedIn.get(ask.label) ?? 0) + 1)
+    return groups.map((group) => ({
+      ...group,
+      asks: group.asks.map((ask) => ({
+        label: ask.label,
+        required: ask.required,
+        prompt: ask.prompt,
+        shared: (askedIn.get(ask.label) ?? 0) > 1,
+      })),
+    }))
   }, [
     plan.factor,
     plan.entrants,
@@ -337,36 +342,111 @@ function OwnedStudio({
     choices,
     templates.templates,
     preparedMetadata,
+    t,
   ])
-  const missingFacts = asks.some(
-    (ask) =>
-      ask.required &&
-      !plan.context.material.templateAnswers.some(
-        (a) => a.label === ask.label && a.enabled && a.text.trim(),
-      ),
-  )
   const sourcePending =
     !!plan.context.sourcePostSlug &&
     (source.isPending ||
       source.isError ||
       source.data?.context.sourcePostSlug !== plan.context.sourcePostSlug)
+  // Every refusal of the material step in the order its field stands on screen: the step bar names
+  // the first and counts them all, each field carries its own message, and a refused press moves
+  // to the first (MODEL-99). A refusal with no field belongs to a choice of an earlier step.
+  const [factTab, setFactTab] = useState('')
+  const [focusRequest, setFocusRequest] = useState<{ fieldId: string } | null>(null)
+  const { problems, fieldMessages } = (() => {
+    const found: { fieldId: string | null; label: string; message: string; groupKey?: string }[] =
+      []
+    const messages: Record<string, string> = {}
+    const refuse = (fieldId: string, label: string, message: string, groupKey?: string) => {
+      messages[fieldId] = message
+      found.push({ fieldId, label, message, groupKey })
+    }
+    const { material } = plan.context
+    const hasAttachments = material.attachmentIds.length > 0
+    if (!hasAttachments && !material.text.trim())
+      refuse('test-material', t('material'), t('requiredMaterial'))
+    const length = plan.context.targetLength
+    if (
+      !Number.isInteger(length) ||
+      length < POST_TARGET_LENGTH_MIN ||
+      length > POST_TARGET_LENGTH_MAX
+    )
+      refuse(
+        'test-target-length',
+        t('targetLength'),
+        t('targetLengthBounds', { min: POST_TARGET_LENGTH_MIN, max: POST_TARGET_LENGTH_MAX }),
+      )
+    const tags = plan.context.tagCount
+    if (!Number.isInteger(tags) || tags < POST_TAG_COUNT_MIN || tags > POST_TAG_COUNT_MAX)
+      refuse(
+        'test-tag-count',
+        t('tags'),
+        t('tagCountBounds', { min: POST_TAG_COUNT_MIN, max: POST_TAG_COUNT_MAX }),
+      )
+    const fixedModelMessage = (ref: WritingTestPlan['context']['writeModel'], stage: TestStage) => {
+      if (!ref) return t('requiredChoice')
+      const usable = filterForStage(models.models, stage).some(
+        (model) => refKey(model.ref) === refKey(ref) && !modelIssue(model, stage),
+      )
+      return usable
+        ? ''
+        : t(hasVideo && stage === 'observe' ? 'unsupportedVideo' : 'ineligibleModel')
+    }
+    const writerMessage = writerFixed ? fixedModelMessage(plan.context.writeModel, 'write') : ''
+    if (writerMessage) refuse('test-fixed-writer', t('fixedWriter'), writerMessage)
+    const observerMessage = observerFixed
+      ? fixedModelMessage(plan.context.observeModel, 'observe')
+      : ''
+    if (observerMessage) refuse('test-fixed-observer', t('fixedObserver'), observerMessage)
+    if (plan.factor === 'guideline' && !plan.context.guidelineSlotId.trim())
+      refuse('test-guideline-slot', t('guidelineSlot'), t('requiredChoice'))
+    const askedLabels = new Set<string>()
+    askGroups.forEach((group, groupIndex) =>
+      group.asks.forEach((ask) => {
+        if (!ask.required || factAnswered(material.templateAnswers, ask.label)) return
+        const fieldId = factFieldId(groupIndex, ask.label)
+        // A question two templates share is one problem, marked in both of its groups.
+        if (askedLabels.has(ask.label)) messages[fieldId] = t('requiredInput')
+        else refuse(fieldId, ask.label, t('requiredInput'), group.key)
+        askedLabels.add(ask.label)
+      }),
+    )
+    if (modelEligibilityProblem)
+      found.push({
+        fieldId: null,
+        label: '',
+        message: t(hasVideo ? 'unsupportedVideo' : 'ineligibleModel'),
+      })
+    return { problems: found, fieldMessages: attempted ? messages : {} }
+  })()
+  const shownProblems = attempted ? problems : []
+  const materialReason = !shownProblems.length
+    ? ''
+    : !shownProblems[0].fieldId
+      ? shownProblems[0].message
+      : shownProblems.length === 1
+        ? t('fixOne', { first: shownProblems[0].label })
+        : t('fixMany', { first: shownProblems[0].label, count: shownProblems.length })
+  useEffect(() => {
+    if (!focusRequest) return
+    // The tab switch has committed by the next frame, so the field is mounted to be reached.
+    const frame = window.requestAnimationFrame(() => {
+      const field = document.getElementById(focusRequest.fieldId)
+      field?.focus({ preventScroll: true })
+      field?.scrollIntoView?.({ block: 'center' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [focusRequest])
   useEffect(() => {
     if (flow.phase !== 'editing' || flow.context.test) return
     const next = { ...plan.context }
     let changed = false
-    if (
-      !(plan.factor === 'model' && plan.modelStage === 'write') &&
-      !next.writeModel &&
-      writer.selected
-    ) {
+    if (plan.factor !== 'model' && !next.writeModel && writer.selected) {
       next.writeModel = writer.selected
       changed = true
     }
-    if (
-      !(plan.factor === 'model' && plan.modelStage === 'observe') &&
-      !next.observeModel &&
-      observer.selected
-    ) {
+    if (!next.observeModel && observer.selected) {
       next.observeModel = observer.selected
       changed = true
     }
@@ -521,6 +601,10 @@ function OwnedStudio({
                                     ? 'quoteExpired'
                                     : 'uncertain',
                       )
+  const choicesReason =
+    attempted && (plan.factor === 'model' ? candidateProblem : assignedProblem)
+      ? t('requiredChoices', { count: plan.count })
+      : ''
   const next = () => {
     setAttempted(true)
     if (flow.view === 'candidates') {
@@ -671,7 +755,7 @@ function OwnedStudio({
           </Typography>
         )}
       </div>
-      {flow.context.failure && (
+      {flow.context.failure && flow.view !== 'material' && (
         <Notice tone="danger" role="alert" className="mt-4">
           <AppFailureMessage failure={flow.context.failure} />
         </Notice>
@@ -695,7 +779,7 @@ function OwnedStudio({
                     draft({
                       ...plan,
                       factor,
-                      modelStage: factor === 'model' ? plan.modelStage : 'write',
+                      modelStage: MODEL_STAGE,
                       entrants: [],
                       context: {
                         ...plan.context,
@@ -703,10 +787,7 @@ function OwnedStudio({
                         templateId: factor === 'template' ? '' : plan.context.templateId,
                         guidelineSlotId:
                           factor === 'guideline' ? WRITING_TEST_NEW_GUIDELINE_SLOT : '',
-                        writeModel:
-                          factor === 'model' && plan.modelStage === 'write'
-                            ? undefined
-                            : (writer.selected ?? undefined),
+                        writeModel: factor === 'model' ? undefined : (writer.selected ?? undefined),
                       },
                     })
                   setAttempted(false)
@@ -772,30 +853,6 @@ function OwnedStudio({
               appliedPreparation.current = ''
             }}
           />
-          {plan.factor === 'model' && (
-            <WritingSelect
-              label={t('modelStage')}
-              disabled={prepLocked}
-              value={plan.modelStage}
-              options={(['write', 'observe'] as const).map((stage) => ({
-                value: stage,
-                label: t(`stage.${stage}`),
-              }))}
-              onChange={(value) =>
-                draft({
-                  ...plan,
-                  modelStage: value as TestStage,
-                  entrants: [],
-                  context: {
-                    ...plan.context,
-                    writeModel: value === 'write' ? undefined : (writer.selected ?? undefined),
-                    observeModel:
-                      value === 'observe' ? undefined : (observer.selected ?? undefined),
-                  },
-                })
-              }
-            />
-          )}
           {plan.factor !== 'model' && <Typography variant="body">{t('slotHelp')}</Typography>}
           {
             <>
@@ -820,35 +877,54 @@ function OwnedStudio({
                   </Button>
                 </Notice>
               )}
-              <div className="grid min-w-0 grid-cols-2 gap-4">
-                {Array.from({ length: plan.count }, (_, index) => (
-                  <WritingSelect
-                    key={index}
-                    label={t('contender', { number: index + 1 })}
-                    value={plan.entrants[index] ? choiceKey(plan.entrants[index]) : ''}
-                    options={[
-                      { value: '', label: t(plan.factor === 'model' ? 'choose' : 'autoAI') },
-                      ...(plan.entrants[index]?.type === 'authoring'
-                        ? [
-                            {
-                              value: choiceKey(plan.entrants[index]),
-                              label: `${t('generatedCandidate')} · ${preparedMetadata(plan.entrants[index])?.name ?? t('preparedSlot')}`,
-                            },
-                          ]
-                        : []),
-                      ...(plan.factor === 'model'
-                        ? modelOptions(plan.modelStage)
-                        : choices.map((c) => ({ value: c.id, label: c.name }))),
-                    ]}
-                    disabled={prepLocked}
-                    onChange={(value) => choose(index, value)}
-                  />
-                ))}
-              </div>
+              {plan.factor === 'model' ? (
+                <ModelContestantList
+                  id="test-model-contestants"
+                  stage={MODEL_STAGE}
+                  count={plan.count}
+                  models={models.models}
+                  selected={plan.entrants.flatMap((entrant) =>
+                    entrant.type === 'model' && !emptySlot(entrant) ? [entrant.model] : [],
+                  )}
+                  issue={(model) => modelIssue(model, MODEL_STAGE)}
+                  disabled={prepLocked}
+                  onChange={(refs) =>
+                    draft({
+                      ...plan,
+                      modelStage: MODEL_STAGE,
+                      entrants: refs.map((model) => ({ type: 'model', model })),
+                    })
+                  }
+                />
+              ) : (
+                <div className="grid min-w-0 grid-cols-2 gap-4">
+                  {Array.from({ length: plan.count }, (_, index) => (
+                    <WritingSelect
+                      key={index}
+                      label={t('contender', { number: index + 1 })}
+                      value={emptySlot(plan.entrants[index]) ? '' : choiceKey(plan.entrants[index])}
+                      options={[
+                        { value: '', label: t('autoAI') },
+                        ...(plan.entrants[index]?.type === 'authoring'
+                          ? [
+                              {
+                                value: choiceKey(plan.entrants[index]),
+                                label: `${t('generatedCandidate')} · ${preparedMetadata(plan.entrants[index])?.name ?? t('preparedSlot')}`,
+                              },
+                            ]
+                          : []),
+                        ...choices.map((c) => ({ value: c.id, label: c.name })),
+                      ]}
+                      disabled={prepLocked}
+                      onChange={(value) => choose(index, value)}
+                    />
+                  ))}
+                </div>
+              )}
               {!choices.length && plan.factor !== 'model' && (
                 <Typography variant="body">{t('emptyChoices')}</Typography>
               )}
-              {plan.factor === 'model' && !modelOptions(plan.modelStage).length && (
+              {plan.factor === 'model' && !modelOptions(MODEL_STAGE).length && (
                 <Typography variant="body">
                   {t('noModels')}{' '}
                   <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
@@ -944,28 +1020,23 @@ function OwnedStudio({
                 )}
               </section>
             )}
-          {attempted && (plan.factor === 'model' ? candidateProblem : assignedProblem) && (
-            <FieldMessage>{t('requiredChoices', { count: plan.count })}</FieldMessage>
-          )}
           <StepBar ariaLabel={title}>
+            <StepBarProblem id={`${headingId}-choices-reason`} text={choicesReason} />
             <StepBarActions className="flex-wrap">
-              {/* The photo comparison's first screen is this one; its way out is the page's ←. */}
-              {(!observing || preparation.phase === 'quoted') && (
-                <Button
-                  variant="secondary"
-                  size="icon"
-                  aria-label={t('back')}
-                  title={t('back')}
-                  disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
-                  onClick={() =>
-                    preparation.phase === 'quoted'
-                      ? preparation.send({ type: 'BACK' })
-                      : flow.sendPresentation({ type: 'BACK' })
-                  }
-                >
-                  <ReturnIcon />
-                </Button>
-              )}
+              <Button
+                variant="secondary"
+                size="icon"
+                aria-label={t('back')}
+                title={t('back')}
+                disabled={prepBusy || ['uncertain', 'created'].includes(preparation.phase)}
+                onClick={() =>
+                  preparation.phase === 'quoted'
+                    ? preparation.send({ type: 'BACK' })
+                    : flow.sendPresentation({ type: 'BACK' })
+                }
+              >
+                <ReturnIcon />
+              </Button>
               {['quoted', 'created'].includes(preparation.phase) && plan.factor !== 'model' ? (
                 <Button
                   variant="cta"
@@ -982,6 +1053,7 @@ function OwnedStudio({
                     size="hero"
                     className="min-w-0 flex-1"
                     onClick={next}
+                    aria-describedby={choicesReason ? `${headingId}-choices-reason` : undefined}
                     disabled={
                       plan.factor !== 'model' && missingSlots.length > 0 && !writer.selected
                     }
@@ -1042,17 +1114,33 @@ function OwnedStudio({
             </Typography>
           )}
           <Typography variant="body">{t('materialHint')}</Typography>
-          <FieldLabel htmlFor="test-material">{t('material')}</FieldLabel>
-          <Textarea
-            id="test-material"
-            autoGrow
-            viewportAllocation={{ reservedBottom: 176 }}
-            rows={6}
-            value={plan.context.material.text}
-            onChange={(e) =>
-              context({ material: { ...plan.context.material, text: e.target.value } })
-            }
-          />
+          <div className="space-y-2">
+            <WritingFieldLabel
+              htmlFor="test-material"
+              required={!plan.context.material.attachmentIds.length}
+            >
+              {t('material')}
+            </WritingFieldLabel>
+            <Textarea
+              id="test-material"
+              autoGrow
+              viewportAllocation={{ reservedBottom: 176 }}
+              rows={6}
+              value={plan.context.material.text}
+              aria-invalid={fieldMessages['test-material'] ? true : undefined}
+              aria-describedby={
+                fieldMessages['test-material'] ? 'test-material-message' : undefined
+              }
+              onChange={(e) =>
+                context({ material: { ...plan.context.material, text: e.target.value } })
+              }
+            />
+            {fieldMessages['test-material'] && (
+              <FieldMessage id="test-material-message">
+                {fieldMessages['test-material']}
+              </FieldMessage>
+            )}
+          </div>
           <WritingCheck
             label={t('fictional')}
             checked={plan.context.material.fictional}
@@ -1077,6 +1165,9 @@ function OwnedStudio({
               onChange={(targetLanguage) => context({ targetLanguage })}
             />
             <WritingOptionField
+              fieldId="test-target-length"
+              required
+              message={fieldMessages['test-target-length']}
               label={t('targetLength')}
               type="number"
               min={POST_TARGET_LENGTH_MIN}
@@ -1085,6 +1176,9 @@ function OwnedStudio({
               onChange={(e) => context({ targetLength: Number(e.target.value) })}
             />
             <WritingOptionField
+              fieldId="test-tag-count"
+              required
+              message={fieldMessages['test-tag-count']}
               label={t('tags')}
               type="number"
               min={POST_TAG_COUNT_MIN}
@@ -1093,8 +1187,11 @@ function OwnedStudio({
               onChange={(e) => context({ tagCount: Number(e.target.value) })}
             />
           </div>
-          {!(plan.factor === 'model' && plan.modelStage === 'write') && (
+          {writerFixed && (
             <WritingSelect
+              fieldId="test-fixed-writer"
+              required
+              message={fieldMessages['test-fixed-writer']}
               label={t('fixedWriter')}
               value={plan.context.writeModel ? refKey(plan.context.writeModel) : ''}
               options={[{ value: '', label: t('choose') }, ...modelOptions('write')]}
@@ -1103,17 +1200,19 @@ function OwnedStudio({
               }
             />
           )}
-          {plan.context.material.attachmentIds.length > 0 &&
-            !(plan.factor === 'model' && plan.modelStage === 'observe') && (
-              <WritingSelect
-                label={t('fixedObserver')}
-                value={plan.context.observeModel ? refKey(plan.context.observeModel) : ''}
-                options={[{ value: '', label: t('choose') }, ...modelOptions('observe')]}
-                onChange={(value) =>
-                  context({ observeModel: models.models.find((m) => refKey(m.ref) === value)?.ref })
-                }
-              />
-            )}
+          {observerFixed && (
+            <WritingSelect
+              fieldId="test-fixed-observer"
+              required
+              message={fieldMessages['test-fixed-observer']}
+              label={t('fixedObserver')}
+              value={plan.context.observeModel ? refKey(plan.context.observeModel) : ''}
+              options={[{ value: '', label: t('choose') }, ...modelOptions('observe')]}
+              onChange={(value) =>
+                context({ observeModel: models.models.find((m) => refKey(m.ref) === value)?.ref })
+              }
+            />
+          )}
           {plan.factor !== 'voice' && (
             <WritingSelect
               label={t('fixedVoice')}
@@ -1139,6 +1238,9 @@ function OwnedStudio({
           {plan.factor === 'guideline' && (
             <>
               <WritingSelect
+                fieldId="test-guideline-slot"
+                required
+                message={fieldMessages['test-guideline-slot']}
                 label={t('guidelineSlot')}
                 value={plan.context.guidelineSlotId}
                 options={[
@@ -1152,76 +1254,34 @@ function OwnedStudio({
               <Typography variant="body">{t('guidelineSlotHelp')}</Typography>
             </>
           )}
-          {asks.length > 0 && (
-            <section className="space-y-4">
-              <Typography variant="title">{t('templateFacts')}</Typography>
-              {asks.map((ask) => (
-                <div key={ask.label}>
-                  <FieldLabel htmlFor={`test-fact-${ask.label}`}>{ask.label}</FieldLabel>
-                  <Textarea
-                    id={`test-fact-${ask.label}`}
-                    rows={2}
-                    autoGrow
-                    value={
-                      plan.context.material.templateAnswers.find((a) => a.label === ask.label)
-                        ?.text ?? ''
-                    }
-                    onChange={(e) =>
-                      context({
-                        material: {
-                          ...plan.context.material,
-                          templateAnswers: [
-                            ...plan.context.material.templateAnswers.filter(
-                              (a) => a.label !== ask.label,
-                            ),
-                            { label: ask.label, text: e.target.value, enabled: true },
-                          ],
-                        },
-                      })
-                    }
-                  />
-                  {ask.prompt && <Typography variant="body">{ask.prompt}</Typography>}
-                </div>
-              ))}
-            </section>
-          )}
-          {attempted &&
-            (!Number.isInteger(plan.context.targetLength) ||
-              plan.context.targetLength < POST_TARGET_LENGTH_MIN ||
-              plan.context.targetLength > POST_TARGET_LENGTH_MAX) && (
-              <FieldMessage>
-                {t('targetLengthBounds', {
-                  min: POST_TARGET_LENGTH_MIN,
-                  max: POST_TARGET_LENGTH_MAX,
-                })}
-              </FieldMessage>
-            )}
-          {attempted &&
-            (!Number.isInteger(plan.context.tagCount) ||
-              plan.context.tagCount < POST_TAG_COUNT_MIN ||
-              plan.context.tagCount > POST_TAG_COUNT_MAX) && (
-              <FieldMessage>
-                {t('tagCountBounds', { min: POST_TAG_COUNT_MIN, max: POST_TAG_COUNT_MAX })}
-              </FieldMessage>
-            )}
-          {attempted &&
-            (writingTestDraftProblem(plan) ||
-              missingFacts ||
-              modelEligibilityProblem ||
-              fixedModelProblem) && (
-              <FieldMessage>
-                {modelEligibilityProblem || fixedModelProblem
-                  ? t(hasVideo ? 'unsupportedVideo' : 'ineligibleModel')
-                  : missingFacts
-                    ? t('requiredInput')
-                    : plan.factor === 'model' &&
-                        plan.modelStage === 'observe' &&
-                        !plan.context.material.attachmentIds.length
-                      ? t('requiredObserver')
-                      : t('requiredMaterial')}
-              </FieldMessage>
-            )}
+          <WritingTestTemplateFacts
+            groups={askGroups}
+            answers={plan.context.material.templateAnswers}
+            messages={fieldMessages}
+            activeKey={factTab}
+            onActiveKey={setFactTab}
+            onAnswer={(label, text) =>
+              context({
+                material: {
+                  ...plan.context.material,
+                  templateAnswers: plan.context.material.templateAnswers.some(
+                    (answer) => answer.label === label,
+                  )
+                    ? plan.context.material.templateAnswers.map((answer) =>
+                        answer.label === label ? { ...answer, text, enabled: true } : answer,
+                      )
+                    : [...plan.context.material.templateAnswers, { label, text, enabled: true }],
+                },
+              })
+            }
+          />
           <StepBar ariaLabel={title}>
+            {flow.context.failure && (
+              <Notice tone="danger" role="alert">
+                <AppFailureMessage failure={flow.context.failure} />
+              </Notice>
+            )}
+            <StepBarProblem id={`${headingId}-material-reason`} text={materialReason} />
             <StepBarActions className="flex-wrap">
               <Button
                 variant="secondary"
@@ -1238,15 +1298,17 @@ function OwnedStudio({
                 className="min-w-0 flex-1"
                 pending={flow.phase === 'quoting'}
                 disabled={sourcePending}
+                aria-describedby={materialReason ? `${headingId}-material-reason` : undefined}
                 onClick={() => {
                   setAttempted(true)
-                  if (
-                    !missingFacts &&
-                    !sourcePending &&
-                    !modelEligibilityProblem &&
-                    !fixedModelProblem
-                  )
+                  if (sourcePending) return
+                  const first = problems[0]
+                  if (!first) {
                     flow.send({ type: 'ESTIMATE' })
+                    return
+                  }
+                  if (first.groupKey) setFactTab(first.groupKey)
+                  if (first.fieldId) setFocusRequest({ fieldId: first.fieldId })
                 }}
               >
                 {t('estimatePosts', { count: plan.count })}
@@ -1619,15 +1681,45 @@ function OwnedStudio({
   )
 }
 
+/** The refusal above a step bar's row. Its live region is mounted before the text arrives so the
+ *  reason is announced, and it collapses while empty so the bar keeps its height (THEME-24/71). */
+function StepBarProblem({ id, text }: { id: string; text: string }) {
+  return (
+    <div aria-live="polite" className="empty:hidden">
+      {text ? <StepBarReason id={id}>{text}</StepBarReason> : null}
+    </div>
+  )
+}
+
+/** A form control's refusal, stood under the control with the control marked invalid (THEME-29). */
+interface FieldProblemProps {
+  /** The control's id, when a refused press has to reach it. */
+  fieldId?: string
+  required?: boolean
+  message?: string
+}
+
 function WritingOptionField({
   label,
+  fieldId,
+  required,
+  message,
   ...props
-}: { label: string } & ComponentProps<typeof TextField>) {
-  const id = useId()
+}: { label: string } & FieldProblemProps & ComponentProps<typeof TextField>) {
+  const generated = useId()
+  const id = fieldId ?? generated
   return (
     <div className="space-y-2">
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <TextField id={id} {...props} />
+      <WritingFieldLabel htmlFor={id} required={required}>
+        {label}
+      </WritingFieldLabel>
+      <TextField
+        id={id}
+        aria-invalid={message ? true : undefined}
+        aria-describedby={message ? `${id}-message` : undefined}
+        {...props}
+      />
+      {message && <FieldMessage id={`${id}-message`}>{message}</FieldMessage>}
     </div>
   )
 }
@@ -1654,15 +1746,26 @@ function WritingCheck({
 
 function WritingSelect<T>({
   label,
+  fieldId,
+  required,
+  message,
   ...props
-}: { label: string } & ComponentProps<typeof Listbox<T>>) {
-  const id = useId()
+}: { label: string } & FieldProblemProps & ComponentProps<typeof Listbox<T>>) {
+  const generated = useId()
+  const id = fieldId ?? generated
   return (
     <div className="space-y-2">
-      <FieldLabel id={`${id}-label`} htmlFor={id}>
+      <WritingFieldLabel id={`${id}-label`} htmlFor={id} required={required}>
         {label}
-      </FieldLabel>
-      <Listbox id={id} aria-labelledby={`${id}-label`} {...props} />
+      </WritingFieldLabel>
+      <Listbox
+        id={id}
+        aria-labelledby={`${id}-label`}
+        aria-invalid={message ? true : undefined}
+        aria-describedby={message ? `${id}-message` : undefined}
+        {...props}
+      />
+      {message && <FieldMessage id={`${id}-message`}>{message}</FieldMessage>}
     </div>
   )
 }

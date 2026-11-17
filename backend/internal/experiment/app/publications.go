@@ -150,7 +150,8 @@ func (p *Publications) preflight(ctx context.Context, t experiment.WritingTest, 
 		}
 		return nil
 	case experiment.TestApplyOutput:
-		if output == nil || t.Factor != experiment.FactorModel || t.SourcePostSlug == "" {
+		// A photo observation test produced no post, so there is nothing to apply (MODEL-97).
+		if output == nil || t.Factor != experiment.FactorModel || t.Output == experiment.OutputObservation || t.SourcePostSlug == "" {
 			return experiment.ErrTestOutputIncompatible
 		}
 		d, _, err := p.dependencies.Snapshots.DescribePublication(t, in.WinnerID)

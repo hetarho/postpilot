@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"slices"
+	"strings"
 
 	"github.com/postpilot/backend/internal/experiment"
 	"github.com/postpilot/backend/internal/generation"
@@ -26,6 +28,12 @@ func (r *WritingTestResolvers) PrepareWritingTestModel(ctx context.Context, user
 }
 func (r *WritingTestResolvers) ResolveWritingTestSource(ctx context.Context, user, slug string, input, content int64, m generation.WritingTestMaterialRequest) (result generation.WritingTestSource, err error) {
 	defer func() { err = WritingTestPreparationError(err) }()
+	if m.Output == generation.WritingTestOutputObservation {
+		return r.resolveTestPhotos(ctx, user, slug, input, content, m)
+	}
+	if len(m.PhotoIDs) > 0 {
+		return generation.WritingTestSource{}, experiment.ErrTestMaterialInvalid
+	}
 	answers := make([]post.TemplateAnswer, len(m.TemplateAnswers))
 	for i, a := range m.TemplateAnswers {
 		answers[i] = post.TemplateAnswer{Label: a.Label, Text: a.Text, Enabled: a.Enabled}
@@ -116,6 +124,55 @@ func (r *WritingTestResolvers) ResolveWritingTestSource(ctx context.Context, use
 	}
 	return value, nil
 }
+
+// resolveTestPhotos freezes a photo observation test's photos (MODEL-97): every id must name
+// a ready photo of this owner that no test holds yet, the same rule admission attaches them
+// under. An unknown, foreign, pending or held photo refuses alike.
+func (r *WritingTestResolvers) resolveTestPhotos(ctx context.Context, user, slug string, input, content int64, m generation.WritingTestMaterialRequest) (generation.WritingTestSource, error) {
+	if user == "" || slug != "" || input != 0 || content != 0 || len(m.PhotoIDs) == 0 || len(m.PhotoIDs) > experiment.TestPhotoMax {
+		return generation.WritingTestSource{}, experiment.ErrTestMaterialInvalid
+	}
+	photos, err := r.dependencies.Photos.ListReadyTestPhotos(ctx, user, m.PhotoIDs)
+	if err != nil {
+		return generation.WritingTestSource{}, err
+	}
+	byID := make(map[string]experiment.TestPhoto, len(photos))
+	for _, photo := range photos {
+		if photo.UserID != user || photo.TestID != "" || photo.Status != experiment.TestPhotoReady || photo.Key == "" || photo.Width <= 0 || photo.Height <= 0 {
+			return generation.WritingTestSource{}, experiment.ErrTestMaterialInvalid
+		}
+		byID[photo.ID] = photo
+	}
+	value := generation.WritingTestSource{Post: generation.PostInput{UserID: user, TargetLanguage: m.TargetLanguage}, Revision: "test-photos-v1"}
+	names := map[string]bool{}
+	for _, id := range m.PhotoIDs {
+		photo, ok := byID[id]
+		if !ok {
+			return generation.WritingTestSource{}, experiment.ErrTestMaterialInvalid
+		}
+		delete(byID, id)
+		attachment := post.WritingTestAttachment{ID: photo.ID, Filename: uniqueTestPhotoName(photo.Filename, names), Key: photo.Key, Kind: post.AttachmentPhoto, ContentType: experiment.TestPhotoContentType, Bytes: photo.Bytes, Width: int(photo.Width), Height: int(photo.Height)}
+		attachment.Fingerprint = post.WritingTestAttachmentFingerprint(attachment)
+		image := generation.Image{ID: attachment.ID, Filename: attachment.Filename, Key: attachment.Key, Kind: generation.AttachmentPhoto, ContentType: attachment.ContentType, Width: int32(attachment.Width), Height: int32(attachment.Height)}
+		value.Post.Images = append(value.Post.Images, image)
+		value.Attachments = append(value.Attachments, generation.WritingTestAttachment{ID: attachment.ID, Fingerprint: attachment.Fingerprint, Image: image})
+	}
+	return value, nil
+}
+
+// uniqueTestPhotoName keeps filenames unique within a test the way a post's photo copies are
+// (POST-33): a repeated name gets ` (2)`, ` (3)` before its extension.
+func uniqueTestPhotoName(name string, taken map[string]bool) string {
+	ext := path.Ext(name)
+	stem := strings.TrimSuffix(name, ext)
+	candidate := name
+	for n := 2; taken[candidate]; n++ {
+		candidate = fmt.Sprintf("%s (%d)%s", stem, n, ext)
+	}
+	taken[candidate] = true
+	return candidate
+}
+
 func materialSourceError(err error) error {
 	if errors.Is(err, post.ErrNotFound) || errors.Is(err, post.ErrForbidden) {
 		return experiment.ErrTestNotFound

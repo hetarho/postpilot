@@ -69,7 +69,7 @@ export function createUploadHandshake(transport: Transport): {
           contentType: response.contentType,
         }
       } catch (error) {
-        throw classify(error)
+        throw classifyUploadFailure(error)
       }
     },
 
@@ -87,13 +87,14 @@ export function createUploadHandshake(transport: Transport): {
         if (response.image) return { kind: 'photo', image: toPostImage(response.image) }
         throw new Error('ConfirmUpload returned no attachment')
       } catch (error) {
-        throw classify(error)
+        throw classifyUploadFailure(error)
       }
     },
   }
 }
 
-function classify(error: unknown): unknown {
+/** Which of the batch's three upload errors a failed handshake call is. */
+export function classifyUploadFailure(error: unknown): unknown {
   const failure = appFailureFromConnect(error)
   switch (failure.reason) {
     case 'POST_FILENAME_TAKEN':

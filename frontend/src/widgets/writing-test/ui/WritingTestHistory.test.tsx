@@ -331,6 +331,7 @@ it('trusts server-filtered style membership while keeping active contestant iden
     return {
       ...record,
       factor: WritingTestFactor.VOICE,
+      modelStage: WritingTestStage.UNSPECIFIED,
       candidates: record.candidates.map((candidate, index) => ({
         ...candidate,
         identity: {
@@ -426,6 +427,7 @@ it('requests owned source/style filters and retains blind active records without
           {
             ...record,
             factor: WritingTestFactor.VOICE,
+            modelStage: WritingTestStage.UNSPECIFIED,
             status: WritingTestStatus.RUNNING,
             revealed: false,
             winnerCandidateId: '',

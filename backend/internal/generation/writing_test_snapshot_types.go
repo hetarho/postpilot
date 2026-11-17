@@ -16,9 +16,18 @@ var (
 	ErrWritingTestDuplicate = errors.New("writing test repeats a semantic entrant")
 )
 
+// What every contestant of a writing test produces. An empty output is a post.
+const (
+	WritingTestOutputPost        = "post"
+	WritingTestOutputObservation = "observation"
+)
+
 // WritingTestMaterialRequest carries explicit material/options and owned identities.
 // It contains no profile, rendered template, observation, rule or private storage key.
+// A photo observation test (MODEL-97) carries only its language and its test photo ids.
 type WritingTestMaterialRequest struct {
+	Output                               string
+	PhotoIDs                             []string
 	Material                             string
 	Fictional                            bool
 	AttachmentIDs                        []string
@@ -149,7 +158,7 @@ func NewWritingTestFactory(service *Service, deps WritingTestFactoryDeps) *Writi
 // Private execution DTOs use the existing generation snapshot's edge mappers.
 type writingTestCommon struct {
 	Version                                                         int
-	Factor, ModelStage                                              string
+	Factor, ModelStage, Output                                      string
 	Post                                                            PostInput
 	Profile                                                         Profile
 	ObserveModel                                                    llm.ModelRef

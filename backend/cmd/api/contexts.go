@@ -100,6 +100,7 @@ type contexts struct {
 	experimentStore         *experimentstore.Store
 	experiment              *experiment.Service
 	writingTests            *experiment.WritingTestService
+	writingTestPhotos       *experiment.TestPhotos
 	writingTestFactory      *generation.WritingTestFactory
 	writingTestJobs         *experimentapp.WritingTestJobs
 	writingTestPublications *experimentapp.Publications

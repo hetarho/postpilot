@@ -4,6 +4,8 @@ export const TEST_COUNTS = [2, 4, 8, 16] as const
 export type TestCount = (typeof TEST_COUNTS)[number]
 export type TestFactor = 'model' | 'voice' | 'template' | 'guideline'
 export type TestStage = 'observe' | 'write'
+/** What each contestant produces: a written post, or only its observation of the test photos. */
+export type TestOutput = 'post' | 'observation'
 export type TestStatus =
   'queued' | 'running' | 'partial' | 'review' | 'completed' | 'cancelled' | 'failed'
 export type TestCandidateStatus = 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled'
@@ -39,8 +41,12 @@ export interface WritingTestContext {
   tagCount: number
   useMemory: boolean
   qualityRules: TestQualityRule[]
+  /** Test-owned photo ids, observation tests only; absent reads as none. */
+  photoIds?: string[]
 }
 export interface WritingTestPlan {
+  /** Absent reads as a post test, as an unspecified wire output does. */
+  output?: TestOutput
   factor: TestFactor
   modelStage: TestStage
   count: TestCount
@@ -69,10 +75,30 @@ export interface TestStoryline {
   addedFiles: string[]
   takenOutFiles: string[]
 }
+export interface TestObservation {
+  file: string
+  scene: string
+  mood: string
+  visibleText: string
+  objects: string[]
+  peoplePresent: boolean
+  /** Which observer produced it; absent until the champion is confirmed (MODEL-32). */
+  model?: string
+}
+export interface WritingTestPhoto {
+  id: string
+  filename: string
+  width: number
+  height: number
+  viewUrl?: string
+  viewExpiresAt?: string
+}
 export interface WritingTestCandidate {
   id: string
   status: TestCandidateStatus
   output?: PostContent
+  /** Observation tests only: one observation per photo, in the photo order. */
+  observations?: TestObservation[]
   failure?: AppFailure
   identity?: WritingTestIdentity
   displayLabel: string
@@ -102,12 +128,16 @@ export interface WritingTest {
   id: string
   /** uint32 server revision; post input/content revisions use bigint separately. */
   revision: number
+  /** Absent reads as a post test; the mapper always sets it. */
+  output?: TestOutput
   factor: TestFactor
   modelStage: TestStage
   count: TestCount
   status: TestStatus
   sourcePostSlug: string
   jobId: string
+  /** Observation tests only; absent reads as none, and the mapper always sets it. */
+  photos?: WritingTestPhoto[]
   candidates: WritingTestCandidate[]
   matches: WritingTestMatch[]
   winnerCandidateId: string
@@ -190,6 +220,6 @@ export function writingTestBusy(test?: WritingTest): boolean {
 export function writingTestPayloadAvailable(test: WritingTest, now = Date.now()): boolean {
   return (
     (!test.contentExpiresAt || Date.parse(test.contentExpiresAt) > now) &&
-    test.candidates.some((candidate) => !!candidate.output)
+    test.candidates.some((candidate) => !!candidate.output || !!candidate.observations?.length)
   )
 }

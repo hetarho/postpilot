@@ -12,6 +12,10 @@ const ACCEPT = [
   'image/*',
   'video/*',
 ].join(',')
+const PHOTO_ACCEPT = [
+  ...UPLOAD_ALLOWED_EXTENSIONS.map((extension) => `.${extension}`),
+  'image/*',
+].join(',')
 
 // Named peers (`peer/gallery`), spelled out rather than built: `peer-focus-visible:` is a general
 // sibling selector, so with two inputs in the row an unnamed peer would ring both labels from
@@ -24,10 +28,14 @@ const CAMERA_FOCUS =
 export function PhotoPicker({
   onFiles,
   disabled,
+  photosOnly,
 }: {
   onFiles: (files: File[]) => void
   disabled?: boolean
+  /** A surface that takes photos alone offers no clip in the system picker. */
+  photosOnly?: boolean
 }) {
+  const accept = photosOnly ? PHOTO_ACCEPT : ACCEPT
   const { t } = useTranslation('posts')
   const galleryId = useId()
   const cameraId = useId()
@@ -44,7 +52,7 @@ export function PhotoPicker({
         id={galleryId}
         type="file"
         multiple
-        accept={ACCEPT}
+        accept={accept}
         disabled={disabled}
         className="peer/gallery sr-only"
         onChange={pick}
@@ -57,7 +65,7 @@ export function PhotoPicker({
           className: disabled ? undefined : GALLERY_FOCUS,
         })}
       >
-        {t('upload.addPhotosOrVideos')}
+        {t(photosOnly ? 'upload.addPhotos' : 'upload.addPhotosOrVideos')}
       </label>
       {/* A second input, because `capture` belongs to the control and not to the pick: an
           image-only `accept` sends Android Chrome to the system photo picker, which offers no way
@@ -68,7 +76,7 @@ export function PhotoPicker({
       <input
         id={cameraId}
         type="file"
-        accept={ACCEPT}
+        accept={accept}
         capture="environment"
         disabled={disabled}
         className="peer/camera sr-only"

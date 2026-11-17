@@ -63,6 +63,12 @@ const (
 	// WritingTestServiceApplyWritingTestOutputProcedure is the fully-qualified name of the
 	// WritingTestService's ApplyWritingTestOutput RPC.
 	WritingTestServiceApplyWritingTestOutputProcedure = "/postpilot.v1.WritingTestService/ApplyWritingTestOutput"
+	// WritingTestServiceCreateTestPhotoUploadProcedure is the fully-qualified name of the
+	// WritingTestService's CreateTestPhotoUpload RPC.
+	WritingTestServiceCreateTestPhotoUploadProcedure = "/postpilot.v1.WritingTestService/CreateTestPhotoUpload"
+	// WritingTestServiceConfirmTestPhotoUploadProcedure is the fully-qualified name of the
+	// WritingTestService's ConfirmTestPhotoUpload RPC.
+	WritingTestServiceConfirmTestPhotoUploadProcedure = "/postpilot.v1.WritingTestService/ConfirmTestPhotoUpload"
 )
 
 // WritingTestServiceClient is a client for the postpilot.v1.WritingTestService service.
@@ -77,6 +83,8 @@ type WritingTestServiceClient interface {
 	CancelWritingTest(context.Context, *connect.Request[v1.CancelWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error)
 	SaveWritingTestWinner(context.Context, *connect.Request[v1.SaveWritingTestWinnerRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error)
 	ApplyWritingTestOutput(context.Context, *connect.Request[v1.ApplyWritingTestOutputRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error)
+	CreateTestPhotoUpload(context.Context, *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error)
+	ConfirmTestPhotoUpload(context.Context, *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error)
 }
 
 // NewWritingTestServiceClient constructs a client for the postpilot.v1.WritingTestService service.
@@ -150,6 +158,18 @@ func NewWritingTestServiceClient(httpClient connect.HTTPClient, baseURL string, 
 			connect.WithSchema(writingTestServiceMethods.ByName("ApplyWritingTestOutput")),
 			connect.WithClientOptions(opts...),
 		),
+		createTestPhotoUpload: connect.NewClient[v1.CreateTestPhotoUploadRequest, v1.CreateTestPhotoUploadResponse](
+			httpClient,
+			baseURL+WritingTestServiceCreateTestPhotoUploadProcedure,
+			connect.WithSchema(writingTestServiceMethods.ByName("CreateTestPhotoUpload")),
+			connect.WithClientOptions(opts...),
+		),
+		confirmTestPhotoUpload: connect.NewClient[v1.ConfirmTestPhotoUploadRequest, v1.ConfirmTestPhotoUploadResponse](
+			httpClient,
+			baseURL+WritingTestServiceConfirmTestPhotoUploadProcedure,
+			connect.WithSchema(writingTestServiceMethods.ByName("ConfirmTestPhotoUpload")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -165,6 +185,8 @@ type writingTestServiceClient struct {
 	cancelWritingTest            *connect.Client[v1.CancelWritingTestRequest, v1.WritingTestResponse]
 	saveWritingTestWinner        *connect.Client[v1.SaveWritingTestWinnerRequest, v1.WritingTestPublicationResponse]
 	applyWritingTestOutput       *connect.Client[v1.ApplyWritingTestOutputRequest, v1.WritingTestPublicationResponse]
+	createTestPhotoUpload        *connect.Client[v1.CreateTestPhotoUploadRequest, v1.CreateTestPhotoUploadResponse]
+	confirmTestPhotoUpload       *connect.Client[v1.ConfirmTestPhotoUploadRequest, v1.ConfirmTestPhotoUploadResponse]
 }
 
 // EstimateWritingTest calls postpilot.v1.WritingTestService.EstimateWritingTest.
@@ -217,6 +239,16 @@ func (c *writingTestServiceClient) ApplyWritingTestOutput(ctx context.Context, r
 	return c.applyWritingTestOutput.CallUnary(ctx, req)
 }
 
+// CreateTestPhotoUpload calls postpilot.v1.WritingTestService.CreateTestPhotoUpload.
+func (c *writingTestServiceClient) CreateTestPhotoUpload(ctx context.Context, req *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error) {
+	return c.createTestPhotoUpload.CallUnary(ctx, req)
+}
+
+// ConfirmTestPhotoUpload calls postpilot.v1.WritingTestService.ConfirmTestPhotoUpload.
+func (c *writingTestServiceClient) ConfirmTestPhotoUpload(ctx context.Context, req *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error) {
+	return c.confirmTestPhotoUpload.CallUnary(ctx, req)
+}
+
 // WritingTestServiceHandler is an implementation of the postpilot.v1.WritingTestService service.
 type WritingTestServiceHandler interface {
 	EstimateWritingTest(context.Context, *connect.Request[v1.EstimateWritingTestRequest]) (*connect.Response[v1.EstimateWritingTestResponse], error)
@@ -229,6 +261,8 @@ type WritingTestServiceHandler interface {
 	CancelWritingTest(context.Context, *connect.Request[v1.CancelWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error)
 	SaveWritingTestWinner(context.Context, *connect.Request[v1.SaveWritingTestWinnerRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error)
 	ApplyWritingTestOutput(context.Context, *connect.Request[v1.ApplyWritingTestOutputRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error)
+	CreateTestPhotoUpload(context.Context, *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error)
+	ConfirmTestPhotoUpload(context.Context, *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error)
 }
 
 // NewWritingTestServiceHandler builds an HTTP handler from the service implementation. It returns
@@ -298,6 +332,18 @@ func NewWritingTestServiceHandler(svc WritingTestServiceHandler, opts ...connect
 		connect.WithSchema(writingTestServiceMethods.ByName("ApplyWritingTestOutput")),
 		connect.WithHandlerOptions(opts...),
 	)
+	writingTestServiceCreateTestPhotoUploadHandler := connect.NewUnaryHandler(
+		WritingTestServiceCreateTestPhotoUploadProcedure,
+		svc.CreateTestPhotoUpload,
+		connect.WithSchema(writingTestServiceMethods.ByName("CreateTestPhotoUpload")),
+		connect.WithHandlerOptions(opts...),
+	)
+	writingTestServiceConfirmTestPhotoUploadHandler := connect.NewUnaryHandler(
+		WritingTestServiceConfirmTestPhotoUploadProcedure,
+		svc.ConfirmTestPhotoUpload,
+		connect.WithSchema(writingTestServiceMethods.ByName("ConfirmTestPhotoUpload")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.WritingTestService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case WritingTestServiceEstimateWritingTestProcedure:
@@ -320,6 +366,10 @@ func NewWritingTestServiceHandler(svc WritingTestServiceHandler, opts ...connect
 			writingTestServiceSaveWritingTestWinnerHandler.ServeHTTP(w, r)
 		case WritingTestServiceApplyWritingTestOutputProcedure:
 			writingTestServiceApplyWritingTestOutputHandler.ServeHTTP(w, r)
+		case WritingTestServiceCreateTestPhotoUploadProcedure:
+			writingTestServiceCreateTestPhotoUploadHandler.ServeHTTP(w, r)
+		case WritingTestServiceConfirmTestPhotoUploadProcedure:
+			writingTestServiceConfirmTestPhotoUploadHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -367,4 +417,12 @@ func (UnimplementedWritingTestServiceHandler) SaveWritingTestWinner(context.Cont
 
 func (UnimplementedWritingTestServiceHandler) ApplyWritingTestOutput(context.Context, *connect.Request[v1.ApplyWritingTestOutputRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.WritingTestService.ApplyWritingTestOutput is not implemented"))
+}
+
+func (UnimplementedWritingTestServiceHandler) CreateTestPhotoUpload(context.Context, *connect.Request[v1.CreateTestPhotoUploadRequest]) (*connect.Response[v1.CreateTestPhotoUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.WritingTestService.CreateTestPhotoUpload is not implemented"))
+}
+
+func (UnimplementedWritingTestServiceHandler) ConfirmTestPhotoUpload(context.Context, *connect.Request[v1.ConfirmTestPhotoUploadRequest]) (*connect.Response[v1.ConfirmTestPhotoUploadResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.WritingTestService.ConfirmTestPhotoUpload is not implemented"))
 }

@@ -1,9 +1,9 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
-import { ProtoConfigurationKind, WritingTestPublicationAction } from '@/shared/api'
+import { ProtoConfigurationKind, Stage, WritingTestPublicationAction } from '@/shared/api'
 import { writingTestI18n } from '@/features/writing-test'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
 import { createTestQueryClient, withProviders } from '@/test/session'
@@ -35,6 +35,8 @@ async function select(label: string, option: string) {
   await userEvent.click(screen.getByRole('combobox', { name: new RegExp(`^${label}(?:\\s|$)`) }))
   await userEvent.click(screen.getByRole('option', { name: option }))
 }
+const modelIds = (plan: { entrants: { source: { case?: string; value?: unknown } }[] }) =>
+  plan.entrants.map((entrant) => (entrant.source.value as { modelId: string }).modelId)
 const FACTOR = {
   'AI 모델': 'model',
   말투: 'voice',
@@ -53,11 +55,10 @@ async function chooseFactor(label: keyof typeof FACTOR) {
 async function modelCandidates(fixture: Fixture) {
   await chooseFactor('AI 모델')
   await waitFor(() => expect(fixture.calls).toContain('GetSelections'))
-  // Picking independently in reverse order catches sparse or shifted slot representations.
-  for (let index = fixture.plan.count - 1; index >= 0; index--)
-    await select(`후보 ${index + 1}`, `Model ${index + 1}`)
+  for (let index = 0; index < fixture.plan.count; index++)
+    await userEvent.click(await screen.findByRole('checkbox', { name: `Model ${index + 1}` }))
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('textbox', { name: '공통 글감' })
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
 }
 async function generate(fixture: Fixture) {
   await userEvent.click(
@@ -89,7 +90,7 @@ it.each([1, 10])(
     const fixture = createWritingTestStudioFixture()
     mount(fixture)
     await modelCandidates(fixture)
-    const tags = screen.getByRole('spinbutton', { name: '최소 태그 수' })
+    const tags = screen.getByRole('spinbutton', { name: /^최소 태그 수/ })
     expect(tags).toHaveValue(4)
     expect(tags).toHaveAttribute('min', '1')
     expect(tags).toHaveAttribute('max', '10')
@@ -114,22 +115,70 @@ it.each([1, 10])(
   },
 )
 
+it('picks model contestants from one checklist in the order checked, with no stage question', async () => {
+  const fixture = createWritingTestStudioFixture()
+  mount(fixture)
+  await chooseFactor('AI 모델')
+  expect(screen.queryByRole('combobox', { name: /^비교할 모델/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('combobox', { name: /^후보 1(?:\s|$)/ })).not.toBeInTheDocument()
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Model 3' }))
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Model 1' }))
+  expect(screen.getByText('2 / 2개 선택')).toBeVisible()
+  // A third check changes nothing and says why.
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Model 2' }))
+  expect(screen.getByRole('checkbox', { name: 'Model 2' })).not.toBeChecked()
+  expect(screen.getByText('2개까지 고를 수 있어요')).toBeVisible()
+  await userEvent.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
+  await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
+  await screen.findByRole('button', { name: '글 2편 만들기' })
+  expect(modelIds(fixture.estimates[0])).toEqual(['model-2', 'model-0'])
+  expect(fixture.estimates[0].modelStage).toBe(Stage.WRITE)
+  expect(fixture.admissions).toHaveLength(0)
+})
+it('keeps the first checked models when the format shrinks and shows credits on the fixed selects', async () => {
+  const fixture = createWritingTestStudioFixture({ count: 4, source: true })
+  mount(fixture)
+  await chooseFactor('AI 모델')
+  for (const label of ['Model 4', 'Model 2', 'Model 1', 'Model 3'])
+    await userEvent.click(await screen.findByRole('checkbox', { name: label }))
+  expect(screen.getByText('4 / 4개 선택')).toBeVisible()
+  await select('비교 형식', 'A/B 테스트')
+  expect(screen.getByText('2 / 2개 선택')).toBeVisible()
+  expect(screen.getByRole('checkbox', { name: 'Model 4' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 2' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 1' })).not.toBeChecked()
+  await userEvent.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
+  // The photos' fixed observer is chosen from a select that shows each option's credits per post.
+  await userEvent.click(screen.getByRole('combobox', { name: /^함께 사용할 관찰 모델/ }))
+  expect(screen.getByRole('option', { name: /^Model 1 · .*크레딧/ })).toBeVisible()
+  expect(screen.getByRole('option', { name: 'Model 2' })).toBeVisible()
+})
 it('requires every chosen slot and preserves unsent material through Back without implicit AI', async () => {
   const fixture = createWritingTestStudioFixture()
   mount(fixture)
   await chooseFactor('AI 모델')
-  await select('후보 2', 'Model 2')
+  await userEvent.click(await screen.findByRole('checkbox', { name: 'Model 2' }))
+  expect(screen.getByText('1 / 2개 선택')).toBeVisible()
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  expect(screen.getByText('서로 다른 후보 2개를 선택해 주세요.')).toBeVisible()
-  expect(screen.queryByRole('textbox', { name: '공통 글감' })).not.toBeInTheDocument()
-  await select('후보 1', 'Model 1')
+  // The refusal stands in the step bar above its row, not in the page.
+  const bar = document.querySelector<HTMLElement>('[data-action-bar="step"]')!
+  const reason = within(bar).getByText('서로 다른 후보 2개를 선택해 주세요.')
+  expect(reason).toBeVisible()
+  expect(screen.getByRole('button', { name: '다음' })).toHaveAttribute(
+    'aria-describedby',
+    reason.id,
+  )
+  expect(screen.queryByRole('textbox', { name: /^공통 글감/ })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Model 1' }))
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  const material = await screen.findByRole('textbox', { name: '공통 글감' })
+  const material = await screen.findByRole('textbox', { name: /^공통 글감/ })
   await userEvent.clear(material)
   await userEvent.type(material, 'My unsent working material')
   await userEvent.click(screen.getByRole('button', { name: '이전 단계' }))
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  expect(screen.getByRole('textbox', { name: '공통 글감' })).toHaveValue(
+  expect(screen.getByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'My unsent working material',
   )
   expect(fixture.estimates).toHaveLength(0)
@@ -141,20 +190,20 @@ it('returns a known refused quote to editable inputs while preserving both candi
   const fixture = createWritingTestStudioFixture({ estimateFailure: true })
   mount(fixture)
   await modelCandidates(fixture)
-  const material = screen.getByRole('textbox', { name: '공통 글감' })
+  const material = screen.getByRole('textbox', { name: /^공통 글감/ })
   await userEvent.clear(material)
   await userEvent.type(material, 'Keep this working material after the refused estimate')
   await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
   await userEvent.click(await screen.findByRole('button', { name: '입력 수정하기' }))
-  expect(await screen.findByRole('textbox', { name: '공통 글감' })).toHaveValue(
+  expect(await screen.findByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'Keep this working material after the refused estimate',
   )
   expect(fixture.estimates).toHaveLength(1)
   expect(fixture.admissions).toHaveLength(0)
   expect(screen.queryByRole('button', { name: '같은 요청 다시 확인하기' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '이전 단계' }))
-  expect(screen.getByRole('combobox', { name: /^후보 1 Model 1$/ })).toBeVisible()
-  expect(screen.getByRole('combobox', { name: /^후보 2 Model 2$/ })).toBeVisible()
+  expect(screen.getByRole('checkbox', { name: 'Model 1' })).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'Model 2' })).toBeChecked()
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
   expect(fixture.estimates).toHaveLength(1)
   await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
@@ -271,7 +320,7 @@ it('retains real source revisions for explicit compatible output application and
   const fixture = createWritingTestStudioFixture({ source: true })
   mount(fixture)
   await modelCandidates(fixture)
-  expect(screen.getByRole('textbox', { name: '공통 글감' })).toHaveValue('Real recorded material')
+  expect(screen.getByRole('textbox', { name: /^공통 글감/ })).toHaveValue('Real recorded material')
   await generate(fixture)
   await decideAll(fixture)
   expect(fixture.applications).toHaveLength(0)

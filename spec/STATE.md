@@ -83,15 +83,6 @@
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
-| T888 | Group template questions by template and point every refusal at its field | MODEL THEME ARCH | - | todo |
-| T889 | Choose model contestants from one checklist with credits per post | MODEL QUOTA ARCH | T888 | todo |
-| T890 | Add the photo observation test wire contract | MODEL ARCH | - | todo |
-| T891 | Store test-owned photos and the test output kind | MODEL VIDEO ARCH | T890 | todo |
-| T892 | Upload, confirm and sweep test-owned photos | MODEL POST ARCH | T891 | todo |
-| T893 | Admit and project photo observation tests | MODEL GEN ARCH | T892 | todo |
-| T894 | Run photo observation tests that stop at each contestant's observation | MODEL VIDEO GEN ARCH | T893 | todo |
-| T895 | Map photo observation tests and test photo uploads in the client | MODEL ARCH | T890 | todo |
-| T896 | Build the photo observation test setup at /tests/photos | MODEL POST THEME ARCH | T889 T895 | todo |
 | T897 | Review, reveal and adopt photo observation test results | MODEL ARCH | T894 T896 | todo |
 
 ## work
@@ -101,5 +92,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T888
 - no runnable task: resolve blocked, parked or deps
+- gusta-implement-task T879 T897

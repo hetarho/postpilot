@@ -41,7 +41,8 @@ func (a *WritingTestGeneration) PrepareWritingTest(ctx context.Context, r experi
 	if len(variants) != r.Count {
 		return experiment.TestPlan{}, experiment.ErrTestEntrant
 	}
-	material := generation.WritingTestMaterialRequest{Material: r.Input.Material, Fictional: r.Input.Fictional, AttachmentIDs: append([]string(nil), r.Input.AttachmentIDs...),
+	output := string(r.OutputKind())
+	material := generation.WritingTestMaterialRequest{Output: output, PhotoIDs: append([]string(nil), r.Input.PhotoIDs...), Material: r.Input.Material, Fictional: r.Input.Fictional, AttachmentIDs: append([]string(nil), r.Input.AttachmentIDs...),
 		ObserveModel: llm.ModelRef{ProviderID: r.Input.ObserveModel.ProviderID, ModelID: r.Input.ObserveModel.ModelID}, WriteModel: llm.ModelRef{ProviderID: r.Input.WriteModel.ProviderID, ModelID: r.Input.WriteModel.ModelID},
 		VoiceID: r.Input.VoiceID, TemplateID: r.Input.TemplateID, GuidelineSlotID: r.Input.GuidelineSlotID, TargetLanguage: generation.Language(r.Input.TargetLanguage),
 		TagCount: r.Input.TagCount, UseMemory: r.Input.UseMemory, QualityRules: append([]string(nil), r.Input.QualityRules...)}
@@ -57,7 +58,7 @@ func (a *WritingTestGeneration) PrepareWritingTest(ctx context.Context, r experi
 		return experiment.TestPlan{}, err
 	}
 	request := generation.WritingTestSnapshotRequest{UserID: r.UserID, SourcePostSlug: r.Input.SourcePostSlug, InputRevision: r.Input.InputRevision, ContentRevision: r.Input.ContentRevision,
-		Factor: string(r.Factor), ModelStage: string(r.ModelStage), Count: r.Count, CommonMaterial: common}
+		Factor: string(r.Factor), ModelStage: string(r.ModelStage), Output: output, Count: r.Count, CommonMaterial: common}
 	for index, v := range variants {
 		if v.Reference != r.Entrants[index] {
 			return experiment.TestPlan{}, experiment.ErrTestEntrant
@@ -273,6 +274,10 @@ func (a *WritingTestGeneration) RunTestCandidate(ctx context.Context, work exper
 	if runErr != nil || err != nil {
 		return out, errors.Join(runErr, err)
 	}
+	if work.Test.Output == experiment.OutputObservation {
+		out.Output, err = observationTestOutput(result)
+		return out, err
+	}
 	value := experiment.TestOutput{ContentLanguage: string(result.ContentLanguage), Nouns: result.Answer.Nouns, Origins: result.Answer.Origins, RequestInspections: result.Checkpoint.RequestInspections, Content: experiment.TestOutputContent{Title: result.Answer.Content.Title, Summary: result.Answer.Content.Summary, Tags: result.Answer.Content.Tags}}
 	for _, b := range result.Answer.Content.Blocks {
 		value.Content.Blocks = append(value.Content.Blocks, experiment.TestOutputBlock{Type: string(b.Type), Content: b.Content, Level: b.Level, File: b.File, Alt: b.Alt, Caption: b.Caption, Items: b.Items, Files: b.Files, Layout: b.Layout})
@@ -285,4 +290,17 @@ func (a *WritingTestGeneration) RunTestCandidate(ctx context.Context, work exper
 	}
 	out.Output, err = experiment.EncodeTestOutput(value)
 	return out, err
+}
+
+// observationTestOutput stores an observation test entrant's observations as its output
+// (MODEL-97). The result must hold them: a writer's answer is never one.
+func observationTestOutput(result generation.WritingTestRunResult) ([]byte, error) {
+	if len(result.Observations) == 0 || !result.Checkpoint.Settled {
+		return nil, experiment.ErrTestStateInvalid
+	}
+	value := experiment.TestOutput{RequestInspections: result.Checkpoint.RequestInspections, Observations: make([]experiment.TestOutputObservation, len(result.Observations))}
+	for i, o := range result.Observations {
+		value.Observations[i] = experiment.TestOutputObservation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: o.Objects, PeoplePresent: o.PeoplePresent, Model: o.Model}
+	}
+	return experiment.EncodeTestOutput(value)
 }

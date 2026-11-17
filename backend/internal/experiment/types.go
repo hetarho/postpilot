@@ -5,6 +5,7 @@ package experiment
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -491,6 +492,39 @@ func (f TestFactor) Valid() bool {
 	return f == FactorModel || f == FactorVoice || f == FactorTemplate || f == FactorGuideline
 }
 
+// TestOutputKind is what each contestant of a test produces: a complete post, or only the
+// observation of the test's photos (MODEL-97). A stored test with no kind reads as a post.
+type TestOutputKind string
+
+const (
+	OutputPost        TestOutputKind = "post"
+	OutputObservation TestOutputKind = "observation"
+)
+
+func (o TestOutputKind) Valid() bool { return o == OutputPost || o == OutputObservation }
+
+// Photo statuses of a test-owned photo: pending until its object is confirmed.
+const (
+	TestPhotoPending = "pending"
+	TestPhotoReady   = "ready"
+)
+
+// TestPhoto is one photo its owner uploaded to a photo observation test. It is private test
+// input: unattached until the test is admitted, then frozen with that test and purged with
+// its payload (MODEL-42).
+type TestPhoto struct {
+	ID, UserID, TestID, Filename, Key, Status string
+	Bytes, Width, Height                      int64
+	ExpiresAt, CreatedAt                      time.Time
+}
+
+// A photo the caller may not use is unknown, someone else's, not yet confirmed or already
+// attached to a test, and every case answers alike so ownership never leaks (MODEL-41).
+var (
+	ErrTestPhotoNotFound    = errors.New("the test photo is not found")
+	ErrTestPhotoUnavailable = errors.New("a test photo is unknown, not ready or already attached")
+)
+
 type TestStatus string
 
 const (
@@ -568,6 +602,7 @@ type TestInput struct {
 	Material                             string
 	Fictional                            bool
 	AttachmentIDs                        []string
+	PhotoIDs                             []string `json:",omitempty"`
 	TemplateAnswers                      []TestAnswer
 	ObserveModel, WriteModel             ModelRef
 	VoiceID, TemplateID, GuidelineSlotID string
@@ -583,10 +618,20 @@ type TestAnswer struct {
 type TestStart struct {
 	UserID, RequestKey, QuoteKey string
 	Factor                       TestFactor
-	ModelStage                   Stage
-	Count                        int
-	Entrants                     []TestEntrantRef
-	Input                        TestInput
+	// Output is what every contestant produces; empty reads as OutputPost.
+	Output     TestOutputKind `json:",omitempty"`
+	ModelStage Stage
+	Count      int
+	Entrants   []TestEntrantRef
+	Input      TestInput
+}
+
+// OutputKind is the request's output with an unspecified one read as a post.
+func (r TestStart) OutputKind() TestOutputKind {
+	if r.Output == "" {
+		return OutputPost
+	}
+	return r.Output
 }
 
 var (
@@ -608,6 +653,9 @@ func ValidateTestShape(r TestStart) error {
 	}
 	if r.UserID == "" || r.RequestKey == "" {
 		return ErrTestOperation
+	}
+	if err := validateTestOutput(r); err != nil {
+		return err
 	}
 	seen := map[string]bool{}
 	for _, e := range r.Entrants {
@@ -635,6 +683,40 @@ func ValidateTestShape(r TestStart) error {
 			return ErrTestDuplicate
 		}
 		seen[key] = true
+	}
+	return nil
+}
+
+// validateTestOutput checks the request against its output kind. A post test carries no
+// test-owned photos; a photo observation test (MODEL-97) compares observe-stage models on
+// 1..TestPhotoMax distinct uploaded photos and carries no writing material of any kind.
+func validateTestOutput(r TestStart) error {
+	in := r.Input
+	switch r.OutputKind() {
+	case OutputPost:
+		if len(in.PhotoIDs) > 0 {
+			return ErrTestMaterialInvalid
+		}
+		return nil
+	case OutputObservation:
+	default:
+		return ErrTestFactor
+	}
+	if r.Factor != FactorModel || r.ModelStage != StageObserve {
+		return ErrTestFactor
+	}
+	if len(in.PhotoIDs) == 0 || len(in.PhotoIDs) > TestPhotoMax {
+		return ErrTestMaterialInvalid
+	}
+	seen := make(map[string]bool, len(in.PhotoIDs))
+	for _, id := range in.PhotoIDs {
+		if id == "" || seen[id] {
+			return ErrTestMaterialInvalid
+		}
+		seen[id] = true
+	}
+	if in.SourcePostSlug != "" || in.InputRevision != 0 || in.ContentRevision != 0 || strings.TrimSpace(in.Material) != "" || in.Fictional || len(in.AttachmentIDs) > 0 || len(in.TemplateAnswers) > 0 || in.ObserveModel != (ModelRef{}) || in.WriteModel != (ModelRef{}) || in.VoiceID != "" || in.TemplateID != "" || in.GuidelineSlotID != "" || in.UseMemory || len(in.QualityRules) > 0 {
+		return ErrTestMaterialInvalid
 	}
 	return nil
 }
@@ -710,6 +792,7 @@ type TestPublication struct{ ID, UserID, TestID, WinnerID, Action, RequestKey, T
 type WritingTest struct {
 	ID, UserID, Kind, SourcePostSlug, JobID, CommonHash, PromptVersion, WinnerID string
 	Factor                                                                       TestFactor
+	Output                                                                       TestOutputKind
 	ModelStage                                                                   Stage
 	Count                                                                        int
 	Status                                                                       TestStatus
@@ -720,10 +803,12 @@ type WritingTest struct {
 	Candidates                                                                   []TestCandidate
 	Matches                                                                      []TestMatch
 	Publications                                                                 []TestPublication
-	ConfirmedCredits, ReservedCredits                                            int
-	Failure                                                                      *Failure
-	ContentExpiresAt                                                             *time.Time
-	CreatedAt, UpdatedAt                                                         time.Time
+	// Photos are a photo observation test's frozen photos, oldest first (MODEL-97).
+	Photos                            []TestPhoto
+	ConfirmedCredits, ReservedCredits int
+	Failure                           *Failure
+	ContentExpiresAt                  *time.Time
+	CreatedAt, UpdatedAt              time.Time
 }
 type FrozenTestVariant struct {
 	Reference                    TestEntrantRef

@@ -53,8 +53,13 @@ const MAX_VIDEO_BYTES = UPLOAD_MAX_VIDEO_MB * 1024 * 1024
 export function filterFile(
   file: { name: string; size: number },
   held: HeldAttachments = { photos: 0, videos: 0 },
+  options: { photosOnly?: boolean } = {},
 ): FileVerdict {
   const extension = fileExtension(file.name)
+  // A photo-only surface (a photo observation test, MODEL-97) lists a clip as an unaccepted
+  // extension rather than taking it.
+  if (VIDEO_ALLOWED.has(extension) && options.photosOnly)
+    return { kind: 'skipped', reason: 'extension' }
   if (VIDEO_ALLOWED.has(extension)) {
     // Nothing converts a clip, so its size at selection is its size on the server.
     if (file.size > MAX_VIDEO_BYTES) return { kind: 'skipped', reason: 'video-too-large' }

@@ -22,7 +22,7 @@ function redirected(action: () => never) {
   throw new Error('Expected an explicit alias redirect')
 }
 
-it.each(['observe', 'write', 'voice', 'analyze', undefined])(
+it.each(['write', 'voice', 'analyze', undefined])(
   'moves the old %s comparison to one explicit two-entry test with retained source and voice',
   (stage) => {
     const search = legacyModelComparisonSearchSchema({
@@ -41,7 +41,7 @@ it.each(['observe', 'write', 'voice', 'analyze', undefined])(
       replace: true,
       search: {
         factor: stage === 'voice' ? 'voice' : 'model',
-        stage: stage === 'observe' ? 'observe' : 'write',
+        stage: 'write',
         count: 2,
         source: 'owned-source',
         voiceId: 'owned-voice',
@@ -52,6 +52,21 @@ it.each(['observe', 'write', 'voice', 'analyze', undefined])(
     expect(result.search).not.toHaveProperty('scope')
   },
 )
+
+it('sends the old observe comparison to the photo observation test', () => {
+  const search = legacyModelComparisonSearchSchema({
+    stage: 'observe',
+    sourcePost: 'owned-source',
+    entry: '/ai-models',
+  })
+  const result = redirected(() => redirectLegacyModelComparison(search))
+  expect(result).toMatchObject({
+    to: '/tests/photos',
+    replace: true,
+    search: { count: 2, entry: '/ai-models' },
+  })
+  expect(result.search).not.toHaveProperty('source')
+})
 
 it.each(['sourcePost', 'sourcePostSlug', 'postSlug'])(
   'keeps the %s source alias without treating malformed values as usable settings',

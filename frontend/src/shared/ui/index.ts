@@ -68,7 +68,7 @@ export { listRowStyles } from './list-group/listRowStyles'
 export { StepScreen } from './step-screen/StepScreen'
 export { StepBar, StepBarActions, StepBarBack, StepBarCta, StepBarReason } from './step-bar/StepBar'
 
-export { useMediaQuery, MD_MEDIA_QUERY } from './media-query/useMediaQuery'
+export { useMediaQuery, MD_MEDIA_QUERY, SM_MEDIA_QUERY } from './media-query/useMediaQuery'
 
 export { choiceStyles } from './choice/choiceStyles'
 export { NavigationProvider } from './navigation/NavigationProvider'

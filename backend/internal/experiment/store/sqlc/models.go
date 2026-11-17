@@ -104,6 +104,7 @@ type WritingTest struct {
 	CreatedAt         string
 	UpdatedAt         string
 	ContentExpiresAt  sql.NullString
+	Output            string
 }
 
 type WritingTestAttempt struct {
@@ -173,6 +174,20 @@ type WritingTestOperation struct {
 	Action       string
 	Fingerprint  string
 	CreatedAt    string
+}
+
+type WritingTestPhoto struct {
+	ID        string
+	UserID    string
+	TestID    sql.NullString
+	Filename  string
+	ObjectKey string
+	Bytes     int64
+	Width     int64
+	Height    int64
+	Status    string
+	ExpiresAt string
+	CreatedAt string
 }
 
 type WritingTestPublication struct {

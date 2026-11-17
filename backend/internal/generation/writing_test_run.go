@@ -48,8 +48,12 @@ func (f *WritingTestFactory) PrepareWritingTestInput(ctx context.Context, snapsh
 	if err := writingTestResumeAllowed(checkpoint, options.RetryFailed); err != nil {
 		return result, err
 	}
-	// A currently unusable writer refuses before paying for shared eyesight.
+	// A currently unusable writer refuses before paying for shared eyesight; an observation
+	// test has no writer.
 	for _, variant := range variants {
+		if observationWritingTest(common) {
+			break
+		}
 		if err := f.checkWritingTestWriter(ctx, common.Post.UserID, variant); err != nil {
 			return result, err
 		}
@@ -116,6 +120,15 @@ func (f *WritingTestFactory) RunWritingTestCandidate(ctx context.Context, snapsh
 		if err != nil {
 			return WritingTestRunResult{}, err
 		}
+	}
+	if checkpoint.Settled {
+		if err := options.SaveCheckpoint(ctx, cloneWritingTestCheckpoint(checkpoint)); err != nil {
+			return WritingTestRunResult{Checkpoint: checkpoint}, err
+		}
+		return WritingTestRunResult{Checkpoint: checkpoint, Observations: cloneWritingTestCheckpoint(checkpoint).Observations, Replayed: true}, nil
+	}
+	if observationWritingTest(common) {
+		return f.runObservationCandidate(ctx, common, variant, batches, checkpoint, options)
 	}
 	result := WritingTestRunResult{Checkpoint: checkpoint}
 	if checkpoint.Answer != nil {
@@ -186,6 +199,41 @@ func (f *WritingTestFactory) RunWritingTestCandidate(ctx context.Context, snapsh
 	return result, nil
 }
 
+// runObservationCandidate observes the frozen photos with this entrant's own model in its own
+// checkpointed batches and settles the observations as its result; no writer is ever called.
+func (f *WritingTestFactory) runObservationCandidate(ctx context.Context, common writingTestCommon, variant writingTestVariant, batches [][]Image, checkpoint WritingTestCheckpoint, options WritingTestRunOptions) (WritingTestRunResult, error) {
+	result := WritingTestRunResult{Checkpoint: checkpoint}
+	if err := writingTestResumeAllowed(checkpoint, options.RetryFailed); err != nil {
+		return result, err
+	}
+	if len(batches) > checkpoint.CompletedObserveCalls {
+		if variant.ObservePromptTokens <= 0 || variant.ObserveCompletionTokens <= 0 {
+			return result, ErrWritingTestMaterial
+		}
+		if err := f.checkWritingTestObserver(ctx, common.Post.UserID, variant.ObserveModel, variant.Snapshot.Post.Images, variant.ObserveStructuredOutput); err != nil {
+			return result, err
+		}
+	}
+	if !checkpoint.Prepared {
+		var err error
+		result, err = runWritingTestObservation(ctx, f.writingTestWorker(common, &variant), variant.Snapshot.Post, batches, checkpoint, options)
+		if err != nil {
+			return result, err
+		}
+		checkpoint = result.Checkpoint
+	}
+	if err := ctx.Err(); err != nil {
+		return result, err
+	}
+	settled := cloneWritingTestCheckpoint(checkpoint)
+	settled.Settled = true
+	if err := options.SaveCheckpoint(ctx, cloneWritingTestCheckpoint(settled)); err != nil {
+		return result, err
+	}
+	result.Checkpoint, result.Observations = settled, cloneWritingTestCheckpoint(settled).Observations
+	return result, nil
+}
+
 func (f *WritingTestFactory) WriteTestEntrant(ctx context.Context, snapshot WritingTestSnapshot, index int, shared *WritingTestCheckpoint, options WritingTestRunOptions) (WriteAnswer, error) {
 	result, err := f.RunWritingTestCandidate(ctx, snapshot, index, shared, options)
 	return result.Answer, err
@@ -247,6 +295,12 @@ func observerWritingTest(common writingTestCommon) bool {
 	return common.Factor == "model" && common.ModelStage == llm.StageNameObserve
 }
 
+// observationWritingTest is a photo observation test: an observer comparison whose entrants
+// stop at their observations (MODEL-97).
+func observationWritingTest(common writingTestCommon) bool {
+	return observerWritingTest(common) && common.Output == WritingTestOutputObservation
+}
+
 func writingTestBatches(targets []Image, size int) [][]Image {
 	if size <= 0 {
 		return nil
@@ -263,7 +317,7 @@ func writingTestBatches(targets []Image, size int) [][]Image {
 }
 
 func writingTestInitialCheckpoint(snapshot WritingTestSnapshot, common writingTestCommon, index int, variant *writingTestVariant, seed []Observation) WritingTestCheckpoint {
-	value := WritingTestCheckpoint{SnapshotHash: snapshot.Hash, Index: index, ObserveModel: common.ObserveModel, BatchSize: common.BatchSize, ObservePromptTokens: common.ObservePromptTokens, ObserveCompletionTokens: common.ObserveCompletionTokens, ObserveStructuredOutput: common.ObserveStructuredOutput, Reasoning: common.Reasoning, Observations: mapSlice(seed, func(o Observation) Observation { return fromSnapshotObservation(toSnapshotObservation(o)) })}
+	value := WritingTestCheckpoint{SnapshotHash: snapshot.Hash, Index: index, ObservationOnly: index >= 0 && observationWritingTest(common), ObserveModel: common.ObserveModel, BatchSize: common.BatchSize, ObservePromptTokens: common.ObservePromptTokens, ObserveCompletionTokens: common.ObserveCompletionTokens, ObserveStructuredOutput: common.ObserveStructuredOutput, Reasoning: common.Reasoning, Observations: mapSlice(seed, func(o Observation) Observation { return fromSnapshotObservation(toSnapshotObservation(o)) })}
 	if variant != nil {
 		value.ObserveModel, value.WriteModel = variant.ObserveModel, variant.WriteModel
 		value.ObservePromptTokens, value.ObserveCompletionTokens = variant.ObservePromptTokens, variant.ObserveCompletionTokens
@@ -278,6 +332,7 @@ func acceptWritingTestCheckpoint(expected, stored WritingTestCheckpoint, batches
 	left.Observations, right.Observations = nil, nil
 	left.CompletedObserveCalls, right.CompletedObserveCalls = 0, 0
 	left.Prepared, right.Prepared = false, false
+	left.Settled, right.Settled = false, false
 	left.InFlightStage, right.InFlightStage = "", ""
 	left.FailedStage, right.FailedStage = "", ""
 	left.Answer, right.Answer = nil, nil
@@ -287,7 +342,7 @@ func acceptWritingTestCheckpoint(expected, stored WritingTestCheckpoint, batches
 			return WritingTestCheckpoint{}, ErrWritingTestCheckpointInvalid
 		}
 	}
-	if !reflect.DeepEqual(left, right) || stored.CompletedObserveCalls < 0 || stored.CompletedObserveCalls > len(batches) || (stored.Prepared && stored.CompletedObserveCalls != len(batches)) || (stored.Answer != nil && (!stored.Prepared || stored.Index < 0 || stored.InFlightStage != "" || stored.FailedStage != "")) {
+	if !reflect.DeepEqual(left, right) || stored.CompletedObserveCalls < 0 || stored.CompletedObserveCalls > len(batches) || (stored.Prepared && stored.CompletedObserveCalls != len(batches)) || (stored.Answer != nil && (!stored.Prepared || stored.Index < 0 || stored.InFlightStage != "" || stored.FailedStage != "")) || (stored.Answer != nil && stored.ObservationOnly) || (stored.Settled && (!stored.ObservationOnly || !stored.Prepared || stored.InFlightStage != "" || stored.FailedStage != "")) {
 		return WritingTestCheckpoint{}, ErrWritingTestCheckpointInvalid
 	}
 	for _, stage := range []string{stored.InFlightStage, stored.FailedStage} {
@@ -298,7 +353,7 @@ func acceptWritingTestCheckpoint(expected, stored WritingTestCheckpoint, batches
 	if stored.InFlightStage != "" && stored.FailedStage != "" {
 		return WritingTestCheckpoint{}, ErrWritingTestCheckpointInvalid
 	}
-	if (stored.Index < 0 && (stored.InFlightStage == llm.StageNameWrite || stored.FailedStage == llm.StageNameWrite)) || (stored.Prepared && (stored.InFlightStage == llm.StageNameObserve || stored.FailedStage == llm.StageNameObserve)) {
+	if ((stored.Index < 0 || stored.ObservationOnly) && (stored.InFlightStage == llm.StageNameWrite || stored.FailedStage == llm.StageNameWrite)) || (stored.Prepared && (stored.InFlightStage == llm.StageNameObserve || stored.FailedStage == llm.StageNameObserve)) {
 		return WritingTestCheckpoint{}, ErrWritingTestCheckpointInvalid
 	}
 	allowed := make(map[string]Observation, len(expected.Observations))
@@ -326,7 +381,12 @@ func acceptWritingTestCheckpoint(expected, stored WritingTestCheckpoint, batches
 	return cloneWritingTestCheckpoint(stored), nil
 }
 
+// writingTestResumeAllowed admits more work for an unfinished checkpoint. A finished one (a
+// durable answer or settled observations) is replayed by its caller and never resumed.
 func writingTestResumeAllowed(checkpoint WritingTestCheckpoint, retry bool) error {
+	if checkpoint.Answer != nil || checkpoint.Settled {
+		return ErrWritingTestCheckpointInvalid
+	}
 	if checkpoint.InFlightStage != "" {
 		return ErrWritingTestExecutionUncertain
 	}

@@ -1,9 +1,10 @@
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
 import { ProtoGuidelineScope } from '@/shared/api'
+import { SM_MEDIA_QUERY } from '@/shared/ui'
 import { writingTestI18n } from '@/features/writing-test'
 import { createWritingTestStudioFixture } from '@/entities/writing-test/api/studio-fixture'
 import { createTestQueryClient, withProviders } from '@/test/session'
@@ -15,7 +16,10 @@ beforeEach(() => {
   i18next.addResourceBundle('ko', 'writingTests', writingTestI18n.ko, true, true)
   i18next.addResourceBundle('en', 'writingTests', writingTestI18n.en, true, true)
 })
-afterEach(cleanup)
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
 type Fixture = ReturnType<typeof createWritingTestStudioFixture>
 const revision = '2026-10-08T00:00:00Z'
 const owned = {
@@ -86,7 +90,7 @@ async function prepare(fixture: Fixture, missing: number) {
   expect(fixture.preparationEstimates.at(-1)?.count).toBe(missing)
   expect(fixture.preparations).toHaveLength(fixture.preparationCreates.length)
   await userEvent.click(confirmation)
-  await screen.findByRole('textbox', { name: '공통 글감' })
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
 }
 async function postQuote(fixture: Fixture, count = fixture.plan.count) {
   await userEvent.click(screen.getByRole('button', { name: `글 ${count}편 생성 비용 확인` }))
@@ -139,7 +143,7 @@ it.each([
     await select('후보 1', 'Saved 1')
     expectNoPreparation(fixture)
     await userEvent.click(screen.getByRole('button', { name: '다음' }))
-    await screen.findByRole('textbox', { name: '공통 글감' })
+    await screen.findByRole('textbox', { name: /^공통 글감/ })
     expectNoPreparation(fixture)
     const quote = await postQuote(fixture)
     expect(quote.entrants.map((entrant) => entrant.source.case)).toEqual(['setting', 'setting'])
@@ -200,7 +204,7 @@ it('retains saved and prepared references through reload, format changes and ano
   const references = firstQuote.entrants.slice()
   reload(first, fixture)
   // Cost quotes do not survive reload as approval; the frozen contestants and material do.
-  await screen.findByRole('textbox', { name: '공통 글감' })
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
   expect(fixture.preparations).toHaveLength(1)
   expect(fixture.estimates).toHaveLength(1)
   await userEvent.click(screen.getByRole('button', { name: '이전 단계' }))
@@ -223,13 +227,15 @@ it('retains saved and prepared references through reload, format changes and ano
   await userEvent.click(screen.getByRole('button', { name: '이전 단계' }))
   await select('비교 형식', 'A/B 테스트')
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('textbox', { name: '공통 글감' })
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
   const shortened = await postQuote(fixture)
   expect(shortened.entrants).toEqual(references)
   expect(fixture.preparations.map((batch) => batch.count)).toEqual([1, 2])
 })
 
 it('retains required fields from a previous prepared template after a second batch and reload', async () => {
+  // Both prepared templates ask, so they stand side by side only from `sm:` up.
+  stubWidth(true)
   const fixture = createWritingTestStudioFixture({
     ...owned,
     factor: 'template',
@@ -254,6 +260,8 @@ it('retains required fields from a previous prepared template after a second bat
   expect(fixture.preparations.map((batch) => batch.count)).toEqual([1, 1])
   await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
   expect(fixture.estimates).toHaveLength(0)
+  // The refused press lands on the first missing answer, which the slot order puts in the newer batch.
+  await waitFor(() => expect(secondField).toHaveFocus())
   await userEvent.type(firstField, '공원')
   await userEvent.type(secondField, '동네 카페')
   const quote = await postQuote(fixture)
@@ -268,4 +276,159 @@ it('retains required fields from a previous prepared template after a second bat
       ),
     ).size,
   ).toBe(2)
+})
+
+/** jsdom has no layout: the `sm:` query decides whether the groups stand stacked or behind tabs. */
+function stubWidth(wide: boolean) {
+  vi.stubGlobal('matchMedia', (query: string) => ({
+    matches: wide && query === SM_MEDIA_QUERY,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }))
+}
+const asking = {
+  ...owned,
+  ownedTemplates: [
+    {
+      id: 'saved-1',
+      name: 'Template A',
+      body: '<ask label="A 장소" required="true"/><ask label="한 줄 소개"/><write>A</write>',
+      updatedAt: revision,
+    },
+    {
+      id: 'saved-2',
+      name: 'Template B',
+      body: '<ask label="B 장소" required="true"/><ask label="한 줄 소개"/><write>B</write>',
+      updatedAt: revision,
+    },
+  ],
+}
+async function materialOfTwoTemplates(fixture: Fixture) {
+  mount(fixture)
+  await enter(fixture, '글 템플릿')
+  await select('후보 1', 'Template A')
+  await select('후보 2', 'Template B')
+  await userEvent.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
+}
+const stepBar = () => document.querySelector<HTMLElement>('[data-action-bar="step"]')!
+
+it('stacks each contestant template under its own heading, shares one answer and marks what is required', async () => {
+  stubWidth(true)
+  const fixture = createWritingTestStudioFixture({ ...asking, factor: 'template' })
+  await materialOfTwoTemplates(fixture)
+  expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  expect(
+    screen.getAllByRole('heading', { level: 3 }).map((heading) => heading.textContent),
+  ).toEqual(['Template A', 'Template B'])
+  const first = within(screen.getByRole('region', { name: 'Template A' }))
+  const second = within(screen.getByRole('region', { name: 'Template B' }))
+  expect(first.getByRole('textbox', { name: 'A 장소 필수' })).toBeVisible()
+  expect(second.getByRole('textbox', { name: 'B 장소 필수' })).toBeVisible()
+  expect(first.queryByRole('textbox', { name: /^B 장소/ })).not.toBeInTheDocument()
+  // The question both templates ask stands in each group, marked shared and not required.
+  const sharedIn = (group: typeof first) => group.getByRole('textbox', { name: '한 줄 소개 공통' })
+  await userEvent.type(sharedIn(first), '한 번에 읽히는 소개')
+  expect(sharedIn(second)).toHaveValue('한 번에 읽히는 소개')
+  expect(first.getAllByText('필수')).toHaveLength(1)
+  expect(first.getAllByText('공통')).toHaveLength(1)
+  expect(second.getAllByText('공통')).toHaveLength(1)
+  // Every required field of the step wears the mark; the optional ones do not.
+  expect(screen.getByRole('textbox', { name: '공통 글감 필수' })).toBeVisible()
+  expect(screen.getByRole('spinbutton', { name: '목표 글자 수 필수' })).toBeVisible()
+  expect(screen.getByRole('spinbutton', { name: '최소 태그 수 필수' })).toBeVisible()
+  expect(screen.getByRole('combobox', { name: /^함께 사용할 글 작성 모델 필수/ })).toBeVisible()
+  expect(screen.getByRole('combobox', { name: /^같게 유지할 말투/ })).not.toHaveAccessibleName(
+    /필수/,
+  )
+  expect(screen.queryByRole('combobox', { name: /^함께 사용할 관찰 모델/ })).not.toBeInTheDocument()
+  expect(fixture.estimates).toEqual([])
+})
+
+it('marks the observer and the guideline slot as required where they stand and drops the material mark under an attachment', async () => {
+  stubWidth(true)
+  const fixture = createWritingTestStudioFixture({ ...owned, factor: 'guideline', source: true })
+  mount(fixture)
+  await enter(fixture, '글 지침')
+  await select('후보 1', 'Saved 1')
+  await select('후보 2', 'Saved 2')
+  await userEvent.click(screen.getByRole('button', { name: '다음' }))
+  await screen.findByRole('combobox', { name: /^바꿀 지침 자리 필수/ })
+  expect(screen.getByRole('combobox', { name: /^함께 사용할 관찰 모델 필수/ })).toBeVisible()
+  await waitFor(() => expect(screen.getByRole('textbox', { name: '공통 글감' })).toBeVisible())
+})
+
+it('shows one template at a time behind tabs on a phone, each naming its unanswered required questions', async () => {
+  stubWidth(false)
+  const fixture = createWritingTestStudioFixture({ ...asking, factor: 'template' })
+  await materialOfTwoTemplates(fixture)
+  const tabs = screen.getAllByRole('tab')
+  expect(tabs.map((tab) => tab.textContent)).toEqual([
+    'Template A · 필수 1개 남음',
+    'Template B · 필수 1개 남음',
+  ])
+  expect(screen.getByRole('tab', { name: /^Template A/ })).toHaveAttribute('aria-selected', 'true')
+  const panel = screen.getByRole('tabpanel', { name: 'Template A' })
+  expect(screen.getByRole('tab', { name: /^Template A/ })).toHaveAttribute(
+    'aria-controls',
+    panel.id,
+  )
+  expect(within(panel).getByRole('textbox', { name: 'A 장소 필수' })).toBeVisible()
+  expect(screen.queryByRole('textbox', { name: /^B 장소/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('heading', { level: 3 })).not.toBeInTheDocument()
+  await userEvent.type(within(panel).getByRole('textbox', { name: /^A 장소/ }), '공원')
+  expect(screen.getByRole('tab', { name: /^Template A/ })).toHaveTextContent('필수 0개 남음')
+  await userEvent.click(screen.getByRole('tab', { name: /^Template B/ }))
+  expect(screen.getByRole('textbox', { name: 'B 장소 필수' })).toBeVisible()
+  expect(screen.queryByRole('textbox', { name: /^A 장소/ })).not.toBeInTheDocument()
+})
+
+it('refuses a cost check with a missing answer in the second tab, names it in the step bar and lands on its field', async () => {
+  stubWidth(false)
+  const fixture = createWritingTestStudioFixture({ ...asking, factor: 'template' })
+  await materialOfTwoTemplates(fixture)
+  await userEvent.type(screen.getByRole('textbox', { name: /^A 장소/ }), '공원')
+  const cta = screen.getByRole('button', { name: '글 2편 생성 비용 확인' })
+  await userEvent.click(cta)
+  expect(fixture.estimates).toEqual([])
+  expect(fixture.admissions).toEqual([])
+  const reason = await within(stepBar()).findByText('‘B 장소’ 항목을 확인해 주세요.')
+  // Above the row, and named by the action it holds.
+  expect(reason.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(cta).toHaveAttribute('aria-describedby', reason.id)
+  expect(screen.getByRole('tab', { name: /^Template B/ })).toHaveAttribute('aria-selected', 'true')
+  const field = screen.getByRole('textbox', { name: 'B 장소 필수' })
+  await waitFor(() => expect(field).toHaveFocus())
+  expect(field).toHaveAttribute('aria-invalid', 'true')
+  const message = document.getElementById(field.getAttribute('aria-describedby')!)!
+  expect(message).toHaveTextContent('필수 입력을 확인해 주세요.')
+  expect(stepBar()).not.toContainElement(message)
+  // Answering it clears the refusal in the field and in the bar.
+  await userEvent.type(field, '카페')
+  expect(field).not.toHaveAttribute('aria-invalid')
+  expect(within(stepBar()).queryByText(/항목/)).not.toBeInTheDocument()
+  await postQuote(fixture)
+  expect(fixture.estimates).toHaveLength(1)
+})
+
+it('counts every refused field in the bar and keeps a bounds refusal under its own field', async () => {
+  stubWidth(false)
+  const fixture = createWritingTestStudioFixture({ ...asking, factor: 'template' })
+  await materialOfTwoTemplates(fixture)
+  const length = screen.getByRole('spinbutton', { name: '목표 글자 수 필수' })
+  fireEvent.change(length, { target: { value: '5' } })
+  await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
+  expect(fixture.estimates).toEqual([])
+  // On screen order: the length comes before the questions, so it is named first and focused.
+  await within(stepBar()).findByText('‘목표 글자 수’ 항목 등 3곳을 확인해 주세요.')
+  await waitFor(() => expect(length).toHaveFocus())
+  const bounds = document.getElementById(length.getAttribute('aria-describedby')!)!
+  expect(bounds).toHaveTextContent('목표 글자 수는')
+  expect(stepBar()).not.toContainElement(bounds)
+  expect(length).toHaveAttribute('aria-invalid', 'true')
 })

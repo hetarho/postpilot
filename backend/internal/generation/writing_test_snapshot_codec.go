@@ -43,6 +43,7 @@ type writingTestCommonWire struct {
 	Version                 int                        `json:"version"`
 	Factor                  string                     `json:"factor"`
 	ModelStage              string                     `json:"model_stage"`
+	Output                  string                     `json:"output,omitempty"`
 	Post                    snapshotPost               `json:"post"`
 	Profile                 *snapshotProfile           `json:"profile,omitempty"`
 	ObserveModel            string                     `json:"observe_model"`
@@ -101,7 +102,7 @@ type writingTestVariantWire struct {
 
 func encodeWritingTestCommon(in writingTestCommon) ([]byte, error) {
 	return json.Marshal(writingTestCommonWire{
-		Version: in.Version, Factor: in.Factor, ModelStage: in.ModelStage, Post: toSnapshotPost(in.Post), Profile: toSnapshotProfile(in.Profile),
+		Version: in.Version, Factor: in.Factor, ModelStage: in.ModelStage, Output: in.Output, Post: toSnapshotPost(in.Post), Profile: toSnapshotProfile(in.Profile),
 		ObserveModel: testModelString(in.ObserveModel), ObserveFiles: copyOptionalTexts(in.ObserveFiles), Observations: mapSlice(in.Observations, toSnapshotObservation),
 		Prepared: in.Prepared, Fictional: in.Fictional, BatchSize: in.BatchSize, ObserveCompletionTokens: in.ObserveCompletionTokens, ObservePromptTokens: in.ObservePromptTokens, WritePromptTokens: in.WritePromptTokens,
 		ObserveStructuredOutput: in.ObserveStructuredOutput, Reasoning: in.Reasoning, PromptVersion: in.PromptVersion, SchemaVersion: in.SchemaVersion, SourceRevision: in.SourceRevision, AssignmentsHash: in.AssignmentsHash,
@@ -125,7 +126,9 @@ func decodeWritingTestSnapshot(snapshot WritingTestSnapshot) (writingTestCommon,
 	if err := decodeWritingTestJSON(snapshot.Common, &wire); err != nil {
 		return writingTestCommon{}, nil, err
 	}
-	if wire.Version != writingTestSnapshotVersion || !validWritingTestFactor(wire.Factor, wire.ModelStage) || !validWritingTestCount(len(snapshot.Variants)) || wire.BatchSize <= 0 || wire.Post.UserID == "" || !Language(wire.Post.TargetLanguage).Valid() || wire.Post.TagCount <= 0 {
+	// An observation test writes nothing, so it freezes no tag count and no writer.
+	observation := wire.Output == WritingTestOutputObservation
+	if wire.Version != writingTestSnapshotVersion || !validWritingTestOutput(wire.Output, wire.Factor, wire.ModelStage) || !validWritingTestFactor(wire.Factor, wire.ModelStage) || !validWritingTestCount(len(snapshot.Variants)) || wire.BatchSize <= 0 || wire.Post.UserID == "" || !Language(wire.Post.TargetLanguage).Valid() || (wire.Post.TagCount <= 0 && !observation) {
 		return writingTestCommon{}, nil, ErrWritingTestMaterial
 	}
 	observe, err := testOptionalModel(wire.ObserveModel)
@@ -133,7 +136,7 @@ func decodeWritingTestSnapshot(snapshot WritingTestSnapshot) (writingTestCommon,
 		return writingTestCommon{}, nil, err
 	}
 	common := writingTestCommon{
-		Version: wire.Version, Factor: wire.Factor, ModelStage: wire.ModelStage, Post: fromSnapshotPost(wire.Post), Profile: fromSnapshotProfile(wire.Profile),
+		Version: wire.Version, Factor: wire.Factor, ModelStage: wire.ModelStage, Output: wire.Output, Post: fromSnapshotPost(wire.Post), Profile: fromSnapshotProfile(wire.Profile),
 		ObserveModel: observe, ObserveFiles: copyOptionalTexts(wire.ObserveFiles), Observations: mapSlice(wire.Observations, fromSnapshotObservation), Prepared: wire.Prepared, Fictional: wire.Fictional,
 		BatchSize: wire.BatchSize, ObserveCompletionTokens: wire.ObserveCompletionTokens, ObservePromptTokens: wire.ObservePromptTokens, WritePromptTokens: wire.WritePromptTokens,
 		ObserveStructuredOutput: wire.ObserveStructuredOutput, Reasoning: wire.Reasoning, PromptVersion: wire.PromptVersion, SchemaVersion: wire.SchemaVersion, SourceRevision: wire.SourceRevision, AssignmentsHash: wire.AssignmentsHash,
@@ -146,9 +149,17 @@ func decodeWritingTestSnapshot(snapshot WritingTestSnapshot) (writingTestCommon,
 		if err := decodeWritingTestJSON(raw, &value); err != nil {
 			return writingTestCommon{}, nil, err
 		}
-		write, ok := llm.ParseModelRef(value.WriteModel)
-		if !ok || value.WriteCompletionTokens <= 0 || value.WritePromptTokens <= 0 || value.Revision == "" || value.SemanticKey == "" {
-			return writingTestCommon{}, nil, ErrWritingTestMaterial
+		var write llm.ModelRef
+		if observation {
+			if value.WriteModel != "" || value.WriteCompletionTokens != 0 || value.WritePromptTokens != 0 || value.ObservePromptTokens <= 0 || value.ObserveCompletionTokens <= 0 || value.Revision == "" || value.SemanticKey == "" {
+				return writingTestCommon{}, nil, ErrWritingTestMaterial
+			}
+		} else {
+			parsed, ok := llm.ParseModelRef(value.WriteModel)
+			if !ok || value.WriteCompletionTokens <= 0 || value.WritePromptTokens <= 0 || value.Revision == "" || value.SemanticKey == "" {
+				return writingTestCommon{}, nil, ErrWritingTestMaterial
+			}
+			write = parsed
 		}
 		observe, err := testOptionalModel(value.ObserveModel)
 		if err != nil {

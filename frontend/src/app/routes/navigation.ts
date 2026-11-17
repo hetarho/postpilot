@@ -143,7 +143,8 @@ function structuralLocation(path: string): Omit<RouteLocation, 'destination'> {
     return { current: 'testHistory', ancestors: [AI_PICK] }
   if (/^\/posts\/[^/]+$/.test(path)) return { current: 'post', ancestors: [POSTS] }
   if (/^\/clips\/[^/]+$/.test(path)) return { current: 'clip', ancestors: [clipHub] }
-  if (path === '/tests') return { current: 'tests', ancestors: [AI_PICK] }
+  if (path === '/tests' || path === '/tests/photos')
+    return { current: 'tests', ancestors: [AI_PICK] }
   if (/^\/tests\/[^/]+$/.test(path)) return { current: 'test', ancestors: [AI_PICK, TESTS] }
   if (path === '/settings') return { current: 'settings', ancestors: [] }
   if (path === '/voices') return { current: 'voices', ancestors: [] }

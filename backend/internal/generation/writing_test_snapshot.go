@@ -18,6 +18,21 @@ func validWritingTestFactor(factor, stage string) bool {
 	return stage == "" && (factor == "voice" || factor == "template" || factor == "guideline")
 }
 
+// validWritingTestOutput admits a post (stored as empty) for every factor and an observation
+// only for an observe-stage model comparison (MODEL-97).
+func validWritingTestOutput(output, factor, stage string) bool {
+	return output == "" || output == WritingTestOutputObservation && factor == "model" && stage == "observe"
+}
+
+// writingTestOutput reads a requested output, a post being stored as empty so the snapshots
+// of post tests stay byte-identical to the ones frozen before outputs existed.
+func writingTestOutput(output string) string {
+	if output == WritingTestOutputPost {
+		return ""
+	}
+	return output
+}
+
 func validWritingTestReference(ref WritingTestReference, factor string) bool {
 	switch ref.SourceKind {
 	case "model":
@@ -44,10 +59,14 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 	if err := decodeWritingTestJSON(request.CommonMaterial, &material); err != nil {
 		return WritingTestSnapshot{}, err
 	}
+	output := writingTestOutput(request.Output)
+	if output != writingTestOutput(material.Output) || !validWritingTestOutput(output, request.Factor, request.ModelStage) {
+		return WritingTestSnapshot{}, ErrWritingTestFactor
+	}
 	if !material.TargetLanguage.Valid() {
 		return WritingTestSnapshot{}, ErrLanguageRequired
 	}
-	if material.TagCount <= 0 || material.TargetLength != nil && *material.TargetLength <= 0 {
+	if output == "" && (material.TagCount <= 0 || material.TargetLength != nil && *material.TargetLength <= 0 || len(material.PhotoIDs) > 0) {
 		return WritingTestSnapshot{}, ErrWritingTestMaterial
 	}
 	refs := make([]WritingTestReference, request.Count)
@@ -68,6 +87,9 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 	}
 	if err := validateWritingTestAttachments(source); err != nil {
 		return WritingTestSnapshot{}, err
+	}
+	if output == WritingTestOutputObservation {
+		return f.freezeObservationTest(ctx, request, material, refs, source)
 	}
 	post := fromSnapshotPost(toSnapshotPost(source.Post))
 	post.TargetLanguage, post.TargetLength, post.TagCount = material.TargetLanguage, copyOptionalInt(material.TargetLength), material.TagCount
@@ -290,6 +312,55 @@ func (f *WritingTestFactory) FreezeWritingTest(ctx context.Context, request Writ
 			}
 		}
 	}
+	return f.encodeWritingTestSnapshot(common, variants)
+}
+
+// freezeObservationTest freezes a photo observation test (MODEL-97): the owner's test photos,
+// the observe-stage contestants and the prompt/schema versions. It freezes no writer, voice,
+// template, guideline, memory or quality rule, since no contestant writes anything.
+func (f *WritingTestFactory) freezeObservationTest(ctx context.Context, request WritingTestSnapshotRequest, material WritingTestMaterialRequest, refs []WritingTestReference, source WritingTestSource) (WritingTestSnapshot, error) {
+	if request.SourcePostSlug != "" || request.InputRevision != 0 || request.ContentRevision != 0 || strings.TrimSpace(material.Material) != "" || material.Fictional || len(material.AttachmentIDs) > 0 || material.ObserveFiles != nil ||
+		material.ObserveModel != (llm.ModelRef{}) || material.WriteModel != (llm.ModelRef{}) || material.VoiceID != "" || material.TemplateID != "" || material.GuidelineSlotID != "" || len(material.TemplateAnswers) > 0 || material.UseMemory || len(material.QualityRules) > 0 {
+		return WritingTestSnapshot{}, ErrWritingTestMaterial
+	}
+	if len(material.PhotoIDs) == 0 || len(source.Post.Images) != len(material.PhotoIDs) || strings.TrimSpace(source.Post.Memo) != "" || source.Revision == "" {
+		return WritingTestSnapshot{}, ErrWritingTestMaterial
+	}
+	for _, image := range source.Post.Images {
+		if image.Kind != AttachmentPhoto || image.Width <= 0 || image.Height <= 0 {
+			return WritingTestSnapshot{}, ErrWritingTestMaterial
+		}
+	}
+	if f.service.batchSize <= 0 {
+		return WritingTestSnapshot{}, ErrWritingTestMaterial
+	}
+	post := PostInput{UserID: request.UserID, Images: fromSnapshotPost(toSnapshotPost(source.Post)).Images, TargetLanguage: material.TargetLanguage, OriginProtocolVersion: OriginProtocolVersion}
+	common := writingTestCommon{Version: writingTestSnapshotVersion, Factor: request.Factor, ModelStage: request.ModelStage, Output: WritingTestOutputObservation, Post: post, Profile: Profile{NoVoice: true}, Prepared: true, BatchSize: f.service.batchSize, Reasoning: f.service.reasoning, PromptVersion: writingTestPromptVersion, SchemaVersion: writingTestSchemaVersion(), SourceRevision: source.Revision, Attachments: source.Attachments}
+	variants := make([]writingTestVariant, len(refs))
+	seen := map[string]bool{}
+	for index, ref := range refs {
+		info, err := f.prepareModel(ctx, request.UserID, request.ModelStage, ref.Model, post.Images)
+		if err != nil {
+			return WritingTestSnapshot{}, err
+		}
+		variant := writingTestVariant{Reference: ref, Revision: ref.Model.String(), ObserveModel: ref.Model, ObservePromptTokens: info.PromptTokens + ObserveOriginPromptTokenOverhead, ObserveCompletionTokens: f.service.budget.Observation(), ObserveStructuredOutput: info.Info.StructuredOutput}
+		variant.SemanticKey = writingTestSemanticKey(struct {
+			Stage string
+			Ref   llm.ModelRef
+		}{request.ModelStage, ref.Model})
+		if seen[variant.SemanticKey] {
+			return WritingTestSnapshot{}, ErrWritingTestDuplicate
+		}
+		seen[variant.SemanticKey] = true
+		variant.Snapshot = writeSnapshot{TargetLanguage: post.TargetLanguage, ObserveModel: ref.Model.String(), Post: post, Profile: common.Profile, SnapshotOnly: true}
+		variants[index] = variant
+	}
+	return f.encodeWritingTestSnapshot(common, variants)
+}
+
+// encodeWritingTestSnapshot seals frozen inputs: the hash covers the common bytes and every
+// variant's bytes, and the observation call count comes from the same plan the quote prices.
+func (f *WritingTestFactory) encodeWritingTestSnapshot(common writingTestCommon, variants []writingTestVariant) (WritingTestSnapshot, error) {
 	commonRaw, err := encodeWritingTestCommon(common)
 	if err != nil {
 		return WritingTestSnapshot{}, err
@@ -328,7 +399,10 @@ func (f *WritingTestFactory) PlanWritingTest(snapshot WritingTestSnapshot) ([]Wr
 		if observerWritingTest(common) {
 			calls = appendWritingTestCall(calls, WritingTestCall{Ref: variant.ObserveModel, Stage: "observe", Count: len(writingTestBatches(variant.Snapshot.Post.Images, common.BatchSize)), PromptTokens: variant.ObservePromptTokens, CompletionTokens: variant.ObserveCompletionTokens})
 		}
-		calls = appendWritingTestCall(calls, WritingTestCall{Ref: variant.WriteModel, Stage: "write", Count: 1, PromptTokens: variant.WritePromptTokens, CompletionTokens: variant.WriteCompletionTokens})
+		// An observation test ends at each contestant's observation (MODEL-97).
+		if !observationWritingTest(common) {
+			calls = appendWritingTestCall(calls, WritingTestCall{Ref: variant.WriteModel, Stage: "write", Count: 1, PromptTokens: variant.WritePromptTokens, CompletionTokens: variant.WriteCompletionTokens})
+		}
 	}
 	return calls, nil
 }

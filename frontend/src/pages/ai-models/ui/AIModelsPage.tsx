@@ -129,13 +129,23 @@ function CompareCard({
       <Typography variant="body" className="text-content-secondary flex-1">
         {help}
       </Typography>
-      <Link
-        to="/tests"
-        search={{ factor: 'model', stage, count: 2, entry: '/ai-models' }}
-        className={buttonStyles({ variant: 'secondary', className: 'w-full' })}
-      >
-        {t('page.compareStart')}
-      </Link>
+      {stage === 'observe' ? (
+        <Link
+          to="/tests/photos"
+          search={{ count: 2, entry: '/ai-models' }}
+          className={buttonStyles({ variant: 'secondary', className: 'w-full' })}
+        >
+          {t('page.compareStart')}
+        </Link>
+      ) : (
+        <Link
+          to="/tests"
+          search={{ factor: 'model', stage, count: 2, entry: '/ai-models' }}
+          className={buttonStyles({ variant: 'secondary', className: 'w-full' })}
+        >
+          {t('page.compareStart')}
+        </Link>
+      )}
     </section>
   )
 }

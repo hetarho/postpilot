@@ -1,6 +1,9 @@
 import { create } from '@bufbuild/protobuf'
 import {
   BlockType,
+  ObservationSchema,
+  WritingTestOutput,
+  WritingTestPhotoSchema,
   WritingTestSchema,
   WritingTestFactor,
   WritingTestStage,
@@ -37,6 +40,22 @@ export function testPlan(count: TestCount = 2): WritingTestPlan {
       tagCount: 3,
       useMemory: false,
       qualityRules: [],
+      photoIds: [],
+    },
+  }
+}
+/** An observation plan: model entrants at the observe stage over test photos alone. */
+export function observationPlan(photoIds: string[], count: TestCount = 2): WritingTestPlan {
+  const plan = testPlan(count)
+  return {
+    ...plan,
+    output: 'observation',
+    modelStage: 'observe',
+    context: {
+      ...plan.context,
+      material: { text: '', fictional: true, attachmentIds: [], templateAnswers: [] },
+      tagCount: 0,
+      photoIds,
     },
   }
 }
@@ -95,4 +114,34 @@ export function wireTest(count: TestCount = 2, completed = false) {
     contentExpiresAt: '2099-01-01T00:00:00Z',
     fictional: true,
   })
+}
+/** A finished observation test: each candidate holds one observation per photo, no post. */
+export function wireObservationTest(photoIds: string[], count: TestCount = 2, completed = false) {
+  const test = wireTest(count, completed)
+  test.output = WritingTestOutput.OBSERVATION
+  test.modelStage = WritingTestStage.OBSERVE
+  test.photos = photoIds.map((id) =>
+    create(WritingTestPhotoSchema, {
+      id,
+      filename: `${id}.jpg`,
+      width: 800,
+      height: 600,
+      viewUrl: `https://storage.test/${id}`,
+      viewExpiresAt: '2099-01-01T00:00:00Z',
+    }),
+  )
+  test.candidates.forEach((candidate, index) => {
+    candidate.output = undefined
+    candidate.observations = photoIds.map((id) =>
+      create(ObservationSchema, {
+        file: `${id}.jpg`,
+        scene: `Scene ${index}`,
+        mood: 'calm',
+        objects: ['table'],
+        // The observer is identity: it stays empty while the test is blind (MODEL-32).
+        model: completed ? `model-${index}` : '',
+      }),
+    )
+  })
+  return test
 }

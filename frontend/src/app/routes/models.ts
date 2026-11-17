@@ -4,6 +4,7 @@ import { testRecordSearchSchema } from '@/pages/model-experiment'
 import {
   writingTestSearchSchema,
   writingTestHistorySearchSchema,
+  photoTestSearchSchema,
   type WritingTestSearch,
   type WritingTestHistorySearch,
 } from '@/pages/writing-tests'
@@ -63,6 +64,13 @@ export function legacyModelComparisonSearchSchema(raw: Record<string, unknown>):
 }
 
 export function redirectLegacyModelComparison(search: WritingTestSearch): never {
+  // Observer models are compared on photos (MODEL-97).
+  if (search.stage === 'observe')
+    throw redirect({
+      to: '/tests/photos',
+      search: photoTestSearchSchema({ ...search }),
+      replace: true,
+    })
   throw redirect({
     to: '/tests',
     search: writingTestSearchSchema({ ...search }),
