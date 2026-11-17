@@ -95,7 +95,7 @@ it('preserves an owned source through the alias and preloads its complete record
       `Model ${index}`,
     )
   await user.click(screen.getByRole('button', { name: '다음' }))
-  expect(await screen.findByRole('textbox', { name: '공통 글감' })).toHaveValue(
+  expect(await screen.findByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'Real recorded material',
   )
   expect(fixture.admissions).toEqual([])

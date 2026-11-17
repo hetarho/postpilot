@@ -175,7 +175,7 @@ it('preloads the actual source context before authoring and quotes its real revi
     await userEvent.click(screen.getByRole('option', { name: `Model ${index + 1}` }))
   }
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  expect(await screen.findByRole('textbox', { name: '공통 글감' })).toHaveValue(
+  expect(await screen.findByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'Real recorded material',
   )
   expect(screen.getByRole('combobox', { name: /^글 언어 영어$/ })).toBeVisible()

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -57,7 +57,7 @@ async function modelCandidates(fixture: Fixture) {
   for (let index = fixture.plan.count - 1; index >= 0; index--)
     await select(`후보 ${index + 1}`, `Model ${index + 1}`)
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('textbox', { name: '공통 글감' })
+  await screen.findByRole('textbox', { name: /^공통 글감/ })
 }
 async function generate(fixture: Fixture) {
   await userEvent.click(
@@ -89,7 +89,7 @@ it.each([1, 10])(
     const fixture = createWritingTestStudioFixture()
     mount(fixture)
     await modelCandidates(fixture)
-    const tags = screen.getByRole('spinbutton', { name: '최소 태그 수' })
+    const tags = screen.getByRole('spinbutton', { name: /^최소 태그 수/ })
     expect(tags).toHaveValue(4)
     expect(tags).toHaveAttribute('min', '1')
     expect(tags).toHaveAttribute('max', '10')
@@ -122,16 +122,23 @@ it('requires every chosen slot and preserves unsent material through Back withou
   // Choosing one slot fills the others with empty entrants, which still read as unchosen.
   expect(screen.getByRole('combobox', { name: '후보 1 선택해 주세요' })).toBeVisible()
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  expect(screen.getByText('서로 다른 후보 2개를 선택해 주세요.')).toBeVisible()
-  expect(screen.queryByRole('textbox', { name: '공통 글감' })).not.toBeInTheDocument()
+  // The refusal stands in the step bar above its row, not in the page.
+  const bar = document.querySelector<HTMLElement>('[data-action-bar="step"]')!
+  const reason = within(bar).getByText('서로 다른 후보 2개를 선택해 주세요.')
+  expect(reason).toBeVisible()
+  expect(screen.getByRole('button', { name: '다음' })).toHaveAttribute(
+    'aria-describedby',
+    reason.id,
+  )
+  expect(screen.queryByRole('textbox', { name: /^공통 글감/ })).not.toBeInTheDocument()
   await select('후보 1', 'Model 1')
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  const material = await screen.findByRole('textbox', { name: '공통 글감' })
+  const material = await screen.findByRole('textbox', { name: /^공통 글감/ })
   await userEvent.clear(material)
   await userEvent.type(material, 'My unsent working material')
   await userEvent.click(screen.getByRole('button', { name: '이전 단계' }))
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
-  expect(screen.getByRole('textbox', { name: '공통 글감' })).toHaveValue(
+  expect(screen.getByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'My unsent working material',
   )
   expect(fixture.estimates).toHaveLength(0)
@@ -143,12 +150,12 @@ it('returns a known refused quote to editable inputs while preserving both candi
   const fixture = createWritingTestStudioFixture({ estimateFailure: true })
   mount(fixture)
   await modelCandidates(fixture)
-  const material = screen.getByRole('textbox', { name: '공통 글감' })
+  const material = screen.getByRole('textbox', { name: /^공통 글감/ })
   await userEvent.clear(material)
   await userEvent.type(material, 'Keep this working material after the refused estimate')
   await userEvent.click(screen.getByRole('button', { name: '글 2편 생성 비용 확인' }))
   await userEvent.click(await screen.findByRole('button', { name: '입력 수정하기' }))
-  expect(await screen.findByRole('textbox', { name: '공통 글감' })).toHaveValue(
+  expect(await screen.findByRole('textbox', { name: /^공통 글감/ })).toHaveValue(
     'Keep this working material after the refused estimate',
   )
   expect(fixture.estimates).toHaveLength(1)
@@ -273,7 +280,7 @@ it('retains real source revisions for explicit compatible output application and
   const fixture = createWritingTestStudioFixture({ source: true })
   mount(fixture)
   await modelCandidates(fixture)
-  expect(screen.getByRole('textbox', { name: '공통 글감' })).toHaveValue('Real recorded material')
+  expect(screen.getByRole('textbox', { name: /^공통 글감/ })).toHaveValue('Real recorded material')
   await generate(fixture)
   await decideAll(fixture)
   expect(fixture.applications).toHaveLength(0)

@@ -85,7 +85,7 @@
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
-| T888 | Group template questions by template and point every refusal at its field | MODEL THEME ARCH | - | todo |
+| T888 | Group template questions by template and point every refusal at its field | MODEL THEME ARCH | - | doing@261117.wtform |
 | T889 | Choose model contestants from one checklist with credits per post | MODEL QUOTA ARCH | T888 | todo |
 | T890 | Add the photo observation test wire contract | MODEL ARCH | - | todo |
 | T891 | Store test-owned photos and the test output kind | MODEL VIDEO ARCH | T890 | todo |
