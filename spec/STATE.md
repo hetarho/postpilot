@@ -85,7 +85,6 @@
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
-| T893 | Admit and project photo observation tests | MODEL GEN ARCH | T892 | todo |
 | T894 | Run photo observation tests that stop at each contestant's observation | MODEL VIDEO GEN ARCH | T893 | todo |
 | T895 | Map photo observation tests and test photo uploads in the client | MODEL ARCH | T890 | todo |
 | T896 | Build the photo observation test setup at /tests/photos | MODEL POST THEME ARCH | T889 T895 | todo |
@@ -98,4 +97,4 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-implement-task T879 T893 T895
+- gusta-implement-task T879 T894 T895
