@@ -29,14 +29,14 @@
 | POST | 54 | 54 | - | 0 |
 | VOICE | 22 | 22 | - | 0 |
 | GEN | 34 | 34 | - | 0 |
-| MODEL | 38 | 38 | - | 0 |
+| MODEL | 39 | 39 | - | 0 |
 | TMPL | 35 | 35 | - | 0 |
 | GUIDE | 28 | 28 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 11 | 11 | - | 0 |
 | THEME | 47 | 47 | - | 2 |
 | MKT | 13 | 13 | - | 0 |
-| VIDEO | 8 | 8 | - | 0 |
+| VIDEO | 9 | 9 | - | 0 |
 | CLIP | 81 | 81 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
@@ -85,6 +85,16 @@
 | T878 | Start the learning chat from the owner's own experience | VOICE THEME | T877 | todo |
 | T879 | Name the experience wherever a thread answer is listed or edited | VOICE | T877 | todo |
 | T887 | Reuse each true-peak FIR sample across its four phases | ARCH | - | blocked@261117 |
+| T888 | Group template questions by template and point every refusal at its field | MODEL THEME ARCH | - | todo |
+| T889 | Choose model contestants from one checklist with credits per post | MODEL QUOTA ARCH | T888 | todo |
+| T890 | Add the photo observation test wire contract | MODEL ARCH | - | todo |
+| T891 | Store test-owned photos and the test output kind | MODEL VIDEO ARCH | T890 | todo |
+| T892 | Upload, confirm and sweep test-owned photos | MODEL POST ARCH | T891 | todo |
+| T893 | Admit and project photo observation tests | MODEL GEN ARCH | T892 | todo |
+| T894 | Run photo observation tests that stop at each contestant's observation | MODEL VIDEO GEN ARCH | T893 | todo |
+| T895 | Map photo observation tests and test photo uploads in the client | MODEL ARCH | T890 | todo |
+| T896 | Build the photo observation test setup at /tests/photos | MODEL POST THEME ARCH | T889 T895 | todo |
+| T897 | Review, reveal and adopt photo observation test results | MODEL ARCH | T894 T896 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -93,4 +103,5 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
+- gusta-implement-task T888
 - gusta-implement-task T887

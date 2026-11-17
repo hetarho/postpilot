@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r38 | Explicit eligible models, private single-factor writing tests and safe versioned request composition/inspection.
+> r39 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -79,14 +79,14 @@
   - the row's effort and 등급 Listboxes appear only on a tab the model serves, the 등급 one marked while unset (→MODEL-58)
   - `SetModelPurpose` writes the registration and its gate in one transaction
   - `UpdateModel` names its purpose and is refused server-side for one the model is not registered to
-- MODEL-30 [o] one actual-writing test varies exactly one factor: a model ref at observe or write stage, a writing-style profile, a post-template structure, or one designated post-guideline slot.
+- MODEL-30 [o] one actual-writing test varies exactly one factor: a write-stage model ref, a writing-style profile, a post-template structure, or one designated post-guideline slot. Observer models are compared by photo observation tests (→=MODEL-97), never by writing.
   - freeze common material, attachment identities, target/length/tags, nonvaried profiles/template/rules, memory opt-in and selected memories, quality options, prompt/schema versions and entrant-specific values before generation
   - changing templates does not recalculate guideline scope, target length or tag count; changing one guideline keeps all other enabled rules and their order fixed
   - identical named template-answer material is available to every contestant; resolve every candidate's required inputs before start rather than inventing answers
   - seed-free tests accept explicit material/scenarios without requiring a saved post; fictional scenarios are labelled and never claimed as owner experience
 - MODEL-31 [o] ordinary generation calls one prepared active writer; an explicit common test produces one complete validated PostContent per contestant without changing its source.
-  - writer/style/template/guideline tests prepare common observations once; observer-model tests observe the same real attachments independently for each contestant then write with one fixed writer
-  - observer tests require attachments and compatible models; every contestant produces a complete post, not isolated observation output or a short verification sample
+  - every writing test prepares common observations once, through one fixed observer when its material has attachments
+  - writing tests admitted with an observe-stage model factor stay readable with their existing retry, review, reveal and adoption actions; no new one is offered
   - a creation editor may enter the common two-contestant model format with retained material/context; larger formats use the same common test workflow
 - MODEL-32 [o] candidate identities are blind on the wire until champion confirmation or explicit abandonment; persist opaque contestant IDs and one cryptographically shuffled initial bracket, stable through reload/viewport changes.
   - predecision responses include complete outputs and bracket positions, omitting model/setting identity, accounting, identity-bearing errors and identity-revealing prompt/source details; inspect only identity-safe shared material until the existing reveal boundary
@@ -119,10 +119,31 @@
   - payload expiry is not a new generation or a reason to recreate an adopted setting
 - MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId, placed under the AI 고르기 tab at /ai-models (→=THEME-38), which also holds the stage model choices (→=MODEL-96)
   - AI 고르기 shows 지금 쓰는 AI with 추천으로 적용 beside its heading (→MODEL-71), then 비교해 보기 as two equal cards — 글 쓰는 AI 비교 and 사진 보는 AI 비교 — with 지난 비교 a link beside that heading, then the default two-model candidates (→MODEL-65) in a card of their own
-  - a factor choice only selects, stating in one line what that comparison changes, and the step bar's 다음 moves on; the observer comparison has no factor question and opens on its candidates
+  - a factor choice only selects, stating in one line what that comparison changes, and the step bar's 다음 moves on; 사진 보는 AI 비교 opens the photo observation test (→=MODEL-97)
   - voice/template/guideline/model entry points all seed the same factor/format/material flow; changing routes or choosing candidates starts no work
-  - model/setting selectors show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
+  - model contestants are chosen under MODEL-98; setting slots show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
+  - setup steps follow MODEL-99
   - desktop review shows two complete readable posts beside each other; phone review preserves candidate reading positions and shows the same pair with explicit winner controls
+- MODEL-97 [o] a photo observation test compares observer models on photos the owner uploads to the test; each contestant produces only its observation, never a post ← an observer is judged by what it sees, and a written post mixes in the writer's work
+  - 사진 보는 AI 비교 opens it at /tests/photos; its steps are candidates (format and observe-stage models, →!MODEL-98), photos, cost, then review; it asks for no writing material, writer, voice, template, guideline, language, length or tags
+  - photos are uploaded into the test, never into a post: photos only, at least one, through the post photo selection gate, conversion and per-post count (→!POST-31–33); videos are not accepted
+  - every contestant observes the same frozen photos independently with the ordinary observation request and no writing material
+  - review shows the pair's two observations photo by photo: beside each other on desktop, the same pair with explicit winner controls on phones
+  - format, blindness, concurrency, progress, failure recovery, champion, adoption as the observe stage's active model, usage, ownership and retention follow the writing-test rules (→!MODEL-32–36 →!MODEL-39–42 →!MODEL-75 →!MODEL-89 →!MODEL-91); the uploaded photos are private test input, purged with the test's payload
+  - its estimate prices the observation calls only, through the ordinary test estimate and explicit approval
+  - its records appear in 지난 비교 beside writing tests and open at /tests/$testId
+- MODEL-98 [o] model contestants are chosen from one list of the stage's selectable models in which the owner checks exactly the format's count; models are never chosen through per-slot dropdowns
+  - each row shows the model's name, grade and credits per post for that stage, or 무료 (→=QUOTA-64 →!QUOTA-66); a row whose figure is unknown says so instead of a number
+  - locked or incompatible models stay listed as disabled rows stating their reason, including the required plan (→!MODEL-14)
+  - rows order like MODEL-96's picker (→=MODEL-96); the number checked is shown against the format's count, and checking past it is refused in place
+  - a saved two-model pair prefills the A/B list (→!MODEL-65)
+  - setting tests keep MODEL-92's per-slot choice
+- MODEL-99 [o] a test setup step shows what each field needs before and after its action is pressed
+  - template questions are grouped by contestant template, each group named by its template; a question asked by more than one template appears in each of their groups, holds one shared answer (→!MODEL-30) and is marked as shared
+  - on phones the groups are tabs showing one template's questions at a time, each tab naming its template and the number of its required questions still unanswered; from `sm:` up the groups stack
+  - a required field or question shows 필수 beside its label; an optional one shows no mark
+  - pressing the step bar's action with a problem starts nothing: the step bar states the problem above its row, naming the first field and how many need attention (→=THEME-71); each problem field shows its message under it with `aria-invalid` (→=THEME-29); the first is scrolled into view and focused, opening its tab first
+  - the step bar stays docked at the screen's bottom edge on phones while the step scrolls (→=THEME-24)
 - MODEL-45 [o] automated judges/winner selection, round-by-round regeneration, three/five-way ranking, Elo winner selection, multi-factor changes, video-render tournaments, automatic traffic splitting/model fallback, statistical-superiority claims, BYOK and a second completion provider are outside unified writing tests.
 - MODEL-46 [o] `LLMCompletionBudget` applies a code-owned headroom multiplier to the write and revision budgets only when the resolved model's `reasoning_native_effort` is true, bounded by `Ceiling` ← for a native-effort model the effort string is passed through and is a hint, not a cap, so reasoning can spend the whole completion budget and truncate, while on a model whose effort OpenRouter converts to a percentage extra room would only buy a longer think
   - observation keeps its batch-derived budget
@@ -293,6 +314,7 @@
 - recommend: 모델 관리 추천 조합 tab → save(whole-set validation → one write) | reorder | delete → /ai-models 추천으로 적용 sheet lists sets in order → owner apply(MODEL-26 gate over seven refs → one transaction)
 - bulk curate: 일괄 편집 → export(current five sections + recommendations) | paste → preview(per-purpose diff + set diff | rejected lines, no write) → apply(re-validate against the document's own registrations → one transaction) → the next Complete sees it
 - test: choose factor/format → owned or prepared entrants + common material → freeze/validate/estimate → explicit generation → all outputs ready → N-1 human pair decisions → champion/reveal → explicit save/adopt/export → thirty-day private-payload sweep
+- photo test: 사진 보는 AI 비교 → format + checked observe-stage models → upload photos → freeze/validate/estimate → explicit observation run → all observations ready → N-1 human pair decisions → champion/reveal → explicit adopt → thirty-day private-payload sweep
 
 ## constraints
 - speech administration uses one ElevenLabs connection; catalog registration performs no voice generation, supplier charge or readiness promotion, and preserves MODEL-77/79/80/82's compatibility, pricing, history and qualification contracts
@@ -304,6 +326,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r39 261117 MODEL-30✎ observe or write stage→write stage only; MODEL-31✎ observer tests write posts→photo observation tests, admitted observe-stage tests readable only; MODEL-44✎ observer opens on candidates→photo test, model selectors→MODEL-98; MODEL-97+ photo observation tests; MODEL-98+ model checklist with credits; MODEL-99+ template groups/tabs, 필수, refusal placement, docked step bar
 - r38 261116 MODEL-44✎ one primary writer action, observer and history beside→two equal comparison cards + 지난 비교 link, factor tap selects then 다음, observer skips the factor; MODEL-71✎ page section→추천으로 적용 sheet; MODEL-91✎ navigating preserves recoverable setup→discards a setup with no test
 - r37 261111 MODEL-44✎ place of tests "a destination beside model settings at /ai-models"→"under the AI 고르기 tab (/ai-models), whose one primary action is the two-writer comparison"; MODEL-96+ /ai-models stage rows and picker: radio cards, a tap saves, free-first order, owner-chosen 품질 먼저/균형/가격 먼저, locked cards disabled with reason, credits only
 - r35 261007 MODEL-5✎ MODEL-32✎ MODEL-37✎ MODEL-42✎ MODEL-93+ MODEL-94+ MODEL-95+ capability-only schema boundary→syntax and semantic accuracy distinguished; unrestricted blind details→identity-safe inspection; content-only application→matching origin review; input/output expiry→origin/request expiry
