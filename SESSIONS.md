@@ -206,6 +206,7 @@
 | T879 | lchat | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 2026-11-17T01:09Z |
 
 ## log
+- 261117 gusta-update-ssot MODEL start
 - 261117 fix writing-tests: unchosen model slots keep their placeholder after one slot is chosen
 - 261117 fix writing-tests: setting tests send no model stage (400 WRITING_TEST_FACTOR_INVALID); 4 files incl. one test fixture correction, over the 3-file light limit
 - 261117 gusta-update-ssot ARCH r26 complete: future task checks use affected units and changed-file fast static checks, full frontend TypeScript remains in existing shared batch build. No code task generated. Spec published to planning main as 4fe6f9246; runbook committed separately as fa6a59a81 on owned update branch. Lint passes with 58 inherited warnings plus T887 ARCH freshness warning; submitted task evidence preserved.
@@ -225,4 +226,3 @@
 - 261116 T876 done
 - 261116 T875 done
 - 261116 T874 done
-- 261116 T873 done
