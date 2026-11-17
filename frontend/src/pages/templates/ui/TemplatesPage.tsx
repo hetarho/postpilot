@@ -1,19 +1,24 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { clsx } from 'clsx'
-import { CircleHelp, Image, MessagesSquare, PenLine, Repeat } from 'lucide-react'
+import { CircleHelp, Image, PenLine, Repeat } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { templateOutline, useTemplates, type OutlineRow, type Template } from '@/entities/template'
 import { ChannelActions } from '@/widgets/channel-actions'
-import { KitHeader } from '@/widgets/writing-kit'
+import {
+  KitArt,
+  KitEmpty,
+  KitHeader,
+  TemplateCard,
+  UnsavedTemplateCard,
+} from '@/widgets/writing-kit'
 import {
   Badge,
   Button,
   Notice,
   LoadingState,
   Typography,
-  cardStyles,
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
@@ -116,31 +121,17 @@ export function TemplatesPage() {
   )
 }
 
-/** No template yet: the empty sheet a first conversation will fill, and nothing else. */
+/** No template yet: the empty slot a first conversation will fill, and nothing else. */
 function EmptyState() {
   const { t } = useTranslation('templates')
   return (
-    <section
-      aria-labelledby="templates-empty-heading"
-      className="border-content-tertiary/40 mt-8 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center"
-    >
-      <span
-        aria-hidden="true"
-        className="bg-badge-accent-bg text-badge-accent-fg flex size-14 items-center justify-center rounded-full"
-      >
-        <MessagesSquare className="size-7" />
-      </span>
-      <Typography variant="title" as="h2" id="templates-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure text-balance">
-        {t('page.emptyTalk')}
-      </Typography>
-    </section>
+    <KitEmpty className="mt-8" figure={<KitArt part="template" />} title={t('page.empty')}>
+      {t('page.emptyTalk')}
+    </KitEmpty>
   )
 }
 
-/** One template, drawn as the outline of the post it makes. The whole card is the link. */
+/** One template, drawn as the outline of the post it makes. */
 function TemplateShape({
   template,
   index,
@@ -153,7 +144,6 @@ function TemplateShape({
   const { t } = useTranslation(['templates', 'authoring'])
   const outline = templateOutline(template.body)
   const shown = outline.slice(0, OUTLINE_ROWS)
-  const nameId = `template-${template.id}-name`
   const named = { kind: t('kinds.post-template', { ns: 'authoring' }), name: template.name }
   // What is waiting on this template's conversation, in the order it matters.
   const work = summary?.targetConflict
@@ -166,33 +156,12 @@ function TemplateShape({
           ? t('unpublished', { ns: 'authoring', ...named })
           : ''
   return (
-    <li className="animate-rise" style={{ animationDelay: `${index * 50}ms` }}>
-      <Link
-        to="/templates/$templateId"
-        params={{ templateId: template.id }}
-        aria-labelledby={nameId}
-        className={cardStyles({
-          interactive: true,
-          className: 'flex h-full min-w-0 flex-col gap-3',
-        })}
-      >
-        <span className="flex min-w-0 flex-col gap-1">
-          <span
-            id={nameId}
-            className={typographyStyles({
-              variant: 'fieldTitle',
-              className: 'text-content-primary line-clamp-2 break-words',
-            })}
-          >
-            {template.name}
-          </span>
-          {template.description && (
-            <span className={typographyStyles({ variant: 'meta', className: 'line-clamp-2' })}>
-              {template.description}
-            </span>
-          )}
-        </span>
-        {shown.length > 0 && (
+    <TemplateCard
+      index={index}
+      name={template.name}
+      description={template.description}
+      outline={
+        shown.length > 0 && (
           <ol
             aria-label={t('shape.outline', { ns: 'templates', name: template.name })}
             className="bg-card-well border-stroke-accent flex flex-col gap-1.5 rounded-lg border-l-2 px-3 py-3"
@@ -206,22 +175,18 @@ function TemplateShape({
               </li>
             )}
           </ol>
-        )}
-        <span className="mt-auto flex flex-wrap items-center gap-2">
-          <Badge tone="neutral">
-            {t('postCount', { ns: 'templates', count: template.postCount })}
-          </Badge>
-          {work && (
-            <span
-              role="status"
-              className={typographyStyles({ variant: 'meta', className: 'text-link-fg' })}
-            >
-              {work}
-            </span>
-          )}
-        </span>
-      </Link>
-    </li>
+        )
+      }
+      meta={
+        <Badge tone="neutral">
+          {t('postCount', { ns: 'templates', count: template.postCount })}
+        </Badge>
+      }
+      status={work || undefined}
+      renderLink={(link) => (
+        <Link to="/templates/$templateId" params={{ templateId: template.id }} {...link} />
+      )}
+    />
   )
 }
 
@@ -271,37 +236,16 @@ function UnsavedConversation({ summary }: { summary: AuthoringSummary }) {
   const { t } = useTranslation(['templates', 'authoring'])
   const name = summary.displayName || t('page.new', { ns: 'templates' })
   return (
-    <li>
-      <Link
-        to="/templates/new"
-        search={{ session: summary.sessionId }}
-        className={cardStyles({
-          interactive: true,
-          className: 'flex min-w-0 items-center gap-3',
-        })}
-      >
-        <span
-          aria-hidden="true"
-          className="bg-badge-accent-bg text-badge-accent-fg flex size-11 shrink-0 items-center justify-center rounded-full"
-        >
-          <MessagesSquare className="size-5" />
-        </span>
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span
-            className={typographyStyles({
-              variant: 'fieldTitle',
-              className: 'text-content-primary truncate',
-            })}
-          >
-            {t('screen.resumeNew', { ns: 'templates', name })}
-          </span>
-          <span className={typographyStyles({ variant: 'meta' })}>
-            {summary.activeJobId
-              ? t('screen.activeAI', { ns: 'templates', name })
-              : t('screen.unsaved', { ns: 'templates' })}
-          </span>
-        </span>
-      </Link>
-    </li>
+    <UnsavedTemplateCard
+      title={t('screen.resumeNew', { ns: 'templates', name })}
+      status={
+        summary.activeJobId
+          ? t('screen.activeAI', { ns: 'templates', name })
+          : t('screen.unsaved', { ns: 'templates' })
+      }
+      renderLink={(link) => (
+        <Link to="/templates/new" search={{ session: summary.sessionId }} {...link} />
+      )}
+    />
   )
 }

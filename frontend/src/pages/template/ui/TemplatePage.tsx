@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
@@ -22,7 +23,7 @@ export function TemplatePage() {
   const stored = templateId ? templates.find((template) => template.id === templateId) : undefined
   if (isError)
     return (
-      <PageFrame width="board">
+      <PageFrame width="wide">
         <Notice tone="danger" role="alert" className="mt-4">
           {t('loadFailed', { ns: 'templates' })}
           <Button variant="ghost" onClick={refetch} pending={isFetching}>
@@ -33,7 +34,7 @@ export function TemplatePage() {
     )
   if (templateId && (isPending || (!stored && isFetching)))
     return (
-      <PageFrame width="board">
+      <PageFrame width="wide">
         <LoadingState
           variant="detail"
           label={t('state.loading', { ns: 'common' })}
@@ -43,7 +44,7 @@ export function TemplatePage() {
     )
   if (templateId && !stored && !isFetching)
     return (
-      <PageFrame width="board">
+      <PageFrame width="wide">
         <Notice tone="danger" role="alert" className="mt-4">
           {t('screen.notFound', { ns: 'templates' })}
         </Notice>
@@ -92,6 +93,10 @@ function TemplateConversationPage({
 }) {
   const { t } = useTranslation(['templates', 'authoring', 'common'])
   const navigate = useNavigate()
+  // The conversation's status and its ⋯ and 저장 sit in this screen's one title row.
+  const [statusSlot, setStatusSlot] = useState<HTMLDivElement | null>(null)
+  const [controlsSlot, setControlsSlot] = useState<HTMLDivElement | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'post-template' })
   // An existing template with unsaved conversation work reopens that work.
   const resumable = stored
@@ -104,29 +109,32 @@ function TemplateConversationPage({
   const session = sessionId ?? resumable?.sessionId
   if (stored && summaries.isPending)
     return (
-      <PageFrame width="board">
+      <PageFrame width="wide">
         <LoadingState variant="detail" label={t('state.loading', { ns: 'common' })} />
       </PageFrame>
     )
   return (
     <PageFrame
-      width="board"
+      width="wide"
       className="flex flex-1 flex-col pb-0 sm:pb-0"
       title={
-        <Typography variant="title" as="h1" className="truncate">
-          {stored?.name ?? t('page.new', { ns: 'templates' })}
-        </Typography>
+        <div className="min-w-0">
+          <Typography variant="title" as="h1" className="truncate">
+            {stored?.name ?? t('page.new', { ns: 'templates' })}
+          </Typography>
+          <div ref={setStatusSlot} />
+        </div>
       }
-      actions={
-        stored && (
-          <DeleteTemplateButton
-            ownerId={ownerId}
-            template={stored}
-            onDeleted={() => void navigate({ to: '/templates', replace: true })}
-          />
-        )
-      }
+      actions={<div ref={setControlsSlot} className="flex items-center gap-2" />}
     >
+      {stored && (
+        <DeleteTemplateButton
+          ownerId={ownerId}
+          template={stored}
+          menu={{ open: deleting, onOpenChange: setDeleting }}
+          onDeleted={() => void navigate({ to: '/templates', replace: true })}
+        />
+      )}
       <AIAuthoringStudio
         layout="conversation"
         ownerId={ownerId}
@@ -139,6 +147,18 @@ function TemplateConversationPage({
         referencePost={referencePost}
         savedPreview={stored && <TemplatePreview titleArea={stored.titleArea} body={stored.body} />}
         renderDirectEditor={(props) => <TemplateDirectEditor {...props} />}
+        heading={{ status: statusSlot, controls: controlsSlot }}
+        menuItems={
+          stored
+            ? [
+                {
+                  id: 'delete',
+                  label: t('screen.deleteMenu', { ns: 'templates' }),
+                  onSelect: () => setDeleting(true),
+                },
+              ]
+            : undefined
+        }
         onSaved={(saved) => {
           onPublished()
           if (stored) return

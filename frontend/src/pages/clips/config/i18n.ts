@@ -5,7 +5,7 @@ export const i18n = {
   ko: {
     history: {
       videos: '영상',
-      empty: '아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.',
+      empty: '아직 영상이 없어요. 아래 + 새 영상에서 만들 수 있어요.',
       continue: '이어서 편집',
       open: '작업 확인',
       download: '영상 다운로드',
@@ -15,7 +15,7 @@ export const i18n = {
   en: {
     history: {
       videos: 'Videos',
-      empty: 'There are no clips yet. Create one from + New clip below.',
+      empty: 'There are no videos yet. Make one from + New video below.',
       continue: 'Continue editing',
       open: 'View work',
       download: 'Download video',

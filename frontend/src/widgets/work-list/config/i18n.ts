@@ -11,7 +11,7 @@ export const i18n = {
     work: {
       continueAction: '계속하기',
       newestFirst: '최근 수정 순',
-      empty: '아직 만든 글이나 영상이 없어요. 만들기에서 시작해 보세요.',
+      empty: '아직 만든 글이나 영상이 없어요. 홈의 글쓰기에서 시작해 보세요.',
       inProgress: '작성 중',
       done: '완성',
       find: '찾기',
@@ -37,7 +37,7 @@ export const i18n = {
     work: {
       continueAction: 'Continue',
       newestFirst: 'Latest changes first',
-      empty: 'No posts or videos yet. Start from Create.',
+      empty: 'No posts or videos yet. Start from Write on Home.',
       inProgress: 'In progress',
       done: 'Finished',
       find: 'Find',

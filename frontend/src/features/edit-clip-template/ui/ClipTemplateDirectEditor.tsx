@@ -1,25 +1,18 @@
-import { useId, useState } from 'react'
+import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AuthoringArtifact } from '@/entities/ai-authoring'
 import {
   CLIP_TEMPLATE_LIMITS,
   clipCompositionGuide,
-  CompositionBuilder,
   CompositionProblem,
   parseClipTemplate,
 } from '@/entities/clip-template'
-import {
-  Button,
-  Disclosure,
-  FieldCount,
-  FieldLabel,
-  FieldMessage,
-  SegmentedControl,
-  TextField,
-  Textarea,
-} from '@/shared/ui'
+import { Disclosure, FieldCount, FieldLabel, FieldMessage, TextField, Textarea } from '@/shared/ui'
 
-/** The EDIT draft owns name and structure. Render/design defaults stay in the template domain. */
+/** The template's own text, typed directly — the secondary path beside the conversation. The EDIT
+ *  draft owns name and structure; render/design defaults stay in the template domain. There is no
+ *  block builder: nothing is dragged, moved or reordered by hand — the order of a video is the
+ *  order of its text, and the AI changes it when asked. */
 export function ClipTemplateDirectEditor({
   source,
   onChange,
@@ -31,8 +24,6 @@ export function ClipTemplateDirectEditor({
 }) {
   const { t } = useTranslation('clips')
   const id = useId()
-  const [mode, setMode] = useState<'builder' | 'source'>('builder')
-  const [advanced, setAdvanced] = useState(false)
   let problem: CompositionProblem | undefined
   try {
     parseClipTemplate(source.body)
@@ -53,75 +44,39 @@ export function ClipTemplateDirectEditor({
         />
         <FieldCount left={CLIP_TEMPLATE_LIMITS.name - Array.from(source.name.trim()).length} />
       </div>
-      <Disclosure
-        title={t('editor.advanced')}
-        size="row"
-        headingLevel={3}
-        open={advanced}
-        onOpenChange={(open) => {
-          setAdvanced(open)
-          if (!open) setMode('builder')
-        }}
-      >
-        <SegmentedControl
-          value={mode}
-          onChange={setMode}
-          disabled={disabled}
-          ariaLabel={t('composition.mode')}
-          options={[
-            { value: 'builder', label: t('composition.builder') },
-            { value: 'source', label: t('composition.source') },
-          ]}
+      <div>
+        <FieldLabel htmlFor={id + '-source'}>{t('composition.source')}</FieldLabel>
+        <Textarea
+          id={id + '-source'}
+          value={source.body}
+          rows={12}
+          autoGrow
+          spellCheck={false}
+          aria-invalid={!!problem}
+          onChange={(e) => onChange({ ...source, body: e.target.value })}
+          className="mt-1"
         />
-      </Disclosure>
-      {problem && (
-        <FieldMessage role="alert">
-          {t('composition.invalid', { line: problem.line, element: problem.elementId || 'clip' })}{' '}
-          {t(`composition.errors.${problem.reason}`, {
-            element: problem.elementId,
-            defaultValue: t('composition.repairSource'),
-          })}
-        </FieldMessage>
-      )}
-      {mode === 'source' ? (
-        <div>
-          <FieldLabel htmlFor={id + '-source'}>{t('composition.source')}</FieldLabel>
+        {problem && (
+          <FieldMessage role="alert">
+            {t('composition.invalid', {
+              line: problem.line,
+              element: problem.elementId || 'clip',
+            })}{' '}
+            {t(`composition.errors.${problem.reason}`, {
+              element: problem.elementId,
+              defaultValue: t('composition.repairSource'),
+            })}
+          </FieldMessage>
+        )}
+        <Disclosure title={t('editor.sourceGuide')} size="row" headingLevel={3} className="mt-3">
           <Textarea
-            id={id + '-source'}
-            value={source.body}
-            rows={12}
-            autoGrow
-            spellCheck={false}
-            aria-invalid={!!problem}
-            onChange={(e) => onChange({ ...source, body: e.target.value })}
-            className="mt-1"
+            aria-label={t('editor.sourceGuide')}
+            readOnly
+            rows={8}
+            value={clipCompositionGuide()}
           />
-          <Disclosure title={t('editor.sourceGuide')} size="row" headingLevel={3} className="mt-3">
-            <Textarea
-              aria-label={t('editor.sourceGuide')}
-              readOnly
-              rows={8}
-              value={clipCompositionGuide()}
-            />
-          </Disclosure>
-        </div>
-      ) : (
-        <CompositionBuilder
-          source={source.body || '<clip version="1"/>'}
-          onChange={(body) => onChange({ ...source, body })}
-        />
-      )}
-      {mode === 'builder' && problem && (
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setAdvanced(true)
-            setMode('source')
-          }}
-        >
-          {t('composition.repairSource')}
-        </Button>
-      )}
+        </Disclosure>
+      </div>
     </fieldset>
   )
 }

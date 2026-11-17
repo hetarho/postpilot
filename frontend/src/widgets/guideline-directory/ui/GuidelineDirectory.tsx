@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
 import { useId, useRef, useState, type ReactNode, type Ref } from 'react'
 import { Check, FileText, Plus, Sparkles } from 'lucide-react'
+import { clsx } from 'clsx'
 import {
   DefaultGuidelineDetail,
   GuidelineScopeBadges,
@@ -117,9 +118,13 @@ export function GuidelineDirectory({
   // The two kinds of row may carry the same raw id. Keep their mixed list identities distinct,
   // in the exact order already rendered, and focus the existing disclosure rather than an action
   // hidden inside a closed row.
+  // The owner's own rules lead each group; the 기본 지침 in use follow theirs under 모든 글에.
+  const ownedKey = (guideline: Guideline) => `owned:${guideline.id}`
+  const defaultKey = (guideline: DefaultGuideline) => `default:${guideline.key}`
   const rowKeys = [
-    ...inUse.map((guideline) => `default:${guideline.key}`),
-    ...owned.map((guideline) => `owned:${guideline.id}`),
+    ...owned.filter((guideline) => reach(guideline) === 'all').map(ownedKey),
+    ...inUse.map(defaultKey),
+    ...owned.filter((guideline) => reach(guideline) !== 'all').map(ownedKey),
   ]
   const [defaultsOpen, setDefaultsOpen] = useState(false)
   const disclosures = useRef(new Map<string, HTMLButtonElement>())
@@ -325,41 +330,64 @@ export function GuidelineDirectory({
                         {own.length + builtIn.length}
                       </span>
                     </h2>
-                    <ul className="mt-2 grid gap-3">
-                      {builtIn.map((guideline, index) => (
-                        <DefaultGuidelineItem
-                          key={guideline.key}
-                          ownerId={ownerId}
-                          kind={kind}
-                          guideline={guideline}
-                          onRefused={setStopRefusal}
-                          rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
-                          onRemoving={() => requestRemoval(rowKeys[index], index)}
-                        />
-                      ))}
-                      {own.map((guideline) => {
-                        const index = inUse.length + owned.indexOf(guideline)
-                        return (
-                          <GuidelineRow
-                            key={guideline.id}
-                            ownerId={ownerId}
-                            guideline={guideline}
-                            scoped={group !== 'all'}
-                            rowRef={(row) => rememberDisclosure(rowKeys[index], row)}
-                            onDeleted={() => requestRemoval(rowKeys[index], index)}
-                            summary={summaries.data?.find(
-                              (row) =>
-                                row.targetId === guideline.id ||
-                                row.lastPublication?.id === guideline.id,
-                            )}
-                            onPublished={(saved) => {
-                              void refetch()
-                              setSavedOutcome({ ownerId, ref: saved })
-                            }}
-                          />
-                        )
-                      })}
-                    </ul>
+                    <div className="bg-card-bg mt-2 overflow-hidden rounded-2xl shadow-sm">
+                      {own.length > 0 && builtIn.length > 0 && (
+                        <SheetLabel>
+                          {t('reach.own', { ns: 'guidelines', count: own.length })}
+                        </SheetLabel>
+                      )}
+                      {own.length > 0 && (
+                        <ul className="divide-divider divide-y">
+                          {own.map((guideline) => {
+                            const key = ownedKey(guideline)
+                            const index = rowKeys.indexOf(key)
+                            return (
+                              <GuidelineRow
+                                key={guideline.id}
+                                ownerId={ownerId}
+                                guideline={guideline}
+                                scoped={group !== 'all'}
+                                rowRef={(row) => rememberDisclosure(key, row)}
+                                onDeleted={() => requestRemoval(key, index)}
+                                summary={summaries.data?.find(
+                                  (row) =>
+                                    row.targetId === guideline.id ||
+                                    row.lastPublication?.id === guideline.id,
+                                )}
+                                onPublished={(saved) => {
+                                  void refetch()
+                                  setSavedOutcome({ ownerId, ref: saved })
+                                }}
+                              />
+                            )
+                          })}
+                        </ul>
+                      )}
+                      {builtIn.length > 0 && (
+                        <>
+                          <SheetLabel divided={own.length > 0}>
+                            {t('reach.builtIn', { ns: 'guidelines', count: builtIn.length })}
+                          </SheetLabel>
+                          <ul className="divide-divider divide-y">
+                            {builtIn.map((guideline) => {
+                              const key = defaultKey(guideline)
+                              const index = rowKeys.indexOf(key)
+                              return (
+                                <DefaultGuidelineItem
+                                  key={guideline.key}
+                                  ownerId={ownerId}
+                                  kind={kind}
+                                  guideline={guideline}
+                                  onRefused={setStopRefusal}
+                                  rowRef={(row) => rememberDisclosure(key, row)}
+                                  onRemoving={() => requestRemoval(key, index)}
+                                />
+                              )
+                            })}
+                          </ul>
+                        </>
+                      )}
+                    </div>
                   </section>
                 )
               })}
@@ -524,8 +552,22 @@ function SentenceTitle({
   )
 }
 
-/** The card a rule row sits on. */
-const ruleCard = cardStyles({ padding: 'none', className: 'px-4 py-2 sm:px-5 sm:py-3' })
+/** A rule's row on its group's sheet. */
+const ruleCard = 'px-4 py-2 sm:px-5 sm:py-3'
+
+/** Who wrote the rules that follow on a sheet: the owner, or Postpilot's 기본 지침. */
+function SheetLabel({ children, divided = false }: { children: ReactNode; divided?: boolean }) {
+  return (
+    <p
+      className={typographyStyles({
+        variant: 'groupLabel',
+        className: clsx('bg-card-well px-4 py-2 sm:px-5', divided && 'border-divider border-t'),
+      })}
+    >
+      {children}
+    </p>
+  )
+}
 
 /** The kind's 원칙 (GUIDE-53): one closed card above the list whose summary says they always
  *  apply; open, each 원칙's name and text, with no control — a 원칙 has no switch. */
@@ -634,7 +676,6 @@ function GuidelineRow({
   rowRef: Ref<HTMLLIElement>
   onDeleted: () => void
 }) {
-  const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
   const [method, setMethod] = useState<'ai' | 'direct'>('ai')
   const [authoringOpen, setAuthoringOpen] = useState(false)
@@ -712,10 +753,8 @@ function GuidelineRow({
           />
         </div>
       </Disclosure>
-      <div className="pb-3 pl-6">
-        <Typography variant="body" className="text-content-secondary">
-          {t('authoringState.savedAvailable')}
-        </Typography>
+      {/* A saved rule needs no word saying so; only work still open on it is said here. */}
+      <div className="pb-3 pl-6 empty:hidden">
         <EditingStatus summary={summary} />
       </div>
     </li>

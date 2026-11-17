@@ -16,29 +16,37 @@ export function DeleteClipTemplateButton({
   template,
   buttonRef,
   onDeleted,
+  menu,
 }: {
   ownerId: string
   template: Pick<ClipTemplate, 'id' | 'name' | 'projectCount'>
   buttonRef?: Ref<HTMLButtonElement>
   /** Success only. The invalidated directory may not have removed this row yet. */
   onDeleted?: () => void
+  /** Raised from a menu row instead of its own button: the row is the trigger, and the dialog
+   *  follows `open`. */
+  menu?: { open: boolean; onOpenChange: (open: boolean) => void }
 }) {
   const { t } = useTranslation(['clips', 'common'])
   const { remove } = useClipTemplateMutations(ownerId)
 
   return (
     <ConfirmedAction
-      trigger={(open) => (
-        <Button
-          ref={buttonRef}
-          variant="danger"
-          disabled={remove.isPending}
-          onClick={open}
-          aria-label={t('delete.aria', { ns: 'clips', name: template.name })}
-        >
-          {t('action.delete', { ns: 'common' })}
-        </Button>
-      )}
+      open={menu?.open}
+      onOpenChange={menu?.onOpenChange}
+      trigger={(open) =>
+        !menu && (
+          <Button
+            ref={buttonRef}
+            variant="danger"
+            disabled={remove.isPending}
+            onClick={open}
+            aria-label={t('delete.aria', { ns: 'clips', name: template.name })}
+          >
+            {t('action.delete', { ns: 'common' })}
+          </Button>
+        )
+      }
       failed={remove.isError}
       failure={
         <FieldMessage className="w-full">

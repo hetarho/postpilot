@@ -25,7 +25,6 @@ it('leads with the credits and one 충전, then groups plan and account rows', a
     '/plans',
     '/billing',
     '/account',
-    '/setup?restart=true',
     '/admin',
   ])
   for (const link of links) expect(link).toHaveAccessibleName()
@@ -35,7 +34,8 @@ it('leads with the credits and one 충전, then groups plan and account rows', a
       .map((link) => link.getAttribute('href')),
   ).toEqual(['/plans', '/billing'])
   // Nothing about writing is here any more.
-  for (const gone of ['/memories', '/spoken-voices', '/ai-models', '/tests'])
+  // The first-use setup is gone too: the home's kit is where an account gets ready.
+  for (const gone of ['/memories', '/spoken-voices', '/ai-models', '/tests', '/setup'])
     expect(main.querySelector(`a[href="${gone}"]`)).toBeNull()
   // The display preferences live in the avatar's menu now, not on this page.
   expect(within(main).queryByRole('group', { name: '인터페이스 환경설정' })).toBeNull()

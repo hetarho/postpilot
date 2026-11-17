@@ -81,7 +81,8 @@ export function readPostReturnContext(
   if (!storage) return undefined
   const entry = store(ownerId, storage, slug ?? 'new').read() ?? store(ownerId, storage).read()
   if (!entry || entry.targetId !== (slug ?? 'new')) return undefined
-  if (entry.path === '/' || entry.path === '/library')
+  // 내 콘텐츠 (/my) is gone with the hub: a return remembered there lands on the 글 list.
+  if (entry.path === '/' || entry.path === '/library' || entry.path === '/my')
     return { ...entry, path: POST_LIST_PATH, section: 'post', filters: {} }
   return entry.path === '/naver-blog' ? { ...entry, path: POST_LIST_PATH } : entry
 }

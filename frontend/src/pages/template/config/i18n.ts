@@ -64,6 +64,7 @@ export const i18n = {
         '템플릿을 저장 형식 그대로 보고 고쳐요. 형식 안내를 AI에게 건네 만든 템플릿을 여기에 붙여 넣을 수 있어요.',
       newTitle: '새 템플릿',
       notFound: '이 템플릿을 찾을 수 없어요. 목록에서 다시 골라 주세요.',
+      deleteMenu: '템플릿 삭제',
       compositionHelp:
         '위에서 블록을 더해 글의 순서를 짜세요. 줄을 누르면 내용을 고칠 수 있고, 끌어서 순서를 바꿀 수 있어요.',
       titleArea: {
@@ -137,6 +138,7 @@ export const i18n = {
         'See and edit the template in its stored format. Hand the format guide to an AI and paste what it writes here.',
       newTitle: 'New template',
       notFound: 'Could not find this template. Pick one from the list again.',
+      deleteMenu: 'Delete template',
       compositionHelp:
         'Add blocks above to lay out the post. Tap a line to edit it, and drag to reorder.',
       titleArea: {

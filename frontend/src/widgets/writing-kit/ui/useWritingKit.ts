@@ -1,4 +1,5 @@
 import { useAuthoringSummaries } from '@/entities/ai-authoring'
+import { useClipTemplates } from '@/entities/clip-template'
 import { useGuidelineCandidates, useGuidelines } from '@/entities/guideline'
 import { useMemories } from '@/entities/memory'
 import { useStageSelection } from '@/entities/model-catalog'
@@ -23,8 +24,12 @@ function useTemplateInput(ownerId: string): KitInput['templates'] {
     drafts: work.data?.filter((row) => !row.targetId && !row.lastPublication).length ?? 0,
   }
 }
-function useGuidelineInput(ownerId: string, suggestions = 0): KitInput['guidelines'] {
-  const guidelines = useGuidelines(ownerId, 'post')
+function useGuidelineInput(
+  ownerId: string,
+  suggestions = 0,
+  kind: 'post' | 'clip' = 'post',
+): KitInput['guidelines'] {
+  const guidelines = useGuidelines(ownerId, kind)
   return {
     isPending: guidelines.isPending,
     isError: guidelines.isError,
@@ -104,6 +109,30 @@ function useModelPartInput(): Partial<KitInput> {
 }
 function useSpokenPartInput(ownerId: string): Partial<KitInput> {
   return { spoken: useSpokenInput(ownerId) }
+}
+
+/** The 영상 side of 템플릿 and 지침: the same parts, read from the video lists. */
+function useVideoTemplatePartInput(ownerId: string): Partial<KitInput> {
+  const templates = useClipTemplates(ownerId)
+  const work = useAuthoringSummaries({ ownerId, kind: 'video-template' })
+  return {
+    templates: {
+      isPending: templates.isPending,
+      isError: templates.isError,
+      count: templates.templates.length,
+      drafts: work.data?.filter((row) => !row.targetId && !row.lastPublication).length ?? 0,
+    },
+  }
+}
+function useVideoGuidelinePartInput(ownerId: string): Partial<KitInput> {
+  return { guidelines: useGuidelineInput(ownerId, 0, 'clip') }
+}
+export const KIT_VIDEO_INPUTS: Record<
+  'template' | 'guideline',
+  (ownerId: string) => Partial<KitInput>
+> = {
+  template: useVideoTemplatePartInput,
+  guideline: useVideoGuidelinePartInput,
 }
 
 /** One part's input hook, by part — each reads only that part's lists, for a kit screen's head. */

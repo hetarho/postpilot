@@ -25,15 +25,17 @@ describe('configuration authoring entrypoints', () => {
     expect(calls).not.toContain('GetLatestWritingVoiceCandidates')
   })
 
-  it('opens video-template creation as a wizard without creating an authoring session', async () => {
+  // A video template is made the same way: the AI's question and one composer, no wizard.
+  it('opens /video-templates/new as a conversation without starting or saving work', async () => {
     const calls: string[] = []
     renderAppAt('/video-templates/new', { user: { id: 'alice' }, calls, existingSetup: true })
+    const log = await screen.findByRole('log')
+    expect(within(log).getByText(/어떤 영상을 만드세요\?/)).toBeVisible()
     expect(
-      await screen.findByRole('heading', { name: '어떤 체험을 영상으로 남기나요?' }),
-    ).toBeVisible()
-    expect(
-      screen.queryByRole('button', { name: 'AI와 영상 템플릿 만들기' }),
+      screen.queryByRole('heading', { name: '어떤 체험을 영상으로 남기나요?' }),
     ).not.toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: 'AI에게 보낼 말' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     expect(
       calls.filter((name) => /^(Start|Generate|Create|Adopt|SaveAuthoring)/.test(name)),
     ).toEqual([])

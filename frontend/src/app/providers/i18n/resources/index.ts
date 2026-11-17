@@ -5,7 +5,6 @@ import { i18n as authoringI18n } from '@/features/ai-authoring/config/i18n'
 import { i18n as voicePreparationI18n } from '@/features/prepare-writing-voice/config/i18n'
 import { i18n as writingCandidatesI18n } from '@/entities/voice-candidate/config/i18n'
 import { i18n as candidateFlowI18n } from '@/features/generate-writing-voices/config/i18n'
-import { i18n as setupI18n } from '@/widgets/creation-setup/config/i18n'
 import { i18n as creationOfferI18n } from '@/features/offer-creation-setup/config/i18n'
 import { i18n as channelI18n } from '@/widgets/channel-actions/config/i18n'
 import { i18n as workListI18n } from '@/widgets/work-list/config/i18n'
@@ -76,7 +75,6 @@ import { i18n as voiceFingerprintI18n } from '@/widgets/voice-fingerprint/config
 import { i18n as configureModelPairI18n } from '@/features/configure-model-pair/config/i18n'
 import { i18n as contactSheetI18n } from '@/widgets/contact-sheet/config/i18n'
 import { i18n as createVoiceI18n } from '@/features/create-voice/config/i18n'
-import { i18n as creditBadgeI18n } from '@/widgets/credit-badge/config/i18n'
 import { i18n as deleteGuidelineI18n } from '@/features/delete-guideline/config/i18n'
 import { i18n as deleteTemplateI18n } from '@/features/delete-template/config/i18n'
 import { i18n as deleteVoiceI18n } from '@/features/delete-voice/config/i18n'
@@ -171,7 +169,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   authoringI18n,
   writingCandidatesI18n,
   candidateFlowI18n,
-  setupI18n,
   creationOfferI18n,
   channelI18n,
   workListI18n,
@@ -242,7 +239,6 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   modelLeaderboardI18n,
   reviewModelExperimentI18n,
   selectModelModelsI18n,
-  creditBadgeI18n,
   planI18n,
   plansI18n,
   giftPageI18n,
@@ -306,7 +302,6 @@ export const resources = {
       ...writingKitI18n.ko,
       ...libraryI18n.ko,
       ...settingsI18n.ko,
-      ...setupI18n.ko,
       ...creationOfferI18n.ko,
     },
     spokenVoice: spokenVoiceResources.ko,
@@ -405,7 +400,6 @@ export const resources = {
     errors: { ...koErrors, ...headingErrors.ko } satisfies Record<AppFailureReason, string>,
     marketing: koMarketing,
     plans: {
-      ...creditBadgeI18n.ko,
       ...planI18n.ko,
       ...plansI18n.ko,
       ...giftPageI18n.ko,
@@ -460,7 +454,6 @@ export const resources = {
       ...writingKitI18n.en,
       ...libraryI18n.en,
       ...settingsI18n.en,
-      ...setupI18n.en,
       ...creationOfferI18n.en,
     },
     spokenVoice: spokenVoiceResources.en,
@@ -559,7 +552,6 @@ export const resources = {
     errors: { ...enErrors, ...headingErrors.en } satisfies Record<AppFailureReason, string>,
     marketing: enMarketing,
     plans: {
-      ...creditBadgeI18n.en,
       ...planI18n.en,
       ...plansI18n.en,
       ...giftPageI18n.en,

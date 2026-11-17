@@ -82,7 +82,8 @@ describe('named owned guideline editing', () => {
     renderGuidelines({}, calls)
     const list = await section('지침 목록')
     expect(list.getAllByRole('listitem')).toHaveLength(3)
-    expect(list.getAllByText('저장되어 사용할 수 있어요')).toHaveLength(3)
+    // A saved rule carries no status line of its own.
+    expect(list.queryByText('저장되어 사용할 수 있어요')).toBeNull()
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListAuthoringSummaries')).toHaveLength(1),
     )
@@ -218,7 +219,7 @@ const DEFAULTS: FakeDefaultGuidelineRow[] = [
 /** GUIDE-20, GUIDE-43, GUIDE-47, GUIDE-48: the 기본 지침 in use are rows of the one list, first and
  *  in registry order; one leaves it by 적용 안함 and comes back from the 기본 지침 sheet. */
 describe('the 기본 지침', () => {
-  it('lists the ones in use first, in registry order, in the same list as the owner’s rows', async () => {
+  it('lists the owner’s own rules first, then the ones in use in registry order, on one sheet', async () => {
     renderGuidelines({ defaults: DEFAULTS })
 
     const list = await section('지침 목록')
@@ -228,9 +229,14 @@ describe('the 기본 지침', () => {
     // A closed row is its sentence alone; 추천 and an every-post scope show once it is open
     // (GUIDE-47). The rules are grouped by where they change a post, and a rule that reaches
     // only some posts — or none — names where while closed.
-    expect(within(items[0]).getByRole('button', { expanded: false })).toHaveTextContent(
+    expect(within(items[0]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
+    expect(within(items[1]).getByRole('button', { expanded: false })).toHaveTextContent(
       /^재료에 있는 사실만$/,
     )
+    // The sheet says whose rules follow: the owner's, then Postpilot's 기본 지침 switched on.
+    const every = within(screen.getByRole('region', { name: /^모든 글에/ }))
+    expect(every.getByText('내가 정한 지침 1')).toBeInTheDocument()
+    expect(every.getByText('켜 둔 기본 지침 2')).toBeInTheDocument()
     expect(list.queryByText('추천')).not.toBeInTheDocument()
     expect(list.queryByText('전역')).not.toBeInTheDocument()
     expect(
@@ -238,8 +244,7 @@ describe('the 기본 지침', () => {
     ).toHaveLength(3)
     const nowhere = within(screen.getByRole('region', { name: /^지금은 어디에도 적용되지 않아요/ }))
     expect(nowhere.getByText('적용 대상 없음')).toBeInTheDocument()
-    expect(within(items[1]).getByText('자연스러운 한국어 문체')).toBeInTheDocument()
-    expect(within(items[2]).getByText('없는 사실을 쓰지 않기')).toBeInTheDocument()
+    expect(within(items[2]).getByText('자연스러운 한국어 문체')).toBeInTheDocument()
     expect(list.queryByText('메모의 이름으로')).not.toBeInTheDocument()
     expect(screen.queryByRole('switch')).not.toBeInTheDocument()
     // Closed rows carry no text and no action.
@@ -347,9 +352,10 @@ describe('the 기본 지침', () => {
 
     await user.click(sheet.getByRole('button', { name: '닫기' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
-    // In the list at its product position: after facts, before natural_korean.
+    // In the list at its product position, after the owner's own rule: after facts, before
+    // natural_korean.
     const items = (await section('지침 목록')).getAllByRole('listitem')
-    expect(within(items[1]).getByText('메모의 이름으로')).toBeInTheDocument()
+    expect(within(items[2]).getByText('메모의 이름으로')).toBeInTheDocument()
   })
 
   // GUIDE-53, GUIDE-48: the 원칙 sit read-only in their own closed card above the list, never as

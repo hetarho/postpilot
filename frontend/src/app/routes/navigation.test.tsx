@@ -193,7 +193,7 @@ it('retains a 내 설정 origin through reload and restores its document positio
 // 홈 is the kit and one 글쓰기: every kit part is a way to its own screen, and nothing is written.
 it.each([
   ['ko', '글쓰기 준비 상태', '글쓰기'],
-  ['en', 'Writing kit readiness', 'Write a post'],
+  ['en', 'Writing kit readiness', 'Write'],
 ] as const)(
   'shows the writing kit and one 글쓰기 on 홈 in %s without object writes',
   async (locale, figure, write) => {

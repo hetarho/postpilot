@@ -16,7 +16,7 @@ import { GeneratedWritingVoicesSheet } from '@/features/generate-writing-voices'
 import { RestoreVoiceButton } from '@/features/restore-voice'
 import { SetDefaultVoiceButton } from '@/features/set-default-voice'
 import { AIAuthoringSheet } from '@/widgets/ai-authoring-studio'
-import { KitHeader, KitRing } from '@/widgets/writing-kit'
+import { KitArt, KitEmpty, KitGlyph, KitHeader, KitRing } from '@/widgets/writing-kit'
 import {
   ActionBar,
   ActionMenu,
@@ -59,7 +59,16 @@ export function VoicesPage() {
     if (requested) void navigate({ to: '/voices', search: {}, replace: true })
   }, [requested, navigate])
   const writing = active.find((voice) => voice.isDefault)
-  const others = active.filter((voice) => voice !== writing)
+  // With no default and nothing finished, the voice furthest along stands in the default's place:
+  // it is the one whose next step makes the kit ready.
+  const closest =
+    !writing && !active.some((voice) => voice.made)
+      ? active.reduce<Voice | undefined>(
+          (best, voice) => (!best || voice.readinessPercent > best.readinessPercent ? voice : best),
+          undefined,
+        )
+      : undefined
+  const others = active.filter((voice) => voice !== writing && voice !== closest)
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
@@ -97,15 +106,24 @@ export function VoicesPage() {
             </h2>
             {writing ? (
               <VoiceSpecimen ownerId={ownerId} voice={writing} />
+            ) : closest ? (
+              <ClosestVoice voice={closest} />
             ) : (
-              <div className="border-content-tertiary/40 rounded-2xl border-2 border-dashed px-5 py-6">
-                <Typography variant="fieldTitle" as="p">
-                  {t(active.length ? 'page.noDefault' : 'page.none', { ns: 'voices' })}
-                </Typography>
-                <Typography variant="body" className="text-content-secondary mt-1">
-                  {t(active.length ? 'page.noDefaultNext' : 'page.noneNext', { ns: 'voices' })}
-                </Typography>
-              </div>
+              <KitEmpty
+                align={active.length ? 'start' : 'center'}
+                figure={
+                  active.length ? (
+                    <KitGlyph>
+                      <Quote />
+                    </KitGlyph>
+                  ) : (
+                    <KitArt part="voice" />
+                  )
+                }
+                title={t(active.length ? 'page.noDefault' : 'page.none', { ns: 'voices' })}
+              >
+                {t(active.length ? 'page.noDefaultNext' : 'page.noneNext', { ns: 'voices' })}
+              </KitEmpty>
             )}
           </section>
 
@@ -280,6 +298,35 @@ function VoiceSpecimen({ ownerId, voice }: { ownerId: string; voice: Voice }) {
   )
 }
 
+/** No voice finished yet: the one furthest along, where the default will be, with what it still
+ *  needs. It is not the default — nothing writes in it until it is made. */
+function ClosestVoice({ voice }: { voice: Voice }) {
+  const { t } = useTranslation('voices')
+  return (
+    <KitEmpty
+      align="start"
+      title={t('page.noneMade')}
+      action={
+        <div className="flex w-full min-w-0 flex-col gap-3">
+          <Link
+            to="/voices/$voiceId"
+            params={{ voiceId: voice.id }}
+            className={typographyStyles({
+              variant: 'title',
+              className: 'text-content-primary min-w-0 break-words hover:underline',
+            })}
+          >
+            {voice.name}
+          </Link>
+          <LearningState voice={voice} />
+        </div>
+      }
+    >
+      {t('page.closest')}
+    </KitEmpty>
+  )
+}
+
 /** A voice not yet made: its real readiness, and the one way to move it on. */
 function LearningState({ voice }: { voice: Voice }) {
   const { t } = useTranslation('voices')
@@ -289,8 +336,8 @@ function LearningState({ voice }: { voice: Voice }) {
         part={{ key: 'voice', state: 'partial', progress: voice.readinessPercent / 100 }}
         size="lg"
       />
-      <div className="min-w-0 flex-1">
-        <Typography variant="fieldTitle" as="p">
+      <div className="min-w-0 flex-1 basis-32">
+        <Typography variant="fieldTitle" as="p" className="break-keep">
           {voice.readinessPercent >= 100
             ? t('page.analyzeLeft')
             : t('page.learning', { percent: voice.readinessPercent })}

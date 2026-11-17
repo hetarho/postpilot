@@ -5,10 +5,12 @@ import { AudioLines, Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
-import { KitHeader } from '@/widgets/writing-kit'
+import { KitArt, KitEmpty, KitHeader } from '@/widgets/writing-kit'
 import {
   ActionBar,
+  Button,
   LoadingState,
+  Notice,
   Typography,
   cardStyles,
   pageStyles,
@@ -27,6 +29,7 @@ const WAVE = [38, 64, 90, 52, 74, 100, 60, 82, 44, 70, 92, 56, 30, 66, 48]
 export function SpokenVoicesPage() {
   const { t } = useTranslation('spokenVoices'),
     { t: model } = useTranslation('models'),
+    { t: common } = useTranslation('common'),
     { user } = useSession(),
     ownerId = user?.id ?? '',
     library = useSpokenLibrary(ownerId),
@@ -42,12 +45,25 @@ export function SpokenVoicesPage() {
       })}
     >
       <KitHeader part="spoken" />
+      {/* A list that cannot be read says so with its way back, as every kit screen does. */}
+      {(library.voicesQuery.isError || library.draftsQuery.isError) && (
+        <Notice tone="danger" role="alert" className="mt-6">
+          <span>{t('failed')}</span>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void library.voicesQuery.refetch()
+              void library.draftsQuery.refetch()
+            }}
+            pending={library.voicesQuery.isFetching || library.draftsQuery.isFetching}
+            className="text-notice-danger-fg underline"
+          >
+            {common('action.retry')}
+          </Button>
+        </Notice>
+      )}
       <Typography role="status" as="p" variant="meta" className="mt-4 min-h-5">
-        {library.voicesQuery.isError || library.draftsQuery.isError
-          ? t('failed')
-          : status
-            ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-            : ' '}
+        {status ? t(status as 'renameFailed' | 'renamed' | 'playFailed') : ' '}
       </Typography>
       {!library.voicesQuery.isError && library.voicesQuery.isPending && (
         <LoadingState variant="list" label={t('loading')} className="mt-2" />
@@ -84,18 +100,9 @@ export function SpokenVoicesPage() {
         </section>
       )}
       {empty ? (
-        <section
-          aria-labelledby="spoken-empty"
-          className="border-content-tertiary/40 mt-4 flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed px-6 py-10 text-center"
-        >
-          <Wave muted />
-          <Typography variant="title" as="h2" id="spoken-empty">
-            {t('empty')}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary max-w-measure text-balance">
-            {t('emptyNext')}
-          </Typography>
-        </section>
+        <KitEmpty className="mt-4" figure={<KitArt part="spoken" />} title={t('empty')}>
+          {t('emptyNext')}
+        </KitEmpty>
       ) : (
         <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('title')}>
           {library.voices.map((voice) => (

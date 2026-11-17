@@ -1,4 +1,4 @@
-import { ReturnIcon } from '@/shared/ui'
+import { ReturnIcon, type ActionMenuItem } from '@/shared/ui'
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
@@ -72,6 +72,16 @@ export interface AuthoringEditorProps extends AuthoringScope {
   /** The saved setting as the conversation's draft pane shows it before a draft is loaded, so an
    *  existing setting opens on itself rather than on an empty sheet. Conversation only. */
   savedPreview?: ReactNode
+  /** A first message typed for the owner (from what they started from), shown in the composer and
+   *  sent only when they send it. Conversation only. */
+  initialMessage?: string
+  /** The page's own title row, when the conversation's status and its ⋯ and 저장 belong in it:
+   *  `status` sits under the page's name, `controls` at the row's end. One row, not two.
+   *  Conversation only. */
+  heading?: { status: HTMLElement | null; controls: HTMLElement | null }
+  /** The page's own actions on this setting (삭제), as more rows of the conversation's ⋯ menu.
+   *  Conversation only. */
+  menuItems?: readonly ActionMenuItem[]
 }
 export interface AuthoringInspectionContext {
   ownerId: string
@@ -118,6 +128,9 @@ function ScopedEditor({
   onNavigationChange,
   layout = 'steps',
   savedPreview,
+  initialMessage,
+  heading: headingSlots,
+  menuItems,
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
   const conversation = layout === 'conversation'
@@ -427,6 +440,9 @@ function ScopedEditor({
         workingStatus={workingStatus}
         preview={preview}
         savedPreview={savedPreview}
+        initialMessage={initialMessage}
+        heading={headingSlots}
+        menuItems={menuItems}
         retry={retry}
         aiAvailability={aiAvailability}
         inputFeedback={inputFeedback}

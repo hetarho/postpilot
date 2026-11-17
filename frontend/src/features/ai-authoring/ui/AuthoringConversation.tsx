@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode, type Ref } from 'react'
+import { createPortal } from 'react-dom'
 import type { SnapshotFrom } from 'xstate'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
@@ -57,6 +58,9 @@ export function AuthoringConversation({
   workingStatus,
   preview,
   savedPreview,
+  initialMessage,
+  heading,
+  menuItems = [],
   retry,
   aiAvailability,
   inputFeedback,
@@ -87,6 +91,9 @@ export function AuthoringConversation({
   workingStatus: string
   preview: ReactNode
   savedPreview?: ReactNode
+  initialMessage?: string
+  heading?: { status: HTMLElement | null; controls: HTMLElement | null }
+  menuItems?: readonly ActionMenuItem[]
   retry: ReactNode
   aiAvailability: ReactNode
   inputFeedback: ReactNode
@@ -108,6 +115,15 @@ export function AuthoringConversation({
   const [held, setHeld] = useState('')
   const queued = useRef<{ text: string; typed: boolean } | null>(null)
   const operationText = flow.context.operation.text
+
+  // A first message typed for the owner goes into the empty composer once; sending stays theirs.
+  const seeded = useRef(false)
+  useEffect(() => {
+    if (seeded.current || !initialMessage || view !== 'purpose' || ai !== 'ready') return
+    seeded.current = true
+    if (!flow.context.purpose.trim())
+      send({ type: 'PURPOSE_CHANGED', scopeKey, text: initialMessage })
+  }, [initialMessage, view, ai, flow.context.purpose, send, scopeKey])
 
   // ONE draft: the single candidate is taken at once — a free selection — so the talk goes on.
   useEffect(() => {
@@ -322,6 +338,7 @@ export function AuthoringConversation({
           },
         ]
       : []),
+    ...menuItems,
   ]
   const hasDraft = !!selected || view === 'direct'
   const showsDraft = hasDraft || !!savedPreview
@@ -333,6 +350,33 @@ export function AuthoringConversation({
         : hasDraft || savedPreview
           ? t('conversation.status.saved')
           : t('conversation.status.empty')
+
+  const status = (
+    <Typography
+      variant={heading ? 'meta' : 'label'}
+      as="p"
+      role="status"
+      className="min-w-0 flex-1 truncate"
+    >
+      {statusLine}
+    </Typography>
+  )
+  const controls = (
+    <>
+      {menu.length > 0 && (
+        <ActionMenu
+          label={t('conversation.more')}
+          triggerLabel={<Ellipsis aria-hidden="true" className="size-5" />}
+          triggerVariant="ghost"
+          chevron={false}
+          items={menu}
+        />
+      )}
+      <Button variant="cta" disabled={!canSave} onClick={save}>
+        {t(targetId ? 'conversation.saveChanges' : 'conversation.save')}
+      </Button>
+    </>
+  )
 
   const composer =
     view === 'direct' ? null : (
@@ -368,26 +412,17 @@ export function AuthoringConversation({
       aria-labelledby={titleId}
       className={clsx('@container flex min-w-0 flex-1 flex-col', className)}
     >
-      {/* One heading row: where the draft stands, then the menu and 저장. */}
-      <div ref={headingRef} className="flex min-h-11 items-center gap-2">
+      {/* One heading row: where the draft stands, then the menu and 저장 — in the page's own title
+          row when the page gives it (`heading`), so the screen has one row of chrome, not two. */}
+      <div ref={headingRef} className={clsx(!heading && 'flex min-h-11 items-center gap-2')}>
         <h2 id={titleId} className="sr-only">
           {t('conversation.label', named)}
         </h2>
-        <Typography variant="label" as="p" role="status" className="min-w-0 flex-1 truncate">
-          {statusLine}
-        </Typography>
-        {menu.length > 0 && (
-          <ActionMenu
-            label={t('conversation.more')}
-            triggerLabel={<Ellipsis aria-hidden="true" className="size-5" />}
-            triggerVariant="ghost"
-            items={menu}
-          />
-        )}
-        <Button variant="cta" disabled={!canSave} onClick={save}>
-          {t(targetId ? 'conversation.saveChanges' : 'conversation.save')}
-        </Button>
+        {!heading && status}
+        {!heading && controls}
       </div>
+      {heading?.status && createPortal(status, heading.status)}
+      {heading?.controls && createPortal(controls, heading.controls)}
       {notices}
       {showsDraft && (
         <SegmentedControl
@@ -404,7 +439,9 @@ export function AuthoringConversation({
           className="mt-3 @3xl:hidden"
         />
       )}
-      <div className="mt-4 grid flex-1 gap-8 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] @3xl:items-start @3xl:gap-10">
+      {/* The talk fills its column so its composer rests at the foot of the screen; the draft
+          stays in view beside it. */}
+      <div className="mt-4 grid flex-1 gap-8 @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] @3xl:gap-10">
         <div
           onFocusCapture={() => setPane('chat')}
           className={clsx('flex min-w-0 flex-col', pane === 'draft' && 'hidden @3xl:flex')}
@@ -427,7 +464,7 @@ export function AuthoringConversation({
         <aside
           aria-label={t('conversation.pane.draft')}
           className={clsx(
-            '@3xl:top-chrome min-w-0 @3xl:sticky',
+            '@3xl:top-chrome min-w-0 @3xl:sticky @3xl:self-start',
             pane === 'chat' && 'hidden @3xl:block',
           )}
         >

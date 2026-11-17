@@ -44,7 +44,7 @@ export function WritingKit({
             '@min-[21rem]:col-span-1 @min-[21rem]:col-start-2 @min-[21rem]:row-span-2 @min-[21rem]:row-start-1 @min-[21rem]:max-w-none',
           )}
         >
-          <Manuscript parts={parts} />
+          <Manuscript parts={parts} complete={summary.phase === 'ready'} />
         </div>
         <Callout
           part={parts.template}
@@ -74,16 +74,10 @@ export function WritingKit({
           part={parts.model}
           next={summary.next}
           side="below"
-          className="@min-[21rem]:col-start-2 @min-[21rem]:row-start-3"
-        />
-        <Callout
-          part={parts.spoken}
-          next={summary.next}
-          side="below"
-          video
-          className="@min-[21rem]:col-start-3 @min-[21rem]:row-start-3"
+          className="@min-[16rem]:col-span-2 @min-[16rem]:justify-self-center @min-[21rem]:col-span-1 @min-[21rem]:col-start-2 @min-[21rem]:row-start-3"
         />
       </div>
+      <VideoNote part={parts.spoken} />
     </figure>
   )
 }
@@ -93,13 +87,11 @@ function Callout({
   part,
   next,
   side,
-  video = false,
   className,
 }: {
   part: KitPart
   next: KitPartKey | undefined
   side: 'left' | 'right' | 'below'
-  video?: boolean
   className?: string
 }) {
   const { t } = useTranslation('creation')
@@ -142,11 +134,6 @@ function Callout({
           })}
         >
           {t(`kit.parts.${part.key}`)}
-          {video && (
-            <span className={typographyStyles({ variant: 'meta', className: 'ml-1' })}>
-              {t('kit.video')}
-            </span>
-          )}
         </span>
         {part.state === 'loading' ? (
           <span aria-busy="true" className="loading-reveal mt-1 block">
@@ -182,6 +169,45 @@ function Callout({
   )
 }
 
+/** 목소리 reads videos, not posts: it is not part of the writing count, so it stands under the
+ *  figure as a note — the same ring, smaller words — rather than as a sixth piece of the page. */
+function VideoNote({ part }: { part: KitPart }) {
+  const { t } = useTranslation('creation')
+  const statusText = useKitStatusText()
+  return (
+    <Link
+      to={part.href}
+      className="group hover:bg-row-bg-hover active:bg-row-bg-active border-divider mx-auto mt-6 flex min-h-11 w-fit max-w-full items-center gap-2 rounded-full border py-1 pr-4 pl-1 transition-colors"
+    >
+      <Ring part={part} size="sm" />
+      <span className={typographyStyles({ variant: 'meta', className: 'break-keep' })}>
+        {t('kit.video')}
+      </span>
+      <span
+        className={typographyStyles({
+          variant: 'label',
+          className: 'text-content-primary break-keep',
+        })}
+      >
+        {t(`kit.parts.${part.key}`)}
+      </span>
+      {part.state === 'loading' ? (
+        <Skeleton className="h-3 w-10" />
+      ) : (
+        <span className={typographyStyles({ variant: 'meta', className: 'break-keep' })}>
+          {statusText(part)}
+        </span>
+      )}
+      <span className="sr-only">
+        {', '}
+        {t(`kit.state.${part.state}`)}
+        {', '}
+        {t(`kit.does.${part.key}`)}
+      </span>
+    </Link>
+  )
+}
+
 const RING_RADIUS = 16
 const RING_LENGTH = 2 * Math.PI * RING_RADIUS
 
@@ -194,7 +220,7 @@ export function Ring({
 }: {
   part: Pick<KitPart, 'key' | 'state' | 'progress'>
   next?: boolean
-  size?: 'md' | 'lg'
+  size?: 'sm' | 'md' | 'lg'
 }) {
   const Icon = KIT_ICONS[part.key]
   const empty = part.state === 'empty' || part.state === 'failed'
@@ -204,7 +230,7 @@ export function Ring({
       aria-hidden="true"
       className={clsx(
         'relative inline-flex shrink-0 items-center justify-center',
-        size === 'lg' ? 'size-14' : 'size-10',
+        size === 'lg' ? 'size-14' : size === 'sm' ? 'size-8' : 'size-10',
       )}
     >
       {next && (
@@ -237,11 +263,14 @@ export function Ring({
       <span
         className={clsx(
           'relative flex items-center justify-center rounded-full',
-          size === 'lg' ? 'size-10' : 'size-7',
+          size === 'lg' ? 'size-10' : size === 'sm' ? 'size-6' : 'size-7',
           ready ? 'bg-badge-accent-bg text-badge-accent-fg' : 'text-content-tertiary',
         )}
       >
-        <Icon aria-hidden="true" className={size === 'lg' ? 'size-5' : 'size-4'} />
+        <Icon
+          aria-hidden="true"
+          className={size === 'lg' ? 'size-5' : size === 'sm' ? 'size-3.5' : 'size-4'}
+        />
       </span>
     </span>
   )
@@ -255,7 +284,13 @@ const SECTION_LINES = [
 ] as const
 
 /** The sheet. Sized in container units so it is the same drawing at every size. */
-function Manuscript({ parts }: { parts: Record<KitPartKey, KitPart> }) {
+function Manuscript({
+  parts,
+  complete,
+}: {
+  parts: Record<KitPartKey, KitPart>
+  complete: boolean
+}) {
   const { voice, template, guideline, memory, model } = parts
   const totalLines = SECTION_LINES.flat().length
   const inked = Math.round(voice.progress * totalLines)
@@ -275,6 +310,10 @@ function Manuscript({ parts }: { parts: Record<KitPartKey, KitPart> }) {
   const arrive = (index: number): CSSProperties => ({ animationDelay: `${120 + index * 70}ms` })
   return (
     <div aria-hidden="true" className="@container relative aspect-[3/4] w-full">
+      {/* The paper it sits on: a soft pool of the accent and the posts already written under it. */}
+      <div className="bg-badge-accent-bg absolute -inset-[10cqw] -z-10 rounded-full opacity-70 blur-3xl" />
+      <div className="bg-card-bg ring-divider absolute inset-0 translate-x-[3cqw] translate-y-[2cqw] rotate-[5deg] rounded-[6cqw] opacity-60 shadow-sm ring-1" />
+      <div className="bg-card-bg ring-divider absolute inset-0 -translate-x-[2cqw] translate-y-[1cqw] -rotate-[3deg] rounded-[6cqw] opacity-80 shadow-sm ring-1" />
       <div className="bg-card-bg ring-divider absolute inset-0 rounded-[6cqw] shadow-lg ring-1" />
       {/* 지침: the margin rule, solid in the accent once the owner has a rule of their own. */}
       <div
@@ -360,6 +399,15 @@ function Manuscript({ parts }: { parts: Record<KitPartKey, KitPart> }) {
           <span className="border-content-tertiary/40 bg-card-bg block size-[17cqw] rotate-6 rounded-[1.5cqw] border-[0.6cqw] border-dashed" />
         )}
       </div>
+      {/* Every part ready: a seal pressed once onto the corner — an arrival, not a loop. */}
+      {complete && (
+        <span
+          className="bg-button-cta-bg text-button-cta-fg animate-rise absolute -top-[5cqw] -right-[5cqw] flex size-[18cqw] -rotate-12 items-center justify-center rounded-full shadow-md"
+          style={arrive(8)}
+        >
+          <Check className="size-[9cqw]" strokeWidth={3} />
+        </span>
+      )}
       {/* 쓰는 AI: the pen, resting where the writing goes on. */}
       <span
         className={clsx(

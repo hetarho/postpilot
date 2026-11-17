@@ -1,53 +1,34 @@
-import { Clapperboard } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useRef, type Ref } from 'react'
-import {
-  ClipTemplateDescription,
-  useClipTemplates,
-  type ClipTemplate,
-} from '@/entities/clip-template'
+import { ClipTemplateSummary, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
-import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
 import { ChannelActions } from '@/widgets/channel-actions'
 import {
-  Badge,
-  DirectoryItem,
-  Button,
-  Notice,
-  LoadingState,
-  Typography,
-  pageStyles,
-  typographyStyles,
-  useListRemovalFocus,
-} from '@/shared/ui'
+  KitArt,
+  KitEmpty,
+  KitHeader,
+  TemplateCard,
+  UnsavedTemplateCard,
+} from '@/widgets/writing-kit'
+import { Badge, Button, Notice, LoadingState, Typography, pageStyles } from '@/shared/ui'
 
-/** Saved video compositions share directory controls while showing their own visual vocabulary. */
+/** Guide: 영상 템플릿 — the shapes the owner's videos take, the 영상 side of 템플릿. Each template is
+ *  drawn as the video it makes (its opening and closing design around one example line, and its
+ *  stages in order) on the same card 글 템플릿 uses; the card is the way in, where it is changed by
+ *  talking and deleted. A conversation not yet saved waits at the top to continue. The one action
+ *  is a new template, which opens the conversation. Nothing here calls a model. */
 export function VideoTemplatesPage() {
   const { t } = useTranslation(['clips', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { templates, isPending, isFetching, isError, refetch } = useClipTemplates(ownerId)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
-  const page = useRef<HTMLElement>(null)
-  const deleteButtons = useRef(new Map<string, HTMLButtonElement>())
-  const requestRemoval = useListRemovalFocus({
-    keys: templates.map((template) => template.id),
-    getTarget: (id) => deleteButtons.current.get(id),
-    getFallback: () =>
-      page.current?.querySelector<HTMLAnchorElement>('a[href="/video-templates/new"]'),
-  })
+  const unsaved = summaries.data?.filter((row) => !row.targetId && !row.lastPublication) ?? []
 
   return (
-    <main
-      ref={page}
-      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
-    >
-      <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('directory.description', { ns: 'clips' })}
-      </Typography>
+    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
+      <KitHeader part="template" video />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -74,13 +55,6 @@ export function VideoTemplatesPage() {
 
       {!isError && !isPending && (
         <>
-          {summaries.isPending && (
-            <LoadingState
-              variant="inline"
-              label={t('directory.checkingWork', { ns: 'clips' })}
-              className="mt-6"
-            />
-          )}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-6">
               {t('directory.workLoadFailed', { ns: 'clips' })}
@@ -89,71 +63,55 @@ export function VideoTemplatesPage() {
               </Button>
             </Notice>
           )}
+          {unsaved.length > 0 && (
+            <section className="mt-8" aria-labelledby="video-templates-unsaved-heading">
+              <Typography variant="title" as="h2" id="video-templates-unsaved-heading">
+                {t('directory.unsavedWork', { ns: 'clips' })}
+              </Typography>
+              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+                {unsaved.map((row) => {
+                  const name = row.displayName || t('directory.create', { ns: 'clips' })
+                  return (
+                    <UnsavedTemplateCard
+                      key={row.sessionId}
+                      title={t('directory.resumeNew', { ns: 'clips', name })}
+                      status={
+                        row.activeJobId
+                          ? t('directory.activeAI', { ns: 'clips', name })
+                          : t('directory.unsaved', { ns: 'clips' })
+                      }
+                      renderLink={(link) => (
+                        <Link
+                          to="/video-templates/new"
+                          search={{ session: row.sessionId }}
+                          {...link}
+                        />
+                      )}
+                    />
+                  )
+                })}
+              </ul>
+            </section>
+          )}
           {templates.length === 0 ? (
             <EmptyState />
           ) : (
-            <section aria-labelledby="video-templates-heading" className="mt-6">
-              <Typography variant="title" id="video-templates-heading">
+            <section aria-labelledby="video-templates-heading" className="mt-8">
+              <Typography variant="title" as="h2" id="video-templates-heading">
                 {t('directory.saved', { ns: 'clips' })}
               </Typography>
-              {/* Saved resources share one card composition with the writing catalog. */}
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {templates.map((template, index) => (
-                  <TemplateRow
+                  <VideoTemplateShape
                     key={template.id}
-                    ownerId={ownerId}
                     template={template}
-                    deleteButtonRef={(button) => {
-                      if (button) deleteButtons.current.set(template.id, button)
-                      else deleteButtons.current.delete(template.id)
-                    }}
-                    onDeleted={() => requestRemoval(template.id, index)}
+                    index={index}
                     summary={summaries.data?.find(
                       (row) =>
                         row.targetId === template.id || row.lastPublication?.id === template.id,
                     )}
                   />
                 ))}
-              </ul>
-            </section>
-          )}
-          {summaries.data?.some((row) => !row.targetId && !row.lastPublication) && (
-            <section className="mt-8" aria-labelledby="video-templates-unsaved-heading">
-              <Typography variant="title" as="h2" id="video-templates-unsaved-heading">
-                {t('directory.unsavedWork', { ns: 'clips' })}
-              </Typography>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
-                {summaries.data
-                  .filter((row) => !row.targetId && !row.lastPublication)
-                  .map((row) => (
-                    <DirectoryItem
-                      key={row.sessionId}
-                      interactive
-                      icon={<Clapperboard className="size-6" />}
-                      title={
-                        <Link
-                          to="/video-templates/new"
-                          search={(previous) => ({ ...previous, session: row.sessionId })}
-                          className={typographyStyles({
-                            variant: 'fieldTitle',
-                            className:
-                              'text-content-primary break-words after:absolute after:inset-0',
-                          })}
-                        >
-                          {t('directory.resumeNew', {
-                            ns: 'clips',
-                            name: row.displayName || t('directory.create', { ns: 'clips' }),
-                          })}
-                        </Link>
-                      }
-                      description={
-                        <Typography variant="meta" as="p">
-                          {t('directory.unsaved', { ns: 'clips' })}
-                        </Typography>
-                      }
-                      status={<EditingStatus summary={row} />}
-                    />
-                  ))}
               </ul>
             </section>
           )}
@@ -165,118 +123,53 @@ export function VideoTemplatesPage() {
   )
 }
 
-/** Plain language and no example: the empty state says what a video template is FOR and lets the
- *  editor teach its own vocabulary. It creates nothing — there are no shipped presets. */
+/** No video template yet: the empty slot a first conversation will fill. It creates nothing —
+ *  there are no shipped presets. */
 function EmptyState() {
   const { t } = useTranslation('clips')
   return (
-    <section aria-labelledby="video-templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="video-templates-empty-heading">
-        {t('directory.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('directory.emptyHelp')}
-      </Typography>
-    </section>
+    <KitEmpty className="mt-8" figure={<KitArt part="template" />} title={t('directory.empty')}>
+      {t('directory.emptyTalk')}
+    </KitEmpty>
   )
 }
 
-/** One template, one target. The link stretches over the whole card through its `::after`, so the
- *  padding and the empty space navigate too, while the delete paints above that layer and acts
- *  without navigating — a row is one target, not a row with a button inside it (THEME-23). */
-function TemplateRow({
-  ownerId,
+/** One video template, drawn as the video it makes. */
+function VideoTemplateShape({
   template,
+  index,
   summary,
-  deleteButtonRef,
-  onDeleted,
 }: {
-  ownerId: string
   template: ClipTemplate
+  index: number
   summary?: AuthoringSummary
-  deleteButtonRef: Ref<HTMLButtonElement>
-  onDeleted: () => void
 }) {
-  const { t } = useTranslation('clips')
-  return (
-    <DirectoryItem
-      interactive
-      icon={<Clapperboard className="size-6" />}
-      title={
-        <Link
-          to="/video-templates/$templateId"
-          params={{ templateId: template.id }}
-          className={typographyStyles({
-            variant: 'fieldTitle',
-            className: 'text-content-primary line-clamp-2 break-words after:absolute after:inset-0',
-          })}
-        >
-          {template.name}
-        </Link>
-      }
-      description={<ClipTemplateDescription template={template} className="line-clamp-2" />}
-      status={summary && <EditingStatus summary={summary} />}
-      metadata={
-        <>
-          <Badge tone="neutral">
-            {t('directory.projectCount', { count: template.projectCount })}
-          </Badge>
-          <Typography variant="meta" as="span">
-            {t('directory.savedAvailable')}
-          </Typography>
-        </>
-      }
-      actions={
-        <DeleteClipTemplateButton
-          ownerId={ownerId}
-          template={template}
-          buttonRef={deleteButtonRef}
-          onDeleted={onDeleted}
-        />
-      }
-    />
-  )
-}
-function EditingStatus({ summary }: { summary?: AuthoringSummary }) {
   const { t } = useTranslation(['clips', 'authoring'])
-  if (!summary) return null
-  const named = {
-    kind: t('kinds.video-template', { ns: 'authoring' }),
-    name: summary.displayName || t('directory.create', { ns: 'clips' }),
-  }
+  const named = { kind: t('kinds.video-template', { ns: 'authoring' }), name: template.name }
+  // What is waiting on this template's conversation, in the order it matters.
+  const work = summary?.targetConflict
+    ? t('directory.conflict', { ns: 'clips', name: template.name })
+    : summary?.activeJobId
+      ? t('directory.activeAI', { ns: 'clips', name: template.name })
+      : summary?.publicationPending
+        ? t('directory.publicationPending', { ns: 'clips', name: template.name })
+        : summary?.hasUnpublishedChanges
+          ? t('unpublished', { ns: 'authoring', ...named })
+          : ''
   return (
-    <div role="status" className="mt-1 space-y-1">
-      {summary.lastPublication?.outcome && (
-        <Typography variant="meta" as="p">
-          {t('directory.lastPublication', {
-            ns: 'clips',
-            result: t(
-              summary.lastPublication.outcome === 'created' ? 'confirmedCreate' : 'confirmedUpdate',
-              { ns: 'authoring', kind: named.kind, name: summary.lastPublication.name },
-            ),
-          })}
-        </Typography>
+    <TemplateCard
+      index={index}
+      name={template.name}
+      outline={<ClipTemplateSummary template={template} />}
+      meta={
+        <Badge tone="neutral">
+          {t('directory.projectCount', { ns: 'clips', count: template.projectCount })}
+        </Badge>
+      }
+      status={work || undefined}
+      renderLink={(link) => (
+        <Link to="/video-templates/$templateId" params={{ templateId: template.id }} {...link} />
       )}
-      {summary.hasUnpublishedChanges && (
-        <Typography variant="meta" as="p">
-          {t('unpublished', { ns: 'authoring', ...named })}
-        </Typography>
-      )}
-      {summary.activeJobId && (
-        <Typography variant="meta" as="p">
-          {t('directory.activeAI', { ns: 'clips', name: named.name })}
-        </Typography>
-      )}
-      {summary.publicationPending && (
-        <Typography variant="meta" as="p">
-          {t('directory.publicationPending', { ns: 'clips', name: named.name })}
-        </Typography>
-      )}
-      {summary.targetConflict && (
-        <Typography variant="meta" as="p">
-          {t('directory.conflict', { ns: 'clips', name: named.name })}
-        </Typography>
-      )}
-    </div>
+    />
   )
 }

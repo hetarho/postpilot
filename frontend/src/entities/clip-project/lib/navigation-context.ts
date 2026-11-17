@@ -17,7 +17,9 @@ export interface ClipEntry {
 /** The one 영상 list (CLIP-41); a video has no channel address of its own. */
 export const CLIP_LIST_PATH = '/clips'
 /** Addresses the list answered to before CLIP-41; a context stored under one still returns here. */
-const LEGACY_CLIP_LIST_PATHS = ['/naver-clip', '/insta-clip', '/library', '/']
+/** Lists that once held clips; a return remembered there lands on the 영상 list (내 콘텐츠, /my,
+ *  went with its hub). */
+const LEGACY_CLIP_LIST_PATHS = ['/naver-clip', '/insta-clip', '/library', '/', '/my']
 export interface ClipReturnDestination {
   path: ClipEntry['path']
   href: string

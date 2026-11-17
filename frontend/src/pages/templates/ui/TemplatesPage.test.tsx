@@ -82,7 +82,9 @@ describe('the template directory', () => {
       user: USER,
       templates: { templates: TEMPLATES },
     })
-    await user.click(await screen.findByRole('button', { name: '정보성 식당 리뷰 삭제' }))
+    // It is a row of the conversation's ⋯, in the screen's one title row.
+    await user.click(await screen.findByRole('button', { name: '더 보기' }))
+    await user.click(await screen.findByRole('menuitem', { name: '템플릿 삭제' }))
     const dialog = within(await screen.findByRole('dialog'))
     expect(dialog.getByText(/2개의 글에서 템플릿이 해제됩니다/)).toBeInTheDocument()
     await user.click(dialog.getByRole('button', { name: '삭제' }))

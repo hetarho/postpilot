@@ -14,6 +14,9 @@ import { useCallback, useSyncExternalStore } from 'react'
 export const SM_MEDIA_QUERY = '(min-width: 40rem)'
 /** Tailwind's md breakpoint, for mutually exclusive inline/sheet controls. */
 export const MD_MEDIA_QUERY = '(min-width: 48rem)'
+/** Tailwind's lg breakpoint, for a control that lives in a docked bar on a phone and inline on the
+ *  desk — one mount, so it is never two controls with one name. */
+export const LG_MEDIA_QUERY = '(min-width: 64rem)'
 
 /** A pointer that can hover and aim finely: a mouse or a trackpad. Only under it does hovering
  *  open an anchored panel — on touch an emulated enter would open one a tap never asked for, and

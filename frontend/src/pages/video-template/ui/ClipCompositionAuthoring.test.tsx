@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import { publishAuthoringDraft } from '@/test/authoring-ui'
-import { parseClipComposition, type ClipRecipe } from '@/entities/clip-template'
+import { openConversationDirect, saveConversationDraft } from '@/test/authoring-ui'
+import type { ClipRecipe } from '@/entities/clip-template'
 import type { FakeClipsOptions } from '@/test/clips'
 import type { FakeAuthoringOptions } from '@/test/authoring'
 const body =
@@ -13,69 +13,58 @@ async function mount(
   user: ReturnType<typeof userEvent.setup>,
   clips: FakeClipsOptions = {},
   authoring: FakeAuthoringOptions = {},
-  path = '/video-templates/owned',
 ) {
-  const view = renderAppAt(path, {
+  const view = renderAppAt('/video-templates/owned', {
     user: { id: 'alice' },
     clips: { templates: [template], ...clips },
     authoring,
   })
-  await user.click(
-    await screen.findByRole('button', {
-      name: path.endsWith('/new') ? '직접 편집' : /직접 편집하기$/,
-    }),
-  )
+  await openConversationDirect(user)
   await screen.findByLabelText('템플릿 이름')
   return view
 }
-async function source(user: ReturnType<typeof userEvent.setup>) {
-  if (screen.getByRole('button', { name: '고급' }).getAttribute('aria-expanded') !== 'true')
-    await user.click(screen.getByRole('button', { name: '고급' }))
-  await user.click(screen.getByRole('tab', { name: '원문' }))
-  return screen.getByRole('textbox', { name: '원문' })
-}
 describe('durable clip template composition editing', () => {
-  it('roundtrips group names/minimum and untouched source spans through builder/source/publication', async () => {
+  it('edits the composition as text only: no block builder, nothing to drag or reorder', async () => {
+    const user = userEvent.setup()
+    await mount(user)
+    expect(screen.getByRole('textbox', { name: '원문' })).toHaveValue(body)
+    expect(screen.queryByRole('tab', { name: '구성 편집' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '고급' })).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('button', { name: /위로|아래로|끌어서|옮기기/ })).toEqual([])
+  })
+  it('publishes the typed text exactly, keeping untouched source spans', async () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
     await mount(user, { writes })
-    await user.click(screen.getByRole('button', { name: '항목 묶음 1' }))
-    fireEvent.change(screen.getByLabelText('항목 묶음 이름'), { target: { value: '메뉴 & 음료' } })
-    fireEvent.change(screen.getByLabelText('최소 항목 개수'), { target: { value: '2' } })
-    const value = ((await source(user)) as HTMLTextAreaElement).value
-    expect(parseClipComposition(value).groups).toMatchObject([
-      { id: 'menu', label: '메뉴 & 음료', min: 2, max: 3 },
-    ])
-    expect(value).toContain('<stage name="외관">  keep &amp; spacing  </stage>')
-    await user.click(screen.getByRole('tab', { name: '구성 편집' }))
-    await user.click(screen.getByRole('button', { name: '메뉴 & 음료' }))
-    expect(screen.getByLabelText('최소 항목 개수')).toHaveValue('2')
-    await publishAuthoringDraft(user)
+    const changed = body.replace('메뉴 이름', '메뉴와 음료')
+    fireEvent.change(screen.getByRole('textbox', { name: '원문' }), {
+      target: { value: changed },
+    })
+    await saveConversationDraft(user)
     await waitFor(() => expect(writes).toHaveLength(1))
-    expect(writes[0].compositionBody).toBe(value)
+    expect(writes[0].compositionBody).toBe(changed)
+    expect(writes[0].compositionBody).toContain('<stage name="외관">  keep &amp; spacing  </stage>')
   })
   it('keeps exact raw bytes when only the name changes and performs no provider work', async () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
     const calls: string[] = []
     await mount(user, { writes, calls })
-    expect(await source(user)).toHaveValue(body)
     await user.type(screen.getByLabelText('템플릿 이름'), ' 새 이름')
-    await publishAuthoringDraft(user)
+    await saveConversationDraft(user)
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0].compositionBody).toBe(body)
     expect(calls).not.toContain('StartClipGeneration')
   })
-  it('retains unfinished raw composition across AI/direct modes with publication blocked', async () => {
+  it('keeps an unfinished composition as typed, with saving unavailable', async () => {
     const user = userEvent.setup()
     const patches: NonNullable<FakeAuthoringOptions['patches']> = []
     await mount(user, {}, { patches })
-    fireEvent.change(await source(user), { target: { value: '<clip version="1"><stage' } })
-    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
-    expect(patches[0].body).toBe('<clip version="1"><stage')
-    await user.click(screen.getByRole('button', { name: /직접 편집하기$/ }))
-    expect(await source(user)).toHaveValue('<clip version="1"><stage')
-    expect(screen.queryByRole('button', { name: /변경사항 저장하기$/ })).not.toBeInTheDocument()
+    fireEvent.change(screen.getByRole('textbox', { name: '원문' }), {
+      target: { value: '<clip version="1"><stage' },
+    })
+    await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+    await waitFor(() => expect(patches[0]?.body).toBe('<clip version="1"><stage'))
+    expect(screen.getByRole('button', { name: '변경 저장' })).toBeDisabled()
   })
 })

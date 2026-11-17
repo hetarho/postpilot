@@ -36,6 +36,12 @@ export const i18n = {
       projectCount: '클립 {{count}}개',
       create: '새 영상 템플릿',
       updated: '수정 {{date}}',
+      design: '시작 디자인',
+      designMenu: '시작 디자인 바꾸기',
+      deleteMenu: '영상 템플릿 삭제',
+      fromClipMessage: '이 영상의 흐름대로 영상 템플릿을 짜 줘.\n{{outline}}',
+      emptyTalk:
+        '어떤 영상을 올리는지 AI에게 말하면, 받을 정보와 순서를 담은 템플릿을 처음부터 짜 줘요.',
     },
   },
   en: {
@@ -72,6 +78,12 @@ export const i18n = {
       projectCount: '{{count}} clips',
       create: 'New video template',
       updated: 'Updated {{date}}',
+      design: 'Starting design',
+      designMenu: 'Change the starting design',
+      deleteMenu: 'Delete video template',
+      fromClipMessage: 'Make a video template that follows this video’s flow.\n{{outline}}',
+      emptyTalk:
+        'Tell the AI what your videos show and it drafts a template from scratch: what a clip asks for, and in what order.',
     },
   },
 } as const satisfies I18nFragment

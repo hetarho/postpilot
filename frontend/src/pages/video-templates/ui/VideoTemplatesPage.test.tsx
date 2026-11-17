@@ -2,9 +2,10 @@ import { expect, it } from 'vitest'
 import { screen, within } from '@testing-library/react'
 import { renderAppAt } from '@/test/app'
 
-// A video template's card reads like a post template's: its glyph, its name as the link, and one
-// line naming the stages it runs through — not a preview of the composition.
-it('describes a stored video template by its stages while keeping navigation and deletion separate', async () => {
+// A video template's card is the post template's card: its name as the one link, then the video it
+// makes — the opening and closing design around one example line, and its stages in order — and
+// how many clips use it. Deleting lives on the template's own screen, as for a post template.
+it('draws a stored video template as the video it makes, one link and nothing else to press', async () => {
   renderAppAt('/video-templates', {
     user: { id: 'alice' },
     clips: {
@@ -25,13 +26,9 @@ it('describes a stored video template by its stages while keeping navigation and
   const directory = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
   const link = directory.getByRole('link', { name: '나만의 영상 구성' })
   expect(link).toHaveAttribute('href', '/video-templates/visual')
-  expect(link).toHaveTextContent(/^나만의 영상 구성$/)
-  const card = link.closest('li')!
-  expect(card.querySelector('svg.lucide-clapperboard')).not.toBeNull()
-  expect(within(card).getByText('첫인상 · 대표 메뉴')).toBeInTheDocument()
-  expect(within(card).queryByText('구성 예시')).toBeNull()
-  expect(card).not.toHaveTextContent('인트로 매거진 커버')
+  expect(within(link).getByText('구성 예시')).toBeInTheDocument()
+  expect(within(link).getByText(/첫인상 → 대표 메뉴/)).toBeInTheDocument()
+  expect(link).toHaveTextContent('인트로 매거진 커버')
   expect(directory.getByText('클립 3개')).toBeInTheDocument()
-  expect(directory.getByRole('button', { name: '나만의 영상 구성 삭제' }).closest('a')).toBeNull()
-  expect(within(link).queryByRole('button')).not.toBeInTheDocument()
+  expect(directory.queryByRole('button')).toBeNull()
 })

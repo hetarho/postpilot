@@ -16,6 +16,11 @@ export const i18n = {
         model: '쓰는 AI',
         spoken: '목소리',
       },
+      videoParts: { template: '영상 템플릿', guideline: '영상 지침' },
+      videoDoes: {
+        template: '영상이 이 순서로 짜여요',
+        guideline: 'AI가 영상에서 이 규칙을 지켜요',
+      },
       does: {
         voice: '문장이 내 말투로 써져요',
         template: '글이 이 순서로 짜여요',
@@ -61,6 +66,11 @@ export const i18n = {
         memory: 'Memories',
         model: 'Writing AI',
         spoken: 'Voices',
+      },
+      videoParts: { template: 'Video templates', guideline: 'Video guidelines' },
+      videoDoes: {
+        template: 'Videos follow this order',
+        guideline: 'The AI keeps these rules in videos',
       },
       does: {
         voice: 'Sentences sound like you',

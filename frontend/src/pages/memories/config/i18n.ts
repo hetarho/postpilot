@@ -23,6 +23,10 @@ export const i18n = {
       all: '전체 {{count}}',
       add: '추가',
       addKind: '{{kind}} 기억 추가',
+      blank: '아직 빈 페이지',
+      blankFirst: 'AI에게 알려 줄 수 있는 것',
+      firstTitle: '아직 기억이 없어요',
+      firstLine: '나에 대한 사실을 적어 두면, AI가 글마다 알맞은 것을 꺼내 써요.',
       empty: {
         preference: '좋아하는 것, 못 먹는 것, 자주 가는 곳',
         persona: '나는 어떤 사람인지, 무슨 일을 하는지',
@@ -52,6 +56,10 @@ export const i18n = {
       all: 'All {{count}}',
       add: 'Add',
       addKind: 'Add a {{kind}} memory',
+      blank: 'Blank pages',
+      blankFirst: 'What you can tell the AI',
+      firstTitle: 'No memories yet',
+      firstLine: 'Write down facts about you, and the AI brings the right ones into each post.',
       empty: {
         preference: 'What you like, cannot eat, keep going back to',
         persona: 'Who you are, what you do',

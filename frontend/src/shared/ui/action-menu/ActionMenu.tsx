@@ -32,6 +32,7 @@ export function ActionMenu({
   triggerLabel,
   triggerVariant = 'secondary',
   disabled = false,
+  chevron = true,
   className,
 }: {
   /** The trigger's accessible name, and the open list's. */
@@ -41,6 +42,9 @@ export function ActionMenu({
   triggerLabel?: ReactNode
   triggerVariant?: ButtonVariant
   disabled?: boolean
+  /** The ▾ after the trigger. A trigger that is a glyph of its own (⋯) leaves it out and stays
+   *  a round icon button. */
+  chevron?: boolean
   className?: string
 }) {
   const { t } = useTranslation('common')
@@ -155,7 +159,7 @@ export function ActionMenu({
       <Button
         ref={triggerRef}
         variant={triggerVariant}
-        size={triggerLabel === undefined ? 'icon' : 'default'}
+        size={triggerLabel === undefined || !chevron ? 'icon' : 'default'}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
@@ -165,13 +169,15 @@ export function ActionMenu({
         onKeyDown={onTriggerKeyDown}
       >
         {triggerLabel}
-        <ChevronDown
-          aria-hidden="true"
-          className={clsx(
-            'duration-fast ease-standard size-4 shrink-0 transition-transform',
-            open && 'rotate-180',
-          )}
-        />
+        {chevron && (
+          <ChevronDown
+            aria-hidden="true"
+            className={clsx(
+              'duration-fast ease-standard size-4 shrink-0 transition-transform',
+              open && 'rotate-180',
+            )}
+          />
+        )}
       </Button>
       {wide ? (
         open && list

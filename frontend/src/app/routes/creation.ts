@@ -1,5 +1,4 @@
 import { createRoute, lazyRouteComponent, redirect } from '@tanstack/react-router'
-import { setupSearchSchema } from '@/pages/setup'
 import { authenticatedRoute } from './tree'
 export const libraryRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
@@ -13,14 +12,16 @@ export const settingsRoute = createRoute({
   path: '/settings',
   component: lazyRouteComponent(() => import('@/pages/settings'), 'SettingsPage'),
 })
+/** The earlier hubs replace themselves with the places that took their jobs: 만들기, 내 스타일 and
+ *  the first-use setup with 홈 (the kit, drawn as how ready it is, and its 글쓰기), 내 콘텐츠 with
+ *  the 글 tab. */
 export const setupRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/setup',
-  validateSearch: setupSearchSchema,
-  component: lazyRouteComponent(() => import('@/pages/setup'), 'SetupPage'),
+  beforeLoad: () => {
+    throw redirect({ to: '/', replace: true })
+  },
 })
-/** The earlier hubs replace themselves with the places that took their jobs: 만들기 and 내 스타일
- *  with 홈 (the kit and its 글쓰기), 내 콘텐츠 with the 글 tab. */
 export const createPageRoute = createRoute({
   getParentRoute: () => authenticatedRoute,
   path: '/create',

@@ -1,15 +1,7 @@
 import type { ComponentType } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import {
-  ChevronRight,
-  CreditCard,
-  RotateCcw,
-  ShieldCheck,
-  Ticket,
-  UserRound,
-  Zap,
-} from 'lucide-react'
+import { ChevronRight, CreditCard, ShieldCheck, Ticket, UserRound, Zap } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { planLabel, useMyPlan } from '@/entities/plan'
 import { BILLING_PACKS_ID } from '@/entities/subscription'
@@ -103,7 +95,6 @@ export function SettingsPage() {
         <nav aria-labelledby="settings-account">
           <ListGroup heading={t('settings.accountGroup')} headingId="settings-account">
             <li>{row('/account', t('settings.account'), UserRound)}</li>
-            <li>{row('/setup', t('setup.restart'), RotateCcw, undefined, { restart: true })}</li>
             {user?.plan === 'master' && <li>{row('/admin', t('settings.admin'), ShieldCheck)}</li>}
           </ListGroup>
         </nav>

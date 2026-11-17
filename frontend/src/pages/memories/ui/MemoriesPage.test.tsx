@@ -73,8 +73,10 @@ describe('the memory directory', () => {
     expect(
       preference.getAllByRole('listitem').map((item) => item.querySelector('p')?.textContent),
     ).toEqual(['매운 음식을 못 먹는다', '커피는 산미 있는 쪽'])
-    // Every kind is a page of the notebook, even an empty one.
-    expect(screen.getByRole('region', { name: '인물 0' })).toBeInTheDocument()
+    // A kind with no fact yet waits among the blank pages, still one 추가 away from its first.
+    const blank = within(screen.getByRole('region', { name: '아직 빈 페이지' }))
+    expect(blank.getByRole('button', { name: '인물 기억 추가' })).toBeInTheDocument()
+    expect(blank.queryByRole('button', { name: '장소 기억 추가' })).toBeNull()
 
     // Reading the directory starts no job and calls no model: a memory is authored text.
     await waitFor(() => expect(calls).toContain('ListMemories'))
@@ -83,10 +85,10 @@ describe('the memory directory', () => {
 
   it('opens on the empty notebook, a page to fill per kind, when the account has no memories', async () => {
     renderMemories({ memories: [] })
-    expect(await screen.findByRole('region', { name: '취향 0' })).toBeInTheDocument()
-    expect(screen.getAllByRole('button', { name: /기억 추가$/ })).toHaveLength(5)
+    const blank = within(await screen.findByRole('region', { name: 'AI에게 알려 줄 수 있는 것' }))
+    expect(blank.getAllByRole('button', { name: /기억 추가$/ })).toHaveLength(5)
     expect(screen.queryByRole('region', { name: '저장된 기억' })).not.toBeInTheDocument()
-    expect(within(screen.getByRole('main')).queryAllByRole('listitem')).toEqual([])
+    expect(screen.queryByRole('button', { name: '기억 수정' })).not.toBeInTheDocument()
     // The one committing action is still there: a fact the author knows on day one does not
     // require generating a post first (MEM-25).
     expect(await screen.findByRole('button', { name: '새 기억' })).toBeInTheDocument()
@@ -321,7 +323,9 @@ describe('the memory directory', () => {
 
     await deleteByKeyboard(user, '연남동에 자주 간다')
     expect(deletions).toEqual(['memory-place'])
-    expect(await screen.findByRole('region', { name: '장소 0' })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('region', { name: 'AI에게 알려 줄 수 있는 것' }),
+    ).toBeInTheDocument()
     await waitFor(() => expect(screen.getByRole('button', { name: '새 기억' })).toHaveFocus())
   })
 })

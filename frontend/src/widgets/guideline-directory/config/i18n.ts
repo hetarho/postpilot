@@ -11,6 +11,8 @@ export const i18n = {
       templates: '고른 템플릿에서만',
       fields: '고른 분야에서만',
       nowhere: '지금은 어디에도 적용되지 않아요',
+      own: '내가 정한 지침 {{count}}',
+      builtIn: '켜 둔 기본 지침 {{count}}',
     },
     newMenu: {
       aria: '새 지침 만드는 방법',
@@ -70,6 +72,8 @@ export const i18n = {
       templates: 'Only with chosen templates',
       fields: 'Only in chosen fields',
       nowhere: 'Applies nowhere right now',
+      own: 'Your own {{count}}',
+      builtIn: 'Built-in, switched on {{count}}',
     },
     newMenu: {
       aria: 'Ways to add a rule',

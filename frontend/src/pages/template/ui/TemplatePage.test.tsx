@@ -49,8 +49,10 @@ describe('a template, changed by talking', () => {
     const log = screen.getByRole('log')
     expect(within(log).getByText(/“식당 리뷰”을 어떻게 바꿀까요\?/)).toBeInTheDocument()
     expect(screen.getByRole('textbox', { name: 'AI에게 보낼 말' })).toBeInTheDocument()
-    // Deleting lives on the template's own screen now, at the end of its title row.
-    expect(screen.getByRole('button', { name: /식당 리뷰.*삭제|삭제/ })).toBeInTheDocument()
+    // One title row: the name with where the draft stands under it, then ⋯ and 저장. Deleting
+    // is a row of that ⋯.
+    expect(screen.getByRole('status')).toHaveTextContent('저장됨')
+    expect(screen.getByRole('button', { name: '더 보기' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '변경 저장' })).toBeDisabled()
     await waitFor(() => expect(calls).toContain('ListAuthoringSummaries'))
     expect(

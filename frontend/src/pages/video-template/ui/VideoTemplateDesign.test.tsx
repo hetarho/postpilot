@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { fireEvent, screen, within, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
-import { publishAuthoringDraft } from '@/test/authoring-ui'
+import { openConversationDirect, saveConversationDraft } from '@/test/authoring-ui'
 import { chooseOption } from '@/test/listbox'
 import type { ClipRecipe } from '@/entities/clip-template'
 const body =
@@ -15,6 +15,10 @@ const template = {
   outroPreset: 'e' as const,
   allowedCaptionStyles: ['neon'],
 }
+async function openDesign(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '더 보기' }))
+  await user.click(await screen.findByRole('menuitem', { name: '시작 디자인 바꾸기' }))
+}
 function mount(writes: ClipRecipe[] = []) {
   return renderAppAt('/video-templates/owned', {
     user: { id: 'alice' },
@@ -22,20 +26,20 @@ function mount(writes: ClipRecipe[] = []) {
   })
 }
 describe('separate retained video template design', () => {
-  it('leads the saved detail with an example of its stored design before editing actions', async () => {
+  it('opens the saved template on itself, its stored design in words, 시작 디자인 one ⋯ row away', async () => {
     mount()
-    const example = await screen.findByText('구성 예시')
+    expect(await screen.findByText('구성 예시')).toBeInTheDocument()
     expect(
       screen.getByText('인트로 매거진 커버 · 자막 네온 사인 · 아웃트로 점수 강조'),
     ).toBeInTheDocument()
-    const edit = screen.getByRole('button', { name: /시작 디자인 편집$/ })
-    expect(example.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await userEvent.setup().click(screen.getByRole('button', { name: '더 보기' }))
+    expect(await screen.findByRole('menuitem', { name: '시작 디자인 바꾸기' })).toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /^인트로 디자인/ })).not.toBeInTheDocument()
   })
   it('shows saved design editing beside named text methods and exposes no competing name/body draft', async () => {
     const user = userEvent.setup()
     mount()
-    await user.click(await screen.findByRole('button', { name: /시작 디자인 편집$/ }))
+    await openDesign(user)
     const preview = within(await screen.findByRole('region', { name: '구성 미리보기' }))
     expect(preview.getByRole('combobox', { name: /^인트로 디자인/ })).toHaveAccessibleName(
       '인트로 디자인 매거진 커버',
@@ -50,7 +54,7 @@ describe('separate retained video template design', () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
     mount(writes)
-    await user.click(await screen.findByRole('button', { name: /시작 디자인 편집$/ }))
+    await openDesign(user)
     const preview = within(await screen.findByRole('region', { name: '구성 미리보기' }))
     await chooseOption(user, preview.getByRole('combobox', { name: /^아웃트로 디자인/ }), '칩 줄')
     await user.click(preview.getByRole('checkbox', { name: '네온 사인' }))
@@ -68,15 +72,14 @@ describe('separate retained video template design', () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
     mount(writes)
-    await user.click(await screen.findByRole('button', { name: /직접 편집하기$/ }))
+    await openConversationDirect(user)
     await screen.findByLabelText('템플릿 이름')
-    if (screen.getByRole('button', { name: '고급' }).getAttribute('aria-expanded') !== 'true')
-      await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
+    // Typed as text, never built by dragging blocks.
+    expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()
     const source = screen.getByRole('textbox', { name: '원문' })
     expect(source).toHaveValue(body)
     fireEvent.change(source, { target: { value: body.replace('장소', '가게') } })
-    await publishAuthoringDraft(user)
+    await saveConversationDraft(user)
     await waitFor(() => expect(writes).toHaveLength(1))
     expect(writes[0]).toMatchObject({
       compositionBody: body.replace('장소', '가게'),
@@ -89,7 +92,7 @@ describe('separate retained video template design', () => {
     const user = userEvent.setup()
     const writes: ClipRecipe[] = []
     mount(writes)
-    await user.click(await screen.findByRole('button', { name: /시작 디자인 편집$/ }))
+    await openDesign(user)
     const preview = within(await screen.findByRole('region', { name: '구성 미리보기' }))
     await user.click(preview.getByRole('checkbox', { name: '네온 사인' }))
     await user.click(screen.getByRole('button', { name: /저장된 영상 템플릿.*보기$/ }))

@@ -10,8 +10,22 @@ import {
   type PostListItem,
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
-import { WritingKit, useWritingKit } from '@/widgets/writing-kit'
-import { ActionBar, Typography, buttonStyles, pageStyles, typographyStyles } from '@/shared/ui'
+import {
+  WritingKit,
+  useWritingKit,
+  type KitPart,
+  type KitPartKey,
+  type KitSummary,
+} from '@/widgets/writing-kit'
+import {
+  ActionBar,
+  LG_MEDIA_QUERY,
+  Typography,
+  buttonStyles,
+  pageStyles,
+  typographyStyles,
+  useMediaQuery,
+} from '@/shared/ui'
 
 /** Guide: 홈 — the product's promise, and whether the owner's kit is ready to keep it. The
  *  promise is the screen's one message; under it, the kit drawn as the post it makes (말투 ·
@@ -25,16 +39,9 @@ export function HomePage() {
   const { parts, summary } = useWritingKit(ownerId)
   const drafts = usePostList({ q: '' })
   const latest = drafts.posts.find(unfinished)
-  const phaseLine =
-    summary.phase === 'loading'
-      ? ''
-      : summary.phase === 'ready'
-        ? t('home.phase.ready')
-        : summary.phase === 'empty'
-          ? t('home.phase.empty')
-          : summary.next
-            ? t(`home.phase.next.${summary.next as 'voice'}`)
-            : ''
+  const phaseLine = usePhaseLine(parts, summary)
+  // One mount of the actions: docked in the thumb zone on a phone, under the promise on the desk.
+  const desk = useMediaQuery(LG_MEDIA_QUERY)
   // The new post keeps the 글 list as its way back — it is where the post will be found.
   const remember = (targetId?: string) =>
     rememberPostEntry(ownerId, {
@@ -44,9 +51,44 @@ export function HomePage() {
       scrollY: 0,
       ...(targetId ? { targetId } : {}),
     })
+  const actions = (
+    <>
+      {latest && (
+        <Link
+          to="/posts/$slug"
+          params={{ slug: latest.slug }}
+          onClick={() => remember(latest.slug)}
+          aria-label={t('home.resumeNamed', { title: displayTitle(latest) })}
+          className={buttonStyles({
+            variant: 'secondary',
+            size: 'hero',
+            className: 'min-w-0 flex-1 basis-40 sm:flex-none sm:basis-auto',
+          })}
+        >
+          <span className="truncate">{t('home.resume')}</span>
+        </Link>
+      )}
+      <Link
+        to="/posts/new"
+        search={{}}
+        onClick={() => remember()}
+        className={buttonStyles({
+          variant: 'cta',
+          size: 'hero',
+          className: 'min-w-0 flex-[2] basis-40 sm:flex-none sm:basis-auto',
+        })}
+      >
+        <PenLine aria-hidden="true" className="size-6 shrink-0" />
+        {t('home.write')}
+      </Link>
+    </>
+  )
   return (
     <main
-      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-4 sm:pt-10' })}
+      className={pageStyles({
+        width: 'wide',
+        className: 'flex flex-1 flex-col pt-4 sm:pt-10 lg:justify-center lg:pb-16',
+      })}
     >
       {/* On the desk the promise and the kit stand side by side, so the whole kit is in view
           above the dock; on a phone they stack. */}
@@ -74,6 +116,11 @@ export function HomePage() {
           >
             {phaseLine}
           </Typography>
+          {desk && (
+            <nav aria-label={t('home.actions')} className="mt-8 flex flex-wrap gap-2">
+              {actions}
+            </nav>
+          )}
         </div>
 
         <WritingKit
@@ -83,42 +130,46 @@ export function HomePage() {
         />
       </div>
 
-      <ActionBar
-        dock="list"
-        ariaLabel={t('home.actions')}
-        className="mt-auto flex w-full min-w-0 flex-wrap gap-2 sm:w-fit"
-      >
-        {latest && (
-          <Link
-            to="/posts/$slug"
-            params={{ slug: latest.slug }}
-            onClick={() => remember(latest.slug)}
-            aria-label={t('home.resumeNamed', { title: displayTitle(latest) })}
-            className={buttonStyles({
-              variant: 'secondary',
-              size: 'hero',
-              className: 'min-w-0 flex-1 basis-40 sm:flex-none sm:basis-auto',
-            })}
-          >
-            <span className="truncate">{t('home.resume')}</span>
-          </Link>
-        )}
-        <Link
-          to="/posts/new"
-          search={{}}
-          onClick={() => remember()}
-          className={buttonStyles({
-            variant: 'cta',
-            size: 'hero',
-            className: 'min-w-0 flex-[2] basis-40 sm:flex-none sm:basis-auto',
-          })}
+      {/* The one 글쓰기 sits in the thumb zone on a phone, and under the promise on the desk. */}
+      {!desk && (
+        <ActionBar
+          dock="list"
+          ariaLabel={t('home.actions')}
+          className="mt-auto flex w-full min-w-0 flex-wrap gap-2 sm:w-fit"
         >
-          <PenLine aria-hidden="true" className="size-6 shrink-0" />
-          {t('home.write')}
-        </Link>
-      </ActionBar>
+          {actions}
+        </ActionBar>
+      )}
     </main>
   )
+}
+
+/** The line under the promise: the whole kit's phase, or — while a part is missing — what that
+ *  part still needs, in the words of its own state (a voice still learning needs more writing,
+ *  a learned one only its analysis). */
+function usePhaseLine(parts: Record<KitPartKey, KitPart>, summary: KitSummary): string {
+  const { t } = useTranslation('creation')
+  if (summary.phase === 'loading') return ''
+  if (summary.phase === 'ready') return t('home.phase.ready')
+  if (summary.phase === 'empty') return t('home.phase.empty')
+  if (!summary.next) return ''
+  const status = parts[summary.next].status
+  switch (status.kind) {
+    case 'learning':
+      return status.percent >= 100
+        ? t('home.phase.voiceAnalyze')
+        : t('home.phase.voiceLearning', { percent: status.percent })
+    case 'noDefault':
+      return t('home.phase.voiceDefault')
+    case 'draft':
+      return t('home.phase.templateDraft')
+    case 'defaultsOnly':
+      return t('home.phase.guidelineOwn')
+    case 'unusable':
+      return t('home.phase.modelAgain')
+    default:
+      return t(`home.phase.next.${summary.next as 'voice'}`)
+  }
 }
 
 /** Still being written: not 확정 or 발행, or with a run going. */

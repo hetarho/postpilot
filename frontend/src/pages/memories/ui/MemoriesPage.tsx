@@ -12,7 +12,7 @@ import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
 import { MemoryEditForm } from '@/features/edit-memory'
-import { KitHeader } from '@/widgets/writing-kit'
+import { KitArt, KitEmpty, KitHeader } from '@/widgets/writing-kit'
 import {
   ActionBar,
   Button,
@@ -33,8 +33,9 @@ const KIND_ICONS: Record<MemoryKind, ComponentType<{ className?: string }>> = {
 }
 
 /** Guide: 기억 — what the AI knows about the owner, kept as a notebook with one page per kind of
- *  fact (취향 · 설정 · 장소 · 인물 · 이력). Every kind is always there, so an empty one reads as a
- *  page still to fill and its 추가 starts a fact of THAT kind. The tags the facts carry are the way
+ *  fact (취향 · 설정 · 장소 · 인물 · 이력). The written pages come first; the kinds with nothing yet
+ *  wait together as blank pages, each saying what it would hold, and its 추가 starts a fact of
+ *  THAT kind. The tags the facts carry are the way
  *  to find one: a tag narrows the notebook to the facts that carry it. A fact is changed or removed
  *  in place. Within a kind, facts keep the server's order — the order a post is given them.
  *
@@ -55,6 +56,12 @@ export function MemoriesPage() {
   const activeTag = tag && tags.includes(tag) ? tag : undefined
   const shown = activeTag ? memories.filter((memory) => memory.tags.includes(activeTag)) : memories
   const ordered = MEMORY_KINDS.flatMap((kind) => shown.filter((memory) => memory.kind === kind))
+  // Pages with facts are the notebook; the kinds with none wait together as blank pages, each
+  // still a way to start a fact of that kind. A tag narrows only the written pages.
+  const filled = MEMORY_KINDS.filter((kind) => shown.some((memory) => memory.kind === kind))
+  const blank = activeTag
+    ? []
+    : MEMORY_KINDS.filter((kind) => !memories.some((memory) => memory.kind === kind))
 
   useEffect(() => {
     if (!removed || settled.current === removed) return
@@ -123,28 +130,51 @@ export function MemoriesPage() {
               ))}
             </div>
           )}
-          <section
-            aria-label={memories.length > 0 ? t('page.saved', { ns: 'memories' }) : undefined}
-            className="mt-6 grid items-start gap-4 lg:grid-cols-2"
-          >
-            {MEMORY_KINDS.map((kind) => {
-              const facts = shown.filter((memory) => memory.kind === kind)
-              if (activeTag && facts.length === 0) return null
-              return (
-                <KindPage
-                  key={kind}
-                  kind={kind}
-                  facts={facts}
-                  ownerId={ownerId}
-                  onAdd={() => setAdding(kind)}
-                  onDeleted={(memory) =>
-                    setRemoved({ id: memory.id, index: ordered.indexOf(memory) })
-                  }
-                  onTag={setTag}
-                />
-              )
-            })}
-          </section>
+          {/* On the desk the written pages and the blank ones stand side by side; with no blank
+              page left, the written ones take both columns. */}
+          <div className="mt-6 grid items-start gap-4 lg:grid-cols-2">
+            {filled.length > 0 && (
+              <section
+                aria-label={t('page.saved', { ns: 'memories' })}
+                className={
+                  blank.length > 0
+                    ? 'flex min-w-0 flex-col gap-4'
+                    : 'gap-4 lg:col-span-2 lg:columns-2 [&>*]:mb-4 [&>*]:break-inside-avoid'
+                }
+              >
+                {filled.map((kind) => (
+                  <KindPage
+                    key={kind}
+                    kind={kind}
+                    facts={shown.filter((memory) => memory.kind === kind)}
+                    ownerId={ownerId}
+                    onAdd={() => setAdding(kind)}
+                    onDeleted={(memory) =>
+                      setRemoved({ id: memory.id, index: ordered.indexOf(memory) })
+                    }
+                    onTag={setTag}
+                  />
+                ))}
+              </section>
+            )}
+            {memories.length === 0 && !activeTag && (
+              <KitEmpty
+                className="lg:col-span-2"
+                figure={<KitArt part="memory" />}
+                title={t('notebook.firstTitle', { ns: 'memories' })}
+              >
+                {t('notebook.firstLine', { ns: 'memories' })}
+              </KitEmpty>
+            )}
+            {blank.length > 0 && (
+              <BlankPages
+                kinds={blank}
+                first={memories.length === 0}
+                onAdd={setAdding}
+                className={filled.length > 0 ? 'mt-2 lg:mt-0' : 'lg:col-span-2'}
+              />
+            )}
+          </div>
         </>
       )}
       <CreateMemorySheet
@@ -226,23 +256,74 @@ function KindPage({
           {t('notebook.add', { ns: 'memories' })}
         </Button>
       </div>
-      {facts.length === 0 ? (
-        <Typography variant="meta" as="p" className="pb-3 pl-12">
-          {t(`notebook.empty.${kind}`, { ns: 'memories' })}
-        </Typography>
-      ) : (
-        <ul className="divide-divider divide-y">
-          {facts.map((memory) => (
-            <MemoryRow
-              key={memory.id}
-              ownerId={ownerId}
-              memory={memory}
-              onDeleted={() => onDeleted(memory)}
-              onTag={onTag}
-            />
-          ))}
-        </ul>
-      )}
+      <ul className="divide-divider divide-y">
+        {facts.map((memory) => (
+          <MemoryRow
+            key={memory.id}
+            ownerId={ownerId}
+            memory={memory}
+            onDeleted={() => onDeleted(memory)}
+            onTag={onTag}
+          />
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** The kinds with no fact yet, as one sheet of blank pages: each its glyph, its name, what it
+ *  would hold, and the 추가 that starts a fact of that kind. */
+function BlankPages({
+  kinds,
+  first,
+  onAdd,
+  className,
+}: {
+  kinds: readonly MemoryKind[]
+  first: boolean
+  onAdd: (kind: MemoryKind) => void
+  className?: string
+}) {
+  const { t } = useTranslation('memories')
+  return (
+    <section aria-labelledby="memories-blank" className={className}>
+      <h2
+        id="memories-blank"
+        className={typographyStyles({ variant: 'groupLabel', className: 'mb-2 px-1' })}
+      >
+        {t(first ? 'notebook.blankFirst' : 'notebook.blank')}
+      </h2>
+      <ul className="divide-divider bg-card-bg divide-y overflow-hidden rounded-2xl shadow-sm">
+        {kinds.map((kind) => {
+          const Icon = KIND_ICONS[kind]
+          const name = t(`kind.${kind}`)
+          return (
+            <li key={kind} className="flex min-h-16 items-center gap-3 px-4 py-2 sm:px-5">
+              <span
+                aria-hidden="true"
+                className="border-content-tertiary/40 text-content-tertiary flex size-9 shrink-0 items-center justify-center rounded-full border-2 border-dashed"
+              >
+                <Icon className="size-4" />
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className={typographyStyles({ variant: 'fieldTitle' })}>{name}</span>
+                <span className={typographyStyles({ variant: 'meta' })}>
+                  {t(`notebook.empty.${kind}`)}
+                </span>
+              </span>
+              <Button
+                variant="ghost"
+                onClick={() => onAdd(kind)}
+                aria-label={t('notebook.addKind', { kind: name })}
+                className="shrink-0"
+              >
+                <Plus aria-hidden="true" className="size-4" />
+                {t('notebook.add')}
+              </Button>
+            </li>
+          )
+        })}
+      </ul>
     </section>
   )
 }
@@ -287,7 +368,7 @@ function MemoryRow({
     )
 
   return (
-    <li className="py-2 pl-12">
+    <li className="py-2 sm:pl-12">
       <div className="flex items-start gap-1">
         <Typography
           variant="body"

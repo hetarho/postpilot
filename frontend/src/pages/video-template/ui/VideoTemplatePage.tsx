@@ -1,13 +1,12 @@
-import { clsx } from 'clsx'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ClipTemplateSummary, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
-import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
-import { useSession } from '@/entities/session'
-import { ClipTemplateDirectEditor, ClipTemplateEditor } from '@/features/edit-clip-template'
-import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-template-wizard'
+import { useAuthoringSummaries } from '@/entities/ai-authoring'
 import { useClipProject } from '@/entities/clip-project'
+import { useSession } from '@/entities/session'
+import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
+import { ClipTemplateDirectEditor, ClipTemplateEditor } from '@/features/edit-clip-template'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
 import { Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
@@ -54,50 +53,31 @@ export function VideoTemplatePage() {
       </PageFrame>
     )
   return (
-    <VideoTemplateHost
+    <VideoTemplateConversationPage
       key={JSON.stringify([ownerId, stored?.id ?? 'new', stored ? '' : session])}
       ownerId={ownerId}
       stored={stored}
-      sessionId={session}
+      sessionId={stored ? undefined : session}
       returnToClip={stored ? undefined : clip}
       fromClip={stored || session ? undefined : from}
-      onPublished={refetch}
-    />
-  )
-}
-/** The wizard, started from a clip when one is named: it waits for that clip, then opens with its
- *  storyline paragraphs as stages and its design selection chosen. A clip that cannot be read
- *  leaves the ordinary wizard. Reading the clip starts no work and changes nothing on it. */
-function SeededClipTemplateWizard({
-  ownerId,
-  fromClip,
-  onSaved,
-}: {
-  ownerId: string
-  fromClip?: string
-  onSaved: (templateId: string) => void
-}) {
-  const { t } = useTranslation('common')
-  const query = useClipProject(ownerId, fromClip)
-  if (fromClip && query.isPending) return <LoadingState variant="form" label={t('state.loading')} />
-  const project = fromClip ? query.data : undefined
-  const seed = project
-    ? clipWizardSeed({
-        paragraphs: project.storyline?.paragraphs ?? [],
-        design: project,
-      })
-    : undefined
-  return (
-    <ClipTemplateWizard
-      key={project?.id ?? 'new'}
-      ownerId={ownerId}
-      seed={seed}
-      onSaved={onSaved}
+      onPublished={() => void refetch()}
     />
   )
 }
 
-function VideoTemplateHost({
+/** How much of each storyline paragraph the first message quotes. */
+const PARAGRAPH_CHARS = 80
+
+/** Guide: a video template is made by talking, as a post template is (TMPL departure, see the
+ *  showcase notes). A new one opens on the conversation — the owner says what their videos show
+ *  and the AI drafts the whole template; an existing one opens on itself with the conversation
+ *  beside it. Typing the template text is one ⋯ choice away, and the intro, outro and caption
+ *  design is the template's own second screen (시작 디자인). Nothing is dragged.
+ *
+ *  Started from a clip (`?from=`), the first message is typed for the owner from that clip's
+ *  storyline — never sent until they send it. A new clip's offer (`?clip=new`) or a saved clip's
+ *  템플릿 screen (`?clip=<id>`) gets the owner back there once the template is saved. */
+function VideoTemplateConversationPage({
   ownerId,
   stored,
   sessionId,
@@ -108,24 +88,56 @@ function VideoTemplateHost({
   ownerId: string
   stored?: ClipTemplate
   sessionId?: string
-  /** The clip whose storyline and design the wizard starts from (CLIP-233). */
-  fromClip?: string
   /** `new`: a new clip's offer opened this creation (CLIP-223); an id: a saved clip's 템플릿
    *  screen did, and 저장 goes back to that screen (CLIP-225). */
   returnToClip?: string
+  /** The clip whose storyline the first message is typed from. */
+  fromClip?: string
   onPublished: () => void
 }) {
-  const { t } = useTranslation(['clips', 'authoring', 'common'])
+  const { t } = useTranslation(['clips', 'common'])
   const navigate = useNavigate()
-  // A new template opens its own page, unless a new clip's offer sent the owner here: then 저장
-  // goes back to a new clip starting from it.
+  const [designing, setDesigning] = useState(false)
+  // The conversation's status and its ⋯ and 저장 sit in this screen's one title row.
+  const [statusSlot, setStatusSlot] = useState<HTMLDivElement | null>(null)
+  const [controlsSlot, setControlsSlot] = useState<HTMLDivElement | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
+  const clip = useClipProject(ownerId, fromClip)
+  // An existing template with unsaved conversation work reopens that work.
+  const resumable = stored
+    ? summaries.data?.find(
+        (row) =>
+          row.targetId === stored.id &&
+          (row.hasUnpublishedChanges || row.activeJobId || row.publicationPending),
+      )
+    : undefined
+  const session = sessionId ?? resumable?.sessionId
+  const paragraphs = fromClip ? (clip.data?.storyline?.paragraphs ?? []) : []
+  const firstMessage = paragraphs.length
+    ? t('directory.fromClipMessage', {
+        ns: 'clips',
+        outline: paragraphs
+          .map((paragraph, index) => {
+            const text = paragraph.text.replace(/\s+/gu, ' ').trim()
+            const cut =
+              Array.from(text).length > PARAGRAPH_CHARS
+                ? Array.from(text).slice(0, PARAGRAPH_CHARS).join('') + '…'
+                : text
+            return `${index + 1}. ${cut}`
+          })
+          .join('\n'),
+      })
+    : undefined
+  if ((stored && summaries.isPending) || (fromClip && clip.isPending))
+    return (
+      <PageFrame width="wide">
+        <LoadingState variant="detail" label={t('state.loading', { ns: 'common' })} />
+      </PageFrame>
+    )
   const openCreated = (templateId: string) =>
     returnToClip === 'new'
-      ? navigate({
-          to: '/clips/new',
-          search: { template: templateId },
-          replace: true,
-        })
+      ? navigate({ to: '/clips/new', search: { template: templateId }, replace: true })
       : returnToClip
         ? navigate({
             to: '/clips/$clipId',
@@ -138,202 +150,32 @@ function VideoTemplateHost({
             params: { templateId },
             replace: true,
           })
-  const [method, setMethod] = useState<'ai' | 'direct' | 'design' | null>(sessionId ? 'ai' : null)
-  const [activeSession, setActiveSession] = useState(sessionId)
-  const [published, setPublished] = useState<AuthoringSavedRef>()
-  const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
-  const summary = stored
-    ? summaries.data?.find(
-        (row) => row.targetId === stored.id || row.lastPublication?.id === stored.id,
-      )
-    : undefined
-  const publication =
-    published ??
-    (stored && summary?.lastPublication?.id === stored.id ? summary.lastPublication : undefined)
-  const named = {
-    kind: t('kinds.video-template', { ns: 'authoring' }),
-    name: stored?.name ?? t('directory.create', { ns: 'clips' }),
-  }
-  const guided = !stored && !sessionId
   return (
     <PageFrame
-      width="board"
-      // The wizard's step bar meets the screen's bottom edge, so nothing pads under it.
-      className={clsx('flex flex-1 flex-col py-4 sm:py-8', guided && 'pb-0 sm:pb-0')}
+      width="wide"
+      className="flex flex-1 flex-col pb-0 sm:pb-0"
       title={
-        <Typography variant="title" as="h1" className="text-content-secondary truncate">
-          {named.name}
-        </Typography>
-      }
-    >
-      {publication?.outcome && (
-        <Typography variant="body" role="status" className="mt-4">
-          {t(publication.outcome === 'updated' ? 'confirmedUpdate' : 'confirmedCreate', {
-            ns: 'authoring',
-            ...named,
-            name: publication.name,
-          })}
-        </Typography>
-      )}
-      {guided ? (
-        <div className="mt-4 flex flex-1 flex-col sm:mt-8">
-          <SeededClipTemplateWizard
-            ownerId={ownerId}
-            fromClip={fromClip}
-            onSaved={(templateId) => {
-              onPublished()
-              void openCreated(templateId)
-            }}
-          />
+        <div className="min-w-0">
+          <Typography variant="title" as="h1" className="truncate">
+            {stored?.name ?? t('directory.create', { ns: 'clips' })}
+          </Typography>
+          <div ref={setStatusSlot} />
         </div>
-      ) : method === null ? (
-        <section className="mt-4 flex flex-col sm:mt-8">
-          <Typography variant="stepTitle" as="h2">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('directory.reviewKind', { ns: 'clips' })}</span>
-                <span className="hidden sm:inline">
-                  {t('reviewNamed', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('directory.chooseCreation', { ns: 'clips' })
-            )}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-2 sm:mt-4">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('directory.savedAvailable', { ns: 'clips' })}</span>
-                <span className="hidden sm:inline">
-                  {t('savedUsable', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('directory.unsaved', { ns: 'clips' })
-            )}
-          </Typography>
-          {summaries.isPending && (
-            <LoadingState
-              variant="inline"
-              label={t('directory.checkingWork', { ns: 'clips' })}
-              className="mt-4"
-            />
-          )}
-          {summaries.isError && (
-            <Notice tone="danger" role="alert" className="mt-4">
-              {t('directory.workLoadFailed', { ns: 'clips' })}
-              <Button variant="ghost" onClick={() => void summaries.refetch()}>
-                {t('action.retry', { ns: 'common' })}
-              </Button>
-            </Notice>
-          )}
-          {summary && (
-            <div role="status" className="mt-4 space-y-2">
-              {summary.hasUnpublishedChanges && (
-                <Typography variant="body">
-                  {t('unpublished', { ns: 'authoring', ...named })}
-                </Typography>
-              )}
-              {summary.activeJobId && (
-                <Typography variant="body">
-                  {t('directory.activeAI', { ns: 'clips', name: named.name })}
-                </Typography>
-              )}
-              {summary.publicationPending && (
-                <Typography variant="body">
-                  {t('directory.publicationPending', { ns: 'clips', name: named.name })}
-                </Typography>
-              )}
-              {summary.targetConflict && (
-                <Notice tone="warning">
-                  {t('directory.conflict', { ns: 'clips', name: named.name })}
-                </Notice>
-              )}
-            </div>
-          )}
-          {stored && (
-            <div className="mt-4 space-y-6 sm:mt-6">
-              <ClipTemplateSummary template={stored} />
-              <AuthoringPreview
-                kind="video-template"
-                artifact={{
-                  id: stored.id,
-                  name: stored.name,
-                  description: '',
-                  body: stored.compositionBody,
-                  titleArea: '',
-                }}
-              />
-            </div>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
-            <Button
-              aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('ai')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('directory.editAI', { ns: 'clips' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('aiNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('directory.createAI', { ns: 'clips' })
-              )}
-            </Button>
-            <Button
-              aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('direct')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('directory.editDirect', { ns: 'clips' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('directNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('host.manual', { ns: 'authoring' })
-              )}
-            </Button>
-            {summary &&
-              (summary.hasUnpublishedChanges ||
-                summary.activeJobId ||
-                summary.publicationPending ||
-                summary.targetConflict) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setActiveSession(summary.sessionId)
-                    setMethod('ai')
-                  }}
-                >
-                  {t('continueNamed', { ns: 'authoring', ...named })}
-                </Button>
-              )}
-            {stored && (
-              <Button variant="ghost" onClick={() => setMethod('design')}>
-                {t('directory.editDesign', { ns: 'clips', name: stored.name })}
-              </Button>
-            )}
-          </div>
-        </section>
-      ) : method === 'design' ? (
-        <section className="mt-8">
-          <Typography variant="stepTitle" as="h2">
-            {t('directory.editDesign', { ns: 'clips', name: named.name })}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-3">
-            {t('directory.designHelp', { ns: 'clips' })}
+      }
+      actions={<div ref={setControlsSlot} className="flex items-center gap-2" />}
+    >
+      {stored && (
+        <DeleteClipTemplateButton
+          ownerId={ownerId}
+          template={stored}
+          menu={{ open: deleting, onOpenChange: setDeleting }}
+          onDeleted={() => void navigate({ to: '/video-templates', replace: true })}
+        />
+      )}
+      {designing && stored ? (
+        <section className="flex flex-1 flex-col">
+          <Typography variant="stepTitle" as="h2" className="mt-2">
+            {t('directory.design', { ns: 'clips' })}
           </Typography>
           <ClipTemplateEditor
             ownerId={ownerId}
@@ -341,27 +183,61 @@ function VideoTemplateHost({
             designOnly
             onClose={() => {
               onPublished()
-              setMethod(null)
+              setDesigning(false)
             }}
           />
         </section>
       ) : (
         <AIAuthoringStudio
+          layout="conversation"
           ownerId={ownerId}
           kind="video-template"
           targetId={stored?.id}
           targetName={stored?.name}
-          sessionId={activeSession}
-          initialMethod={method}
-          startFromSaved={!activeSession}
+          sessionId={session}
+          initialMethod={session ? 'ai' : undefined}
+          startFromSaved={!session}
+          initialMessage={firstMessage}
+          savedPreview={
+            stored && (
+              <div className="space-y-6">
+                <ClipTemplateSummary template={stored} />
+                <AuthoringPreview
+                  kind="video-template"
+                  artifact={{
+                    id: stored.id,
+                    name: stored.name,
+                    description: '',
+                    body: stored.compositionBody,
+                    titleArea: '',
+                  }}
+                />
+              </div>
+            )
+          }
           renderDirectEditor={(props) => <ClipTemplateDirectEditor {...props} />}
+          heading={{ status: statusSlot, controls: controlsSlot }}
+          menuItems={
+            stored
+              ? [
+                  {
+                    id: 'design',
+                    label: t('directory.designMenu', { ns: 'clips' }),
+                    onSelect: () => setDesigning(true),
+                  },
+                  {
+                    id: 'delete',
+                    label: t('directory.deleteMenu', { ns: 'clips' }),
+                    onSelect: () => setDeleting(true),
+                  },
+                ]
+              : undefined
+          }
           onSaved={(saved) => {
-            setPublished(saved)
             onPublished()
-            if (stored) setMethod(null)
-            else void openCreated(saved.id)
+            if (!stored) void openCreated(saved.id)
           }}
-          className="mt-8"
+          className="flex-1"
         />
       )}
     </PageFrame>

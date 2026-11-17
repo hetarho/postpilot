@@ -53,13 +53,16 @@ export function TabBar({ items, ariaLabel }: { items: readonly TabBarItem[]; ari
                   (owner 2026-11-16). On the desk the link itself is the pill. */}
               <span
                 className={clsx(
-                  'flex w-full max-w-20 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 transition-colors',
+                  'flex w-full max-w-24 min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1 py-2 transition-colors',
                   'lg:max-w-none lg:flex-row lg:gap-2 lg:rounded-none lg:bg-transparent lg:p-0',
                   current && 'bg-tab-bar-indicator',
                 )}
               >
                 <Icon aria-hidden="true" className="size-5.5 shrink-0 lg:size-5" />
-                <span className="max-w-full truncate">{label}</span>
+                {/* A long name (AI 토너먼트) at large text sizes takes a second line before it is cut. */}
+                <span className="line-clamp-2 max-w-full text-center [overflow-wrap:anywhere] break-keep lg:line-clamp-1">
+                  {label}
+                </span>
               </span>
             </Link>
           </li>

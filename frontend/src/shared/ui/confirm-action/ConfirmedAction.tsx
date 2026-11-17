@@ -16,6 +16,9 @@ interface ConfirmedActionProps {
   run: () => Promise<unknown>
   /** After a successful run, once the dialog is closed. */
   onDone?: () => void | Promise<void>
+  /** Controlled: whether the dialog is open — for a trigger that lives elsewhere (a menu row). */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 /** The confirm-then-run shape of a destructive control: trigger, its failure message, then the
@@ -31,8 +34,15 @@ export function ConfirmedAction({
   children,
   run,
   onDone,
+  open,
+  onOpenChange,
 }: ConfirmedActionProps) {
-  const [confirming, setConfirming] = useState(false)
+  const [own, setOwn] = useState(false)
+  const confirming = open ?? own
+  const setConfirming = (next: boolean) => {
+    onOpenChange?.(next)
+    if (open === undefined) setOwn(next)
+  }
 
   const confirm = async () => {
     try {

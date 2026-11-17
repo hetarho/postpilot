@@ -341,7 +341,7 @@ export function AuthenticatedLayout() {
     <div className="mx-auto flex w-full max-w-5xl items-center gap-3 px-4 pt-2 sm:px-6 lg:px-8">
       {showBack && (
         <nav aria-label={t('returnLabel')}>
-          <ContextualReturn className="-ml-4" />
+          <ContextualReturn />
         </nav>
       )}
       {kindSwitch}
