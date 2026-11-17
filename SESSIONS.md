@@ -178,6 +178,7 @@
 - 261117 suggest GEN-18: GEN-18 still describes observer writing-test snapshots, which now exist only as admitted records; a gusta-doc-review pass can scope it to them
 - 261117 decided T888 T889 T890: the loop stopped after two completed units were recorded failed (abbreviated candidate SHA in agentChecks) and an empty duplicate wtform session held integration → withdraw the duplicate, add a full-SHA receipt note to T890-T897 and resume the same scope under the original deadline (alt: stop and report | hand-implement the remaining tasks in this session)
 - 261117 decided MODEL-97 T890 T893 T894: how is the photo observation test built? → as an output kind (observation) of the existing writing-test engine, reusing its tournament, quote, checkpoint, retention and history paths, with test-owned photo rows under tests/ (alt: a separate observation-test engine and tables | revive the legacy ModelExperimentService observe experiment)
+- 261117 decided T891: T891 impl notes name the output kind experiment.TestOutput but that is already the output body struct (writing_test_output.go:15), so what is the kind type called? -> TestOutputKind with OutputPost/OutputObservation, and the T891/T893 notes now say so (alt: rename the existing struct, which T893/T894 extend | a plain string field).
 
 ## unlanded
 | id | tag | branch | commit | at |
