@@ -95,7 +95,7 @@ func (h *WritingTestHandler) StartWritingTest(ctx context.Context, req *connect.
 	}
 	start.RequestKey, start.QuoteKey = req.Msg.GetRequestKey(), req.Msg.GetQuoteKey()
 	found, err := h.tests.Start(ctx, start)
-	return writingResponse(found, err)
+	return h.writingResponse(ctx, found, err)
 }
 func (h *WritingTestHandler) GetWritingTest(ctx context.Context, req *connect.Request[v1.GetWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -103,7 +103,7 @@ func (h *WritingTestHandler) GetWritingTest(ctx context.Context, req *connect.Re
 		return nil, err
 	}
 	found, err := h.tests.Get(ctx, user, req.Msg.GetTestId())
-	return writingResponse(found, err)
+	return h.writingResponse(ctx, found, err)
 }
 func (h *WritingTestHandler) ListWritingTests(ctx context.Context, req *connect.Request[v1.ListWritingTestsRequest]) (*connect.Response[v1.ListWritingTestsResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -116,7 +116,7 @@ func (h *WritingTestHandler) ListWritingTests(ctx context.Context, req *connect.
 	}
 	result := &v1.ListWritingTestsResponse{NextPageToken: next}
 	for _, test := range found {
-		wire, err := writingTestToProto(test)
+		wire, err := writingTestToProto(ctx, test, nil)
 		if err != nil {
 			return nil, writingError(err)
 		}
@@ -130,7 +130,7 @@ func (h *WritingTestHandler) RetryFailedTestCandidates(ctx context.Context, req 
 		return nil, err
 	}
 	found, err := h.tests.Retry(ctx, experiment.TestRetry{TestMutation: experiment.TestMutation{UserID: user, TestID: req.Msg.GetTestId(), ExpectedRevision: req.Msg.GetExpectedRevision(), RequestKey: req.Msg.GetRequestKey()}, CandidateIDs: req.Msg.GetCandidateIds(), QuoteKey: req.Msg.GetQuoteKey()})
-	return writingResponse(found, err)
+	return h.writingResponse(ctx, found, err)
 }
 func (h *WritingTestHandler) DecideTestMatch(ctx context.Context, req *connect.Request[v1.DecideTestMatchRequest]) (*connect.Response[v1.WritingTestResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -138,7 +138,7 @@ func (h *WritingTestHandler) DecideTestMatch(ctx context.Context, req *connect.R
 		return nil, err
 	}
 	found, err := h.tests.Decide(ctx, experiment.MatchDecision{TestMutation: experiment.TestMutation{UserID: user, TestID: req.Msg.GetTestId(), ExpectedRevision: req.Msg.GetExpectedRevision(), RequestKey: req.Msg.GetRequestKey()}, MatchID: req.Msg.GetMatchId(), WinnerCandidateID: req.Msg.GetWinnerCandidateId()})
-	return writingResponse(found, err)
+	return h.writingResponse(ctx, found, err)
 }
 func (h *WritingTestHandler) CancelWritingTest(ctx context.Context, req *connect.Request[v1.CancelWritingTestRequest]) (*connect.Response[v1.WritingTestResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -146,7 +146,7 @@ func (h *WritingTestHandler) CancelWritingTest(ctx context.Context, req *connect
 		return nil, err
 	}
 	found, err := h.tests.Cancel(ctx, experiment.TestMutation{UserID: user, TestID: req.Msg.GetTestId(), ExpectedRevision: req.Msg.GetExpectedRevision(), RequestKey: req.Msg.GetRequestKey()})
-	return writingResponse(found, err)
+	return h.writingResponse(ctx, found, err)
 }
 func (h *WritingTestHandler) SaveWritingTestWinner(ctx context.Context, req *connect.Request[v1.SaveWritingTestWinnerRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -158,7 +158,7 @@ func (h *WritingTestHandler) SaveWritingTestWinner(ctx context.Context, req *con
 		return nil, writingError(experiment.ErrTestOperation)
 	}
 	publication, test, err := h.publication.SaveWinner(ctx, experiment.WinnerPublication{TestMutation: experiment.TestMutation{UserID: user, TestID: req.Msg.GetTestId(), ExpectedRevision: req.Msg.GetExpectedRevision(), RequestKey: req.Msg.GetRequestKey()}, WinnerID: req.Msg.GetWinnerCandidateId(), Action: string(action), MakeDefault: req.Msg.GetMakeDefault(), Name: req.Msg.GetName(), Scope: req.Msg.GetScope(), ScopeIDs: req.Msg.GetScopeIds()})
-	return writingPublicationResponse(publication, test, err)
+	return h.writingPublicationResponse(ctx, publication, test, err)
 }
 func (h *WritingTestHandler) ApplyWritingTestOutput(ctx context.Context, req *connect.Request[v1.ApplyWritingTestOutputRequest]) (*connect.Response[v1.WritingTestPublicationResponse], error) {
 	user, err := authactor.ActingUser(ctx)
@@ -166,7 +166,7 @@ func (h *WritingTestHandler) ApplyWritingTestOutput(ctx context.Context, req *co
 		return nil, err
 	}
 	publication, test, err := h.publication.ApplyOutput(ctx, experiment.OutputApplication{TestMutation: experiment.TestMutation{UserID: user, TestID: req.Msg.GetTestId(), ExpectedRevision: req.Msg.GetExpectedRevision(), RequestKey: req.Msg.GetRequestKey()}, WinnerID: req.Msg.GetWinnerCandidateId(), InputRevision: req.Msg.GetExpectedInputRevision(), ContentRevision: req.Msg.GetExpectedContentRevision()})
-	return writingPublicationResponse(publication, test, err)
+	return h.writingPublicationResponse(ctx, publication, test, err)
 }
 
 // CreateTestPhotoUpload presigns one photo's PUT for the acting owner and records it pending.
@@ -199,21 +199,21 @@ func (h *WritingTestHandler) ConfirmTestPhotoUpload(ctx context.Context, req *co
 	}
 	return connect.NewResponse(&v1.ConfirmTestPhotoUploadResponse{Photo: &v1.WritingTestPhoto{Id: photo.ID, Filename: photo.Filename, Width: int32(photo.Width), Height: int32(photo.Height), ViewUrl: url, ViewExpiresAt: formatTime(expires)}}), nil
 }
-func writingResponse(found experiment.WritingTest, err error) (*connect.Response[v1.WritingTestResponse], error) {
+func (h *WritingTestHandler) writingResponse(ctx context.Context, found experiment.WritingTest, err error) (*connect.Response[v1.WritingTestResponse], error) {
 	if err != nil {
 		return nil, writingError(err)
 	}
-	wire, err := writingTestToProto(found)
+	wire, err := writingTestToProto(ctx, found, h.photos.ViewURL)
 	if err != nil {
 		return nil, writingError(err)
 	}
 	return connect.NewResponse(&v1.WritingTestResponse{Test: wire}), nil
 }
-func writingPublicationResponse(publication experiment.TestPublication, found experiment.WritingTest, err error) (*connect.Response[v1.WritingTestPublicationResponse], error) {
+func (h *WritingTestHandler) writingPublicationResponse(ctx context.Context, publication experiment.TestPublication, found experiment.WritingTest, err error) (*connect.Response[v1.WritingTestPublicationResponse], error) {
 	if err != nil {
 		return nil, writingError(err)
 	}
-	wire, err := writingTestToProto(found)
+	wire, err := writingTestToProto(ctx, found, h.photos.ViewURL)
 	if err != nil {
 		return nil, writingError(err)
 	}

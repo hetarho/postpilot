@@ -15,8 +15,8 @@ AND (CAST(sqlc.arg(voice_id) AS TEXT)=''
 AND (CAST(sqlc.arg(cursor_time) AS TEXT)='' OR writing_tests.created_at<sqlc.arg(cursor_time) OR (writing_tests.created_at=sqlc.arg(cursor_time) AND writing_tests.id<sqlc.arg(cursor_id)))
 ORDER BY writing_tests.created_at DESC,writing_tests.id DESC LIMIT sqlc.arg(page_limit);
 -- name: InsertWritingTest :exec
-INSERT INTO writing_tests(id,user_id,operation_key,fingerprint,kind,factor,model_stage,count,status,revision,source_post_slug,context,common_snapshot,common_hash,prompt_version,purge_fence,job_id,winner_candidate_id,confirmed_credits,reserved_credits,failure_reason,created_at,updated_at,content_expires_at)
-VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+INSERT INTO writing_tests(id,user_id,operation_key,fingerprint,kind,factor,model_stage,count,status,revision,source_post_slug,context,common_snapshot,common_hash,prompt_version,purge_fence,job_id,winner_candidate_id,confirmed_credits,reserved_credits,failure_reason,created_at,updated_at,content_expires_at,output)
+VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 -- name: UpdateWritingTest :execrows
 UPDATE writing_tests SET status=?,revision=?,context=?,purge_fence=?,job_id=?,winner_candidate_id=?,confirmed_credits=?,reserved_credits=?,failure_reason=?,updated_at=?,content_expires_at=?,common_snapshot=?,source_post_slug=?
 WHERE user_id=? AND id=? AND revision=?;

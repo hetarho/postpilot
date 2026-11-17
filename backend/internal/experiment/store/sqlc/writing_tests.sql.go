@@ -297,8 +297,8 @@ func (q *Queries) GetWritingTestQuote(ctx context.Context, arg GetWritingTestQuo
 }
 
 const insertWritingTest = `-- name: InsertWritingTest :exec
-INSERT INTO writing_tests(id,user_id,operation_key,fingerprint,kind,factor,model_stage,count,status,revision,source_post_slug,context,common_snapshot,common_hash,prompt_version,purge_fence,job_id,winner_candidate_id,confirmed_credits,reserved_credits,failure_reason,created_at,updated_at,content_expires_at)
-VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+INSERT INTO writing_tests(id,user_id,operation_key,fingerprint,kind,factor,model_stage,count,status,revision,source_post_slug,context,common_snapshot,common_hash,prompt_version,purge_fence,job_id,winner_candidate_id,confirmed_credits,reserved_credits,failure_reason,created_at,updated_at,content_expires_at,output)
+VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
 `
 
 type InsertWritingTestParams struct {
@@ -326,6 +326,7 @@ type InsertWritingTestParams struct {
 	CreatedAt         string
 	UpdatedAt         string
 	ContentExpiresAt  sql.NullString
+	Output            string
 }
 
 func (q *Queries) InsertWritingTest(ctx context.Context, arg InsertWritingTestParams) error {
@@ -354,6 +355,7 @@ func (q *Queries) InsertWritingTest(ctx context.Context, arg InsertWritingTestPa
 		arg.CreatedAt,
 		arg.UpdatedAt,
 		arg.ContentExpiresAt,
+		arg.Output,
 	)
 	return err
 }

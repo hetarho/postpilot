@@ -13,6 +13,11 @@ import (
 
 func WritingTestStartFingerprint(request TestStart) string {
 	request.RequestKey, request.QuoteKey = "", ""
+	// A post test hashes as it did before tests had an output kind, so a quote or request key
+	// issued before the kind existed keeps matching its retry.
+	if request.Output == OutputPost {
+		request.Output = ""
+	}
 	raw, _ := json.Marshal(request)
 	sum := sha256.Sum256(raw)
 	return hex.EncodeToString(sum[:])
@@ -57,7 +62,7 @@ func BuildWritingTest(request TestStart, plan TestPlan, at time.Time) (WritingTe
 	if err := ValidWritingTestPlan(request, plan); err != nil {
 		return WritingTest{}, err
 	}
-	out := WritingTest{ID: newID(), UserID: request.UserID, Kind: "knockout", Factor: request.Factor, ModelStage: request.ModelStage, Count: request.Count, Status: TestQueued, Input: request.Input, SourcePostSlug: request.Input.SourcePostSlug, CommonSnapshot: append([]byte(nil), plan.Snapshot.Common...), CommonHash: plan.Snapshot.Hash, PromptVersion: plan.Snapshot.PromptVersion, CreatedAt: at.UTC(), UpdatedAt: at.UTC(), ReservedCredits: plan.EstimateCredits}
+	out := WritingTest{ID: newID(), UserID: request.UserID, Kind: "knockout", Factor: request.Factor, Output: request.OutputKind(), ModelStage: request.ModelStage, Count: request.Count, Status: TestQueued, Input: request.Input, SourcePostSlug: request.Input.SourcePostSlug, CommonSnapshot: append([]byte(nil), plan.Snapshot.Common...), CommonHash: plan.Snapshot.Hash, PromptVersion: plan.Snapshot.PromptVersion, CreatedAt: at.UTC(), UpdatedAt: at.UTC(), ReservedCredits: plan.EstimateCredits}
 	if request.Count == 2 {
 		out.Kind = "ab"
 	}

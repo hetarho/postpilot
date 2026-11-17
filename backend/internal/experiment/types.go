@@ -5,6 +5,7 @@ package experiment
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -617,10 +618,20 @@ type TestAnswer struct {
 type TestStart struct {
 	UserID, RequestKey, QuoteKey string
 	Factor                       TestFactor
-	ModelStage                   Stage
-	Count                        int
-	Entrants                     []TestEntrantRef
-	Input                        TestInput
+	// Output is what every contestant produces; empty reads as OutputPost.
+	Output     TestOutputKind `json:",omitempty"`
+	ModelStage Stage
+	Count      int
+	Entrants   []TestEntrantRef
+	Input      TestInput
+}
+
+// OutputKind is the request's output with an unspecified one read as a post.
+func (r TestStart) OutputKind() TestOutputKind {
+	if r.Output == "" {
+		return OutputPost
+	}
+	return r.Output
 }
 
 var (
@@ -642,6 +653,9 @@ func ValidateTestShape(r TestStart) error {
 	}
 	if r.UserID == "" || r.RequestKey == "" {
 		return ErrTestOperation
+	}
+	if err := validateTestOutput(r); err != nil {
+		return err
 	}
 	seen := map[string]bool{}
 	for _, e := range r.Entrants {
@@ -669,6 +683,40 @@ func ValidateTestShape(r TestStart) error {
 			return ErrTestDuplicate
 		}
 		seen[key] = true
+	}
+	return nil
+}
+
+// validateTestOutput checks the request against its output kind. A post test carries no
+// test-owned photos; a photo observation test (MODEL-97) compares observe-stage models on
+// 1..TestPhotoMax distinct uploaded photos and carries no writing material of any kind.
+func validateTestOutput(r TestStart) error {
+	in := r.Input
+	switch r.OutputKind() {
+	case OutputPost:
+		if len(in.PhotoIDs) > 0 {
+			return ErrTestMaterialInvalid
+		}
+		return nil
+	case OutputObservation:
+	default:
+		return ErrTestFactor
+	}
+	if r.Factor != FactorModel || r.ModelStage != StageObserve {
+		return ErrTestFactor
+	}
+	if len(in.PhotoIDs) == 0 || len(in.PhotoIDs) > TestPhotoMax {
+		return ErrTestMaterialInvalid
+	}
+	seen := make(map[string]bool, len(in.PhotoIDs))
+	for _, id := range in.PhotoIDs {
+		if id == "" || seen[id] {
+			return ErrTestMaterialInvalid
+		}
+		seen[id] = true
+	}
+	if in.SourcePostSlug != "" || in.InputRevision != 0 || in.ContentRevision != 0 || strings.TrimSpace(in.Material) != "" || in.Fictional || len(in.AttachmentIDs) > 0 || len(in.TemplateAnswers) > 0 || in.ObserveModel != (ModelRef{}) || in.WriteModel != (ModelRef{}) || in.VoiceID != "" || in.TemplateID != "" || in.GuidelineSlotID != "" || in.UseMemory || len(in.QualityRules) > 0 {
+		return ErrTestMaterialInvalid
 	}
 	return nil
 }
@@ -755,10 +803,12 @@ type WritingTest struct {
 	Candidates                                                                   []TestCandidate
 	Matches                                                                      []TestMatch
 	Publications                                                                 []TestPublication
-	ConfirmedCredits, ReservedCredits                                            int
-	Failure                                                                      *Failure
-	ContentExpiresAt                                                             *time.Time
-	CreatedAt, UpdatedAt                                                         time.Time
+	// Photos are a photo observation test's frozen photos, oldest first (MODEL-97).
+	Photos                            []TestPhoto
+	ConfirmedCredits, ReservedCredits int
+	Failure                           *Failure
+	ContentExpiresAt                  *time.Time
+	CreatedAt, UpdatedAt              time.Time
 }
 type FrozenTestVariant struct {
 	Reference                    TestEntrantRef

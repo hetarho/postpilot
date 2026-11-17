@@ -41,6 +41,10 @@ const (
 	// maxTestPhotoDimension bounds the width and height a client may report, the same ceiling
 	// the post context enforces (→POST-36).
 	maxTestPhotoDimension = 20000
+	// TestPhotoMax is how many photos one photo observation test may hold, the post photo
+	// count (UPLOAD_MAX_PHOTOS_PER_POST, →POST-31 →QUOTA-24) ← the observation calls a test
+	// prices grow with it exactly as a post's do.
+	TestPhotoMax = 30
 	// testPhotoSweepBatch bounds one list of expired rows; a larger backlog takes more rounds.
 	testPhotoSweepBatch = 200
 )

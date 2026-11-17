@@ -275,7 +275,7 @@ func TestWritingTestBlindWireRetainsCompleteOutputAndOnlyRevealsIdentityAndToken
 	found.Candidates = []experiment.TestCandidate{{ID: "opaque", Status: "succeeded", Output: raw, FrozenVariant: []byte("private variant"), Accounting: []byte("suppliercost"), Identity: &experiment.TestCandidateIdentity{Label: "private model identity", Ref: experiment.TestEntrantRef{SourceKind: "model", Model: experiment.ModelRef{ProviderID: "private-provider", ModelID: "private-model"}}}, Usage: &experiment.Usage{PromptTokens: 10, CompletionTokens: 20, LatencyMS: 30, CostMicrousd: 999}, Failure: &experiment.Failure{Reason: "UNKNOWN_FAILURE", Params: map[string]string{"model": "private-model"}, TechnicalDetail: "private diagnostic"}}}
 	for _, status := range []experiment.TestStatus{experiment.TestReview, experiment.TestPartial, experiment.TestFailed, experiment.TestCompleted, experiment.TestCancelled} {
 		found.Status = status
-		wire, err := writingTestToProto(found)
+		wire, err := writingTestToProto(context.Background(), found, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

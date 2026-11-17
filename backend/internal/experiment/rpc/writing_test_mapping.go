@@ -1,7 +1,9 @@
 package rpc
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/postpilot/backend/internal/experiment"
 	v1 "github.com/postpilot/backend/internal/gen/postpilot/v1"
@@ -30,6 +32,14 @@ func writingStartFromProto(user string, p *v1.WritingTestPlan) (experiment.TestS
 	default:
 		return out, experiment.ErrTestFactor
 	}
+	switch p.GetOutput() {
+	case v1.WritingTestOutput_WRITING_TEST_OUTPUT_UNSPECIFIED, v1.WritingTestOutput_WRITING_TEST_OUTPUT_POST:
+		out.Output = experiment.OutputPost
+	case v1.WritingTestOutput_WRITING_TEST_OUTPUT_OBSERVATION:
+		out.Output = experiment.OutputObservation
+	default:
+		return out, experiment.ErrTestFactor
+	}
 	for _, item := range p.GetEntrants() {
 		ref, err := writingEntrantFromProto(item)
 		if err != nil {
@@ -41,7 +51,7 @@ func writingStartFromProto(user string, p *v1.WritingTestPlan) (experiment.TestS
 	if c == nil {
 		return out, experiment.ErrTestMaterialInvalid
 	}
-	out.Input = experiment.TestInput{SourcePostSlug: c.GetSourcePostSlug(), InputRevision: c.GetExpectedInputRevision(), ContentRevision: c.GetExpectedContentRevision(), ObserveModel: fromProtoRef(c.GetObserveModel()), WriteModel: fromProtoRef(c.GetWriteModel()), VoiceID: c.GetVoiceId(), TemplateID: c.GetTemplateId(), GuidelineSlotID: c.GetGuidelineSlotId(), TargetLength: int(c.GetTargetLength()), TagCount: int(c.GetTagCount()), UseMemory: c.GetUseMemory()}
+	out.Input = experiment.TestInput{SourcePostSlug: c.GetSourcePostSlug(), InputRevision: c.GetExpectedInputRevision(), ContentRevision: c.GetExpectedContentRevision(), ObserveModel: fromProtoRef(c.GetObserveModel()), WriteModel: fromProtoRef(c.GetWriteModel()), VoiceID: c.GetVoiceId(), TemplateID: c.GetTemplateId(), GuidelineSlotID: c.GetGuidelineSlotId(), TargetLength: int(c.GetTargetLength()), TagCount: int(c.GetTagCount()), UseMemory: c.GetUseMemory(), PhotoIDs: append([]string(nil), c.GetPhotoIds()...)}
 	switch c.GetTargetLanguage() {
 	case v1.ContentLanguage_CONTENT_LANGUAGE_KOREAN:
 		out.Input.TargetLanguage = "ko"
@@ -193,7 +203,13 @@ func writingPublicationToProto(p experiment.TestPublication) (*v1.WritingTestPub
 	}
 	return out, nil
 }
-func writingTestToProto(t experiment.WritingTest) (*v1.WritingTest, error) {
+
+// testPhotoViewer signs a short-lived read URL for one stored test photo.
+type testPhotoViewer func(context.Context, string) (string, time.Time, error)
+
+// writingTestToProto projects a test for its owner. A nil viewer lists an observation test's
+// photos without URLs, as a history read does; a purged payload never gets one.
+func writingTestToProto(ctx context.Context, t experiment.WritingTest, view testPhotoViewer) (*v1.WritingTest, error) {
 	out := &v1.WritingTest{Id: t.ID, Revision: t.Revision, Count: int32(t.Count), SourcePostSlug: t.SourcePostSlug, JobId: t.JobID, WinnerCandidateId: t.WinnerID, CreatedAt: formatTime(t.CreatedAt), UpdatedAt: formatTime(t.UpdatedAt), ContentExpiresAt: formatOptional(t.ContentExpiresAt), Fictional: t.Input.Fictional, ConfirmedCredits: int64(t.ConfirmedCredits), ReservedCredits: int64(t.ReservedCredits), Revealed: t.Status == experiment.TestCompleted || t.Status == experiment.TestCancelled}
 	switch t.Factor {
 	case experiment.FactorModel:
@@ -206,6 +222,27 @@ func writingTestToProto(t experiment.WritingTest) (*v1.WritingTest, error) {
 		out.Factor = v1.WritingTestFactor_WRITING_TEST_FACTOR_GUIDELINE
 	default:
 		return nil, experiment.ErrTestFactor
+	}
+	switch t.Output {
+	case "", experiment.OutputPost:
+		out.Output = v1.WritingTestOutput_WRITING_TEST_OUTPUT_POST
+	case experiment.OutputObservation:
+		out.Output = v1.WritingTestOutput_WRITING_TEST_OUTPUT_OBSERVATION
+	default:
+		return nil, experiment.ErrTestFactor
+	}
+	if t.Output == experiment.OutputObservation {
+		for _, photo := range t.Photos {
+			wire := &v1.WritingTestPhoto{Id: photo.ID, Filename: photo.Filename, Width: int32(photo.Width), Height: int32(photo.Height)}
+			if view != nil && t.PurgeFence == 0 {
+				url, expires, err := view(ctx, photo.Key)
+				if err != nil {
+					return nil, err
+				}
+				wire.ViewUrl, wire.ViewExpiresAt = url, formatTime(expires)
+			}
+			out.Photos = append(out.Photos, wire)
+		}
 	}
 	switch t.ModelStage {
 	case "":
@@ -267,9 +304,20 @@ func writingTestToProto(t experiment.WritingTest) (*v1.WritingTest, error) {
 			if err != nil {
 				return nil, err
 			}
-			wire.Output, wire.Storyline, err = writingOutputToProto(value)
-			if err != nil {
-				return nil, err
+			if value.Observations != nil {
+				// The public output never names the observer; reveal names it from the identity.
+				model := ""
+				if p.Identity != nil {
+					model = p.Identity.Ref.Model.String()
+				}
+				for _, o := range value.Observations {
+					wire.Observations = append(wire.Observations, &v1.Observation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: o.Objects, PeoplePresent: o.PeoplePresent, Model: model})
+				}
+			} else {
+				wire.Output, wire.Storyline, err = writingOutputToProto(value)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 		wire.Failure = failureToProto(p.Failure)

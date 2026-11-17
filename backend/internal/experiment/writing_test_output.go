@@ -19,6 +19,18 @@ type TestOutput struct {
 	ContentLanguage    string
 	Origins            *post.OriginReview
 	RequestInspections []llm.RequestInspection
+	// Observations is a photo observation test's whole answer (MODEL-97): one entry per
+	// frozen photo and no post. An output holding them carries no content or storyline.
+	Observations []TestOutputObservation
+}
+
+// TestOutputObservation is what one observer recorded for one frozen photo. Model names the
+// observer and is dropped from every public projection; reveal names it from the identity.
+type TestOutputObservation struct {
+	File, Scene, Mood, VisibleText string
+	Objects                        []string
+	PeoplePresent                  bool
+	Model                          string
 }
 
 type TestOutputContent struct {
@@ -88,10 +100,35 @@ type testOutputParagraphWire struct {
 	Files []string `json:"files"`
 }
 
-const maxTestOutputBytes = 4 << 20
+// Version 2 is a photo observation answer: observations and no content, so a reader of a
+// post output can never mistake one for the other.
+type testObservationOutputWire struct {
+	Version            int                         `json:"version"`
+	Observations       []testOutputObservationWire `json:"observations"`
+	RequestInspections json.RawMessage             `json:"request_inspections,omitempty"`
+}
+
+type testOutputObservationWire struct {
+	File          string   `json:"file"`
+	Scene         string   `json:"scene"`
+	Mood          string   `json:"mood"`
+	VisibleText   string   `json:"visible_text"`
+	Objects       []string `json:"objects"`
+	PeoplePresent bool     `json:"people_present"`
+	Model         string   `json:"model,omitempty"`
+}
+
+const (
+	maxTestOutputBytes           = 4 << 20
+	testPostOutputVersion        = 1
+	testObservationOutputVersion = 2
+)
 
 func EncodeTestOutput(value TestOutput) ([]byte, error) {
-	wire := testOutputWire{Version: 1, ContentLanguage: value.ContentLanguage, Nouns: value.Nouns}
+	if value.Observations != nil {
+		return encodeTestObservationOutput(value)
+	}
+	wire := testOutputWire{Version: testPostOutputVersion, ContentLanguage: value.ContentLanguage, Nouns: value.Nouns}
 	wire.Origins, _ = json.Marshal(value.Origins)
 	if value.Origins == nil {
 		wire.Origins = nil
@@ -134,9 +171,42 @@ func EncodeTestOutput(value TestOutput) ([]byte, error) {
 	return raw, nil
 }
 
+func encodeTestObservationOutput(value TestOutput) ([]byte, error) {
+	if value.Content.Title != "" || value.Content.Summary != "" || len(value.Content.Tags) > 0 || len(value.Content.Blocks) > 0 || value.Storyline != nil || len(value.Nouns) > 0 || value.ContentLanguage != "" || value.Origins != nil {
+		return nil, fmt.Errorf("%w: an observation output carries no post", ErrTestOutputIncompatible)
+	}
+	wire := testObservationOutputWire{Version: testObservationOutputVersion, Observations: make([]testOutputObservationWire, len(value.Observations))}
+	for index, o := range value.Observations {
+		wire.Observations[index] = testOutputObservationWire{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: o.Objects, PeoplePresent: o.PeoplePresent, Model: o.Model}
+	}
+	if len(value.RequestInspections) > 0 {
+		wire.RequestInspections, _ = json.Marshal(validTestInspections(value.RequestInspections))
+	}
+	if err := validateTestObservationWire(wire); err != nil {
+		return nil, err
+	}
+	raw, err := json.Marshal(wire)
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) > maxTestOutputBytes {
+		return nil, fmt.Errorf("%w: output exceeds storage limit", ErrTestOutputIncompatible)
+	}
+	return raw, nil
+}
+
 func DecodeTestOutput(raw []byte) (TestOutput, error) {
 	if len(raw) == 0 || len(raw) > maxTestOutputBytes {
 		return TestOutput{}, ErrTestOutputIncompatible
+	}
+	var head struct {
+		Version int `json:"version"`
+	}
+	if err := json.Unmarshal(raw, &head); err != nil {
+		return TestOutput{}, fmt.Errorf("%w: invalid output encoding", ErrTestOutputIncompatible)
+	}
+	if head.Version == testObservationOutputVersion {
+		return decodeTestObservationOutput(raw)
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.DisallowUnknownFields()
@@ -178,6 +248,44 @@ func DecodeTestOutput(raw []byte) (TestOutput, error) {
 	return value, nil
 }
 
+func decodeTestObservationOutput(raw []byte) (TestOutput, error) {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	var wire testObservationOutputWire
+	if err := decoder.Decode(&wire); err != nil {
+		return TestOutput{}, fmt.Errorf("%w: invalid output encoding", ErrTestOutputIncompatible)
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return TestOutput{}, fmt.Errorf("%w: trailing output data", ErrTestOutputIncompatible)
+	}
+	if err := validateTestObservationWire(wire); err != nil {
+		return TestOutput{}, err
+	}
+	value := TestOutput{Observations: make([]TestOutputObservation, len(wire.Observations))}
+	for index, o := range wire.Observations {
+		value.Observations[index] = TestOutputObservation{File: o.File, Scene: o.Scene, Mood: o.Mood, VisibleText: o.VisibleText, Objects: o.Objects, PeoplePresent: o.PeoplePresent, Model: o.Model}
+	}
+	if requests := decodeOptionalTestEvidence[[]llm.RequestInspection](wire.RequestInspections); requests != nil {
+		value.RequestInspections = validTestInspections(*requests)
+	}
+	return value, nil
+}
+
+// Every observation names the frozen photo it describes, once.
+func validateTestObservationWire(value testObservationOutputWire) error {
+	if value.Version != testObservationOutputVersion || len(value.Observations) == 0 {
+		return ErrTestOutputIncompatible
+	}
+	files := make(map[string]bool, len(value.Observations))
+	for _, o := range value.Observations {
+		if o.File == "" || files[o.File] {
+			return ErrTestOutputIncompatible
+		}
+		files[o.File] = true
+	}
+	return nil
+}
+
 // Optional private evidence never makes an otherwise usable canonical answer fail.
 // Unknown fields, malformed metadata and unissued previews are discarded rather
 // than being returned as captured execution or interpreted as an origin category.
@@ -213,6 +321,9 @@ func PublicTestOutput(raw []byte) []byte {
 		return nil
 	}
 	value.Origins, value.RequestInspections = nil, nil
+	for index := range value.Observations {
+		value.Observations[index].Model = ""
+	}
 	if value.Storyline != nil {
 		value.Storyline.Origins = nil
 	}
@@ -224,7 +335,7 @@ func PublicTestOutput(raw []byte) []byte {
 }
 
 func validateTestOutputWire(value testOutputWire) error {
-	if value.Version != 1 || (value.ContentLanguage != "ko" && value.ContentLanguage != "en") {
+	if value.Version != testPostOutputVersion || (value.ContentLanguage != "ko" && value.ContentLanguage != "en") {
 		return ErrTestOutputIncompatible
 	}
 	// The generation parser already validates and bounds field combinations.

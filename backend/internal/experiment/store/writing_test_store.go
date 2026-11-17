@@ -67,7 +67,7 @@ func loadWritingTest(ctx context.Context, q *sqlc.Queries, user, id string) (exp
 	if err = json.Unmarshal([]byte(row.Context), &info); err != nil {
 		return experiment.WritingTest{}, err
 	}
-	found := experiment.WritingTest{ID: row.ID, UserID: row.UserID, Kind: row.Kind, Factor: experiment.TestFactor(row.Factor), ModelStage: experiment.Stage(row.ModelStage), Count: int(row.Count), Status: experiment.TestStatus(row.Status), Revision: uint32(row.Revision), SourcePostSlug: row.SourcePostSlug.String, Input: info.Input, CommonSnapshot: slices.Clone(row.CommonSnapshot), CommonHash: row.CommonHash, PromptVersion: row.PromptVersion, PurgeFence: uint64(row.PurgeFence), JobID: row.JobID, WinnerID: row.WinnerCandidateID.String, ConfirmedCredits: int(row.ConfirmedCredits), ReservedCredits: int(row.ReservedCredits), CreatedAt: created, UpdatedAt: updated, ContentExpiresAt: parseOptional(row.ContentExpiresAt)}
+	found := experiment.WritingTest{ID: row.ID, UserID: row.UserID, Kind: row.Kind, Factor: experiment.TestFactor(row.Factor), Output: experiment.TestOutputKind(row.Output), ModelStage: experiment.Stage(row.ModelStage), Count: int(row.Count), Status: experiment.TestStatus(row.Status), Revision: uint32(row.Revision), SourcePostSlug: row.SourcePostSlug.String, Input: info.Input, CommonSnapshot: slices.Clone(row.CommonSnapshot), CommonHash: row.CommonHash, PromptVersion: row.PromptVersion, PurgeFence: uint64(row.PurgeFence), JobID: row.JobID, WinnerID: row.WinnerCandidateID.String, ConfirmedCredits: int(row.ConfirmedCredits), ReservedCredits: int(row.ReservedCredits), CreatedAt: created, UpdatedAt: updated, ContentExpiresAt: parseOptional(row.ContentExpiresAt)}
 	if row.FailureReason != "" {
 		found.Failure = &experiment.Failure{Reason: row.FailureReason}
 	}
@@ -106,6 +106,15 @@ func loadWritingTest(ctx context.Context, q *sqlc.Queries, user, id string) (exp
 	}
 	for _, row := range publications {
 		found.Publications = append(found.Publications, experiment.TestPublication{ID: row.ID, UserID: row.UserID, TestID: row.TestID, WinnerID: row.WinnerCandidateID, Action: row.Action, RequestKey: row.RequestKey, TargetID: row.TargetID, Status: row.Status, Fingerprint: row.Fingerprint})
+	}
+	if found.Output == experiment.OutputObservation {
+		photos, err := q.ListWritingTestPhotosForTest(ctx, sqlc.ListWritingTestPhotosForTestParams{UserID: user, TestID: nullString(id)})
+		if err != nil {
+			return experiment.WritingTest{}, err
+		}
+		if found.Photos, err = testPhotosFromRows(photos); err != nil {
+			return experiment.WritingTest{}, err
+		}
 	}
 	return found, nil
 }
@@ -283,9 +292,19 @@ func (s *Store) AdmitTest(ctx context.Context, request experiment.TestStart, pla
 		if err != nil {
 			return err
 		}
-		err = q.InsertWritingTest(ctx, sqlc.InsertWritingTestParams{ID: found.ID, UserID: found.UserID, OperationKey: request.RequestKey, Fingerprint: experiment.WritingTestStartFingerprint(request), Kind: found.Kind, Factor: string(found.Factor), ModelStage: string(found.ModelStage), Count: int64(found.Count), Status: string(found.Status), SourcePostSlug: nullString(found.SourcePostSlug), Context: string(encoded), CommonSnapshot: found.CommonSnapshot, CommonHash: found.CommonHash, PromptVersion: found.PromptVersion, ReservedCredits: int64(found.ReservedCredits), CreatedAt: dbtime.Format(found.CreatedAt), UpdatedAt: dbtime.Format(found.UpdatedAt)})
+		err = q.InsertWritingTest(ctx, sqlc.InsertWritingTestParams{ID: found.ID, UserID: found.UserID, OperationKey: request.RequestKey, Fingerprint: experiment.WritingTestStartFingerprint(request), Kind: found.Kind, Factor: string(found.Factor), ModelStage: string(found.ModelStage), Count: int64(found.Count), Status: string(found.Status), SourcePostSlug: nullString(found.SourcePostSlug), Context: string(encoded), CommonSnapshot: found.CommonSnapshot, CommonHash: found.CommonHash, PromptVersion: found.PromptVersion, ReservedCredits: int64(found.ReservedCredits), CreatedAt: dbtime.Format(found.CreatedAt), UpdatedAt: dbtime.Format(found.UpdatedAt), Output: string(found.Output)})
 		if err != nil {
 			return err
+		}
+		// The photos freeze with the test they were uploaded for in this same transaction; a
+		// photo that is not ready, not the owner's or already held refuses the whole admission.
+		if found.Output == experiment.OutputObservation {
+			if err = AttachTestPhotos(ctx, q, found.UserID, found.ID, found.Input.PhotoIDs); err != nil {
+				if errors.Is(err, experiment.ErrTestPhotoUnavailable) {
+					return experiment.ErrTestMaterialInvalid
+				}
+				return err
+			}
 		}
 		ids := []string{}
 		for _, candidate := range found.Candidates {
