@@ -206,6 +206,7 @@
 | T879 | lchat | gusta-session-start-lchat-fe660cf1 | 59abcd6b3 | 2026-11-17T01:09Z |
 
 ## log
+- 261117 gusta-create-task ARCH r26 no-op (no code impact): ARCH-24 and verification runbook assign full frontend TypeScript to existing shared batch build; ARCH tasked=rev, no task generated, unrelated pending INFRA and submitted T878/T879 preserved. T887 needs ARCH freshness review before further implementation.
 - 261117 gusta-update-ssot ARCH start: owner approved future task checks using affected unit and fast static checks; full frontend TypeScript checking belongs to existing shared batch build. Preserve submitted T878/T879 evidence.
 - 261117 T879 done
 - 261117 T878 done
@@ -225,4 +226,3 @@
 - 261116 T882 done
 - 261116 T872 done
 - 261116 T871 done
-- 261116 T881 done
