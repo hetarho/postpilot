@@ -244,11 +244,34 @@
       "publication": "merge",
       "host": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-lchat-fe660cf1",
-      "head": "df4f2a9d871695357daf57ae9a86439655fa08c3",
+      "head": "3d610e4d05962e1e09ccb7d1df7e12f9d1ec7bc3",
       "land": "main",
-      "status": "ready",
-      "at": "2026-11-17T01:09:42.284Z",
-      "agentChecks": [],
+      "status": "working",
+      "at": "2026-11-17T01:11:37.044Z",
+      "agentChecks": [
+        {
+          "id": "T878-chat-experience-walk",
+          "scenario": "Browser walk of the learning chat: pick 맛집 with a name, answer five thread questions, start a second experience, reach the analysis offer after ten replies",
+          "steps": [
+            "Open the learning chat on an unmade voice",
+            "Pick 맛집, type a name and send",
+            "Answer the five thread questions, using 다른 얘기 할래요 once",
+            "Choose 경험 하나 더 이야기하기 and answer five more",
+            "Confirm the explicit analysis action appears"
+          ],
+          "expected": "The owner's line shows the name, each question names the experience, a swap does not count, the offer appears after five replies and the analysis action after ten.",
+          "observed": "",
+          "evidence": [],
+          "status": "not-run",
+          "reason": "The T878 unit had no browser tooling and covered the flow with machine and VoiceLearningChat component tests only; its returned check carried an abbreviated candidate SHA and a free-text owner, so the CLI rejected it. Resubmitted unchanged in substance for the capable host on the fixed candidate.",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host",
+          "candidate": null,
+          "duplicationReason": "No automated e2e covers the chat walk, so this check adds none and replaces no e2e."
+        }
+      ],
       "verificationCommands": []
     }
   },
