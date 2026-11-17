@@ -2,7 +2,10 @@ import { create } from '@bufbuild/protobuf'
 import { describe, expect, it } from 'vitest'
 import {
   EstimateWritingTestResponseSchema,
+  ObservationSchema,
   WritingTestFactor,
+  WritingTestOutput,
+  WritingTestPhotoSchema,
   WritingTestService,
   WritingTestStage,
   WritingTestStatus,
@@ -14,7 +17,7 @@ import {
 } from '@/shared/api'
 import { writingTestPayloadAvailable, type TestCount } from '../model/types'
 import { mapWritingTest, mapWritingTestQuote, planToProto } from './mappers'
-import { testPlan, wireTest } from './fixtures.test-support'
+import { observationPlan, testPlan, wireObservationTest, wireTest } from './fixtures.test-support'
 
 describe('exact server writing-test projections', () => {
   it.each<TestCount>([2, 4, 8, 16])(
@@ -237,5 +240,88 @@ describe('explicit plan and credit boundaries', () => {
     expect(() =>
       mapWritingTestQuote(create(EstimateWritingTestResponseSchema, { ...quote, free: true })),
     ).toThrow('free quote credits')
+  })
+})
+
+describe('photo observation tests on the wire', () => {
+  it('sends output observation with the photo ids, the observe stage and model entrants', () => {
+    const wire = planToProto(observationPlan(['p1', 'p2'], 4))
+    expect(wire.output).toBe(WritingTestOutput.OBSERVATION)
+    expect(wire.modelStage).toBe(WritingTestStage.OBSERVE)
+    expect(wire.factor).toBe(WritingTestFactor.MODEL)
+    expect(wire.context?.photoIds).toEqual(['p1', 'p2'])
+    expect(wire.entrants).toHaveLength(4)
+    expect(wire.entrants.every((entrant) => entrant.source.case === 'model')).toBe(true)
+  })
+  it.each<[string, (plan: ReturnType<typeof observationPlan>) => void, string]>([
+    ['material text', (plan) => void (plan.context.material.text = 'note'), 'material'],
+    ['attachments', (plan) => void (plan.context.material.attachmentIds = ['photo']), 'material'],
+    ['a source post', (plan) => void (plan.context.sourcePostSlug = 'post'), 'source post'],
+    ['a voice', (plan) => void (plan.context.voiceId = 'voice'), 'setting'],
+    ['a template', (plan) => void (plan.context.templateId = 'template'), 'setting'],
+    ['a guideline slot', (plan) => void (plan.context.guidelineSlotId = 'slot'), 'setting'],
+    [
+      'an observer model',
+      (plan) => void (plan.context.observeModel = { providerId: 'p', modelId: 'm' }),
+      'fixed model',
+    ],
+    [
+      'a writer model',
+      (plan) => void (plan.context.writeModel = { providerId: 'p', modelId: 'm' }),
+      'fixed model',
+    ],
+    ['no photo', (plan) => void (plan.context.photoIds = []), 'photos'],
+    ['a repeated photo', (plan) => void (plan.context.photoIds = ['p1', 'p1']), 'photos'],
+    ['the write stage', (plan) => void (plan.modelStage = 'write'), 'observation stage'],
+    ['a setting factor', (plan) => void (plan.factor = 'voice'), 'observation stage'],
+  ])('refuses an observation plan with %s', (_name, change, field) => {
+    const plan = observationPlan(['p1'])
+    change(plan)
+    expect(() => planToProto(plan)).toThrow(field)
+  })
+  it('sends output post and no photo ids for a post plan, and refuses photos on one', () => {
+    const wire = planToProto(testPlan())
+    expect(wire.output).toBe(WritingTestOutput.POST)
+    expect(wire.context?.photoIds).toEqual([])
+    const withPhoto = testPlan()
+    withPhoto.context.photoIds = ['p1']
+    expect(() => planToProto(withPhoto)).toThrow('photos')
+  })
+  it('reads an unspecified output as a post test with no photos', () => {
+    const result = mapWritingTest(wireTest())
+    expect(result.output).toBe('post')
+    expect(result.photos).toEqual([])
+    expect(result.candidates.every((candidate) => candidate.observations === undefined)).toBe(true)
+  })
+  it('reads photos and blind observations, naming the observer only after the reveal', () => {
+    const blind = mapWritingTest(wireObservationTest(['p1', 'p2']))
+    expect(blind.output).toBe('observation')
+    expect(blind.photos?.map((photo) => photo.id)).toEqual(['p1', 'p2'])
+    expect(blind.photos?.[0]).toMatchObject({ viewUrl: 'https://storage.test/p1', width: 800 })
+    const observations = blind.candidates.flatMap((candidate) => candidate.observations ?? [])
+    expect(observations).toHaveLength(4)
+    expect(observations[0]).toMatchObject({ file: 'p1.jpg', scene: 'Scene 0', objects: ['table'] })
+    expect(observations.every((observation) => observation.model === undefined)).toBe(true)
+    // A server that leaked the observer while blind is still dropped.
+    const leaked = wireObservationTest(['p1'])
+    leaked.candidates[0].observations[0].model = 'secret-model'
+    expect(mapWritingTest(leaked).candidates[0].observations?.[0].model).toBeUndefined()
+    const revealed = mapWritingTest(wireObservationTest(['p1'], 2, true))
+    expect(revealed.candidates[1].observations?.[0].model).toBe('model-1')
+    expect(writingTestPayloadAvailable(revealed)).toBe(true)
+  })
+  it('refuses observations or photos on a post test and a post output on an observation test', () => {
+    const post = wireTest()
+    post.candidates[0].observations = [create(ObservationSchema, { file: 'a.jpg' })]
+    expect(() => mapWritingTest(post)).toThrow('observations')
+    const photos = wireTest()
+    photos.photos = [create(WritingTestPhotoSchema, { id: 'p1', filename: 'p1.jpg' })]
+    expect(() => mapWritingTest(photos)).toThrow('photos')
+    const observation = wireObservationTest(['p1'])
+    observation.candidates[0].output = wireTest().candidates[0].output
+    expect(() => mapWritingTest(observation)).toThrow('post output')
+    const writing = wireObservationTest(['p1'])
+    writing.modelStage = WritingTestStage.WRITE
+    expect(() => mapWritingTest(writing)).toThrow('observation stage')
   })
 })

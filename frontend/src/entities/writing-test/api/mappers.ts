@@ -9,6 +9,7 @@ import {
   requireContentLanguage,
   WritingTestCandidateStatus as CandidateStatus,
   WritingTestFactor as Factor,
+  WritingTestOutput as Output,
   WritingTestStage as Stage,
   WritingTestStatus as Status,
   WritingTestPublicationAction as Action,
@@ -16,7 +17,9 @@ import {
   WritingTestPlanSchema,
   type EstimateWritingTestResponse,
   type ProtoFailure,
+  type Observation,
   type WritingTest as WireTest,
+  type WritingTestPhoto as WirePhoto,
   type WritingTestEntrant as WireEntrant,
   type WritingTestPublication as WirePublication,
 } from '@/shared/api'
@@ -27,12 +30,15 @@ import {
   type TestEntrant,
   type TestFactor,
   type TestModelRef,
+  type TestObservation,
+  type TestOutput,
   type TestPublicationAction,
   type TestQualityRule,
   type TestSettingKind,
   type TestStage,
   type TestStatus,
   type WritingTest,
+  type WritingTestPhoto,
   type WritingTestPlan,
   type WritingTestPublication,
   type WritingTestQuote,
@@ -72,6 +78,7 @@ const factorMap: Record<TestFactor, Factor> = {
   guideline: Factor.GUIDELINE,
 }
 const stageMap: Record<TestStage, Stage> = { observe: Stage.OBSERVE, write: Stage.WRITE }
+const outputMap: Record<TestOutput, Output> = { post: Output.POST, observation: Output.OBSERVATION }
 const statusMap: Record<TestStatus, Status> = {
   queued: Status.QUEUED,
   running: Status.RUNNING,
@@ -207,8 +214,39 @@ export function entrantKey(value: TestEntrant): string {
       return invalid('entrant')
   }
 }
+function requirePhotoIds(ids: string[]): string[] {
+  if (new Set(ids).size !== ids.length || ids.some((id) => !id.trim())) invalid('photos')
+  return ids
+}
+/** The server's observation shape (experiment.ValidateTestShape): model entrants at the observe
+ *  stage over test photos alone, with no writing material, setting or fixed model. */
+function requireObservationPlan(plan: WritingTestPlan) {
+  const context = plan.context
+  if (plan.factor !== 'model' || plan.modelStage !== 'observe') invalid('observation stage')
+  if (!context.photoIds?.length) invalid('photos')
+  if (
+    context.material.text.trim() ||
+    context.material.attachmentIds.length > 0 ||
+    context.material.templateAnswers.length > 0
+  )
+    invalid('material')
+  if (context.sourcePostSlug.trim()) invalid('source post')
+  if (context.observeModel || context.writeModel) invalid('fixed model')
+  if (
+    context.voiceId.trim() ||
+    context.templateId.trim() ||
+    context.guidelineSlotId.trim() ||
+    context.useMemory ||
+    context.qualityRules.length > 0
+  )
+    invalid('setting')
+}
 export function planToProto(plan: WritingTestPlan) {
   count(plan.count)
+  const output = plan.output ?? 'post'
+  const photoIds = requirePhotoIds(plan.context.photoIds ?? [])
+  if (output === 'observation') requireObservationPlan(plan)
+  else if (photoIds.length > 0) invalid('photos')
   const factor = toEnum(factorMap, plan.factor, 'factor')
   if (plan.factor !== 'model' && plan.modelStage !== 'write') invalid('stage')
   // Only a model test varies a stage (MODEL-30); the server refuses any other factor that
@@ -243,7 +281,11 @@ export function planToProto(plan: WritingTestPlan) {
     invalid('target length')
   if (!Number.isInteger(context.tagCount) || context.tagCount < 0 || context.tagCount > 0x7fffffff)
     invalid('tag count')
-  if (!context.material.text.trim() && context.material.attachmentIds.length === 0)
+  if (
+    output === 'post' &&
+    !context.material.text.trim() &&
+    context.material.attachmentIds.length === 0
+  )
     invalid('material')
   if (
     new Set(context.material.attachmentIds).size !== context.material.attachmentIds.length ||
@@ -251,12 +293,17 @@ export function planToProto(plan: WritingTestPlan) {
   )
     invalid('attachments')
   if (
+    output === 'post' &&
     plan.factor === 'model' &&
     plan.modelStage === 'observe' &&
     context.material.attachmentIds.length === 0
   )
     invalid('observer attachments')
-  if ((plan.factor !== 'model' || plan.modelStage === 'observe') && !context.writeModel)
+  if (
+    output === 'post' &&
+    (plan.factor !== 'model' || plan.modelStage === 'observe') &&
+    !context.writeModel
+  )
     invalid('fixed writer')
   if (plan.factor === 'guideline' && !context.guidelineSlotId.trim()) invalid('guideline slot')
   if (new Set(context.qualityRules).size !== context.qualityRules.length) invalid('quality rules')
@@ -267,12 +314,14 @@ export function planToProto(plan: WritingTestPlan) {
   )
     invalid('template answers')
   return create(WritingTestPlanSchema, {
+    output: toEnum(outputMap, output, 'output'),
     factor,
     modelStage,
     count: plan.count,
     entrants: plan.entrants.map(entrantToProto),
     context: {
       ...context,
+      photoIds: [...photoIds],
       targetLanguage: contentLanguageToProto(context.targetLanguage),
       observeModel: context.observeModel ? model(context.observeModel) : undefined,
       writeModel: context.writeModel ? model(context.writeModel) : undefined,
@@ -320,6 +369,28 @@ export function mapWritingTestPublication(
     failure: failure(wire.failure),
   }
 }
+/** The observer's model is identity, so it stays off until the champion is confirmed (MODEL-32). */
+function mapObservation(wire: Observation, revealed: boolean): TestObservation {
+  return {
+    file: requireText(wire.file, 'observation file'),
+    scene: wire.scene,
+    mood: wire.mood,
+    visibleText: wire.visibleText,
+    objects: [...wire.objects],
+    peoplePresent: wire.peoplePresent,
+    model: revealed && wire.model ? wire.model : undefined,
+  }
+}
+function mapPhoto(wire: WirePhoto): WritingTestPhoto {
+  return {
+    id: requireText(wire.id, 'photo'),
+    filename: requireText(wire.filename, 'photo filename'),
+    width: wire.width,
+    height: wire.height,
+    viewUrl: wire.viewUrl || undefined,
+    viewExpiresAt: wire.viewExpiresAt ? date(wire.viewExpiresAt, 'photo expiry') : undefined,
+  }
+}
 export function mapWritingTest(wire: WireTest, expectedId?: string): WritingTest {
   requireText(wire.id, 'identity')
   if (expectedId && wire.id !== expectedId) invalid('identity mismatch')
@@ -330,6 +401,14 @@ export function mapWritingTest(wire: WireTest, expectedId?: string): WritingTest
   if (factor !== 'model' && wire.modelStage !== Stage.UNSPECIFIED) invalid('stage')
   const modelStage: TestStage =
     factor === 'model' ? fromEnum(stageMap, wire.modelStage, 'stage') : 'write'
+  // An unspecified output is a post test, so a server that predates it still reads cleanly.
+  const output: TestOutput =
+    wire.output === Output.UNSPECIFIED ? 'post' : fromEnum(outputMap, wire.output, 'output')
+  const photos = wire.photos.map(mapPhoto)
+  if (new Set(photos.map((photo) => photo.id)).size !== photos.length) invalid('photos')
+  if (output === 'post' && photos.length > 0) invalid('photos')
+  if (output === 'observation' && (factor !== 'model' || modelStage !== 'observe'))
+    invalid('observation stage')
   const status = fromEnum(statusMap, wire.status, 'status')
   if (wire.revealed && !['completed', 'cancelled'].includes(status)) invalid('premature reveal')
   if (
@@ -340,6 +419,8 @@ export function mapWritingTest(wire: WireTest, expectedId?: string): WritingTest
   const candidates = wire.candidates.map((candidate) => {
     requireText(candidate.id, 'candidate')
     const candidateStatus = fromEnum(candidateMap, candidate.status, 'candidate status')
+    if (output === 'post' && candidate.observations.length > 0) invalid('observations')
+    if (output === 'observation' && candidate.output) invalid('post output')
     if (
       candidate.output &&
       (!candidate.output.title.trim() ||
@@ -362,6 +443,10 @@ export function mapWritingTest(wire: WireTest, expectedId?: string): WritingTest
       id: candidate.id,
       status: candidateStatus,
       output: candidate.output ? clone(PostContentSchema, candidate.output) : undefined,
+      observations:
+        output === 'observation'
+          ? candidate.observations.map((observation) => mapObservation(observation, wire.revealed))
+          : undefined,
       failure: failure(candidate.failure, wire.revealed),
       identity:
         wire.revealed && candidate.identity
@@ -488,12 +573,14 @@ export function mapWritingTest(wire: WireTest, expectedId?: string): WritingTest
   return {
     id: wire.id,
     revision: requireRevision(wire.revision),
+    output,
     factor,
     modelStage,
     count: entrantCount,
     status,
     sourcePostSlug: wire.sourcePostSlug,
     jobId: wire.jobId,
+    photos,
     candidates,
     matches,
     winnerCandidateId: wire.winnerCandidateId,

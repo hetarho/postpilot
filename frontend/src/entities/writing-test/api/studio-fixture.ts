@@ -17,6 +17,8 @@ import {
   VoiceSchema,
   GuidelineSchema,
   WritingTestIdentitySchema,
+  WritingTestOutput,
+  WritingTestPhotoSchema,
   WritingTestPublicationAction,
   WritingTestPublicationStatus,
   WritingTestPublicationSchema,
@@ -33,13 +35,45 @@ import {
   type WritingTest as WireTest,
 } from '@/shared/api'
 import type { TestCount, TestFactor, WritingTestPlan } from '../model/types'
-import { wireTest } from './fixtures.test-support'
+import { wireObservationTest, wireTest } from './fixtures.test-support'
 
-/** The server's shape check (experiment.ValidateTestShape): only a model test names a stage. */
+/** Mirrors the server's TestPhotoMax, the post photo count (QUOTA-24). */
+const TEST_PHOTO_MAX = 30
+
+/** The server's shape check (experiment.ValidateTestShape): only a model test names a stage, an
+ *  observation test is a model test at the observe stage over test photos alone, and a post test
+ *  carries none. An unspecified output reads as a post test. */
 function refuseServerShape(plan: WirePlan) {
   const model = plan.factor === WritingTestFactor.MODEL
   if (model === (plan.modelStage === WritingTestStage.UNSPECIFIED))
     throw new ConnectError('WRITING_TEST_FACTOR_INVALID', Code.InvalidArgument)
+  const context = plan.context
+  const photoIds = context?.photoIds ?? []
+  if (plan.output !== WritingTestOutput.OBSERVATION) {
+    if (photoIds.length > 0)
+      throw new ConnectError('WRITING_TEST_MATERIAL_INVALID', Code.InvalidArgument)
+    return
+  }
+  if (!model || plan.modelStage !== WritingTestStage.OBSERVE)
+    throw new ConnectError('WRITING_TEST_FACTOR_INVALID', Code.InvalidArgument)
+  if (
+    plan.entrants.some((entrant) => entrant.source.case !== 'model') ||
+    photoIds.length < 1 ||
+    photoIds.length > TEST_PHOTO_MAX ||
+    new Set(photoIds).size !== photoIds.length ||
+    context?.sourcePostSlug ||
+    context?.material?.text ||
+    context?.material?.attachmentIds.length ||
+    context?.material?.templateAnswers.length ||
+    context?.observeModel ||
+    context?.writeModel ||
+    context?.voiceId ||
+    context?.templateId ||
+    context?.guidelineSlotId ||
+    context?.useMemory ||
+    context?.qualityRules.length
+  )
+    throw new ConnectError('WRITING_TEST_MATERIAL_INVALID', Code.InvalidArgument)
 }
 
 /** Deterministic RPC fixture used by real actors in host tests and temporary browser previews. */
@@ -89,6 +123,11 @@ export function createWritingTestStudioFixture(
   let estimatesToRefuse = options.estimateFailure ? 1 : 0
   let ledgerOwnerId = 'alice'
   let admittedPlan: WirePlan | undefined
+  const photoUploads = new Map<string, { ownerId: string; filename: string }>()
+  const photos = new Map<
+    string,
+    { ownerId: string; photo: MessageShape<typeof WritingTestPhotoSchema> }
+  >()
   let ledger: WireTest | undefined = options.readableTest ? wireTest(count) : undefined
   const plan: WritingTestPlan = {
     factor,
@@ -331,16 +370,53 @@ export function createWritingTestStudioFixture(
       const caller = ownerId
       if (!request.plan) throw new ConnectError('plan required', Code.InvalidArgument)
       refuseServerShape(request.plan)
+      const photoIds = request.plan.context?.photoIds ?? []
+      // A photo the caller never confirmed, or another account's, refuses the whole admission.
+      if (photoIds.some((id) => photos.get(id)?.ownerId !== caller))
+        throw new ConnectError('WRITING_TEST_MATERIAL_INVALID', Code.InvalidArgument)
       if (options.generationGate) await options.generationGate
       admittedPlan = request.plan
-      ledger = wireTest(request.plan.count as TestCount)
+      ledger =
+        request.plan.output === WritingTestOutput.OBSERVATION
+          ? wireObservationTest(photoIds, request.plan.count as TestCount)
+          : wireTest(request.plan.count as TestCount)
+      if (request.plan.output === WritingTestOutput.OBSERVATION)
+        ledger.photos = photoIds.map((id) => photos.get(id)!.photo)
       ledgerOwnerId = caller
       ledger.factor = request.plan.factor
       ledger.modelStage = request.plan.modelStage
+      ledger.output = request.plan.output
       ledger.sourcePostSlug = request.plan.context?.sourcePostSlug ?? ''
       ledger.targetLanguage = request.plan.context?.targetLanguage ?? contentLanguageToProto('ko')
       ledger.fictional = request.plan.context?.material?.fictional ?? false
       return create(Service.method.startWritingTest.output, { test: ledger })
+    })
+    rpc(Service.method.createTestPhotoUpload, (request) => {
+      calls.push('CreateTestPhotoUpload')
+      if (!request.filename) throw new ConnectError('filename required', Code.InvalidArgument)
+      const uploadId = `test-upload-${photoUploads.size + 1}`
+      photoUploads.set(uploadId, { ownerId, filename: request.filename })
+      return create(Service.method.createTestPhotoUpload.output, {
+        uploadId,
+        putUrl: `https://storage.test/put/${uploadId}`,
+        contentType: 'image/jpeg',
+        expiresAt: '2099-01-01T00:00:00Z',
+      })
+    })
+    rpc(Service.method.confirmTestPhotoUpload, (request) => {
+      calls.push('ConfirmTestPhotoUpload')
+      const upload = photoUploads.get(request.uploadId)
+      if (!upload || upload.ownerId !== ownerId) throw new ConnectError('not found', Code.NotFound)
+      const photo = create(WritingTestPhotoSchema, {
+        id: `test-photo-${photos.size + 1}`,
+        filename: upload.filename,
+        width: request.width,
+        height: request.height,
+        viewUrl: `https://storage.test/view/${request.uploadId}`,
+        viewExpiresAt: '2099-01-01T00:00:00Z',
+      })
+      photos.set(photo.id, { ownerId, photo })
+      return create(Service.method.confirmTestPhotoUpload.output, { photo })
     })
     rpc(Service.method.getWritingTest, () => {
       calls.push('GetWritingTest')
@@ -402,6 +478,10 @@ export function createWritingTestStudioFixture(
               },
             },
             synthetic: admittedPlan?.entrants[index].source.case === 'authoringCandidate',
+          })
+          // The observer is named only once the champion is confirmed (MODEL-32).
+          candidate.observations.forEach((observation) => {
+            observation.model = `model-${index}`
           })
         })
       }

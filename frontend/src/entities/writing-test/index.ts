@@ -8,6 +8,7 @@ export {
 } from './api/source'
 export { createCandidatePreparationClient, useCandidatePreparationClient } from './api/preparation'
 export { createWritingTestClient } from './api/client'
+export { createTestPhotoHandshake, useTestPhotoHandshake } from './api/photo-upload'
 export { WritingTestValidationError } from './api/mappers'
 export {
   useWritingTest,
