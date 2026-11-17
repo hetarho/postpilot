@@ -182,6 +182,7 @@
 - 261117 suggest ARCH-24: move task check `/tmp/claude-1000/-home-hrlee-project--gusta-worktrees-postpilot-bffb2063-start-wtform-501eaa2b/1c09f0f1-f29d-40bd-ade3-6a325f428546/scratchpad/task-check.sh` to the final gate (ARCH batch): it averaged 158s over 2 runs
 - 261117 decided T897: the wtform loop cannot resume: its failed-stop report lacks ## next and the runner refuses any edit to it → close that report by hand and run T897 plus the batch gate under tag wtform2 in the same worktree (alt: implement T897 and run the gate by hand | leave the run stopped)
 - 261117 decided T897: MODEL-97 T897: the writing-test machine judged a candidate readable only by its post output, so an observation test never opened its pair, expired at once and refused adoption → one shared entity judgment (output or observations) now serves the machine, the widgets and the payload check (alt: a second observation-only machine | leaving the compare gate to the widget); edited outside the touches because the acceptance cannot pass otherwise.
+- 261117 decided T897: MODEL-97 T897: how does a phone read the pair photo by photo? → both observations stay stacked under each photo with explicit winner buttons in the dock, so no candidate tab or per-candidate reading position is needed (alt: the post pairs candidate tabs with a saved scroll position per candidate, which would compare the same photo out of view).
 
 ## unlanded
 | id | tag | branch | commit | at |
