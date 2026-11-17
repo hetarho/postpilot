@@ -12,9 +12,6 @@ import {
 
 const STABLE_PARENTS = new Set([
   '/',
-  '/create',
-  '/my',
-  '/style',
   '/settings',
   '/posts',
   '/clips',
@@ -33,9 +30,13 @@ const STABLE_PARENTS = new Set([
   '/billing',
   '/admin',
 ])
-/** Addresses the two lists answered to before they settled on `/posts` and `/clips`; a return
- *  stored under one still lands on the list (THEME-58). */
+/** Addresses the two lists answered to before they settled on `/posts` and `/clips`, and the
+ *  retired 만들기 · 내 콘텐츠 · 내 스타일 hubs; a return stored under one still lands where that
+ *  work lives now (THEME-58). */
 const LEGACY_LIST_PATHS: Readonly<Record<string, string>> = {
+  '/create': '/',
+  '/my': '/posts',
+  '/style': '/',
   '/naver-blog': '/posts',
   '/naver-clip': '/clips',
   '/insta-clip': '/clips',

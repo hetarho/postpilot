@@ -4,6 +4,7 @@ export const i18n = {
   ko: {
     conversation: {
       log: '템플릿 대화',
+      untitled: '이름 없는 템플릿',
       ai: 'AI',
       you: '나',
       openerNew:
@@ -19,6 +20,7 @@ export const i18n = {
       save: '저장',
       more: '더 보기',
       direct: '직접 고치기',
+      directNew: '직접 쓰기',
       fresh: '새 대화로',
       reset: '저장본으로 되돌리기',
       confirmDraft: '이 설명으로 초안을 만들까요?',
@@ -28,6 +30,24 @@ export const i18n = {
       saveNew: '새 템플릿으로 저장',
       saveChanges: '변경사항 저장',
       keepTalking: '계속 다듬기',
+      starters: {
+        restaurant: {
+          label: '맛집 후기',
+          text: '맛집에 다녀온 후기를 올려요. 가게 소개, 먹은 메뉴와 가격, 분위기를 사진 순서대로 보여 줘요.',
+        },
+        assembly: {
+          label: '조립하는 상품',
+          text: '조립이 필요한 상품 리뷰예요. 구성품, 조립 과정, 완성 모습과 써 본 느낌을 순서대로 보여 줘요.',
+        },
+        food: {
+          label: '음식 상품',
+          text: '밀키트나 간식 같은 음식 상품을 소개해요. 포장, 조리 방법, 맛 평가를 사진과 함께 보여 줘요.',
+        },
+        showcase: {
+          label: '보여 주는 상품',
+          text: '설명할 과정 없이 상품을 보여 주는 글이에요. 디자인, 디테일 컷, 실제로 쓰는 모습 위주예요.',
+        },
+      },
     },
     newGlobalScope:
       '새 지침은 전체 글에 적용해요. 저장하기 전에 직접 편집에서 적용 범위를 선택할 수 있어요.',
@@ -256,6 +276,7 @@ export const i18n = {
   en: {
     conversation: {
       log: 'Template conversation',
+      untitled: 'Untitled template',
       ai: 'AI',
       you: 'You',
       openerNew:
@@ -271,6 +292,7 @@ export const i18n = {
       save: 'Save',
       more: 'More',
       direct: 'Edit the text',
+      directNew: 'Write it by hand',
       fresh: 'New conversation',
       reset: 'Back to the saved version',
       confirmDraft: 'Draft a template from this?',
@@ -280,6 +302,24 @@ export const i18n = {
       saveNew: 'Save as a new template',
       saveChanges: 'Save changes',
       keepTalking: 'Keep refining',
+      starters: {
+        restaurant: {
+          label: 'Restaurant visit',
+          text: 'I review restaurants I visit: the place, what I ate and what it cost, and the mood, in photo order.',
+        },
+        assembly: {
+          label: 'Product to assemble',
+          text: "Reviews of products that need assembling: what's in the box, the build, the finished look and how it feels to use.",
+        },
+        food: {
+          label: 'Food product',
+          text: 'Food products like meal kits and snacks: the packaging, how to cook it and how it tastes, with photos.',
+        },
+        showcase: {
+          label: 'Product to show',
+          text: 'Products that just need showing: the design, close-up details and how it looks in use.',
+        },
+      },
     },
     newGlobalScope:
       'The new guideline applies globally. Choose its scope through direct editing before saving.',

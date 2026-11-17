@@ -25,9 +25,12 @@ function renderDirectory(voice: FakeVoiceOptions = {}, calls: string[] = []) {
   return renderAppAt('/voices', { user: USER, calls, voice: { voices: VOICES, ...voice } })
 }
 
-/** The owner's voices by name, the one shown pressed (more than one voice). */
-const voiceChips = async () =>
-  within(await screen.findByRole('navigation', { name: '말투 고르기' })).getAllByRole('button')
+/** The owner's voices by name, opened from beside the shown voice's name, the one shown checked
+ *  (more than one voice). */
+async function voiceOptions(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '말투 고르기' }))
+  return screen.findAllByRole('menuitemradio')
+}
 /** The voice held up to be read. */
 const specimen = async (name: string | RegExp) =>
   within(await screen.findByRole('region', { name }))
@@ -51,8 +54,6 @@ describe('the voice directory', () => {
     renderDirectory({}, calls)
 
     expect(await screen.findByRole('heading', { level: 1, name: '말투' })).toBeInTheDocument()
-    const chips = await voiceChips()
-    expect(chips).toHaveLength(3)
     // The 기본 voice is the one shown first.
     const shown = await specimen('기본 말투')
     expect(shown.getByRole('link', { name: '자세히 보기' })).toHaveAttribute(
@@ -60,12 +61,14 @@ describe('the voice directory', () => {
       '/voices/voice-default',
     )
     expect(shown.getByText('학습 글 1편 · 2026.08.29 분석')).toBeInTheDocument()
-    expect(chips.find((chip) => chip.textContent?.startsWith('기본 말투'))).toHaveAttribute(
-      'aria-pressed',
+    const options = await voiceOptions(user)
+    expect(options).toHaveLength(3)
+    expect(options.find((option) => option.textContent === '기본 말투')).toHaveAttribute(
+      'aria-checked',
       'true',
     )
     // A voice still being made shows its readiness and the way to carry on.
-    await user.click(chips.find((chip) => chip.textContent === '새 말투')!)
+    await user.click(options.find((option) => option.textContent === '새 말투')!)
     const making = await specimen('새 말투')
     expect(making.getByRole('link', { name: '이어서 만들기' })).toHaveAttribute(
       'href',
@@ -278,12 +281,11 @@ describe('the voice directory', () => {
     await user.click((await deletedGroup()).getByRole('button', { name: '복원' }))
 
     await waitFor(() => expect(calls).toContain('RestoreVoice'))
-    await waitFor(async () => expect(await voiceChips()).toHaveLength(4))
-    expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument())
+    expect(await voiceOptions(user)).toHaveLength(4)
+    await user.keyboard('{Escape}')
     // The 기본 stays the one voice it was.
-    expect((await voiceChips()).filter((chip) => chip.textContent?.endsWith('기본'))).toHaveLength(
-      1,
-    )
+    expect((await specimen('기본 말투')).getByText('기본')).toBeInTheDocument()
   })
 
   it('refuses a restore whose name is taken and says how to resolve it', async () => {

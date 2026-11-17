@@ -242,9 +242,7 @@ describe('clip directory', () => {
     failing.unmount()
 
     mount('/clips', { projects: [] })
-    expect(
-      await screen.findByText('아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('아직 만든 영상이 없어요')).toBeInTheDocument()
   })
 
   it('offers separate continuation and retained download actions without a creation dock or preview', async () => {

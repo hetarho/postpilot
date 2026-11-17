@@ -18,7 +18,7 @@ export const i18n = {
   },
   en: {
     create: {
-      open: 'New voice',
+      open: 'New style',
       dockAria: 'Add a voice',
       title: 'New voice',
       name: 'Voice name',

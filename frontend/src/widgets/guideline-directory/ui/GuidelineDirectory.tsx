@@ -158,17 +158,20 @@ export function GuidelineDirectory({
           : pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })
       }
     >
-      {/* Guide: the hub's large title and the 지침 chip say where this is; the page leads with
-          what the list IS — the plain sentences the AI always keeps to. */}
+      {/* Guide: the hub's large title and the 지침 chip say where this is. On the writing kit's
+          page the kit's head says what a rule does to a post; elsewhere the list leads with what
+          it IS — the plain sentences the AI always keeps to. */}
       {!embedded && <h1 className="sr-only">{t(`${page}.title`, { ns: 'guidelines' })}</h1>}
-      <Typography
-        variant={embedded ? 'body' : 'display'}
-        as="p"
-        aria-hidden={embedded ? undefined : true}
-        className="text-balance"
-      >
-        {t(`${page}.always`, { ns: 'guidelines' })}
-      </Typography>
+      {(embedded || kind === 'clip') && (
+        <Typography
+          variant={embedded ? 'body' : 'display'}
+          as="p"
+          aria-hidden={embedded ? undefined : true}
+          className="text-balance"
+        >
+          {t(`${page}.always`, { ns: 'guidelines' })}
+        </Typography>
+      )}
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -329,8 +332,11 @@ export function GuidelineDirectory({
                   <Typography variant="title" as="h2">
                     {t('groups.ownEmpty', { ns: 'guidelines' })}
                   </Typography>
-                  <Typography variant="body" className="text-content-primary mt-2">
-                    {t(`${page}.example`, { ns: 'guidelines' })}
+                  <Typography variant="body" className="text-content-secondary mt-2">
+                    {t('groups.example', {
+                      ns: 'guidelines',
+                      text: t(`${page}.example`, { ns: 'guidelines' }),
+                    })}
                   </Typography>
                 </div>
               )}
@@ -634,7 +640,6 @@ function GuidelineRow({
   rowRef: Ref<HTMLLIElement>
   onDeleted: () => void
 }) {
-  const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
   const [method, setMethod] = useState<'ai' | 'direct'>('ai')
   const [authoringOpen, setAuthoringOpen] = useState(false)
@@ -707,12 +712,12 @@ function GuidelineRow({
           />
         </div>
       </Disclosure>
-      <div className="pb-3 pl-6">
-        <Typography variant="body" className="text-content-secondary">
-          {t('authoringState.savedAvailable')}
-        </Typography>
-        <EditingStatus summary={summary} />
-      </div>
+      {/* A saved rule needs no word that it is saved; only work still open on it is said. */}
+      {summary && (
+        <div className="pb-3 pl-6 empty:hidden">
+          <EditingStatus summary={summary} />
+        </div>
+      )}
     </li>
   )
 }

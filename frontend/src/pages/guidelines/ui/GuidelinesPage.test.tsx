@@ -87,13 +87,14 @@ async function openRow(user: ReturnType<typeof userEvent.setup>, label: string) 
 }
 
 describe('named owned guideline editing', () => {
-  it('lists saved availability and injection order using one batch without fetching individual sessions', async () => {
+  it('lists the rules in injection order using one batch without fetching individual sessions', async () => {
     const calls: string[] = []
     renderGuidelines({}, calls)
     const list = await section('지침 목록')
     openDefaultsGroup()
     expect(list.getAllByRole('listitem')).toHaveLength(3)
-    expect(list.getAllByText('저장되어 사용할 수 있어요')).toHaveLength(3)
+    // A saved rule carries no word that it is saved (T808).
+    expect(list.queryByText('저장되어 사용할 수 있어요')).toBeNull()
     // One batch per kind: this directory's, and the kit chips' template drafts.
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListAuthoringSummaries')).toHaveLength(2),

@@ -45,6 +45,7 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 import { pageStyles } from '@/shared/ui'
+import { videoIllustration } from '@/shared/assets'
 import { i18n } from '../config/i18n'
 
 /** The 영상 list: the way back to unfinished clips (CLIP-3, CLIP-41). The server
@@ -181,13 +182,28 @@ export function ClipHistoryPage() {
 
       {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
       {!projects.isError && !projects.isPending && listed.length === 0 && (
-        <Typography
-          variant="body"
+        <section
           role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
+          aria-labelledby="clips-empty-heading"
+          className="mt-6 flex flex-col items-center gap-2 px-4 text-center sm:flex-row sm:gap-6 sm:px-6 sm:text-left lg:px-8"
         >
-          {historyText('empty')}
-        </Typography>
+          <img
+            src={videoIllustration}
+            alt=""
+            width={440}
+            height={440}
+            className="size-44 shrink-0 object-contain"
+            draggable={false}
+          />
+          <div>
+            <Typography variant="title" id="clips-empty-heading">
+              {historyText('empty')}
+            </Typography>
+            <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+              {historyText('emptyHelp')}
+            </Typography>
+          </div>
+        </section>
       )}
 
       {/* A narrowing that matches nothing is NOT the same screen as an account with no clips: it

@@ -3,3 +3,5 @@
 export { default as kitPageIllustration } from './illustrations/kit-page.png'
 export { default as templateDraftIllustration } from './illustrations/template-draft.png'
 export { default as memoriesIllustration } from './illustrations/memories.png'
+export { default as voiceIllustration } from './illustrations/voice.png'
+export { default as videoIllustration } from './illustrations/video.png'

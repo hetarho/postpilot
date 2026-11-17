@@ -26,7 +26,7 @@ import {
 import { AccountMenu } from '@/widgets/account-menu'
 import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
-import { KitRing, useWritingKit, type KitElement } from '@/widgets/writing-kit'
+import { KitRing, KitSectionHead, useWritingKit, type KitElement } from '@/widgets/writing-kit'
 import { endSession } from '../model/end-session'
 import {
   entryHref,
@@ -394,6 +394,9 @@ export function AuthenticatedLayout() {
               {t(`hub.${section.hub}`)}
             </p>
             <HubChips section={section} ownerId={ownerId} />
+            {section.hub === 'kit' && (
+              <KitSectionHead element={section.key} ownerId={ownerId} className="mt-4 sm:mt-6" />
+            )}
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">

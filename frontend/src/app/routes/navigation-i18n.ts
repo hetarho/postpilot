@@ -58,7 +58,7 @@ export const navigationI18n = {
     },
   },
   en: {
-    tabs: { home: 'Home', posts: 'Posts', videos: 'Videos', ai: 'AI tournament' },
+    tabs: { home: 'Home', posts: 'Posts', videos: 'Videos', ai: 'Arena' },
     tests: 'Try a comparison',
     history: 'Work history',
     overflow: 'Navigation menu',

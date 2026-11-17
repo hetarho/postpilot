@@ -99,6 +99,10 @@ export function AuthoringEditor(props: AuthoringEditorProps) {
     />
   )
 }
+/** The kinds of post the owner said they make (owner 2026-11-17), offered as ways to begin a new
+ *  post template's conversation. */
+const CONVERSATION_STARTERS = ['restaurant', 'assembly', 'food', 'showcase'] as const
+
 function ScopedEditor({
   ownerId,
   kind,
@@ -432,13 +436,42 @@ function ScopedEditor({
       state.session?.phase === 'generating' ||
       state.session?.phase === 'refining'
     const turns = state.session?.turns ?? []
+    const opener = targetId
+      ? t('conversation.openerExisting', { name })
+      : t('conversation.openerNew')
+    // A new post template offers the kinds of post the owner makes as ways to begin.
+    const offerStarters =
+      asking && !targetId && kind === 'post-template' && !flow.context.purpose.trim()
     const messages: ChatMessage[] = [
       {
         id: 'opener',
         sender: 'partner',
-        content: targetId
-          ? t('conversation.openerExisting', { name })
-          : t('conversation.openerNew'),
+        content: offerStarters ? (
+          <>
+            {opener}
+            {/* Ways to begin, as replies the owner can take: each fills the field below. */}
+            <span className="mt-3 flex flex-wrap gap-2 whitespace-normal">
+              {CONVERSATION_STARTERS.map((starter) => (
+                <Button
+                  key={starter}
+                  variant="secondary"
+                  size="compact"
+                  onClick={() =>
+                    send({
+                      type: 'PURPOSE_CHANGED',
+                      scopeKey,
+                      text: t(`conversation.starters.${starter}.text`),
+                    })
+                  }
+                >
+                  {t(`conversation.starters.${starter}.label`)}
+                </Button>
+              ))}
+            </span>
+          </>
+        ) : (
+          opener
+        ),
       },
     ]
     // The description the draft was made from, while this screen still holds it.
@@ -479,8 +512,15 @@ function ScopedEditor({
       !hasFailure &&
       (!targetId || !!state.session?.hasUnpublishedChanges)
     const menu: ActionMenuItem[] = [
-      ...(state.session
-        ? [{ id: 'direct', label: t('conversation.direct'), onSelect: () => event('OPEN_DIRECT') }]
+      // Writing it by hand stays one menu away — from a blank page too, before any draft.
+      ...(state.session || asking
+        ? [
+            {
+              id: 'direct',
+              label: t(state.session ? 'conversation.direct' : 'conversation.directNew'),
+              onSelect: () => event('OPEN_DIRECT'),
+            },
+          ]
         : []),
       ...(turns.length > 0
         ? [{ id: 'fresh', label: t('conversation.fresh'), onSelect: () => event('FRESH') }]
@@ -497,19 +537,14 @@ function ScopedEditor({
         {/* One heading row: what is being made, and its actions — 저장 and the rest behind ⋯. */}
         <div ref={heading} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
           <div className="min-w-0 flex-1">
-            {(draft?.name || targetName) && (
-              <Typography variant="meta" as="p" className="text-content-secondary">
-                {t(`kinds.${kind}`)}
-              </Typography>
-            )}
             <Typography
               variant="title"
               as="h2"
               tabIndex={-1}
               id={id + '-title'}
-              className="truncate"
+              className={draft?.name || targetName ? 'truncate' : 'text-content-secondary truncate'}
             >
-              {draft?.name || targetName || t(`kinds.${kind}`)}
+              {draft?.name || targetName || t('conversation.untitled')}
             </Typography>
           </div>
           {menu.length > 0 && (
@@ -555,20 +590,6 @@ function ScopedEditor({
             )}
           </Notice>
         )}
-        {active &&
-          state.session &&
-          renderInspection?.({
-            ownerId,
-            sessionId: state.session.id,
-            kind,
-            revision: state.session.revision,
-            mode: asking || turns.length === 0 ? 'recommend' : 'refine',
-            prompt: value,
-            model: write.selected ?? undefined,
-            candidateCount,
-            operationId: state.session.activeJobId,
-            sourceDirty: Boolean(state.sourceDirty),
-          })}
         <div className="mt-6 flex flex-1 flex-col gap-6 @3xl:grid @3xl:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] @3xl:grid-rows-[1fr_auto] @3xl:gap-x-10 @3xl:[grid-template-areas:'thread_draft'_'dock_draft']">
           <Chat
             label={t('conversation.log')}
@@ -583,11 +604,22 @@ function ScopedEditor({
           >
             {draft ? (
               <div className={drafting ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
-                {preview}
+                {/* The draft's name heads the screen; beside the talk it is the post it makes. */}
+                {selected?.description && (
+                  <Typography variant="body" className="text-content-secondary mb-4 break-words">
+                    {selected.description}
+                  </Typography>
+                )}
+                {selected &&
+                  (renderPreview ? (
+                    renderPreview(selected, undefined)
+                  ) : (
+                    <AuthoringPreview kind={kind} artifact={selected} />
+                  ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 py-6 text-center">
-                <span className="relative flex size-40 items-center justify-center sm:size-52">
+              <div className="flex flex-col items-center gap-2 py-2 text-center sm:gap-3 sm:py-6">
+                <span className="relative flex size-28 items-center justify-center sm:size-52">
                   <span
                     aria-hidden="true"
                     className={
@@ -679,6 +711,23 @@ function ScopedEditor({
               </>
             )}
           </div>
+        </div>
+        {/* The request's technical view is a reference, not a step: under the conversation. */}
+        <div className="mt-4 empty:hidden">
+          {active &&
+            state.session &&
+            renderInspection?.({
+              ownerId,
+              sessionId: state.session.id,
+              kind,
+              revision: state.session.revision,
+              mode: asking || turns.length === 0 ? 'recommend' : 'refine',
+              prompt: value,
+              model: write.selected ?? undefined,
+              candidateCount,
+              operationId: state.session.activeJobId,
+              sourceDirty: Boolean(state.sourceDirty),
+            })}
         </div>
         {dialogs}
       </section>

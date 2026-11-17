@@ -14,6 +14,7 @@ export const i18n = {
     groups: {
       defaults: '기본으로 지키는 것',
       ownEmpty: '내가 쓴 지침은 아직 없어요',
+      example: '예: {{text}}',
       post: { global: '모든 글에서', templates: '템플릿을 쓸 때', fields: '분야별로' },
       clip: { global: '모든 영상에서', templates: '영상 템플릿을 쓸 때', fields: '분야별로' },
     },
@@ -33,7 +34,6 @@ export const i18n = {
       unsaved: '저장하기 전에는 글이나 영상에 적용되지 않아요.',
       createDirect: '새 지침 직접 쓰기',
       createVideoDirect: '새 영상 지침 직접 쓰기',
-      savedAvailable: '저장되어 사용할 수 있어요',
       lastPublication: '마지막으로 확인한 저장: {{result}}',
     },
     page: {
@@ -73,6 +73,7 @@ export const i18n = {
     groups: {
       defaults: 'Kept by default',
       ownEmpty: 'You have not written a rule yet',
+      example: 'For example: {{text}}',
       post: { global: 'In every post', templates: 'With a template', fields: 'By field' },
       clip: {
         global: 'In every video',
@@ -96,7 +97,6 @@ export const i18n = {
       unsaved: 'These do not apply to posts or videos until saved.',
       createDirect: 'Write a new guideline directly',
       createVideoDirect: 'Write a new video guideline directly',
-      savedAvailable: 'Saved and available',
       lastPublication: 'Last confirmed save: {{result}}',
     },
     page: {

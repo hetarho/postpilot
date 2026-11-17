@@ -30,7 +30,7 @@ export const i18n = {
         },
         'post-template': {
           title: '자주 쓰는 글 구성',
-          description: '마음에 드는 시작, 사진 배치, 마무리를 골라요.',
+          description: '어떤 글을 올리는지 말하면 AI가 구성을 짜 줘요.',
         },
         'clip-template': {
           title: '영상이 이어지는 흐름',
@@ -76,7 +76,7 @@ export const i18n = {
       'post-template': {
         title: '자주 쓰는 글의 구성을 정해요.',
         description:
-          '도입, 사진, 본문처럼 글에 반복해서 쓰는 순서를 만들어 보세요. 자세한 조정은 나중에 해도 괜찮아요.',
+          '어떤 글을 올리는지 AI에게 말해 주세요. 초안을 짜고, 대화하며 다듬어요. 자세한 조정은 나중에 해도 괜찮아요.',
       },
       'clip-template': {
         title: '영상에도 나만의 흐름을 담아요.',
@@ -122,7 +122,7 @@ export const i18n = {
         },
         'post-template': {
           title: 'Your familiar post structure',
-          description: 'Choose an opening, photo arrangement, and ending you like.',
+          description: 'Tell the AI what you post and it drafts the structure.',
         },
         'clip-template': {
           title: 'The flow of your videos',
@@ -168,7 +168,7 @@ export const i18n = {
       'post-template': {
         title: 'Give your posts a familiar shape.',
         description:
-          'Build the opening, photos and sections you often use. Fine-tune the details later.',
+          'Tell the AI what you post. It drafts a structure and you refine it by talking. Fine-tune the details later.',
       },
       'clip-template': {
         title: 'Give your videos a personal flow.',

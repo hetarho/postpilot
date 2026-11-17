@@ -1,11 +1,11 @@
 export const editorNavigationCopy = {
   ko: {
-    home: '네이버 블로그로 돌아가기',
+    home: '내 글로 돌아가기',
     /** Work opened from 내 글 전체 goes back there (THEME-69). */
     mine: '내 콘텐츠로 돌아가기',
     location: '글쓰기',
   },
-  en: { home: 'Back to Naver Blog', mine: 'Back to My work', location: 'Writing' },
+  en: { home: 'Back to my posts', mine: 'Back to My work', location: 'Writing' },
 }
 
 export const clipFromPostCopy = {

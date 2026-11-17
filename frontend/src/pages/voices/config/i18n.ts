@@ -19,6 +19,7 @@ export const i18n = {
     specimen: {
       eyebrow: '이 말투로 쓰면',
       empty: '아직 말투가 없어요',
+      emptyHelp: '내가 쓴 글 몇 편이면, AI가 그 문장 버릇을 배워 같은 말투로 써요.',
       unmade: '분석하면 이 말투로 쓴 문장이 여기에 보여요.',
       phrases: '자주 쓰는 말',
       open: '자세히 보기',
@@ -46,6 +47,7 @@ export const i18n = {
     specimen: {
       eyebrow: 'Written in this style',
       empty: 'No styles yet',
+      emptyHelp: 'Give it a few posts you wrote, and the AI learns how your sentences go.',
       unmade: 'Once analyzed, sentences in this style show here.',
       phrases: 'Phrases it keeps using',
       open: 'Open',

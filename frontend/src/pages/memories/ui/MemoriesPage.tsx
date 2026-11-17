@@ -76,12 +76,9 @@ export function MemoriesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      {/* Guide: the hub's title and the 기억 chip say where this is; the page leads with what the
-          list IS — what the AI remembers — and the facts themselves. */}
+      {/* Guide: the hub's title, the 기억 chip and the kit's head (what the AI knows about the owner)
+          say where this is; the page is the facts themselves. */}
       <h1 className="sr-only">{t('title', { ns: 'memories' })}</h1>
-      <Typography variant="display" as="p" aria-hidden="true">
-        {t('page.lead', { ns: 'memories' })}
-      </Typography>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -110,16 +107,11 @@ export function MemoriesPage() {
             <EmptyState />
           ) : (
             <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-4">
-              <Typography variant="meta" as="p">
-                {t('page.count', { ns: 'memories', count: memories.length })}
-                {' · '}
-                {t('page.order', { ns: 'memories' })}
-              </Typography>
               {tags.length > 0 && (
                 // Finding a fact: the owner's own tags narrow the notebook to one subject.
                 <nav
                   aria-label={t('page.tags', { ns: 'memories' })}
-                  className="-mx-4 mt-3 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0"
+                  className="-mx-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0"
                 >
                   {[undefined, ...tags].map((value) => (
                     <ChipToggle

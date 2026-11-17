@@ -46,12 +46,9 @@ export function TemplatesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      {/* Guide: the hub's title and the 템플릿 chip say where this is; the page leads with what a
-          template does. */}
+      {/* Guide: the hub's title, the 템플릿 chip and the kit's head (what a template does to a post)
+          say where this is; the page is the templates themselves. */}
       <h1 className="sr-only">{t('title', { ns: 'templates' })}</h1>
-      <Typography variant="display" as="p" aria-hidden="true">
-        {t('page.lead', { ns: 'templates' })}
-      </Typography>
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -239,6 +236,7 @@ function TemplateRow({
         </span>
         <span className="relative z-10 -mt-1 -mr-2 shrink-0">
           <DeleteTemplateButton
+            quiet
             ownerId={ownerId}
             template={template}
             buttonRef={deleteButtonRef}

@@ -157,7 +157,7 @@ function TemplateAuthoringPage({
     )
   return (
     <PageFrame
-      width="board"
+      width="wide"
       className="flex flex-1 flex-col py-4 sm:py-8"
       title={
         <Typography variant="label" as="h1" className="text-content-secondary truncate">

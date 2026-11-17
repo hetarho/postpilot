@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { clsx } from 'clsx'
-import { Plus, Quote } from 'lucide-react'
+import { ChevronRight, ChevronsUpDown, Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import {
   useVoices,
@@ -22,7 +21,7 @@ import {
   ActionMenu,
   Badge,
   Button,
-  ChipToggle,
+  Menu,
   Notice,
   LoadingState,
   LoadingStatus,
@@ -32,6 +31,7 @@ import {
   typographyStyles,
   pageStyles,
 } from '@/shared/ui'
+import { voiceIllustration } from '@/shared/assets'
 
 /** Guide: 말투 — what a voice IS: how the owner's sentences sound. The screen holds one voice at a
  *  time as a specimen — its own sentence in quotes, the impression it leaves, the phrases it keeps
@@ -110,66 +110,53 @@ export function VoicesPage() {
       )}
 
       {!isError && !isPending && active.length === 0 && (
-        <section aria-labelledby="voices-empty" className="mt-6 flex flex-col items-start gap-3">
-          <span
-            aria-hidden="true"
-            className="bg-kit-voice/15 text-kit-voice flex size-16 items-center justify-center rounded-2xl"
-          >
-            <Quote className="size-8" />
-          </span>
-          <Typography variant="title" id="voices-empty">
-            {t('specimen.empty', { ns: 'voices' })}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary max-w-measure">
-            {t('kit.does.voices', { ns: 'creation' })}
-          </Typography>
+        <section
+          aria-labelledby="voices-empty"
+          className="mt-6 flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-6 sm:text-left"
+        >
+          <img
+            src={voiceIllustration}
+            alt=""
+            width={440}
+            height={440}
+            className="size-44 shrink-0 object-contain"
+            draggable={false}
+          />
+          <div>
+            <Typography variant="title" id="voices-empty">
+              {t('specimen.empty', { ns: 'voices' })}
+            </Typography>
+            <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+              {t('specimen.emptyHelp', { ns: 'voices' })}
+            </Typography>
+          </div>
         </section>
       )}
 
       {!isError && !isPending && shown && (
-        <>
-          {active.length > 1 && (
-            // Finding a voice: every one of the owner's voices by name, the one shown marked.
-            <nav
-              aria-label={t('specimen.pick', { ns: 'voices' })}
-              className="-mx-4 mt-2 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:flex-wrap sm:px-0"
-            >
-              {active.map((voice) => (
-                <ChipToggle
-                  key={voice.id}
-                  pressed={voice.id === shown.id}
-                  onClick={() => setChosenId(voice.id)}
-                  className="min-h-10 gap-2 rounded-full px-4"
-                >
-                  <span
-                    aria-hidden="true"
-                    className={clsx(
-                      'size-2 rounded-full',
-                      voice.made ? 'bg-kit-voice' : 'border-content-tertiary border',
-                    )}
-                  />
-                  {voice.name}
-                  {voice.isDefault && (
-                    <span className="sr-only">{t('state.default', { ns: 'common' })}</span>
-                  )}
-                </ChipToggle>
-              ))}
-            </nav>
-          )}
-          <VoiceSpecimen key={shown.id} ownerId={ownerId} voice={shown} />
-        </>
+        <VoiceSpecimen
+          key={shown.id}
+          ownerId={ownerId}
+          voice={shown}
+          voices={active}
+          onPick={setChosenId}
+        />
       )}
 
       {!isError && !isPending && deleted.length > 0 && (
         // Closed by default: a tombstone is history. It exists at all so a restore stays reachable.
-        <details className="mt-8">
+        <details className="group mt-8">
           <summary
             className={typographyStyles({
               variant: 'label',
               className:
-                'active:bg-row-bg-active text-content-secondary -mx-4 min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
+                'hover:bg-row-bg-hover active:bg-row-bg-active text-content-secondary -mx-3 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1.5 rounded-full px-3 py-2 select-none [&::-webkit-details-marker]:hidden',
             })}
           >
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4 shrink-0 transition-transform group-open:rotate-90"
+            />
             {t('page.deleted', { ns: 'voices', count: deleted.length })}
           </summary>
           <ul className="divide-divider mt-3 divide-y">
@@ -180,14 +167,18 @@ export function VoicesPage() {
         </details>
       )}
       {!isError && !isPending && (
-        <details className="mt-2">
+        <details className="group mt-2">
           <summary
             className={typographyStyles({
               variant: 'label',
               className:
-                'active:bg-row-bg-active text-content-secondary -mx-4 min-h-11 cursor-pointer rounded-md px-4 py-3 select-none',
+                'hover:bg-row-bg-hover active:bg-row-bg-active text-content-secondary -mx-3 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1.5 rounded-full px-3 py-2 select-none [&::-webkit-details-marker]:hidden',
             })}
           >
+            <ChevronRight
+              aria-hidden="true"
+              className="size-4 shrink-0 transition-transform group-open:rotate-90"
+            />
             {t('host.legacyVoice', { ns: 'authoring' })}
           </summary>
           <div className="mt-3">
@@ -232,25 +223,35 @@ export function VoicesPage() {
   )
 }
 
-/** One voice, held up to be read: what it sounds like before anything about it. A voice made from
- *  an AI suggestion is read from a fictional sample, and the specimen says so over it (VOICE-69). */
-function VoiceSpecimen({ ownerId, voice }: { ownerId: string; voice: Voice }) {
+/** One voice, held up to be read: what it sounds like before anything about it. Its name is also
+ *  the way to the owner's other voices — a choice that opens from the name it changes. A voice
+ *  made from an AI suggestion is read from a fictional sample, and the specimen says so over it
+ *  (VOICE-69). */
+function VoiceSpecimen({
+  ownerId,
+  voice,
+  voices,
+  onPick,
+}: {
+  ownerId: string
+  voice: Voice
+  voices: readonly Voice[]
+  onPick: (id: string) => void
+}) {
   const { t } = useTranslation(['voices', 'common', 'authoring'])
   const { profile, isPending } = useVoiceProfile(ownerId, voice.id)
   const analysis = profile?.analysis
   const ai = analysis?.ai
   const sample = analysis?.syntheticSample || ai?.examples[0]?.sentence
   const fictional = Boolean(analysis?.syntheticSample) || analysis?.origin === 'synthetic'
+  const nameId = `voice-specimen-${voice.id}`
   return (
     <section
-      aria-labelledby="voice-specimen-name"
-      className="bg-card-bg animate-step-in relative mt-4 overflow-hidden rounded-3xl p-6 shadow-md sm:p-10"
+      aria-labelledby={nameId}
+      className="bg-card-bg animate-step-in relative mt-4 max-w-3xl overflow-hidden rounded-3xl p-6 shadow-md sm:p-10"
     >
-      {/* The voice's hue, as a soft wash behind the quote. */}
-      <div
-        aria-hidden="true"
-        className="bg-kit-voice/20 pointer-events-none absolute -top-24 -right-16 size-72 rounded-full blur-3xl"
-      />
+      {/* What a voice IS, drawn: the quotation mark its sentences are held in. */}
+      <QuoteMark className="pointer-events-none absolute top-10 right-10 hidden h-20 opacity-20 sm:block" />
       <div className="relative flex flex-wrap items-center gap-x-3 gap-y-2">
         <Typography variant="eyebrow" as="p" className="text-kit-voice">
           {t('specimen.eyebrow', { ns: 'voices' })}
@@ -261,14 +262,21 @@ function VoiceSpecimen({ ownerId, voice }: { ownerId: string; voice: Voice }) {
           {voice.made && <VoiceMaterialFreshnessFor ownerId={ownerId} voiceId={voice.id} />}
         </span>
       </div>
-      <Typography
-        variant="title"
-        as="h2"
-        id="voice-specimen-name"
-        className="relative mt-1 break-words"
-      >
-        {voice.name}
-      </Typography>
+      <div className="relative mt-1 flex min-w-0 items-center gap-2">
+        <Typography variant="title" as="h2" id={nameId} className="min-w-0 break-words">
+          {voice.name}
+        </Typography>
+        {voices.length > 1 && (
+          <Menu
+            label={t('specimen.pick', { ns: 'voices' })}
+            triggerIcon={<ChevronsUpDown aria-hidden="true" className="size-4" />}
+            value={voice.id}
+            options={voices.map((item) => ({ value: item.id, label: item.name }))}
+            onChange={onPick}
+            triggerClassName="shrink-0"
+          />
+        )}
+      </div>
 
       {voice.made ? (
         <div className="relative mt-6 space-y-5">
@@ -330,7 +338,16 @@ function VoiceSpecimen({ ownerId, voice }: { ownerId: string; voice: Voice }) {
           </Typography>
         </div>
       ) : (
-        <div className="relative mt-6 space-y-4">
+        <div className="relative mt-6 space-y-5">
+          {/* The sentence this voice will write, still blank: where the specimen will be. */}
+          <figure aria-hidden="true" className="flex items-start gap-2">
+            <QuoteMark className="mt-0.5 h-4 shrink-0 opacity-60" />
+            <span className="flex flex-1 flex-col gap-2.5 pt-1.5">
+              <span className="bg-kit-voice/15 h-3 w-full rounded-full" />
+              <span className="bg-kit-voice/15 h-3 w-4/5 rounded-full" />
+              <span className="bg-kit-voice/10 h-3 w-1/2 rounded-full" />
+            </span>
+          </figure>
           <Typography variant="body" className="text-content-secondary max-w-measure">
             {t('specimen.unmade', { ns: 'voices' })}
           </Typography>
@@ -355,6 +372,15 @@ function VoiceSpecimen({ ownerId, voice }: { ownerId: string; voice: Voice }) {
         <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
       </div>
     </section>
+  )
+}
+
+/** The opening quotation mark a voice's sentence is held in. */
+function QuoteMark({ className }: { className?: string }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 64 48" className={'fill-kit-voice w-auto ' + className}>
+      <path d="M0 48V29C0 13 8 3.5 24 0l3 6.5C18 9.5 13.5 15 13 22h11v26H0Zm37 0V29C37 13 45 3.5 61 0l3 6.5C55 9.5 50.5 15 50 22h11v26H37Z" />
+    </svg>
   )
 }
 

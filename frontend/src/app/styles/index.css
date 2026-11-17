@@ -751,6 +751,8 @@
   /* A kit mark ARRIVING: it draws itself along its arc once, on mount (`pathLength="1"` with a
      `1 1` dash). It ends drawn, so reduced motion shows the finished ring. */
   --animate-kit-draw: kit-draw 900ms var(--ease-emphasized) both;
+  /* A kit bead ARRIVING: it swells into place once, after its quarter has drawn. */
+  --animate-kit-bead: kit-bead 420ms var(--ease-emphasized) both;
   /* Guide: a step screen ARRIVING. One gentle, one-time slide-and-fade on mount — forward steps
      come in from the right, a step back from the left — on transform and opacity alone. */
   --animate-step-in: step-in var(--duration-slow) var(--ease-emphasized) both;
@@ -840,6 +842,12 @@
     }
     to {
       stroke-dashoffset: 0;
+    }
+  }
+  @keyframes kit-bead {
+    from {
+      opacity: 0;
+      transform: scale(0.2);
     }
   }
   @keyframes kit-halo {

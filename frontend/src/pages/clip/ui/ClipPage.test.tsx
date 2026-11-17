@@ -134,9 +134,7 @@ describe('clip directory and setup', () => {
   })
   it('handles empty and failed directories', async () => {
     const empty = mount('/clips', { projects: [] })
-    expect(
-      await screen.findByText('아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('아직 만든 영상이 없어요')).toBeInTheDocument()
     empty.unmount()
     mount('/clips', { projectListFails: true })
     expect(await screen.findByRole('alert')).toBeInTheDocument()

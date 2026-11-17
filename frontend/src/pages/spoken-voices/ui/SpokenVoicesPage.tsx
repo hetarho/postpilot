@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { AudioLines, Plus } from 'lucide-react'
+import { AudioLines, Play, Plus } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
@@ -51,16 +51,42 @@ export function SpokenVoicesPage() {
         <LoadingState variant="cards" label={t('loading')} className="mt-4" />
       )}
       {!library.voicesQuery.isPending && !library.voices.length && (
-        <section className="mt-4 flex flex-col items-start gap-3">
-          <span
+        // Empty, the screen still shows what a voice here is: a card to listen to, not yet filled.
+        <section
+          aria-labelledby="spoken-voices-empty"
+          className="mt-4 grid items-center gap-5 sm:grid-cols-2 lg:grid-cols-3"
+        >
+          <div
             aria-hidden="true"
-            className="bg-badge-accent-bg text-badge-accent-fg flex size-16 items-center justify-center rounded-2xl"
+            className="border-divider flex min-w-0 flex-col gap-4 rounded-3xl border-2 border-dashed p-5"
           >
-            <AudioLines className="size-8" />
-          </span>
-          <Typography variant="title" as="h2">
-            {t('empty')}
-          </Typography>
+            <span className="flex flex-col gap-2">
+              <span className="bg-surface-recessed h-4 w-2/5 rounded-full" />
+              <span className="bg-surface-recessed h-3 w-3/5 rounded-full" />
+            </span>
+            <span className="bg-surface-recessed flex min-w-0 items-center gap-4 rounded-2xl px-4 py-3">
+              <span className="bg-link-fg-current/15 text-link-fg-current flex size-11 shrink-0 items-center justify-center rounded-full">
+                <Play className="size-5 translate-x-px" />
+              </span>
+              <span className="flex h-9 min-w-0 flex-1 items-center gap-1 overflow-hidden">
+                {WAVE.map((height, index) => (
+                  <span
+                    key={index}
+                    className="bg-link-fg-current/20 w-1 shrink-0 rounded-full"
+                    style={{ height }}
+                  />
+                ))}
+              </span>
+            </span>
+          </div>
+          <div className="lg:col-span-2">
+            <Typography variant="title" as="h2" id="spoken-voices-empty">
+              {t('empty')}
+            </Typography>
+            <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+              {t('emptyHelp')}
+            </Typography>
+          </div>
         </section>
       )}
       {library.voices.length > 0 && (

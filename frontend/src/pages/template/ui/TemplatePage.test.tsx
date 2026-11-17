@@ -69,6 +69,21 @@ describe('templates made by talking', () => {
     expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
     expect(calls.filter((call) => /Start|EstimateAuthoring|SaveAuthoring/.test(call))).toEqual([])
   })
+  it('offers the kinds of post the owner makes as ways to begin, each filling the field and sending nothing', async () => {
+    const user = userEvent.setup()
+    const calls: string[] = []
+    mount('/templates/new', { templates: [] }, {}, calls)
+    const log = await screen.findByRole('log', { name: '템플릿 대화' })
+    for (const name of ['맛집 후기', '조립하는 상품', '음식 상품', '보여 주는 상품'])
+      expect(within(log).getByRole('button', { name })).toBeInTheDocument()
+    await user.click(within(log).getByRole('button', { name: '조립하는 상품' }))
+    expect(screen.getByRole('textbox', { name: '무엇을 올리는지' })).toHaveValue(
+      '조립이 필요한 상품 리뷰예요. 구성품, 조립 과정, 완성 모습과 써 본 느낌을 순서대로 보여 줘요.',
+    )
+    // Once the owner has words in the field, the ways to begin step aside.
+    expect(within(log).queryByRole('button', { name: '맛집 후기' })).not.toBeInTheDocument()
+    expect(calls.filter((call) => /Start|EstimateAuthoring|SaveAuthoring/.test(call))).toEqual([])
+  })
   it('asks for one draft only after the owner describes what they post, and quotes it first', async () => {
     const user = userEvent.setup()
     const calls: string[] = []

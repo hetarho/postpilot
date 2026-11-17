@@ -5,7 +5,8 @@ export const i18n = {
   ko: {
     history: {
       videos: '영상',
-      empty: '아직 클립이 없어요. 아래 + 새 클립에서 만들 수 있어요.',
+      empty: '아직 만든 영상이 없어요',
+      emptyHelp: '찍어 둔 사진과 영상으로 AI가 짧은 영상을 엮어 줘요.',
       continue: '이어서 편집',
       open: '작업 확인',
       download: '영상 다운로드',
@@ -15,7 +16,8 @@ export const i18n = {
   en: {
     history: {
       videos: 'Videos',
-      empty: 'There are no clips yet. Create one from + New clip below.',
+      empty: 'No videos yet',
+      emptyHelp: 'The AI cuts the photos and footage you took into a short video.',
       continue: 'Continue editing',
       open: 'View work',
       download: 'Download video',

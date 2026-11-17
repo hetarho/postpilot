@@ -1,5 +1,6 @@
 import { type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Trash2 } from 'lucide-react'
 import { detachWarning, useDeleteTemplate, type Template } from '@/entities/template'
 import { Button, ConfirmedAction, FieldMessage } from '@/shared/ui'
 
@@ -10,12 +11,16 @@ export function DeleteTemplateButton({
   template,
   buttonRef,
   onDeleted,
+  quiet = false,
 }: {
   ownerId: string
   template: Pick<Template, 'id' | 'name' | 'postCount'>
   buttonRef?: Ref<HTMLButtonElement>
   /** Success only. The invalidated directory may not have removed this row yet. */
   onDeleted?: () => void
+  /** A bin glyph on no plane, for a card whose own content is what the eye should land on; the
+   *  same confirmation and the same accessible name. */
+  quiet?: boolean
 }) {
   const { t } = useTranslation(['templates', 'common'])
   const remove = useDeleteTemplate(ownerId)
@@ -25,12 +30,17 @@ export function DeleteTemplateButton({
       trigger={(open) => (
         <Button
           ref={buttonRef}
-          variant="danger"
+          variant={quiet ? 'ghost' : 'danger'}
+          size={quiet ? 'icon' : undefined}
           disabled={remove.isPending}
           onClick={open}
           aria-label={t('delete.aria', { ns: 'templates', name: template.name })}
         >
-          {t('action.delete', { ns: 'common' })}
+          {quiet ? (
+            <Trash2 aria-hidden="true" className="size-4" />
+          ) : (
+            t('action.delete', { ns: 'common' })
+          )}
         </Button>
       )}
       failed={remove.isError}

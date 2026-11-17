@@ -87,9 +87,8 @@ export function readPostReturnContext(
 }
 
 export function postReturnDestination(ownerId: string, slug?: string, storage = browserStorage()) {
+  // An entry from the retired 내 콘텐츠 hub returns to 글, the list that holds every post now.
   const entry = readPostReturnContext(ownerId, slug, storage)
-  if (entry && isMyWorkEntry(entry))
-    return { path: '/my' as const, href: '/my', section: entry.section, scrollY: entry.scrollY }
   const path = POST_LIST_PATH
   const search = Object.fromEntries(
     Object.entries(entry?.filters ?? {}).filter(([key]) => key === 'q' || key === 'status'),
@@ -106,7 +105,7 @@ export function postReturnDestination(ownerId: string, slug?: string, storage = 
 export function retainMintedPostEntry(ownerId: string, slug: string) {
   const entry = readPostReturnContext(ownerId)
   return rememberPostEntry(ownerId, {
-    path: entry && isMyWorkEntry(entry) ? '/my' : POST_LIST_PATH,
+    path: POST_LIST_PATH,
     section: entry?.section ?? 'post',
     filters: entry?.filters ?? {},
     scrollY: entry?.scrollY ?? 0,

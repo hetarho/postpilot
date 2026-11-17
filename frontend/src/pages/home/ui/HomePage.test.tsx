@@ -50,3 +50,15 @@ it('names what the kit holds in the owner’s own words once it is filled in', a
     '/guidelines?new=1',
   )
 })
+
+it('carries on a voice still being made rather than starting another', async () => {
+  renderAppAt('/', {
+    user: { id: 'alice' },
+    voice: { voices: [{ id: 'voice-new', name: '만드는 말투', made: false }] },
+  })
+  expect(await screen.findByRole('link', { name: '말투 마저 만들기' })).toHaveAttribute(
+    'href',
+    '/voices/voice-new',
+  )
+  expect(screen.queryByRole('link', { name: '말투 만들기' })).toBeNull()
+})

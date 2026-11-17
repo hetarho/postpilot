@@ -25,194 +25,154 @@
 // Usage: node scripts/lint-style-escapes.mjs           (wired as `pnpm lint:style`)
 //        node scripts/lint-style-escapes.mjs --probe   (scanner self-test)
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
-import { createRequire } from "node:module";
-const ts = createRequire(new URL("../frontend/package.json", import.meta.url))(
-  "typescript",
-);
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join, relative, sep } from 'node:path'
+import { createRequire } from 'node:module'
+const ts = createRequire(new URL('../frontend/package.json', import.meta.url))('typescript')
 
-const ROOT = join(import.meta.dirname, "..", "frontend", "src");
-const TOKEN_FILE = join(ROOT, "app", "styles", "index.css");
-const EXT = new Set([".ts", ".tsx", ".css"]);
+const ROOT = join(import.meta.dirname, '..', 'frontend', 'src')
+const TOKEN_FILE = join(ROOT, 'app', 'styles', 'index.css')
+const EXT = new Set(['.ts', '.tsx', '.css'])
 
 const STOCK_HUES =
-  "slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black";
+  'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black'
 const STOCK_UTILITY = new RegExp(
   `(?<![\\w-])(?:[\\w-]+:)*(?:bg|text|border|ring|outline|shadow|from|via|to|fill|stroke|accent|caret|decoration|divide|placeholder)-(?:${STOCK_HUES})(?:-\\d{2,3})?(?:/\\d{1,3})?(?![\\w-])`,
-  "g",
-);
+  'g',
+)
 const RETIRED_ROLES = [
-  "surface-hover",
-  "surface-sunken",
-  "intent-accent",
-  "surface",
-  "text-muted",
-  "text-subtle",
-  "text-faint",
-  "text",
-  "border-strong",
-  "border",
-  "primary-hover",
-  "primary-foreground",
-  "primary-surface",
-  "primary",
-  "danger-foreground",
-  "danger-surface",
-  "danger",
-  "success-foreground",
-  "success-surface",
-  "success",
-  "warning-foreground",
-  "warning-surface",
-  "warning",
-  "info-foreground",
-  "info-surface",
-  "info",
-  "overlay",
-  "depth",
-  "bg",
-].join("|");
+  'surface-hover',
+  'surface-sunken',
+  'intent-accent',
+  'surface',
+  'text-muted',
+  'text-subtle',
+  'text-faint',
+  'text',
+  'border-strong',
+  'border',
+  'primary-hover',
+  'primary-foreground',
+  'primary-surface',
+  'primary',
+  'danger-foreground',
+  'danger-surface',
+  'danger',
+  'success-foreground',
+  'success-surface',
+  'success',
+  'warning-foreground',
+  'warning-surface',
+  'warning',
+  'info-foreground',
+  'info-surface',
+  'info',
+  'overlay',
+  'depth',
+  'bg',
+].join('|')
 const RETIRED_UTILITY = new RegExp(
   `(?<![\\w-])(?:[\\w-]+:)*(?:bg|text|border|ring|outline|shadow|from|via|to|fill|stroke|accent|caret|decoration|divide|placeholder)-(?:${RETIRED_ROLES})(?:/\\d{1,3})?(?![\\w-])`,
-  "g",
-);
-const RAW_COLOUR =
-  /(?<![\w-])(?:#[0-9a-fA-F]{3,8}\b|(?:rgba?|hsla?|oklch|oklab|color)\()/g;
+  'g',
+)
+const RAW_COLOUR = /(?<![\w-])(?:#[0-9a-fA-F]{3,8}\b|(?:rgba?|hsla?|oklch|oklab|color)\()/g
 const ARBITRARY_COLOUR_UTILITY =
-  /(?:bg|text|border|ring|outline|shadow|fill|stroke)-\[(?:#|rgba?\(|hsla?\(|oklch\(|oklab\()/g;
+  /(?:bg|text|border|ring|outline|shadow|fill|stroke)-\[(?:#|rgba?\(|hsla?\(|oklch\(|oklab\()/g
 // Sizes, weights/families, tracking, leading — the THEME-19 recipe vocabulary. The open named forms
 // catch Tailwind theme extensions (`text-display`, `font-brand`, `tracking-display`, …); the
 // negative lookahead keeps alignment/wrap and the project's semantic colour roles out. Arbitrary
 // text sizes recognise numeric lengths, CSS size keywords and math spellings while colour
 // arbitraries stay finding #3 because they begin with a colour literal/function instead.
 const TYPE_UTILITY = new RegExp(
-  "(?<![\\w-])(?:[\\w-]+:)*(?:" +
-    "text-(?:xs|sm|base|lg|[2-9]?xl)" +
-    "|text-(?!(?:(?:left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|transparent|current|inherit)(?![\\w-])|(?:badge|button|content|field|link|media|notice|origin|voice-habit|kit)-))[a-z][\\w-]*" +
-    "|text-\\[(?:\\d|\\.|length:|xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|larger|smaller|math|clamp\\(|calc\\(|min\\(|max\\(|round\\(|mod\\(|rem\\(|sin\\(|cos\\(|tan\\(|asin\\(|acos\\(|atan\\(|atan2\\(|pow\\(|sqrt\\(|hypot\\(|log\\(|exp\\(|abs\\(|sign\\()[^\\]]*\\]" +
-    "|text-\\(length:[^)]*\\)" +
-    "|font-(?:[a-z][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))" +
-    "|-?tracking-(?:[a-z0-9][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))" +
-    "|leading-(?:[a-z0-9][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))" +
-    ")(?![\\w-])",
-  "g",
-);
+  '(?<![\\w-])(?:[\\w-]+:)*(?:' +
+    'text-(?:xs|sm|base|lg|[2-9]?xl)' +
+    '|text-(?!(?:(?:left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|transparent|current|inherit)(?![\\w-])|(?:badge|button|content|field|link|media|notice|origin|voice-habit|kit)-))[a-z][\\w-]*' +
+    '|text-\\[(?:\\d|\\.|length:|xx-small|x-small|small|medium|large|x-large|xx-large|xxx-large|larger|smaller|math|clamp\\(|calc\\(|min\\(|max\\(|round\\(|mod\\(|rem\\(|sin\\(|cos\\(|tan\\(|asin\\(|acos\\(|atan\\(|atan2\\(|pow\\(|sqrt\\(|hypot\\(|log\\(|exp\\(|abs\\(|sign\\()[^\\]]*\\]' +
+    '|text-\\(length:[^)]*\\)' +
+    '|font-(?:[a-z][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))' +
+    '|-?tracking-(?:[a-z0-9][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))' +
+    '|leading-(?:[a-z0-9][\\w-]*|\\[[^\\]]*\\]|\\([^)]*\\))' +
+    ')(?![\\w-])',
+  'g',
+)
 
 // The opening tag only — `</select>` and the word in prose are not mounts. A `<selection…>`
 // component name must not match, hence the boundary.
-const NATIVE_SELECT = /<select(?![\w-])/g;
+const NATIVE_SELECT = /<select(?![\w-])/g
 
 function walk(dir, out = []) {
   for (const name of readdirSync(dir)) {
-    const p = join(dir, name);
-    if (name === "gen" || name === "node_modules") continue;
-    if (statSync(p).isDirectory()) walk(p, out);
-    else if (EXT.has(p.slice(p.lastIndexOf(".")))) out.push(p);
+    const p = join(dir, name)
+    if (name === 'gen' || name === 'node_modules') continue
+    if (statSync(p).isDirectory()) walk(p, out)
+    else if (EXT.has(p.slice(p.lastIndexOf('.')))) out.push(p)
   }
-  return out;
+  return out
 }
 
-function scanLine(
-  line,
-  { isTokenFile = false, isTypeGated = false, isSelectGated = false } = {},
-) {
-  const findings = [];
-  const trimmed = line.trim();
-  if (/\/\/\s*style-escape:\s*\S/.test(line)) return findings;
+function scanLine(line, { isTokenFile = false, isTypeGated = false, isSelectGated = false } = {}) {
+  const findings = []
+  const trimmed = line.trim()
+  if (/\/\/\s*style-escape:\s*\S/.test(line)) return findings
   // The token file may name colours; everywhere else, comments are not exempt (they get copied).
   if (
     isTokenFile &&
-    (trimmed.startsWith("/*") ||
-      trimmed.startsWith("*") ||
-      trimmed.startsWith("--"))
+    (trimmed.startsWith('/*') || trimmed.startsWith('*') || trimmed.startsWith('--'))
   ) {
-    return findings;
+    return findings
   }
-  const report = (kind, match) => findings.push({ kind, match });
-  for (const match of line.matchAll(STOCK_UTILITY))
-    report("stock colour utility", match[0]);
-  for (const match of line.matchAll(RETIRED_UTILITY))
-    report("retired token utility", match[0]);
+  const report = (kind, match) => findings.push({ kind, match })
+  for (const match of line.matchAll(STOCK_UTILITY)) report('stock colour utility', match[0])
+  for (const match of line.matchAll(RETIRED_UTILITY)) report('retired token utility', match[0])
   if (!isTokenFile) {
-    for (const match of line.matchAll(RAW_COLOUR))
-      report("raw colour literal", match[0]);
+    for (const match of line.matchAll(RAW_COLOUR)) report('raw colour literal', match[0])
     for (const match of line.matchAll(ARBITRARY_COLOUR_UTILITY)) {
-      report("arbitrary colour utility", match[0]);
+      report('arbitrary colour utility', match[0])
     }
   }
   if (isTypeGated) {
-    for (const match of line.matchAll(TYPE_UTILITY))
-      report("ad-hoc type utility", match[0]);
+    for (const match of line.matchAll(TYPE_UTILITY)) report('ad-hoc type utility', match[0])
   }
   if (isSelectGated) {
-    for (const match of line.matchAll(NATIVE_SELECT))
-      report("native select element", match[0]);
+    for (const match of line.matchAll(NATIVE_SELECT)) report('native select element', match[0])
   }
-  return findings;
+  return findings
 }
 
 // Parse JSX rather than searching text: comments, examples and string literals are not controls.
 // Only visually hidden file inputs are native outside shared/ui; the shared picker trigger owns
 // their visible interaction. No generic button/input/textarea path is grandfathered.
-function scanNativeControls(source, file = "screen.tsx") {
-  const ast = ts.createSourceFile(
-    file,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  );
-  const findings = [];
+function scanNativeControls(source, file = 'screen.tsx') {
+  const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const findings = []
   function visit(node) {
     if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
-      const tag = node.tagName.getText(ast);
-      if (["button", "input", "textarea"].includes(tag)) {
-        const attrs = new Map(
-          node.attributes.properties
-            .filter(ts.isJsxAttribute)
-            .map((a) => [a.name.getText(ast), a.initializer]),
-        );
+      const tag = node.tagName.getText(ast)
+      if (['button', 'input', 'textarea'].includes(tag)) {
+        const attrs = new Map(node.attributes.properties.filter(ts.isJsxAttribute).map((a) => [a.name.getText(ast), a.initializer]))
         const literal = (name) => {
-          const value = attrs.get(name);
-          if (value && ts.isStringLiteral(value)) return value.text;
-          if (
-            value &&
-            ts.isJsxExpression(value) &&
-            value.expression &&
-            ts.isStringLiteral(value.expression)
-          )
-            return value.expression.text;
-          return undefined;
-        };
-        const hiddenFile =
-          tag === "input" &&
-          literal("type") === "file" &&
-          ((attrs.has("hidden") && !attrs.get("hidden")) ||
-            /(?:^|\s)(hidden|sr-only)(?:\s|$)/.test(
-              literal("className") ?? "",
-            ));
-        if (!hiddenFile)
-          findings.push({
-            kind: "native generic control",
-            match: `<${tag}>`,
-            line:
-              ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1,
-          });
+          const value = attrs.get(name)
+          if (value && ts.isStringLiteral(value)) return value.text
+          if (value && ts.isJsxExpression(value) && value.expression && ts.isStringLiteral(value.expression)) return value.expression.text
+          return undefined
+        }
+        const hiddenFile = tag === 'input' && literal('type') === 'file' &&
+          ((attrs.has('hidden') && !attrs.get('hidden')) || /(?:^|\s)(hidden|sr-only)(?:\s|$)/.test(literal('className') ?? ''))
+        if (!hiddenFile) findings.push({ kind: 'native generic control', match: `<${tag}>`, line: ast.getLineAndCharacterOfPosition(node.getStart(ast)).line + 1 })
       }
     }
-    ts.forEachChild(node, visit);
+    ts.forEachChild(node, visit)
   }
-  visit(ast);
-  return findings;
+  visit(ast)
+  return findings
 }
 
 function runProbe() {
   const controlCases = [
     ['<button className="rounded-full">Back</button>', 1],
     ['<button\n aria-label="Back" />', 1],
-    ["<textarea />", 1],
-    ["<input />", 1],
+    ['<textarea />', 1],
+    ['<input />', 1],
     ['<input type="text" />', 1],
     ['<input type="radio" />', 1],
     ['<input type="checkbox" />', 1],
@@ -222,212 +182,189 @@ function runProbe() {
     ['<input type="file" hidden={false} />', 1],
     ['<input type="file" className="not-hidden" />', 1],
     ['// <button />\nconst text = "<textarea />"', 0],
-    ["const node = <>{/* <input /> */}<Button /><TextField /></>", 0],
-  ];
+    ['const node = <>{/* <input /> */}<Button /><TextField /></>', 0],
+  ]
   for (const [source, count] of controlCases) {
     if (scanNativeControls(source).length !== count) {
-      console.error(
-        `lint:style:probe — native control parsing failed: ${source}`,
-      );
-      process.exit(1);
+      console.error(`lint:style:probe — native control parsing failed: ${source}`)
+      process.exit(1)
     }
   }
 
   const typeCases = [
-    { source: "text-sm", gated: true },
-    { source: "sm:text-lg", gated: true },
-    { source: "text-3xl", gated: true },
-    { source: "text-display", gated: true },
+    { source: 'text-sm', gated: true },
+    { source: 'sm:text-lg', gated: true },
+    { source: 'text-3xl', gated: true },
+    { source: 'text-display', gated: true },
     // The Guide's type steps are theme tokens like any other: a slice reaches them through a role.
-    { source: "text-meta", gated: true },
-    { source: "sm:text-large-title-wide", gated: true },
-    { source: "text-[10px]", gated: true },
-    { source: "text-[.875rem]", gated: true },
-    { source: "text-[medium]", gated: true },
-    { source: "text-[larger]", gated: true },
-    { source: "text-[length:var(--type-size)]", gated: true },
-    { source: "text-[clamp(1rem,2vw,2rem)]", gated: true },
-    { source: "text-(length:--type-size)", gated: true },
-    { source: "font-medium", gated: true },
-    { source: "font-mono", gated: true },
-    { source: "font-[650]", gated: true },
-    { source: "font-[var(--weight)]", gated: true },
-    { source: "font-(--weight)", gated: true },
-    { source: "font-(family-name:--font-family)", gated: true },
-    { source: "font-brand", gated: true },
-    { source: "tracking-tight", gated: true },
-    { source: "-tracking-tight", gated: true },
-    { source: "-tracking-[0.02em]", gated: true },
-    { source: "tracking-(--letter-spacing)", gated: true },
-    { source: "tracking-display", gated: true },
-    { source: "leading-relaxed", gated: true },
-    { source: "leading-(--line-height)", gated: true },
-    { source: "leading-golden", gated: true },
-    { source: "text-[var(--font-size)]", gated: false },
-    { source: "text-center", gated: false },
-    { source: "text-balance", gated: false },
-    { source: "text-content-secondary", gated: false },
-    { source: "text-field-error", gated: false },
-    { source: "text-button-cta-fg", gated: false },
-    { source: "text-badge-accent-fg", gated: false },
-    { source: "text-media-scrim-fg", gated: false },
-    { source: "text-link-fg", gated: false },
-    { source: "text-notice-danger-fg", gated: false },
-    { source: "text-origin-owner-foreground", gated: false },
-    { source: "text-origin-visual-foreground", gated: false },
-    { source: "text-origin-ai-foreground", gated: false },
-    { source: "text-origin-unconfirmed-foreground", gated: false },
-    { source: "text-voice-habit-foreground", gated: false },
-    { source: "text-transparent", gated: false },
-  ];
+    { source: 'text-meta', gated: true },
+    { source: 'sm:text-large-title-wide', gated: true },
+    { source: 'text-[10px]', gated: true },
+    { source: 'text-[.875rem]', gated: true },
+    { source: 'text-[medium]', gated: true },
+    { source: 'text-[larger]', gated: true },
+    { source: 'text-[length:var(--type-size)]', gated: true },
+    { source: 'text-[clamp(1rem,2vw,2rem)]', gated: true },
+    { source: 'text-(length:--type-size)', gated: true },
+    { source: 'font-medium', gated: true },
+    { source: 'font-mono', gated: true },
+    { source: 'font-[650]', gated: true },
+    { source: 'font-[var(--weight)]', gated: true },
+    { source: 'font-(--weight)', gated: true },
+    { source: 'font-(family-name:--font-family)', gated: true },
+    { source: 'font-brand', gated: true },
+    { source: 'tracking-tight', gated: true },
+    { source: '-tracking-tight', gated: true },
+    { source: '-tracking-[0.02em]', gated: true },
+    { source: 'tracking-(--letter-spacing)', gated: true },
+    { source: 'tracking-display', gated: true },
+    { source: 'leading-relaxed', gated: true },
+    { source: 'leading-(--line-height)', gated: true },
+    { source: 'leading-golden', gated: true },
+    { source: 'text-[var(--font-size)]', gated: false },
+    { source: 'text-center', gated: false },
+    { source: 'text-balance', gated: false },
+    { source: 'text-content-secondary', gated: false },
+    { source: 'text-field-error', gated: false },
+    { source: 'text-button-cta-fg', gated: false },
+    { source: 'text-badge-accent-fg', gated: false },
+    { source: 'text-media-scrim-fg', gated: false },
+    { source: 'text-link-fg', gated: false },
+    { source: 'text-notice-danger-fg', gated: false },
+    { source: 'text-origin-owner-foreground', gated: false },
+    { source: 'text-origin-visual-foreground', gated: false },
+    { source: 'text-origin-ai-foreground', gated: false },
+    { source: 'text-origin-unconfirmed-foreground', gated: false },
+    { source: 'text-voice-habit-foreground', gated: false },
+    { source: 'text-transparent', gated: false },
+  ]
   const typeFailures = typeCases.filter(({ source, gated }) => {
     const inSlice = scanLine(source, { isTypeGated: true }).some(
-      ({ kind }) => kind === "ad-hoc type utility",
-    );
+      ({ kind }) => kind === 'ad-hoc type utility',
+    )
     // shared/ui owns the recipes, so the same line must pass without the flag.
-    const inSharedUi = scanLine(source).some(
-      ({ kind }) => kind === "ad-hoc type utility",
-    );
-    return inSlice !== gated || inSharedUi;
-  });
+    const inSharedUi = scanLine(source).some(({ kind }) => kind === 'ad-hoc type utility')
+    return inSlice !== gated || inSharedUi
+  })
   if (typeFailures.length) {
     for (const failure of typeFailures) {
-      console.error(
-        `lint:style:probe — ${failure.source} expected type-gated=${failure.gated}`,
-      );
+      console.error(`lint:style:probe — ${failure.source} expected type-gated=${failure.gated}`)
     }
-    process.exit(1);
+    process.exit(1)
   }
 
   const selectCases = [
     { source: '<select id="model">', gated: true },
-    { source: "        <select", gated: true },
-    { source: "<select\n", gated: true },
+    { source: '        <select', gated: true },
+    { source: '<select\n', gated: true },
     { source: '<Select id="model">', gated: false },
-    { source: "<Selection />", gated: false },
-    { source: "</select>", gated: false },
+    { source: '<Selection />', gated: false },
+    { source: '</select>', gated: false },
     { source: "// a native `<select>` is what this replaces", gated: true },
-    { source: "const selected = options.find(...)", gated: false },
-  ];
+    { source: 'const selected = options.find(...)', gated: false },
+  ]
   const selectFailures = selectCases.filter(({ source, gated }) => {
     const inSlice = scanLine(source, { isSelectGated: true }).some(
-      ({ kind }) => kind === "native select element",
-    );
+      ({ kind }) => kind === 'native select element',
+    )
     // The gate is off for tests and generated code, so the same line must pass without the flag.
-    const ungated = scanLine(source).some(
-      ({ kind }) => kind === "native select element",
-    );
-    return inSlice !== gated || ungated;
-  });
+    const ungated = scanLine(source).some(({ kind }) => kind === 'native select element')
+    return inSlice !== gated || ungated
+  })
   if (selectFailures.length) {
     for (const failure of selectFailures) {
-      console.error(
-        `lint:style:probe — ${failure.source} expected select-gated=${failure.gated}`,
-      );
+      console.error(`lint:style:probe — ${failure.source} expected select-gated=${failure.gated}`)
     }
-    process.exit(1);
+    process.exit(1)
   }
 
   const cases = [
-    { source: "bg-bg", retired: true },
-    { source: "bg-surface-sunken", retired: true },
-    { source: "accent-intent-accent", retired: true },
-    { source: "hover:bg-surface-hover/60", retired: true },
-    { source: "text-text-muted", retired: true },
-    { source: "focus:text-primary-foreground", retired: true },
-    { source: "divide-border", retired: true },
-    { source: "shadow-depth", retired: true },
-    { source: "placeholder:text-text-faint", retired: true },
-    { source: "bg-danger-surface", retired: true },
-    { source: "ring-success", retired: true },
-    { source: "outline-warning", retired: true },
-    { source: "fill-info", retired: true },
-    { source: "bg-surface-base", retired: false },
-    { source: "text-content-primary", retired: false },
-    { source: "bg-button-cta-bg", retired: false },
-    { source: "text-notice-danger-fg", retired: false },
-    { source: "divide-divider", retired: false },
-  ];
+    { source: 'bg-bg', retired: true },
+    { source: 'bg-surface-sunken', retired: true },
+    { source: 'accent-intent-accent', retired: true },
+    { source: 'hover:bg-surface-hover/60', retired: true },
+    { source: 'text-text-muted', retired: true },
+    { source: 'focus:text-primary-foreground', retired: true },
+    { source: 'divide-border', retired: true },
+    { source: 'shadow-depth', retired: true },
+    { source: 'placeholder:text-text-faint', retired: true },
+    { source: 'bg-danger-surface', retired: true },
+    { source: 'ring-success', retired: true },
+    { source: 'outline-warning', retired: true },
+    { source: 'fill-info', retired: true },
+    { source: 'bg-surface-base', retired: false },
+    { source: 'text-content-primary', retired: false },
+    { source: 'bg-button-cta-bg', retired: false },
+    { source: 'text-notice-danger-fg', retired: false },
+    { source: 'divide-divider', retired: false },
+  ]
 
   const failures = cases.filter(({ source, retired }) => {
-    const detected = scanLine(source).some(
-      ({ kind }) => kind === "retired token utility",
-    );
-    return detected !== retired;
-  });
+    const detected = scanLine(source).some(({ kind }) => kind === 'retired token utility')
+    return detected !== retired
+  })
   if (failures.length) {
     for (const failure of failures) {
-      console.error(
-        `lint:style:probe — ${failure.source} expected retired=${failure.retired}`,
-      );
+      console.error(`lint:style:probe — ${failure.source} expected retired=${failure.retired}`)
     }
-    process.exit(1);
+    process.exit(1)
   }
   console.log(
     `lint:style:probe — ok (${cases.length + typeCases.length + selectCases.length + controlCases.length} scanner cases)`,
-  );
+  )
 }
 
-if (process.argv.includes("--probe")) {
-  runProbe();
-  process.exit(0);
+if (process.argv.includes('--probe')) {
+  runProbe()
+  process.exit(0)
 }
 
-const SHARED_UI_DIR = join(ROOT, "shared", "ui") + sep;
+const SHARED_UI_DIR = join(ROOT, 'shared', 'ui') + sep
 
-const findings = [];
+const findings = []
 for (const file of walk(ROOT)) {
-  const isTokenFile = file === TOKEN_FILE;
+  const isTokenFile = file === TOKEN_FILE
   // Type recipes live in shared/ui (Typography and the other primitives own them); everywhere
   // else a .tsx renders text through those primitives. Tests assert on recipe classes, so they
   // stay out of the type gate (they still go through the colour gates above).
   const isTypeGated =
-    file.endsWith(".tsx") &&
-    !file.endsWith(".test.tsx") &&
-    !file.startsWith(SHARED_UI_DIR);
+    file.endsWith('.tsx') && !file.endsWith('.test.tsx') && !file.startsWith(SHARED_UI_DIR)
   // Everywhere, including shared/ui: there is no longer a primitive allowed to wrap a native
   // select. Generated code is already excluded by `walk`, which skips every `gen` directory.
-  const isSelectGated = file.endsWith(".tsx") && !file.endsWith(".test.tsx");
-  const source = readFileSync(file, "utf8");
-  const isControlGated =
-    isTypeGated && !file.startsWith(join(ROOT, "test") + sep);
+  const isSelectGated = file.endsWith('.tsx') && !file.endsWith('.test.tsx')
+  const source = readFileSync(file, 'utf8')
+  const isControlGated = isTypeGated && !file.startsWith(join(ROOT, 'test') + sep)
   if (isControlGated) {
     for (const { kind, match, line } of scanNativeControls(source, file)) {
-      findings.push(
-        `${relative(process.cwd(), file)}:${line}  ${kind}: ${match}`,
-      );
+      findings.push(`${relative(process.cwd(), file)}:${line}  ${kind}: ${match}`)
     }
   }
-  const lines = source.split("\n");
+  const lines = source.split('\n')
   lines.forEach((line, index) => {
     for (const { kind, match } of scanLine(line, {
       isTokenFile,
       isTypeGated,
       isSelectGated,
     })) {
-      findings.push(
-        `${relative(process.cwd(), file)}:${index + 1}  ${kind}: ${match}`,
-      );
+      findings.push(`${relative(process.cwd(), file)}:${index + 1}  ${kind}: ${match}`)
     }
-  });
+  })
 }
 
 if (findings.length) {
+  console.error(`lint:style — ${findings.length} escape(s) from the design tokens:\n`)
+  for (const f of findings) console.error('  ' + f)
   console.error(
-    `lint:style — ${findings.length} escape(s) from the design tokens:\n`,
-  );
-  for (const f of findings) console.error("  " + f);
-  console.error(
-    "\nUse a functional role (bg-button-cta-bg, text-notice-danger-fg) or a compositional",
-    "foundation (bg-surface-base, text-content-secondary). Roles are defined in",
-    "frontend/src/app/styles/index.css; the rules are THEME-11 and THEME-15 in spec/ssot/THEME.md.",
-    "\nFor an ad-hoc type utility, render the text through shared/ui Typography (or",
-    "typographyStyles for a self-semantic element) — the type roles are THEME-19.",
-    "\nFor native buttons/text inputs/textarea, use shared/ui controls. Only hidden file inputs",
-    "stay native outside shared/ui (THEME-78).",
-    "\nFor a native <select>, use shared/ui Listbox (or SegmentedControl for a bounded 2–5",
-    "switch) — THEME-29 bans the OS-drawn option list.",
-  );
-  process.exit(1);
+    '\nUse a functional role (bg-button-cta-bg, text-notice-danger-fg) or a compositional',
+    'foundation (bg-surface-base, text-content-secondary). Roles are defined in',
+    'frontend/src/app/styles/index.css; the rules are THEME-11 and THEME-15 in spec/ssot/THEME.md.',
+    '\nFor an ad-hoc type utility, render the text through shared/ui Typography (or',
+    'typographyStyles for a self-semantic element) — the type roles are THEME-19.',
+    '\nFor native buttons/text inputs/textarea, use shared/ui controls. Only hidden file inputs',
+    'stay native outside shared/ui (THEME-78).',
+    '\nFor a native <select>, use shared/ui Listbox (or SegmentedControl for a bounded 2–5',
+    'switch) — THEME-29 bans the OS-drawn option list.',
+  )
+  process.exit(1)
 }
-console.log("lint:style — ok (no colour, type or native control escapes)");
+console.log('lint:style — ok (no colour, type or native control escapes)')

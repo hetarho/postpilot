@@ -88,14 +88,8 @@ export function clipReturnDestination(
   clipId?: string,
   storage = browserStorage(),
 ): ClipReturnDestination {
+  // An entry from the retired 내 콘텐츠 hub returns to 영상, the list that holds every video now.
   const entry = readClipReturnContext(ownerId, clipId, storage)
-  if (entry && isMyWorkEntry(entry))
-    return {
-      path: '/my',
-      href: '/my',
-      section: entry.section,
-      scrollY: entry.scrollY,
-    }
   // A history entry adds its own narrowing to the one list's address.
   const path = CLIP_LIST_PATH
   const history = entry ? isClipHistoryEntry(entry) : !!clipId

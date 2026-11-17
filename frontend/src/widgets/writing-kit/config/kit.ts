@@ -7,31 +7,47 @@ import type { KitElement } from '../model/readiness'
 export const KIT_LOOK: Readonly<
   Record<
     KitElement,
-    { icon: ComponentType<{ className?: string }>; text: string; stroke: string; wash: string }
+    {
+      icon: ComponentType<{ className?: string }>
+      /** The hue's custom property, for a gradient stop. */
+      color: string
+      text: string
+      stroke: string
+      fill: string
+      wash: string
+    }
   >
 > = {
   voices: {
     icon: Quote,
+    color: '--color-kit-voice',
     text: 'text-kit-voice',
     stroke: 'stroke-kit-voice',
+    fill: 'fill-kit-voice',
     wash: 'bg-kit-voice/15',
   },
   templates: {
     icon: LayoutList,
+    color: '--color-kit-template',
     text: 'text-kit-template',
     stroke: 'stroke-kit-template',
+    fill: 'fill-kit-template',
     wash: 'bg-kit-template/15',
   },
   guidelines: {
     icon: ListChecks,
+    color: '--color-kit-guideline',
     text: 'text-kit-guideline',
     stroke: 'stroke-kit-guideline',
+    fill: 'fill-kit-guideline',
     wash: 'bg-kit-guideline/15',
   },
   memories: {
     icon: Brain,
+    color: '--color-kit-memory',
     text: 'text-kit-memory',
     stroke: 'stroke-kit-memory',
+    fill: 'fill-kit-memory',
     wash: 'bg-kit-memory/15',
   },
 }

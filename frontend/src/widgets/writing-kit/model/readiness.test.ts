@@ -11,8 +11,8 @@ const empty: KitInputs = {
 const byKey = (inputs: KitInputs) =>
   Object.fromEntries(readWritingKit(inputs).map((reading) => [reading.key, reading]))
 
-// The kit reads the owner's own lists and invents no progress: a ring is one mark per thing made,
-// or a voice's own readiness share while it is being made.
+// The kit reads the owner's own lists and invents no progress: one mark per thing made, what
+// stands in only while nothing is made, and a voice's own readiness share while it is being made.
 describe('the writing kit readiness', () => {
   it('reads a new account as four empty elements', () => {
     const readings = readWritingKit(empty)
@@ -32,19 +32,13 @@ describe('the writing kit readiness', () => {
       templates: { ...settled, saved: 0, unsavedDrafts: 1 },
       guidelines: { ...settled, own: 0, defaultsInUse: 9 },
     })
-    expect(kit.voices).toMatchObject({ state: 'partial', marks: { kind: 'share', percent: 62 } })
-    expect(kit.templates).toMatchObject({
-      state: 'partial',
-      marks: { kind: 'count', own: 0, assumed: 1 },
-    })
-    expect(kit.guidelines).toMatchObject({
-      state: 'partial',
-      marks: { kind: 'count', own: 0, assumed: 9 },
-    })
+    expect(kit.voices).toMatchObject({ state: 'partial', own: 0, standIns: 1, share: 62 })
+    expect(kit.templates).toMatchObject({ state: 'partial', own: 0, standIns: 1, share: 0 })
+    expect(kit.guidelines).toMatchObject({ state: 'partial', own: 0, standIns: 9 })
     expect(kit.memories.state).toBe('empty')
   })
 
-  it('reads what the owner made as ready, one mark per item', () => {
+  it('reads what the owner made as ready, and stops counting what stood in for it', () => {
     const readings = readWritingKit({
       voices: {
         ...settled,
@@ -60,8 +54,9 @@ describe('the writing kit readiness', () => {
     })
     expect(readings.every((reading) => reading.state === 'ready')).toBe(true)
     expect(readyCount(readings)).toBe(4)
-    expect(readings[0].marks).toEqual({ kind: 'count', own: 2, assumed: 0 })
-    expect(readings[2].marks).toEqual({ kind: 'count', own: 2, assumed: 5 })
+    expect(readings[0]).toMatchObject({ own: 2, standIns: 0, share: 100 })
+    expect(readings[1]).toMatchObject({ own: 3, standIns: 0 })
+    expect(readings[2]).toMatchObject({ own: 2, standIns: 0 })
   })
 
   it('keeps a read that has not answered or failed out of the ready count', () => {
