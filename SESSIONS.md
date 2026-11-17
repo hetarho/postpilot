@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| wtform | DESKTOP-VKPLS8P | autopilot | 2026-11-17T06:27Z | 2026-11-17T07:16Z | T895 | gusta-session-start-wtform-501eaa2b | 7564bd9abcc9 | 57003c600520721f5f5a87e1 |
+| wtform | DESKTOP-VKPLS8P | autopilot | 2026-11-17T06:27Z | 2026-11-17T07:16Z | - | gusta-session-start-wtform-501eaa2b | 7564bd9abcc9 | 57003c600520721f5f5a87e1 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -224,8 +224,10 @@
 | T892 | wtform | gusta-session-start-wtform-501eaa2b | 896506693eaf | 2026-11-17T06:52Z |
 | T893 | wtform | gusta-session-start-wtform-501eaa2b | ce73fb32d8dd | 2026-11-17T07:00Z |
 | T894 | wtform | gusta-session-start-wtform-501eaa2b | fbc91efb96e7 | 2026-11-17T07:07Z |
+| T895 | wtform | gusta-session-start-wtform-501eaa2b | 7564bd9abcc9 | 2026-11-17T07:16Z |
 
 ## log
+- 261117 T895 done
 - 261117 T894 done
 - 261117 T893 done
 - 261117 T892 done
@@ -245,4 +247,3 @@
 - 261117 T879 done
 - 261117 T878 done
 - 261116 onev: one video kind with no clip channel (T856-T868, CLIP r80 THEME r47 POST r51 GUIDE r28 MKT r13) landed and pushed 0715db3bb; CI, Deploy backend and Verify media green
-- 261116 T886 done
