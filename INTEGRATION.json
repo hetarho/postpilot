@@ -216,10 +216,11 @@
       "branch": "gusta-session-self-improve-perf6-9e039bd9",
       "head": "87cbe1ac096e960c5454ecf082287c2a744b808d",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-16T16:29:14.941Z",
+      "status": "withdrawn",
+      "at": "2026-11-17T07:53:27.000Z",
       "agentChecks": [],
-      "verificationCommands": []
+      "verificationCommands": [],
+      "reason": "owner-approved-skip"
     },
     "fb3a1cf0d152edc634face9f": {
       "id": "fb3a1cf0d152edc634face9f",
