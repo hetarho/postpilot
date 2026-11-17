@@ -175,7 +175,6 @@
 - 261117 decided MODEL-97 T890 T893 T894: how is the photo observation test built? → as an output kind (observation) of the existing writing-test engine, reusing its tournament, quote, checkpoint, retention and history paths, with test-owned photo rows under tests/ (alt: a separate observation-test engine and tables | revive the legacy ModelExperimentService observe experiment)
 - 261117 decided T891: T891 impl notes name the output kind experiment.TestOutput but that is already the output body struct (writing_test_output.go:15), so what is the kind type called? -> TestOutputKind with OutputPost/OutputObservation, and the T891/T893 notes now say so (alt: rename the existing struct, which T893/T894 extend | a plain string field).
 - 261117 suggest ARCH-24: move task check `/tmp/claude-1000/-home-hrlee-project--gusta-worktrees-postpilot-bffb2063-start-wtform-501eaa2b/1c09f0f1-f29d-40bd-ade3-6a325f428546/scratchpad/task-check.sh` to the final gate (ARCH batch): it averaged 158s over 2 runs
-- 261117 decided T897: the wtform loop cannot resume: its failed-stop report lacks ## next and the runner refuses any edit to it → close that report by hand and run T897 plus the batch gate under tag wtform2 in the same worktree (alt: implement T897 and run the gate by hand | leave the run stopped)
 - 261117 decided T897: MODEL-97 T897: the writing-test machine judged a candidate readable only by its post output, so an observation test never opened its pair, expired at once and refused adoption → one shared entity judgment (output or observations) now serves the machine, the widgets and the payload check (alt: a second observation-only machine | leaving the compare gate to the widget); edited outside the touches because the acceptance cannot pass otherwise.
 - 261117 decided T897: MODEL-97 T897: how does a phone read the pair photo by photo? → both observations stay stacked under each photo with explicit winner buttons in the dock, so no candidate tab or per-candidate reading position is needed (alt: the post pairs candidate tabs with a saved scroll position per candidate, which would compare the same photo out of view).
 - 261117 parked T897: shared integration waits only on the perf6 participant from another device (status working since 2026-11-16T16:29Z, no live session); wtform, wtform2 and both lchat sessions are ready. Finish or close perf6 on that device (vibe integration close --tag perf6 in its worktree), then resume here with vibe loop --tag wtform2 to run the batch gate and land
@@ -231,6 +230,7 @@
 | T897 | wtform2 | gusta-session-start-wtform2-c523edbc | 69c86561c328 | 2026-11-17T07:44Z |
 
 ## log
+- 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 T897 done
 - 261117 T896 done
 - 261117 T895 done
@@ -250,4 +250,3 @@
 - 261117 gusta-update-ssot ARCH r26 complete: future task checks use affected units and changed-file fast static checks, full frontend TypeScript remains in existing shared batch build. No code task generated. Spec published to planning main as 4fe6f9246; runbook committed separately as fa6a59a81 on owned update branch. Lint passes with 58 inherited warnings plus T887 ARCH freshness warning; submitted task evidence preserved.
 - 261117 gusta-create-task ARCH r26 no-op (no code impact): ARCH-24 and verification runbook assign full frontend TypeScript to existing shared batch build; ARCH tasked=rev, no task generated, unrelated pending INFRA and submitted T878/T879 preserved. T887 needs ARCH freshness review before further implementation.
 - 261117 gusta-update-ssot ARCH start: owner approved future task checks using affected unit and fast static checks; full frontend TypeScript checking belongs to existing shared batch build. Preserve submitted T878/T879 evidence.
-- 261117 T879 done
