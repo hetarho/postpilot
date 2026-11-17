@@ -43,7 +43,7 @@ export const i18n = {
   en: {
     kit: {
       label: 'Writing kit',
-      name: { voices: 'Style', templates: 'Templates', guidelines: 'Rules', memories: 'Memories' },
+      name: { voices: 'Styles', templates: 'Templates', guidelines: 'Rules', memories: 'Memories' },
       does: {
         voices: 'Sentences sound like you',
         templates: 'Posts take this shape',

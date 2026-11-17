@@ -41,6 +41,20 @@ it('draws 새 목소리 as the section creation button every sibling has', async
   expect(create.closest('[data-action-bar]')).toHaveClass('w-full', 'sm:w-fit')
 })
 
+// A list that did not load is not an empty library: it says so and offers the retry.
+it('offers a retry when the voice list fails, without claiming there is no voice', async () => {
+  const f = spokenVoiceFixture(),
+    user = userEvent.setup()
+  f.setFailList(true)
+  renderAppAt('/spoken-voices', { user: { id: 'alice' }, transport: f.transport })
+  const alert = await screen.findByRole('alert', {}, { timeout: 4000 })
+  expect(alert).toHaveTextContent('목소리 목록을 불러오지 못했어요.')
+  expect(screen.queryByRole('heading', { name: '아직 확정한 목소리가 없어요' })).toBeNull()
+  f.setFailList(false)
+  await user.click(within(alert).getByRole('button', { name: '다시 시도' }))
+  await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
+})
+
 describe('spoken voice creation and reuse', () => {
   it('keeps a failed approved request available for an explicit same-key retry', async () => {
     const f = spokenVoiceFixture(),

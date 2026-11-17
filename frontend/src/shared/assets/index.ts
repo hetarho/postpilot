@@ -5,3 +5,4 @@ export { default as templateDraftIllustration } from './illustrations/template-d
 export { default as memoriesIllustration } from './illustrations/memories.png'
 export { default as voiceIllustration } from './illustrations/voice.png'
 export { default as videoIllustration } from './illustrations/video.png'
+export { default as guidelinesIllustration } from './illustrations/guidelines.png'

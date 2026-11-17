@@ -138,7 +138,7 @@ describe('templates made by talking', () => {
     fireEvent.change(screen.getByLabelText('제목 원문'), {
       target: { value: '<slot kind="photo"/>' },
     })
-    await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+    await user.click(screen.getByRole('button', { name: '초안에 반영' }))
     expect(await screen.findByText(/마지막 유효한 미리보기/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '저장' })).toBeDisabled()
     expect(patches[0]).toMatchObject({

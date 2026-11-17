@@ -804,7 +804,7 @@ describe('localized registered-route smoke', () => {
         'Photos and notes from your sponsored visit, ready for Naver Blog or a clip in your voice',
       analysis: 'Voice analysis',
       materials: 'Training data',
-      models: 'AI tournament',
+      models: 'AI arena',
       clips: 'Videos',
       retry: 'Try again',
       kind: 'What kind of post is this?',

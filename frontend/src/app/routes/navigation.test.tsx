@@ -227,7 +227,7 @@ it('retains a 설정 origin through reload and restores its document position on
 // 홈 is the writing kit: one way into each element and the one 글쓰기, in both languages.
 it.each([
   ['ko', '글쓰기', ['말투', '템플릿', '지침', '기억']],
-  ['en', 'Write', ['Style', 'Templates', 'Rules', 'Memories']],
+  ['en', 'Write', ['Styles', 'Templates', 'Rules', 'Memories']],
 ] as const)(
   'opens home on the kit and its one 글쓰기 in %s without object writes',
   async (locale, write, names) => {

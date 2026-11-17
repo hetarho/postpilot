@@ -45,6 +45,8 @@ export function MemoriesPage() {
   const [tag, setTag] = useState<string>()
   const tags = Array.from(new Set(memories.flatMap((memory) => memory.tags)))
   const shown = tag ? memories.filter((memory) => memory.tags.includes(tag)) : memories
+  // The notebook's own order: by kind, then the server's order within one.
+  const ordered = MEMORY_KINDS.flatMap((kind) => shown.filter((memory) => memory.kind === kind))
   const page = useRef<HTMLElement>(null)
   const list = useRef<HTMLUListElement>(null)
   // A confirmed delete hands focus back to the trash button, then the re-read list removes the row
@@ -61,10 +63,12 @@ export function MemoriesPage() {
     // meantime stays where they put it.
     const active = document.activeElement
     if (active && active !== document.body) return
+    // The rows as they stand now, in the notebook's order (grouped by kind, narrowed by a tag).
+    const rows = list.current?.querySelectorAll('[data-memory-row]') ?? []
     const target =
-      memories.length > 0
+      rows.length > 0
         ? buttonNamed(
-            list.current?.children[Math.min(removed.index, memories.length - 1)],
+            rows[Math.min(removed.index, rows.length - 1)],
             t('delete.aria', { ns: 'memories' }),
           )
         : buttonNamed(page.current, t('create.open', { ns: 'memories' }))
@@ -156,7 +160,7 @@ export function MemoriesPage() {
                             ownerId={ownerId}
                             memory={memory}
                             onDeleted={() =>
-                              setRemoved({ id: memory.id, index: memories.indexOf(memory) })
+                              setRemoved({ id: memory.id, index: ordered.indexOf(memory) })
                             }
                           />
                         ))}
@@ -184,7 +188,7 @@ export function MemoriesPage() {
   )
 }
 
-/** A deleted memory and the position its row held. */
+/** A deleted memory and the position its row held in the notebook. */
 type Removal = { id: string; index: number }
 
 /** The button named `name` inside `root`. The rows repeat the same names and carry no ids, so a
@@ -272,7 +276,7 @@ function MemoryRow({
     )
 
   return (
-    <li className="px-5 py-3">
+    <li data-memory-row="" className="px-5 py-3">
       <div className="flex items-start gap-1">
         <Typography
           variant="body"

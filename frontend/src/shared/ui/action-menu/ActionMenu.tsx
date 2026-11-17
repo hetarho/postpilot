@@ -31,6 +31,8 @@ export function ActionMenu({
   items,
   triggerLabel,
   triggerVariant = 'secondary',
+  triggerIcon,
+  placement = 'above',
   disabled = false,
   className,
 }: {
@@ -40,6 +42,12 @@ export function ActionMenu({
   /** Visible trigger content; a ▾ glyph alone when absent. */
   triggerLabel?: ReactNode
   triggerVariant?: ButtonVariant
+  /** An icon trigger in place of the ▾ glyph — ⋯ for a heading's or a card's further actions:
+   *  the trigger is icon-sized and shows the icon alone. */
+  triggerIcon?: ReactNode
+  /** Where the list opens from `sm:` up: above the trigger (a dock at the bottom) or below it (a
+   *  trigger in a heading row, near the top). */
+  placement?: 'above' | 'below'
   disabled?: boolean
   className?: string
 }) {
@@ -104,8 +112,8 @@ export function ActionMenu({
       onKeyDown={onListKeyDown}
       className={clsx(
         'select-none',
-        wide &&
-          'bg-surface-highest absolute right-0 bottom-full z-30 mb-2 min-w-56 rounded-lg p-1 shadow-lg',
+        wide && 'bg-surface-highest absolute right-0 z-30 min-w-56 rounded-lg p-1 shadow-lg',
+        wide && (placement === 'below' ? 'top-full mt-2' : 'bottom-full mb-2'),
       )}
     >
       {items.map((item) => {
@@ -164,14 +172,18 @@ export function ActionMenu({
         onClick={() => setOpen((current) => !current)}
         onKeyDown={onTriggerKeyDown}
       >
-        {triggerLabel}
-        <ChevronDown
-          aria-hidden="true"
-          className={clsx(
-            'duration-fast ease-standard size-4 shrink-0 transition-transform',
-            open && 'rotate-180',
-          )}
-        />
+        {triggerIcon ?? (
+          <>
+            {triggerLabel}
+            <ChevronDown
+              aria-hidden="true"
+              className={clsx(
+                'duration-fast ease-standard size-4 shrink-0 transition-transform',
+                open && 'rotate-180',
+              )}
+            />
+          </>
+        )}
       </Button>
       {wide ? (
         open && list

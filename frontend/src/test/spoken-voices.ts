@@ -35,7 +35,8 @@ export function spokenVoiceFixture(
   let revision = 1n,
     ticketRequested = false,
     pending = !!options.operationState,
-    failStart = false
+    failStart = false,
+    failList = false
   const profile = {
     id: 'curated',
     revision: 1n,
@@ -184,7 +185,10 @@ export function spokenVoiceFixture(
     })
     service(SpokenVoiceService, {
       listSpokenDrafts: () => ({ drafts: [...drafts.values()] }),
-      listSpokenVoices: () => ({ voices: [...voices.values()].filter((v) => !v.removedAt) }),
+      listSpokenVoices: () => {
+        if (failList) throw new ConnectError('unavailable', Code.Unavailable)
+        return { voices: [...voices.values()].filter((v) => !v.removedAt) }
+      },
       getSpokenDraft: (r) => ({ draft: draft(r.id) }),
       createSpokenDraft: (r) => {
         calls.push('create')
@@ -335,6 +339,9 @@ export function spokenVoiceFixture(
     },
     setFailStart: (v: boolean) => {
       failStart = v
+    },
+    setFailList: (v: boolean) => {
+      failList = v
     },
   }
 }

@@ -103,6 +103,23 @@ describe('ActionMenu from sm: up', () => {
     await user.click(screen.getByRole('button', { name: '밖' }))
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
+
+  it('shows an icon trigger alone and opens below it when asked', async () => {
+    const user = userEvent.setup()
+    render(
+      <ActionMenu
+        label="더 보기"
+        items={items()}
+        triggerIcon={<svg data-testid="more" />}
+        placement="below"
+      />,
+    )
+    const trigger = screen.getByRole('button', { name: '더 보기' })
+    expect(trigger.querySelectorAll('svg')).toHaveLength(1)
+    expect(screen.getByTestId('more')).toBeInTheDocument()
+    await user.click(trigger)
+    expect(screen.getByRole('menu', { name: '더 보기' })).toHaveClass('top-full')
+  })
 })
 
 describe('ActionMenu below sm:', () => {

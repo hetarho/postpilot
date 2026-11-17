@@ -26,10 +26,11 @@ function NativeLink(props: NavigationLinkProps) {
   return <a {...props} />
 }
 
-/** Where each element's "next" step opens: straight into making one. */
+/** Where each element's "next" step opens: straight into making one. A step that leaves the kit
+ *  for a screen of its own (the template conversation) names 홈 as its way back. */
 const NEXT_HREF: Readonly<Record<KitElement, string>> = {
   voices: '/voices?new=1',
-  templates: '/templates/new',
+  templates: '/templates/new?entry=%2F',
   guidelines: '/guidelines?new=1',
   memories: '/memories?new=1',
 }

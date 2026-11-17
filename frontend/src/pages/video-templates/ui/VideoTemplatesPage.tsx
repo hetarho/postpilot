@@ -44,9 +44,11 @@ export function VideoTemplatesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('directory.description', { ns: 'clips' })}
+      {/* Guide: the hub's title and the 템플릿 chip say where this is; the page leads, as its
+          sibling pages do, with what a video template does to a video. */}
+      <h1 className="sr-only">{t('directory.title', { ns: 'clips' })}</h1>
+      <Typography variant="display" as="p" aria-hidden="true" className="text-balance">
+        {t('directory.lead', { ns: 'clips' })}
       </Typography>
 
       {isError && (

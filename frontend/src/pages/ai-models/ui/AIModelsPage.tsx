@@ -29,7 +29,8 @@ export function AIModelsPage() {
   const { t } = useTranslation('models')
   const [recommending, setRecommending] = useState(false)
   return (
-    <main className={pageStyles({ width: 'prose', className: 'pt-4 sm:pt-10' })}>
+    // A tab beside 홈 · 글 · 영상, so it keeps their column: switching tabs moves nothing sideways.
+    <main className={pageStyles({ width: 'wide', className: 'pt-4 sm:pt-10' })}>
       <Typography variant="largeTitle">{t('page.guideTitle')}</Typography>
 
       <section aria-labelledby="compare-heading" className="mt-8">

@@ -15,6 +15,7 @@ import {
   type GuidelineKind,
 } from '@/entities/guideline'
 import { useSession } from '@/entities/session'
+import { guidelinesIllustration } from '@/shared/assets'
 import { AuthoringSheet } from '@/features/ai-authoring'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { GuidelineDirectEditor } from '@/features/edit-guideline'
@@ -288,7 +289,7 @@ export function GuidelineDirectory({
             )}
           </div>
           {principles.length === 0 && inUse.length === 0 && guidelines.length === 0 ? (
-            <EmptyState kind={kind} />
+            <EmptyState kind={kind} embedded={embedded} />
           ) : (
             // Guide: the rules grouped by WHERE they change the writing, in the order the writer
             // is given them (원칙 and 기본 지침, then every post, a template's posts, a field's
@@ -310,7 +311,7 @@ export function GuidelineDirectory({
                   >
                     <div className="pb-2">
                       {principles.length > 0 && <PrincipleCard principles={principles} />}
-                      <ul className="mt-3 grid gap-3">
+                      <ul className="mt-3 grid grid-cols-1 gap-3">
                         {inUse.map((guideline, index) => (
                           <DefaultGuidelineItem
                             key={guideline.key}
@@ -328,16 +329,36 @@ export function GuidelineDirectory({
                 </div>
               )}
               {guidelines.length === 0 && (
-                <div className="mt-8">
-                  <Typography variant="title" as="h2">
-                    {t('groups.ownEmpty', { ns: 'guidelines' })}
-                  </Typography>
-                  <Typography variant="body" className="text-content-secondary mt-2">
-                    {t('groups.example', {
-                      ns: 'guidelines',
-                      text: t(`${page}.example`, { ns: 'guidelines' }),
-                    })}
-                  </Typography>
+                // The same shape as every kit page's empty state: its picture, then the words.
+                <div
+                  className={
+                    embedded
+                      ? 'mt-8'
+                      : 'mt-8 flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-6 sm:text-left'
+                  }
+                >
+                  {/* In the editor's sheet the words alone: the sheet is a quick look, not a page. */}
+                  {!embedded && (
+                    <img
+                      src={guidelinesIllustration}
+                      alt=""
+                      width={440}
+                      height={440}
+                      className="size-36 shrink-0 object-contain sm:size-40"
+                      draggable={false}
+                    />
+                  )}
+                  <div>
+                    <Typography variant="title" as="h2">
+                      {t('groups.ownEmpty', { ns: 'guidelines' })}
+                    </Typography>
+                    <Typography variant="body" className="text-content-secondary mt-2">
+                      {t('groups.example', {
+                        ns: 'guidelines',
+                        text: t(`${page}.example`, { ns: 'guidelines' }),
+                      })}
+                    </Typography>
+                  </div>
                 </div>
               )}
               {(['global', 'templates', 'fields'] as const).map((scope) => {
@@ -357,7 +378,7 @@ export function GuidelineDirectory({
                         {members.length}
                       </span>
                     </h2>
-                    <ul className="mt-3 grid gap-3">
+                    <ul className="mt-3 grid grid-cols-1 gap-3">
                       {members.map(({ guideline, index }) => (
                         <GuidelineRow
                           key={guideline.id}
@@ -390,7 +411,7 @@ export function GuidelineDirectory({
               <Typography variant="title" as="h2" id="guideline-unsaved-heading">
                 {t('authoringState.unsavedHeading', { ns: 'guidelines' })}
               </Typography>
-              <ul className="mt-3 grid gap-3">
+              <ul className="mt-3 grid grid-cols-1 gap-3">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
@@ -522,7 +543,7 @@ function SentenceTitle({
         <span
           className={typographyStyles({
             variant: 'fieldTitle',
-            className: 'text-content-primary text-pretty break-words',
+            className: 'text-content-primary text-pretty break-words whitespace-pre-line',
           })}
         >
           {sentence}
@@ -640,6 +661,7 @@ function GuidelineRow({
   rowRef: Ref<HTMLLIElement>
   onDeleted: () => void
 }) {
+  const { t } = useTranslation('guidelines')
   const { t: authoringText } = useTranslation('authoring')
   const [method, setMethod] = useState<'ai' | 'direct'>('ai')
   const [authoringOpen, setAuthoringOpen] = useState(false)
@@ -661,20 +683,18 @@ function GuidelineRow({
           <SentenceTitle name={guideline.title} sentence={guideline.text} />
         }
       >
+        {/* The sentence itself heads the row in full, so the open row adds only where it acts
+            and what can be done to it. Each action is named for its rule; it shows its verb. */}
         <div className="pb-3 pl-6">
-          <Typography variant="body" className="text-content-primary whitespace-pre-wrap">
-            {guideline.text}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-3">
-            {authoringText('savedUsable', named)}
-          </Typography>
           <GuidelineScopeBadges guideline={guideline} />
           <div className="mt-4 flex flex-wrap gap-3">
             <Button variant="secondary" onClick={() => open('ai')}>
-              {authoringText('aiNamed', named)}
+              <span className="sr-only">{t('row.named', { name: named.name })} </span>
+              {t('row.ai')}
             </Button>
             <Button variant="secondary" onClick={() => open('direct')}>
-              {authoringText('directNamed', named)}
+              <span className="sr-only">{t('row.named', { name: named.name })} </span>
+              {t('row.direct')}
             </Button>
             {summary &&
               (summary.hasUnpublishedChanges ||
@@ -682,7 +702,8 @@ function GuidelineRow({
                 summary.publicationPending ||
                 summary.targetConflict) && (
                 <Button variant="ghost" onClick={() => open('ai', summary.sessionId)}>
-                  {authoringText('continueNamed', named)}
+                  <span className="sr-only">{t('row.named', { name: named.name })} </span>
+                  {t('row.continue')}
                 </Button>
               )}
             <DeleteGuidelineButton
@@ -1061,20 +1082,39 @@ function CandidateRow({
 
 /** The worked example is copy, not a row: nothing here creates a guideline the user did not
  *  author (GUIDE-18, GUIDE-19 — no seeded library, no inference). */
-function EmptyState({ kind }: { kind: GuidelineKind }) {
+function EmptyState({ kind, embedded }: { kind: GuidelineKind; embedded: boolean }) {
   const { t } = useTranslation('guidelines')
   const page = kind === 'clip' ? 'clipPage' : 'page'
   return (
-    <section aria-labelledby="guidelines-empty-heading" className="mt-8">
-      <Typography variant="title" id="guidelines-empty-heading">
-        {t(`${page}.empty`)}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t(`${page}.emptyHelp`)}
-      </Typography>
-      <Typography variant="body" className="text-content-primary mt-3">
-        {t(`${page}.example`)}
-      </Typography>
+    <section
+      aria-labelledby="guidelines-empty-heading"
+      className={
+        embedded
+          ? 'mt-8'
+          : 'mt-8 flex flex-col items-center gap-2 text-center sm:flex-row sm:gap-6 sm:text-left'
+      }
+    >
+      {!embedded && (
+        <img
+          src={guidelinesIllustration}
+          alt=""
+          width={440}
+          height={440}
+          className="size-44 shrink-0 object-contain"
+          draggable={false}
+        />
+      )}
+      <div>
+        <Typography variant="title" id="guidelines-empty-heading">
+          {t(`${page}.empty`)}
+        </Typography>
+        <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+          {t(`${page}.emptyHelp`)}
+        </Typography>
+        <Typography variant="body" className="text-content-primary mt-3">
+          {t(`${page}.example`)}
+        </Typography>
+      </div>
     </section>
   )
 }

@@ -7,7 +7,9 @@ import { SpokenSamplePlayer, useSpokenLibrary } from '@/entities/spoken-voice'
 import { SpokenVoiceActions } from '@/features/manage-spoken-voice'
 import {
   ActionBar,
+  Button,
   LoadingState,
+  Notice,
   Typography,
   pageStyles,
   buttonStyles,
@@ -27,7 +29,9 @@ export function SpokenVoicesPage() {
     { user } = useSession(),
     ownerId = user?.id ?? '',
     library = useSpokenLibrary(ownerId),
-    [status, setStatus] = useState('')
+    [status, setStatus] = useState(''),
+    { t: common } = useTranslation('common')
+  const failed = library.voicesQuery.isError || library.draftsQuery.isError
   const drafts = library.drafts.filter((draft) => !draft.confirmedVoiceId)
   return (
     <main
@@ -41,16 +45,30 @@ export function SpokenVoicesPage() {
         {t('lead')}
       </Typography>
       <Typography role="status" as="p" variant="meta" className="mt-3 min-h-5">
-        {library.voicesQuery.isError || library.draftsQuery.isError
-          ? t('failed')
-          : status
-            ? t(status as 'renameFailed' | 'renamed' | 'playFailed')
-            : ' '}
+        {status ? t(status as 'renameFailed' | 'renamed' | 'playFailed') : ' '}
       </Typography>
+      {/* A list that did not load says so with its way to try again — as every kit page does —
+          rather than standing as an empty library. */}
+      {failed && (
+        <Notice tone="danger" role="alert" className="mt-2">
+          <span>{t('failed')}</span>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void library.voicesQuery.refetch()
+              void library.draftsQuery.refetch()
+            }}
+            pending={library.voicesQuery.isFetching || library.draftsQuery.isFetching}
+            className="text-notice-danger-fg underline"
+          >
+            {common('action.retry')}
+          </Button>
+        </Notice>
+      )}
       {!library.voicesQuery.isError && library.voicesQuery.isPending && (
         <LoadingState variant="cards" label={t('loading')} className="mt-4" />
       )}
-      {!library.voicesQuery.isPending && !library.voices.length && (
+      {!failed && !library.voicesQuery.isPending && !library.voices.length && (
         // Empty, the screen still shows what a voice here is: a card to listen to, not yet filled.
         <section
           aria-labelledby="spoken-voices-empty"
@@ -90,7 +108,10 @@ export function SpokenVoicesPage() {
         </section>
       )}
       {library.voices.length > 0 && (
-        <ul className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('title')}>
+        <ul
+          className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          aria-label={t('title')}
+        >
           {library.voices.map((voice) => (
             <li
               key={voice.id}
@@ -118,6 +139,7 @@ export function SpokenVoicesPage() {
               {/* The card's job: hearing the voice. */}
               <div className="bg-surface-recessed flex min-w-0 flex-wrap items-center gap-4 rounded-2xl px-4 py-3">
                 <SpokenSamplePlayer
+                  presentation="icon"
                   ownerId={ownerId}
                   assetId={voice.sampleAssetId}
                   name={voice.name}
@@ -146,7 +168,7 @@ export function SpokenVoicesPage() {
           <Typography variant="title" as="h2">
             {t('drafts')}
           </Typography>
-          <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+          <ul className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
             {drafts.map((draft) => (
               <li
                 key={draft.id}

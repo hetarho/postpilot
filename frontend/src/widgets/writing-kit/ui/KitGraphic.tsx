@@ -56,7 +56,9 @@ export function KitGraphic({ kit, className }: { kit: WritingKit; className?: st
     <figure
       aria-label={t('kit.label')}
       className={clsx(
-        'mx-auto grid w-full max-w-md grid-cols-2 gap-x-3 gap-y-1 lg:max-w-lg',
+        // `content-center`: where the page gives the figure more height than it needs (the desk's
+        // column), the corners stay close to the ring instead of drifting to the figure's edges.
+        'mx-auto grid w-full max-w-md grid-cols-2 content-center gap-x-3 gap-y-1 lg:max-w-lg',
         className,
       )}
     >

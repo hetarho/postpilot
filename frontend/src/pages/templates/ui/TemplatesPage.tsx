@@ -88,42 +88,14 @@ export function TemplatesPage() {
               </Button>
             </Notice>
           )}
-          {templates.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <section aria-labelledby="templates-heading" className="mt-6">
-              <Typography variant="title" id="templates-heading">
-                {t('page.saved', { ns: 'templates' })}
-              </Typography>
-              {/* Guide: each template is the shape of the post it makes; the card opens its
-                  conversation. */}
-              <ul className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {templates.map((template, index) => (
-                  <TemplateRow
-                    key={template.id}
-                    ownerId={ownerId}
-                    template={template}
-                    deleteButtonRef={(button) => {
-                      if (button) deleteButtons.current.set(template.id, button)
-                      else deleteButtons.current.delete(template.id)
-                    }}
-                    onDeleted={() => requestRemoval(template.id, index)}
-                    summary={summaries.data?.find(
-                      (row) =>
-                        row.targetId === template.id || row.lastPublication?.id === template.id,
-                    )}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
-
+          {/* Work still in progress leads, as 작성 중 leads 글: a conversation not yet saved is
+              picked up here before the saved shapes. */}
           {summaries.data?.some((row) => !row.targetId && !row.lastPublication) && (
-            <section className="mt-8" aria-labelledby="templates-unsaved-heading">
+            <section className="mt-6" aria-labelledby="templates-unsaved-heading">
               <Typography variant="title" as="h2" id="templates-unsaved-heading">
                 {t('screen.unsavedWork', { ns: 'templates' })}
               </Typography>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+              <ul className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
@@ -155,6 +127,42 @@ export function TemplatesPage() {
                       </span>
                     </li>
                   ))}
+              </ul>
+            </section>
+          )}
+          {templates.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <section
+              aria-labelledby="templates-heading"
+              className={
+                summaries.data?.some((row) => !row.targetId && !row.lastPublication)
+                  ? 'mt-8'
+                  : 'mt-6'
+              }
+            >
+              <Typography variant="title" id="templates-heading">
+                {t('page.saved', { ns: 'templates' })}
+              </Typography>
+              {/* Guide: each template is the shape of the post it makes; the card opens its
+                  conversation. */}
+              <ul className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {templates.map((template, index) => (
+                  <TemplateRow
+                    key={template.id}
+                    ownerId={ownerId}
+                    template={template}
+                    deleteButtonRef={(button) => {
+                      if (button) deleteButtons.current.set(template.id, button)
+                      else deleteButtons.current.delete(template.id)
+                    }}
+                    onDeleted={() => requestRemoval(template.id, index)}
+                    summary={summaries.data?.find(
+                      (row) =>
+                        row.targetId === template.id || row.lastPublication?.id === template.id,
+                    )}
+                  />
+                ))}
               </ul>
             </section>
           )}

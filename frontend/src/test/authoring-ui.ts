@@ -16,9 +16,10 @@ export async function openTemplateDirect(user: ReturnType<typeof userEvent.setup
   await screen.findByLabelText('이름')
 }
 
-/** Keeps the direct edit, returns to the conversation and saves from its heading row. */
+/** Applies the direct edit to the draft, returns to the conversation and saves from its heading
+ *  row. */
 export async function publishTemplateConversation(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+  await user.click(screen.getByRole('button', { name: '초안에 반영' }))
   const save = await screen.findByRole('button', { name: '저장' })
   await waitFor(() => expect(save).toBeEnabled())
   await user.click(save)

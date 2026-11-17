@@ -3,7 +3,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { useMachine } from '@xstate/react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Ellipsis, SendHorizontal, Sparkles } from 'lucide-react'
+import { Ellipsis, MessageCircle, SendHorizontal, Sparkles } from 'lucide-react'
 import {
   authoringScopeKey,
   completedAuthoringExchanges,
@@ -166,7 +166,7 @@ function ScopedEditor({
         cancel: controller.cancel,
       },
     }),
-    { input: { scope, operation: state, ai, initialMakeDefault } },
+    { input: { scope, operation: state, ai, initialMakeDefault, talk: layout === 'conversation' } },
   )
   useEffect(() => {
     send({ type: 'OBSERVE', scopeKey, operation: state, ai })
@@ -276,6 +276,13 @@ function ScopedEditor({
   const named = { kind: t(`kinds.${kind}`), name }
   const draftInvalid =
     state.session?.draftState === 'invalid' || state.session?.draftState === 'incomplete'
+  // A conversation opened on nothing yet — no draft, nothing written by hand — has nothing kept to
+  // call incomplete.
+  const blankTalk =
+    layout === 'conversation' &&
+    !selected &&
+    !state.sourceDirty &&
+    !state.session?.workingSource?.body.trim()
   const needsVoiceExample =
     kind === 'writing-voice' &&
     !!selected &&
@@ -517,7 +524,7 @@ function ScopedEditor({
         ? [
             {
               id: 'direct',
-              label: t(state.session ? 'conversation.direct' : 'conversation.directNew'),
+              label: t(selected ? 'conversation.direct' : 'conversation.directNew'),
               onSelect: () => event('OPEN_DIRECT'),
             },
           ]
@@ -536,7 +543,7 @@ function ScopedEditor({
       >
         {/* One heading row: what is being made, and its actions — 저장 and the rest behind ⋯. */}
         <div ref={heading} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-[min(100%,8rem)] flex-1">
             <Typography
               variant="title"
               as="h2"
@@ -550,8 +557,9 @@ function ScopedEditor({
           {menu.length > 0 && (
             <ActionMenu
               label={t('conversation.more')}
-              triggerLabel={<Ellipsis aria-hidden="true" className="size-5" />}
+              triggerIcon={<Ellipsis aria-hidden="true" className="size-5" />}
               triggerVariant="ghost"
+              placement="below"
               items={menu}
               disabled={blocked}
             />
@@ -574,7 +582,7 @@ function ScopedEditor({
             {t('unpublished', named)}
           </Typography>
         )}
-        {draftInvalid && (
+        {draftInvalid && !blankTalk && (
           <Notice tone="danger" className="mt-4">
             {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
           </Notice>
@@ -602,20 +610,19 @@ function ScopedEditor({
             aria-label={t('conversation.draft')}
             className="bg-surface-recessed relative min-w-0 overflow-hidden rounded-2xl p-4 [grid-area:draft] sm:p-6 @3xl:sticky @3xl:top-[calc(var(--spacing-chrome,0px)+1rem)] @3xl:self-start"
           >
-            {draft ? (
+            {selected ? (
               <div className={drafting ? 'opacity-50 transition-opacity' : 'transition-opacity'}>
                 {/* The draft's name heads the screen; beside the talk it is the post it makes. */}
-                {selected?.description && (
+                {selected.description && (
                   <Typography variant="body" className="text-content-secondary mb-4 break-words">
                     {selected.description}
                   </Typography>
                 )}
-                {selected &&
-                  (renderPreview ? (
-                    renderPreview(selected, undefined)
-                  ) : (
-                    <AuthoringPreview kind={kind} artifact={selected} />
-                  ))}
+                {renderPreview ? (
+                  renderPreview(selected, undefined)
+                ) : (
+                  <AuthoringPreview kind={kind} artifact={selected} />
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 py-2 text-center sm:gap-3 sm:py-6">
@@ -643,8 +650,10 @@ function ScopedEditor({
             )}
           </aside>
           {/* On a phone the dock is the column's own child, so it rides the screen's bottom edge
-              under the thread and the draft; beside the draft it closes the conversation's column. */}
-          <div className="bg-surface-base sticky bottom-0 z-10 mt-auto min-w-0 [grid-area:dock] @3xl:static @3xl:self-end">
+              under the thread and the draft — while the screen has the height for it; at large
+              text it would cover the whole thread, so there it simply follows the draft. Beside
+              the draft it closes the conversation's column. */}
+          <div className="bg-surface-base bottom-0 z-10 mt-auto min-w-0 [grid-area:dock] @3xl:self-end [@media(min-height:44em)]:sticky [@media(min-height:44em)]:@3xl:static">
             {view === 'publication' && selected ? (
               <div className="bg-surface-base sticky bottom-0 z-10 space-y-3 pt-3 pb-[max(1rem,var(--spacing-safe-b,0px))]">
                 <Typography variant="fieldTitle" as="p" className="break-words">
@@ -733,65 +742,119 @@ function ScopedEditor({
       </section>
     )
   }
+  // Writing it by hand from a conversation keeps the conversation's heading row — the setting's
+  // name, and the one way back to the talk — rather than a step screen of its own.
+  const directInTalk = conversation && view === 'direct'
+  const inspection =
+    active &&
+    state.session &&
+    renderInspection?.({
+      ownerId,
+      sessionId: state.session.id,
+      kind,
+      revision: state.session.revision,
+      mode:
+        view === 'purpose' ||
+        view === 'choices' ||
+        state.session.phase === 'generating' ||
+        (view !== 'refining' &&
+          view !== 'direct' &&
+          state.session.phase !== 'refining' &&
+          state.session.turns.length === 0)
+          ? 'recommend'
+          : 'refine',
+      prompt: view === 'purpose' ? flow.context.purpose : state.text,
+      model: write.selected ?? undefined,
+      candidateCount,
+      operationId: state.session.activeJobId,
+      sourceDirty: Boolean(state.sourceDirty),
+    })
   return (
     <section aria-labelledby={id + '-title'} className={'@container min-w-0 ' + (className ?? '')}>
-      <div ref={heading}>
-        {canGoBack && !onNavigationChange && (
-          <Button
-            variant="secondary"
-            size="icon"
-            aria-label={t('back')}
-            title={t('back')}
-            className="mb-2 sm:mb-6"
-            onClick={() => event('BACK')}
-          >
-            <ReturnIcon />
-          </Button>
-        )}
-        <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">
-          {t('namedSetting', named)}
-        </Typography>
-        <Typography
-          variant="stepTitle"
-          as="h2"
-          tabIndex={-1}
-          id={id + '-title'}
-          className="break-words"
-        >
-          {view === 'purpose'
-            ? t(`purposeQuestions.${kind}`)
-            : view === 'review' && state.session?.savedAvailable
-              ? t('reviewNamed', named)
-              : t(`steps.${view}`)}
-        </Typography>
-        {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && (
-          <Typography variant="body" className="text-content-secondary max-w-measure mt-2 sm:mt-3">
-            {t(`stepHelp.${view}`)}
+      {directInTalk ? (
+        <div ref={heading} className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="min-w-[min(100%,8rem)] flex-1">
+            <Typography
+              variant="title"
+              as="h2"
+              tabIndex={-1}
+              id={id + '-title'}
+              className={
+                source?.name || targetName ? 'truncate' : 'text-content-secondary truncate'
+              }
+            >
+              {source?.name || targetName || t('conversation.untitled')}
+            </Typography>
+          </div>
+          {canGoBack && (
+            <Button variant="secondary" onClick={() => event('BACK')}>
+              <MessageCircle aria-hidden="true" className="size-4" />
+              {t('conversation.backToTalk')}
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div ref={heading}>
+          {canGoBack && !onNavigationChange && (
+            <Button
+              variant="secondary"
+              size="icon"
+              aria-label={t('back')}
+              title={t('back')}
+              className="mb-2 sm:mb-6"
+              onClick={() => event('BACK')}
+            >
+              <ReturnIcon />
+            </Button>
+          )}
+          <Typography variant="meta" className="text-content-secondary mb-2 block sm:mb-3">
+            {t('namedSetting', named)}
           </Typography>
-        )}
-        <Typography variant="body" role="status" aria-live="polite" className="mt-4 empty:hidden">
-          {view === 'working'
-            ? workingStatus
-            : view === 'restoring'
-              ? t('checking')
-              : view === 'confirmed'
-                ? t(
-                    state.session?.saved?.outcome === 'created'
-                      ? 'confirmedCreate'
-                      : state.session?.saved?.outcome === 'updated'
-                        ? 'confirmedUpdate'
-                        : targetId && kind !== 'writing-voice'
+          <Typography
+            variant="stepTitle"
+            as="h2"
+            tabIndex={-1}
+            id={id + '-title'}
+            className="break-words"
+          >
+            {view === 'purpose'
+              ? t(`purposeQuestions.${kind}`)
+              : view === 'review' && state.session?.savedAvailable
+                ? t('reviewNamed', named)
+                : t(`steps.${view}`)}
+          </Typography>
+          {view !== 'working' && view !== 'restoring' && view !== 'confirmed' && (
+            <Typography
+              variant="body"
+              className="text-content-secondary max-w-measure mt-2 sm:mt-3"
+            >
+              {t(`stepHelp.${view}`)}
+            </Typography>
+          )}
+          <Typography variant="body" role="status" aria-live="polite" className="mt-4 empty:hidden">
+            {view === 'working'
+              ? workingStatus
+              : view === 'restoring'
+                ? t('checking')
+                : view === 'confirmed'
+                  ? t(
+                      state.session?.saved?.outcome === 'created'
+                        ? 'confirmedCreate'
+                        : state.session?.saved?.outcome === 'updated'
                           ? 'confirmedUpdate'
-                          : 'confirmedCreate',
-                    {
-                      kind: t(`kinds.${kind}`),
-                      name: state.session?.saved?.name || name,
-                    },
-                  )
-                : ''}
-        </Typography>
-      </div>
-      {state.session?.savedAvailable && view !== 'confirmed' && (
+                          : targetId && kind !== 'writing-voice'
+                            ? 'confirmedUpdate'
+                            : 'confirmedCreate',
+                      {
+                        kind: t(`kinds.${kind}`),
+                        name: state.session?.saved?.name || name,
+                      },
+                    )
+                  : ''}
+          </Typography>
+        </div>
+      )}
+      {state.session?.savedAvailable && view !== 'confirmed' && !directInTalk && (
         <Typography variant="body" className="text-content-secondary mt-4">
           {t('savedUsable', named)}
         </Typography>
@@ -801,7 +864,7 @@ function ScopedEditor({
           {t('unpublished', named)}
         </Typography>
       )}
-      {draftInvalid && !needsVoiceExample && (
+      {draftInvalid && !needsVoiceExample && !blankTalk && (
         <Notice tone="danger" className="mt-4">
           {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
         </Notice>
@@ -825,29 +888,7 @@ function ScopedEditor({
           </Button>
         </Notice>
       )}
-      {active &&
-        state.session &&
-        renderInspection?.({
-          ownerId,
-          sessionId: state.session.id,
-          kind,
-          revision: state.session.revision,
-          mode:
-            view === 'purpose' ||
-            view === 'choices' ||
-            state.session.phase === 'generating' ||
-            (view !== 'refining' &&
-              view !== 'direct' &&
-              state.session.phase !== 'refining' &&
-              state.session.turns.length === 0)
-              ? 'recommend'
-              : 'refine',
-          prompt: view === 'purpose' ? flow.context.purpose : state.text,
-          model: write.selected ?? undefined,
-          candidateCount,
-          operationId: state.session.activeJobId,
-          sourceDirty: Boolean(state.sourceDirty),
-        })}
+      {!directInTalk && inspection}
       {view === 'purpose' && (
         <form
           className="max-w-measure mt-8"
@@ -1072,18 +1113,22 @@ function ScopedEditor({
                   )}
                 </>
               )}
-              <Typography variant="body" className="text-content-secondary">
-                {t('directHelp')}
-              </Typography>
+              {!directInTalk && (
+                <Typography variant="body" className="text-content-secondary">
+                  {t('directHelp')}
+                </Typography>
+              )}
               <div className="flex flex-wrap gap-4">
                 <Button variant="cta" type="submit">
-                  {t('keepDirect')}
+                  {t(directInTalk ? 'conversation.applyDirect' : 'keepDirect')}
                 </Button>
-                <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
-                  {t('aiNamed', named)}
-                </Button>
+                {!directInTalk && (
+                  <Button variant="ghost" onClick={() => event('OPEN_REFINEMENT')}>
+                    {t('aiNamed', named)}
+                  </Button>
+                )}
               </div>
-              {state.session?.savedBaseline && (
+              {state.session?.savedBaseline && !directInTalk && (
                 <Button variant="ghost" onClick={() => event('ASK_RESET')}>
                   {t('resetNamed', named)}
                 </Button>
@@ -1092,6 +1137,8 @@ function ScopedEditor({
           </div>
         </div>
       )}
+      {/* As under the conversation: the request's technical view is a reference, after the work. */}
+      {directInTalk && inspection && <div className="mt-6">{inspection}</div>}
       {view === 'refining' && (selected || source) && (
         <div className="mt-4 sm:mt-8">
           <SegmentedControl

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Pause, Play } from 'lucide-react'
 import { Button, Typography } from '@/shared/ui'
 import { useSpokenActions } from '../api/hooks'
 import { SPOKEN_MAX_AUDIO_BYTES } from '../config/limits'
@@ -11,6 +12,9 @@ interface Props {
   disabled?: boolean
   onPlayed?: (playbackId: string) => Promise<void>
   onFailure?: (error: unknown) => void
+  /** `icon`: a round play control named for the voice, for a card whose title already names it
+   *  (the 목소리 page's listening cards). The worded button stays the default. */
+  presentation?: 'button' | 'icon'
 }
 export function SpokenSamplePlayer(props: Props) {
   return <SamplePlayer key={`${props.ownerId}:${props.assetId}`} {...props} />
@@ -23,6 +27,7 @@ function SamplePlayer({
   disabled,
   onPlayed,
   onFailure,
+  presentation = 'button',
 }: Props) {
   const { t } = useTranslation('spokenVoice'),
     actions = useSpokenActions(ownerId)
@@ -103,17 +108,38 @@ function SamplePlayer({
         onEnded={() => setPlaying(false)}
         aria-hidden="true"
       />
-      <Button
-        variant="secondary"
-        disabled={disabled}
-        pending={loading}
-        onClick={() => {
-          if (playing) audio.current?.pause()
-          else void play()
-        }}
-      >
-        {playing ? t('stop') : t('play', { name })}
-      </Button>
+      {presentation === 'icon' ? (
+        <Button
+          variant="secondary"
+          size="icon"
+          aria-label={playing ? t('stop') : t('play', { name })}
+          disabled={disabled}
+          pending={loading}
+          onClick={() => {
+            if (playing) audio.current?.pause()
+            else void play()
+          }}
+          className="bg-link-fg-current/15 text-link-fg-current hover:bg-link-fg-current/25 size-11 shrink-0"
+        >
+          {playing ? (
+            <Pause aria-hidden="true" className="size-5" />
+          ) : (
+            <Play aria-hidden="true" className="size-5 translate-x-px" />
+          )}
+        </Button>
+      ) : (
+        <Button
+          variant="secondary"
+          disabled={disabled}
+          pending={loading}
+          onClick={() => {
+            if (playing) audio.current?.pause()
+            else void play()
+          }}
+        >
+          {playing ? t('stop') : t('play', { name })}
+        </Button>
+      )}
       <Typography variant="meta">
         {t('duration', { seconds: (durationMs / 1000).toFixed(1) })}
       </Typography>

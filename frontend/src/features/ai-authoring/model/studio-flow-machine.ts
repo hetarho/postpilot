@@ -27,6 +27,9 @@ interface FlowInput {
   operation: AuthoringState
   ai: StudioAIAvailability
   initialMakeDefault?: boolean
+  /** A conversation (`layout="conversation"`): writing by hand before any draft can return to
+   *  the conversation's opening question. */
+  talk?: boolean
 }
 interface FlowContext {
   scopeKey: string
@@ -40,6 +43,7 @@ interface FlowContext {
   makeDefault: boolean
   initialMakeDefault: boolean
   resetOpen: boolean
+  talk: boolean
 }
 type Scoped = { scopeKey: string }
 export type StudioFlowEvent = Scoped &
@@ -149,6 +153,8 @@ export const studioFlowMachine = setup({
     accepted: ({ context, event }) => accepted(context, event),
     available: ({ context, event }) => available(context, event),
     navigable: ({ context, event }) => navigable(context, event),
+    talkWithoutDraft: ({ context, event }) =>
+      context.talk && navigable(context, event) && !context.operation.session?.selected,
     saved: ({ context }) => context.operation.phase === 'saved',
     working: ({ context }) =>
       studioBusy(context.operation) &&
@@ -283,6 +289,7 @@ export const studioFlowMachine = setup({
     purpose: input.operation.session ? '' : input.operation.text,
     makeDefault: input.scope.kind === 'writing-voice' && !!input.initialMakeDefault,
     initialMakeDefault: input.scope.kind === 'writing-voice' && !!input.initialMakeDefault,
+    talk: !!input.talk,
   }),
   on: {
     OBSERVE: [
@@ -414,6 +421,7 @@ export const studioFlowMachine = setup({
         BACK: [
           { guard: 'sourceDirty', target: 'working', actions: ['keepingDirect', 'keepDirect'] },
           { guard: 'canReview', target: 'review' },
+          { guard: 'talkWithoutDraft', target: 'purpose' },
         ],
       },
     },

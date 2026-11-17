@@ -32,7 +32,7 @@ function session(patch: Partial<AuthoringSession> = {}): AuthoringSession {
 function operation(patch: Partial<AuthoringState> = {}): AuthoringState {
   return { scopeKey, phase: 'idle', operation: 0, text: '', ...patch }
 }
-function actor(initial = operation()) {
+function actor(initial = operation(), talk = false) {
   const select = vi.fn(),
     recommend = vi.fn(),
     refine = vi.fn(),
@@ -58,7 +58,7 @@ function actor(initial = operation()) {
         fresh,
       },
     }),
-    { input: { scope, operation: initial, ai: 'ready' } },
+    { input: { scope, operation: initial, ai: 'ready', talk } },
   ).start()
   const send = (event: Omit<StudioFlowEvent, 'scopeKey'>) =>
     value.send({ ...event, scopeKey } as StudioFlowEvent)
@@ -162,6 +162,25 @@ describe('scoped studio presentation actor', () => {
     expect(continuation.continueEditing).toHaveBeenCalledOnce()
     expect(continuation.fresh).not.toHaveBeenCalled()
     expect(continuation.publish).not.toHaveBeenCalled()
+  })
+  it('returns blank direct writing to a conversation’s opening question, and only there', () => {
+    for (const talk of [true, false]) {
+      const h = actor(operation(), talk)
+      expect(h.view()).toBe('purpose')
+      h.send({ type: 'OPEN_DIRECT' })
+      expect(h.load).toHaveBeenCalledOnce()
+      h.observe(
+        operation({
+          phase: 'editing',
+          operation: 1,
+          session: session({ phase: 'editing', candidates: [] }),
+        }),
+      )
+      expect(h.view()).toBe('direct')
+      h.send({ type: 'BACK' })
+      expect(h.view()).toBe(talk ? 'purpose' : 'direct')
+      expect(h.patch).not.toHaveBeenCalled()
+    }
   })
   it('allows an empty optional purpose and admits a repeated recommendation only once', () => {
     const h = actor()

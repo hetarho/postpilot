@@ -284,8 +284,8 @@ describe('the memory directory', () => {
   }
 
   // The confirmation hands focus back to the trash button, and the re-read list then removes the
-  // row that holds it. Focus goes to the row that took the deleted one's place, or to the one
-  // above it when the last row went.
+  // row that holds it. Focus goes to the row that took the deleted one's place in the notebook
+  // (grouped by kind, not the server's order), or to the one above it when the last row went.
   it('keeps keyboard focus in the list after a memory is deleted', async () => {
     const user = userEvent.setup()
     const deletions: string[] = []
@@ -294,11 +294,13 @@ describe('the memory directory', () => {
       memories: [
         ...MEMORIES,
         { id: 'memory-person', text: '동생과 자주 간다', kind: ProtoMemoryKind.PERSON },
+        { id: 'memory-sea', text: '바다를 좋아한다', kind: ProtoMemoryKind.PREFERENCE },
       ],
     })
 
+    // The notebook reads 취향 (매운 음식, 바다), 장소 (연남동), 인물 (동생).
     await deleteByKeyboard(user, '매운 음식을 못 먹는다')
-    const next = (await row('동생과 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
+    const next = (await row('바다를 좋아한다')).getByRole('button', { name: '이 기억 삭제' })
     await waitFor(() => expect(next).toHaveFocus())
 
     await deleteByKeyboard(user, '동생과 자주 간다')

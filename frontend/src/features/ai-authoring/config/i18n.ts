@@ -30,6 +30,8 @@ export const i18n = {
       saveNew: '새 템플릿으로 저장',
       saveChanges: '변경사항 저장',
       keepTalking: '계속 다듬기',
+      backToTalk: '대화로 돌아가기',
+      applyDirect: '초안에 반영',
       starters: {
         restaurant: {
           label: '맛집 후기',
@@ -144,7 +146,7 @@ export const i18n = {
         '영상 현재 초안의 지침과 직접 선택한 적용 범위를 저장해요. AI 편집은 적용 범위를 바꾸지 않아요.',
     },
     publicationCreates: {
-      'post-template': '새 글 구성으로 저장해요.',
+      'post-template': '새 템플릿으로 저장해요.',
       'video-template': '새 영상 구성으로 저장해요.',
       'post-guideline': '새 글쓰기 지침으로 저장해요.',
       'video-guideline': '새 영상 지침으로 저장해요.',
@@ -180,7 +182,7 @@ export const i18n = {
       legacyVoice: '이전에 만든 말투 이어보기',
     },
     kinds: {
-      'post-template': '글 구성',
+      'post-template': '템플릿',
       'video-template': '영상 구성',
       'post-guideline': '작문 지침',
       'video-guideline': '영상 지침',
@@ -302,6 +304,8 @@ export const i18n = {
       saveNew: 'Save as a new template',
       saveChanges: 'Save changes',
       keepTalking: 'Keep refining',
+      backToTalk: 'Back to the conversation',
+      applyDirect: 'Apply to the draft',
       starters: {
         restaurant: {
           label: 'Restaurant visit',
@@ -418,7 +422,7 @@ export const i18n = {
         'Save the draft video text and explicitly chosen scope. AI editing preserves the scope.',
     },
     publicationCreates: {
-      'post-template': 'Save as a new post structure.',
+      'post-template': 'Save as a new template.',
       'video-template': 'Save as a new video structure.',
       'post-guideline': 'Save as a new writing guideline.',
       'video-guideline': 'Save as a new video guideline.',
@@ -454,7 +458,7 @@ export const i18n = {
       legacyVoice: 'Continue a previous writing style',
     },
     kinds: {
-      'post-template': 'post structure',
+      'post-template': 'template',
       'video-template': 'video structure',
       'post-guideline': 'writing guideline',
       'video-guideline': 'video guideline',

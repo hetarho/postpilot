@@ -18,6 +18,12 @@ export const i18n = {
       post: { global: '모든 글에서', templates: '템플릿을 쓸 때', fields: '분야별로' },
       clip: { global: '모든 영상에서', templates: '영상 템플릿을 쓸 때', fields: '분야별로' },
     },
+    row: {
+      named: '“{{name}}”',
+      ai: 'AI로 편집하기',
+      direct: '직접 편집하기',
+      continue: '이어서 편집하기',
+    },
     principles: {
       title: 'Postpilot 원칙',
       summary: '항상 적용돼요',
@@ -80,6 +86,12 @@ export const i18n = {
         templates: 'With a video template',
         fields: 'By field',
       },
+    },
+    row: {
+      named: '“{{name}}”:',
+      ai: 'Edit with AI',
+      direct: 'Edit directly',
+      continue: 'Continue editing',
     },
     principles: {
       title: 'Postpilot principles',

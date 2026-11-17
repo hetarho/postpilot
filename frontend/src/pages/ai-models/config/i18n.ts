@@ -103,7 +103,7 @@ export const i18n = {
         row: '{{voice}} · {{prompt}}',
       },
       modelSettings: 'Change models',
-      guideTitle: 'AI tournament',
+      guideTitle: 'AI arena',
       inUse: 'AI in use',
       writingTests: 'Give two AIs the same post',
       writingTestsHelp:

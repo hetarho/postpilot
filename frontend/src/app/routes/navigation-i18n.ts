@@ -58,7 +58,7 @@ export const navigationI18n = {
     },
   },
   en: {
-    tabs: { home: 'Home', posts: 'Posts', videos: 'Videos', ai: 'Arena' },
+    tabs: { home: 'Home', posts: 'Posts', videos: 'Videos', ai: 'AI arena' },
     tests: 'Try a comparison',
     history: 'Work history',
     overflow: 'Navigation menu',
@@ -90,7 +90,7 @@ export const navigationI18n = {
       videoGuidelines: 'Video guidelines',
       spokenVoices: 'Speaking voices',
       newSpokenVoice: 'New speaking voice',
-      models: 'AI tournament',
+      models: 'AI arena',
       tests: 'Writing tests',
       testHistory: 'Test history',
       test: 'Test result',

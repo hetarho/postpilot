@@ -62,3 +62,17 @@ it('carries on a voice still being made rather than starting another', async () 
   )
   expect(screen.queryByRole('link', { name: '말투 만들기' })).toBeNull()
 })
+
+// The template step leaves the kit for its own conversation screen, so it names 홈 as the way
+// back rather than the template list the owner never opened.
+it('opens the template conversation from home with home as its way back', async () => {
+  renderAppAt('/', {
+    user: { id: 'alice' },
+    voice: { voices: [{ id: 'voice-default', name: '다정한 말투', isDefault: true }] },
+    templates: { templates: [] },
+  })
+  expect(await screen.findByRole('link', { name: '템플릿 만들기' })).toHaveAttribute(
+    'href',
+    '/templates/new?entry=%2F',
+  )
+})

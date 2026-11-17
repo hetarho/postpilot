@@ -74,7 +74,7 @@ describe('owner template generation numbers in shared drafts', () => {
       await mount(user, true, { updates }, { patches })
       fireEvent.change(screen.getByLabelText('최소 태그 수'), { target: { value } })
       expect(screen.getByText('1에서 10 사이로 적어 주세요.')).toBeInTheDocument()
-      await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
+      await user.click(screen.getByRole('button', { name: '초안에 반영' }))
       await waitFor(() => expect(patches).toHaveLength(1))
       expect(patches[0].tagCount).toBe(value || ' ')
       expect(updates).toHaveLength(0)
@@ -90,7 +90,7 @@ describe('owner template generation numbers in shared drafts', () => {
     fireEvent.change(screen.getByLabelText('목표 글자 수'), { target: { value: '2500' } })
     await user.click(screen.getByLabelText('목표 글자 수 사용'))
     // Back to the conversation and into the text again: the same working draft.
-    await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
+    await user.click(screen.getByRole('button', { name: '대화로 돌아가기' }))
     await screen.findByRole('log', { name: '템플릿 대화' })
     await openTemplateDirect(user)
     await user.click(screen.getByLabelText('목표 글자 수 사용'))

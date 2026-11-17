@@ -68,8 +68,9 @@ export function SpokenVoiceActions({
       {presentation === 'menu' ? (
         <ActionMenu
           label={t('menu', { name: voice.name })}
-          triggerLabel={<Ellipsis aria-hidden="true" className="size-5" />}
+          triggerIcon={<Ellipsis aria-hidden="true" className="size-5" />}
           triggerVariant="ghost"
+          placement="below"
           items={[
             { id: 'rename', label: t('rename'), onSelect: openRename },
             {
