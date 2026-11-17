@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r25 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
+> r26 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -79,6 +79,8 @@
   - import-based selection is an aid, not proof of coverage; shared contracts, migrations, authentication, media behavior and test configuration require their matching consumer/integration regressions at the shared batch gate (→!ARCH-31)
   - an impact that cannot be bounded expands the batch selection to the affected full suite; unit sessions maintain integration/e2e tests and hand off exact commands and test paths in result limits
   - task checks are affected unit tests plus applicable static checks expected under a minute; record commands, input revision, actual evidence and selection rationale; an empty selection is not behavioral verification
+  - frontend task static checks use changed-file ESLint/Prettier and applicable fast boundary/style checks; hand off any slower scope with its exact command and paths
+  - full-project frontend TypeScript checks (`tsc -b` or whole-app `tsc --noEmit`) run through the existing `pnpm build:web` at the shared batch gate (→!ARCH-31); task checks do not repeat them
   - build, browser/integration/e2e and full-suite success belong to batch completion; task completion records implementation, affected-unit verification and the handoff without claiming unrun coverage
   - task: `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') lint`
   - batch: →=ARCH-31
@@ -219,6 +221,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r26 261117 ARCH-24✎ frontend task whole-project TypeScript checks→existing shared-batch frontend build; task static checks→changed-file fast checks with slower scopes handed off
 - r25 261116 ARCH-71+ product stage alpha with a Chrome-first support scope; ARCH-31✎ initiating coordinator owns batch/CI and publication under cumulative failure limits→shared integration owner (initiating coordinator when alone) under deadline/closing-reserve/unit limits; ARCH-24✎ ARCH-37✎ coordinator's/coordinator-owned batch gate→shared batch gate
 - r24 261114 ARCH-24✎ ARCH-25✎ ARCH-26✎ ARCH-31✎ ARCH-37✎ task build/full-suite completion→unit/static task checks plus coordinator batch handoff; pre-push-only full CI→final implementation batch and CI; ARCH-70✎ serial direct-main orchestration→Gusta/SETTINGS
 - r23 261112 ARCH-30✎ skill check `pnpm exec haeram-spec-creator check` (devDependency, `.haeram-spec-creator-lock.json`)→gusta through npx at the `.gusta-lock.json` version, never a dependency
