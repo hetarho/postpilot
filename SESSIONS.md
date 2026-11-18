@@ -184,6 +184,7 @@
 - 261117 decided MODEL-100 T898: how much room does a reasoning observer get? → four times the batch budget (8,192 tokens for four photos, the clip observer budget) for any model whose source publishes a reasoning object, since the truncating models expose no effort control (alt: double it like the writer headroom | raise every observation budget regardless of reasoning)
 - 261118 decided review/redesign-261119: which of the 12 scout proposals does this redesign run adopt? → the 8 that change a screen's flow (F1–F8 → T903–T910); held F9–F12 (dead pages, /setup copy, signed-out frame, 최신순 label) as cleanup or separate planning (alt: adopt all 12 | only the 글/영상 lists)
 - 261118 decided T903 T909: where does the integration screenshot check live when a work-group submit needs every acceptance line [v]? → removed from task acceptance and run by the coordinator as a group-level check on the integrated candidate, recorded in the session report (alt: let workers tick it unobserved | keep it and block every submit)
+- 261118 decided T909 AUTH-29: how does a signed-in account with no password set one from 계정? → it keeps today's no-password line with no pencil or link; no in-app reset route exists and /forgot-password returns a signed-in owner (alt: a send-reset-mail action on 계정 | link to /forgot-password)
 
 ## unlanded
 | id | tag | branch | commit | at |
