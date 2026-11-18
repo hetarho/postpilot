@@ -187,6 +187,7 @@
 - 261118 decided T909 AUTH-29: how does a signed-in account with no password set one from 계정? → it keeps today's no-password line with no pencil or link; no in-app reset route exists and /forgot-password returns a signed-in owner (alt: a send-reset-mail action on 계정 | link to /forgot-password)
 - 261118 decided T908 QUOTA-75 BILL-9: does a free account's arrival at /billing#billing-charge open the packs sheet? → the arrival sheet belongs to accounts that can buy packs (paid; master disabled); a free account is never offered a purchasable pack (alt: open the sheet for every tier | send a free arrival to /plans)
 - 261118 decided T911 T906 MODEL-44: T906 integrated but the browser normalizes /tests to /tests?factor=model…, so every entry skipped the factor choice → a follow-up task T911 inside this run (alt: revert T906 | park it)
+- 261118 decided review/redesign-261119: the runner blocks dispatch on each synchronous 5-min submit gate → submit tier switched to static checks + vitest --changed (workers already run the full suite; integrate keeps the full gate) and the runner restarted (alt: keep the full gate at both tiers)
 
 ## unlanded
 | id | tag | branch | commit | at |
