@@ -184,6 +184,7 @@
 - 261117 decided MODEL-100 T898: how much room does a reasoning observer get? → four times the batch budget (8,192 tokens for four photos, the clip observer budget) for any model whose source publishes a reasoning object, since the truncating models expose no effort control (alt: double it like the writer headroom | raise every observation budget regardless of reasoning)
 
 ## log
+- 261118 gusta-update-ssot ready-home variant c: THEME r48 TMPL r37 EDIT r8 CLIP r82 POST r55 VOICE r23 GUIDE r29 MEM r9 MODEL r45 QUOTA r41 LANG r12 AUTH r16 ARCH r28
 - 261118 ab ready-home: adopt c — Writing-kit home with KitRing and four tabs; kit pieces navigate by icon and change defaults from a…
 - 261117 T899 done
 - 261117 T898 done
@@ -203,4 +204,3 @@
 - 261117 gusta-create-task MODEL r39 VIDEO r9 -> T888-T897
 - 261117 gusta-create-task MODEL VIDEO start
 - 261117 gusta-update-ssot MODEL r39 VIDEO r9 done: photo observation tests, model checklist with credits, setup legibility
-- 261117 gusta-update-ssot MODEL start
