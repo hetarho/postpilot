@@ -88,3 +88,4 @@ export { WorkspaceHeader } from './workspace-header/WorkspaceHeader'
 
 export { DirectoryItem } from './directory-item/DirectoryItem'
 export { ListEmptyState } from './list-empty-state/ListEmptyState'
+export { WorkRow, WorkRowList, type WorkRowLinkProps } from './work-row/WorkRow'

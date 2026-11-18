@@ -165,12 +165,21 @@ describe('clip directory', () => {
     expect(router.state.location.search).toMatchObject({ status: 'completed' })
   })
 
-  it('carries the template, the ratio and a relative time on the row', async () => {
-    mount()
-    const link = await row(/제주 여행/)
-    await waitFor(() => expect(link).toHaveTextContent('여행'))
-    expect(link).toHaveTextContent('세로 9:16')
-    expect(within(link).getByText(/전|어제|방금/)).toBeInTheDocument()
+  // CLIP-41: every new clip is 9:16, so only a 16:9 or 1:1 project names its ratio.
+  it('carries the template, a non-vertical ratio and a relative time on the row', async () => {
+    mount('/clips', {
+      projects: [
+        { ...projects[0], id: 'tall', title: '세로 영상' },
+        { ...projects[0], id: 'wide', title: '가로 영상', ratio: 'horizontal' },
+        { ...projects[0], id: 'box', title: '정방형 영상', ratio: 'square' },
+      ],
+    })
+    const tall = await row(/세로 영상/)
+    await waitFor(() => expect(tall).toHaveTextContent('여행'))
+    expect(tall).not.toHaveTextContent('9:16')
+    expect(within(tall).getByText(/전|어제|방금/)).toBeInTheDocument()
+    expect(await row(/가로 영상/)).toHaveTextContent('가로 16:9')
+    expect(await row(/정방형 영상/)).toHaveTextContent('정방형 1:1')
   })
 
   it('shows no template as a normal state and asks again only for a template that is gone', async () => {
@@ -247,24 +256,24 @@ describe('clip directory', () => {
     ).toBeInTheDocument()
   })
 
-  it('offers separate continuation and retained download actions without a creation dock or preview', async () => {
+  it('opens each clip through its one row link without a creation dock or preview', async () => {
     const calls: string[] = []
     mount('/clips', { calls })
     const directory = await screen.findByRole('region', { name: '저장된 클립' })
     const finished = (await within(directory).findByRole('link', { name: /JEJU 다시/ })).closest(
       'li',
     )!
-    const continueAction = within(finished).getByRole('link', { name: '작업 확인' })
-    const download = within(finished).getByRole('link', { name: '영상 내보내기' })
-    expect(continueAction).toHaveAttribute('href', '/clips/finished')
-    expect(download).toHaveAttribute('href', '/clips/finished')
-    expect(download.parentElement?.closest('a')).toBeNull()
+    // THEME-83: the row is the one link to the clip; no 작업 확인 or 영상 내보내기 repeats it.
+    expect(within(finished).getAllByRole('link')).toHaveLength(1)
+    expect(within(finished).getByRole('link')).toHaveAttribute('href', '/clips/finished')
+    for (const name of ['작업 확인', '이어서 편집', '영상 내보내기']) {
+      expect(within(directory).queryByRole('link', { name })).not.toBeInTheDocument()
+    }
     const draft = within(directory)
       .getByRole('link', { name: /제주 여행/ })
       .closest('li')!
-    expect(within(draft).getByRole('link', { name: '이어서 편집' })).toBeInTheDocument()
+    expect(within(draft).getAllByRole('link')).toHaveLength(1)
     expect(within(draft).queryByRole('link', { name: '영상 다운로드' })).not.toBeInTheDocument()
-    expect(within(draft).queryByRole('link', { name: '영상 내보내기' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
     expect(directory.querySelector('video')).toBeNull()
     expect(calls.filter((call) => call === 'GetClipProject')).toHaveLength(0)
@@ -310,21 +319,17 @@ describe('clip directory', () => {
       'section',
     )!
     expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
-    expect(
-      within(inProgress)
-        .getByRole('link', { name: /새 초안/ })
-        .closest('.ui-card'),
-    ).toHaveClass('bg-badge-accent-bg')
-    expect(
-      within(inProgress)
-        .getByRole('link', { name: /오래된 초안/ })
-        .closest('.ui-card'),
-    ).not.toHaveClass('bg-badge-accent-bg')
+    const latest = within(inProgress).getByRole('link', { name: /새 초안/ })
+    expect(latest.closest('li')).toHaveClass('bg-badge-accent-bg')
+    expect(latest).toHaveTextContent(/이어서$/)
+    const older = within(inProgress).getByRole('link', { name: /오래된 초안/ })
+    expect(older.closest('li')).not.toHaveClass('bg-badge-accent-bg')
+    expect(older).not.toHaveTextContent('이어서')
     expect(screen.getByRole('heading', { name: /^작성 중/ })).toHaveTextContent(/^작성 중\s*2$/)
     const done = screen.getByRole('heading', { name: /^완성/ }).closest('section')!
     expect(within(done).getByRole('link', { name: /끝난 클립/ })).toBeInTheDocument()
     expect(screen.getAllByRole('link', { name: /새 초안/ })).toHaveLength(1)
-    expect(within(inProgress).getAllByRole('link', { name: '이어서 편집' })).toHaveLength(2)
+    expect(within(inProgress).getAllByRole('link')).toHaveLength(2)
     expect(screen.getByRole('main').querySelectorAll('.ui-button-cta')).toHaveLength(1)
   })
 
@@ -447,6 +452,7 @@ it('keeps a narrowed clip list compact without special latest-item emphasis', as
   })
   const heading = await screen.findByRole('heading', { name: /^작성 중/ })
   expect(heading).toHaveTextContent(/^작성 중\s*2$/)
-  expect(screen.getByRole('main').querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(0)
+  expect(screen.getByRole('main').querySelectorAll('li.bg-badge-accent-bg')).toHaveLength(0)
+  expect(screen.getByRole('link', { name: /첫 초안/ })).not.toHaveTextContent('이어서')
   expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
 })

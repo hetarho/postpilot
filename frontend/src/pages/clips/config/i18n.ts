@@ -6,20 +6,14 @@ export const i18n = {
     history: {
       videos: '영상',
       empty: '아직 영상이 없어요. 아래 + 새 영상에서 만들 수 있어요.',
-      continue: '이어서 편집',
-      open: '작업 확인',
       download: '영상 다운로드',
-      export: '영상 내보내기',
     },
   },
   en: {
     history: {
       videos: 'Videos',
       empty: 'No videos yet. Make one from + New video below.',
-      continue: 'Continue editing',
-      open: 'View work',
       download: 'Download video',
-      export: 'Export video',
     },
   },
 } as const satisfies I18nFragment

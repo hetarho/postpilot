@@ -84,7 +84,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T903 | Draw the 글 and 영상 lists as one shared work row | THEME POST CLIP | - | todo |
 | T904 | Read 지난 비교 as work rows grouped by state | MODEL THEME | T903 | todo |
 | T905 | Open AI 토너먼트 on its picture header, a 새 비교 menu and the latest comparisons | MODEL THEME | T904 | todo |
 | T908 | One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet | QUOTA BILL THEME | - | todo |
@@ -95,7 +94,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
-| redesign-261119 | 4 | 9 | 4 | 5 | 1 | 2 | 0 | 2026-11-18T17:31:14.442Z | [history](work/redesign-261119.json) |
+| redesign-261119 | 4 | 9 | 5 | 4 | 0 | 2 | 0 | 2026-11-18T17:48:18.219Z | [history](work/redesign-261119.json) |
 
 ## next
 - inspect work board for remaining tasks

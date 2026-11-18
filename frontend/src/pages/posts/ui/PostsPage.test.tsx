@@ -10,6 +10,7 @@ import {
   readPostReturnContext,
   rememberPostEntry,
 } from '@/entities/post'
+import { postsIllustration } from '@/shared/assets'
 
 const USER = { id: 'alice' }
 
@@ -154,9 +155,9 @@ describe('PostsPage', () => {
     expect(screen.getByRole('link', { name: /스토리만/ })).toHaveTextContent('스토리라인 작성 완료')
   })
 
-  // The card's main link covered only its top half, so a hover tinted that half and left the
-  // 이어서 작성 row under it in the card's resting colour.
-  it('answers a hover anywhere on a card with the whole card', async () => {
+  // THEME-83: the whole row is ONE target opening the post — its link is stretched over the row
+  // and no second link leads to the same post.
+  it('opens each post through one row link stretched over the row', async () => {
     renderList({
       posts: [
         { slug: '20260828-jeju', title: '제주 3일' },
@@ -165,13 +166,13 @@ describe('PostsPage', () => {
     })
 
     const main = await screen.findByRole('link', { name: /부산/ })
-    const card = main.closest('li')
-    expect(card).toHaveClass('relative', 'hover:bg-card-bg-hover', 'hover:-translate-y-0.5')
-    // The main link stretches over the card; the row's own link stays a target above it.
+    const row = main.closest('li') as HTMLElement
+    expect(row).toHaveClass('relative', 'hover:bg-card-bg-hover')
     expect(main).toHaveClass('after:absolute', 'after:inset-0')
-    expect(main).not.toHaveClass('hover:bg-card-bg-hover')
-    const footer = within(card as HTMLElement).getByRole('link', { name: '이어서 작성' })
-    expect(footer).toHaveClass('relative', 'z-10')
+    expect(within(row).getAllByRole('link')).toEqual([main])
+    for (const name of ['이어서 작성', '작업 확인', '내보내기']) {
+      expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
+    }
   })
 
   it('marks a post with an active job as generating', async () => {
@@ -315,10 +316,10 @@ describe('PostsPage', () => {
     // Guide: one region holds 이어서 쓰기 (the review post) and the 작성 중 / 완성 groups.
     const history = await screen.findByRole('region', { name: '글 작업 내역' })
     const [review, empty, published] = await within(history).findAllByRole('listitem')
-    const resume = within(review).getByRole('link', { name: '이어서 작성' })
+    const resume = within(review).getByRole('link', { name: /내용 있는 검토 글/ })
     expect(resume).toHaveAttribute('href', '/posts/review-content')
-    // THEME-18: the hero's 계속하기 is no second filled CTA beside 새 글.
-    expect(resume).not.toHaveClass('ui-button-cta')
+    // THEME-18: the latest row's 이어서 is no second filled CTA beside 새 글.
+    expect(resume).toHaveTextContent('이어서')
     expect(
       [...screen.getByRole('main').querySelectorAll('.ui-button-cta')].map(
         (node) => node.textContent,
@@ -327,14 +328,14 @@ describe('PostsPage', () => {
     expect(within(review).getByText('내보내기 가능')).toBeInTheDocument()
     expect(within(empty).queryByText('내보내기 가능')).not.toBeInTheDocument()
     expect(within(history).queryByRole('link', { name: '내보내기' })).not.toBeInTheDocument()
-    expect(within(published).getByRole('link', { name: '작업 확인' })).toHaveAttribute(
-      'href',
-      '/posts/published-content',
-    )
-    expect(within(published).getByRole('link', { name: '발행한 글' })).toHaveAttribute(
-      'href',
-      'https://blog.naver.com/alice/1',
-    )
+    // The published row opens the post itself, and its one trailing action the published page.
+    const [work, external] = within(published).getAllByRole('link')
+    expect(work).toHaveAccessibleName(/발행한 작업/)
+    expect(work).toHaveAttribute('href', '/posts/published-content')
+    expect(external).toHaveAccessibleName('발행한 글')
+    expect(external).toHaveAttribute('href', 'https://blog.naver.com/alice/1')
+    expect(external.closest('a')).toBe(external)
+    expect(external.parentElement?.closest('a')).toBeNull()
     expect(calls).not.toContain('GetPost')
     expect(within(history).queryByText(POST_CONTENT_FIXTURE.summary)).not.toBeInTheDocument()
   })
@@ -363,10 +364,18 @@ describe('PostsPage', () => {
     expect(work).toHaveTextContent('AI 결과 오류')
     expect(work).toHaveAttribute('href', '/posts/failed')
     expect(within(history).getByText('내보내기 가능')).toBeInTheDocument()
-    expect(within(history).getByRole('link', { name: '이전 AI 결과 확인' })).toHaveAttribute(
+    expect(within(history).getAllByRole('link')).toHaveLength(2)
+    expect(within(history).getByRole('link', { name: '이전 AI 결과' })).toHaveAttribute(
       'href',
       '/tests/records/legacy-result?entry=%2Fposts',
     )
+    // The latest row carries all four at once — its failure, 내보내기 가능, 이어서 and the trailing
+    // 이전 AI 결과 — and the failure is never cut to fit the row (THEME-83).
+    expect(work).toHaveTextContent('이어서')
+    const failureLine = within(work).getByText('내보내기 가능').nextElementSibling as HTMLElement
+    expect(failureLine.textContent?.length).toBeGreaterThan(0)
+    expect(failureLine).toHaveClass('break-words')
+    expect(failureLine).not.toHaveClass('truncate')
   })
 
   it('retains the history narrowing when opening a content-bearing draft', async () => {
@@ -379,7 +388,7 @@ describe('PostsPage', () => {
         ],
       },
     })
-    await user.click(await screen.findByRole('link', { name: '이어서 작성' }))
+    await user.click(await screen.findByRole('link', { name: /제주 작업/ }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/posts/jeju'))
     const entry = readPostReturnContext(USER.id, 'jeju')
     expect(entry).toMatchObject({
@@ -390,10 +399,12 @@ describe('PostsPage', () => {
     expect(entry?.filters).not.toHaveProperty('intent')
   })
 
-  it('says so when there is nothing yet', async () => {
+  it('says so when there is nothing yet, over the 글 illustration', async () => {
     renderList()
 
     expect(await screen.findByText(/아직 글이 없어요/)).toBeInTheDocument()
+    // THEME-29: the empty 글 list shows its own illustration, not 홈's pen.
+    expect(screen.getByRole('main').querySelector('img')).toHaveAttribute('src', postsIllustration)
   })
 
   it('says so when the list cannot be loaded', async () => {
@@ -517,6 +528,44 @@ describe('PostsPage', () => {
     expect(row).toHaveTextContent('#카페')
     // Only the tag that matched — the row is not a tag list.
     expect(row).not.toHaveTextContent('#제주')
+  })
+
+  // POST-65 with THEME-83: a running or failed row still says which tag kept it, beside its
+  // progress or failure.
+  it('names the matched tag on a running and on a failed row', async () => {
+    renderAppAt('/posts?q=카페', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: 'running',
+            title: '쓰는 중인 글',
+            status: 'draft',
+            tags: ['카페'],
+            activeJob: { id: 'job-1', status: 'running', stage: 'write' },
+          },
+          {
+            slug: 'failed',
+            title: '실패한 글',
+            status: 'draft',
+            tags: ['카페'],
+            latestOrdinaryFailure: {
+              id: 'failed-write',
+              kind: 'generate_post',
+              status: 'failed',
+              stage: 'write',
+              failureReason: 'NETWORK_UNAVAILABLE',
+            },
+          },
+        ],
+      },
+    })
+    const running = await screen.findByRole('link', { name: /쓰는 중인 글/ })
+    expect(running).toHaveTextContent('#카페')
+    expect(running).toHaveTextContent('AI 생성 중')
+    const failed = screen.getByRole('link', { name: /실패한 글/ })
+    expect(failed).toHaveTextContent('#카페')
+    expect(failed).toHaveTextContent('AI 결과 오류')
   })
 
   it('leaves the row alone when the title is what matched', async () => {
@@ -822,7 +871,8 @@ describe('the Naver Blog channel', () => {
   it('opens on its history with no visible heading and its creation button', async () => {
     renderList({ posts: [{ slug: 'jeju', title: '제주 3일', status: 'draft' }] })
     expect(await screen.findByRole('link', { name: /제주 3일/ })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { level: 1, name: '네이버 블로그' })).toHaveClass('sr-only')
+    // POST-43: the outline's h1 names the 글 tab, whose large title the shell draws.
+    expect(screen.getByRole('heading', { level: 1, name: '글' })).toHaveClass('sr-only')
     expect(screen.queryByText('글 작업 내역', { selector: 'h1, h2, p' })).toBeNull()
 
     // The 글 section's one creation opens the editor directly (THEME-67).
@@ -851,16 +901,15 @@ it('counts the latest unfinished post once and removes emphasis under a narrowin
   expect(heading).toHaveTextContent(/^작성 중\s*2$/)
   expect(screen.queryByRole('heading', { name: '이어서 쓰기' })).toBeNull()
   expect(screen.getAllByRole('link', { name: /최근 초안/ })).toHaveLength(1)
-  expect(screen.getByRole('link', { name: /최근 초안/ }).closest('.ui-card')).toHaveClass(
-    'bg-badge-accent-bg',
-  )
-  expect(screen.getByRole('link', { name: /이전 초안/ }).closest('.ui-card')).not.toHaveClass(
-    'bg-badge-accent-bg',
-  )
+  const latest = screen.getByRole('link', { name: /최근 초안/ })
+  expect(latest.closest('li')).toHaveClass('bg-badge-accent-bg')
+  expect(latest).toHaveTextContent(/이어서$/)
+  const older = screen.getByRole('link', { name: /이전 초안/ })
+  expect(older.closest('li')).not.toHaveClass('bg-badge-accent-bg')
+  expect(older).not.toHaveTextContent('이어서')
   await act(() => view.router.navigate({ to: '/posts', search: { status: 'draft' } }))
   await waitFor(() =>
-    expect(screen.getByRole('main').querySelectorAll('.ui-card.bg-badge-accent-bg')).toHaveLength(
-      0,
-    ),
+    expect(screen.getByRole('main').querySelectorAll('li.bg-badge-accent-bg')).toHaveLength(0),
   )
+  expect(screen.getByRole('link', { name: /최근 초안/ })).not.toHaveTextContent('이어서')
 })
