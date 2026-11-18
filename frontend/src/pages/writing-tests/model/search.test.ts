@@ -1,5 +1,9 @@
 import { expect, it } from 'vitest'
-import { writingTestHistorySearchSchema, writingTestSearchSchema } from './search'
+import {
+  writingTestFactorNamed,
+  writingTestHistorySearchSchema,
+  writingTestSearchSchema,
+} from './search'
 
 it('defaults a fresh writing test to the model A/B writing axis and preserves explicit valid formats', () => {
   expect(writingTestSearchSchema({})).toMatchObject({ factor: 'model', stage: 'write', count: 2 })
@@ -94,4 +98,11 @@ it('keeps meaningful history stage, source and voice filters while dropping rank
   expect(
     writingTestHistorySearchSchema({ stage: ['voice'], source: {}, voiceId: ['other'] }),
   ).toEqual({ stage: undefined, source: undefined, voiceId: undefined })
+})
+it('tells an address that names its factor from one that leaves it to the default', () => {
+  expect(writingTestFactorNamed({ factor: 'model', stage: 'write', count: '2' })).toBe(true)
+  expect(writingTestFactorNamed({ factor: 'voice' })).toBe(true)
+  expect(writingTestFactorNamed({})).toBe(false)
+  expect(writingTestFactorNamed({ sourcePost: 'owned-source' })).toBe(false)
+  expect(writingTestFactorNamed({ factor: '' })).toBe(false)
 })

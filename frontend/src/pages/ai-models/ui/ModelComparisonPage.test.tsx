@@ -6,11 +6,10 @@ import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
 
 beforeEach(() => sessionStorage.clear())
 
-/** A tile only chooses the factor; the step bar's 다음 moves on to the candidates. */
-async function chooseFactor(user: ReturnType<typeof userEvent.setup>, label: string) {
-  await user.click(screen.getByRole('button', { name: label }))
-  expect(screen.queryByRole('combobox', { name: /^후보 \d+(?:\s|$)/ })).toBeNull()
-  await user.click(screen.getByRole('button', { name: '다음' }))
+/** The alias names its factor, so it opens on the candidates; 이전 reaches the factor choice. */
+async function backToFactor(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: '이전 단계' }))
+  await screen.findByRole('heading', { level: 2, name: '무엇을 비교할까요?' })
 }
 
 it.each([
@@ -28,6 +27,7 @@ it.each([
     expect(router.state.location.pathname).toBe('/tests')
     expect(router.state.location.search).toMatchObject({ factor, stage, count: 2 })
     if (factor === 'voice') expect(router.state.location.search.voiceId).toBe('voice-default')
+    await backToFactor(userEvent.setup())
     const main = within(screen.getByRole('main'))
     expect(
       main.getByRole('button', { name: factor === 'voice' ? '말투' : 'AI 모델' }),
@@ -57,6 +57,7 @@ it('offers only two, four, eight and sixteen entrants and changes count without 
     { procedures, fixture } = renderLegacyModelRoute('/ai-models/compare', {
       user: { id: 'alice' },
     })
+  await backToFactor(user)
   const format = await screen.findByRole('combobox', { name: /^비교 형식(?:\s|$)/ })
   await user.click(format)
   expect(
@@ -65,7 +66,7 @@ it('offers only two, four, eight and sixteen entrants and changes count without 
       .map((node) => node.textContent),
   ).toEqual(['A/B 테스트', '4강전', '8강전', '16강전'])
   await user.click(screen.getByRole('option', { name: '16강전' }))
-  await chooseFactor(user, 'AI 모델')
+  await user.click(screen.getByRole('button', { name: '다음' }))
   // Model contestants are one checklist counted against the format (MODEL-98).
   expect(
     within(screen.getByRole('main')).getByRole('group', { name: '0 / 16개 선택' }),
@@ -91,7 +92,6 @@ it('preserves an owned source through the alias and preloads its complete record
     stage: 'write',
     factor: 'model',
   })
-  await chooseFactor(user, 'AI 모델')
   for (let index = 1; index <= 2; index++)
     await user.click(await screen.findByRole('checkbox', { name: `Model ${index}` }))
   await user.click(screen.getByRole('button', { name: '다음' }))
@@ -127,10 +127,11 @@ it('does not import obsolete five-candidate rankings or auto-save a legacy compa
     },
   })
   await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+  await backToFactor(user)
   expect(screen.getByRole('combobox', { name: /^비교 형식(?:\s|$)/ })).toHaveTextContent(
     'A/B 테스트',
   )
-  await chooseFactor(user, 'AI 모델')
+  await user.click(screen.getByRole('button', { name: '다음' }))
   // The saved pair prefills the A/B checklist; the three extra legacy candidates stay out.
   expect(screen.getByRole('group', { name: '2 / 2개 선택' })).toBeVisible()
   expect(screen.getAllByRole('checkbox', { checked: true })).toHaveLength(2)
