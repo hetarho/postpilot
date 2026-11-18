@@ -276,7 +276,9 @@ it('preserves the post return of a standalone guidelines URL', async () => {
   })
   const back = await screen.findByRole('link', { name: '글 작성' })
   expect(back).toHaveAttribute('href', '/posts/saved')
-  expect(screen.getAllByRole('navigation', { name: '돌아가기' })).toHaveLength(1)
+  // The one way back starts the page title's row; the shell draws none of its own (THEME-75).
+  expect(screen.getAllByRole('link', { name: '글 작성' })).toHaveLength(1)
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
   await user.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
 })
@@ -286,10 +288,13 @@ it('preserves the post return of a standalone guidelines URL', async () => {
 // a post.
 it('returns from the guidelines page to 홈, not to a post', async () => {
   renderAppAt('/guidelines', { user: USER })
-  await screen.findByRole('main')
+  await screen.findByRole('heading', { level: 1, name: '지침' })
   expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
-  const back = await screen.findByRole('navigation', { name: '돌아가기' })
-  expect(within(back).getByRole('link', { name: '홈' })).toHaveAttribute('href', '/')
+  // At the start of the title's row (the tab bar's 홈 shares its name, outside the page).
+  expect(within(screen.getByRole('main')).getByRole('link', { name: '홈' })).toHaveAttribute(
+    'href',
+    '/',
+  )
 })
 
 // 내용 opened on the title as bare display-size text with its name hidden: a second, larger

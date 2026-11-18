@@ -24,10 +24,16 @@ export const KIT_HREF: Record<KitKey, string> = {
  *  is chosen under AI 토너먼트's 지금 쓰는 AI, below the comparisons that open the tab. */
 export const KIT_HASH: Partial<Record<KitKey, string>> = { ai: 'ai-in-use' }
 
-/** The pieces whose account default 홈 can change in place, each in a sheet opened from the
- *  piece: the 기본 말투 (VOICE-12), the 기본 지침 in use (GUIDE-43) and the write stage's model.
- *  템플릿 and 기억 have no account default (TMPL-54, MEM-29), so they stay links to their screens. */
-export const KIT_DEFAULT_KEYS = ['voice', 'guideline', 'ai'] as const satisfies readonly KitKey[]
+/** The pieces whose default 홈 changes in place, from a dropdown beside the piece's name: the 기본
+ *  말투 (VOICE-12), the template the next new post starts on (remembered on this browser, see
+ *  `lastTemplate` in entities/template), the 기본 지침 in use (GUIDE-43) and the write stage's model.
+ *  기억 has no default (MEM-29), so it is only the way to its screen. */
+export const KIT_DEFAULT_KEYS = [
+  'voice',
+  'template',
+  'guideline',
+  'ai',
+] as const satisfies readonly KitKey[]
 export type KitDefaultKey = (typeof KIT_DEFAULT_KEYS)[number]
 export function hasKitDefault(key: KitKey): key is KitDefaultKey {
   return (KIT_DEFAULT_KEYS as readonly KitKey[]).includes(key)
@@ -44,6 +50,8 @@ export type KitFact =
   | { kind: 'none' }
   | { kind: 'voice'; name: string; percent: number; made: boolean }
   | { kind: 'count'; count: number; lead?: string }
+  /** The template the next new post starts on, once one has been specified: null is 없음. */
+  | { kind: 'template'; count: number; name: string | null }
   | { kind: 'defaultsOnly'; count: number }
   | { kind: 'model'; label: string }
   | { kind: 'unavailable' }
@@ -101,16 +109,31 @@ export function voiceElement(active: readonly VoiceLike[], pending: boolean): Ki
   }
 }
 
-/** 템플릿 · 기억: ready from the first one. The fact names the most used template, so the picture
- *  says which shape the owner actually writes in. */
+/** 템플릿 · 기억: ready from the first one. The template's fact names the one the next new post
+ *  starts on once the owner has specified one (`chosen`: its id, or '' for 없음, already checked
+ *  against the list); until then, the most used template, so the picture says which shape the
+ *  owner actually writes in. */
 export function listElement(
   key: 'template' | 'memory',
-  items: readonly { name?: string; postCount?: number }[],
+  items: readonly { id?: string; name?: string; postCount?: number }[],
   pending: boolean,
+  chosen?: string,
 ): KitElement {
   if (pending) return LOADING(key)
   if (items.length === 0)
     return { key, href: KIT_HREF[key], state: 'empty', fill: 0, fact: { kind: 'none' } }
+  if (key === 'template' && chosen !== undefined)
+    return {
+      key,
+      href: KIT_HREF[key],
+      state: 'ready',
+      fill: 1,
+      fact: {
+        kind: 'template',
+        count: items.length,
+        name: items.find((item) => chosen && item.id === chosen)?.name ?? null,
+      },
+    }
   const lead =
     key === 'template'
       ? [...items].sort((a, b) => (b.postCount ?? 0) - (a.postCount ?? 0))[0]?.name

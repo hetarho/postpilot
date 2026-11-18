@@ -12,6 +12,13 @@ export {
   remainingChars,
 } from './model/types'
 export { templateDirectoryQuery, useTemplates } from './api/useTemplates'
+export {
+  forgetLastTemplates,
+  listedLastTemplate,
+  readLastTemplate,
+  rememberLastTemplate,
+} from './model/last-template'
+export { useLastTemplate } from './api/useLastTemplate'
 export { templatesQueryKey, toTemplate, toTemplateRef } from './api/template-queries'
 export { invalidateTemplates } from './api/template-cache'
 export { useCreateTemplate } from './api/useCreateTemplate'

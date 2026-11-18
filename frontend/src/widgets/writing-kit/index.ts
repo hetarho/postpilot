@@ -1,7 +1,6 @@
 export { WritingKit } from './ui/WritingKit'
 export { KitScreenHeader } from './ui/KitScreenHeader'
 export { KitRing } from './ui/KitRing'
-export { KitPieceSheet } from './ui/KitPieceSheet'
 export { useKitText } from './ui/useKitText'
 export { useWritingKit } from './model/useWritingKit'
 export {

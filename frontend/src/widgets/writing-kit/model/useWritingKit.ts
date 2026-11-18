@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useVoices } from '@/entities/voice'
-import { useTemplates } from '@/entities/template'
+import { listedLastTemplate, useLastTemplate, useTemplates } from '@/entities/template'
 import { useGuidelines } from '@/entities/guideline'
 import { useMemories } from '@/entities/memory'
 import { sameRef, useModels, useSelections, useStageSelection } from '@/entities/model-catalog'
@@ -23,6 +23,7 @@ import {
 export function useWritingKit(ownerId: string) {
   const voices = useVoices(ownerId)
   const templates = useTemplates(ownerId)
+  const chosenTemplate = listedLastTemplate(useLastTemplate(ownerId), templates.templates)
   const guidelines = useGuidelines(ownerId, 'post')
   const memories = useMemories(ownerId)
   const write = useStageSelection('write')
@@ -51,7 +52,12 @@ export function useWritingKit(ownerId: string) {
         : voiceElement(voices.active, !ownerId || voices.isPending),
       template: templatesFailed
         ? failedElement('template')
-        : listElement('template', templates.templates, !ownerId || templates.isPending),
+        : listElement(
+            'template',
+            templates.templates,
+            !ownerId || templates.isPending,
+            chosenTemplate,
+          ),
       guideline: guidelinesFailed
         ? failedElement('guideline')
         : guidelineElement(
@@ -78,6 +84,7 @@ export function useWritingKit(ownerId: string) {
       templatesFailed,
       templates.templates,
       templates.isPending,
+      chosenTemplate,
       guidelinesFailed,
       guidelines.guidelines.length,
       guidelines.isPending,

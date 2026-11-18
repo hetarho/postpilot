@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { usePost, postReturnDestination } from '@/entities/post'
 import { useSession } from '@/entities/session'
+import { listedLastTemplate, readLastTemplate, useTemplates } from '@/entities/template'
 import { useVoices } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
 import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
@@ -25,13 +26,16 @@ import { editorNavigationCopy } from '../config/i18n'
  *  keystroke create the post on 말투 없음 because the 기본 had not arrived yet.
  *
  *  It also waits for the template directory: an account with no made voice or no template opens
- *  on the offer to make it (POST-121), and that sheet has to stand before anything is typed. */
+ *  on the offer to make it (POST-121), and that sheet has to stand before anything is typed. The
+ *  same answer settles the template the draft starts on — the one last specified, while it is
+ *  still in the directory, else 없음. */
 export function NewDraftPage() {
   const { t } = useTranslation(['posts', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const navigate = useNavigate()
   const { defaultVoice, isPending, isError, refetch } = useVoices(ownerId)
+  const { templates } = useTemplates(ownerId)
   const { template, from } = useSearch({ strict: false }) as {
     template?: string
     from?: 'setup'
@@ -51,7 +55,11 @@ export function NewDraftPage() {
     return <EditorLoading label={t('state.loading', { ns: 'common' })} />
   return (
     <>
-      <DraftEditor defaultVoice={defaultVoice} handedTemplate={template} />
+      <DraftEditor
+        defaultVoice={defaultVoice}
+        handedTemplate={template}
+        lastTemplate={listedLastTemplate(readLastTemplate(ownerId), templates)}
+      />
       <CreationOfferSheet
         kind="post"
         open={offer.open}

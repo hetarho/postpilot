@@ -9,9 +9,8 @@ import type { Voice } from '../model/types'
 /** One voice as a row: its name and how it sounds in one line, or how far it has been made; the
  *  whole row opens it, and `action` — making it the 기본 (VOICE-12) — sits at its end. The link
  *  stretches over the row through its `::after`; the action paints above that layer. The voices
- *  screen lists its other voices this way, and 홈's 말투 sheet lists every voice this way. The row
- *  pads its own content; a list that wants the words on its column's edge pulls itself out by
- *  that padding (`-mx-3`). */
+ *  screen lists its other voices this way. The row pads its own content; a list that wants the
+ *  words on its column's edge pulls itself out by that padding (`-mx-3`). */
 export function VoiceRow({
   ownerId,
   voice,

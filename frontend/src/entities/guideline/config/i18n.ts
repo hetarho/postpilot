@@ -53,6 +53,8 @@ export const i18n = {
       inUse: '적용 중',
       stop: '적용 안함',
       stopNamed: '{{name}} 적용 안함',
+      loadFailed: '기본 지침을 불러오지 못했어요.',
+      none: '고를 수 있는 기본 지침이 없어요.',
     },
   },
   en: {
@@ -105,6 +107,8 @@ export const i18n = {
       inUse: 'In use',
       stop: "Don't apply",
       stopNamed: "Don't apply {{name}}",
+      loadFailed: 'Could not load the default guidelines.',
+      none: 'There are no default guidelines to choose.',
     },
   },
 } as const satisfies I18nFragment

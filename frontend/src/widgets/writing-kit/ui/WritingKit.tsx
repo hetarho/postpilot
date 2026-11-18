@@ -2,12 +2,13 @@ import type { CSSProperties } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { ChevronDown, ChevronRight, PenLine } from 'lucide-react'
+import { ChevronRight, PenLine } from 'lucide-react'
 import { POST_LIST_PATH, rememberPostEntry } from '@/entities/post'
 import { useSession } from '@/entities/session'
-import { SurfaceButton, typographyStyles } from '@/shared/ui'
+import { typographyStyles } from '@/shared/ui'
 import { penIllustration } from '@/shared/assets'
-import { KIT_HASH, type KitElement, type KitKey } from '../model/kit'
+import { KIT_HASH, hasKitDefault, type KitElement, type KitKey } from '../model/kit'
+import { KitDefaultControl } from './KitDefaultControl'
 import { KitRing } from './KitRing'
 import { useKitText } from './useKitText'
 
@@ -27,9 +28,9 @@ const ORBIT: Record<KitKey, { x: number; y: number }> = {
  *  outline on a dashed spoke. The halo behind the pen glows with how much of the kit is there,
  *  and only once all of it is does it breathe — motion lives in the halo, never in a stroke.
  *
- *  The pen IS the page's 글쓰기. A piece with an account default (`onOpen`) opens the sheet that
- *  changes it, marked by a small ▾ beside its name; every other piece opens the screen that makes
- *  it ready.
+ *  The pen IS the page's 글쓰기. Every piece opens the screen that makes it ready, and a piece
+ *  with a default carries a ▾ beside its name: a dropdown of its own that changes that default in
+ *  place (`KitDefaultControl`).
  *
  *  One DOM in two layouts: a circle wherever the container has room for one (≥ 20rem, measured
  *  in rem so enlarged text falls back on its own), and otherwise a column — the pen as a wide
@@ -38,15 +39,12 @@ export function WritingKit({
   elements,
   fill,
   complete,
-  onOpen,
   className,
 }: {
   elements: readonly KitElement[]
   /** The rings' fills, averaged: how strongly the halo glows. */
   fill: number
   complete: boolean
-  /** Opens a piece's default in place instead of its screen; a piece absent here stays a link. */
-  onOpen?: Partial<Record<KitKey, () => void>>
   className?: string
 }) {
   const { t } = useTranslation('creation')
@@ -163,7 +161,7 @@ export function WritingKit({
                     : '@xs:-translate-y-8 @md:-translate-y-10',
                 )}
               >
-                <KitPiece element={element} top={point.y < 30} onOpen={onOpen?.[element.key]} />
+                <KitPiece element={element} top={point.y < 30} />
               </li>
             )
           })}
@@ -173,27 +171,27 @@ export function WritingKit({
   )
 }
 
-/** One piece on the orbit, or one row of the column: its ring, its name and its one fact. It
- *  opens the piece's default in a sheet when it has an `onOpen`, its screen otherwise. */
+/** One piece on the orbit, or one row of the column: its ring, its name and its one fact, all of
+ *  it the way to the piece's screen. The name is the link and its `::after` stretches over the
+ *  whole piece; the ▾ of a piece with a default paints above that layer, a control of its own. */
 function KitPiece({
   element,
   top,
-  onOpen,
 }: {
   element: KitElement
   /** The top piece, whose words sit above its ring rather than across its spoke. */
   top: boolean
-  onOpen?: () => void
 }) {
   const text = useKitText()
-  const className = clsx(
-    'hover:bg-row-bg-hover active:bg-row-bg-active group flex min-h-16 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left @xs:gap-1.5 @xs:p-0 @xs:hover:bg-transparent @xs:active:bg-transparent',
-    // The top piece's spoke runs straight down from its ring, so its words sit above the ring
-    // rather than across the spoke.
-    top ? '@xs:flex-col-reverse' : '@xs:flex-col',
-  )
-  const body = (
-    <>
+  return (
+    <div
+      className={clsx(
+        'hover:bg-row-bg-hover active:bg-row-bg-active group relative flex min-h-16 w-full items-center gap-3 rounded-2xl px-3 py-2 text-left @xs:gap-1.5 @xs:p-0 @xs:hover:bg-transparent @xs:active:bg-transparent',
+        // The top piece's spoke runs straight down from its ring, so its words sit above the ring
+        // rather than across the spoke.
+        top ? '@xs:flex-col-reverse' : '@xs:flex-col',
+      )}
+    >
       <span className="duration-base ease-standard rounded-full transition-transform @xs:group-hover:scale-105">
         <KitRing
           kitKey={element.key}
@@ -206,16 +204,24 @@ function KitPiece({
       </span>
       <span className="flex min-w-0 flex-1 flex-col @xs:w-full @xs:items-center @xs:text-center">
         <span className="flex max-w-full min-w-0 items-center gap-0.5">
-          <span
+          <Link
+            to={element.href}
+            hash={KIT_HASH[element.key]}
+            aria-label={text.label(element)}
             className={typographyStyles({
               variant: 'label',
-              className: 'text-content-primary min-w-0 break-keep @xs:truncate',
+              className:
+                // The focus ring goes round the whole piece the link stretches over, not the
+                // name: the app's own ring is unlayered, hence the `!` that turns it off there.
+                'text-content-primary focus-visible:after:outline-focus-ring min-w-0 break-keep after:absolute after:inset-0 after:rounded-2xl focus-visible:outline-none! focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-solid @xs:truncate',
             })}
           >
             {text.name(element)}
-          </span>
-          {onOpen && (
-            <ChevronDown aria-hidden="true" className="text-content-tertiary size-4 shrink-0" />
+          </Link>
+          {hasKitDefault(element.key) && (
+            <span className="relative shrink-0">
+              <KitDefaultControl kit={element.key} />
+            </span>
           )}
         </span>
         <span
@@ -230,34 +236,10 @@ function KitPiece({
           {text.fact(element)}
         </span>
       </span>
-      {!onOpen && (
-        <ChevronRight
-          aria-hidden="true"
-          className="text-content-tertiary size-4 shrink-0 @xs:hidden"
-        />
-      )}
-    </>
-  )
-  if (onOpen)
-    return (
-      <SurfaceButton
-        presentation="content"
-        aria-label={text.label(element)}
-        aria-haspopup="dialog"
-        onClick={onOpen}
-        className={className}
-      >
-        {body}
-      </SurfaceButton>
-    )
-  return (
-    <Link
-      to={element.href}
-      hash={KIT_HASH[element.key]}
-      aria-label={text.label(element)}
-      className={className}
-    >
-      {body}
-    </Link>
+      <ChevronRight
+        aria-hidden="true"
+        className="text-content-tertiary size-4 shrink-0 @xs:hidden"
+      />
+    </div>
   )
 }

@@ -1,35 +1,23 @@
-import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ArrowRight, Clapperboard } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
 import {
-  KIT_DEFAULT_KEYS,
   KIT_HASH,
   KIT_NEXT_HREF,
   KitRing,
   WritingKit,
   useKitText,
   useWritingKit,
-  type KitDefaultKey,
 } from '@/widgets/writing-kit'
-import {
-  Button,
-  SurfaceButton,
-  Typography,
-  buttonStyles,
-  pageStyles,
-  typographyStyles,
-} from '@/shared/ui'
-import { KitDefaultSheet } from './KitDefaultSheet'
+import { Button, Typography, buttonStyles, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** Guide: 홈 — "고품질의 글을, 내 언어로." over the owner's writing kit drawn as one picture.
- *  The pen in its middle is the screen's 글쓰기. A piece with an account default — 말투, 지침, 글
- *  쓰는 AI — opens a sheet that changes it right here, with the way to its full screen at the
- *  sheet's foot; 템플릿 and 기억, which have none, open their screens. Beside the picture: how much
- *  of the kit is there, and the ONE thing to do next — or, once everything is, that nothing is
- *  left but to write. 영상 만들기 stays a quiet second way in.
+ *  The pen in its middle is the screen's 글쓰기; each piece around it opens the screen that makes
+ *  it ready, and the ▾ beside a piece's name changes its default right here. Beside the picture:
+ *  how much of the kit is there, and the ONE thing to do next — or, once everything is, that
+ *  nothing is left but to write. 영상 만들기 stays a quiet second way in.
  *
  *  A new account lands here too, on the empty kit: the picture and its next step are the
  *  onboarding, so no setup gate stands in front of them (setup stays one row away in 설정). */
@@ -39,35 +27,6 @@ export function HomePage() {
   const ownerId = user?.id ?? ''
   const kit = useWritingKit(ownerId)
   const text = useKitText()
-  // The piece stays named while its sheet sinks away, so the sheet keeps its content on the way out.
-  const [piece, setPiece] = useState<KitDefaultKey>('voice')
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const openPiece = (key: KitDefaultKey) => {
-    setPiece(key)
-    setSheetOpen(true)
-  }
-  const onOpen = Object.fromEntries(KIT_DEFAULT_KEYS.map((key) => [key, () => openPiece(key)]))
-  const nextCard = (
-    <>
-      {kit.next && (
-        <KitRing kitKey={kit.next.key} state={kit.next.state} fill={kit.next.fill} size="sm" />
-      )}
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className={typographyStyles({ variant: 'meta' })}>{t('kit.nextLabel')}</span>
-        <span
-          className={typographyStyles({
-            variant: 'label',
-            className: 'text-content-primary text-pretty break-keep',
-          })}
-        >
-          {kit.next && text.next(kit.next)}
-        </span>
-      </span>
-      <ArrowRight aria-hidden="true" className="text-link-fg size-5 shrink-0" />
-    </>
-  )
-  const nextCardClass =
-    'bg-card-bg hover:bg-card-bg-hover active:bg-card-bg-active animate-rise flex min-h-14 w-full max-w-md min-w-0 items-center gap-3 rounded-2xl py-2 pr-4 pl-2 text-left shadow-sm'
   return (
     <main
       className={pageStyles({
@@ -90,14 +49,7 @@ export function HomePage() {
         elements={kit.ordered}
         fill={kit.summary.fill}
         complete={kit.summary.complete}
-        onOpen={onOpen}
         className="mx-auto w-full max-w-md lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none"
-      />
-      <KitDefaultSheet
-        ownerId={ownerId}
-        kit={piece}
-        open={sheetOpen}
-        onClose={() => setSheetOpen(false)}
       />
 
       <section
@@ -127,30 +79,30 @@ export function HomePage() {
             className="loading-skeleton bg-surface-recessed block h-15 w-full max-w-md rounded-2xl"
           />
         )}
-        {/* Choosing the writing AI is a default 홈 changes in place, so its next step opens the
-            same sheet as its piece; every other next step is made on its own screen. */}
-        {!kit.summary.loading &&
-          kit.next &&
-          (kit.next.key === 'ai' ? (
-            <SurfaceButton
-              presentation="content"
-              aria-haspopup="dialog"
-              onClick={() => openPiece('ai')}
-              className={nextCardClass}
-            >
-              {nextCard}
-            </SurfaceButton>
-          ) : (
-            <Link
-              to={KIT_NEXT_HREF[kit.next.key] ?? kit.next.href}
-              // Its way back is 홈, where it was started, even where it opens past the kit screen.
-              search={{ entry: '/' }}
-              hash={KIT_HASH[kit.next.key]}
-              className={nextCardClass}
-            >
-              {nextCard}
-            </Link>
-          ))}
+        {!kit.summary.loading && kit.next && (
+          <Link
+            to={KIT_NEXT_HREF[kit.next.key] ?? kit.next.href}
+            // Its way back is 홈, where it was started, even where it opens past the kit screen;
+            // the writing AI's place is a tab of its own, which needs no way back.
+            search={kit.next.key === 'ai' ? {} : { entry: '/' }}
+            hash={KIT_HASH[kit.next.key]}
+            className="bg-card-bg hover:bg-card-bg-hover active:bg-card-bg-active animate-rise flex w-full max-w-md min-w-0 items-center gap-3 rounded-2xl py-2 pr-4 pl-2 shadow-sm"
+          >
+            <KitRing kitKey={kit.next.key} state={kit.next.state} fill={kit.next.fill} size="sm" />
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className={typographyStyles({ variant: 'meta' })}>{t('kit.nextLabel')}</span>
+              <span
+                className={typographyStyles({
+                  variant: 'label',
+                  className: 'text-content-primary text-pretty break-keep',
+                })}
+              >
+                {text.next(kit.next)}
+              </span>
+            </span>
+            <ArrowRight aria-hidden="true" className="text-link-fg size-5 shrink-0" />
+          </Link>
+        )}
         <Link
           to="/clips/new"
           search={{}}

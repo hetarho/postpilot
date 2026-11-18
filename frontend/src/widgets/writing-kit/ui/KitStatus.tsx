@@ -4,8 +4,8 @@ import type { KitKey } from '../model/kit'
 import { useKitElement } from './useKitElement'
 import { useKitText } from './useKitText'
 
-/** The piece's state in words, and its one fact — under a kit screen's title and in the sheet
- *  홈 opens from the piece, so both say the same thing in the same shape. */
+/** The piece's state in words, and its one fact, under a kit screen's title — the same words 홈's
+ *  picture puts under the piece, so the two say the same thing in the same shape. */
 export function KitStatus({ kit, className }: { kit: KitKey; className?: string }) {
   const element = useKitElement(kit)
   const text = useKitText()

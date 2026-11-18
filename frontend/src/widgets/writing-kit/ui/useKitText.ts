@@ -25,6 +25,12 @@ export function useKitText() {
             ? t('kit.facts.countLead', { lead: value.lead, more: value.count - 1 })
             : value.lead
           : t('kit.facts.count', { count: value.count })
+      case 'template':
+        return value.name
+          ? value.count > 1
+            ? t('kit.facts.countLead', { lead: value.name, more: value.count - 1 })
+            : value.name
+          : t('kit.facts.noTemplate')
       case 'defaultsOnly':
         return t('kit.facts.defaultsOnly')
       case 'model':

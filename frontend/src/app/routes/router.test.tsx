@@ -382,21 +382,14 @@ describe('About consumes the shared locale and theme runtimes', () => {
   })
 })
 
-// Guide: guidelines are the kit's 지침, beside 템플릿 on the orbit. The piece opens the 기본 지침
-// in a sheet, whose foot is the way to the whole screen.
+// Guide: guidelines are the kit's 지침, beside 템플릿 on the orbit.
 describe('the guideline management route', () => {
   it('opens guidelines from the kit on 홈', async () => {
     const { router } = renderAppAt('/', { user: { id: 'alice' } })
     const kit = within(await screen.findByRole('list', { name: '글쓰기 준비' }))
-    const names = kit
-      .getAllByRole('listitem')
-      .map((item) => item.firstElementChild?.getAttribute('aria-label') ?? '')
-    expect(names.findIndex((name) => name.startsWith('지침'))).toBe(
-      names.findIndex((name) => name.startsWith('템플릿')) + 1,
-    )
-    await userEvent.click(kit.getByRole('button', { name: /^지침/ }))
-    const sheet = within(await screen.findByRole('dialog', { name: '지침' }))
-    await userEvent.click(sheet.getByRole('link', { name: '지침 화면으로 가기' }))
+    const hrefs = kit.getAllByRole('link').map((item) => item.getAttribute('href'))
+    expect(hrefs.indexOf('/guidelines')).toBe(hrefs.indexOf('/templates') + 1)
+    await userEvent.click(kit.getByRole('link', { name: /^지침/ }))
     await screen.findByRole('heading', { level: 1, name: '지침' })
     expect(router.state.location.pathname).toBe('/guidelines')
   })
@@ -915,10 +908,10 @@ describe('localized registered-route smoke', () => {
         for (const control of directControls) {
           // Every control keeps its touch floor under a coarse pointer (THEME-23): the 44px
           // floor, or `compact`'s documented 36px step below it. Guide raises fields and every
-          // committing action above the floor — 48px (`min-h-12`), the 56px hero action
-          // (`min-h-14`) and 홈's 64px kit piece (`min-h-16`) — which still keeps it.
+          // committing action above the floor — 48px (`min-h-12`) and the 56px hero action
+          // (`min-h-14`) — which still keeps it.
           expect(control.className, `${routeCase.path}: ${control.tagName}`).toMatch(
-            /(?:^|\s)(?:min-h-11|min-h-12|min-h-14|min-h-16|size-11|pointer-coarse:min-h-11|pointer-coarse:min-h-12|pointer-coarse:min-h-9|pointer-coarse:size-11)(?:\s|$)/,
+            /(?:^|\s)(?:min-h-11|min-h-12|min-h-14|size-11|pointer-coarse:min-h-11|pointer-coarse:min-h-12|pointer-coarse:min-h-9|pointer-coarse:size-11)(?:\s|$)/,
           )
         }
         for (const choice of main.querySelectorAll('input[type="checkbox"], input[type="radio"]')) {
@@ -982,19 +975,8 @@ describe('retired publishing route', () => {
     // Guide: what the owner taught the AI is 홈's kit, model choice is its own tab.
     renderAppAt('/', { user: { id: 'alice', plan: ProtoPlan.FREE } })
     await screen.findByRole('heading', { level: 1, name: /고품질의 글을/ })
-    for (const destination of ['/memories', '/templates', '/ai-models']) {
+    for (const destination of ['/memories', '/voices', '/templates', '/guidelines', '/ai-models']) {
       expect(hrefs()).toContain(destination)
-    }
-    // 말투 and 지침 open their defaults in a sheet whose foot leads to their screens.
-    for (const [piece, destination] of [
-      [/^말투/, '/voices'],
-      [/^지침/, '/guidelines'],
-    ] as const) {
-      await userEvent.click(screen.getByRole('button', { name: piece }))
-      await screen.findByRole('dialog')
-      expect(hrefs()).toContain(destination)
-      await userEvent.click(screen.getByRole('button', { name: '닫기' }))
-      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     }
   })
 })

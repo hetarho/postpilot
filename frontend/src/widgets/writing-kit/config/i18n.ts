@@ -26,6 +26,7 @@ export const i18n = {
         count_other: '{{count}}개',
         countLead: '{{lead}} 외 {{more}}개',
         defaultsOnly: '기본 지침만',
+        noTemplate: '템플릿 없이',
         unavailable: '다시 골라 주세요',
       },
       state: {
@@ -58,20 +59,25 @@ export const i18n = {
         memory: '기억할 이야기 적기',
       },
       nextLabel: '다음',
-      sheet: {
-        open: {
-          voice: '말투 화면으로 가기',
-          guideline: '지침 화면으로 가기',
-          ai: 'AI 토너먼트로 가기',
+      defaults: {
+        change: {
+          voice: '말투 기본값 바꾸기',
+          template: '템플릿 기본값 바꾸기',
+          guideline: '기본 지침 바꾸기',
+          ai: '글 쓰는 AI 바꾸기',
+        },
+        title: {
+          voice: '기본 말투',
+          template: '새 글의 템플릿',
+          guideline: '기본 지침',
+          ai: '글 쓰는 AI',
         },
         help: {
-          voice: '새 글은 기본 말투로 써요. 다 만든 말투만 기본이 될 수 있어요.',
-          guideline:
-            '기본 지침은 새 글마다 AI가 지키는 규칙이에요. ‘기본 지침’에서 더하고, 지침을 열어 ‘적용 안함’으로 뺄 수 있어요.',
+          voice: '새 글은 이 말투로 써요. 다 만든 말투만 고를 수 있어요.',
+          template: '다음 새 글이 이 템플릿으로 시작해요. 글에서 바꿀 수 있어요.',
+          guideline: '켠 지침은 새 글마다 AI가 지켜요. 누를 때마다 바로 저장돼요.',
           ai: '새 글을 쓰는 AI예요. 고르면 바로 저장돼요.',
         },
-        voices: '내 말투',
-        voicesEmpty: '아직 만든 말투가 없어요. 말투 화면에서 만들 수 있어요.',
       },
     },
   },
@@ -97,6 +103,7 @@ export const i18n = {
         count_other: '{{count}}',
         countLead: '{{lead}} +{{more}}',
         defaultsOnly: 'Defaults only',
+        noTemplate: 'No template',
         unavailable: 'Choose again',
       },
       state: {
@@ -129,21 +136,26 @@ export const i18n = {
         memory: 'Note something to remember',
       },
       nextLabel: 'Next',
-      sheet: {
-        open: {
-          voice: 'Go to writing styles',
-          guideline: 'Go to guidelines',
-          ai: 'Go to AI tournament',
+      defaults: {
+        change: {
+          voice: 'Change default writing style',
+          template: 'Change default template',
+          guideline: 'Change default guidelines',
+          ai: 'Change writing AI',
+        },
+        title: {
+          voice: 'Default writing style',
+          template: 'Template for new posts',
+          guideline: 'Default guidelines',
+          ai: 'Writing AI',
         },
         help: {
-          voice:
-            'New posts are written in the default style. Only a finished style can be the default.',
+          voice: 'New posts are written in this style. Only a finished style can be chosen.',
+          template: 'Your next new post starts with this template. You can change it in the post.',
           guideline:
-            "Default guidelines are rules the AI keeps in every new post. Add one under ‘Default guidelines’; open one and choose ‘Don't apply’ to take it out.",
+            'The AI keeps the ones turned on in every new post. Each press is saved at once.',
           ai: 'The AI that writes your new posts. A pick is saved at once.',
         },
-        voices: 'Your writing styles',
-        voicesEmpty: 'No writing style yet. You can make one on the writing styles screen.',
       },
     },
   },
