@@ -68,7 +68,7 @@ Use disposable copies and example settings so an existing development `.env` or 
 (
   set -eu
   verification_root="$PWD"
-  verification_dir="$(mktemp -d /tmp/postpilot-compose-check.XXXXXX)"
+  verification_dir="$(mktemp -d)"
   trap 'rm -rf "$verification_dir"' EXIT
   mkdir -p "$verification_dir/deploy/media"
   cp "$verification_root/docker-compose.prod.yml" \
