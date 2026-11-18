@@ -94,7 +94,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
-| redesign-261119 | 4 | 9 | 5 | 4 | 0 | 2 | 0 | 2026-11-18T17:48:18.219Z | [history](work/redesign-261119.json) |
+| redesign-261119 | 4 | 9 | 5 | 4 | 0 | 0 | 4 | 2026-11-18T18:57:10.294Z | [history](work/redesign-261119.json) |
 
 ## next
 - inspect work board for remaining tasks
