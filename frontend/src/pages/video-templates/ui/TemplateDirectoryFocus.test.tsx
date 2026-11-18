@@ -12,12 +12,12 @@ const ROWS = ['First', 'Middle', 'Last'].map((name) => ({
   projectCount: name === 'Middle' ? 2 : 0,
 }))
 
-function mount(path: string, { refuseDelete = false } = {}) {
+function mount(path: string, { refuseDelete = false, rows = ROWS } = {}) {
   const calls: string[] = []
   const base = createFakeAuthTransport({
     user: { id: 'alice' },
     existingSetup: true,
-    clips: { templates: ROWS },
+    clips: { templates: rows },
   })
   const transport: Transport = {
     ...base,
@@ -52,10 +52,28 @@ describe('deleting a video template from its reading', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
     // `replace`: Back does not return to the reading of a template that no longer exists.
     expect(router.history.length).toBe(1)
-    await screen.findByRole('link', { name: /^First/ })
+    // Focus does not fall to the body: it lands on the first remaining tile (THEME-76).
+    await waitFor(() => expect(screen.getByRole('link', { name: /^First/ })).toHaveFocus())
     expect(screen.queryByRole('link', { name: /^Middle/ })).toBeNull()
     // No render, AI or authoring work starts on the way (CLIP-208).
     expect(calls.filter((call) => /Start|Generate|Render|Request/.test(call))).toEqual([])
+  })
+
+  it('hands focus to the creation entry when the last template is deleted', async () => {
+    const user = userEvent.setup()
+    const { router } = mount('/video-templates/first', { rows: [ROWS[0]] })
+    const dialog = await openDelete(user, 'First')
+    dialog.getByRole('button', { name: '삭제' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
+    await waitFor(() => expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveFocus())
+    expect(screen.getByRole('heading', { name: '어떤 영상을 자주 만드세요?' })).toBeInTheDocument()
+  })
+
+  it('takes no focus on an ordinary visit to the directory', async () => {
+    mount('/video-templates')
+    await screen.findByRole('link', { name: /^First/ })
+    expect(document.body).toHaveFocus()
   })
 
   it('stays on the reading with focus at the opener after cancellation', async () => {

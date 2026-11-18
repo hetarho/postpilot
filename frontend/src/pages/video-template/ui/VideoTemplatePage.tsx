@@ -12,6 +12,7 @@ import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-templ
 import { useClipProject } from '@/entities/clip-project'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
+import { handOffRemovalFocus } from '@/widgets/template-directory'
 import { videoTemplateIllustration } from '@/shared/assets'
 import { Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
 
@@ -220,7 +221,11 @@ function VideoTemplateHost({
             <DeleteClipTemplateButton
               ownerId={ownerId}
               template={stored}
-              onDeleted={() => void navigate({ to: '/video-templates', replace: true })}
+              onDeleted={() => {
+                // The delete button leaves with this page; the directory takes focus (THEME-76).
+                handOffRemovalFocus('video-template')
+                void navigate({ to: '/video-templates', replace: true })
+              }}
             />
             <Button
               variant="secondary"

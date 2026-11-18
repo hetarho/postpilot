@@ -112,7 +112,8 @@ export function TemplateTile({
   workState?: string
 }) {
   return (
-    <li>
+    // The directory finds its first tile here to take focus after a removal (removal-focus.ts).
+    <li data-template-tile>
       {link({
         className: cardStyles({
           interactive: true,

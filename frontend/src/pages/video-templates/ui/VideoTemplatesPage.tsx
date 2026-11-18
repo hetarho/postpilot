@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { useRef } from 'react'
 import {
   ClipTemplateDescription,
   ClipTemplateSummary,
@@ -16,6 +17,7 @@ import {
   TemplateTile,
   TemplateTileGrid,
   templateWorkState,
+  useRemovalFocusHandoff,
 } from '@/widgets/template-directory'
 import { videoTemplateIllustration } from '@/shared/assets'
 import { Button, Notice, LoadingState, buttonStyles, pageStyles } from '@/shared/ui'
@@ -35,9 +37,22 @@ export function VideoTemplatesPage() {
   const { templates, isPending, isFetching, isError, refetch } = useClipTemplates(ownerId)
   const summaries = useAuthoringSummaries({ ownerId, kind: 'video-template' })
   const unsaved = summaries.data?.filter((row) => !row.targetId && !row.lastPublication) ?? []
+  // A template deleted on its reading lands here: focus goes to the first remaining tile, or to
+  // the creation entry when none remains or the list cannot be read (THEME-76).
+  const page = useRef<HTMLElement>(null)
+  useRemovalFocusHandoff(
+    'video-template',
+    isError || !isPending,
+    () =>
+      page.current?.querySelector<HTMLElement>('[data-template-tile] a') ??
+      page.current?.querySelector<HTMLElement>('a[href="/video-templates/new"]'),
+  )
 
   return (
-    <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}>
+    <main
+      ref={page}
+      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
+    >
       {/* The same opening as its siblings under 영상 — 영상 지침 and 목소리 — with the one way to
           make a template in the heading row. */}
       <KitScreenHeader
