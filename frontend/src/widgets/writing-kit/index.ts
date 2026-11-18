@@ -1,6 +1,8 @@
 export { WritingKit } from './ui/WritingKit'
 export { KitScreenHeader } from './ui/KitScreenHeader'
 export { KitRing } from './ui/KitRing'
+export { KitStepRow } from './ui/KitStepRow'
+export { CreationOfferSheet } from './ui/CreationOfferSheet'
 export { useKitText } from './ui/useKitText'
 export { useWritingKit } from './model/useWritingKit'
 export {

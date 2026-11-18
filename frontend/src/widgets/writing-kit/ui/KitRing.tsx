@@ -40,12 +40,16 @@ export function KitRing({
   state,
   fill,
   size = 'md',
+  illustration,
   className,
 }: {
   kitKey: KitKey
   state: KitState
   fill: number
   size?: keyof typeof SIZES
+  /** Another object drawn in the piece's place — a clip's 영상 템플릿 where its writing kit draws
+   *  the post template (CLIP-223). */
+  illustration?: string
   /** Extra sizing, e.g. a larger ring where its container has room. */
   className?: string
 }) {
@@ -95,7 +99,7 @@ export function KitRing({
       />
       {state !== 'loading' && (
         <img
-          src={KIT_ILLUSTRATIONS[kitKey]}
+          src={illustration ?? KIT_ILLUSTRATIONS[kitKey]}
           alt=""
           className={clsx(
             'duration-slow ease-standard absolute inset-[17%] size-[66%] object-contain transition-[filter,opacity]',
