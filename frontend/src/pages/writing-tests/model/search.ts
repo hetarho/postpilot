@@ -2,7 +2,10 @@ import { safeInternalPath } from '@/shared/lib/navigation'
 import type { TestCount, TestFactor, TestStage } from '@/entities/writing-test'
 
 export interface WritingTestSearch {
-  factor: TestFactor
+  /** Present only when the address names the factor (새 비교's items): the defaulted factor stays
+   *  out of the validated search, so the router's address normalization never writes one an
+   *  entry did not name (MODEL-44). Read the effective factor with `writingTestFactor`. */
+  factor?: TestFactor
   stage: TestStage
   count: TestCount
   source?: string
@@ -13,7 +16,8 @@ export interface WritingTestSearch {
   draft?: string
 }
 export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTestSearch {
-  const factor = raw.factor ?? 'model',
+  const named = raw.factor !== undefined && raw.factor !== ''
+  const factor = named ? raw.factor : 'model',
     stage = raw.stage ?? 'write'
   if (
     typeof factor !== 'string' ||
@@ -34,7 +38,7 @@ export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTe
   const source = text('source') ?? text('sourcePost') ?? text('sourcePostSlug') ?? text('postSlug')
   const entry = text('entry')
   return {
-    factor: factor as TestFactor,
+    ...(named ? { factor: factor as TestFactor } : {}),
     stage: stage as TestStage,
     count: count as TestCount,
     source,
@@ -45,10 +49,13 @@ export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTe
     draft: text('draft'),
   }
 }
-/** Whether the address itself names the factor (새 비교's items, MODEL-44): read it from the
- *  address as written, since the validated search always carries a defaulted factor. */
-export function writingTestFactorNamed(raw: Record<string, unknown>): boolean {
-  return typeof raw.factor === 'string' && raw.factor !== ''
+/** Whether the entry's address named the factor (새 비교's items, MODEL-44). */
+export function writingTestFactorNamed(search: Pick<WritingTestSearch, 'factor'>): boolean {
+  return search.factor !== undefined
+}
+/** The factor a setup starts on: the named one, else the model comparison. */
+export function writingTestFactor(search: Pick<WritingTestSearch, 'factor'>): TestFactor {
+  return search.factor ?? 'model'
 }
 export interface WritingTestHistorySearch {
   stage?: TestStage | 'voice'
