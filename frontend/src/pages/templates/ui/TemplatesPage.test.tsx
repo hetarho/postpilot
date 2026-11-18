@@ -48,11 +48,14 @@ describe('the template directory', () => {
     expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('템플릿 이름')).not.toBeInTheDocument()
-    // The add action opens the conversation that drafts a template from scratch.
-    expect(screen.getByRole('link', { name: 'AI와 새 템플릿' })).toHaveAttribute(
-      'href',
-      '/templates/new',
-    )
+    // The add action floats over the list the way 새 글 floats over 글 — words only, no icon —
+    // and opens the conversation that drafts a template from scratch.
+    const create = screen.getByRole('link', { name: '새 템플릿' })
+    expect(create).toHaveAttribute('href', '/templates/new')
+    expect(create.closest('[data-action-bar="list"]')).not.toBeNull()
+    expect(create.querySelector('svg')).toBeNull()
+    // The kit's state in words stays on 홈: the header has no status line under its title.
+    expect(within(screen.getByRole('main')).queryByRole('status')).not.toBeInTheDocument()
     // Deleting waits on the template's own screen, where it is being looked at.
     expect(within(items[1]).queryByRole('button')).not.toBeInTheDocument()
 
@@ -88,7 +91,10 @@ describe('the template directory', () => {
       expect(page).not.toContain(syntax)
     }
     // The conversation is still the way out of an empty gallery.
-    expect(screen.getAllByRole('link', { name: 'AI와 새 템플릿' }).length).toBeGreaterThan(0)
+    expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveAttribute(
+      'href',
+      '/templates/new',
+    )
   })
 
   // A9: no grammar on the populated list either — a row shows the name and the description.

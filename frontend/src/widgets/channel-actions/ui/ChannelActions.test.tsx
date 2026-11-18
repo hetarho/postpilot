@@ -34,17 +34,17 @@ it.each([
   },
 )
 
-// A section that still docks its creation opens it directly, carrying no channel. The writing
-// kit's screens and 영상 지침 make theirs from their heading row instead.
-it.each([['/video-templates', '새 템플릿', '/video-templates/new']] as const)(
-  'offers %s its own creation only',
-  async (path, label, href) => {
-    renderAppAt(path, { user: { id: 'alice' } })
-    expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
-    expect(screen.queryByRole('menu')).toBeNull()
-    expect(document.querySelector('[data-action-bar="list"] [aria-haspopup]')).toBeNull()
-  },
-)
+// A section that docks its creation opens it directly, carrying no channel. 말투, 지침 and 영상 지침
+// make theirs from their heading row instead.
+it.each([
+  ['/templates', '새 템플릿', '/templates/new'],
+  ['/video-templates', '새 템플릿', '/video-templates/new'],
+] as const)('offers %s its own creation only', async (path, label, href) => {
+  renderAppAt(path, { user: { id: 'alice' } })
+  expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href)
+  expect(screen.queryByRole('menu')).toBeNull()
+  expect(document.querySelector('[data-action-bar="list"] [aria-haspopup]')).toBeNull()
+})
 
 it.each(['/posts/new', '/clips/new'])(
   'keeps the creation button off the writing screen %s',

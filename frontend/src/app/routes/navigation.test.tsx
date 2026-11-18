@@ -212,15 +212,29 @@ it('retains a 설정 origin through reload and restores its document position on
   await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 480))
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
-// 홈 draws the kit as one picture: the pen in its middle is 글쓰기, each piece opens its screen and
-// the ▾ beside a piece's name is a control of its own, and 영상 만들기 is the quiet second way in.
-// Looking at it writes nothing.
+// 홈 draws the kit as one picture: the icon in its middle starts 글쓰기 and its name switches it to
+// 영상 만들기; each piece's ring opens its screen and a piece's name is the dropdown that changes
+// its default. Looking at it writes nothing.
 it.each([
-  ['ko', '글쓰기', '영상 만들기', /^말투/, /^템플릿/, '말투 기본값 바꾸기'],
-  ['en', 'Write', 'Make a video', /^Writing style/, /^Template/, 'Change default writing style'],
+  [
+    'ko',
+    '글쓰기',
+    '글쓰기, 만들 것 바꾸기',
+    '말투 화면으로 가기',
+    '템플릿 화면으로 가기',
+    '말투 기본값 바꾸기',
+  ],
+  [
+    'en',
+    'Write',
+    'Write, change what to make',
+    'Open writing style',
+    'Open templates',
+    'Change default writing style',
+  ],
 ] as const)(
   'starts a post from the kit on 홈 in %s without object writes',
-  async (locale, write, video, voice, template, voiceDefault) => {
+  async (locale, write, mode, voice, template, voiceDefault) => {
     viewport(true)
     initializeI18n(locale)
     const calls: string[] = []
@@ -230,12 +244,12 @@ it.each([
       'href',
       '/posts/new',
     )
-    expect(within(main).getByRole('link', { name: video })).toHaveAttribute('href', '/clips/new')
-    expect(within(main).getAllByRole('link', { name: voice })[0]).toHaveAttribute('href', '/voices')
-    expect(within(main).getAllByRole('link', { name: template })[0]).toHaveAttribute(
-      'href',
-      '/templates',
+    expect(within(main).getByRole('button', { name: mode })).toHaveAttribute(
+      'aria-haspopup',
+      'dialog',
     )
+    expect(within(main).getByRole('link', { name: voice })).toHaveAttribute('href', '/voices')
+    expect(within(main).getByRole('link', { name: template })).toHaveAttribute('href', '/templates')
     expect(within(main).getByRole('button', { name: voiceDefault })).toHaveAttribute(
       'aria-haspopup',
       'dialog',

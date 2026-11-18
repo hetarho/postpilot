@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useActorRef, useSelector } from '@xstate/react'
 import { fromPromise, type SnapshotFrom } from 'xstate'
 import {
@@ -12,9 +12,10 @@ import {
   type AuthoringModelRef,
   type AuthoringArtifact,
   type AuthoringCandidateCount,
+  type AuthoringReference,
 } from '@/entities/ai-authoring'
 import { isTerminal, useJob } from '@/entities/generation-job'
-import { appFailureFromConnect } from '@/shared/api'
+import { appFailureFromConnect, normalizeAppFailure, type AppFailure } from '@/shared/api'
 import {
   authoringMachine,
   authoringStateOf,
@@ -205,6 +206,7 @@ export function useAuthoring(
     mode: AuthoringMode,
     model: AuthoringModelRef,
     candidateCount: AuthoringCandidateCount = 8,
+    references: readonly AuthoringReference[] = [],
   ) => {
     const before = getSnapshot()
     return send({
@@ -219,9 +221,29 @@ export function useAuthoring(
         expectedRevision: before.session?.revision ?? 0,
         createRequestId: crypto.randomUUID(),
         requestId: crypto.randomUUID(),
+        ...(references.length ? { references: [...references] } : {}),
       },
     })
   }
+  // A job's failure carries what its session's reason alone cannot — the model's label, why
+  // it is unavailable, the provider's own words — so the last one seen is kept for the screen
+  // after the session settles and stops naming the job.
+  const [jobFailure, setJobFailure] = useState<{ jobId: string; failure: AppFailure }>()
+  const failedJob = job.job?.status === 'failed' && job.job.failure ? job.job : undefined
+  if (failedJob && failedJob.failure && jobFailure?.jobId !== failedJob.id)
+    setJobFailure({ jobId: failedJob.id, failure: failedJob.failure })
+  const sessionReason =
+    state.session?.phase === 'failed' &&
+    state.session.failureReason &&
+    state.session.failureReason !== 'AUTHORING_SAVE_CONFLICT'
+      ? state.session.failureReason
+      : ''
+  /** Why the session's last AI request failed, with the job's details when they were seen. */
+  const requestFailure: AppFailure | undefined = sessionReason
+    ? jobFailure?.failure.reason === sessionReason
+      ? jobFailure.failure
+      : normalizeAppFailure({ reason: sessionReason, params: {} })
+    : undefined
   const confirm = () => send({ type: 'begin', scopeKey, phase: 'starting' })
   const retryOperation = async () => {
     const context = actorRef.getSnapshot().context
@@ -338,5 +360,6 @@ export function useAuthoring(
       job.refetch()
     },
     activeJobFailed: !!job.job && isTerminal(job.job) && job.job.status !== 'done',
+    requestFailure,
   }
 }

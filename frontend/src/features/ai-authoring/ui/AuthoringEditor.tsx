@@ -5,6 +5,7 @@ import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { MessagesSquare, SendHorizontal, Sparkles } from 'lucide-react'
 import {
+  authoringReferenceKey,
   authoringScopeKey,
   completedAuthoringExchanges,
   AUTHORING_MAX_EXCHANGES,
@@ -16,8 +17,13 @@ import {
   type AuthoringKind,
   type AuthoringMode,
   type AuthoringModelRef,
+  type AuthoringReference,
 } from '@/entities/ai-authoring'
-import { useInitializeDefaultSelections, useStageSelection } from '@/entities/model-catalog'
+import {
+  sameRef,
+  useInitializeDefaultSelections,
+  useStageSelection,
+} from '@/entities/model-catalog'
 import {
   ActionMenu,
   AppFailureMessage,
@@ -29,6 +35,7 @@ import {
   ChoiceButton,
   Disclosure,
   SegmentedControl,
+  Sheet,
   Dialog,
   FieldMessage,
   Notice,
@@ -40,11 +47,14 @@ import {
 import { readableAuthoringProse } from '../lib/readable-prose'
 import { useAuthoring } from '../model/useAuthoring'
 import {
+  authoringArtifactHasContent,
   studioFlowMachine,
   studioFlowView,
   type StudioAIAvailability,
 } from '../model/studio-flow-machine'
 import { AuthoringPreview } from './AuthoringPreview'
+import { AuthoringReferences } from './AuthoringReferences'
+import { AuthoringRequestFailure } from './AuthoringRequestFailure'
 
 export interface AuthoringDirectEditorProps {
   source: AuthoringArtifact
@@ -74,6 +84,10 @@ export interface AuthoringEditorProps extends AuthoringScope {
   layout?: 'steps' | 'conversation'
   /** The picture the conversation's empty draft pane shows before anything is drafted. */
   draftIllustration?: string
+  /** The app's own model choice for the write stage (the one 홈's ▾ and 지금 쓰는 AI use), for
+   *  a failed request's `다른 모델로 다시 시도`. It calls `onSaved` once the choice is saved;
+   *  without it, a failure offers only `다시 시도`. */
+  renderModelChoice?: (onSaved: () => void) => ReactNode
 }
 export interface AuthoringInspectionContext {
   ownerId: string
@@ -120,6 +134,7 @@ function ScopedEditor({
   onNavigationChange,
   layout = 'steps',
   draftIllustration,
+  renderModelChoice,
 }: AuthoringEditorProps) {
   const { t } = useTranslation('authoring')
   const conversation = layout === 'conversation'
@@ -138,6 +153,20 @@ function ScopedEditor({
   const defaults = useInitializeDefaultSelections(ownerId)
   const ai: StudioAIAvailability =
     defaults.isPending || write.isPending ? 'preparing' : write.selected ? 'ready' : 'unavailable'
+  const writeLabel = write.selected
+    ? write.models.find((model) => sameRef(model.ref, write.selected!))?.label
+    : undefined
+  // A template request can carry the owner's posts, templates or pages as its form; they ride
+  // with each request until one finishes well, and are never stored (TMPL-58's reference rule).
+  const referencesAllowed = kind === 'post-template'
+  const [references, setReferences] = useState<AuthoringReference[]>([])
+  const [seenJob, setSeenJob] = useState('')
+  const activeJob = state.session?.activeJobId ?? ''
+  if (activeJob && activeJob !== seenJob) setSeenJob(activeJob)
+  else if (!activeJob && seenJob) {
+    setSeenJob('')
+    if (state.session?.phase !== 'failed') setReferences([])
+  }
   const [flow, send] = useMachine(
     studioFlowMachine.provide({
       actions: {
@@ -146,10 +175,17 @@ function ScopedEditor({
         },
         requestRecommend: ({ context }) => {
           controller.setText(context.purpose)
-          if (write.selected) void controller.quote('recommend', write.selected, candidateCount)
+          if (write.selected)
+            void controller.quote(
+              'recommend',
+              write.selected,
+              candidateCount,
+              referencesAllowed ? references : [],
+            )
         },
         requestRefine: () => {
-          if (write.selected) void controller.quote('refine', write.selected)
+          if (write.selected)
+            void controller.quote('refine', write.selected, 8, referencesAllowed ? references : [])
         },
         loadExisting: () => void controller.edit(),
         selectCandidate: ({ event }) => {
@@ -288,6 +324,10 @@ function ScopedEditor({
   const named = { kind: t(`kinds.${kind}`), name }
   const draftInvalid =
     state.session?.draftState === 'invalid' || state.session?.draftState === 'incomplete'
+  // An unfinished draft is the owner's to hear about only once they have typed into it: a new
+  // session starts on an empty one, which a failed request leaves exactly as it was.
+  const ownerTyped =
+    !!state.sourceDirty || authoringArtifactHasContent(state.session?.workingSource)
   const needsVoiceExample =
     kind === 'writing-voice' &&
     !!selected &&
@@ -309,6 +349,109 @@ function ScopedEditor({
   const blocked = busy || !!state.command
   const hasFailure = !!failure || state.session?.phase === 'failed' || conflict
   const frozenPublication = (flow.context.intent === 'save' || recoveredSave) && hasFailure
+  // An AI request that did not finish — refused before its job (with its frozen command) or
+  // failed as a job — is explained from its reason and offered again, on this model or another.
+  // Saves, reads and conflicts keep their own retry.
+  const requestFailure = conflict
+    ? undefined
+    : failure
+      ? state.command
+        ? failure
+        : undefined
+      : controller.requestFailure
+  const aiFailure = !!requestFailure && !frozenPublication
+  const otherFailure = hasFailure && !aiFailure
+  const invalidNotice = draftInvalid && !needsVoiceExample && ownerTyped && !hasFailure
+  const resendPending = useRef(false)
+  const [modelChoiceOpen, setModelChoiceOpen] = useState(false)
+  const [, setResendTick] = useState(0)
+  const resend = () => {
+    // The same words go again through the usual estimate. A refusal that kept its frozen
+    // command is set aside first, so the new quote names the model in use now.
+    if (state.command) controller.dismissQuote()
+    const pending = state.session?.pendingRequest ?? ''
+    if (view === 'refining') {
+      if (!state.text.trim() && pending) controller.setText(pending)
+    } else if (!flow.context.purpose.trim() && pending)
+      send({ type: 'PURPOSE_CHANGED', scopeKey, text: pending })
+    resendPending.current = true
+    setResendTick((tick) => tick + 1)
+  }
+  // The frozen request goes again as it was — unless its references were changed since, or
+  // one of them is what refused it: then the words go again with the references now attached.
+  const sameReferences =
+    (state.command?.references ?? []).map(authoringReferenceKey).join('\n') ===
+    (referencesAllowed ? references : []).map(authoringReferenceKey).join('\n')
+  const retryRequest = () =>
+    state.command && sameReferences && failure?.reason !== 'AUTHORING_REFERENCE_UNAVAILABLE'
+      ? event('RETRY')
+      : resend()
+  // Sent once the render after `resend` shows its words and, after a model change, the newly
+  // saved model: the flow reads both from what it last observed.
+  useEffect(() => {
+    if (!resendPending.current || busy || state.command || ai !== 'ready') return
+    resendPending.current = false
+    if (view === 'refining') send({ type: 'REFINE', scopeKey })
+    else if (view === 'purpose' || view === 'choices') send({ type: 'RECOMMEND', scopeKey })
+  })
+  // After a reload, a first request that failed puts its words back in the field.
+  const refilled = useRef(false)
+  useEffect(() => {
+    const pending = state.session?.pendingRequest ?? ''
+    if (refilled.current || view !== 'purpose' || state.session?.phase !== 'failed' || !pending)
+      return
+    refilled.current = true
+    if (!flow.context.purpose.trim()) send({ type: 'PURPOSE_CHANGED', scopeKey, text: pending })
+  }, [
+    view,
+    state.session?.phase,
+    state.session?.pendingRequest,
+    flow.context.purpose,
+    scopeKey,
+    send,
+  ])
+  const modelChoice = renderModelChoice && (
+    <Sheet
+      open={modelChoiceOpen}
+      label={t('failure.otherModelTitle')}
+      onClose={() => setModelChoiceOpen(false)}
+      header={
+        <div className="flex flex-col gap-1 px-5 pt-5 sm:px-6">
+          <Typography variant="title" as="h2">
+            {t('failure.otherModelTitle')}
+          </Typography>
+          <Typography variant="meta" as="p" className="text-pretty">
+            {t('failure.otherModelHelp')}
+          </Typography>
+        </div>
+      }
+      bodyClassName="px-5 pb-5 sm:px-6"
+    >
+      {modelChoiceOpen &&
+        renderModelChoice(() => {
+          setModelChoiceOpen(false)
+          resend()
+        })}
+    </Sheet>
+  )
+  const requestFailureNotice = (className: string) =>
+    requestFailure &&
+    aiFailure && (
+      <AuthoringRequestFailure
+        failure={requestFailure}
+        modelLabel={writeLabel}
+        kept={
+          selected || (conversation && authoringArtifactHasContent(state.session?.workingSource))
+            ? 'draft'
+            : (view === 'purpose' ? flow.context.purpose : state.text).trim()
+              ? 'message'
+              : undefined
+        }
+        onRetry={retryRequest}
+        onOtherModel={renderModelChoice ? () => setModelChoiceOpen(true) : undefined}
+        className={className}
+      />
+    )
   const historyFull = completedAuthoringExchanges(state.session) >= AUTHORING_MAX_EXCHANGES
   const workingStatus =
     state.phase === 'quoting'
@@ -359,7 +502,7 @@ function ScopedEditor({
       </div>
     </div>
   )
-  const retry = hasFailure && (
+  const retry = otherFailure && (
     <div className="mt-8 flex flex-wrap items-center gap-4">
       <Button variant="cta" onClick={() => event('RETRY')}>
         {t(frozenPublication ? 'saveRetry' : 'retry')}
@@ -438,10 +581,17 @@ function ScopedEditor({
       >
         <Typography variant="body">{t('cancelHelp')}</Typography>
       </Dialog>
+      {modelChoice}
     </>
   )
   if (conversation && view !== 'direct') {
-    const draft = selected ?? state.session?.workingSource
+    // A new session's working source is empty until something is drafted or typed: it is no
+    // draft to show, name or save.
+    const draft =
+      selected ??
+      (authoringArtifactHasContent(state.session?.workingSource)
+        ? state.session?.workingSource
+        : undefined)
     const draftName = draft?.name || state.session?.savedBaseline?.name || targetName || ''
     const working = view === 'working'
     const asking = view === 'purpose'
@@ -731,12 +881,13 @@ function ScopedEditor({
             </Button>
           )}
         </div>
-        {draftInvalid && !needsVoiceExample && (
+        {invalidNotice && (
           <Notice tone="danger" className="mt-4">
             {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
           </Notice>
         )}
-        {hasFailure && (
+        {requestFailureNotice('mt-4')}
+        {otherFailure && (
           <Notice tone="danger" role="alert" className="mt-4">
             {conflict ? (
               t('conflict')
@@ -747,7 +898,7 @@ function ScopedEditor({
             )}
           </Notice>
         )}
-        {hasFailure && retry}
+        {otherFailure && retry}
         {controller.readFailure && (
           <Notice tone="danger" role="alert" className="mt-4">
             <AppFailureMessage failure={controller.readFailure} />
@@ -812,6 +963,18 @@ function ScopedEditor({
                     disabled={ai !== 'ready' || blocked || frozenPublication}
                     invalid={!!flow.context.problem}
                     feedback={inputFeedback}
+                    attachment={
+                      referencesAllowed && (
+                        <AuthoringReferences
+                          ownerId={ownerId}
+                          references={references}
+                          onChange={setReferences}
+                          // A refused request leaves its chips editable, so one that could not
+                          // be read can be taken out before sending again.
+                          disabled={busy || working}
+                        />
+                      )
+                    }
                   />
                 ) : historyFull ? (
                   <Typography variant="body" className="text-content-secondary">
@@ -953,12 +1116,13 @@ function ScopedEditor({
           {t('unpublished', named)}
         </Typography>
       )}
-      {draftInvalid && !needsVoiceExample && (
+      {invalidNotice && (
         <Notice tone="danger" className="mt-4">
           {t(selected ? 'invalidSource' : 'invalidSourceNoPreview')}
         </Notice>
       )}
-      {hasFailure && (
+      {requestFailureNotice('mt-6')}
+      {otherFailure && (
         <Notice tone="danger" role="alert" className="mt-6">
           {conflict ? (
             t('conflict')
@@ -1045,7 +1209,7 @@ function ScopedEditor({
             {t('useExample')}
           </Button>
           {aiAvailability}
-          {hasFailure ? (
+          {otherFailure ? (
             retry
           ) : ai === 'ready' ? (
             <Button type="submit" variant="cta" className="mt-8 w-full sm:w-auto">
@@ -1057,7 +1221,7 @@ function ScopedEditor({
       )}
       {view === 'existing' && (
         <div className="mt-8">
-          {hasFailure ? (
+          {otherFailure ? (
             retry
           ) : (
             <Button variant="cta" onClick={() => event('LOAD_EXISTING')}>
@@ -1085,7 +1249,7 @@ function ScopedEditor({
               />
             ))}
           </div>
-          {hasFailure ? (
+          {otherFailure ? (
             retry
           ) : (
             <Button variant="ghost" className="mt-8" onClick={() => event('RECOMMEND')}>
@@ -1098,7 +1262,7 @@ function ScopedEditor({
         <div className="mt-8">
           {preview}
           <div className="mt-8 flex flex-wrap items-center gap-4">
-            {hasFailure ? (
+            {otherFailure ? (
               retry
             ) : (
               <Button
@@ -1310,7 +1474,7 @@ function ScopedEditor({
                     {t('useExample')}
                   </Button>
                   {aiAvailability}
-                  {hasFailure ? (
+                  {otherFailure ? (
                     retry
                   ) : ai === 'ready' ? (
                     <Button type="submit" variant="cta" className="mt-4 w-full sm:mt-8 sm:w-auto">
@@ -1424,7 +1588,7 @@ function ScopedEditor({
               </Typography>
             </label>
           )}
-          {hasFailure ? (
+          {otherFailure ? (
             retry
           ) : (
             <Button

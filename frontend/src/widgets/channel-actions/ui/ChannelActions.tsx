@@ -24,11 +24,14 @@ function NativeLink(props: NavigationLinkProps) {
 export function ChannelActions({
   video = false,
   section,
+  icon = true,
   className = 'mt-auto',
 }: {
   /** The 영상 side of 템플릿 and 지침; 말투 is one section for 글 and 영상. */
   video?: boolean
   section: ChannelSection
+  /** The ＋ before the label; `false` for a section whose creation is its words alone (템플릿). */
+  icon?: boolean
   /** The dock's placement; `mt-auto` holds it at the bottom of a short list (THEME-24). A list
    *  whose rows run edge to edge adds `action-list-inset` so the dock keeps the page gutter. */
   className?: string
@@ -69,7 +72,7 @@ export function ChannelActions({
         onClick={section === 'work' ? rememberCreation : undefined}
         className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full sm:w-auto' })}
       >
-        <Plus aria-hidden="true" className="size-6 shrink-0" />
+        {icon && <Plus aria-hidden="true" className="size-6 shrink-0" />}
         {t(`button.${section === 'work' && video ? 'video' : section}`)}
       </Link>
     </ActionBar>

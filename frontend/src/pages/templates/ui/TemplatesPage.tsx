@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from '@tanstack/react-router'
-import { MessagesSquare, Sparkles } from 'lucide-react'
+import { MessagesSquare } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { TemplatePreview, useTemplates, type Template } from '@/entities/template'
+import { ChannelActions } from '@/widgets/channel-actions'
 import { KitScreenHeader } from '@/widgets/writing-kit'
 import {
   Badge,
@@ -11,7 +12,6 @@ import {
   Notice,
   LoadingState,
   Typography,
-  buttonStyles,
   cardStyles,
   pageStyles,
   typographyStyles,
@@ -21,9 +21,10 @@ import {
  *  miniature of the post it makes (the same preview its own screen draws, clipped to a page),
  *  under its name and how many posts use it — so the owner finds one by what it looks like, not
  *  by reading a list of names. A tile opens the template, where it is reviewed, changed by
- *  talking, or deleted. A new template is never assembled here: `AI와 새 템플릿` opens a
- *  conversation that drafts one from what the owner says they post (TMPL departure: no wizard).
- *  A conversation left unsaved waits at the top to be picked up.
+ *  talking, or deleted. A new template is never assembled here: `새 템플릿` floats over the list
+ *  as 새 글 floats over 글 (the section's one creation, THEME-67) and opens a conversation that
+ *  drafts one from what the owner says they post (TMPL departure: no wizard). A conversation left
+ *  unsaved waits at the top to be picked up.
  *
  *  Nothing here calls a model or enqueues a job ([I5]). */
 export function TemplatesPage() {
@@ -36,20 +37,7 @@ export function TemplatesPage() {
 
   return (
     <main className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-4 sm:pt-8' })}>
-      <KitScreenHeader
-        kit="template"
-        title={t('title')}
-        statement={t('page.statement')}
-        actions={
-          <Link
-            to="/templates/new"
-            className={buttonStyles({ variant: 'cta', className: 'gap-2' })}
-          >
-            <Sparkles aria-hidden="true" className="size-5 shrink-0" />
-            {t('page.create')}
-          </Link>
-        }
-      />
+      <KitScreenHeader kit="template" title={t('title')} statement={t('page.statement')} />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -122,7 +110,7 @@ export function TemplatesPage() {
           <Typography variant="title" as="h2" id="templates-empty">
             {t('page.emptyTitle')}
           </Typography>
-          {/* The way to make one is the heading row's; the empty space only says what to bring. */}
+          {/* The way to make one floats at the bottom; the empty space only says what to bring. */}
           <Typography variant="body" as="p" className="text-content-secondary max-w-measure">
             {t('page.emptyBody')}
           </Typography>
@@ -135,11 +123,10 @@ export function TemplatesPage() {
             {t('page.saved')}
           </h2>
           <ul className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {templates.map((template, index) => (
+            {templates.map((template) => (
               <TemplateTile
                 key={template.id}
                 template={template}
-                index={index}
                 summary={summaries.data?.find(
                   (row) => row.targetId === template.id || row.lastPublication?.id === template.id,
                 )}
@@ -148,24 +135,20 @@ export function TemplatesPage() {
           </ul>
         </section>
       )}
+      {/* Docked over the list at every width and set after it, so the last tile scrolls clear. */}
+      <ChannelActions section="templates" icon={false} />
     </main>
   )
 }
 
 /** One template as a page: its shape in miniature, faded where the tile ends, then its name, its
- *  description and how many posts use it. The whole tile is the one link. */
-function TemplateTile({
-  template,
-  index,
-  summary,
-}: {
-  template: Template
-  index: number
-  summary?: AuthoringSummary
-}) {
+ *  description and how many posts use it. The whole tile is the one link. The tiles stand in
+ *  place as the list answers, in the grid the loading cards held, rather than rising in one by
+ *  one. */
+function TemplateTile({ template, summary }: { template: Template; summary?: AuthoringSummary }) {
   const { t } = useTranslation('templates')
   return (
-    <li className="animate-rise" style={{ animationDelay: `${index * 50}ms` }}>
+    <li>
       <Link
         to="/templates/$templateId"
         params={{ templateId: template.id }}

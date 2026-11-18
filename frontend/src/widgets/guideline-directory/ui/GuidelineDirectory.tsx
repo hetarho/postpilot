@@ -16,6 +16,7 @@ import {
 } from '@/entities/guideline'
 import { useSession } from '@/entities/session'
 import { AuthoringSheet } from '@/features/ai-authoring'
+import { ModelPicker } from '@/features/configure-model-pair'
 import { DeleteGuidelineButton } from '@/features/delete-guideline'
 import { GuidelineDirectEditor } from '@/features/edit-guideline'
 import {
@@ -240,6 +241,7 @@ export function GuidelineDirectory({
           </Button>
         )}
         <AuthoringSheet
+          renderModelChoice={(onSaved) => <ModelPicker stage="write" onSaved={onSaved} />}
           open={authoringOpen}
           onOpenChange={(open) => {
             setAuthoringOpen(open)
@@ -271,13 +273,9 @@ export function GuidelineDirectory({
 
       {!isError && !isPending && (
         <>
-          {summaries.isPending && (
-            <LoadingState
-              variant="inline"
-              label={t('authoringState.checking', { ns: 'guidelines' })}
-              className="mt-6"
-            />
-          )}
+          {/* Unsaved work is read after the list; until it answers nothing stands above the
+              list, so the list does not jump up when a waiting line goes away. A row's own state
+              joins it when it arrives. */}
           {summaries.isError && (
             <Notice tone="danger" role="alert" className="mt-6">
               {t('authoringState.failed', { ns: 'guidelines' })}
@@ -846,6 +844,7 @@ function GuidelineRow({
             />
           </div>
           <AuthoringSheet
+            renderModelChoice={(onSaved) => <ModelPicker stage="write" onSaved={onSaved} />}
             open={authoringOpen}
             onOpenChange={setAuthoringOpen}
             ownerId={ownerId}

@@ -4,6 +4,12 @@ export { KitRing } from './ui/KitRing'
 export { useKitText } from './ui/useKitText'
 export { useWritingKit } from './model/useWritingKit'
 export {
+  forgetCreationModes,
+  readCreationMode,
+  rememberCreationMode,
+  type CreationMode,
+} from './model/creation-mode'
+export {
   KIT_KEYS,
   KIT_HREF,
   KIT_HASH,

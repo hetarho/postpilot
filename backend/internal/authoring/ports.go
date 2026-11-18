@@ -69,3 +69,10 @@ type WorkingDrafts interface {
 type TestCandidates interface {
 	FreezeCandidate(context.Context, string, OwnedCandidateRef) (FrozenCandidate, error)
 }
+
+// References reads one form reference for its owner: an owned post or post template, read
+// owner-scoped through its own context, or a web page under the fetch guard. A reference
+// that cannot be read is a *ReferenceRefusal.
+type References interface {
+	Read(ctx context.Context, owner string, ref Reference) (ReferenceDocument, error)
+}

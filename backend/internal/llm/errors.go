@@ -74,10 +74,11 @@ const (
 
 // Failure is the provider-neutral, durable projection of an LLM error.
 //
-// Params is nil when there are no display-safe interpolation values. LLM failures
-// currently expose none: provider names, status text, and messages are not public
-// parameters. TechnicalDetail may contain the provider's original message and must
-// remain separate from localized user-facing copy.
+// Params is nil when there are no display-safe interpolation values. The one value an
+// LLM failure exposes is MODEL_UNAVAILABLE's `cause` (see ModelUnavailableCause*), a
+// code-owned word, never provider prose: provider names, status text, and messages are
+// not public parameters. TechnicalDetail may contain the provider's original message and
+// must remain separate from localized user-facing copy.
 //
 // The zero value means no failure and is returned only for a nil error.
 type Failure struct {
@@ -100,6 +101,9 @@ func NormalizeFailure(err error) Failure {
 		// The provider's prose is deliberately technical-only. In particular, do not
 		// copy it into Params or make it the stable reason.
 		failure.TechnicalDetail = strings.TrimSpace(providerErr.Message)
+		if failure.Reason == FailureReasonModelUnavailable && providerErr.Cause != "" {
+			failure.Params = map[string]string{"cause": providerErr.Cause}
+		}
 	}
 	var truncated *TruncatedError
 	if errors.As(err, &truncated) {
@@ -167,7 +171,22 @@ type ProviderError struct {
 	Message  string
 	// Kind is the sentinel this failure normalizes to, or nil for a generic failure.
 	Kind error
+	// Cause tells apart why an ErrModelUnavailable model cannot serve: one of the
+	// ModelUnavailableCause* words, or empty when the provider did not say.
+	Cause string
 }
+
+// Why a model the provider names cannot serve the request. A refused policy is fixed in
+// the provider account's settings or by picking another model; a gone model only by
+// picking another one. Both are display-safe codes, carried as MODEL_UNAVAILABLE's
+// `cause` param.
+const (
+	// ModelUnavailableCauseGone: the provider does not offer the model (any more).
+	ModelUnavailableCauseGone = "gone"
+	// ModelUnavailableCausePolicy: the model exists, but every endpoint serving it is
+	// excluded by the provider account's guardrail, privacy or data policy settings.
+	ModelUnavailableCausePolicy = "provider_policy"
+)
 
 func (e *ProviderError) Error() string {
 	if e.Kind != nil {

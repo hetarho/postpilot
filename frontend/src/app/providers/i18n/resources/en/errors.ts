@@ -7,6 +7,8 @@ export const errors = {
   AUTHORING_DRAFT_INVALID:
     'Your current changes need review before saving. Your input is preserved.',
   AUTHORING_FEATURE_UNAVAILABLE: 'This editing option is not ready yet.',
+  AUTHORING_REFERENCE_UNAVAILABLE:
+    'Could not read an attached reference. Check it, or remove it, and send again.',
   VOICE_SAMPLE_REVISION_CONFLICT:
     'This material changed. Your input is preserved; check the latest material.',
   VOICE_SAMPLE_UPDATE_INVALID: 'Check the material text and photo before saving.',

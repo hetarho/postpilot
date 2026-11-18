@@ -1,8 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, Clapperboard } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useSession } from '@/entities/session'
-import { CLIP_LIST_PATH, rememberClipEntry } from '@/entities/clip-project'
 import {
   KIT_HASH,
   KIT_NEXT_HREF,
@@ -11,13 +10,13 @@ import {
   useKitText,
   useWritingKit,
 } from '@/widgets/writing-kit'
-import { Button, Typography, buttonStyles, pageStyles, typographyStyles } from '@/shared/ui'
+import { Button, Typography, pageStyles, typographyStyles } from '@/shared/ui'
 
 /** Guide: 홈 — "고품질의 글을, 내 언어로." over the owner's writing kit drawn as one picture.
- *  The pen in its middle is the screen's 글쓰기; each piece around it opens the screen that makes
- *  it ready, and the ▾ beside a piece's name changes its default right here. Beside the picture:
- *  how much of the kit is there, and the ONE thing to do next — or, once everything is, that
- *  nothing is left but to write. 영상 만들기 stays a quiet second way in.
+ *  The icon in its middle starts the screen's 글쓰기, or 영상 만들기 once its name has switched it;
+ *  each piece's ring opens the screen that makes it ready, and a piece's name changes its default
+ *  right here. Under the picture, on its own axis: how much of the kit is there, and the ONE thing
+ *  to do next — or, once everything is, that nothing is left but to write.
  *
  *  A new account lands here too, on the empty kit: the picture and its next step are the
  *  onboarding, so no setup gate stands in front of them (setup stays one row away in 설정). */
@@ -52,11 +51,13 @@ export function HomePage() {
         className="mx-auto w-full max-w-md lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none"
       />
 
+      {/* On a phone and a tablet it stands on the picture's own axis, as wide as the picture; on
+          the desk it is the left column's, under the title it continues. */}
       <section
         aria-label={t('home.nextAria')}
-        className="flex flex-col items-start gap-3 lg:col-start-1 lg:row-start-2"
+        className="mx-auto flex w-full max-w-md flex-col gap-3 lg:col-start-1 lg:row-start-2 lg:mx-0"
       >
-        <div className="flex flex-wrap items-center gap-x-2">
+        <div className="flex flex-wrap items-center justify-center gap-x-2 text-center lg:justify-start lg:text-left">
           <Typography variant="body" as="p" role="status" className="text-content-secondary">
             {kit.summary.loading
               ? ' '
@@ -76,7 +77,7 @@ export function HomePage() {
         {kit.summary.loading && (
           <span
             aria-hidden="true"
-            className="loading-skeleton bg-surface-recessed block h-15 w-full max-w-md rounded-2xl"
+            className="loading-skeleton bg-surface-recessed block h-15 w-full rounded-2xl"
           />
         )}
         {!kit.summary.loading && kit.next && (
@@ -86,7 +87,7 @@ export function HomePage() {
             // the writing AI's place is a tab of its own, which needs no way back.
             search={kit.next.key === 'ai' ? {} : { entry: '/' }}
             hash={KIT_HASH[kit.next.key]}
-            className="bg-card-bg hover:bg-card-bg-hover active:bg-card-bg-active animate-rise flex w-full max-w-md min-w-0 items-center gap-3 rounded-2xl py-2 pr-4 pl-2 shadow-sm"
+            className="bg-card-bg hover:bg-card-bg-hover active:bg-card-bg-active flex w-full min-w-0 items-center gap-3 rounded-2xl py-2 pr-4 pl-2 text-left shadow-sm"
           >
             <KitRing kitKey={kit.next.key} state={kit.next.state} fill={kit.next.fill} size="sm" />
             <span className="flex min-w-0 flex-1 flex-col">
@@ -103,22 +104,6 @@ export function HomePage() {
             <ArrowRight aria-hidden="true" className="text-link-fg size-5 shrink-0" />
           </Link>
         )}
-        <Link
-          to="/clips/new"
-          search={{}}
-          onClick={() =>
-            rememberClipEntry(ownerId, {
-              path: CLIP_LIST_PATH,
-              section: 'video',
-              filters: {},
-              scrollY: 0,
-            })
-          }
-          className={buttonStyles({ variant: 'ghost', className: '-ml-3 gap-2' })}
-        >
-          <Clapperboard aria-hidden="true" className="size-5" />
-          {t('kit.writeVideo')}
-        </Link>
       </section>
     </main>
   )

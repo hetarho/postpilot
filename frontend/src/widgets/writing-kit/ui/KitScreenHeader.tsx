@@ -3,14 +3,16 @@ import { clsx } from 'clsx'
 import { TitleRow, Typography } from '@/shared/ui'
 import type { KitKey } from '../model/kit'
 import { KitRing } from './KitRing'
-import { KitStatus } from './KitStatus'
 import { useKitElement } from './useKitElement'
 
 /** Guide: how every kit screen opens — what the thing IS and what it does to the owner's writing,
  *  in the screen's own large title and one sentence, with its illustration beside them. For a
  *  piece of the writing kit the illustration sits inside the very ring 홈 draws for it, only
- *  larger, and the line under the sentence says that ring's state and its one fact — so the
- *  screen and the picture that opened it say the same thing in the same shape.
+ *  larger, so the screen and the picture that opened it are the same shape. The piece's state
+ *  in words stays on 홈, under the piece; here the ring says it and the screen shows the rest.
+ *
+ *  The header is the screen's frame, so it is there from the first frame and does not rise in:
+ *  only the ring's own stroke draws.
  *
  *  `actions` is the screen's one heading row of actions; nothing else goes here. The screen's way
  *  back, when it has one, stands at the start of the title's row rather than on a row above it. */
@@ -53,7 +55,6 @@ export function KitScreenHeader({
           <Typography variant="body" className="text-content-secondary max-w-measure text-pretty">
             {statement}
           </Typography>
-          {kit && <KitStatus kit={kit} className="mt-1" />}
         </div>
         {kit ? (
           <KitPiece kit={kit} />
@@ -64,7 +65,7 @@ export function KitScreenHeader({
               alt=""
               aria-hidden="true"
               className={clsx(
-                'animate-rise shrink-0 object-contain drop-shadow-sm',
+                'shrink-0 object-contain drop-shadow-sm',
                 size === 'page' ? 'size-24 sm:size-32' : 'size-16 sm:size-20',
               )}
             />
@@ -80,7 +81,7 @@ export function KitScreenHeader({
 function KitPiece({ kit }: { kit: KitKey }) {
   const element = useKitElement(kit)
   return (
-    <span className="animate-rise shrink-0">
+    <span className="shrink-0">
       <KitRing kitKey={kit} state={element.state} fill={element.fill} size="lg" />
     </span>
   )

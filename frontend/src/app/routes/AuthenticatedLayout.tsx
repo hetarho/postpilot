@@ -43,6 +43,7 @@ import {
   VIDEO_SECTIONS,
 } from './navigation'
 import { NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
+import { preloadWhenIdle } from './idle-preload'
 
 /** Guide: one glyph per tab, so a destination is found by shape before it is read. */
 const TAB_ICONS = {
@@ -85,8 +86,26 @@ export function AuthenticatedLayout() {
   const ownerId = user?.id ?? ''
   const defaults = useInitializeDefaultSelections(ownerId)
   const navigate = useNavigate()
-  const location = useRouterState({ select: (state) => state.location })
+  // The chrome follows the screen the outlet is DRAWING. The router moves `location` the moment a
+  // navigation starts, while a first visit's code is still on its way; read there, the next
+  // screen's way back and its hub's title were drawn over the current screen, pushing it down,
+  // and jumped again when the screen arrived. Until the outlet holds the new route, the location
+  // it is drawing is the one last resolved.
+  const location = useRouterState({
+    select: (state) => {
+      const shown = state.matches.at(-1)
+      return shown &&
+        state.resolvedLocation &&
+        navigationPathname(shown.pathname) !== navigationPathname(state.location.pathname)
+        ? state.resolvedLocation
+        : state.location
+    },
+  })
   const pathname = navigationPathname(location.pathname)
+  // The tab bar alone answers a tap at once: lighting the tapped tab moves nothing on the page.
+  const tappedPath = useRouterState({
+    select: (state) => navigationPathname(state.location.pathname),
+  })
   const search = location.search as Record<string, unknown>
   const router = useRouter()
   const header = useRef<HTMLElement>(null)
@@ -175,6 +194,12 @@ export function AuthenticatedLayout() {
     pathname === '/tests' ||
     (pathname.startsWith('/tests/') && pathname !== '/tests/history')
 
+  useEffect(() => {
+    // The app's router preloads what is pointed at, and so the screens one tap away while idle;
+    // a router that asks for no preloading (a test's) gets none here either.
+    if (router.options.defaultPreload !== 'intent') return
+    return preloadWhenIdle(router, navigationPathname(router.state.location.pathname))
+  }, [router])
   useEffect(() => {
     const token = takePendingGift()
     if (token) void navigate({ to: '/gift/$token', params: { token }, replace: true })
@@ -321,16 +346,20 @@ export function AuthenticatedLayout() {
     href: to,
     label: t(labelKey),
     icon: TAB_ICONS[to],
-    current: current === to,
+    current: currentDestination(tappedPath) === to,
   }))
-  // Only 영상 has sibling pages: the videos, then what makes one. 글 is one list.
+  // Only 영상 has sibling pages: the videos, then what makes one. 글 is one list. Between
+  // siblings the row stays where it is, so the tapped chip lights at once, as a tab does (and as
+  // the router's own link state already marks it).
+  const tappedSection = currentSection(tappedPath)
+  const chipKey = tappedSection?.hub === section?.hub ? tappedSection?.key : section?.key
   const chips =
     section?.hub === 'videos'
       ? VIDEO_SECTIONS.map(({ key, href }) => ({
           key,
           href,
           label: t(`videos.${key}`),
-          current: section.key === key,
+          current: chipKey === key,
         }))
       : []
   return (

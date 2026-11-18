@@ -146,71 +146,73 @@ const (
 	FailureReason_MODEL_SET_UNAVAILABLE                      FailureReason = 112
 	FailureReason_MODEL_STAGE_INVALID                        FailureReason = 113
 	FailureReason_MODEL_STAGE_REQUIRED                       FailureReason = 114
-	FailureReason_MODEL_UNAVAILABLE                          FailureReason = 115
-	FailureReason_MODEL_UNSUITABLE                           FailureReason = 116
-	FailureReason_MODEL_UNSUPPORTED                          FailureReason = 117
-	FailureReason_MODEL_VIDEO_UNSUPPORTED                    FailureReason = 118
-	FailureReason_NO_CHANGE                                  FailureReason = 119
-	FailureReason_NO_SCHEDULED_CHANGE                        FailureReason = 120
-	FailureReason_PASSWORD_NOT_SET                           FailureReason = 121
-	FailureReason_PASSWORD_TOO_LONG                          FailureReason = 122
-	FailureReason_PASSWORD_TOO_SHORT                         FailureReason = 123
-	FailureReason_PAYMENT_METHOD_REQUIRED                    FailureReason = 124
-	FailureReason_PLAN_REQUIRED                              FailureReason = 125
-	FailureReason_POST_BUSY                                  FailureReason = 126
-	FailureReason_POST_CONTENT_INVALID                       FailureReason = 127
-	FailureReason_POST_CONTENT_STALE                         FailureReason = 128
-	FailureReason_POST_FILENAME_TAKEN                        FailureReason = 129
-	FailureReason_POST_FORBIDDEN                             FailureReason = 130
-	FailureReason_POST_MACHINE_BASELINE_REQUIRED             FailureReason = 131
-	FailureReason_POST_NOT_FINALIZED                         FailureReason = 132
-	FailureReason_POST_NOT_FOUND                             FailureReason = 133
-	FailureReason_POST_PHOTO_LIMIT                           FailureReason = 134
-	FailureReason_POST_TAG_COUNT_INVALID                     FailureReason = 136
-	FailureReason_POST_TARGET_LANGUAGE_REQUIRED              FailureReason = 137
-	FailureReason_POST_TARGET_LANGUAGE_UNSUPPORTED           FailureReason = 138
-	FailureReason_POST_TEMPLATE_ANSWER_INVALID               FailureReason = 139
-	FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG              FailureReason = 140
-	FailureReason_POST_VIDEO_LIMIT                           FailureReason = 141
-	FailureReason_PROVIDER_DISABLED                          FailureReason = 142
-	FailureReason_PURPOSE_NOT_FOUND                          FailureReason = 164
-	FailureReason_REFUND_FAILED                              FailureReason = 165
-	FailureReason_RESET_LINK_INVALID                         FailureReason = 167
-	FailureReason_REVISION_CONTENT_REQUIRED                  FailureReason = 168
-	FailureReason_REVISION_INSTRUCTION_REQUIRED              FailureReason = 169
-	FailureReason_REVISION_INSTRUCTION_TOO_LONG              FailureReason = 170
-	FailureReason_SUBSCRIPTION_EXISTS                        FailureReason = 171
-	FailureReason_SUBSCRIPTION_NEEDS_METHOD                  FailureReason = 172
-	FailureReason_SUBSCRIPTION_REQUIRED                      FailureReason = 173
-	FailureReason_TEMPLATE_BODY_REQUIRED                     FailureReason = 174
-	FailureReason_TEMPLATE_FIELD_TOO_LONG                    FailureReason = 175
-	FailureReason_TEMPLATE_LIMIT_REACHED                     FailureReason = 176
-	FailureReason_TEMPLATE_NAME_REQUIRED                     FailureReason = 177
-	FailureReason_TEMPLATE_NAME_TAKEN                        FailureReason = 178
-	FailureReason_TEMPLATE_NOT_FOUND                         FailureReason = 179
-	FailureReason_TEMPLATE_NUMBER_OUT_OF_RANGE               FailureReason = 180
-	FailureReason_TEMPLATE_PARSE_FAILED                      FailureReason = 181
-	FailureReason_TIER_NOT_SUBSCRIBABLE                      FailureReason = 182
-	FailureReason_TOO_MANY_ATTEMPTS                          FailureReason = 183
-	FailureReason_UPLOAD_INVALID                             FailureReason = 184
-	FailureReason_UPLOAD_NOT_FOUND                           FailureReason = 185
-	FailureReason_UPLOAD_OBJECT_MISSING                      FailureReason = 186
-	FailureReason_UPLOAD_VIDEO_INVALID                       FailureReason = 187
-	FailureReason_UPLOAD_VIDEO_UNSUPPORTED                   FailureReason = 188
-	FailureReason_USER_ID_REQUIRED                           FailureReason = 189
-	FailureReason_USER_NOT_FOUND                             FailureReason = 190
-	FailureReason_VERIFICATION_LINK_INVALID                  FailureReason = 191
-	FailureReason_VOICE_ANALYZE_MODEL_REQUIRED               FailureReason = 193
-	FailureReason_VOICE_BUSY                                 FailureReason = 195
-	FailureReason_VOICE_DELETED                              FailureReason = 200
-	FailureReason_VOICE_INVALID_LIFECYCLE                    FailureReason = 204
-	FailureReason_VOICE_NAME_REQUIRED                        FailureReason = 206
-	FailureReason_VOICE_NAME_TAKEN                           FailureReason = 207
-	FailureReason_VOICE_NAME_TOO_LONG                        FailureReason = 208
-	FailureReason_VOICE_NOT_FOUND                            FailureReason = 209
-	FailureReason_VOICE_REQUIRED                             FailureReason = 210
-	FailureReason_VOICE_SAMPLE_NOT_FOUND                     FailureReason = 213
-	FailureReason_VOICE_SAMPLE_TOO_SHORT                     FailureReason = 214
+	// params: model (the catalog label, where known) and cause (gone or provider_policy,
+	// where the provider said), both optional.
+	FailureReason_MODEL_UNAVAILABLE                FailureReason = 115
+	FailureReason_MODEL_UNSUITABLE                 FailureReason = 116
+	FailureReason_MODEL_UNSUPPORTED                FailureReason = 117
+	FailureReason_MODEL_VIDEO_UNSUPPORTED          FailureReason = 118
+	FailureReason_NO_CHANGE                        FailureReason = 119
+	FailureReason_NO_SCHEDULED_CHANGE              FailureReason = 120
+	FailureReason_PASSWORD_NOT_SET                 FailureReason = 121
+	FailureReason_PASSWORD_TOO_LONG                FailureReason = 122
+	FailureReason_PASSWORD_TOO_SHORT               FailureReason = 123
+	FailureReason_PAYMENT_METHOD_REQUIRED          FailureReason = 124
+	FailureReason_PLAN_REQUIRED                    FailureReason = 125
+	FailureReason_POST_BUSY                        FailureReason = 126
+	FailureReason_POST_CONTENT_INVALID             FailureReason = 127
+	FailureReason_POST_CONTENT_STALE               FailureReason = 128
+	FailureReason_POST_FILENAME_TAKEN              FailureReason = 129
+	FailureReason_POST_FORBIDDEN                   FailureReason = 130
+	FailureReason_POST_MACHINE_BASELINE_REQUIRED   FailureReason = 131
+	FailureReason_POST_NOT_FINALIZED               FailureReason = 132
+	FailureReason_POST_NOT_FOUND                   FailureReason = 133
+	FailureReason_POST_PHOTO_LIMIT                 FailureReason = 134
+	FailureReason_POST_TAG_COUNT_INVALID           FailureReason = 136
+	FailureReason_POST_TARGET_LANGUAGE_REQUIRED    FailureReason = 137
+	FailureReason_POST_TARGET_LANGUAGE_UNSUPPORTED FailureReason = 138
+	FailureReason_POST_TEMPLATE_ANSWER_INVALID     FailureReason = 139
+	FailureReason_POST_TEMPLATE_ANSWER_TOO_LONG    FailureReason = 140
+	FailureReason_POST_VIDEO_LIMIT                 FailureReason = 141
+	FailureReason_PROVIDER_DISABLED                FailureReason = 142
+	FailureReason_PURPOSE_NOT_FOUND                FailureReason = 164
+	FailureReason_REFUND_FAILED                    FailureReason = 165
+	FailureReason_RESET_LINK_INVALID               FailureReason = 167
+	FailureReason_REVISION_CONTENT_REQUIRED        FailureReason = 168
+	FailureReason_REVISION_INSTRUCTION_REQUIRED    FailureReason = 169
+	FailureReason_REVISION_INSTRUCTION_TOO_LONG    FailureReason = 170
+	FailureReason_SUBSCRIPTION_EXISTS              FailureReason = 171
+	FailureReason_SUBSCRIPTION_NEEDS_METHOD        FailureReason = 172
+	FailureReason_SUBSCRIPTION_REQUIRED            FailureReason = 173
+	FailureReason_TEMPLATE_BODY_REQUIRED           FailureReason = 174
+	FailureReason_TEMPLATE_FIELD_TOO_LONG          FailureReason = 175
+	FailureReason_TEMPLATE_LIMIT_REACHED           FailureReason = 176
+	FailureReason_TEMPLATE_NAME_REQUIRED           FailureReason = 177
+	FailureReason_TEMPLATE_NAME_TAKEN              FailureReason = 178
+	FailureReason_TEMPLATE_NOT_FOUND               FailureReason = 179
+	FailureReason_TEMPLATE_NUMBER_OUT_OF_RANGE     FailureReason = 180
+	FailureReason_TEMPLATE_PARSE_FAILED            FailureReason = 181
+	FailureReason_TIER_NOT_SUBSCRIBABLE            FailureReason = 182
+	FailureReason_TOO_MANY_ATTEMPTS                FailureReason = 183
+	FailureReason_UPLOAD_INVALID                   FailureReason = 184
+	FailureReason_UPLOAD_NOT_FOUND                 FailureReason = 185
+	FailureReason_UPLOAD_OBJECT_MISSING            FailureReason = 186
+	FailureReason_UPLOAD_VIDEO_INVALID             FailureReason = 187
+	FailureReason_UPLOAD_VIDEO_UNSUPPORTED         FailureReason = 188
+	FailureReason_USER_ID_REQUIRED                 FailureReason = 189
+	FailureReason_USER_NOT_FOUND                   FailureReason = 190
+	FailureReason_VERIFICATION_LINK_INVALID        FailureReason = 191
+	FailureReason_VOICE_ANALYZE_MODEL_REQUIRED     FailureReason = 193
+	FailureReason_VOICE_BUSY                       FailureReason = 195
+	FailureReason_VOICE_DELETED                    FailureReason = 200
+	FailureReason_VOICE_INVALID_LIFECYCLE          FailureReason = 204
+	FailureReason_VOICE_NAME_REQUIRED              FailureReason = 206
+	FailureReason_VOICE_NAME_TAKEN                 FailureReason = 207
+	FailureReason_VOICE_NAME_TOO_LONG              FailureReason = 208
+	FailureReason_VOICE_NOT_FOUND                  FailureReason = 209
+	FailureReason_VOICE_REQUIRED                   FailureReason = 210
+	FailureReason_VOICE_SAMPLE_NOT_FOUND           FailureReason = 213
+	FailureReason_VOICE_SAMPLE_TOO_SHORT           FailureReason = 214
 	// Reasons no Connect status carries: a durable job failure the browser renders from the
 	// job record, and one the browser raises itself. They are values of the same enum because
 	// the browser renders them from the same catalogue.
@@ -402,6 +404,9 @@ const (
 	FailureReason_CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED FailureReason = 341
 	// A clip's posted URL is not an https URL on its channel's platform host (CLIP-232).
 	FailureReason_CLIP_PUBLISHED_URL_INVALID FailureReason = 342
+	// A template request's form reference could not be read. params: refusal (invalid,
+	// not_allowed, unreachable, not_html, too_large, empty, missing or too_many).
+	FailureReason_AUTHORING_REFERENCE_UNAVAILABLE FailureReason = 343
 )
 
 // Enum value maps for FailureReason.
@@ -706,6 +711,7 @@ var (
 		340: "CLIP_UPLOAD_TEXT_LIMIT",
 		341: "CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED",
 		342: "CLIP_PUBLISHED_URL_INVALID",
+		343: "AUTHORING_REFERENCE_UNAVAILABLE",
 	}
 	FailureReason_value = map[string]int32{
 		"UNKNOWN_FAILURE":                            0,
@@ -1007,6 +1013,7 @@ var (
 		"CLIP_UPLOAD_TEXT_LIMIT":                     340,
 		"CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED":     341,
 		"CLIP_PUBLISHED_URL_INVALID":                 342,
+		"AUTHORING_REFERENCE_UNAVAILABLE":            343,
 	}
 )
 
@@ -1177,7 +1184,7 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x10technical_detail\x18\x03 \x01(\tR\x0ftechnicalDetail\x1a9\n" +
 	"\vParamsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x92N\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xb8N\n" +
 	"\rFailureReason\x12\x13\n" +
 	"\x0fUNKNOWN_FAILURE\x10\x00\x12\x11\n" +
 	"\rAUTH_REQUIRED\x10\x01\x12\x1d\n" +
@@ -1479,7 +1486,8 @@ const file_postpilot_v1_error_proto_rawDesc = "" +
 	"\x16CLIP_RATIO_UNSUPPORTED\x10\xd3\x02\x12\x1b\n" +
 	"\x16CLIP_UPLOAD_TEXT_LIMIT\x10\xd4\x02\x12+\n" +
 	"&CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED\x10\xd5\x02\x12\x1f\n" +
-	"\x1aCLIP_PUBLISHED_URL_INVALID\x10\xd6\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e\"\x06\b\xc2\x01\x10\xc2\x01\"\x06\b\xc4\x01\x10\xc4\x01\"\x06\b\xc5\x01\x10\xc5\x01\"\x06\b\xc6\x01\x10\xc6\x01\"\x06\b\xca\x01\x10\xca\x01\"\x06\b\xcb\x01\x10\xcb\x01\"\x06\b\xd3\x01\x10\xd3\x01\"\x06\b\xd9\x01\x10\xd9\x01\"\x04\bF\x10F\"\x04\b=\x10=\"\x06\b\xc7\x01\x10\xc7\x01\"\x06\b\xc9\x01\x10\xc9\x01\"\x06\b\xd7\x01\x10\xd7\x01\"\x06\b\xd8\x01\x10\xd8\x01\"\x06\b\xd4\x01\x10\xd4\x01\"\x06\b\xcd\x01\x10\xcd\x01\"\x06\b\xdd\x01\x10\xdd\x01\"\x06\b\xa1\x01\x10\xa1\x01\"\x06\b\xa2\x01\x10\xa2\x01\"\x06\b\xa3\x01\x10\xa3\x01\"\x06\b\xa6\x01\x10\xa6\x01\"\x06\b\xff\x01\x10\xff\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIRED*\x17VOICE_BASELINE_MISMATCH*\x1aVOICE_COMPARISON_NOT_FOUND*\x1cVOICE_CONFIRMATION_NOT_FOUND*\x1fVOICE_CONTENT_LANGUAGE_MISMATCH*\x16VOICE_FEEDBACK_INVALID*\x1aVOICE_INSUFFICIENT_SOURCES*\x14VOICE_RULE_NOT_FOUND*\x1aVOICE_VALIDATION_NOT_FOUND*\x19EXPERIMENT_VOICE_REQUIRED* EXPERIMENT_CONFIRMATION_REQUIRED*\x1eVOICE_DEFAULT_DELETE_FORBIDDEN*\x1aVOICE_DESCRIPTION_TOO_LONG*\x1eVOICE_SOURCE_LANGUAGE_REQUIRED*!VOICE_SOURCE_LANGUAGE_UNSUPPORTED*\x1cVOICE_SAMPLE_MUTATION_FAILED*\x18VOICE_LEARNING_NOT_FOUND*\x1cVOICE_PROFILE_FIELD_REQUIRED*\x12PURCHASE_NOT_FOUND*\x0ePURCHASE_SPENT*\x12PURCHASE_TOO_SMALL*\x14REFUND_WINDOW_CLOSED*\x1eGENERATION_STORYLINE_REOBSERVEBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
+	"\x1aCLIP_PUBLISHED_URL_INVALID\x10\xd6\x02\x12$\n" +
+	"\x1fAUTHORING_REFERENCE_UNAVAILABLE\x10\xd7\x02\"\x06\b\x87\x01\x10\x87\x01\"\x06\b\x8f\x01\x10\xa0\x01\"\x06\b\xc0\x01\x10\xc0\x01\"\x04\b\x0e\x10\x0e\"\x06\b\xc2\x01\x10\xc2\x01\"\x06\b\xc4\x01\x10\xc4\x01\"\x06\b\xc5\x01\x10\xc5\x01\"\x06\b\xc6\x01\x10\xc6\x01\"\x06\b\xca\x01\x10\xca\x01\"\x06\b\xcb\x01\x10\xcb\x01\"\x06\b\xd3\x01\x10\xd3\x01\"\x06\b\xd9\x01\x10\xd9\x01\"\x04\bF\x10F\"\x04\b=\x10=\"\x06\b\xc7\x01\x10\xc7\x01\"\x06\b\xc9\x01\x10\xc9\x01\"\x06\b\xd7\x01\x10\xd7\x01\"\x06\b\xd8\x01\x10\xd8\x01\"\x06\b\xd4\x01\x10\xd4\x01\"\x06\b\xcd\x01\x10\xcd\x01\"\x06\b\xdd\x01\x10\xdd\x01\"\x06\b\xa1\x01\x10\xa1\x01\"\x06\b\xa2\x01\x10\xa2\x01\"\x06\b\xa3\x01\x10\xa3\x01\"\x06\b\xa6\x01\x10\xa6\x01\"\x06\b\xff\x01\x10\xff\x01*\x0fPOST_PUBLISHING*\x15VIDEO_NOT_PUBLISHABLE*\x17PUBLISH_AGENT_NOT_READY*\x15PUBLISH_AGENT_REVOKED*\x19PUBLISH_AGENT_UNAVAILABLE*\x16PUBLISH_ALREADY_EXISTS*\x1aPUBLISH_CATEGORY_NOT_FOUND*\x14PUBLISH_COMMIT_FENCE*\x11PUBLISH_FORBIDDEN*\x15PUBLISH_LEASE_INVALID*\x17PUBLISH_NEEDS_ATTENTION*\x11PUBLISH_NOT_FOUND*\x17PUBLISH_OUTCOME_UNKNOWN*\x17PUBLISH_PAIRING_INVALID*\x15PUBLISH_PAIRING_LIMIT*\x1aPUBLISH_POST_NOT_FINALIZED*\x17PUBLISH_REQUEST_INVALID*\x16PUBLISH_STALE_REVISION*\x1aPUBLISH_TRANSITION_INVALID*\x13PUBLISH_URL_INVALID*\x13CLIP_FACTS_REQUIRED*\x17VOICE_BASELINE_MISMATCH*\x1aVOICE_COMPARISON_NOT_FOUND*\x1cVOICE_CONFIRMATION_NOT_FOUND*\x1fVOICE_CONTENT_LANGUAGE_MISMATCH*\x16VOICE_FEEDBACK_INVALID*\x1aVOICE_INSUFFICIENT_SOURCES*\x14VOICE_RULE_NOT_FOUND*\x1aVOICE_VALIDATION_NOT_FOUND*\x19EXPERIMENT_VOICE_REQUIRED* EXPERIMENT_CONFIRMATION_REQUIRED*\x1eVOICE_DEFAULT_DELETE_FORBIDDEN*\x1aVOICE_DESCRIPTION_TOO_LONG*\x1eVOICE_SOURCE_LANGUAGE_REQUIRED*!VOICE_SOURCE_LANGUAGE_UNSUPPORTED*\x1cVOICE_SAMPLE_MUTATION_FAILED*\x18VOICE_LEARNING_NOT_FOUND*\x1cVOICE_PROFILE_FIELD_REQUIRED*\x12PURCHASE_NOT_FOUND*\x0ePURCHASE_SPENT*\x12PURCHASE_TOO_SMALL*\x14REFUND_WINDOW_CLOSED*\x1eGENERATION_STORYLINE_REOBSERVEBDZBgithub.com/postpilot/backend/internal/gen/postpilot/v1;postpilotv1b\x06proto3"
 
 var (
 	file_postpilot_v1_error_proto_rawDescOnce sync.Once

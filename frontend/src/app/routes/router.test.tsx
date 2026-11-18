@@ -69,9 +69,11 @@ describe('the app home', () => {
       'href',
       '/posts/new',
     )
-    expect(within(main).getByRole('link', { name: '영상 만들기' })).toHaveAttribute(
-      'href',
-      '/clips/new',
+    // 영상 만들기 is the centre's other choice, switched from its name, not a link of its own.
+    expect(within(main).queryByRole('link', { name: '영상 만들기' })).toBeNull()
+    expect(within(main).getByRole('button', { name: '글쓰기, 만들 것 바꾸기' })).toHaveAttribute(
+      'aria-haspopup',
+      'dialog',
     )
     expect(router.state.location.pathname).toBe('/')
   })

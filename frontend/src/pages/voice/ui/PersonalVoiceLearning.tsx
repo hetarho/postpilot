@@ -4,6 +4,7 @@ import { VoiceQuestionnaire } from '@/features/answer-voice-prompt'
 import { EditVoiceMaterial } from '@/features/edit-voice-material'
 import { PasteMaterialForm } from '@/features/paste-voice-material'
 import { AuthoringEditor, AuthoringPreview } from '@/features/ai-authoring'
+import { authoringModelChoice } from '@/widgets/ai-authoring-studio'
 export function PersonalVoiceLearning({
   ownerId,
   voiceId,
@@ -48,6 +49,7 @@ export function PersonalVoiceLearning({
       )}
       renderAI={(props) => (
         <AuthoringEditor
+          renderModelChoice={authoringModelChoice}
           ownerId={props.ownerId}
           kind="writing-voice"
           active={props.active}

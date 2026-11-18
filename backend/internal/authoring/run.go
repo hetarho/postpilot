@@ -56,9 +56,17 @@ func withMetadata(a Artifact, m *directMetadataWire) Artifact {
 	return a
 }
 
+// referenceWire is one request's form reference as its job freezes it.
+type referenceWire struct {
+	Kind      string `json:"kind"`
+	Title     string `json:"title"`
+	Structure string `json:"structure"`
+}
+
 type operationInput struct {
 	Metadata         *directMetadataWire `json:"owner_fields,omitempty"`
 	ReferencePost    string              `json:"reference_post,omitempty"`
+	References       []referenceWire     `json:"form_references,omitempty"`
 	TargetID         string              `json:"target_id"`
 	TargetVersion    string              `json:"target_version"`
 	CandidateCount   int                 `json:"candidate_count"`
@@ -115,6 +123,9 @@ func authoringRules(in operationInput) []llm.RequestFragment {
 	case WritingVoice:
 		rules = append(rules, fragment("writing-style-contract", "fictional-style-only-no-owner-facts", "\n문장의 느낌과 표현 습관만 표현하세요. source_style의 개인 분석, AI 설명과 body의 가상 예시는 말투 자료일 뿐, 실제 방문·가격·맛·행동의 근거가 아닙니다. 문구나 사실을 복사하지 마세요."))
 	}
+	if len(in.References) > 0 {
+		rules = append(rules, fragment("form-references", "attached-form-references-not-event-evidence", "\nform_references는 사용자가 이번 요청에 붙인 글·템플릿·웹 페이지의 형식입니다. 섹션 순서, 소제목, 사진 위치, 고정 문구와 질문의 짜임만 참고해 새 템플릿의 형식을 만드세요. 그 안의 문장이나 사실을 새 템플릿에 옮기거나 실제 경험의 근거로 쓰지 말고, 여러 개면 요청에 맞게 하나의 형식으로 합치세요."))
+	}
 	rules = append(rules, fragment("response-fields", "consumed-kind-response-fields", "\n설정 필드는 "+strings.Join(artifactFields(in.Kind), ", ")+"만 반환하세요."))
 	return rules
 }
@@ -137,7 +148,7 @@ func artifactFields(kind Kind) []string {
 }
 
 func (s *Service) freezeInput(state Session, op Operation, start Start, info llm.ModelInfo) (operationInput, error) {
-	in := operationInput{Version: 1, SessionID: state.ID, OperationID: op.ID, BaseRevision: state.Revision, Kind: state.Kind, Mode: start.Mode, CandidateCount: normalizedCount(start.RequestedCandidateCount), TargetID: state.TargetID, TargetVersion: state.TargetVersion, Guide: s.targets.Guide(state.Kind), Purpose: state.Purpose, Prompt: start.Prompt, SourceContext: state.SourceContext, ReferencePost: state.ReferencePost}
+	in := operationInput{Version: 1, SessionID: state.ID, OperationID: op.ID, BaseRevision: state.Revision, Kind: state.Kind, Mode: start.Mode, CandidateCount: normalizedCount(start.RequestedCandidateCount), TargetID: state.TargetID, TargetVersion: state.TargetVersion, Guide: s.targets.Guide(state.Kind), Purpose: state.Purpose, Prompt: start.Prompt, SourceContext: state.SourceContext, ReferencePost: state.ReferencePost, References: start.read}
 	chars := 0
 	if current := currentSource(state); current != nil {
 		a := artifactToWire(*current)
@@ -250,9 +261,10 @@ func modelMessage(in operationInput) string {
 		Request   string            `json:"request"`
 		Source    string            `json:"source_style,omitempty"`
 		Reference string            `json:"reference_post,omitempty"`
+		Forms     []referenceWire   `json:"form_references,omitempty"`
 		Draft     map[string]string `json:"draft,omitempty"`
 		History   []historyWire     `json:"recent_conversation"`
-	}{count, in.Kind, in.Mode, in.Guide, in.Purpose, in.Prompt, source, in.ReferencePost, selected, in.History}
+	}{count, in.Kind, in.Mode, in.Guide, in.Purpose, in.Prompt, source, in.ReferencePost, in.References, selected, in.History}
 	var b bytes.Buffer
 	encoder := json.NewEncoder(&b)
 	encoder.SetEscapeHTML(false)
@@ -283,6 +295,29 @@ type OutputError struct{ Cause error }
 func (e *OutputError) Error() string        { return "authoring output is invalid" }
 func (e *OutputError) Unwrap() error        { return e.Cause }
 func (e *OutputError) Failure() llm.Failure { return llm.Failure{Reason: "AUTHORING_OUTPUT_INVALID"} }
+
+// ModelError is a provider failure of the model the request ran on. It adds that model's
+// catalog label to MODEL_UNAVAILABLE's params, so the screen can name the model it asks the
+// owner to replace; every other reason, and the provider's own text, pass through as the
+// llm context normalized them.
+type ModelError struct {
+	Cause error
+	Label string
+}
+
+func (e *ModelError) Error() string { return e.Cause.Error() }
+func (e *ModelError) Unwrap() error { return e.Cause }
+func (e *ModelError) Failure() llm.Failure {
+	f := llm.NormalizeFailure(e.Cause)
+	if f.Reason == llm.FailureReasonModelUnavailable && strings.TrimSpace(e.Label) != "" {
+		params := map[string]string{"model": strings.TrimSpace(e.Label)}
+		for key, value := range f.Params {
+			params[key] = value
+		}
+		f.Params = params
+	}
+	return f
+}
 func (s *Service) Run(ctx context.Context, run Run, progress func(string, int, int)) error {
 	var in operationInput
 	if e := json.Unmarshal(run.Payload, &in); e != nil {
@@ -317,7 +352,7 @@ func (s *Service) Run(ctx context.Context, run Run, progress func(string, int, i
 	response, e := s.models.Complete(ctx, ref, request)
 	s.captureAuthoringRequest(ctx, run, in, response, e)
 	if e != nil {
-		return e
+		return &ModelError{Cause: e, Label: info.Label}
 	}
 	out, e := s.parseResponse(in, response.Text)
 	if e != nil {

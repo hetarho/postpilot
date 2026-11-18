@@ -10,7 +10,6 @@ export const i18n = {
       lead: '글이 이 순서로 짜여요',
       statement:
         '글이 흘러가는 순서예요. 어떤 글을 올리는지 AI에게 말하면 처음부터 짜 주고, 대화로 다듬어요.',
-      create: 'AI와 새 템플릿',
       emptyTitle: '어떤 글을 자주 올리세요?',
       emptyBody:
         '맛집 후기, 조립이 필요한 제품, 보여 주기만 하면 되는 신상품 — 말해 주면 AI가 그 글의 순서를 짜 드려요.',
@@ -31,7 +30,6 @@ export const i18n = {
       lead: 'Your posts follow this order',
       statement:
         'The order a post flows in. Tell the AI what you post and it drafts one from scratch; refine it by talking.',
-      create: 'New template with AI',
       emptyTitle: 'What do you post most?',
       emptyBody:
         'A restaurant review, a product that needs assembling, a new item that only needs showing — say it and the AI drafts that post’s order.',

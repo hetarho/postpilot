@@ -1,4 +1,5 @@
 import { AuthoringEditor, AuthoringPreview } from '@/features/ai-authoring'
+import { ModelPicker } from '@/features/configure-model-pair'
 import { TemplateDirectEditor } from '@/features/edit-template'
 import { ClipTemplateDirectEditor } from '@/features/edit-clip-template'
 import type { SetupController } from '@/features/complete-setup'
@@ -21,6 +22,7 @@ export function TemplateSetup({
   const authoringKind = kind === 'post-template' ? 'post-template' : 'video-template'
   return (
     <AuthoringEditor
+      renderModelChoice={(onSaved) => <ModelPicker stage="write" onSaved={onSaved} />}
       key={ownerId}
       ownerId={ownerId}
       kind={authoringKind}

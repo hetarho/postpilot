@@ -13,7 +13,10 @@ import {
   type WireSession,
 } from './mappers'
 import {
+  AUTHORING_REFERENCE_REFUSALS,
   authoringSessionBusy,
+  type AuthoringReference,
+  type AuthoringReferenceRefusal,
   type AuthoringScope,
   type AuthoringSession,
   type AuthoringSummary,
@@ -111,6 +114,7 @@ export function useAuthoringAPI(scope: AuthoringScope) {
           prompt: input.prompt,
           writeModel: input.writeModel,
           candidateCount: input.candidateCount ?? 8,
+          references: (input.references ?? []).map(wireReference),
         })
         if (!response.jobId) throw new Error('Authoring job unconfirmed')
         return { jobId: response.jobId, session: publish(response.session, input.sessionId) }
@@ -185,6 +189,34 @@ export function useAuthoringAPI(scope: AuthoringScope) {
       },
     }
   }, [cache, transport, ownedScope])
+}
+function wireReference(reference: AuthoringReference) {
+  return {
+    source:
+      reference.kind === 'post'
+        ? { case: 'postSlug' as const, value: reference.slug }
+        : reference.kind === 'template'
+          ? { case: 'templateId' as const, value: reference.id }
+          : { case: 'url' as const, value: reference.url },
+  }
+}
+/** Reads one reference the way a request would — the page's title, or why it cannot be used —
+ *  before it is attached. Starts no AI work and stores nothing. */
+export function useCheckAuthoringReference() {
+  const transport = useTransport()
+  return useMemo(() => {
+    const client = createClient(Service, transport)
+    return async (
+      reference: AuthoringReference,
+    ): Promise<{ title: string; refusal?: AuthoringReferenceRefusal }> => {
+      const response = await client.checkAuthoringReference({
+        reference: wireReference(reference),
+      })
+      const refusal = AUTHORING_REFERENCE_REFUSALS.find((code) => code === response.refusal)
+      if (response.refusal && !refusal) return { title: '', refusal: 'unreachable' }
+      return refusal ? { title: '', refusal } : { title: response.title }
+    }
+  }, [transport])
 }
 export function useLatestAuthoringSession(scope: AuthoringScope, enabled = true) {
   const cache = useQueryClient()

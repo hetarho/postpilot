@@ -19,6 +19,7 @@ import {
   type AuthoringMode,
   type AuthoringArtifact,
   type AuthoringCandidateCount,
+  type AuthoringReference,
 } from '@/entities/ai-authoring'
 import { appFailureFromConnect, type AppFailure } from '@/shared/api'
 
@@ -32,6 +33,8 @@ export interface FrozenAuthoringCommand {
   createRequestId: string
   requestId: string
   confirmed?: boolean
+  /** The form references this request carries (post templates), frozen with it. */
+  references?: readonly AuthoringReference[]
 }
 export type StudioPhase =
   | 'checking'
@@ -415,7 +418,11 @@ export const authoringMachine = setup({
     freezeQuote: assign(({ context, event }) =>
       event.type === 'quote'
         ? {
-            command: { ...event.command, writeModel: { ...event.command.writeModel } },
+            command: {
+              ...event.command,
+              writeModel: { ...event.command.writeModel },
+              references: event.command.references?.map((reference) => ({ ...reference })),
+            },
             operation: context.operation + 1,
             failure: undefined,
             estimate: undefined,
@@ -540,6 +547,12 @@ export const authoringMachine = setup({
         ...available,
         hydrate: [{ guard: 'staleFailureHydrate' }, ...hydrateTransitions],
         'retry-quote': { guard: 'retryQuote', target: 'quoting', actions: 'retryQuote' },
+        // A request that failed before its job existed is set aside so the same words can be
+        // quoted again on another model; the failure stays on screen until that quote.
+        'dismiss-quote': {
+          guard: ({ context, event }) => owns(context, event) && !!context.command,
+          actions: 'dismiss',
+        },
         begin: [
           { guard: 'retryStarting', target: 'starting', actions: 'begin' },
           ...available.begin,

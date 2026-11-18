@@ -12,6 +12,7 @@ import (
 	authstore "github.com/postpilot/backend/internal/auth/store"
 	"github.com/postpilot/backend/internal/authoring"
 	authoringstore "github.com/postpilot/backend/internal/authoring/store"
+	"github.com/postpilot/backend/internal/authoring/webpage"
 	"github.com/postpilot/backend/internal/billing"
 	billingstore "github.com/postpilot/backend/internal/billing/store"
 	"github.com/postpilot/backend/internal/clip"
@@ -366,7 +367,10 @@ func buildContexts(ctx context.Context, p *platform) (*contexts, error) {
 			voices:         voice.NewAuthoring(c.voice, voicestore.New(handle.Writer, handle.Reader)),
 		},
 		authoringBudget{config: cfg.LLMCompletionBudget}, authoringEstimates{rates: c.ledger},
-	), authoring.RequestInspectionDependencies{
+	).WithReferences(authoringReferences{
+		posts: c.post, templates: c.template, pages: webpage.NewFetcher(webpage.DefaultLimits),
+		photoRowMax: cfg.Template.PhotoRowMax,
+	}), authoring.RequestInspectionDependencies{
 		Captures:   authoringstore.New(handle.Writer, handle.Reader),
 		Models:     authoringInspectionModels{registry: registry, models: c.provider},
 		Selections: generationInspectionSelections{service: c.provider},

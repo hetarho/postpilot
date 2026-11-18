@@ -13,6 +13,7 @@ import { VoiceQuestionnaire } from '@/features/answer-voice-prompt'
 import { PasteMaterialForm } from '@/features/paste-voice-material'
 import { GeneratedWritingVoices } from '@/features/generate-writing-voices'
 import { AuthoringEditor, AuthoringPreview } from '@/features/ai-authoring'
+import { ModelPicker } from '@/features/configure-model-pair'
 import { Typography } from '@/shared/ui'
 export function VoiceSetup({
   ownerId,
@@ -130,6 +131,7 @@ function ReadyVoiceSetup({
       )}
       renderAI={(props) => (
         <AuthoringEditor
+          renderModelChoice={(onSaved) => <ModelPicker stage="write" onSaved={onSaved} />}
           ownerId={props.ownerId}
           kind="writing-voice"
           initialMakeDefault

@@ -33,7 +33,6 @@ export const i18n = {
       listAria: 'Postpilot 원칙 목록',
     },
     authoringState: {
-      checking: '저장하지 않은 지침 작업을 확인하고 있어요.',
       failed: '지침 편집 상태를 확인하지 못했어요. 저장된 지침은 계속 적용됩니다.',
       active: '{{kind}} “{{name}}”의 AI 작업이 진행 중이에요.',
       pending: '{{kind}} “{{name}}”의 저장 결과를 확인해야 해요.',
@@ -101,7 +100,6 @@ export const i18n = {
       listAria: 'Postpilot principles',
     },
     authoringState: {
-      checking: 'Checking unpublished guideline work.',
       failed: 'Could not check guideline editing status. Saved guidelines still apply.',
       active: 'AI is working on {{kind}} “{{name}}”.',
       pending: 'Confirm the save result for {{kind}} “{{name}}”.',
