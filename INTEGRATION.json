@@ -400,7 +400,37 @@
       "verificationCommands": []
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "a968b01d-ac02-4067-af6e-c8ee21b48b39",
+    "owner": "redesign",
+    "via": "merge",
+    "executor": {
+      "host": "ihaelam-ui-MacBookPro.local",
+      "pid": 74531
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "83fdb76062ded656bdffe6e2d129c1f8e2d6191c",
+    "cohort": [
+      {
+        "id": "f4bc3e69d0c189372e75af41",
+        "tag": "redesign",
+        "host": "ihaelam-ui-MacBookPro",
+        "device": "ihaelam-ui-MacBookPro",
+        "branch": "gusta-session-self-improve-redesign-1a39b172",
+        "head": "9ec0c4d26beaeb4e917fbe9008d571a08591637b",
+        "agentChecks": [],
+        "verificationCommands": [],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-18T18:58:51.728Z",
+    "deadline": "2026-11-18T19:58:38.944Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "c3d3f235-22e0-4c1d-9d35-9bafadfb0db1",
