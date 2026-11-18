@@ -45,3 +45,22 @@ it('keeps its one trailing action a sibling above the stretched link, never nest
   expect(action.parentElement?.closest('a')).toBeNull()
   expect(screen.getAllByRole('link')).toHaveLength(2)
 })
+
+// THEME-83: on a narrow phone the state, progress or failure must stay readable — the meta line
+// wraps instead of clipping, and the trailing action drops under the text rather than squeezing it.
+it('wraps its meta line and lets the trailing action drop under the text instead of clipping', () => {
+  render(
+    row({
+      tint: true,
+      cue: 'Continue',
+      meta: <span>A long failure explanation that must be read whole</span>,
+      action: <a href="https://elsewhere.test">Elsewhere</a>,
+    }),
+  )
+  const meta = screen.getByText(/A long failure explanation/).parentElement as HTMLElement
+  expect(meta).toHaveClass('flex-wrap')
+  expect(meta).not.toHaveClass('overflow-hidden')
+  expect(meta).not.toHaveClass('whitespace-nowrap')
+  expect(screen.getByRole('listitem')).toHaveClass('flex-wrap')
+  expect(screen.getAllByRole('link')[0]).toHaveClass('basis-56')
+})

@@ -221,7 +221,7 @@ export function PostsPage() {
                 )}
                 {/* A running job's progress or a failure takes the made-with and time's place. */}
                 {runningJob || failure ? (
-                  <span className="min-w-0 truncate">
+                  <span className="min-w-0 break-words">
                     {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
                   </span>
                 ) : (
@@ -229,12 +229,15 @@ export function PostsPage() {
                     {/* Which voice a post is in is what this list has to say, and a tombstone says
                         so on the row itself (POST-25); 말투 없음 shows none. */}
                     {post.voice && (
-                      <VoiceRefLabel voice={post.voice} className="min-w-0 truncate" />
+                      <VoiceRefLabel voice={post.voice} className="max-w-full min-w-0 truncate" />
                     )}
-                    <TemplateRefLabel template={post.template} className="min-w-0 truncate" />
+                    <TemplateRefLabel
+                      template={post.template}
+                      className="max-w-full min-w-0 truncate"
+                    />
                     {/* Only the tags the search matched, and only while it did (POST-65). */}
                     {matchedTags.length > 0 && (
-                      <span className="min-w-0 truncate">
+                      <span className="max-w-full min-w-0 truncate">
                         {matchedTags.map((tag) => `#${tag}`).join(' ')}
                       </span>
                     )}

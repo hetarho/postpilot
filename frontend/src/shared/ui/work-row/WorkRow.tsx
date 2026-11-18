@@ -10,7 +10,8 @@ export type WorkRowLinkProps = { className: string; children: ReactNode }
  *  the caller's link, stretched over the row; the title keeps one truncated line and the meta
  *  line one more under it, so a phone holds about twice the items the earlier cards did. A
  *  trailing action exists only for somewhere other than the item (a result, a published page, a
- *  file); it stands above the stretched link as its own target, never nested inside it.
+ *  file); it stands above the stretched link as its own target, never nested inside it, and drops
+ *  under the text on a width too narrow for both. The meta line wraps instead of clipping.
  *
  *  The primitive knows no router and no domain: the caller supplies the link element through
  *  `link`, every word and the meta line's content. Rows are `li`s for a `WorkRowList`. */
@@ -44,14 +45,16 @@ export function WorkRow({
     <li
       {...data}
       className={clsx(
-        'relative flex min-h-16 min-w-0 items-center gap-2 px-4 py-2 transition-colors',
+        // Wraps: below the width the text needs, the trailing action drops under it rather than
+        // squeezing the state, progress or failure the meta line has to say (THEME-83).
+        'relative flex min-h-16 min-w-0 flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2 transition-colors',
         tint ? 'bg-badge-accent-bg' : 'hover:bg-card-bg-hover active:bg-card-bg-active',
         className,
       )}
     >
       {link({
         className:
-          'flex min-h-11 min-w-0 flex-1 items-center gap-3 py-1 after:absolute after:inset-0',
+          'flex min-h-11 min-w-0 flex-1 basis-56 items-center gap-3 py-1 after:absolute after:inset-0',
         children: (
           <>
             {leading && (
@@ -72,7 +75,9 @@ export function WorkRow({
                 <span
                   className={typographyStyles({
                     variant: 'meta',
-                    className: 'flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap',
+                    // Wraps rather than clips, so a badge, a state and a failure are always read
+                    // whole; long names truncate inside their own item.
+                    className: 'flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5',
                   })}
                 >
                   {meta}
@@ -99,7 +104,7 @@ export function WorkRow({
           </>
         ),
       })}
-      {action && <div className="relative z-10 flex shrink-0 items-center">{action}</div>}
+      {action && <div className="relative z-10 ml-auto flex shrink-0 items-center">{action}</div>}
     </li>
   )
 }

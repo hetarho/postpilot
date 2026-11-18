@@ -218,12 +218,12 @@ export function ClipHistoryPage() {
                 </Badge>
                 {/* A running job's progress or a failure takes the made-with and time's place. */}
                 {runningJob || failure ? (
-                  <span className="min-w-0 truncate">
+                  <span className="min-w-0 break-words">
                     {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
                   </span>
                 ) : (
                   <>
-                    <span className="min-w-0 truncate">
+                    <span className="max-w-full min-w-0 truncate">
                       {template?.name ??
                         t(
                           // No template is a normal state and asks for nothing;

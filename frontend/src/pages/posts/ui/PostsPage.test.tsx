@@ -369,6 +369,13 @@ describe('PostsPage', () => {
       'href',
       '/tests/records/legacy-result?entry=%2Fposts',
     )
+    // The latest row carries all four at once — its failure, 내보내기 가능, 이어서 and the trailing
+    // 이전 AI 결과 — and the failure is never cut to fit the row (THEME-83).
+    expect(work).toHaveTextContent('이어서')
+    const failureLine = within(work).getByText('내보내기 가능').nextElementSibling as HTMLElement
+    expect(failureLine.textContent?.length).toBeGreaterThan(0)
+    expect(failureLine).toHaveClass('break-words')
+    expect(failureLine).not.toHaveClass('truncate')
   })
 
   it('retains the history narrowing when opening a content-bearing draft', async () => {
