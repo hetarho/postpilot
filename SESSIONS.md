@@ -189,15 +189,6 @@
 - 261118 decided T911 T906 MODEL-44: T906 integrated but the browser normalizes /tests to /tests?factor=model…, so every entry skipped the factor choice → a follow-up task T911 inside this run (alt: revert T906 | park it)
 - 261118 decided review/redesign-261119: the runner blocks dispatch on each synchronous 5-min submit gate → submit tier switched to static checks + vitest --changed (workers already run the full suite; integrate keeps the full gate) and the runner restarted (alt: keep the full gate at both tiers)
 
-## unlanded
-| id | tag | branch | commit | at |
-|---|---|---|---|---|
-| T906 | work | gusta-session-self-improve-redesign-1a39b172 | a19cbb83e02e | 2026-11-18T16:35Z |
-| T910 | work | gusta-session-self-improve-redesign-1a39b172 | b5cfb1d11a50 | 2026-11-18T17:14Z |
-| T911 | work | gusta-session-self-improve-redesign-1a39b172 | d4ecd9cfc826 | 2026-11-18T17:27Z |
-| T907 | work | gusta-session-self-improve-redesign-1a39b172 | 5a44070338a8 | 2026-11-18T17:34Z |
-| T903 | work | gusta-session-self-improve-redesign-1a39b172 | 89b22e77f29a | 2026-11-18T17:52Z |
-
 ## log
 - 261118 T903 integrated
 - 261118 T907 integrated
