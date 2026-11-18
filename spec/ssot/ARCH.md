@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r28 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
+> r29 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -118,7 +118,7 @@
     - `npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check`
     - `pnpm --filter ./frontend test`
     - `pnpm build:web`
-    - `python3 -m venv /tmp/postpilot-deploy-checks && /tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt && /tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v`
+    - `python3 -m venv .venv-deploy-checks && .venv-deploy-checks/bin/pip install -r deploy/requirements-test.txt && .venv-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v` ← the venv lives in the checked worktree (ignored), so concurrent candidates never share one and the command carries no machine-local path
     - `cd backend && test -z "$(gofmt -l .)" && go vet ./... && go build ./... && go test -timeout 30m ./...`
   - CI: after each actual code push inspect `CI` and every triggered deployment/media workflow for the pushed revision; an unavailable remote result remains unchecked, with that revision recorded for follow-up
   - the batch gate runs once on the fixed shared integration candidate after every live participating session is ready, before landing or whole-work completion, including when committing only; retain ARCH-25–30 coverage and deployment Python unittests with deploy/requirements-test.txt installed
@@ -228,6 +228,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r29 261119 ARCH-31✎ deployment unittests in a shared `/tmp/postpilot-deploy-checks` venv→a worktree-local ignored `.venv-deploy-checks` venv
 - r28 261118 ARCH-72+ guarded server-side web page reads for form references: http(s) on 80/443, every resolved and redirected address public unicast, ≤3 redirects, 10 s, 2 MB, HTML only, Naver mobile rewrite, structure only
 - r27 261117 ARCH-31✎ batch gate after every participating session→every live participating session is ready; no workspace preparation→a frozen offline pnpm install prepares every CLI-created worktree before any check
 - r26 261117 ARCH-24✎ frontend task whole-project TypeScript checks→existing shared-batch frontend build; task static checks→changed-file fast checks with slower scopes handed off
