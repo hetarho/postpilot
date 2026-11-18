@@ -187,8 +187,10 @@
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
 | T906 | work | gusta-session-self-improve-redesign-1a39b172 | a19cbb83e02e | 2026-11-18T16:35Z |
+| T910 | work | gusta-session-self-improve-redesign-1a39b172 | b5cfb1d11a50 | 2026-11-18T17:14Z |
 
 ## log
+- 261118 T910 integrated
 - 261118 T906 integrated
 - 261118 ab ready-home: adopt c, its code landing with the spec on feat/ready-home-c, so those deltas are consumed (tasked=rev) without tasks
 - 261118 gusta-update-ssot ready-home variant c: THEME r48 TMPL r37 EDIT r8 CLIP r82 POST r55 VOICE r23 GUIDE r29 MEM r9 MODEL r45 QUOTA r41 LANG r12 AUTH r16 ARCH r28
@@ -208,4 +210,3 @@
 - 261117 T892 done
 - 261117 T891 done
 - 261117 T890 done
-- 261117 T889 done
