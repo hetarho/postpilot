@@ -1,11 +1,9 @@
-import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import {
   KIT_HASH,
   KIT_NEXT_HREF,
-  KitRing,
+  KitStepRow,
   WritingKit,
   useKitText,
   useWritingKit,
@@ -81,28 +79,21 @@ export function HomePage() {
           />
         )}
         {!kit.summary.loading && kit.next && (
-          <Link
-            to={KIT_NEXT_HREF[kit.next.key] ?? kit.next.href}
-            // Its way back is 홈, where it was started, even where it opens past the kit screen;
-            // the writing AI's place is a tab of its own, which needs no way back.
-            search={kit.next.key === 'ai' ? {} : { entry: '/' }}
-            hash={KIT_HASH[kit.next.key]}
-            className="bg-card-bg hover:bg-card-bg-hover active:bg-card-bg-active flex w-full min-w-0 items-center gap-3 rounded-2xl py-2 pr-4 pl-2 text-left shadow-sm"
+          <KitStepRow
+            kitKey={kit.next.key}
+            state={kit.next.state}
+            fill={kit.next.fill}
+            label={t('kit.nextLabel')}
+            link={{
+              to: KIT_NEXT_HREF[kit.next.key] ?? kit.next.href,
+              // Its way back is 홈, where it was started, even where it opens past the kit
+              // screen; the writing AI's place is a tab of its own, which needs no way back.
+              search: kit.next.key === 'ai' ? {} : { entry: '/' },
+              hash: KIT_HASH[kit.next.key],
+            }}
           >
-            <KitRing kitKey={kit.next.key} state={kit.next.state} fill={kit.next.fill} size="sm" />
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className={typographyStyles({ variant: 'meta' })}>{t('kit.nextLabel')}</span>
-              <span
-                className={typographyStyles({
-                  variant: 'label',
-                  className: 'text-content-primary text-pretty break-keep',
-                })}
-              >
-                {text.next(kit.next)}
-              </span>
-            </span>
-            <ArrowRight aria-hidden="true" className="text-link-fg size-5 shrink-0" />
-          </Link>
+            {text.next(kit.next)}
+          </KitStepRow>
         )}
       </section>
     </main>

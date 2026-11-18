@@ -2,12 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { emptyVoice, type Voice } from '@/entities/voice'
 import { clipOfferMissing, postOfferMissing } from './offer'
 
-const voice = (id: string, made: boolean, createdAt = '2026-11-01T00:00:00Z'): Voice => ({
+const voice = (
+  id: string,
+  made: boolean,
+  createdAt = '2026-11-01T00:00:00Z',
+  readinessPercent = 0,
+): Voice => ({
   ...emptyVoice(),
   id,
   name: id,
   made,
   createdAt,
+  readinessPercent,
 })
 
 describe('postOfferMissing', () => {
@@ -29,10 +35,14 @@ describe('postOfferMissing', () => {
   it('continues the newest voice still being made rather than creating another', () => {
     const active = [
       voice('older', false, '2026-10-01T00:00:00Z'),
-      voice('newest', false, '2026-10-30T00:00:00Z'),
+      voice('newest', false, '2026-10-30T00:00:00Z', 40),
       voice('middle', false, '2026-10-15T00:00:00Z'),
     ]
-    expect(postOfferMissing(active, 1)?.voice).toEqual({ action: 'continue', voiceId: 'newest' })
+    expect(postOfferMissing(active, 1)?.voice).toEqual({
+      action: 'continue',
+      voiceId: 'newest',
+      fill: 0.4,
+    })
   })
 
   it('counts a voice being made beside a made one as no gap at all', () => {

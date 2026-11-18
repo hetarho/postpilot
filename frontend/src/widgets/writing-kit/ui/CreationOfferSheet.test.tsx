@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { initializeI18n } from '@/app/providers/i18n'
-import type { CreationOfferKind, CreationOfferMissing } from '../model/offer'
+import { templateIllustration, videoTemplateIllustration, voiceIllustration } from '@/shared/assets'
+import type { CreationOfferKind, CreationOfferMissing } from '@/features/offer-creation-setup'
 import { CreationOfferSheet } from './CreationOfferSheet'
 
 function renderSheet(kind: CreationOfferKind, missing: CreationOfferMissing) {
@@ -30,6 +31,12 @@ describe('CreationOfferSheet', () => {
     const handlers = renderSheet('post', { voice: { action: 'create' }, template: true })
 
     const dialog = await screen.findByRole('dialog', { name: '말투와 템플릿이 아직 없어요' })
+    // Each row is 홈's next-step row: the missing piece's ring beside its action words.
+    const ringOf = (name: string) =>
+      within(dialog).getByRole('button', { name }).querySelector('img')?.getAttribute('src')
+    expect(ringOf('새 말투 만들기')).toBe(voiceIllustration)
+    expect(ringOf('새 템플릿 만들기')).toBe(templateIllustration)
+    expect(within(dialog).queryByText(/골라 쓸 수 있어요/)).not.toBeInTheDocument()
     await user.click(within(dialog).getByRole('button', { name: '새 말투 만들기' }))
     await user.click(within(dialog).getByRole('button', { name: '새 템플릿 만들기' }))
 
@@ -40,7 +47,7 @@ describe('CreationOfferSheet', () => {
   it('continues the voice being made by its id', async () => {
     const user = userEvent.setup()
     const handlers = renderSheet('post', {
-      voice: { action: 'continue', voiceId: 'voice-half' },
+      voice: { action: 'continue', voiceId: 'voice-half', fill: 0.4 },
       template: false,
     })
 
@@ -65,6 +72,12 @@ describe('CreationOfferSheet', () => {
 
     const dialog = await screen.findByRole('dialog', { name: '영상 템플릿이 아직 없어요' })
     expect(within(dialog).queryByRole('button', { name: /말투/ })).not.toBeInTheDocument()
+    expect(
+      within(dialog)
+        .getByRole('button', { name: '새 영상 템플릿 만들기' })
+        .querySelector('img')
+        ?.getAttribute('src'),
+    ).toBe(videoTemplateIllustration)
     await user.click(within(dialog).getByRole('button', { name: '새 영상 템플릿 만들기' }))
     await user.click(within(dialog).getByRole('button', { name: '이대로 만들기' }))
 
