@@ -58,6 +58,21 @@ export const i18n = {
         memory: '기억할 이야기 적기',
       },
       nextLabel: '다음',
+      sheet: {
+        open: {
+          voice: '말투 화면으로 가기',
+          guideline: '지침 화면으로 가기',
+          ai: 'AI 토너먼트로 가기',
+        },
+        help: {
+          voice: '새 글은 기본 말투로 써요. 다 만든 말투만 기본이 될 수 있어요.',
+          guideline:
+            '기본 지침은 새 글마다 AI가 지키는 규칙이에요. ‘기본 지침’에서 더하고, 지침을 열어 ‘적용 안함’으로 뺄 수 있어요.',
+          ai: '새 글을 쓰는 AI예요. 고르면 바로 저장돼요.',
+        },
+        voices: '내 말투',
+        voicesEmpty: '아직 만든 말투가 없어요. 말투 화면에서 만들 수 있어요.',
+      },
     },
   },
   en: {
@@ -114,6 +129,22 @@ export const i18n = {
         memory: 'Note something to remember',
       },
       nextLabel: 'Next',
+      sheet: {
+        open: {
+          voice: 'Go to writing styles',
+          guideline: 'Go to guidelines',
+          ai: 'Go to AI tournament',
+        },
+        help: {
+          voice:
+            'New posts are written in the default style. Only a finished style can be the default.',
+          guideline:
+            "Default guidelines are rules the AI keeps in every new post. Add one under ‘Default guidelines’; open one and choose ‘Don't apply’ to take it out.",
+          ai: 'The AI that writes your new posts. A pick is saved at once.',
+        },
+        voices: 'Your writing styles',
+        voicesEmpty: 'No writing style yet. You can make one on the writing styles screen.',
+      },
     },
   },
 } as const satisfies I18nFragment

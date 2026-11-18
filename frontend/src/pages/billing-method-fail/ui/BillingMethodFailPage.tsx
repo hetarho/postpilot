@@ -4,6 +4,7 @@ import { isInAppPath } from '@/shared/lib'
 import {
   Notice,
   ReturnIcon,
+  TitleRow,
   TechnicalDetail,
   Typography,
   pageStyles,
@@ -26,15 +27,21 @@ export function BillingMethodFailPage() {
 
   return (
     <main className={pageStyles()}>
-      <Link
-        to={back}
-        aria-label={backLabel}
-        title={backLabel}
-        className={returnControlStyles('mb-4')}
+      <TitleRow
+        variant="display"
+        back={
+          <Link
+            to={back}
+            aria-label={backLabel}
+            title={backLabel}
+            className={returnControlStyles()}
+          >
+            <ReturnIcon />
+          </Link>
+        }
       >
-        <ReturnIcon />
-      </Link>
-      <Typography variant="display">{t('registration.title', { ns: 'billing' })}</Typography>
+        <Typography variant="display">{t('registration.title', { ns: 'billing' })}</Typography>
+      </TitleRow>
       <Notice tone="danger" role="alert" className="mt-8">
         {t('registration.failed', { ns: 'billing' })}
       </Notice>

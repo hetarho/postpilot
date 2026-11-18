@@ -29,7 +29,7 @@ afterEach(() => {
 })
 
 /** The shell's one back link (THEME-58); a page with its own top-row return shows none, and a
- *  screen on a `PageFrame` draws it in its own column instead (THEME-75). */
+ *  screen on a `PageFrame` or with a `TitleRow` draws it in its own column instead (THEME-75). */
 function backLink() {
   const region = screen.queryByRole('navigation', { name: '돌아가기' })
   return region ? within(region).getByRole('link') : undefined
@@ -41,6 +41,14 @@ function backHref() {
  *  the only one — the shell then draws none. */
 async function frameReturn(name: string) {
   const back = await screen.findByRole('link', { name })
+  expect(back.querySelector('svg')).not.toBeNull()
+  expect(backLink()).toBeUndefined()
+  return back
+}
+/** A kit screen's way back: the ← in the page itself, at the start of its title's row (the tab
+ *  bar's 홈 shares its name), and the only one — the shell then draws none. */
+function titleReturn(name: string) {
+  const back = within(screen.getByRole('main')).getByRole('link', { name })
   expect(back.querySelector('svg')).not.toBeNull()
   expect(backLink()).toBeUndefined()
   return back
@@ -230,7 +238,7 @@ it('does not propagate a sibling visit into a kit screen origin', async () => {
   await act(() => view.router.navigate({ to: '/templates' }))
   await screen.findByRole('heading', { name: '템플릿', level: 1 })
   // A kit screen's way back is 홈, the picture that holds it, not the list visited before.
-  expect(backHref()).toBe('/')
+  expect(titleReturn('홈')).toHaveAttribute('href', '/')
   expect(readNavigationEntry('alice', '/templates')?.path).not.toBe('/library')
   expect(paidActions(view.procedures)).toEqual([])
 })
@@ -367,8 +375,13 @@ it.each([
   expect(
     within(screen.getByRole('navigation', { name: '주요' })).getByRole('link', { name: '홈' }),
   ).toHaveAttribute('aria-current', 'page')
-  expect(backHref()).toBe('/')
-  await userEvent.click(backLink()!)
+  // The ← starts the title's own row rather than standing on a row above it.
+  const back = titleReturn('홈')
+  expect(back).toHaveAttribute('href', '/')
+  expect(back.parentElement?.nextElementSibling).toContainElement(
+    screen.getByRole('heading', { name: heading, level: 1 }),
+  )
+  await userEvent.click(back)
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/'))
 })
 

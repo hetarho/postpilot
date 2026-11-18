@@ -7,6 +7,7 @@ import {
   useVoices,
   useVoiceProfile,
   VoiceMaterialFreshness,
+  VoiceRow,
   voiceAnalysisDate,
   type Voice,
 } from '@/entities/voice'
@@ -167,9 +168,15 @@ export function VoicesPage() {
               <Typography variant="eyebrow" as="h2" id="voice-others">
                 {t('page.others')}
               </Typography>
-              <ul className="divide-divider mt-3 divide-y">
+              <ul className="divide-divider -mx-3 mt-3 divide-y">
                 {others.map((voice) => (
-                  <OtherVoiceRow key={voice.id} ownerId={ownerId} voice={voice} />
+                  // A made voice takes the writing voice's place in one tap.
+                  <VoiceRow
+                    key={voice.id}
+                    ownerId={ownerId}
+                    voice={voice}
+                    action={<SetDefaultVoiceButton ownerId={ownerId} voice={voice} />}
+                  />
                 ))}
               </ul>
             </section>
@@ -309,40 +316,6 @@ function VoicePortrait({ ownerId, voice }: { ownerId: string; voice: Voice }) {
         <ChevronRight aria-hidden="true" className="size-4" />
       </Link>
     </article>
-  )
-}
-
-/** Another voice: its name and how it sounds in one line, or how far it has been made; the whole
- *  row opens it, and a made voice takes the writing voice's place in one tap. The link stretches
- *  over the row through its `::after`; the button paints above that layer. */
-function OtherVoiceRow({ ownerId, voice }: { ownerId: string; voice: Voice }) {
-  const { t } = useTranslation('voices')
-  const { profile } = useVoiceProfile(ownerId, voice.made ? voice.id : '')
-  const impression = profile?.analysis?.ai.impression
-  return (
-    <li className="hover:bg-row-bg-hover active:bg-row-bg-active relative -mx-3 flex min-h-16 flex-wrap items-center gap-x-3 gap-y-2 rounded-xl px-3 py-3">
-      <span className="flex min-w-0 flex-1 flex-col">
-        <Link
-          to="/voices/$voiceId"
-          params={{ voiceId: voice.id }}
-          className={typographyStyles({
-            variant: 'fieldTitle',
-            className: 'text-content-primary truncate after:absolute after:inset-0',
-          })}
-        >
-          {voice.name}
-        </Link>
-        <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
-          {voice.made
-            ? (impression ?? '')
-            : t('page.learning', { percent: voice.readinessPercent })}
-        </span>
-      </span>
-      <span className="relative shrink-0">
-        <SetDefaultVoiceButton ownerId={ownerId} voice={voice} />
-      </span>
-      <ChevronRight aria-hidden="true" className="text-content-tertiary size-5 shrink-0" />
-    </li>
   )
 }
 

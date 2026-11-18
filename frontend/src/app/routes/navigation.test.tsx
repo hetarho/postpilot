@@ -159,8 +159,10 @@ it('opens each kit screen under 홈 with one way back to it', async () => {
   await screen.findByRole('heading', { name: '기억', level: 1 })
   const nav = screen.getByRole('navigation', { name: '주요' })
   expect(within(nav).getByRole('link', { name: '홈' })).toHaveAttribute('aria-current', 'page')
-  const back = within(screen.getByRole('navigation', { name: '돌아가기' })).getByRole('link')
+  // The way back starts the title's row, and the shell draws none of its own.
+  const back = within(screen.getByRole('main')).getByRole('link', { name: '홈' })
   expect(back).toHaveAttribute('href', '/')
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
 })
 it('gives a 설정 child one way back to 설정, and remembers where it was opened from', async () => {
   viewport(true)
@@ -210,14 +212,15 @@ it('retains a 설정 origin through reload and restores its document position on
   await waitFor(() => expect(scroll).toHaveBeenCalledWith(0, 480))
   expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
 })
-// 홈 draws the kit as one picture: the pen in its middle is 글쓰기, each piece opens its screen,
+// 홈 draws the kit as one picture: the pen in its middle is 글쓰기, a piece with an account default
+// opens it in a sheet whose foot leads to the piece's screen, a piece with none opens its screen,
 // and 영상 만들기 is the quiet second way in. Looking at it writes nothing.
 it.each([
-  ['ko', '글쓰기', '영상 만들기', /^말투/],
-  ['en', 'Write', 'Make a video', /^Writing style/],
+  ['ko', '글쓰기', '영상 만들기', /^말투/, /^템플릿/, '말투 화면으로 가기'],
+  ['en', 'Write', 'Make a video', /^Writing style/, /^Template/, 'Go to writing styles'],
 ] as const)(
   'starts a post from the kit on 홈 in %s without object writes',
-  async (locale, write, video, voice) => {
+  async (locale, write, video, voice, template, voiceScreen) => {
     viewport(true)
     initializeI18n(locale)
     const calls: string[] = []
@@ -228,7 +231,13 @@ it.each([
       '/posts/new',
     )
     expect(within(main).getByRole('link', { name: video })).toHaveAttribute('href', '/clips/new')
-    expect(within(main).getAllByRole('link', { name: voice })[0]).toHaveAttribute('href', '/voices')
+    expect(within(main).getAllByRole('link', { name: template })[0]).toHaveAttribute(
+      'href',
+      '/templates',
+    )
+    await userEvent.click(within(main).getByRole('button', { name: voice }))
+    const sheet = within(await screen.findByRole('dialog'))
+    expect(sheet.getByRole('link', { name: voiceScreen })).toHaveAttribute('href', '/voices')
     expect(calls.some((x) => /^(Start|Save|Cancel|Create)/.test(x))).toBe(false)
   },
 )

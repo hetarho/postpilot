@@ -98,6 +98,7 @@ export {
 } from './api/voice-queries'
 export { VoiceRefLabel } from './ui/VoiceRefLabel'
 export { VoiceReadinessMeter } from './ui/VoiceReadinessMeter'
+export { VoiceRow } from './ui/VoiceRow'
 
 export { useVoiceMaterialEditor, useVoiceAnalysisEstimator } from './api/voice-source-edit'
 export { voiceMaterialFreshness, voiceMaterialVersionKey } from './model/types'

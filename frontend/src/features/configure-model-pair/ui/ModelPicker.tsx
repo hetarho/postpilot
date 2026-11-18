@@ -90,8 +90,11 @@ function useCatalogRead() {
  *  and what one post costs — whose 바꾸기 opens the picker as a bottom sheet. The picker is the
  *  shared compact model list under grade headings, opening free first and resorted by what the
  *  owner says matters first (품질 · 균형 · 가격), and a tap saves the choice at once: the same save
- *  the old dropdown made. */
-export function StageModelRow({ stage }: { stage: StageName }) {
+ *  the old dropdown made.
+ *
+ *  `inline` is for a surface that is already a sheet (홈's 글 쓰는 AI): the picker opens under the
+ *  row instead of in a second sheet over it, and the row has no 바꾸기. */
+export function StageModelRow({ stage, inline = false }: { stage: StageName; inline?: boolean }) {
   const { t } = useTranslation(['models', 'common'])
   const active = useStageSelection(stage)
   const read = useCatalogRead()
@@ -104,8 +107,12 @@ export function StageModelRow({ stage }: { stage: StageName }) {
   const figure = current ? stagePostFigure(current, stage) : undefined
   const level = current ? levelOf(current, stage) : undefined
   const headingId = useId()
-  return (
-    <div className="flex min-h-16 items-center gap-3 px-4 py-3">
+  const row = (
+    <div
+      className={
+        inline ? 'flex min-h-16 items-center gap-3' : 'flex min-h-16 items-center gap-3 px-4 py-3'
+      }
+    >
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className={typographyStyles({ variant: 'label' })}>{t(`picker.stage.${stage}`)}</span>
         {read.failed ? (
@@ -138,35 +145,47 @@ export function StageModelRow({ stage }: { stage: StageName }) {
           {t('action.retry', { ns: 'common' })}
         </Button>
       ) : (
-        <Button
-          variant="secondary"
-          onClick={() => setOpen(true)}
-          aria-label={`${t('picker.change')} · ${t(`picker.stage.${stage}`)}`}
-          disabled={active.isPending}
-        >
-          {t('picker.change')}
-        </Button>
+        !inline && (
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(true)}
+            aria-label={`${t('picker.change')} · ${t(`picker.stage.${stage}`)}`}
+            disabled={active.isPending}
+          >
+            {t('picker.change')}
+          </Button>
+        )
       )}
-      <Sheet
-        open={open}
-        labelledBy={headingId}
-        onClose={() => setOpen(false)}
-        header={
-          <Typography variant="title" as="h2" id={headingId} className="px-5 pt-5 sm:px-6">
-            {t('picker.title', { stage: t(`picker.stage.${stage}`) })}
-          </Typography>
-        }
-        bodyClassName="px-5 pb-4 sm:px-6"
-        footer={
-          <div className="px-5 pt-2 pb-5 sm:px-6">
-            <Button variant="cta" size="hero" className="w-full" onClick={() => setOpen(false)}>
-              {t('picker.done')}
-            </Button>
-          </div>
-        }
-      >
-        <ModelPicker stage={stage} />
-      </Sheet>
+      {!inline && (
+        <Sheet
+          open={open}
+          labelledBy={headingId}
+          onClose={() => setOpen(false)}
+          header={
+            <Typography variant="title" as="h2" id={headingId} className="px-5 pt-5 sm:px-6">
+              {t('picker.title', { stage: t(`picker.stage.${stage}`) })}
+            </Typography>
+          }
+          bodyClassName="px-5 pb-4 sm:px-6"
+          footer={
+            <div className="px-5 pt-2 pb-5 sm:px-6">
+              <Button variant="cta" size="hero" className="w-full" onClick={() => setOpen(false)}>
+                {t('picker.done')}
+              </Button>
+            </div>
+          }
+        >
+          <ModelPicker stage={stage} />
+        </Sheet>
+      )}
+    </div>
+  )
+  if (!inline) return row
+  return (
+    <div className="flex flex-col gap-4">
+      {row}
+      {/* A failed read already says so on the row, with its retry. */}
+      {!read.failed && <ModelPicker stage={stage} />}
     </div>
   )
 }

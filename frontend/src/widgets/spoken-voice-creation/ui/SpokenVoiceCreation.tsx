@@ -1,5 +1,5 @@
 import { ReturnIcon } from '@/shared/ui'
-import { useId, useState } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
@@ -14,6 +14,7 @@ import {
   Dialog,
   RadioGroup,
   SegmentedControl,
+  TitleRow,
   Typography,
   buttonStyles,
 } from '@/shared/ui'
@@ -23,11 +24,14 @@ export function SpokenVoiceCreation({
   address,
   onAddress,
   initialInput,
+  back,
 }: {
   ownerId: string
   address: CreationAddress
   onAddress: (next: CreationAddress) => void
   initialInput?: SpokenDraftInput
+  /** The page's way back, at the start of the title's row. */
+  back?: ReactNode
 }) {
   const { t } = useTranslation('spokenCreation'),
     { t: action } = useTranslation('createSpokenVoice'),
@@ -70,7 +74,9 @@ export function SpokenVoiceCreation({
                             : ''
   return (
     <div className="min-w-0">
-      <Typography variant="display">{c.draft?.name || t('title')}</Typography>
+      <TitleRow variant="display" back={back}>
+        <Typography variant="display">{c.draft?.name || t('title')}</Typography>
+      </TitleRow>
       <div className="bg-surface-base top-top-chrome sticky z-10 mt-4 pb-3">
         <SegmentedControl
           variant="steps"

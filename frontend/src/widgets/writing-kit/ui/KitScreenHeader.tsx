@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react'
 import { clsx } from 'clsx'
-import { useSession } from '@/entities/session'
-import { Typography, typographyStyles } from '@/shared/ui'
+import { TitleRow, Typography } from '@/shared/ui'
 import type { KitKey } from '../model/kit'
-import { useWritingKit } from '../model/useWritingKit'
 import { KitRing } from './KitRing'
-import { useKitText } from './useKitText'
+import { KitStatus } from './KitStatus'
+import { useKitElement } from './useKitElement'
 
 /** Guide: how every kit screen opens — what the thing IS and what it does to the owner's writing,
  *  in the screen's own large title and one sentence, with its illustration beside them. For a
@@ -13,7 +12,8 @@ import { useKitText } from './useKitText'
  *  larger, and the line under the sentence says that ring's state and its one fact — so the
  *  screen and the picture that opened it say the same thing in the same shape.
  *
- *  `actions` is the screen's one heading row of actions; nothing else goes here. */
+ *  `actions` is the screen's one heading row of actions; nothing else goes here. The screen's way
+ *  back, when it has one, stands at the start of the title's row rather than on a row above it. */
 export function KitScreenHeader({
   kit,
   title,
@@ -41,17 +41,19 @@ export function KitScreenHeader({
           moves the picture above the title instead of squeezing the title beside it. */}
       <div className="flex flex-col-reverse items-start gap-4 @xs:flex-row">
         <div className="flex w-full min-w-0 flex-1 flex-col gap-2">
-          <Typography
-            variant={size === 'page' ? 'largeTitle' : 'title'}
-            as="h1"
-            className="break-words"
-          >
-            {title}
-          </Typography>
+          <TitleRow variant={size === 'page' ? 'largeTitle' : 'title'}>
+            <Typography
+              variant={size === 'page' ? 'largeTitle' : 'title'}
+              as="h1"
+              className="break-words"
+            >
+              {title}
+            </Typography>
+          </TitleRow>
           <Typography variant="body" className="text-content-secondary max-w-measure text-pretty">
             {statement}
           </Typography>
-          {kit && <KitStatus kit={kit} />}
+          {kit && <KitStatus kit={kit} className="mt-1" />}
         </div>
         {kit ? (
           <KitPiece kit={kit} />
@@ -74,11 +76,6 @@ export function KitScreenHeader({
   )
 }
 
-function useKitElement(kit: KitKey) {
-  const { user } = useSession()
-  return useWritingKit(user?.id ?? '').elements[kit]
-}
-
 /** The piece as 홈 draws it, at the size of a screen's illustration. */
 function KitPiece({ kit }: { kit: KitKey }) {
   const element = useKitElement(kit)
@@ -86,33 +83,5 @@ function KitPiece({ kit }: { kit: KitKey }) {
     <span className="animate-rise shrink-0">
       <KitRing kitKey={kit} state={element.state} fill={element.fill} size="lg" />
     </span>
-  )
-}
-
-/** The piece's state in words, and its one fact. */
-function KitStatus({ kit }: { kit: KitKey }) {
-  const element = useKitElement(kit)
-  const text = useKitText()
-  return (
-    <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-2" role="status">
-      <span
-        className={typographyStyles({
-          variant: 'label',
-          className: clsx(
-            'shrink-0',
-            element.state === 'ready' ? 'text-link-fg' : 'text-content-secondary',
-          ),
-        })}
-      >
-        {text.status(element)}
-      </span>
-      {element.state !== 'loading' &&
-        element.state !== 'failed' &&
-        element.fact.kind !== 'none' && (
-          <span className={typographyStyles({ variant: 'meta', className: 'min-w-0 break-words' })}>
-            {text.fact(element)}
-          </span>
-        )}
-    </p>
   )
 }

@@ -24,6 +24,15 @@ export const KIT_HREF: Record<KitKey, string> = {
  *  is chosen under AI 토너먼트's 지금 쓰는 AI, below the comparisons that open the tab. */
 export const KIT_HASH: Partial<Record<KitKey, string>> = { ai: 'ai-in-use' }
 
+/** The pieces whose account default 홈 can change in place, each in a sheet opened from the
+ *  piece: the 기본 말투 (VOICE-12), the 기본 지침 in use (GUIDE-43) and the write stage's model.
+ *  템플릿 and 기억 have no account default (TMPL-54, MEM-29), so they stay links to their screens. */
+export const KIT_DEFAULT_KEYS = ['voice', 'guideline', 'ai'] as const satisfies readonly KitKey[]
+export type KitDefaultKey = (typeof KIT_DEFAULT_KEYS)[number]
+export function hasKitDefault(key: KitKey): key is KitDefaultKey {
+  return (KIT_DEFAULT_KEYS as readonly KitKey[]).includes(key)
+}
+
 /** Where 홈's 다음 opens when it can go straight to the making: a template has one way to be
  *  made — the conversation — so its next step starts it rather than the list it will join. */
 export const KIT_NEXT_HREF: Partial<Record<KitKey, string>> = { template: '/templates/new' }
