@@ -41,8 +41,9 @@ tmp/region-presets/src/.measure-cache.json
 # Release QA render output (the harness itself is tracked)
 tmp/release-qa/clips/*.mp4
 
-# Python bytecode from the deploy tests (the tests themselves are tracked)
+# Python bytecode and the venv from the deploy tests (the tests themselves are tracked)
 __pycache__/
+.venv-deploy-checks/
 tmp/caption-styles/*.mp4
 tmp/caption-styles/stills/*.png
 tmp/caption-styles/fonts/*.png

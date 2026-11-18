@@ -39,9 +39,9 @@ pnpm lint:style:probe && pnpm lint:style
 npx -y @haeram/gusta@$(node -p 'require("./.gusta-lock.json").packageVersion') check
 pnpm --filter ./frontend test
 pnpm build:web
-python3 -m venv /tmp/postpilot-deploy-checks
-/tmp/postpilot-deploy-checks/bin/pip install -r deploy/requirements-test.txt
-/tmp/postpilot-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v
+python3 -m venv .venv-deploy-checks
+.venv-deploy-checks/bin/pip install -r deploy/requirements-test.txt
+.venv-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v
 (
   cd backend &&
   test -z "$(gofmt -l .)" &&
