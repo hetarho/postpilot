@@ -408,7 +408,7 @@
       "host": "ihaelam-ui-MacBookPro.local",
       "pid": 74531
     },
-    "phase": "preparing",
+    "phase": "checking",
     "land": "main",
     "base": "83fdb76062ded656bdffe6e2d129c1f8e2d6191c",
     "cohort": [
@@ -426,10 +426,17 @@
     ],
     "at": "2026-11-18T18:58:51.728Z",
     "deadline": "2026-11-18T19:58:38.944Z",
-    "candidate": null,
+    "candidate": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
     "checks": [],
     "agentChecks": [],
-    "rounds": []
+    "rounds": [],
+    "path": "/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-a968b01d-ac02-4067-af6e-c8ee21b48b39",
+    "branch": "integration/a968b01d-ac02-4067-af6e-c8ee21b48b39",
+    "version": {
+      "level": "minor",
+      "from": "0.6.0",
+      "to": "0.7.0"
+    }
   },
   "history": [
     {
