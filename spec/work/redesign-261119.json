@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-18T17:22:48.337Z",
-  "sourceCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+  "snapshotAt": "2026-11-18T17:31:14.442Z",
+  "sourceCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
   "group": {
     "id": "redesign-261119",
     "branch": "gusta-session-self-improve-redesign-1a39b172",
@@ -22,12 +22,12 @@
           "vitest src/pages/billing/ui/BillingPage.test.tsx (purchase, failure, master and free cases through the card)"
         ],
         "expected": "purchaseRequests ['pack-3000'] and a success notice inside the sheet; Escape closes only the confirm and focus returns to 크레딧 구매; the path stays /settings; free shows a /plans link; master's buy button and radios are disabled with no QuotePurchase/PurchaseCredits calls",
-        "observed": "all assertions pass; the T909 full-suite run on top of T908 also passed these files",
+        "observed": "all assertions pass after the corrections (billing, account, credits-card and settings: 7 files, 45 tests; submit-gate 148 files / 1548 tests)",
         "evidence": [
           "frontend/src/widgets/credits-card/ui/CreditsCard.test.tsx",
           "frontend/src/pages/settings/ui/SettingsPage.test.tsx",
           "frontend/src/pages/billing/ui/BillingPage.test.tsx",
-          "gusta check log /Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log"
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
         ],
         "status": "pass",
         "reason": "",
@@ -42,13 +42,16 @@
         "id": "T908-AC2",
         "scenario": "/billing#billing-charge opens the sheet once billing has loaded; the billing screen keeps its other sections in BILL-14 order and has no packs section",
         "steps": [
-          "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge'",
+          "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge' (PRO)",
+          "vitest BillingPage.test.tsx 'opens no packs sheet when a free account arrives at #billing-charge' (coordinator decision: arrival sheet only for accounts that can buy packs)",
           "vitest BillingPage.test.tsx 'renders the empty money surface in contract order'"
         ],
-        "expected": "the dialog '크레딧 충전' opens on arrival and the card's 충전 can open it again; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
-        "observed": "both pass",
+        "expected": "a paid account's arrival opens the '크레딧 충전' dialog, and the card's 충전 can open it again; a free account's arrival opens no dialog, offers no 크레딧 구매, makes no QuotePurchase/PurchaseCredits call, and its 충전 links to /plans; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
+        "observed": "all three pass",
         "evidence": [
-          "frontend/src/pages/billing/ui/BillingPage.test.tsx"
+          "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+          "frontend/src/widgets/credits-card/ui/CreditsCard.tsx",
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
         ],
         "status": "pass",
         "reason": "",
@@ -63,13 +66,14 @@
         "id": "T908-AC3",
         "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite",
         "steps": [
-          "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh",
-          "npx eslint and npx prettier --check on the untracked src/widgets/credits-card"
+          "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh (original full-suite run)",
+          "after the corrections: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
         ],
         "expected": "everything passes",
-        "observed": "REDESIGN-GATE-PASS; vitest 648 files / 5200 tests passed; the direct ESLint/Prettier runs on the new widget were clean",
+        "observed": "the original full-suite gate passed (648 files / 5200 tests); the final submit-gate passed with tsc, ESLint and Prettier on changed files, lint-style and steiger, plus 148 related test files (1548 tests). The full suite was not rerun after the corrections",
         "evidence": [
-          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log"
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log",
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
         ],
         "status": "pass",
         "reason": "",
@@ -91,7 +95,7 @@
         "observed": "not run",
         "evidence": [],
         "status": "not-run",
-        "reason": "Integration-stage computer-use check owned by the coordinator on the integrated candidate; the worker has no integration candidate and no browser session",
+        "reason": "Moved out of task acceptance by the coordinator (inbox 261118 T903 T909) into a group-level computer-use check on the integrated candidate; the worker has no integration candidate and no browser session",
         "replaces": [],
         "stage": "integration",
         "required": true,
@@ -231,14 +235,15 @@
       },
       {
         "id": "T909-AC1",
-        "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; a password-less account shows its reset route line",
+        "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; the no-password account shows today's no-password line with no pencil and no link",
         "steps": [
-          "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; password-less line)"
+          "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to the row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; no-password line with no button and no link)"
         ],
-        "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row has no pencil and names 비밀번호 찾기",
-        "observed": "7/7 tests pass",
+        "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row shows the no-password line with no pencil and no link",
+        "observed": "all 7 account tests pass",
         "evidence": [
-          "frontend/src/pages/account/ui/AccountPage.test.tsx"
+          "frontend/src/pages/account/ui/AccountPage.test.tsx",
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
         ],
         "status": "pass",
         "reason": "",
@@ -253,14 +258,16 @@
         "id": "T909-AC2",
         "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite; every test that encoded a changed literal or structure is updated",
         "steps": [
-          "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh",
+          "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh (full suite)",
           "update app/routes/navigation.test.tsx to the TitleRow structure and rerun it alone with eslint/prettier",
-          "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password"
+          "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password",
+          "final: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
         ],
-        "expected": "all static checks pass and every FE test passes",
-        "observed": "tsc, eslint, prettier, lint-style and steiger passed; full vitest 5208/5209 with the one navigation.test.tsx failure caused by the old PageFrame title-row DOM; after updating it, that file passes 45/45 and its eslint/prettier are clean; the grep found no other test with the changed literals. The full suite was not rerun after the one-file fix",
+        "expected": "all static checks pass and every affected FE test passes",
+        "observed": "the full suite was 5208/5209, with the one navigation.test.tsx failure fixed and that file rerun 45/45; the grep found no other test using the changed literals; the final submit-gate passed: tsc, ESLint and Prettier on changed files, lint-style, steiger and 148 related test files (1548 tests). The full suite was not rerun after the corrections",
         "evidence": [
           "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-e3b6e554-10c8-4b43-b114-b4cbe83d1e13.log",
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log",
           "frontend/src/app/routes/navigation.test.tsx"
         ],
         "status": "pass",
@@ -464,9 +471,9 @@
   },
   "summary": {
     "total": 9,
-    "completed": 3,
-    "remaining": 6,
-    "running": 2,
+    "completed": 4,
+    "remaining": 5,
+    "running": 1,
     "review": 2,
     "blocked": 0,
     "unassigned": 2
@@ -477,7 +484,7 @@
       "title": "Draw the 글 and 영상 lists as one shared work row",
       "dep": [],
       "lane": "work-rows",
-      "status": "reviewing"
+      "status": "doing"
     },
     {
       "id": "T904",
@@ -498,25 +505,18 @@
       "status": "todo"
     },
     {
-      "id": "T907",
-      "title": "Give 영상 템플릿 the 템플릿 directory, a one-row reading and its own pictures",
-      "dep": [],
-      "lane": "video-templates",
-      "status": "ready"
-    },
-    {
       "id": "T908",
       "title": "One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet",
       "dep": [],
       "lane": "account-side",
-      "status": "doing"
+      "status": "reviewing"
     },
     {
       "id": "T909",
       "title": "Show 계정 as rows that open their form in place",
       "dep": [],
       "lane": "account-side",
-      "status": "doing"
+      "status": "reviewing"
     }
   ],
   "attempts": [
@@ -533,11 +533,10 @@
         "7c8e664e-92e6-4eb8-b2da-cbdbcee6d285/worker-1",
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-4"
       ],
-      "status": "reviewing",
+      "status": "doing",
       "reason": null,
       "createdAt": "2026-11-18T15:44:15.574Z",
       "startCommit": "b6273d5f26de49e967702e917da49295542359d5",
-      "verifiedCommit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
       "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
       "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
       "submittedAt": "2026-11-18T17:20:24.751Z",
@@ -571,17 +570,11 @@
         "slot": 2,
         "provider": "codex",
         "model": "gpt-6.1-terra",
-        "status": "running",
-        "startedAt": "2026-11-18T17:22:21.343Z"
-      },
-      "review": {
-        "id": "5452ef83-3fcf-4e21-b424-8b2f4c2c2bcc",
-        "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
-        "status": "reviewing",
-        "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
-        "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
-        "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
-        "createdAt": "2026-11-18T17:22:20.059Z"
+        "status": "finished",
+        "startedAt": "2026-11-18T17:22:21.343Z",
+        "finishedAt": "2026-11-18T17:30:40.800Z",
+        "error": null,
+        "summary": "T903의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 진행·실패 행의 검색 일치 태그 누락은 수정됐습니다. 작업자 검증 기록을 확인했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다."
       },
       "reviewHistory": [
         {
@@ -625,6 +618,21 @@
           "finishedAt": "2026-11-18T17:00:52.474Z",
           "invalidatedAt": "2026-11-18T17:00:53.353Z",
           "invalidationReason": "correction assigned"
+        },
+        {
+          "id": "5452ef83-3fcf-4e21-b424-8b2f4c2c2bcc",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T903의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 진행·실패 행의 검색 일치 태그 누락은 수정됐습니다. 작업자 검증 기록을 확인했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+          "findings": [],
+          "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+          "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+          "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+          "createdAt": "2026-11-18T17:22:20.059Z",
+          "finishedAt": "2026-11-18T17:30:40.784Z",
+          "invalidatedAt": "2026-11-18T17:31:07.120Z",
+          "invalidationReason": "worker resumed or blocked"
         }
       ],
       "steps": [
@@ -770,7 +778,7 @@
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-1",
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-2"
       ],
-      "status": "ready",
+      "status": "integrated",
       "reason": null,
       "createdAt": "2026-11-18T15:44:25.827Z",
       "startCommit": "b6273d5f26de49e967702e917da49295542359d5",
@@ -804,17 +812,30 @@
         }
       ],
       "dispatch": {
-        "id": "da3513b5-015c-44f8-9d3d-93a25b724a8b",
+        "id": "50332b0c-7ecf-47d0-bbba-00c6d3ffe237",
         "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
-        "role": "worker",
-        "slot": 2,
-        "provider": "claude",
-        "model": "opus",
+        "role": "reviewer",
+        "slot": 1,
+        "provider": "codex",
+        "model": "gpt-6.1-terra",
         "status": "finished",
-        "startedAt": "2026-11-18T17:08:40.011Z",
-        "finishedAt": "2026-11-18T17:22:17.586Z",
+        "startedAt": "2026-11-18T17:30:44.813Z",
+        "finishedAt": "2026-11-18T17:31:12.776Z",
         "error": null,
-        "summary": "I fixed the review finding (b936669a, P2). An unsaved video-template conversation's \"이어서 만들던 대화\" row showed only its name, so a busy conversation lost the work state the old list displayed. The shared `ResumeConversations` widget now takes an optional `workState` for each row. It renders as one meta line marked as a status, under the name and inside the row's single link. The video directory (`VideoTemplatesPage.tsx`) passes the conversation's state in TMPL-24's priority order: AI working, then a save to confirm, then a conflict. It leaves out \"unpublished changes\" because every row in that region is unsaved by definition. The post template directory passes nothing, so it is unchanged. I added a test in `VideoTemplatesPage.test.tsx`: a busy conversation and a saving one each show their state and still link to `/video-templates/new?session=…`, and a quiet conversation shows no state. The correction is recorded in the result section of `spec/tasks/T907.video-template-directory.md`. The task gate (`submit-gate.sh`, base 1ef5a5ac2) passed: `tsc -b`, ESLint and Prettier on the changed files, lint-style-escapes, steiger, and `vitest --changed` (242 files, 2090 tests). I did not rerun the full FE suite for this correction; that stays with the shared final gate. The browser screenshot check remains not run and is handed to the coordinator for the integrated candidate."
+        "summary": "T907의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 미저장 대화의 작업 상태 표시가 복구됐고, 작업자 검증 기록을 확인했습니다. 통합 후보의 화면 확인과 최종 게이트는 코디네이터에게 남아 있습니다."
+      },
+      "review": {
+        "id": "00fa2205-41be-44d7-b0ee-5a4014259b17",
+        "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-1",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T907의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 미저장 대화의 작업 상태 표시가 복구됐고, 작업자 검증 기록을 확인했습니다. 통합 후보의 화면 확인과 최종 게이트는 코디네이터에게 남아 있습니다.",
+        "findings": [],
+        "commit": "8e88096dab2eab242ea249b732a8059211b9bbbd",
+        "baseCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+        "submissionId": "18d4cc0d-c61f-4936-b2d6-104ef3ed2b44",
+        "createdAt": "2026-11-18T17:30:43.341Z",
+        "finishedAt": "2026-11-18T17:31:12.763Z"
       },
       "reviewHistory": [
         {
@@ -896,13 +917,14 @@
         "7c8e664e-92e6-4eb8-b2da-cbdbcee6d285/worker-4",
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-1"
       ],
-      "status": "doing",
+      "status": "reviewing",
       "reason": null,
       "createdAt": "2026-11-18T15:44:30.778Z",
       "startCommit": "b6273d5f26de49e967702e917da49295542359d5",
-      "submittedBase": "ff665fb449bad16c6942aa1d0de438a38a80c7dd",
-      "submissionId": "65ac2433-3499-4428-8fbf-f0084c3f4897",
-      "submittedAt": "2026-11-18T16:52:32.005Z",
+      "verifiedCommit": "e1420b8754baf2b4287a4039c3ba928a6f0a7f42",
+      "submittedBase": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+      "submissionId": "fea2c877-9931-4407-a4bb-8ab1949c7166",
+      "submittedAt": "2026-11-18T17:30:40.212Z",
       "risk": null,
       "agentChecks": [
         {
@@ -914,12 +936,12 @@
             "vitest src/pages/billing/ui/BillingPage.test.tsx (purchase, failure, master and free cases through the card)"
           ],
           "expected": "purchaseRequests ['pack-3000'] and a success notice inside the sheet; Escape closes only the confirm and focus returns to 크레딧 구매; the path stays /settings; free shows a /plans link; master's buy button and radios are disabled with no QuotePurchase/PurchaseCredits calls",
-          "observed": "all assertions pass; the T909 full-suite run on top of T908 also passed these files",
+          "observed": "all assertions pass after the corrections (billing, account, credits-card and settings: 7 files, 45 tests; submit-gate 148 files / 1548 tests)",
           "evidence": [
             "frontend/src/widgets/credits-card/ui/CreditsCard.test.tsx",
             "frontend/src/pages/settings/ui/SettingsPage.test.tsx",
             "frontend/src/pages/billing/ui/BillingPage.test.tsx",
-            "gusta check log /Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log"
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
           ],
           "status": "pass",
           "reason": "",
@@ -934,13 +956,16 @@
           "id": "T908-AC2",
           "scenario": "/billing#billing-charge opens the sheet once billing has loaded; the billing screen keeps its other sections in BILL-14 order and has no packs section",
           "steps": [
-            "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge'",
+            "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge' (PRO)",
+            "vitest BillingPage.test.tsx 'opens no packs sheet when a free account arrives at #billing-charge' (coordinator decision: arrival sheet only for accounts that can buy packs)",
             "vitest BillingPage.test.tsx 'renders the empty money surface in contract order'"
           ],
-          "expected": "the dialog '크레딧 충전' opens on arrival and the card's 충전 can open it again; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
-          "observed": "both pass",
+          "expected": "a paid account's arrival opens the '크레딧 충전' dialog, and the card's 충전 can open it again; a free account's arrival opens no dialog, offers no 크레딧 구매, makes no QuotePurchase/PurchaseCredits call, and its 충전 links to /plans; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
+          "observed": "all three pass",
           "evidence": [
-            "frontend/src/pages/billing/ui/BillingPage.test.tsx"
+            "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+            "frontend/src/widgets/credits-card/ui/CreditsCard.tsx",
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
           ],
           "status": "pass",
           "reason": "",
@@ -955,13 +980,14 @@
           "id": "T908-AC3",
           "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite",
           "steps": [
-            "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh",
-            "npx eslint and npx prettier --check on the untracked src/widgets/credits-card"
+            "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh (original full-suite run)",
+            "after the corrections: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
           ],
           "expected": "everything passes",
-          "observed": "REDESIGN-GATE-PASS; vitest 648 files / 5200 tests passed; the direct ESLint/Prettier runs on the new widget were clean",
+          "observed": "the original full-suite gate passed (648 files / 5200 tests); the final submit-gate passed with tsc, ESLint and Prettier on changed files, lint-style and steiger, plus 148 related test files (1548 tests). The full suite was not rerun after the corrections",
           "evidence": [
-            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log"
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log",
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
           ],
           "status": "pass",
           "reason": "",
@@ -983,7 +1009,7 @@
           "observed": "not run",
           "evidence": [],
           "status": "not-run",
-          "reason": "Integration-stage computer-use check owned by the coordinator on the integrated candidate; the worker has no integration candidate and no browser session",
+          "reason": "Moved out of task acceptance by the coordinator (inbox 261118 T903 T909) into a group-level computer-use check on the integrated candidate; the worker has no integration candidate and no browser session",
           "replaces": [],
           "stage": "integration",
           "required": true,
@@ -993,14 +1019,15 @@
         },
         {
           "id": "T909-AC1",
-          "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; a password-less account shows its reset route line",
+          "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; the no-password account shows today's no-password line with no pencil and no link",
           "steps": [
-            "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; password-less line)"
+            "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to the row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; no-password line with no button and no link)"
           ],
-          "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row has no pencil and names 비밀번호 찾기",
-          "observed": "7/7 tests pass",
+          "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row shows the no-password line with no pencil and no link",
+          "observed": "all 7 account tests pass",
           "evidence": [
-            "frontend/src/pages/account/ui/AccountPage.test.tsx"
+            "frontend/src/pages/account/ui/AccountPage.test.tsx",
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
           ],
           "status": "pass",
           "reason": "",
@@ -1015,14 +1042,16 @@
           "id": "T909-AC2",
           "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite; every test that encoded a changed literal or structure is updated",
           "steps": [
-            "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh",
+            "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh (full suite)",
             "update app/routes/navigation.test.tsx to the TitleRow structure and rerun it alone with eslint/prettier",
-            "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password"
+            "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password",
+            "final: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
           ],
-          "expected": "all static checks pass and every FE test passes",
-          "observed": "tsc, eslint, prettier, lint-style and steiger passed; full vitest 5208/5209 with the one navigation.test.tsx failure caused by the old PageFrame title-row DOM; after updating it, that file passes 45/45 and its eslint/prettier are clean; the grep found no other test with the changed literals. The full suite was not rerun after the one-file fix",
+          "expected": "all static checks pass and every affected FE test passes",
+          "observed": "the full suite was 5208/5209, with the one navigation.test.tsx failure fixed and that file rerun 45/45; the grep found no other test using the changed literals; the final submit-gate passed: tsc, ESLint and Prettier on changed files, lint-style, steiger and 148 related test files (1548 tests). The full suite was not rerun after the corrections",
           "evidence": [
             "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-e3b6e554-10c8-4b43-b114-b4cbe83d1e13.log",
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log",
             "frontend/src/app/routes/navigation.test.tsx"
           ],
           "status": "pass",
@@ -1036,14 +1065,23 @@
         }
       ],
       "dispatch": {
-        "id": "6f375eba-fa87-4e3c-9d1d-bedc0da24cc1",
+        "id": "36fa06d8-dc13-48c6-90d1-7d515ecb6a7e",
         "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
-        "role": "worker",
-        "slot": 1,
-        "provider": "claude",
-        "model": "opus",
+        "role": "reviewer",
+        "slot": 2,
+        "provider": "codex",
+        "model": "gpt-6.1-terra",
         "status": "running",
-        "startedAt": "2026-11-18T17:22:17.685Z"
+        "startedAt": "2026-11-18T17:30:46.111Z"
+      },
+      "review": {
+        "id": "a40dcd7a-441a-4d17-a39d-1296ed43a1be",
+        "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+        "status": "reviewing",
+        "commit": "e1420b8754baf2b4287a4039c3ba928a6f0a7f42",
+        "baseCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+        "submissionId": "fea2c877-9931-4407-a4bb-8ab1949c7166",
+        "createdAt": "2026-11-18T17:30:44.906Z"
       },
       "reviewHistory": [
         {
@@ -1088,22 +1126,22 @@
         },
         {
           "taskId": "T909",
-          "commit": "c58f04417a462b0372708d76693ffc71f50ba40d",
-          "at": "2026-11-18T16:52:31.991Z",
+          "commit": "e1420b8754baf2b4287a4039c3ba928a6f0a7f42",
+          "at": "2026-11-18T17:30:40.196Z",
           "verification": [
             {
-              "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
-              "startedAt": "2026-11-18T16:43:52.509Z",
-              "finishedAt": "2026-11-18T16:52:31.791Z"
+              "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+              "startedAt": "2026-11-18T17:27:53.616Z",
+              "finishedAt": "2026-11-18T17:30:39.997Z"
             }
           ]
         }
       ],
       "verification": [
         {
-          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
-          "startedAt": "2026-11-18T16:43:52.509Z",
-          "finishedAt": "2026-11-18T16:52:31.791Z"
+          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+          "startedAt": "2026-11-18T17:27:53.616Z",
+          "finishedAt": "2026-11-18T17:30:39.997Z"
         }
       ]
     },
@@ -1288,6 +1326,8 @@
       "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
       "submissionId": "bf6292ed-2602-47c2-a67f-87fd34f563c4",
       "submittedAt": "2026-11-18T17:18:27.389Z",
+      "integratedCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+      "integratedAt": "2026-11-18T17:27:49.830Z",
       "risk": null,
       "agentChecks": [
         {
@@ -1402,6 +1442,13 @@
           "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
           "startedAt": "2026-11-18T17:14:39.441Z",
           "finishedAt": "2026-11-18T17:18:27.156Z"
+        }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
+          "startedAt": "2026-11-18T17:22:53.362Z",
+          "finishedAt": "2026-11-18T17:27:49.410Z"
         }
       ]
     }
@@ -9609,6 +9656,1033 @@
       "group": "redesign-261119",
       "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
       "taskId": "T911",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 1002,
+      "at": "2026-11-18T17:27:49.596Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
+            "startedAt": "2026-11-18T17:22:53.362Z",
+            "finishedAt": "2026-11-18T17:27:49.410Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 1003,
+      "at": "2026-11-18T17:27:49.830Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+        "integratedAt": "2026-11-18T17:27:49.830Z"
+      }
+    },
+    {
+      "sequence": 1004,
+      "at": "2026-11-18T17:27:52.412Z",
+      "type": "group",
+      "group": "redesign-261119",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "agentChecks": [
+          {
+            "id": "T908-AC1",
+            "scenario": "설정 and 결제 both render the one CreditsCard; a paid tier's 충전 opens a sheet with CreditPurchaseSection; choosing a pack, the quote, a confirm dialog stacked inside the sheet (focus and Escape working) and the purchase call QuotePurchase/PurchaseCredits as before; the success notice shows; a free tier's 충전 links to /plans; master's packs are disabled and never charge",
+            "steps": [
+              "vitest src/widgets/credits-card/ui/CreditsCard.test.tsx (render /settings as PRO, press 충전, pick 3000 pack, press 크레딧 구매, Escape the confirm, confirm again, close the sheet)",
+              "vitest src/pages/settings/ui/SettingsPage.test.tsx (master button, free link to /plans, basic button)",
+              "vitest src/pages/billing/ui/BillingPage.test.tsx (purchase, failure, master and free cases through the card)"
+            ],
+            "expected": "purchaseRequests ['pack-3000'] and a success notice inside the sheet; Escape closes only the confirm and focus returns to 크레딧 구매; the path stays /settings; free shows a /plans link; master's buy button and radios are disabled with no QuotePurchase/PurchaseCredits calls",
+            "observed": "all assertions pass after the corrections (billing, account, credits-card and settings: 7 files, 45 tests; submit-gate 148 files / 1548 tests)",
+            "evidence": [
+              "frontend/src/widgets/credits-card/ui/CreditsCard.test.tsx",
+              "frontend/src/pages/settings/ui/SettingsPage.test.tsx",
+              "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC2",
+            "scenario": "/billing#billing-charge opens the sheet once billing has loaded; the billing screen keeps its other sections in BILL-14 order and has no packs section",
+            "steps": [
+              "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge' (PRO)",
+              "vitest BillingPage.test.tsx 'opens no packs sheet when a free account arrives at #billing-charge' (coordinator decision: arrival sheet only for accounts that can buy packs)",
+              "vitest BillingPage.test.tsx 'renders the empty money surface in contract order'"
+            ],
+            "expected": "a paid account's arrival opens the '크레딧 충전' dialog, and the card's 충전 can open it again; a free account's arrival opens no dialog, offers no 크레딧 구매, makes no QuotePurchase/PurchaseCredits call, and its 충전 links to /plans; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
+            "observed": "all three pass",
+            "evidence": [
+              "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+              "frontend/src/widgets/credits-card/ui/CreditsCard.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC3",
+            "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite",
+            "steps": [
+              "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh (original full-suite run)",
+              "after the corrections: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
+            ],
+            "expected": "everything passes",
+            "observed": "the original full-suite gate passed (648 files / 5200 tests); the final submit-gate passed with tsc, ESLint and Prettier on changed files, lint-style and steiger, plus 148 related test files (1548 tests). The full suite was not rerun after the corrections",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC4",
+            "scenario": "Screenshots at 390×844 and 1280×900 in day and night on the integrated candidate show the new credits card, the charge sheet and the billing layout with no horizontal overflow",
+            "steps": [
+              "On the integrated candidate open /settings and /billing at 390×844 and 1280×900 in both themes",
+              "Press 충전 as a paid account and capture the sheet, and the confirm stacked over it"
+            ],
+            "expected": "the card shows the figure, tier and illustration beside the figure with 충전 below; the sheet holds the packs; no horizontal page scroll",
+            "observed": "not run",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Moved out of task acceptance by the coordinator (inbox 261118 T903 T909) into a group-level computer-use check on the integrated candidate; the worker has no integration candidate and no browser session",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T906-named-factor-browser",
+            "scenario": "From AI 토너먼트's 새 비교 → 글 쓰는 AI, the comparison opens on the candidates step; 이전 reaches the factor choice with AI 모델 selected; the editor's 비교 entry (/tests?sourcePost=…) opens on the factor choice; the factor step shows one line per factor and no extra help sentence.",
+            "steps": [
+              "Sign in and open /ai-models",
+              "Open 새 비교 and choose 글 쓰는 AI",
+              "Confirm the model checklist (candidates step) is shown, not 무엇을 비교할까요?",
+              "Press 이전 and confirm the factor choice with AI 모델 selected and only its one-line description",
+              "From a post editor open its writing-test entry and confirm it opens on the factor choice",
+              "Confirm no estimate or admission request was sent"
+            ],
+            "expected": "Named-factor entry opens on candidates; 이전 shows the factor choice with the factor selected; unnamed entry opens on the factor choice; no help sentence; no paid request.",
+            "observed": "Not observed in a browser. The deterministic unit tests for this behaviour (WritingTestsPage.test.tsx, WritingTestStudio.test.tsx) passed in the task gate on committed tree fbc83455436d.",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-03d4b91f-f888-48f5-af5a-f17eff1493e0.log"
+            ],
+            "status": "not-run",
+            "reason": "This worker has no computer-use or browser tool; the observation belongs to the integration host on the fixed candidate.",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "host",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T903-AC5-screenshots",
+            "scenario": "The 글 (/posts) and 영상 (/clips) lists drawn as shared work rows on the integrated candidate",
+            "steps": [
+              "Open /posts and /clips on the integrated candidate with items that are unfinished, finished, running, failed, published or downloadable, including a newest unfinished post that has a failure, 내보내기 가능 and an 이전 AI 결과 action",
+              "Capture 390×844 and 1280×900 in day and night themes",
+              "Check that the latest unfinished row is tinted with 이어서, that each row has at most one trailing action, that the badge, progress and failure text are readable in full (the trailing action moving under the text on a narrow phone), and that the page does not overflow horizontally"
+            ],
+            "expected": "Compact one-target rows: title on one truncated line, a meta line that wraps rather than clips, at most one trailing action; about twice as many items per phone screen as before; no horizontal overflow",
+            "observed": "Not run by this worker: this is a coordinator-level check on the integrated candidate, and this worker has no computer-use or browser tool.",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Integration-stage check owned by the coordinator on the integrated candidate; this worker has no computer-use tool.",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T910-AC1-unit",
+            "scenario": "Offer rows are buttons named as before, each with its ring; close/dismiss work; a clip is never offered 말투; 홈's next-step card renders through the same extracted row",
+            "steps": [
+              "Run vitest on widgets/writing-kit/ui/CreationOfferSheet.test.tsx, features/offer-creation-setup, pages/home, pages/editor/ui/EditorPage.offer.test.tsx and pages/clip/ui/ClipPage.offer.test.tsx"
+            ],
+            "expected": "All pass; each row button contains the right ring illustration (voice, template, video template); the help line is absent",
+            "observed": "These tests passed again at f59ddaa0c as part of the change-related vitest run (147 files / 1544 tests). The earlier full suite at 7d4f66867, with the same frontend code, passed 647 files / 5199 tests.",
+            "evidence": [
+              "frontend/src/widgets/writing-kit/ui/CreationOfferSheet.test.tsx",
+              "frontend/src/pages/home/ui/HomePage.test.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-46339d7e-f84d-4bdd-b490-b59e4fc3e835.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T910-AC2-task-gate",
+            "scenario": "Task gate: tsc -b, changed-file ESLint/Prettier (untracked files included), lint-style-escapes, steiger and FE vitest",
+            "steps": [
+              "gusta vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T910 -- bash submit-gate.sh"
+            ],
+            "expected": "Every step passes",
+            "observed": "ok:true, exit 0 at f59ddaa0c0ff11e398ea28d0e9ab07110513ce71 (tree 3f07fe92e453), 196 s: tsc -b, ESLint, Prettier, style lint and steiger passed, and related vitest passed 147 files / 1544 tests. The full suite last passed at 7d4f66867 (647 / 5199, same frontend code).",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-46339d7e-f84d-4bdd-b490-b59e4fc3e835.log",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-345ea10f-70aa-43de-b0cc-02a792519bb7.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T910-AC3-screens",
+            "scenario": "Day and night screenshots at 390×844 and 1280×900 of the new-post/new-clip offer and 홈's next-step row on the integrated candidate, with no horizontal overflow",
+            "steps": [
+              "Open /posts/new and /clips/new on accounts missing a voice/template, and open /",
+              "Capture day and night at 390×844 and 1280×900",
+              "Check the layout and that there is no horizontal overflow"
+            ],
+            "expected": "The offer shows its title, then ring rows with an arrow, with 다시 묻지 않기 and 이대로 쓰기/만들기 at its foot; 홈's next-step card looks as before; no horizontal overflow",
+            "observed": "not run",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Removed from the task acceptance by the coordinator as a group-level check; the coordinator runs and records it on the integrated candidate. This worker has no browser-capture tool.",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T907-AC5-screens",
+            "scenario": "Video template directory, reading and 영상 지침 header render the new layout at phone and desktop widths in both themes without horizontal overflow",
+            "steps": [
+              "On the integrated candidate, sign in with an account holding saved video templates and an unsaved video-template conversation",
+              "Open /video-templates at 390x844 and 1280x900 in day and night themes and capture screenshots",
+              "Open a saved template's reading (/video-templates/<id>) at both sizes and themes and capture screenshots",
+              "Open /video-templates with no templates (empty placeholder) and /video-guidelines, and capture screenshots",
+              "Check document scrollWidth equals viewport width on every screen"
+            ],
+            "expected": "Header with the 영상 템플릿 picture and + 새 템플릿; resume rows above the tiles; tiles leading with the 9:16 miniature, name, stage line, 영상 N개 and no delete; the reading's single action row with AI와 고치기 filled; the dashed empty placeholder; 영상 지침's own picture; no horizontal overflow",
+            "observed": "not run: this worker has no computer-use or browser tool",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Computer-use acceptance is integration-stage and owned by the coordinator; this worker has no browser or computer-use tool",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-AC1",
+            "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; the no-password account shows today's no-password line with no pencil and no link",
+            "steps": [
+              "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to the row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; no-password line with no button and no link)"
+            ],
+            "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row shows the no-password line with no pencil and no link",
+            "observed": "all 7 account tests pass",
+            "evidence": [
+              "frontend/src/pages/account/ui/AccountPage.test.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-AC2",
+            "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite; every test that encoded a changed literal or structure is updated",
+            "steps": [
+              "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh (full suite)",
+              "update app/routes/navigation.test.tsx to the TitleRow structure and rerun it alone with eslint/prettier",
+              "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password",
+              "final: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
+            ],
+            "expected": "all static checks pass and every affected FE test passes",
+            "observed": "the full suite was 5208/5209, with the one navigation.test.tsx failure fixed and that file rerun 45/45; the grep found no other test using the changed literals; the final submit-gate passed: tsc, ESLint and Prettier on changed files, lint-style, steiger and 148 related test files (1548 tests). The full suite was not rerun after the corrections",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-e3b6e554-10c8-4b43-b114-b4cbe83d1e13.log",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log",
+              "frontend/src/app/routes/navigation.test.tsx"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-unit-unnamed-entry",
+            "scenario": "Real route tree at /tests and /tests?sourcePost=<slug> keeps the factor choice after the router rewrites the address; the 새 비교 address still opens on the candidates; a recovered draft resumes its own step",
+            "steps": [
+              "renderAppAt('/tests') and renderAppAt('/tests?sourcePost=owned-source') over the writing-test studio fixture transport",
+              "wait until router.state.location.href contains stage=write, then assert there is no factor= and the source is kept",
+              "assert the 무엇을 비교할까요 heading and no model checkboxes",
+              "renderAppAt('/tests?factor=model&stage=write&count=2'): Model 1 checked, then 이전 단계 shows the factor choice",
+              "existing test 'resumes a recovered setup on its own step' rerun",
+              "rerun the new tests against the a19cbb83e source files"
+            ],
+            "expected": "Factor choice for unnamed entries after address normalization; candidates for the named entry; tests fail on the a19cbb83e source",
+            "observed": "New tests pass on the fix; both /tests cases fail (2/2) when the a19cbb83e search.ts and WritingTestsPage.tsx are restored; recovery test passes",
+            "evidence": [
+              "frontend/src/pages/writing-tests/ui/WritingTestsPage.test.tsx",
+              "frontend/src/pages/writing-tests/model/search.test.ts",
+              "vitest run src/pages/writing-tests: 4 files, 41 tests passed"
+            ],
+            "status": "pass",
+            "reason": "Deterministic jsdom tests over the real route tree",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-task-gate",
+            "scenario": "Task gate from frontend/",
+            "steps": [
+              "vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T911 -- bash gate.sh"
+            ],
+            "expected": "tsc -b, changed-file ESLint/Prettier, lint-style-escapes, steiger and full vitest all pass",
+            "observed": "ok:true, exit 0; 647 test files and 5,210 tests passed; REDESIGN-GATE-PASS",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-22815e74-11a9-47e5-aefe-4c53a399de9f.log"
+            ],
+            "status": "pass",
+            "reason": "Ran once before handoff (557 s, over the 5-minute task hint because the acceptance asks for the full suite)",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-browser-dev-server",
+            "scenario": "Open /tests and the editor's /tests?sourcePost=… on the dev server and confirm the factor choice stays after the address rewrite",
+            "steps": [
+              "open /tests in Chrome on the integration candidate",
+              "confirm the address becomes /tests?stage=write&count=2 with no factor and the heading stays 무엇을 비교할까요"
+            ],
+            "expected": "Factor choice stays; no factor in the address",
+            "observed": "Not observed in this unit: no browser or computer-use tool available",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "No computer-use in this worker session; the real-route-tree jsdom test covers the same normalization path",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "host",
+            "candidate": null,
+            "duplicationReason": ""
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 1005,
+      "at": "2026-11-18T17:27:52.412Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "agentChecks": [
+          {
+            "id": "T908-AC1",
+            "scenario": "설정 and 결제 both render the one CreditsCard; a paid tier's 충전 opens a sheet with CreditPurchaseSection; choosing a pack, the quote, a confirm dialog stacked inside the sheet (focus and Escape working) and the purchase call QuotePurchase/PurchaseCredits as before; the success notice shows; a free tier's 충전 links to /plans; master's packs are disabled and never charge",
+            "steps": [
+              "vitest src/widgets/credits-card/ui/CreditsCard.test.tsx (render /settings as PRO, press 충전, pick 3000 pack, press 크레딧 구매, Escape the confirm, confirm again, close the sheet)",
+              "vitest src/pages/settings/ui/SettingsPage.test.tsx (master button, free link to /plans, basic button)",
+              "vitest src/pages/billing/ui/BillingPage.test.tsx (purchase, failure, master and free cases through the card)"
+            ],
+            "expected": "purchaseRequests ['pack-3000'] and a success notice inside the sheet; Escape closes only the confirm and focus returns to 크레딧 구매; the path stays /settings; free shows a /plans link; master's buy button and radios are disabled with no QuotePurchase/PurchaseCredits calls",
+            "observed": "all assertions pass after the corrections (billing, account, credits-card and settings: 7 files, 45 tests; submit-gate 148 files / 1548 tests)",
+            "evidence": [
+              "frontend/src/widgets/credits-card/ui/CreditsCard.test.tsx",
+              "frontend/src/pages/settings/ui/SettingsPage.test.tsx",
+              "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC2",
+            "scenario": "/billing#billing-charge opens the sheet once billing has loaded; the billing screen keeps its other sections in BILL-14 order and has no packs section",
+            "steps": [
+              "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge' (PRO)",
+              "vitest BillingPage.test.tsx 'opens no packs sheet when a free account arrives at #billing-charge' (coordinator decision: arrival sheet only for accounts that can buy packs)",
+              "vitest BillingPage.test.tsx 'renders the empty money surface in contract order'"
+            ],
+            "expected": "a paid account's arrival opens the '크레딧 충전' dialog, and the card's 충전 can open it again; a free account's arrival opens no dialog, offers no 크레딧 구매, makes no QuotePurchase/PurchaseCredits call, and its 충전 links to /plans; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
+            "observed": "all three pass",
+            "evidence": [
+              "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+              "frontend/src/widgets/credits-card/ui/CreditsCard.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC3",
+            "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite",
+            "steps": [
+              "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh (original full-suite run)",
+              "after the corrections: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
+            ],
+            "expected": "everything passes",
+            "observed": "the original full-suite gate passed (648 files / 5200 tests); the final submit-gate passed with tsc, ESLint and Prettier on changed files, lint-style and steiger, plus 148 related test files (1548 tests). The full suite was not rerun after the corrections",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC4",
+            "scenario": "Screenshots at 390×844 and 1280×900 in day and night on the integrated candidate show the new credits card, the charge sheet and the billing layout with no horizontal overflow",
+            "steps": [
+              "On the integrated candidate open /settings and /billing at 390×844 and 1280×900 in both themes",
+              "Press 충전 as a paid account and capture the sheet, and the confirm stacked over it"
+            ],
+            "expected": "the card shows the figure, tier and illustration beside the figure with 충전 below; the sheet holds the packs; no horizontal page scroll",
+            "observed": "not run",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Moved out of task acceptance by the coordinator (inbox 261118 T903 T909) into a group-level computer-use check on the integrated candidate; the worker has no integration candidate and no browser session",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-AC1",
+            "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; the no-password account shows today's no-password line with no pencil and no link",
+            "steps": [
+              "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to the row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; no-password line with no button and no link)"
+            ],
+            "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row shows the no-password line with no pencil and no link",
+            "observed": "all 7 account tests pass",
+            "evidence": [
+              "frontend/src/pages/account/ui/AccountPage.test.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-AC2",
+            "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite; every test that encoded a changed literal or structure is updated",
+            "steps": [
+              "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh (full suite)",
+              "update app/routes/navigation.test.tsx to the TitleRow structure and rerun it alone with eslint/prettier",
+              "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password",
+              "final: vibe check --tier task --diff-base 1ef5a5ac --task T909 -- bash submit-gate.sh"
+            ],
+            "expected": "all static checks pass and every affected FE test passes",
+            "observed": "the full suite was 5208/5209, with the one navigation.test.tsx failure fixed and that file rerun 45/45; the grep found no other test using the changed literals; the final submit-gate passed: tsc, ESLint and Prettier on changed files, lint-style, steiger and 148 related test files (1548 tests). The full suite was not rerun after the corrections",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-e3b6e554-10c8-4b43-b114-b4cbe83d1e13.log",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3a876bad-6284-4de1-8b14-86d1776328c9.log",
+              "frontend/src/app/routes/navigation.test.tsx"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 1006,
+      "at": "2026-11-18T17:27:52.447Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "doing",
+      "status": "committing",
+      "changes": {
+        "status": "committing"
+      }
+    },
+    {
+      "sequence": 1007,
+      "at": "2026-11-18T17:27:53.228Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "committing",
+      "status": "doing",
+      "changes": {
+        "status": "doing"
+      }
+    },
+    {
+      "sequence": 1008,
+      "at": "2026-11-18T17:27:53.283Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 1009,
+      "at": "2026-11-18T17:30:40.212Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "submittedBase": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+        "submissionId": "fea2c877-9931-4407-a4bb-8ab1949c7166",
+        "submittedAt": "2026-11-18T17:30:40.212Z",
+        "steps": [
+          {
+            "taskId": "T908",
+            "commit": "c58f04417a462b0372708d76693ffc71f50ba40d",
+            "at": "2026-11-18T16:52:31.991Z",
+            "verification": [
+              {
+                "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
+                "startedAt": "2026-11-18T16:43:52.509Z",
+                "finishedAt": "2026-11-18T16:52:31.791Z"
+              }
+            ]
+          },
+          {
+            "taskId": "T909",
+            "commit": "e1420b8754baf2b4287a4039c3ba928a6f0a7f42",
+            "at": "2026-11-18T17:30:40.196Z",
+            "verification": [
+              {
+                "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+                "startedAt": "2026-11-18T17:27:53.616Z",
+                "finishedAt": "2026-11-18T17:30:39.997Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+            "startedAt": "2026-11-18T17:27:53.616Z",
+            "finishedAt": "2026-11-18T17:30:39.997Z"
+          }
+        ],
+        "verifiedCommit": "e1420b8754baf2b4287a4039c3ba928a6f0a7f42"
+      }
+    },
+    {
+      "sequence": 1010,
+      "at": "2026-11-18T17:30:40.226Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "ready",
+      "status": "ready",
+      "changes": {
+        "dispatch": {
+          "id": "6f375eba-fa87-4e3c-9d1d-bedc0da24cc1",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 1,
+          "provider": "claude",
+          "model": "opus",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:22:17.685Z",
+          "finishedAt": "2026-11-18T17:30:40.226Z",
+          "error": null,
+          "summary": "T909 is done and both review findings are resolved as the coordinator decided. The task gate (submit-gate) passed.\n\n**T908:** a free account arriving at `/billing#billing-charge` now opens nothing. It is never offered a pack (BILL-9), and its 충전 stays the `/plans` link. Paid tiers still get the pack sheet on arrival, and master gets it with the packs disabled. This reverses the every-tier sheet I added in the last correction. A new billing test covers the free arrival: no sheet, no 크레딧 구매 button, no quote or purchase call.\n\n**T909:** as decided, an account with no password keeps the existing sentence on its 비밀번호 row, with no pencil and no link. Its test now also asserts there is no link. The rest of `/account` is unchanged from before. Both acceptance items are re-checked, and the T908 and T909 results record the decisions.\n\n**Checks:** the submit-gate on the full delta since 1ef5a5ac passed. That covered tsc, ESLint and Prettier on changed files, style lint, steiger, and 148 related test files (1548 tests). This gate ran only the tests related to the change; the last full-suite run was before the corrections.\n\n**Edits outside T909's scope:** the auth string files `app/providers/i18n/resources/{ko,en}/auth.ts`:\n- the 미인증 badge;\n- the 아이디 label;\n- dropping the unused intro strings.\n\nThe navigation test `app/routes/navigation.test.tsx` was also updated for the new title row. Both edits are required by T909's own notes and acceptance, and are recorded in its result.\n\nNothing is committed or submitted; the host runner owns that."
+        }
+      }
+    },
+    {
+      "sequence": 1011,
+      "at": "2026-11-18T17:30:40.784Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "5452ef83-3fcf-4e21-b424-8b2f4c2c2bcc",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T903의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 진행·실패 행의 검색 일치 태그 누락은 수정됐습니다. 작업자 검증 기록을 확인했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+          "findings": [],
+          "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+          "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+          "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+          "createdAt": "2026-11-18T17:22:20.059Z",
+          "finishedAt": "2026-11-18T17:30:40.784Z"
+        }
+      }
+    },
+    {
+      "sequence": 1012,
+      "at": "2026-11-18T17:30:40.800Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "approved",
+      "status": "approved",
+      "changes": {
+        "dispatch": {
+          "id": "d2d2942b-cf5b-487d-acfd-ada90caabf0d",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 2,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:22:21.343Z",
+          "finishedAt": "2026-11-18T17:30:40.800Z",
+          "error": null,
+          "summary": "T903의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 진행·실패 행의 검색 일치 태그 누락은 수정됐습니다. 작업자 검증 기록을 확인했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다."
+        }
+      }
+    },
+    {
+      "sequence": 1013,
+      "at": "2026-11-18T17:30:40.833Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 1014,
+      "at": "2026-11-18T17:30:42.897Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "integrating",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "reason": "Command failed: git -C /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/redesign-261119-integrate-aabb3b68 merge --no-ff --no-commit b691a205f122bf21bf23b6d32c9e59c4082debd8\n"
+      }
+    },
+    {
+      "sequence": 1015,
+      "at": "2026-11-18T17:30:43.341Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "00fa2205-41be-44d7-b0ee-5a4014259b17",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-1",
+          "status": "reviewing",
+          "commit": "8e88096dab2eab242ea249b732a8059211b9bbbd",
+          "baseCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+          "submissionId": "18d4cc0d-c61f-4936-b2d6-104ef3ed2b44",
+          "createdAt": "2026-11-18T17:30:43.341Z"
+        }
+      }
+    },
+    {
+      "sequence": 1016,
+      "at": "2026-11-18T17:30:44.813Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "50332b0c-7ecf-47d0-bbba-00c6d3ffe237",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 1,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "starting",
+          "startedAt": "2026-11-18T17:30:44.813Z"
+        }
+      }
+    },
+    {
+      "sequence": 1017,
+      "at": "2026-11-18T17:30:44.830Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "50332b0c-7ecf-47d0-bbba-00c6d3ffe237",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 1,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "running",
+          "startedAt": "2026-11-18T17:30:44.813Z"
+        }
+      }
+    },
+    {
+      "sequence": 1018,
+      "at": "2026-11-18T17:30:44.906Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "a40dcd7a-441a-4d17-a39d-1296ed43a1be",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+          "status": "reviewing",
+          "commit": "e1420b8754baf2b4287a4039c3ba928a6f0a7f42",
+          "baseCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+          "submissionId": "fea2c877-9931-4407-a4bb-8ab1949c7166",
+          "createdAt": "2026-11-18T17:30:44.906Z"
+        }
+      }
+    },
+    {
+      "sequence": 1019,
+      "at": "2026-11-18T17:30:46.111Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "36fa06d8-dc13-48c6-90d1-7d515ecb6a7e",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 2,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "starting",
+          "startedAt": "2026-11-18T17:30:46.111Z"
+        }
+      }
+    },
+    {
+      "sequence": 1020,
+      "at": "2026-11-18T17:30:46.124Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "36fa06d8-dc13-48c6-90d1-7d515ecb6a7e",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 2,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "running",
+          "startedAt": "2026-11-18T17:30:46.111Z"
+        }
+      }
+    },
+    {
+      "sequence": 1021,
+      "at": "2026-11-18T17:31:07.120Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "approved",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null,
+        "verifiedCommit": null,
+        "review": null,
+        "reviewHistory": [
+          {
+            "id": "512904e3-2938-4549-ae65-8d273909cd07",
+            "owner": "7c8e664e-92e6-4eb8-b2da-cbdbcee6d285/reviewer-1",
+            "status": "changes_requested",
+            "verdict": "changes_requested",
+            "summary": "T903의 공유 행은 좁은 화면에서 필수 상태와 진행 정보를 잘라낼 수 있습니다. 작업자 게이트는 통과했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+            "findings": [
+              {
+                "priority": "P2",
+                "where": "frontend/src/shared/ui/work-row/WorkRow.tsx:75",
+                "message": "T903: 메타 행을 overflow-hidden으로 자르면서 상태 배지와 내보내기 가능 표시, 이어서 문구, 보조 동작은 축소하지 않습니다. 예를 들어 최신 글에 실패 상태, 내보내기 가능 표시와 이전 AI 결과 동작이 함께 있으면 휴대전화 너비에서 실패 설명이나 내보내기 가능 표시가 보이지 않을 수 있습니다. 긴 영문 문구에서도 같은 문제가 발생합니다. 필수 상태와 진행·실패 정보가 읽히도록 공간 배분을 조정하고, 해당 조합을 좁은 화면에서 확인해 주세요."
+              }
+            ],
+            "commit": "ca89a63e65686f312a8f6debc33b56240495fca9",
+            "baseCommit": "a19cbb83e02eec367d8219342d2efa89a02c5d55",
+            "submissionId": "4561fc23-c30c-462f-ab09-daa3169e9ba7",
+            "createdAt": "2026-11-18T16:35:15.948Z",
+            "finishedAt": "2026-11-18T16:40:14.985Z",
+            "invalidatedAt": "2026-11-18T16:40:15.036Z",
+            "invalidationReason": "correction assigned"
+          },
+          {
+            "id": "593e21c7-fbe3-4c39-93ec-566e6508bdad",
+            "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+            "status": "changes_requested",
+            "verdict": "changes_requested",
+            "summary": "T903의 작업자 게이트는 통과했지만, 검색 결과의 태그 표시가 진행 중이거나 실패한 글에서 누락됩니다. 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+            "findings": [
+              {
+                "priority": "P2",
+                "where": "frontend/src/pages/posts/ui/PostsPage.tsx:238",
+                "message": "T903: 검색어가 글 제목이 아닌 태그와 일치하더라도, 작업이 진행 중이거나 실패 상세가 있으면 matchedTags가 표시되지 않습니다. POST-65는 검색에 일치한 태그를 행에 표시하도록 요구하므로, 사용자는 해당 글이 검색된 이유를 알 수 없습니다. 진행·실패 정보와 함께 일치 태그를 표시하고 두 상태의 태그 검색을 확인해 주세요."
+              }
+            ],
+            "commit": "610fc808e90cc3ebfa371e694dc567749555c932",
+            "baseCommit": "1ef5a5ac2541902fb90dae60c55205ec16bef479",
+            "submissionId": "be8b1534-3fc7-4507-b438-2013fa7e6d90",
+            "createdAt": "2026-11-18T16:57:43.269Z",
+            "finishedAt": "2026-11-18T17:00:52.474Z",
+            "invalidatedAt": "2026-11-18T17:00:53.353Z",
+            "invalidationReason": "correction assigned"
+          },
+          {
+            "id": "5452ef83-3fcf-4e21-b424-8b2f4c2c2bcc",
+            "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+            "status": "approved",
+            "verdict": "approved",
+            "summary": "T903의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 진행·실패 행의 검색 일치 태그 누락은 수정됐습니다. 작업자 검증 기록을 확인했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+            "findings": [],
+            "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+            "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+            "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+            "createdAt": "2026-11-18T17:22:20.059Z",
+            "finishedAt": "2026-11-18T17:30:40.784Z",
+            "invalidatedAt": "2026-11-18T17:31:07.120Z",
+            "invalidationReason": "worker resumed or blocked"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 1022,
+      "at": "2026-11-18T17:31:12.763Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "00fa2205-41be-44d7-b0ee-5a4014259b17",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-1",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T907의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 미저장 대화의 작업 상태 표시가 복구됐고, 작업자 검증 기록을 확인했습니다. 통합 후보의 화면 확인과 최종 게이트는 코디네이터에게 남아 있습니다.",
+          "findings": [],
+          "commit": "8e88096dab2eab242ea249b732a8059211b9bbbd",
+          "baseCommit": "d4ecd9cfc826c8b6eb9c2b58ccce917b2b577676",
+          "submissionId": "18d4cc0d-c61f-4936-b2d6-104ef3ed2b44",
+          "createdAt": "2026-11-18T17:30:43.341Z",
+          "finishedAt": "2026-11-18T17:31:12.763Z"
+        }
+      }
+    },
+    {
+      "sequence": 1023,
+      "at": "2026-11-18T17:31:12.776Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "approved",
+      "status": "approved",
+      "changes": {
+        "dispatch": {
+          "id": "50332b0c-7ecf-47d0-bbba-00c6d3ffe237",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 1,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:30:44.813Z",
+          "finishedAt": "2026-11-18T17:31:12.776Z",
+          "error": null,
+          "summary": "T907의 고정 커밋을 수용 기준과 관련 SSOT에 따라 검토했습니다. 이전 리뷰에서 지적한 미저장 대화의 작업 상태 표시가 복구됐고, 작업자 검증 기록을 확인했습니다. 통합 후보의 화면 확인과 최종 게이트는 코디네이터에게 남아 있습니다."
+        }
+      }
+    },
+    {
+      "sequence": 1024,
+      "at": "2026-11-18T17:31:12.829Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {

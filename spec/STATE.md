@@ -87,7 +87,6 @@
 | T903 | Draw the 글 and 영상 lists as one shared work row | THEME POST CLIP | - | todo |
 | T904 | Read 지난 비교 as work rows grouped by state | MODEL THEME | T903 | todo |
 | T905 | Open AI 토너먼트 on its picture header, a 새 비교 menu and the latest comparisons | MODEL THEME | T904 | todo |
-| T907 | Give 영상 템플릿 the 템플릿 directory, a one-row reading and its own pictures | CLIP THEME TMPL | - | todo |
 | T908 | One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet | QUOTA BILL THEME | - | todo |
 | T909 | Show 계정 as rows that open their form in place | AUTH THEME | - | todo |
 
@@ -96,7 +95,7 @@
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
-| redesign-261119 | 4 | 9 | 3 | 6 | 2 | 2 | 0 | 2026-11-18T17:22:48.337Z | [history](work/redesign-261119.json) |
+| redesign-261119 | 4 | 9 | 4 | 5 | 1 | 2 | 0 | 2026-11-18T17:31:14.442Z | [history](work/redesign-261119.json) |
 
 ## next
 - inspect work board for remaining tasks

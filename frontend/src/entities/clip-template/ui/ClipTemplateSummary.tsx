@@ -1,3 +1,4 @@
+import { clsx } from 'clsx'
 import { useTranslation } from 'react-i18next'
 import { CLIP_DEFAULT_CAPTION_STYLE } from '@/entities/clip-design/@x/clip-template'
 import { Typography } from '@/shared/ui'
@@ -31,9 +32,11 @@ function summarizeOutline(entries: string[]): string {
   return shown.join(SEPARATOR)
 }
 
-/** A static, illustrative outline that can also live inside a choice or link. */
-export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
-  const { t } = useTranslation('clips')
+type Translate = ReturnType<typeof useTranslation<'clips'>>['t']
+
+/** What a template's stored body and design read as, for the summary and its miniature alike. A
+ *  body that is absent or unreadable still yields its design, so a name and a choice still work. */
+function readClipTemplate(template: ClipRecipe, t: Translate) {
   let outline: string[] = []
   let example = ''
   let readable = false
@@ -74,46 +77,84 @@ export function ClipTemplateSummary({ template }: { template: ClipRecipe }) {
     preset
       ? t(`composition.design.${region}_${preset}`, { defaultValue: preset })
       : t('composition.summary.unspecified')
+  return { outline, example, readable, design }
+}
+
+/** The static 9:16 example a video template is recognised by (CLIP-236): its intro and outro
+ *  designs and its first entry over a dark frame, labelled as an example. It holds no interactive
+ *  child, so it may stand inside a choice button or a directory tile's link; it plays, measures
+ *  and generates nothing. `tile` is the directory's larger miniature. */
+function ClipTemplateMiniature({
+  template,
+  size = 'summary',
+}: {
+  template: ClipRecipe
+  size?: 'summary' | 'tile'
+}) {
+  const { t } = useTranslation('clips')
+  const { outline, example, design } = readClipTemplate(template, t)
+  return (
+    <span
+      className={clsx(
+        'bg-media-canvas-bg text-media-scrim-fg flex aspect-9/16 shrink-0 flex-col justify-between overflow-hidden rounded-lg p-2',
+        size === 'tile' ? 'w-28' : 'w-24',
+      )}
+    >
+      <Typography
+        as="span"
+        variant="meta"
+        className="text-media-scrim-fg line-clamp-1 shrink-0 break-words"
+      >
+        {t('composition.summary.example')}
+      </Typography>
+      <Typography
+        as="span"
+        variant="label"
+        className="text-media-scrim-fg line-clamp-2 shrink-0 break-words"
+      >
+        {t('composition.summary.intro')}
+        <br />
+        {design('intro', template.introPreset)}
+      </Typography>
+      <Typography
+        as="span"
+        variant="label"
+        className="bg-media-scrim-bg text-media-scrim-fg line-clamp-2 shrink-0 rounded-sm p-1 break-words"
+      >
+        {shorten(example || outline[0] || t('composition.summary.body'), ITEM_CHARS)}
+      </Typography>
+      <Typography
+        as="span"
+        variant="label"
+        className="text-media-scrim-fg line-clamp-2 shrink-0 break-words"
+      >
+        {t('composition.summary.outro')}
+        <br />
+        {design('outro', template.outroPreset)}
+      </Typography>
+    </span>
+  )
+}
+
+/** A static, illustrative outline that can also live inside a choice or link. `miniature` is the
+ *  9:16 example alone, larger, as a directory tile leads with it (CLIP-42). */
+export function ClipTemplateSummary({
+  template,
+  variant = 'summary',
+}: {
+  template: ClipRecipe
+  variant?: 'summary' | 'miniature'
+}) {
+  const { t } = useTranslation('clips')
+  if (variant === 'miniature') return <ClipTemplateMiniature template={template} size="tile" />
+  const { outline, readable, design } = readClipTemplate(template, t)
   const styles = template.allowedCaptionStyles.length
     ? template.allowedCaptionStyles
     : [CLIP_DEFAULT_CAPTION_STYLE]
   const styleNames = styles.map((style) => t(`captionStyles.${style}`, { defaultValue: style }))
   return (
     <span className="mt-3 flex min-w-0 items-start gap-4">
-      <span className="bg-media-canvas-bg text-media-scrim-fg flex aspect-9/16 w-24 shrink-0 flex-col justify-between overflow-hidden rounded-lg p-2">
-        <Typography
-          as="span"
-          variant="meta"
-          className="text-media-scrim-fg line-clamp-1 shrink-0 break-words"
-        >
-          {t('composition.summary.example')}
-        </Typography>
-        <Typography
-          as="span"
-          variant="label"
-          className="text-media-scrim-fg line-clamp-2 shrink-0 break-words"
-        >
-          {t('composition.summary.intro')}
-          <br />
-          {design('intro', template.introPreset)}
-        </Typography>
-        <Typography
-          as="span"
-          variant="label"
-          className="bg-media-scrim-bg text-media-scrim-fg line-clamp-2 shrink-0 rounded-sm p-1 break-words"
-        >
-          {shorten(example || outline[0] || t('composition.summary.body'), ITEM_CHARS)}
-        </Typography>
-        <Typography
-          as="span"
-          variant="label"
-          className="text-media-scrim-fg line-clamp-2 shrink-0 break-words"
-        >
-          {t('composition.summary.outro')}
-          <br />
-          {design('outro', template.outroPreset)}
-        </Typography>
-      </span>
+      <ClipTemplateMiniature template={template} />
       <span className="min-w-0 flex-1 space-y-2">
         <Typography as="span" variant="body" className="block break-words">
           {readable && outline.length

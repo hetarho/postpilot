@@ -2,14 +2,18 @@ import { clsx } from 'clsx'
 import { useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import { MessagesSquare, Palette, PencilLine } from 'lucide-react'
 import { ClipTemplateSummary, useClipTemplates, type ClipTemplate } from '@/entities/clip-template'
 import { useAuthoringSummaries, type AuthoringSavedRef } from '@/entities/ai-authoring'
 import { useSession } from '@/entities/session'
+import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
 import { ClipTemplateDirectEditor, ClipTemplateEditor } from '@/features/edit-clip-template'
 import { ClipTemplateWizard, clipWizardSeed } from '@/features/create-clip-template-wizard'
 import { useClipProject } from '@/entities/clip-project'
 import { AuthoringPreview } from '@/features/ai-authoring'
 import { AIAuthoringStudio } from '@/widgets/ai-authoring-studio'
+import { handOffRemovalFocus } from '@/widgets/template-directory'
+import { videoTemplateIllustration } from '@/shared/assets'
 import { Button, LoadingState, Notice, Typography, PageFrame } from '@/shared/ui'
 
 export function VideoTemplatePage() {
@@ -159,6 +163,12 @@ function VideoTemplateHost({
     name: stored?.name ?? t('directory.create', { ns: 'clips' }),
   }
   const guided = !stored && !sessionId && !!fromClip
+  const busyElsewhere =
+    !!summary &&
+    (summary.hasUnpublishedChanges ||
+      !!summary.activeJobId ||
+      summary.publicationPending ||
+      summary.targetConflict)
   return (
     <PageFrame
       width="board"
@@ -190,154 +200,110 @@ function VideoTemplateHost({
             }}
           />
         </div>
-      ) : method === null ? (
-        <section className="mt-4 flex flex-col sm:mt-8">
-          <Typography variant="stepTitle" as="h2">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('directory.reviewKind', { ns: 'clips' })}</span>
-                <span className="hidden sm:inline">
-                  {t('reviewNamed', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('directory.chooseCreation', { ns: 'clips' })
-            )}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-2 sm:mt-4">
-            {stored ? (
-              <>
-                <span className="sm:hidden">{t('directory.savedAvailable', { ns: 'clips' })}</span>
-                <span className="hidden sm:inline">
-                  {t('savedUsable', { ns: 'authoring', ...named })}
-                </span>
-              </>
-            ) : (
-              t('directory.unsaved', { ns: 'clips' })
-            )}
-          </Typography>
-          {summaries.isPending && (
-            <LoadingState
-              variant="inline"
-              label={t('directory.checkingWork', { ns: 'clips' })}
-              className="mt-4"
+      ) : stored && method === null ? (
+        // The reading keeps a column under the title, its actions in one row beside what they
+        // change, as the post template's review does.
+        <section
+          aria-labelledby="video-template-review"
+          className="mt-4 flex max-w-3xl flex-col gap-6 sm:mt-6"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            {/* The frame's title already names it; this row says how many videos use it and
+                holds what to do with it, wrapping under the count on a phone. */}
+            <div className="min-w-0 flex-1 basis-40">
+              <h2 id="video-template-review" className="sr-only">
+                {stored.name}
+              </h2>
+              <Typography variant="label" as="p">
+                {t('directory.projectCount', { ns: 'clips', count: stored.projectCount })}
+              </Typography>
+            </div>
+            <DeleteClipTemplateButton
+              ownerId={ownerId}
+              template={stored}
+              onDeleted={() => {
+                // The delete button leaves with this page; the directory takes focus (THEME-76).
+                handOffRemovalFocus('video-template')
+                void navigate({ to: '/video-templates', replace: true })
+              }}
             />
-          )}
+            <Button
+              variant="secondary"
+              aria-label={t('directory.editDesign', { ns: 'clips', name: stored.name })}
+              onClick={() => setMethod('design')}
+            >
+              <Palette aria-hidden="true" className="size-4" />
+              {t('directory.startDesign', { ns: 'clips' })}
+            </Button>
+            <Button
+              variant="secondary"
+              aria-label={t('directNamed', { ns: 'authoring', ...named })}
+              onClick={() => {
+                setActiveSession(undefined)
+                setMethod('direct')
+              }}
+            >
+              <PencilLine aria-hidden="true" className="size-4" />
+              {t('directory.editDirect', { ns: 'clips' })}
+            </Button>
+            <Button
+              variant="cta"
+              aria-label={t('aiNamed', { ns: 'authoring', ...named })}
+              onClick={() => {
+                setActiveSession(undefined)
+                setMethod('ai')
+              }}
+            >
+              <MessagesSquare aria-hidden="true" className="size-4" />
+              {t('directory.editAI', { ns: 'clips' })}
+            </Button>
+          </div>
           {summaries.isError && (
-            <Notice tone="danger" role="alert" className="mt-4">
+            <Notice tone="danger" role="alert">
               {t('directory.workLoadFailed', { ns: 'clips' })}
               <Button variant="ghost" onClick={() => void summaries.refetch()}>
                 {t('action.retry', { ns: 'common' })}
               </Button>
             </Notice>
           )}
-          {summary && (
-            <div role="status" className="mt-4 space-y-2">
-              {summary.hasUnpublishedChanges && (
-                <Typography variant="body">
-                  {t('unpublished', { ns: 'authoring', ...named })}
-                </Typography>
-              )}
-              {summary.activeJobId && (
-                <Typography variant="body">
-                  {t('directory.activeAI', { ns: 'clips', name: named.name })}
-                </Typography>
-              )}
-              {summary.publicationPending && (
-                <Typography variant="body">
-                  {t('directory.publicationPending', { ns: 'clips', name: named.name })}
-                </Typography>
-              )}
-              {summary.targetConflict && (
-                <Notice tone="warning">
-                  {t('directory.conflict', { ns: 'clips', name: named.name })}
-                </Notice>
-              )}
-            </div>
-          )}
-          {stored && (
-            <div className="mt-4 space-y-6 sm:mt-6">
-              <ClipTemplateSummary template={stored} />
-              <AuthoringPreview
-                kind="video-template"
-                artifact={{
-                  id: stored.id,
-                  name: stored.name,
-                  description: '',
-                  body: stored.compositionBody,
-                  titleArea: '',
+          {busyElsewhere && summary && (
+            <Notice tone={summary.targetConflict ? 'warning' : 'info'} role="status">
+              <span>
+                {summary.activeJobId
+                  ? t('directory.activeAI', { ns: 'clips', name: named.name })
+                  : summary.publicationPending
+                    ? t('directory.publicationPending', { ns: 'clips', name: named.name })
+                    : summary.targetConflict
+                      ? t('directory.conflict', { ns: 'clips', name: named.name })
+                      : t('unpublished', { ns: 'authoring', ...named })}
+              </span>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setActiveSession(summary.sessionId)
+                  setMethod('ai')
                 }}
-              />
-            </div>
-          )}
-          <div className="mt-4 flex flex-wrap gap-2 sm:mt-8 sm:gap-4">
-            <Button
-              aria-label={stored ? t('aiNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('ai')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('directory.editAI', { ns: 'clips' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('aiNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('directory.createAI', { ns: 'clips' })
-              )}
-            </Button>
-            <Button
-              aria-label={stored ? t('directNamed', { ns: 'authoring', ...named }) : undefined}
-              variant="secondary"
-              onClick={() => {
-                setActiveSession(undefined)
-                setMethod('direct')
-              }}
-            >
-              {stored ? (
-                <>
-                  <span className="sm:hidden">{t('directory.editDirect', { ns: 'clips' })}</span>
-                  <span className="hidden sm:inline">
-                    {t('directNamed', { ns: 'authoring', ...named })}
-                  </span>
-                </>
-              ) : (
-                t('host.manual', { ns: 'authoring' })
-              )}
-            </Button>
-            {summary &&
-              (summary.hasUnpublishedChanges ||
-                summary.activeJobId ||
-                summary.publicationPending ||
-                summary.targetConflict) && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setActiveSession(summary.sessionId)
-                    setMethod('ai')
-                  }}
-                >
-                  {t('continueNamed', { ns: 'authoring', ...named })}
-                </Button>
-              )}
-            {stored && (
-              <Button variant="ghost" onClick={() => setMethod('design')}>
-                {t('directory.editDesign', { ns: 'clips', name: stored.name })}
+              >
+                {t('continueNamed', { ns: 'authoring', ...named })}
               </Button>
-            )}
-          </div>
+            </Notice>
+          )}
+          <ClipTemplateSummary template={stored} />
+          <AuthoringPreview
+            kind="video-template"
+            artifact={{
+              id: stored.id,
+              name: stored.name,
+              description: '',
+              body: stored.compositionBody,
+              titleArea: '',
+            }}
+          />
         </section>
       ) : method === 'design' ? (
         <section className="mt-8">
           <Typography variant="stepTitle" as="h2">
             {t('directory.editDesign', { ns: 'clips', name: named.name })}
-          </Typography>
-          <Typography variant="body" className="text-content-secondary mt-3">
-            {t('directory.designHelp', { ns: 'clips' })}
           </Typography>
           <ClipTemplateEditor
             ownerId={ownerId}
@@ -358,7 +324,8 @@ function VideoTemplateHost({
           targetId={stored?.id}
           targetName={stored?.name}
           sessionId={activeSession}
-          initialMethod={method}
+          initialMethod={method ?? 'ai'}
+          draftIllustration={videoTemplateIllustration}
           startFromSaved={!activeSession}
           renderDirectEditor={(props) => <ClipTemplateDirectEditor {...props} />}
           onSaved={(saved) => {
