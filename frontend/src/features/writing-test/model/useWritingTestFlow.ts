@@ -31,6 +31,8 @@ export interface WritingTestFlowOptions {
   client: WritingTestClient
   initialDraft?: WritingTestPlan
   testId?: string
+  /** The entry's address named its factor; a new setup then opens on the candidates step. */
+  factorNamed?: boolean
   prepareCandidates?: () => void
   /** Browser session storage holds only this owner/entry's resumable work, never an actor snapshot. */
   recoveryStorage?:
@@ -182,6 +184,7 @@ export function useWritingTestFlow(options: WritingTestFlowOptions): WritingTest
       operation: snapshot.context,
       phase,
       recovery: initialRecovery?.presentation,
+      factorNamed: options.factorNamed,
       prepareCandidates: options.prepareCandidates ? () => preparationRef.current?.() : undefined,
     },
   })
