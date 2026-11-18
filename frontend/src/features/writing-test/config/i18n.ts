@@ -19,7 +19,6 @@ export const writingTestI18n = {
     back: '이전 단계',
     next: '다음',
     factorTitle: '무엇을 비교할까요?',
-    factorHelp: '한 가지 항목만 바꿔 실제 글을 만들어요. 나머지 조건은 같게 유지해요.',
     factor: { model: 'AI 모델', voice: '말투', template: '글 템플릿', guideline: '글 지침' },
     factorWhat: {
       model: '같은 글감과 말투로 AI만 바꿔 글을 써요. 완성된 글을 읽고 더 잘 쓴 AI를 골라요.',
@@ -282,7 +281,6 @@ export const writingTestI18n = {
     back: 'Back',
     next: 'Continue',
     factorTitle: 'What would you like to compare?',
-    factorHelp: 'Change one factor and generate real posts. Everything else stays the same.',
     factor: {
       model: 'AI models',
       voice: 'Writing styles',

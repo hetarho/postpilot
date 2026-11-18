@@ -98,6 +98,48 @@ it('prefills exactly the eligible saved A/B pair for a new two-model test withou
   expect(fixture.admissions).toHaveLength(0)
   expect(fixture.publications).toHaveLength(0)
 })
+it("opens 새 비교's model entry on the candidates, whose 이전 reaches the factor choice, starting no work", async () => {
+  const fixture = createWritingTestStudioFixture({ comparisonPairs: [savedPair(Stage.WRITE)] })
+  const user = userEvent.setup()
+  mount('/tests?factor=model&stage=write&count=2', fixture)
+  await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
+  expect(await screen.findByRole('checkbox', { name: 'Model 1' })).toBeChecked()
+  expect(screen.queryByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeNull()
+  await user.click(screen.getByRole('button', { name: '이전 단계' }))
+  expect(await screen.findByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'AI 모델' })).toHaveAttribute('aria-pressed', 'true')
+  expect(fixture.estimates).toHaveLength(0)
+  expect(fixture.admissions).toHaveLength(0)
+  expect(fixture.preparations).toHaveLength(0)
+  expect(fixture.publications).toHaveLength(0)
+})
+it.each(['/tests', '/tests?sourcePost=owned-source'])(
+  'opens %s, which names no factor, on the factor choice',
+  async (path) => {
+    const fixture = createWritingTestStudioFixture({ source: true })
+    mount(path, fixture)
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '무엇을 비교할까요?' }),
+    ).toBeVisible()
+    expect(screen.queryByRole('checkbox', { name: /^Model/ })).toBeNull()
+    expect(fixture.estimates).toHaveLength(0)
+    expect(fixture.admissions).toHaveLength(0)
+  },
+)
+it('resumes a recovered setup on its own step even when its address names the factor', async () => {
+  const fixture = createWritingTestStudioFixture()
+  const user = userEvent.setup()
+  const path = '/tests?factor=model&draft=named-recovery'
+  mount(path, fixture)
+  await screen.findByRole('checkbox', { name: 'Model 1' })
+  await user.click(screen.getByRole('button', { name: '이전 단계' }))
+  await screen.findByRole('heading', { level: 2, name: '무엇을 비교할까요?' })
+  reloadAfter(cleanup)
+  mount(path, fixture)
+  expect(await screen.findByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeVisible()
+  expect(screen.queryByRole('checkbox', { name: 'Model 1' })).toBeNull()
+  expect(fixture.admissions).toHaveLength(0)
+})
 it('keeps an owner/entry recovered test draft ahead of a newly changed saved pair', async () => {
   const options = { comparisonPairs: [savedPair(Stage.WRITE)] }
   const fixture = createWritingTestStudioFixture(options)
@@ -151,7 +193,8 @@ it.each([
     })
     mount(`/tests?factor=${factor}`, fixture)
     await screen.findByRole('heading', { name: '글쓰기 테스트', level: 1 })
-    await chooseFactor(label)
+    // The address named the factor, so the setup opens on the candidates (MODEL-44).
+    expect(screen.queryByRole('button', { name: label })).toBeNull()
     expect(await screen.findByRole('combobox', { name: /^후보 1/ })).toHaveTextContent(
       'AI가 준비해요',
     )

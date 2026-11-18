@@ -45,6 +45,11 @@ export function writingTestSearchSchema(raw: Record<string, unknown>): WritingTe
     draft: text('draft'),
   }
 }
+/** Whether the address itself names the factor (새 비교's items, MODEL-44): read it from the
+ *  address as written, since the validated search always carries a defaulted factor. */
+export function writingTestFactorNamed(raw: Record<string, unknown>): boolean {
+  return typeof raw.factor === 'string' && raw.factor !== ''
+}
 export interface WritingTestHistorySearch {
   stage?: TestStage | 'voice'
   source?: string

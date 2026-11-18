@@ -115,6 +115,9 @@ export interface WritingTestStudioProps {
   ownerId: string
   seedKey: string
   initialPlan: WritingTestPlan
+  /** The entry's address named its factor (MODEL-44): a new setup opens on the candidates step,
+   *  whose 이전 still reaches the factor choice. */
+  factorNamed?: boolean
   testId?: string
   onOpenTest?: (id: string) => void
 }
@@ -132,6 +135,7 @@ function OwnedStudio({
   ownerId,
   seedKey,
   initialPlan,
+  factorNamed,
   testId,
   onOpenTest,
 }: WritingTestStudioProps) {
@@ -146,7 +150,14 @@ function OwnedStudio({
   const sources = useWritingTestSources(ownerId)
   const client = useWritingTestClient(),
     preparationClient = useCandidatePreparationClient()
-  const flow = useWritingTestFlow({ ownerId, seedKey, initialDraft: initialPlan, testId, client })
+  const flow = useWritingTestFlow({
+    ownerId,
+    seedKey,
+    initialDraft: initialPlan,
+    factorNamed,
+    testId,
+    client,
+  })
   const plan = flow.context.draft ?? initialPlan
   const test = flow.context.test
   const kind: TestSettingKind =
@@ -788,15 +799,11 @@ function OwnedStudio({
       )}
       {flow.view === 'factor' && (
         <section className="mt-4 flex flex-1 flex-col gap-4 sm:mt-5 sm:gap-6">
-          <Typography variant="body" id={`${headingId}-help`} className="max-w-measure">
-            {t('factorHelp')}
-          </Typography>
           <div className="grid grid-cols-2 gap-3">
             {(['model', 'voice', 'template', 'guideline'] as const).map((factor) => (
               <ChoiceButton
                 key={factor}
                 title={t(`factor.${factor}`)}
-                aria-describedby={`${headingId}-help`}
                 selected={factor === plan.factor}
                 // A tap only chooses; what the choice compares shows under the tiles and 다음
                 // moves on (THEME-52).
