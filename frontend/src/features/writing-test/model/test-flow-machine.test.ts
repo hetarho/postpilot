@@ -73,6 +73,27 @@ it('Back retains presentation state and only explicit candidate preparation invo
   expect(preparation).toHaveBeenCalledTimes(1)
   ref.stop()
 })
+it('opens on the candidates when the entry named its factor, Back still reaching the factor choice', () => {
+  const op = operation()
+  const start = (input: { factorNamed?: boolean; recovery?: { step: 'factor' | 'material' } }) =>
+    createActor(testFlowMachine, {
+      input: { scopeKey, operation: op.context, phase: 'editing', ...input },
+    }).start()
+  const named = start({ factorNamed: true })
+  expect(writingTestView(named.getSnapshot())).toBe('candidates')
+  named.send({ type: 'BACK', scopeKey })
+  expect(writingTestView(named.getSnapshot())).toBe('factor')
+  named.stop()
+  // An entry naming no factor asks it first; a recovered setup resumes its own step either way.
+  expect(writingTestView(start({}).getSnapshot())).toBe('factor')
+  expect(writingTestView(start({ factorNamed: false }).getSnapshot())).toBe('factor')
+  expect(
+    writingTestView(start({ factorNamed: true, recovery: { step: 'factor' } }).getSnapshot()),
+  ).toBe('factor')
+  expect(
+    writingTestView(start({ factorNamed: true, recovery: { step: 'material' } }).getSnapshot()),
+  ).toBe('material')
+})
 it('records full-post reading positions and unsent publication choices through Back and later server rounds', () => {
   const op = { ...operation().context, test: durable(), testId: 'test', operation: 1 }
   const ref = createActor(testFlowMachine, {

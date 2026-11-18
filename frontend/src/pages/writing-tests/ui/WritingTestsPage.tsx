@@ -1,6 +1,6 @@
 import { useWritingTestTranslation } from '@/features/writing-test'
 import { useMemo } from 'react'
-import { useSearch, useParams } from '@tanstack/react-router'
+import { useLocation, useSearch, useParams } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { eligibleTestPair, useModels, useModelSetup } from '@/entities/model-catalog'
 import {
@@ -15,6 +15,7 @@ import { activeLocale } from '@/shared/lib'
 import { Button, LoadingState, Typography, PageFrame, TitleRow } from '@/shared/ui'
 import {
   writingTestSearchSchema,
+  writingTestFactorNamed,
   writingTestHistorySearchSchema,
   type WritingTestSearch,
 } from '../model/search'
@@ -40,15 +41,25 @@ export function WritingTestsPage() {
   const { user } = useSession(),
     raw = useSearch({ strict: false })
   const seed = writingTestSearchSchema(raw as Record<string, unknown>)
+  const factorNamed = writingTestFactorNamed(useLocation().search as Record<string, unknown>)
   return (
     <OwnedNewPage
-      key={JSON.stringify([user?.id ?? '', seed])}
+      key={JSON.stringify([user?.id ?? '', seed, factorNamed])}
       ownerId={user?.id ?? ''}
       seed={seed}
+      factorNamed={factorNamed}
     />
   )
 }
-function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSearch }) {
+function OwnedNewPage({
+  ownerId,
+  seed,
+  factorNamed,
+}: {
+  ownerId: string
+  seed: WritingTestSearch
+  factorNamed: boolean
+}) {
   const { t } = useWritingTestTranslation()
   const source = useWritingTestSource(ownerId, seed.source ?? '')
   const binaryModel = seed.factor === 'model' && seed.count === 2
@@ -105,6 +116,7 @@ function OwnedNewPage({ ownerId, seed }: { ownerId: string; seed: WritingTestSea
         ownerId={ownerId}
         seedKey={JSON.stringify(seed)}
         initialPlan={initialPlan}
+        factorNamed={factorNamed}
       />
     </PageFrame>
   )

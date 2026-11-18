@@ -34,6 +34,8 @@ interface PresentationInput {
   operation: WritingTestOperationContext
   phase: WritingTestPhase
   recovery?: TestPresentationRecovery
+  /** The entry's address named its factor, so the choice is made: open on the candidates. */
+  factorNamed?: boolean
   prepareCandidates?: () => void
 }
 export interface WritingTestPresentationContext {
@@ -149,7 +151,7 @@ export const testFlowMachine = setup({
     scopeKey: input.scopeKey,
     operation: input.operation,
     phase: input.phase,
-    step: input.recovery?.step ?? 'factor',
+    step: input.recovery?.step ?? (input.factorNamed ? 'candidates' : 'factor'),
     reading: input.recovery?.reading ?? {},
     visibleCandidateId: input.recovery?.visibleCandidateId ?? '',
     choices: input.recovery?.choices ?? {
