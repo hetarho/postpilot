@@ -1,5 +1,5 @@
 # TMPL post templates (템플릿)
-> r36 | Owner-scoped post forms drafted in a conversation with the AI beside a live preview and edited directly as text, with explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
+> r37 | Owner-scoped post forms drafted in a conversation with the AI beside a live preview and edited directly as text, with explicit literal, instruction and supplied-fact boundaries and minimum tag seeds.
 
 ## decisions
 - TMPL-1 [o] a template decides the form of a post; three authored axes stand beside each other and each owns one question — the voice decides how sentences sound (VOICE), the template what form the post has and what each of its places is about, a guideline what kind of writing is wanted (GUIDE); a post combines at most one voice and at most one template ← prose about shape must be re-derived by the model every run, cannot require a literal line, and cannot bind output to the attachments
@@ -65,7 +65,7 @@
 
 - TMPL-22 [o] a run's output is taken as the model wrote it: its single photos and photo groups pass the attachment filter like any other block (→GEN-2 →GEN-78), and literal fidelity, section order and whether every photo token came back are neither verified nor repaired — no deviation fails, retries or discards a usable generation
 - TMPL-24 [o] /templates is the writing kit's 템플릿 screen, a child of 홈 under the shared kit-screen header (→=THEME-38 →THEME-81); unified tests can prepare/adopt template candidates
-  - unsaved new-template conversations come first under 이어서 만들던 대화, one compact row each reopening its conversation, apart from the saved directory (→EDIT-22)
+  - unsaved new-template conversations holding the owner's work come first under 이어서 만들던 대화, one compact row each reopening its conversation, apart from the saved directory; a conversation opened and left, or whose only request failed with nothing drafted, is not listed (→!EDIT-22)
   - saved templates are tiles, one column on a phone, two from `sm` and three from `lg`; a whole tile is one link to the template's review (→TMPL-25)
   - a tile shows a clipped miniature of the post the template makes (→TMPL-66), its name, its description, its post count as operational metadata rather than draft status, and at most one work state, in the priority AI working, publication to confirm, conflict, unpublished changes (→~EDIT-18); a saved template shows no usability or publication line
   - deleting happens on the template's review, never on a tile
@@ -151,6 +151,7 @@
 
 - TMPL-58 [o] a new template and AI refinement of a saved one both use the shared durable EDIT session and its explicit paid actions as one conversation beside the live draft (→!TMPL-71); direct editing does not host a second independent paid request/undo engine.
   - the owner may explicitly supply at most 12,000 Unicode characters of a reference post as form material; read only its selected title/body structure, with attachment positions rather than private files or captions, never unrelated account materials; it travels with the session's first request and is not shown in the chat
+  - any request of a post template, new or saved, may also carry up to three references of its own (→!TMPL-78)
   - candidate validity, mode retention, failure/cancellation and publication follow EDIT; domain structure and owner generation numbers retain their own rules
 - TMPL-64 [o] explicit 이 글 형식으로 템플릿 만들기 opens the new-template conversation (→TMPL-71) with that owned post as its form reference (→!TMPL-58): its title, its headings as written and every other block named only as 사진 or 본문, in post order with consecutive repeats collapsed, at most 12,000 characters; opening starts no AI; a post that cannot be read shows the failure with 참고 글 빼기, which opens the conversation without it; no prose, captions, photo files, voice, guidelines, memo, observations or tags are read.
 - TMPL-65 [o] a live preview redraws on every change of the draft from whichever side made it — `원문` as typed (its last parsable state, with the parse error noted while it does not parse →TMPL-42), a conversation result or explicit baseline reset — and shows the post the template makes the way a post's reading view shows one, the title area first ← a template is used by seeing the post it makes, and `원문` (→TMPL-26) shows grammar, not a post
@@ -180,7 +181,8 @@
   - 템플릿으로 저장 publishes after a confirmation naming the template, through the standard create under every field rule (→TMPL-6 →TMPL-7)
   - chat and draft stand side by side where the column allows, otherwise behind a 대화 / 초안 switch; before the first draft the draft pane shows a blank page with the template illustration
   - once a draft exists, 더보기 holds 직접 고치기 (→TMPL-26), 대화 비우기 and, for a saved one, 저장한 상태로 되돌리기
-  - nothing is created or charged before the first send; an unsaved conversation stays resumable from /templates (→TMPL-24)
+  - nothing is created or charged before the first send; a failed first request leaves the conversation as before it was sent — no draft, no save, its words back in the field (→EDIT-8 →EDIT-21); an unsaved conversation holding the owner's work stays resumable from /templates (→TMPL-24)
+  - its requests may carry form references (→TMPL-78)
   - first-use setup's post-template question hosts the same conversation under setup's own step bar, which carries its way back and skip; nothing runs before the owner sends, and the conversation's save is the step's one save (→EDIT-15)
 - TMPL-72 [o] the template targets are a code-owned tree the video-template wizard narrows through one question per level (→CLIP-213); v1:
   - 맛집 → 식사 · 코스·오마카세 · 술집·바 · 포장·배달
@@ -206,6 +208,14 @@
   - a template is specified by assigning it on a post's 템플릿 screen (on a saved post only once the assignment is confirmed), by choosing it on 홈's 템플릿 dropdown (→THEME-80), or by saving it from a conversation opened from a post or from the new-post offer
   - one no longer in the directory, or a directory that cannot be read, starts the post on 없음 without a message; the 템플릿 screen still changes it
   - it is kept per account in browser storage alone, with an in-memory copy for the session where storage refuses, and follows other tabs of this browser but no other device; no server field holds it
+- TMPL-78 [o] a post-template request — in the new-template conversation or AI refinement of a saved post template — may carry up to 3 owner-chosen form references: one of the owner's posts, one of the owner's post templates, or a web page address (→!ARCH-72) ← a familiar shape is easier to point at than to describe
+  - `참고 자료 붙이기` above the message field opens an app-drawn panel (a bottom sheet on a phone) with 내 글 and 내 템플릿, each searchable, and 웹 주소; each attached one is a chip above the field named by its title and removed by its ✕
+  - a web address is read as soon as it is attached (`CheckAuthoringReference`: no AI work, nothing stored), and a page that cannot be used says why under the field, which keeps the address to correct; Enter in that field never sends the message
+  - read on the server when the request starts, owner-scoped: a post as its form alone — its title, headings as written and every other block as its position (`[본문]`, `[인용]`, `[목록 n개]`, `[사진]`, `[사진 n장 묶음]`), never its prose, photo files, captions, memo or tags (→TMPL-64); a template as its own title area and body grammar (→TMPL-57); a page as ARCH-72's extracted structure
+  - together at most 12,000 Unicode characters of structure, split evenly between them and cut at whole lines, each title at most 200
+  - frozen into that request's job alone and part of its identity, never stored on the session, the template or the account (→EDIT-16); the request goes through the same estimate, confirmation and credits as any other (→EDIT-12)
+  - a reference that cannot be read refuses the request with `AUTHORING_REFERENCE_UNAVAILABLE` and its `refusal` (`invalid`, `not_allowed`, `unreachable`, `not_html`, `too_large`, `empty`, `missing`, `too_many`); an unowned post or template reads as `missing`
+  - the chips stay after a failed request, so a refusing one can be removed and the words sent again, and clear once a request succeeds; video templates, guidelines and writing styles take no references
 
 ## flow
 - render evidence: authored literal/write/ask roles → explicit answers → role-preserving frozen brief → stage composition → current-result source review without treating template shape as visit facts
@@ -227,6 +237,7 @@
 - contract: `proto/postpilot/v1/template.proto`
 
 ## chg
+- r37 261118 TMPL-78+ up to 3 post/template/web-page form references per post-template request, ≤12,000 chars split evenly, frozen in the job alone; TMPL-58✎ +a request's own references; TMPL-24✎ every unsaved conversation listed→only those holding owner work; TMPL-71✎ +a failed first request leaves no draft or save, words back in the field
 - r36 261118 TMPL-24✎ 내 스타일 cards with usability, wizard→kit screen under 홈: unsaved conversations first, miniature tiles with one work state, delete on the review, label-only floating 새 템플릿; TMPL-71✎ guided wizard→`/templates/new` conversation (one draft, no choice step, named 저장, hosted by setup); TMPL-26✎ builder + 원문 behind 고급→원문 fields only; TMPL-27- TMPL-28- TMPL-44- builder toolbar, reordering, 데이터 받기 switch; TMPL-74- TMPL-75- post wizard steps, preview; TMPL-76- heading-line reference; TMPL-29✎ TMPL-30✎ builder rows→원문 draft; TMPL-32✎ default 없음→last specified template; TMPL-77+ last specified template per account on this browser; TMPL-58✎ TMPL-64✎ wizard→conversation, post as form reference; TMPL-72✎ post section roles→tree for the video wizard; TMPL-73✎ post sections→video stages; TMPL-16✎ TMPL-34✎ wizard suggestions→conversation + video suggestions; TMPL-36✎ toolbar names→preview/parse names; TMPL-2✎ TMPL-19✎ TMPL-33✎ TMPL-37✎ TMPL-38✎ TMPL-42✎ TMPL-49✎ TMPL-57✎ TMPL-65✎ TMPL-66✎ builder→원문/preview
 - r35 261117 TMPL-45✎ removed field→field + its lead (literal lines directly above, no blank line; shared by fields stacked under it); TMPL-72✎ +별점 last in every leaf (질문을 바탕으로 작성, no photo); TMPL-74✎ 질문을 바탕으로 작성 +optional 고정 문구 above the field, blank lines closed up
 - r34 261116 TMPL-76+ 내 템플릿 소제목 참고해서 제안 받기: saved heading lines (≤30) as a wording reference below the style request, above the 기본 voice; post wizard only; TMPL-73✎ one 제안 받기→제안 받기 + the TMPL-76 action

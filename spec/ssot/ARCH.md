@@ -1,5 +1,5 @@
 # ARCH postpilot architecture
-> r27 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
+> r28 | Code placement, product stage and support scope, Gusta task/batch/CI verification and a browser-owned media pipeline.
 
 ## decisions
 - ARCH-1 [o] product: a paid product anyone may sign up for (→AUTH-1, →BILL) — photos + notes → a blog draft in the user's own voice → per-platform copy export for manual posting; ko/en UI. Behavior lives in the domain SSOTs; root PRD.md is a reference brief and ssot/ wins on conflict
@@ -11,6 +11,12 @@
   - excluded-support: compatibility matrices for other browsers and older OS or browser versions; other browsers are guided by the runtime capability check in CLIP-155
   - support-review: when closed beta opens
   - validation-baseline: unresolved until a verification candidate records the observed browser and OS versions
+- ARCH-72 [o] the server reads a web page an owner names (a template's form reference, →TMPL-78) only through `internal/authoring/webpage`'s guard ← fetching a user-typed address from the API host is a request-forgery path into the host's network
+  - http or https only, on its scheme's default port (80/443), with no credentials in the address; a missing scheme is https
+  - the fetcher resolves the host itself and connects only when every resolved address is public unicast; loopback, private, link-local, multicast, unspecified, CGNAT, documentation, benchmarking, reserved, site-local, NAT64, Teredo, 6to4 and cloud-metadata addresses (169.254.169.254, fd00:ec2::254, 168.63.129.16) are refused as `not_allowed`
+  - at most 3 redirects, each target checked again; no proxy from the environment; one 10 s timeout covers lookups, redirects and body; at most 2 MB; only a 2xx `text/html` or `application/xhtml+xml` answer, decoded from its charset to UTF-8
+  - a Naver blog post address (`blog.naver.com/<id>/<logNo>`, its PostView form, `m.blog.naver.com`, or a `naver.me` link landing on one) is read as its mobile post page
+  - only the title and the body's structure come back — headings, paragraph excerpts of at most 120 characters, list items, quotes and photo positions, at most 12,000 characters, skipping navigation, headers, footers, scripts, forms and frames — never the page itself; every failure is a code-owned refusal (`invalid`, `not_allowed`, `unreachable`, `not_html`, `too_large`, `empty`)
 - ARCH-2 [o] shape:
   | directory | holds |
   |---|---|
@@ -222,6 +228,7 @@
 - dev ports: web 2564, api 7678 (compose maps 7678 → 8080; containers use 8080)
 
 ## chg
+- r28 261118 ARCH-72+ guarded server-side web page reads for form references: http(s) on 80/443, every resolved and redirected address public unicast, ≤3 redirects, 10 s, 2 MB, HTML only, Naver mobile rewrite, structure only
 - r27 261117 ARCH-31✎ batch gate after every participating session→every live participating session is ready; no workspace preparation→a frozen offline pnpm install prepares every CLI-created worktree before any check
 - r26 261117 ARCH-24✎ frontend task whole-project TypeScript checks→existing shared-batch frontend build; task static checks→changed-file fast checks with slower scopes handed off
 - r25 261116 ARCH-71+ product stage alpha with a Chrome-first support scope; ARCH-31✎ initiating coordinator owns batch/CI and publication under cumulative failure limits→shared integration owner (initiating coordinator when alone) under deadline/closing-reserve/unit limits; ARCH-24✎ ARCH-37✎ coordinator's/coordinator-owned batch gate→shared batch gate

@@ -23,28 +23,28 @@
 ## ssot
 | id | rev | tasked | pending | [?] |
 |---|---|---|---|---|
-| ARCH | 27 | 27 | - | 0 |
-| AUTH | 16 | 15 | AUTH-50✎ | 0 |
-| QUOTA | 41 | 40 | QUOTA-27✎ QUOTA-75✎ | 0 |
-| POST | 55 | 54 | POST-26✎ POST-43✎ POST-69✎ POST-109✎ POST-121✎ POST-122✎ | 0 |
-| VOICE | 23 | 22 | VOICE-52✎ | 0 |
+| ARCH | 28 | 28 | - | 0 |
+| AUTH | 16 | 16 | - | 0 |
+| QUOTA | 41 | 41 | - | 0 |
+| POST | 55 | 55 | - | 0 |
+| VOICE | 23 | 23 | - | 0 |
 | GEN | 34 | 34 | - | 0 |
-| MODEL | 44 | 43 | MODEL-44✎ MODEL-96✎ | 0 |
-| TMPL | 36 | 35 | TMPL-2✎ TMPL-16✎ TMPL-19✎ TMPL-24✎ TMPL-26✎ TMPL-27- TMPL-28- TMPL-29✎ TMPL-30✎ TMPL-32✎ TMPL-33✎ TMPL-34✎ TMPL-36✎ TMPL-37✎ TMPL-38✎ TMPL-42✎ TMPL-44- TMPL-49✎ TMPL-57✎ TMPL-58✎ TMPL-64✎ TMPL-65✎ TMPL-66✎ TMPL-71✎ TMPL-72✎ TMPL-73✎ TMPL-74- TMPL-75- TMPL-76- TMPL-77+ | 0 |
-| GUIDE | 29 | 28 | GUIDE-20✎ GUIDE-26✎ GUIDE-43✎ GUIDE-44✎ GUIDE-48✎ | 0 |
+| MODEL | 45 | 45 | - | 0 |
+| TMPL | 37 | 37 | - | 0 |
+| GUIDE | 29 | 29 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
-| LANG | 12 | 11 | LANG-6✎ | 0 |
-| THEME | 48 | 47 | THEME-6✎ THEME-12✎ THEME-19✎ THEME-24✎ THEME-26✎ THEME-29✎ THEME-38✎ THEME-47✎ THEME-56✎ THEME-57✎ THEME-58✎ THEME-66✎ THEME-67✎ THEME-68- THEME-69- THEME-70- THEME-71✎ THEME-72✎ THEME-73✎ THEME-75✎ THEME-76✎ THEME-79+ THEME-80+ THEME-81+ THEME-82+ | 2 |
+| LANG | 12 | 12 | - | 0 |
+| THEME | 48 | 48 | - | 2 |
 | MKT | 13 | 13 | - | 0 |
 | VIDEO | 9 | 9 | - | 0 |
-| CLIP | 82 | 81 | CLIP-3✎ CLIP-41✎ CLIP-42✎ CLIP-208✎ CLIP-213✎ CLIP-221✎ CLIP-223✎ CLIP-225✎ CLIP-226✎ | 2 |
+| CLIP | 82 | 82 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 10 | 10 | - | 0 |
-| MEM | 9 | 8 | MEM-24✎ MEM-30✎ | 2 |
+| MEM | 9 | 9 | - | 2 |
 | QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
 | DUB | 5 | 5 | - | 0 |
-| EDIT | 7 | 6 | EDIT-2✎ EDIT-17✎ | 0 |
+| EDIT | 8 | 8 | - | 0 |
 | INFRA | 2 | 0 | all | 1 |
 
 ## review
@@ -90,5 +90,4 @@
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
 
 ## next
-- gusta-create-task THEME TMPL EDIT CLIP POST VOICE GUIDE MEM MODEL QUOTA LANG AUTH (ready-home variant c adopted; its code is on ab/ready-home/c, not yet merged)
 - no runnable task: resolve blocked, parked or deps
