@@ -1,6 +1,7 @@
 import type { I18nFragment } from '@/shared/lib'
 
-/** This slice's share of the `creation` namespace (ARCH-16). */
+/** This slice's share of the `creation` namespace (ARCH-16): the words of the offer, which the
+ *  writing kit draws (`widgets/writing-kit`'s `CreationOfferSheet`). */
 export const i18n = {
   namespace: 'creation',
   ko: {
@@ -10,10 +11,6 @@ export const i18n = {
         voice: '말투가 아직 없어요',
         template: '템플릿이 아직 없어요',
         clip: '영상 템플릿이 아직 없어요',
-      },
-      description: {
-        post: '먼저 만들어 두면 글마다 골라 쓸 수 있어요.',
-        clip: '먼저 만들어 두면 영상마다 골라 쓸 수 있어요.',
       },
       createVoice: '새 말투 만들기',
       continueVoice: '말투 이어서 만들기',
@@ -33,10 +30,6 @@ export const i18n = {
         voice: 'No voice yet',
         template: 'No template yet',
         clip: 'No video template yet',
-      },
-      description: {
-        post: 'Make one first and pick it for any post.',
-        clip: 'Make one first and pick it for any clip.',
       },
       createVoice: 'New voice',
       continueVoice: 'Keep making my voice',

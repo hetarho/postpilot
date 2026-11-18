@@ -1,8 +1,14 @@
 import { expect, it } from 'vitest'
-import { writingTestHistorySearchSchema, writingTestSearchSchema } from './search'
+import {
+  writingTestFactor,
+  writingTestFactorNamed,
+  writingTestHistorySearchSchema,
+  writingTestSearchSchema,
+} from './search'
 
 it('defaults a fresh writing test to the model A/B writing axis and preserves explicit valid formats', () => {
-  expect(writingTestSearchSchema({})).toMatchObject({ factor: 'model', stage: 'write', count: 2 })
+  expect(writingTestSearchSchema({})).toMatchObject({ stage: 'write', count: 2 })
+  expect(writingTestFactor(writingTestSearchSchema({}))).toBe('model')
   for (const count of [2, 4, 8, 16])
     expect(writingTestSearchSchema({ factor: 'template', count: String(count) })).toMatchObject({
       factor: 'template',
@@ -94,4 +100,22 @@ it('keeps meaningful history stage, source and voice filters while dropping rank
   expect(
     writingTestHistorySearchSchema({ stage: ['voice'], source: {}, voiceId: ['other'] }),
   ).toEqual({ stage: undefined, source: undefined, voiceId: undefined })
+})
+it('tells an address that names its factor from one that leaves it to the default', () => {
+  const named = (raw: Record<string, unknown>) =>
+    writingTestFactorNamed(writingTestSearchSchema(raw))
+  expect(named({ factor: 'model', stage: 'write', count: '2' })).toBe(true)
+  expect(named({ factor: 'voice' })).toBe(true)
+  expect(named({})).toBe(false)
+  expect(named({ sourcePost: 'owned-source' })).toBe(false)
+  expect(named({ factor: '' })).toBe(false)
+})
+it('writes no defaulted factor into the validated search, so normalizing an address names none (MODEL-44)', () => {
+  for (const raw of [{}, { sourcePost: 'owned-source' }, { factor: '' }]) {
+    const search = writingTestSearchSchema(raw)
+    expect(search).not.toHaveProperty('factor')
+    // Validating the normalized address again keeps it unnamed.
+    expect(writingTestFactorNamed(writingTestSearchSchema({ ...search }))).toBe(false)
+  }
+  expect(writingTestSearchSchema({ factor: 'template' })).toMatchObject({ factor: 'template' })
 })

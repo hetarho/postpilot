@@ -6,8 +6,9 @@ import {
   useClipProject,
 } from '@/entities/clip-project'
 import { useSession } from '@/entities/session'
-import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
+import { useCreationOffer } from '@/features/offer-creation-setup'
 import { ClipTopRow, ClipWorkspace, NewClipWorkspace } from '@/widgets/clip-workspace'
+import { CreationOfferSheet } from '@/widgets/writing-kit'
 import { appFailureFromConnect } from '@/shared/api'
 import { AppFailureMessage, Button, LoadingState, pageStyles } from '@/shared/ui'
 import { ClipImportFeedback } from './ClipImportFeedback'

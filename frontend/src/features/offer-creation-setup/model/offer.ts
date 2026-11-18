@@ -5,7 +5,10 @@ export type CreationOfferKind = 'post' | 'clip'
 
 /** How the offer gets the account a voice: a new one, or the one already being made — a second
  *  voice would leave the first one half made (POST-121). */
-export type VoiceOffer = { action: 'create' } | { action: 'continue'; voiceId: string }
+export type VoiceOffer =
+  | { action: 'create' }
+  /** `fill`: how far that voice's readiness meter has come, 0 … 1 (VOICE-9). */
+  | { action: 'continue'; voiceId: string; fill: number }
 
 export interface CreationOfferMissing {
   voice?: VoiceOffer
@@ -36,5 +39,11 @@ function voiceOffer(active: readonly Voice[]): VoiceOffer {
         !newest || candidate.createdAt > newest.createdAt ? candidate : newest,
       undefined,
     )
-  return making ? { action: 'continue', voiceId: making.id } : { action: 'create' }
+  return making
+    ? {
+        action: 'continue',
+        voiceId: making.id,
+        fill: Math.max(0, Math.min(100, making.readinessPercent)) / 100,
+      }
+    : { action: 'create' }
 }

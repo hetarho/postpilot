@@ -6,7 +6,8 @@ import { useSession } from '@/entities/session'
 import { listedLastTemplate, readLastTemplate, useTemplates } from '@/entities/template'
 import { useVoices } from '@/entities/voice'
 import { CreateVoiceSheet } from '@/features/create-voice'
-import { CreationOfferSheet, useCreationOffer } from '@/features/offer-creation-setup'
+import { useCreationOffer } from '@/features/offer-creation-setup'
+import { CreationOfferSheet } from '@/widgets/writing-kit'
 import {
   AppFailureMessage,
   Button,

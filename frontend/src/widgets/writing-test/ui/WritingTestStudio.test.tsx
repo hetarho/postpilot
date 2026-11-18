@@ -17,7 +17,7 @@ beforeEach(() => {
 })
 afterEach(cleanup)
 type Fixture = ReturnType<typeof createWritingTestStudioFixture>
-function mount(fixture: Fixture, ownerId = 'alice') {
+function mount(fixture: Fixture, ownerId = 'alice', factorNamed?: boolean) {
   const onOpenTest = vi.fn()
   const seedKey = 'host-test'
   const mounted = render(
@@ -25,6 +25,7 @@ function mount(fixture: Fixture, ownerId = 'alice') {
       ownerId={ownerId}
       seedKey={seedKey}
       initialPlan={fixture.plan}
+      factorNamed={factorNamed}
       onOpenTest={onOpenTest}
     />,
     { wrapper: withProviders(fixture.transport, createTestQueryClient()) },
@@ -48,7 +49,9 @@ async function chooseFactor(label: keyof typeof FACTOR) {
   await userEvent.click(await screen.findByRole('button', { name: label }))
   expect(screen.getByRole('button', { name: label })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeVisible()
+  // One line says what the comparison changes; no second help sentence stands above the tiles.
   expect(screen.getByText(writingTestI18n.ko.factorWhat[FACTOR[label]])).toBeVisible()
+  expect(screen.queryByText(/한 가지 항목만 바꿔/)).toBeNull()
   expect(screen.queryByRole('combobox', { name: /^후보 1(?:\s|$)/ })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: '다음' }))
 }
@@ -115,6 +118,19 @@ it.each([1, 10])(
   },
 )
 
+it('opens a setup whose entry named its factor on the candidates, and 이전 reaches the factor choice', async () => {
+  const fixture = createWritingTestStudioFixture()
+  mount(fixture, 'alice', true)
+  expect(await screen.findByRole('checkbox', { name: 'Model 1' })).toBeVisible()
+  expect(screen.queryByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeNull()
+  await userEvent.click(screen.getByRole('button', { name: '이전 단계' }))
+  expect(await screen.findByRole('heading', { level: 2, name: '무엇을 비교할까요?' })).toBeVisible()
+  expect(screen.getByRole('button', { name: 'AI 모델' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.queryByText(/한 가지 항목만 바꿔/)).toBeNull()
+  expect(fixture.estimates).toHaveLength(0)
+  expect(fixture.admissions).toHaveLength(0)
+  expect(fixture.preparations).toHaveLength(0)
+})
 it('picks model contestants from one checklist in the order checked, with no stage question', async () => {
   const fixture = createWritingTestStudioFixture()
   mount(fixture)
