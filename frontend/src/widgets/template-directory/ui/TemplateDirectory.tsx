@@ -8,13 +8,21 @@ export type DirectoryLink = (props: { className: string; children: ReactNode }) 
 
 /** Guide: the unsaved conversations a template directory keeps apart from its saved tiles
  *  (TMPL-24, CLIP-42) — one compact row each, reopening its conversation. 템플릿 and 영상 템플릿
- *  draw the same rows; each binds only its own route and wording. */
+ *  draw the same rows; each binds only its own route and wording. A row may carry one work state
+ *  under its name — AI working, a save to confirm — so a conversation still busy says so before it
+ *  is reopened (THEME-76). */
 export function ResumeConversations({
   heading,
   rows,
 }: {
   heading: string
-  rows: { key: string; label: string; link: DirectoryLink }[]
+  rows: {
+    key: string
+    label: string
+    link: DirectoryLink
+    /** At most one work state, already worded. */
+    workState?: string
+  }[]
 }) {
   const id = useId()
   if (rows.length === 0) return null
@@ -35,13 +43,23 @@ export function ResumeConversations({
                     aria-hidden="true"
                     className="text-badge-accent-fg size-5 shrink-0"
                   />
-                  <span
-                    className={typographyStyles({
-                      variant: 'label',
-                      className: 'text-content-primary min-w-0 flex-1 truncate',
-                    })}
-                  >
-                    {row.label}
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span
+                      className={typographyStyles({
+                        variant: 'label',
+                        className: 'text-content-primary truncate',
+                      })}
+                    >
+                      {row.label}
+                    </span>
+                    {row.workState && (
+                      <span
+                        role="status"
+                        className={typographyStyles({ variant: 'meta', className: 'break-words' })}
+                      >
+                        {row.workState}
+                      </span>
+                    )}
                   </span>
                 </>
               ),

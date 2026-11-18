@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { useRef } from 'react'
 import {
   ClipTemplateDescription,
@@ -110,6 +111,7 @@ export function VideoTemplatesPage() {
             ns: 'clips',
             name: row.displayName || t('directory.create', { ns: 'clips' }),
           }),
+          workState: resumeWorkState(row, t),
           link: (props) => (
             <Link to="/video-templates/new" search={{ session: row.sessionId }} {...props} />
           ),
@@ -138,6 +140,26 @@ export function VideoTemplatesPage() {
       )}
     </main>
   )
+}
+
+/** The one state an unsaved conversation's row carries: AI working, a save to confirm, or a
+ *  conflict, in TMPL-24's priority. Unpublished changes are what makes it a resume row at all, so
+ *  the row's heading already says it and the row repeats nothing (THEME-76). */
+function resumeWorkState(
+  summary: AuthoringSummary,
+  t: TFunction<readonly ['clips', 'common']>,
+): string | undefined {
+  const name = summary.displayName || t('directory.create', { ns: 'clips' })
+  switch (templateWorkState(summary)) {
+    case 'activeAI':
+      return t('directory.activeAI', { ns: 'clips', name })
+    case 'publicationPending':
+      return t('directory.publicationPending', { ns: 'clips', name })
+    case 'conflict':
+      return t('directory.conflict', { ns: 'clips', name })
+    default:
+      return undefined
+  }
 }
 
 /** One video template on the shared tile: its static 9:16 example (CLIP-236), its name, the
