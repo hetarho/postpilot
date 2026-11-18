@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r45 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
+> r46 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -121,10 +121,11 @@
   - deletion/expiry marks a durable payload-purge fence; queued/in-flight/late callbacks cannot restore purged private data or publish a result from it
   - payload expiry is not a new generation or a reason to recreate an adopted setting
 - MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId, placed under the AI 토너먼트 tab at /ai-models (→=THEME-38), which also holds the stage model choices (→=MODEL-96)
-  - AI 토너먼트 opens on its title and one line saying two AIs take the same job and the winner is used, then 비교해 보기 as two equal cards — 글 쓰는 AI 비교 and 사진 보는 AI 비교 — with 지난 비교 a link beside that heading, then 지금 쓰는 AI (`#ai-in-use`) with 추천으로 적용 beside its heading (→MODEL-71), then the default two-model candidates (→MODEL-65) in a card of their own
+  - AI 토너먼트 opens on the shared section header (→THEME-81): its title, one line saying two AIs take the same job and the winner is used, the tournament illustration, and one 새 비교 menu in its action row offering 글 쓰는 AI and 사진 보는 AI; then 비교, the latest five comparisons as work rows (→THEME-83) each opening its test, with 모두 보기 (/tests/history) beside that heading, or the shared empty state before the first comparison (→THEME-29); then 지금 쓰는 AI (`#ai-in-use`) with 추천으로 적용 beside its heading (→MODEL-71), then the default two-model candidates (→MODEL-65) in a card of their own
   - every link elsewhere that sends the owner to change a stage model lands on 지금 쓰는 AI (`/ai-models#ai-in-use`)
+  - 지난 비교 (/tests/history) opens on its large title with the same 새 비교 menu, then groups 진행 중 and 끝난 비교, and the earlier paid records under 이전 기록, each item one work row (→THEME-83) opening its test or record; the list refreshes itself when the owner returns to it, with no refresh button, and keeps its paging, filters and blind identities
   - a factor choice only selects, stating in one line what that comparison changes, and the step bar's 다음 moves on; 사진 보는 AI 비교 opens the photo observation test (→=MODEL-97)
-  - voice/template/guideline/model entry points all seed the same factor/format/material flow; changing routes or choosing candidates starts no work
+  - voice/template/guideline/model entry points all seed the same factor/format/material flow; an entry whose address names its factor (새 비교's items) opens on the candidates step, whose 이전 still reaches the factor choice, and an entry naming none opens on the factor choice; changing routes or choosing candidates starts no work
   - model contestants are chosen under MODEL-98; setting slots show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
   - setup steps follow MODEL-99
   - desktop review shows two complete readable posts beside each other; phone review preserves candidate reading positions and shows the same pair with explicit winner controls
@@ -344,6 +345,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r46 261119 MODEL-44✎ AI 토너먼트 "title, line, 비교해 보기 as two equal cards with 지난 비교 a link"→shared section header with the tournament illustration and one 새 비교 menu (글 쓰는 AI · 사진 보는 AI), then 비교: the latest five comparisons as work rows with 모두 보기, or the shared empty state; 지난 비교 "rows with 이어보기 buttons, refresh buttons and a separate paid section"→work rows grouped 진행 중 · 끝난 비교 · 이전 기록 with the same 새 비교 menu; entry seeding "every entry opens on the factor choice"→an entry whose address names its factor opens on the candidates step
 - r45 261118 MODEL-2✎ gateway no-endpoint answers unclassified (UNKNOWN_FAILURE), LLM failures without params→ErrModelUnavailable at any status or in a 200 body, cause provider_policy|gone, MODEL_UNAVAILABLE params cause + model label; MODEL-96✎ +the authoring failure's 다른 모델로 다시 시도 opens the write-stage picker
 - r44 261118 MODEL-44✎ AI 고르기 tab opening on 지금 쓰는 AI, then 비교해 보기→AI 토너먼트 tab opening on its one-line purpose and 비교해 보기, then 지금 쓰는 AI (#ai-in-use, where every change-model link lands), then the default pair; MODEL-96✎ the write-stage picker on /ai-models only→also in 홈's 글 쓰는 AI dropdown, closing once the save is confirmed
 - r43 261118 MODEL-101✎ a photo observation test's done contestants one row each, opening to a one-contestant viewer→the review's viewer over every contestant, the switcher's dropdown naming each with its status and a card stating a contestant's status in place of observations; MODEL-97✎ done contestants read without the contestant switcher→the progress list is the viewer over every contestant

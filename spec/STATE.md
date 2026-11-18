@@ -25,21 +25,21 @@
 |---|---|---|---|---|
 | ARCH | 29 | 29 | - | 0 |
 | AUTH | 16 | 16 | - | 0 |
-| QUOTA | 41 | 41 | - | 0 |
-| POST | 55 | 55 | - | 0 |
+| QUOTA | 42 | 42 | - | 0 |
+| POST | 56 | 56 | - | 0 |
 | VOICE | 23 | 23 | - | 0 |
 | GEN | 34 | 34 | - | 0 |
-| MODEL | 45 | 45 | - | 0 |
+| MODEL | 46 | 46 | - | 0 |
 | TMPL | 37 | 37 | - | 0 |
 | GUIDE | 29 | 29 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 12 | 12 | - | 0 |
-| THEME | 48 | 48 | - | 2 |
+| THEME | 49 | 49 | - | 2 |
 | MKT | 13 | 13 | - | 0 |
 | VIDEO | 9 | 9 | - | 0 |
-| CLIP | 82 | 82 | - | 2 |
+| CLIP | 83 | 83 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
-| BILL | 10 | 10 | - | 0 |
+| BILL | 11 | 11 | - | 0 |
 | MEM | 9 | 9 | - | 2 |
 | QUAL | 8 | 8 | - | 0 |
 | GIFT | 3 | 3 | - | 0 |
@@ -51,6 +51,7 @@
 | id | st |
 |---|---|
 | test-audit-261119 | open@261119 |
+| redesign-261119 | converted@261119 |
 | audio-true-peak-261117 | converted@261117 |
 | tidy-261116 | converted@261116 |
 | design-system-panels-261114 | converted@261114 |
@@ -83,6 +84,14 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T903 | Draw the 글 and 영상 lists as one shared work row | THEME POST CLIP | - | todo |
+| T904 | Read 지난 비교 as work rows grouped by state | MODEL THEME | T903 | todo |
+| T905 | Open AI 토너먼트 on its picture header, a 새 비교 menu and the latest comparisons | MODEL THEME | T904 | todo |
+| T906 | Open a comparison whose address names its factor on the candidates step | MODEL | - | todo |
+| T907 | Give 영상 템플릿 the 템플릿 directory, a one-row reading and its own pictures | CLIP THEME TMPL | - | todo |
+| T908 | One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet | QUOTA BILL THEME | - | todo |
+| T909 | Show 계정 as rows that open their form in place | AUTH THEME | - | todo |
+| T910 | Draw the new post / new clip offer with 홈's next-step row | POST CLIP THEME | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |

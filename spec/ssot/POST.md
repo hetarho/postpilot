@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r55 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, safe first-save handoffs, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r56 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, safe first-save handoffs, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -138,7 +138,7 @@
   - generation, requested tag revision and writing tests freeze the post's minimum (→GEN-46); saving an option does not rewrite existing tags
   - saving it changes no status, content revision, baseline, learning eligibility or existing tags; input revision follows POST-111 for generation-setting changes ← the option directs the next tag selection, not tags already written
 
-- POST-64 [o] writing history shows readable work name/title fallback and update time with actual running/failed/unfinished/exportable state and the relevant continuation or result action. A row offers no separate export action: export lives in the opened post's 글 완성 step (→POST-54) ← that step is one step press from wherever the post opens, so a second link to the same post would read as a different action. It has no docked primary New post action or article preview; new writing is reached through the Naver Blog channel's creation entry.
+- POST-64 [o] writing history draws each post as THEME-83's work row (→!THEME-83): readable work name/title fallback and update time with actual running/failed/unfinished/exportable state; the row itself is the continuation, and its one trailing action is a result that opens elsewhere — 이전 AI 결과 while a comparison waits, else 발행한 글 for a published post. A row offers no separate export or continuation link: export lives in the opened post's 글 완성 step (→POST-54) ← that step is one step press from wherever the post opens, so a second link to the same post would read as a different action. It has no docked primary New post action or article preview; new writing is reached through the Naver Blog channel's creation entry.
 - POST-65 [o] one search field narrows the list by title and tags: a trimmed, case-insensitive, whitespace-collapsed substring match with a leading `#` on the query ignored, and the tags that matched are named on the row, only while they matched ← a row kept by a word its title never contains otherwise looks arbitrary, while tags on every row at all times would double the list's height; the list answer carries each post's current tags (`PostSummary.tags`, the newest content revision's) so a post with no content yet is matched by its title alone
 - POST-66 [o] one status filter beside the search, on the search's own row in the 찾기 sheet (→POST-68) — 전체 · 초안 · 검토 · 확정 · 발행됨, single choice, a `Listbox` labelled 상태 (→THEME-29) ← a `SegmentedControl` under the search read as a row of buttons rather than as a filter and took a row of its own on a phone
   - keyed on `post.status` alone and composing with the search as AND ← AI 생성 중, AI 결과 확인 and 스토리라인 작성 완료 are derived row states, not statuses, so filtering on what the badge happens to say would hide a mid-generation draft from 초안
@@ -301,6 +301,7 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r56 261119 POST-64✎ "history shows … the relevant continuation or result action"→each history item is THEME-83's work row: the row itself is the continuation, one trailing action only for a result that opens elsewhere (이전 AI 결과, else 발행한 글)
 - r55 261118 POST-26✎ 없음 the default→last specified template, else 없음; POST-43✎ 내 콘텐츠 글 section + 만들기 tab→글 tab, 새 글 or 홈's 글쓰기; POST-69✎ empty account text→illustration + one line; POST-109✎ home/만들기, 내 글 전체/블로그→홈's 글쓰기, 글's 새 글, 글; POST-121✎ POST-122✎ wizard→conversation
 - r54 261116 POST-123✎ deferred first-save address replacement until Sheet close→ordinary queued-save/address handoff before Sheet open, preserving focus and saved-draft history
 - r53 261116 POST-123✎ 지침 바꾸기 flushes/mints and navigates to guidelines→opens the same account-owned management in a Sheet, keeping the draft route and step
