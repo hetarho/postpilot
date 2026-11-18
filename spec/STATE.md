@@ -90,14 +90,13 @@
 | T907 | Give 영상 템플릿 the 템플릿 directory, a one-row reading and its own pictures | CLIP THEME TMPL | - | todo |
 | T908 | One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet | QUOTA BILL THEME | - | todo |
 | T909 | Show 계정 as rows that open their form in place | AUTH THEME | - | todo |
-| T911 | Keep an entry that names no factor on the factor choice in the browser | MODEL | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
 |---|---|---|---|---|---|---|---|---|---|
 | si8-261113 | 1 | 8 | 8 | 0 | 0 | 0 | 0 | 2026-11-12T20:35:28.177Z | [history](work/si8-261113.json) |
 | tidy-261116 | 3 | 14 | 14 | 0 | 0 | 0 | 0 | 2026-11-16T08:07:39.788Z | [history](work/tidy-261116.json) |
-| redesign-261119 | 4 | 9 | 2 | 7 | 5 | 0 | 0 | 2026-11-18T17:09:17.683Z | [history](work/redesign-261119.json) |
+| redesign-261119 | 4 | 9 | 3 | 6 | 2 | 2 | 0 | 2026-11-18T17:22:48.337Z | [history](work/redesign-261119.json) |
 
 ## next
 - inspect work board for remaining tasks

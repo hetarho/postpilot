@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "snapshotAt": "2026-11-18T17:09:17.683Z",
-  "sourceCommit": "7acc3612226c74f140d3778aed84f4ad4f2ef6d5",
+  "snapshotAt": "2026-11-18T17:22:48.337Z",
+  "sourceCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
   "group": {
     "id": "redesign-261119",
     "branch": "gusta-session-self-improve-redesign-1a39b172",
@@ -271,6 +271,72 @@
         "owner": "worker",
         "candidate": null,
         "duplicationReason": ""
+      },
+      {
+        "id": "T911-unit-unnamed-entry",
+        "scenario": "Real route tree at /tests and /tests?sourcePost=<slug> keeps the factor choice after the router rewrites the address; the 새 비교 address still opens on the candidates; a recovered draft resumes its own step",
+        "steps": [
+          "renderAppAt('/tests') and renderAppAt('/tests?sourcePost=owned-source') over the writing-test studio fixture transport",
+          "wait until router.state.location.href contains stage=write, then assert there is no factor= and the source is kept",
+          "assert the 무엇을 비교할까요 heading and no model checkboxes",
+          "renderAppAt('/tests?factor=model&stage=write&count=2'): Model 1 checked, then 이전 단계 shows the factor choice",
+          "existing test 'resumes a recovered setup on its own step' rerun",
+          "rerun the new tests against the a19cbb83e source files"
+        ],
+        "expected": "Factor choice for unnamed entries after address normalization; candidates for the named entry; tests fail on the a19cbb83e source",
+        "observed": "New tests pass on the fix; both /tests cases fail (2/2) when the a19cbb83e search.ts and WritingTestsPage.tsx are restored; recovery test passes",
+        "evidence": [
+          "frontend/src/pages/writing-tests/ui/WritingTestsPage.test.tsx",
+          "frontend/src/pages/writing-tests/model/search.test.ts",
+          "vitest run src/pages/writing-tests: 4 files, 41 tests passed"
+        ],
+        "status": "pass",
+        "reason": "Deterministic jsdom tests over the real route tree",
+        "replaces": [],
+        "stage": "unit",
+        "required": true,
+        "owner": "worker",
+        "candidate": null,
+        "duplicationReason": ""
+      },
+      {
+        "id": "T911-task-gate",
+        "scenario": "Task gate from frontend/",
+        "steps": [
+          "vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T911 -- bash gate.sh"
+        ],
+        "expected": "tsc -b, changed-file ESLint/Prettier, lint-style-escapes, steiger and full vitest all pass",
+        "observed": "ok:true, exit 0; 647 test files and 5,210 tests passed; REDESIGN-GATE-PASS",
+        "evidence": [
+          "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-22815e74-11a9-47e5-aefe-4c53a399de9f.log"
+        ],
+        "status": "pass",
+        "reason": "Ran once before handoff (557 s, over the 5-minute task hint because the acceptance asks for the full suite)",
+        "replaces": [],
+        "stage": "unit",
+        "required": true,
+        "owner": "worker",
+        "candidate": null,
+        "duplicationReason": ""
+      },
+      {
+        "id": "T911-browser-dev-server",
+        "scenario": "Open /tests and the editor's /tests?sourcePost=… on the dev server and confirm the factor choice stays after the address rewrite",
+        "steps": [
+          "open /tests in Chrome on the integration candidate",
+          "confirm the address becomes /tests?stage=write&count=2 with no factor and the heading stays 무엇을 비교할까요"
+        ],
+        "expected": "Factor choice stays; no factor in the address",
+        "observed": "Not observed in this unit: no browser or computer-use tool available",
+        "evidence": [],
+        "status": "not-run",
+        "reason": "No computer-use in this worker session; the real-route-tree jsdom test covers the same normalization path",
+        "replaces": [],
+        "stage": "integration",
+        "required": false,
+        "owner": "host",
+        "candidate": null,
+        "duplicationReason": ""
       }
     ],
     "push": null,
@@ -398,10 +464,10 @@
   },
   "summary": {
     "total": 9,
-    "completed": 2,
-    "remaining": 7,
-    "running": 5,
-    "review": 0,
+    "completed": 3,
+    "remaining": 6,
+    "running": 2,
+    "review": 2,
     "blocked": 0,
     "unassigned": 2
   },
@@ -411,7 +477,7 @@
       "title": "Draw the 글 and 영상 lists as one shared work row",
       "dep": [],
       "lane": "work-rows",
-      "status": "doing"
+      "status": "reviewing"
     },
     {
       "id": "T904",
@@ -436,7 +502,7 @@
       "title": "Give 영상 템플릿 the 템플릿 directory, a one-row reading and its own pictures",
       "dep": [],
       "lane": "video-templates",
-      "status": "doing"
+      "status": "ready"
     },
     {
       "id": "T908",
@@ -450,12 +516,6 @@
       "title": "Show 계정 as rows that open their form in place",
       "dep": [],
       "lane": "account-side",
-      "status": "doing"
-    },
-    {
-      "id": "T911",
-      "title": "Keep an entry that names no factor on the factor choice in the browser",
-      "dep": [],
       "status": "doing"
     }
   ],
@@ -473,13 +533,14 @@
         "7c8e664e-92e6-4eb8-b2da-cbdbcee6d285/worker-1",
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-4"
       ],
-      "status": "doing",
-      "reason": "T903의 작업자 게이트는 통과했지만, 검색 결과의 태그 표시가 진행 중이거나 실패한 글에서 누락됩니다. 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+      "status": "reviewing",
+      "reason": null,
       "createdAt": "2026-11-18T15:44:15.574Z",
       "startCommit": "b6273d5f26de49e967702e917da49295542359d5",
-      "submittedBase": "ff665fb449bad16c6942aa1d0de438a38a80c7dd",
-      "submissionId": "be8b1534-3fc7-4507-b438-2013fa7e6d90",
-      "submittedAt": "2026-11-18T16:55:57.198Z",
+      "verifiedCommit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+      "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+      "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+      "submittedAt": "2026-11-18T17:20:24.751Z",
       "risk": null,
       "agentChecks": [
         {
@@ -504,14 +565,23 @@
         }
       ],
       "dispatch": {
-        "id": "33924440-5c56-4f86-930e-8bc42b90dc09",
+        "id": "d2d2942b-cf5b-487d-acfd-ada90caabf0d",
         "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
-        "role": "worker",
-        "slot": 4,
-        "provider": "claude",
-        "model": "opus",
+        "role": "reviewer",
+        "slot": 2,
+        "provider": "codex",
+        "model": "gpt-6.1-terra",
         "status": "running",
-        "startedAt": "2026-11-18T17:00:53.496Z"
+        "startedAt": "2026-11-18T17:22:21.343Z"
+      },
+      "review": {
+        "id": "5452ef83-3fcf-4e21-b424-8b2f4c2c2bcc",
+        "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+        "status": "reviewing",
+        "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+        "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+        "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+        "createdAt": "2026-11-18T17:22:20.059Z"
       },
       "reviewHistory": [
         {
@@ -560,22 +630,22 @@
       "steps": [
         {
           "taskId": "T903",
-          "commit": "610fc808e90cc3ebfa371e694dc567749555c932",
-          "at": "2026-11-18T16:55:57.182Z",
+          "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+          "at": "2026-11-18T17:20:24.737Z",
           "verification": [
             {
-              "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
-              "startedAt": "2026-11-18T16:52:32.651Z",
-              "finishedAt": "2026-11-18T16:55:56.987Z"
+              "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+              "startedAt": "2026-11-18T17:18:28.242Z",
+              "finishedAt": "2026-11-18T17:20:24.553Z"
             }
           ]
         }
       ],
       "verification": [
         {
-          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
-          "startedAt": "2026-11-18T16:52:32.651Z",
-          "finishedAt": "2026-11-18T16:55:56.987Z"
+          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+          "startedAt": "2026-11-18T17:18:28.242Z",
+          "finishedAt": "2026-11-18T17:20:24.553Z"
         }
       ]
     },
@@ -700,13 +770,14 @@
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-1",
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-2"
       ],
-      "status": "doing",
-      "reason": "T907의 작업자 게이트 통과와 삭제 후 포커스 복구 테스트를 확인했지만, 미저장 대화의 작업 상태가 목록에서 사라지는 회귀가 있습니다. 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+      "status": "ready",
+      "reason": null,
       "createdAt": "2026-11-18T15:44:25.827Z",
       "startCommit": "b6273d5f26de49e967702e917da49295542359d5",
-      "submittedBase": "1ef5a5ac2541902fb90dae60c55205ec16bef479",
-      "submissionId": "b76ad7bb-681e-415b-bba8-4ac026fa37bc",
-      "submittedAt": "2026-11-18T17:00:50.470Z",
+      "verifiedCommit": "8e88096dab2eab242ea249b732a8059211b9bbbd",
+      "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+      "submissionId": "18d4cc0d-c61f-4936-b2d6-104ef3ed2b44",
+      "submittedAt": "2026-11-18T17:22:17.574Z",
       "risk": null,
       "agentChecks": [
         {
@@ -739,8 +810,11 @@
         "slot": 2,
         "provider": "claude",
         "model": "opus",
-        "status": "running",
-        "startedAt": "2026-11-18T17:08:40.011Z"
+        "status": "finished",
+        "startedAt": "2026-11-18T17:08:40.011Z",
+        "finishedAt": "2026-11-18T17:22:17.586Z",
+        "error": null,
+        "summary": "I fixed the review finding (b936669a, P2). An unsaved video-template conversation's \"이어서 만들던 대화\" row showed only its name, so a busy conversation lost the work state the old list displayed. The shared `ResumeConversations` widget now takes an optional `workState` for each row. It renders as one meta line marked as a status, under the name and inside the row's single link. The video directory (`VideoTemplatesPage.tsx`) passes the conversation's state in TMPL-24's priority order: AI working, then a save to confirm, then a conflict. It leaves out \"unpublished changes\" because every row in that region is unsaved by definition. The post template directory passes nothing, so it is unchanged. I added a test in `VideoTemplatesPage.test.tsx`: a busy conversation and a saving one each show their state and still link to `/video-templates/new?session=…`, and a quiet conversation shows no state. The correction is recorded in the result section of `spec/tasks/T907.video-template-directory.md`. The task gate (`submit-gate.sh`, base 1ef5a5ac2) passed: `tsc -b`, ESLint and Prettier on the changed files, lint-style-escapes, steiger, and `vitest --changed` (242 files, 2090 tests). I did not rerun the full FE suite for this correction; that stays with the shared final gate. The browser screenshot check remains not run and is handed to the coordinator for the integrated candidate."
       },
       "reviewHistory": [
         {
@@ -789,13 +863,13 @@
       "steps": [
         {
           "taskId": "T907",
-          "commit": "c937ec17bf8a1c6764bfd196336530bc0414ac94",
-          "at": "2026-11-18T17:00:50.449Z",
+          "commit": "8e88096dab2eab242ea249b732a8059211b9bbbd",
+          "at": "2026-11-18T17:22:17.559Z",
           "verification": [
             {
               "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
-              "startedAt": "2026-11-18T16:57:52.850Z",
-              "finishedAt": "2026-11-18T17:00:50.161Z"
+              "startedAt": "2026-11-18T17:20:25.394Z",
+              "finishedAt": "2026-11-18T17:22:17.372Z"
             }
           ]
         }
@@ -803,8 +877,8 @@
       "verification": [
         {
           "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
-          "startedAt": "2026-11-18T16:57:52.850Z",
-          "finishedAt": "2026-11-18T17:00:50.161Z"
+          "startedAt": "2026-11-18T17:20:25.394Z",
+          "finishedAt": "2026-11-18T17:22:17.372Z"
         }
       ]
     },
@@ -823,7 +897,7 @@
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-1"
       ],
       "status": "doing",
-      "reason": "T908과 T909에서 각각 명시된 진입 경로가 충족되지 않습니다. 워커의 최종 태스크 게이트 통과 기록은 확인했으며, 통합 후보의 화면 검증과 최종 게이트는 코디네이터에게 남아 있습니다.",
+      "reason": null,
       "createdAt": "2026-11-18T15:44:30.778Z",
       "startCommit": "b6273d5f26de49e967702e917da49295542359d5",
       "submittedBase": "ff665fb449bad16c6942aa1d0de438a38a80c7dd",
@@ -962,14 +1036,14 @@
         }
       ],
       "dispatch": {
-        "id": "05970fbd-99da-46a8-8321-83d9b47d72ec",
+        "id": "6f375eba-fa87-4e3c-9d1d-bedc0da24cc1",
         "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
         "role": "worker",
         "slot": 1,
         "provider": "claude",
         "model": "opus",
         "status": "running",
-        "startedAt": "2026-11-18T17:00:52.671Z"
+        "startedAt": "2026-11-18T17:22:17.685Z"
       },
       "reviewHistory": [
         {
@@ -1054,6 +1128,8 @@
       "submittedBase": "7acc3612226c74f140d3778aed84f4ad4f2ef6d5",
       "submissionId": "29c4f378-762d-4fad-88d1-94546d4de312",
       "submittedAt": "2026-11-18T17:08:38.243Z",
+      "integratedCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+      "integratedAt": "2026-11-18T17:14:35.617Z",
       "risk": null,
       "agentChecks": [
         {
@@ -1183,6 +1259,13 @@
           "startedAt": "2026-11-18T17:01:30.824Z",
           "finishedAt": "2026-11-18T17:08:37.725Z"
         }
+      ],
+      "integrationVerification": [
+        {
+          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
+          "startedAt": "2026-11-18T17:09:27.294Z",
+          "finishedAt": "2026-11-18T17:14:35.027Z"
+        }
       ]
     },
     {
@@ -1197,19 +1280,130 @@
       "contributors": [
         "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/worker-3"
       ],
-      "status": "doing",
+      "status": "integrated",
+      "reason": null,
       "createdAt": "2026-11-18T16:57:36.857Z",
       "startCommit": "1ef5a5ac2541902fb90dae60c55205ec16bef479",
+      "verifiedCommit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+      "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+      "submissionId": "bf6292ed-2602-47c2-a67f-87fd34f563c4",
+      "submittedAt": "2026-11-18T17:18:27.389Z",
+      "risk": null,
+      "agentChecks": [
+        {
+          "id": "T911-unit-unnamed-entry",
+          "scenario": "Real route tree at /tests and /tests?sourcePost=<slug> keeps the factor choice after the router rewrites the address; the 새 비교 address still opens on the candidates; a recovered draft resumes its own step",
+          "steps": [
+            "renderAppAt('/tests') and renderAppAt('/tests?sourcePost=owned-source') over the writing-test studio fixture transport",
+            "wait until router.state.location.href contains stage=write, then assert there is no factor= and the source is kept",
+            "assert the 무엇을 비교할까요 heading and no model checkboxes",
+            "renderAppAt('/tests?factor=model&stage=write&count=2'): Model 1 checked, then 이전 단계 shows the factor choice",
+            "existing test 'resumes a recovered setup on its own step' rerun",
+            "rerun the new tests against the a19cbb83e source files"
+          ],
+          "expected": "Factor choice for unnamed entries after address normalization; candidates for the named entry; tests fail on the a19cbb83e source",
+          "observed": "New tests pass on the fix; both /tests cases fail (2/2) when the a19cbb83e search.ts and WritingTestsPage.tsx are restored; recovery test passes",
+          "evidence": [
+            "frontend/src/pages/writing-tests/ui/WritingTestsPage.test.tsx",
+            "frontend/src/pages/writing-tests/model/search.test.ts",
+            "vitest run src/pages/writing-tests: 4 files, 41 tests passed"
+          ],
+          "status": "pass",
+          "reason": "Deterministic jsdom tests over the real route tree",
+          "replaces": [],
+          "stage": "unit",
+          "required": true,
+          "owner": "worker",
+          "candidate": null,
+          "duplicationReason": ""
+        },
+        {
+          "id": "T911-task-gate",
+          "scenario": "Task gate from frontend/",
+          "steps": [
+            "vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T911 -- bash gate.sh"
+          ],
+          "expected": "tsc -b, changed-file ESLint/Prettier, lint-style-escapes, steiger and full vitest all pass",
+          "observed": "ok:true, exit 0; 647 test files and 5,210 tests passed; REDESIGN-GATE-PASS",
+          "evidence": [
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-22815e74-11a9-47e5-aefe-4c53a399de9f.log"
+          ],
+          "status": "pass",
+          "reason": "Ran once before handoff (557 s, over the 5-minute task hint because the acceptance asks for the full suite)",
+          "replaces": [],
+          "stage": "unit",
+          "required": true,
+          "owner": "worker",
+          "candidate": null,
+          "duplicationReason": ""
+        },
+        {
+          "id": "T911-browser-dev-server",
+          "scenario": "Open /tests and the editor's /tests?sourcePost=… on the dev server and confirm the factor choice stays after the address rewrite",
+          "steps": [
+            "open /tests in Chrome on the integration candidate",
+            "confirm the address becomes /tests?stage=write&count=2 with no factor and the heading stays 무엇을 비교할까요"
+          ],
+          "expected": "Factor choice stays; no factor in the address",
+          "observed": "Not observed in this unit: no browser or computer-use tool available",
+          "evidence": [],
+          "status": "not-run",
+          "reason": "No computer-use in this worker session; the real-route-tree jsdom test covers the same normalization path",
+          "replaces": [],
+          "stage": "integration",
+          "required": false,
+          "owner": "host",
+          "candidate": null,
+          "duplicationReason": ""
+        }
+      ],
       "dispatch": {
-        "id": "05022006-a6c6-4513-b661-ebc75672c112",
+        "id": "889dfc28-779e-4ee2-b08f-6040cf31f62c",
         "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
-        "role": "worker",
-        "slot": 3,
-        "provider": "claude",
-        "model": "opus",
-        "status": "running",
-        "startedAt": "2026-11-18T16:57:41.220Z"
-      }
+        "role": "reviewer",
+        "slot": 1,
+        "provider": "codex",
+        "model": "gpt-6.1-terra",
+        "status": "finished",
+        "startedAt": "2026-11-18T17:22:20.003Z",
+        "finishedAt": "2026-11-18T17:22:45.262Z",
+        "error": null,
+        "summary": "T911 satisfies the reviewed acceptance criteria and MODEL-44. Worker evidence covers the route normalization regression and task checks; browser observation and the final integration gate remain with the coordinator host."
+      },
+      "review": {
+        "id": "65c1ced3-c2c6-4db7-bc87-246811f4e615",
+        "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-1",
+        "status": "approved",
+        "verdict": "approved",
+        "summary": "T911 satisfies the reviewed acceptance criteria and MODEL-44. Worker evidence covers the route normalization regression and task checks; browser observation and the final integration gate remain with the coordinator host.",
+        "findings": [],
+        "commit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+        "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+        "submissionId": "bf6292ed-2602-47c2-a67f-87fd34f563c4",
+        "createdAt": "2026-11-18T17:22:18.353Z",
+        "finishedAt": "2026-11-18T17:22:45.204Z"
+      },
+      "steps": [
+        {
+          "taskId": "T911",
+          "commit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+          "at": "2026-11-18T17:18:27.375Z",
+          "verification": [
+            {
+              "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+              "startedAt": "2026-11-18T17:14:39.441Z",
+              "finishedAt": "2026-11-18T17:18:27.156Z"
+            }
+          ]
+        }
+      ],
+      "verification": [
+        {
+          "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+          "startedAt": "2026-11-18T17:14:39.441Z",
+          "finishedAt": "2026-11-18T17:18:27.156Z"
+        }
+      ]
     }
   ],
   "history": [
@@ -8341,6 +8535,1080 @@
       "group": "redesign-261119",
       "attemptId": "050b2ca2-5531-4fef-b913-258687c3613a",
       "taskId": "T910",
+      "previousStatus": "approved",
+      "status": "integrating",
+      "changes": {
+        "status": "integrating"
+      }
+    },
+    {
+      "sequence": 969,
+      "at": "2026-11-18T17:14:35.272Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "050b2ca2-5531-4fef-b913-258687c3613a",
+      "taskId": "T910",
+      "previousStatus": "integrating",
+      "status": "integrating",
+      "changes": {
+        "integrationVerification": [
+          {
+            "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/gate.sh",
+            "startedAt": "2026-11-18T17:09:27.294Z",
+            "finishedAt": "2026-11-18T17:14:35.027Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 970,
+      "at": "2026-11-18T17:14:35.617Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "050b2ca2-5531-4fef-b913-258687c3613a",
+      "taskId": "T910",
+      "previousStatus": "integrating",
+      "status": "integrated",
+      "changes": {
+        "status": "integrated",
+        "integratedCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+        "integratedAt": "2026-11-18T17:14:35.617Z"
+      }
+    },
+    {
+      "sequence": 971,
+      "at": "2026-11-18T17:14:38.428Z",
+      "type": "group",
+      "group": "redesign-261119",
+      "previousStatus": "active",
+      "status": "active",
+      "changes": {
+        "agentChecks": [
+          {
+            "id": "T908-AC1",
+            "scenario": "설정 and 결제 both render the one CreditsCard; a paid tier's 충전 opens a sheet with CreditPurchaseSection; choosing a pack, the quote, a confirm dialog stacked inside the sheet (focus and Escape working) and the purchase call QuotePurchase/PurchaseCredits as before; the success notice shows; a free tier's 충전 links to /plans; master's packs are disabled and never charge",
+            "steps": [
+              "vitest src/widgets/credits-card/ui/CreditsCard.test.tsx (render /settings as PRO, press 충전, pick 3000 pack, press 크레딧 구매, Escape the confirm, confirm again, close the sheet)",
+              "vitest src/pages/settings/ui/SettingsPage.test.tsx (master button, free link to /plans, basic button)",
+              "vitest src/pages/billing/ui/BillingPage.test.tsx (purchase, failure, master and free cases through the card)"
+            ],
+            "expected": "purchaseRequests ['pack-3000'] and a success notice inside the sheet; Escape closes only the confirm and focus returns to 크레딧 구매; the path stays /settings; free shows a /plans link; master's buy button and radios are disabled with no QuotePurchase/PurchaseCredits calls",
+            "observed": "all assertions pass; the T909 full-suite run on top of T908 also passed these files",
+            "evidence": [
+              "frontend/src/widgets/credits-card/ui/CreditsCard.test.tsx",
+              "frontend/src/pages/settings/ui/SettingsPage.test.tsx",
+              "frontend/src/pages/billing/ui/BillingPage.test.tsx",
+              "gusta check log /Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC2",
+            "scenario": "/billing#billing-charge opens the sheet once billing has loaded; the billing screen keeps its other sections in BILL-14 order and has no packs section",
+            "steps": [
+              "vitest BillingPage.test.tsx 'opens the packs sheet on arrival at #billing-charge'",
+              "vitest BillingPage.test.tsx 'renders the empty money surface in contract order'"
+            ],
+            "expected": "the dialog '크레딧 충전' opens on arrival and the card's 충전 can open it again; the h2 order is 남은 크레딧, 혜택과 잔액, 구독, 결제 수단, 결제 및 지급 기록, 환불 요청, and there is no #billing-charge element",
+            "observed": "both pass",
+            "evidence": [
+              "frontend/src/pages/billing/ui/BillingPage.test.tsx"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC3",
+            "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite",
+            "steps": [
+              "vibe check --tier task --diff-base HEAD --task T908 -- bash gate.sh",
+              "npx eslint and npx prettier --check on the untracked src/widgets/credits-card"
+            ],
+            "expected": "everything passes",
+            "observed": "REDESIGN-GATE-PASS; vitest 648 files / 5200 tests passed; the direct ESLint/Prettier runs on the new widget were clean",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6c2d7d29-3760-4bd5-a30b-1d5cda1c4866.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T908-AC4",
+            "scenario": "Screenshots at 390×844 and 1280×900 in day and night on the integrated candidate show the new credits card, the charge sheet and the billing layout with no horizontal overflow",
+            "steps": [
+              "On the integrated candidate open /settings and /billing at 390×844 and 1280×900 in both themes",
+              "Press 충전 as a paid account and capture the sheet, and the confirm stacked over it"
+            ],
+            "expected": "the card shows the figure, tier and illustration beside the figure with 충전 below; the sheet holds the packs; no horizontal page scroll",
+            "observed": "not run",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Integration-stage computer-use check owned by the coordinator on the integrated candidate; the worker has no integration candidate and no browser session",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T906-named-factor-browser",
+            "scenario": "From AI 토너먼트's 새 비교 → 글 쓰는 AI, the comparison opens on the candidates step; 이전 reaches the factor choice with AI 모델 selected; the editor's 비교 entry (/tests?sourcePost=…) opens on the factor choice; the factor step shows one line per factor and no extra help sentence.",
+            "steps": [
+              "Sign in and open /ai-models",
+              "Open 새 비교 and choose 글 쓰는 AI",
+              "Confirm the model checklist (candidates step) is shown, not 무엇을 비교할까요?",
+              "Press 이전 and confirm the factor choice with AI 모델 selected and only its one-line description",
+              "From a post editor open its writing-test entry and confirm it opens on the factor choice",
+              "Confirm no estimate or admission request was sent"
+            ],
+            "expected": "Named-factor entry opens on candidates; 이전 shows the factor choice with the factor selected; unnamed entry opens on the factor choice; no help sentence; no paid request.",
+            "observed": "Not observed in a browser. The deterministic unit tests for this behaviour (WritingTestsPage.test.tsx, WritingTestStudio.test.tsx) passed in the task gate on committed tree fbc83455436d.",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-03d4b91f-f888-48f5-af5a-f17eff1493e0.log"
+            ],
+            "status": "not-run",
+            "reason": "This worker has no computer-use or browser tool; the observation belongs to the integration host on the fixed candidate.",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "host",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T903-AC5-screenshots",
+            "scenario": "The 글 (/posts) and 영상 (/clips) lists drawn as shared work rows on the integrated candidate",
+            "steps": [
+              "Open /posts and /clips on the integrated candidate with items that are unfinished, finished, running, failed, published or downloadable, including a newest unfinished post that has a failure, 내보내기 가능 and an 이전 AI 결과 action",
+              "Capture 390×844 and 1280×900 in day and night themes",
+              "Check that the latest unfinished row is tinted with 이어서, that each row has at most one trailing action, that the badge, progress and failure text are readable in full (the trailing action moving under the text on a narrow phone), and that the page does not overflow horizontally"
+            ],
+            "expected": "Compact one-target rows: title on one truncated line, a meta line that wraps rather than clips, at most one trailing action; about twice as many items per phone screen as before; no horizontal overflow",
+            "observed": "Not run by this worker: this is a coordinator-level check on the integrated candidate, and this worker has no computer-use or browser tool.",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Integration-stage check owned by the coordinator on the integrated candidate; this worker has no computer-use tool.",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T910-AC1-unit",
+            "scenario": "Offer rows are buttons named as before, each with its ring; close/dismiss work; a clip is never offered 말투; 홈's next-step card renders through the same extracted row",
+            "steps": [
+              "Run vitest on widgets/writing-kit/ui/CreationOfferSheet.test.tsx, features/offer-creation-setup, pages/home, pages/editor/ui/EditorPage.offer.test.tsx and pages/clip/ui/ClipPage.offer.test.tsx"
+            ],
+            "expected": "All pass; each row button contains the right ring illustration (voice, template, video template); the help line is absent",
+            "observed": "These tests passed again at f59ddaa0c as part of the change-related vitest run (147 files / 1544 tests). The earlier full suite at 7d4f66867, with the same frontend code, passed 647 files / 5199 tests.",
+            "evidence": [
+              "frontend/src/widgets/writing-kit/ui/CreationOfferSheet.test.tsx",
+              "frontend/src/pages/home/ui/HomePage.test.tsx",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-46339d7e-f84d-4bdd-b490-b59e4fc3e835.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T910-AC2-task-gate",
+            "scenario": "Task gate: tsc -b, changed-file ESLint/Prettier (untracked files included), lint-style-escapes, steiger and FE vitest",
+            "steps": [
+              "gusta vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T910 -- bash submit-gate.sh"
+            ],
+            "expected": "Every step passes",
+            "observed": "ok:true, exit 0 at f59ddaa0c0ff11e398ea28d0e9ab07110513ce71 (tree 3f07fe92e453), 196 s: tsc -b, ESLint, Prettier, style lint and steiger passed, and related vitest passed 147 files / 1544 tests. The full suite last passed at 7d4f66867 (647 / 5199, same frontend code).",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-46339d7e-f84d-4bdd-b490-b59e4fc3e835.log",
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-345ea10f-70aa-43de-b0cc-02a792519bb7.log"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T910-AC3-screens",
+            "scenario": "Day and night screenshots at 390×844 and 1280×900 of the new-post/new-clip offer and 홈's next-step row on the integrated candidate, with no horizontal overflow",
+            "steps": [
+              "Open /posts/new and /clips/new on accounts missing a voice/template, and open /",
+              "Capture day and night at 390×844 and 1280×900",
+              "Check the layout and that there is no horizontal overflow"
+            ],
+            "expected": "The offer shows its title, then ring rows with an arrow, with 다시 묻지 않기 and 이대로 쓰기/만들기 at its foot; 홈's next-step card looks as before; no horizontal overflow",
+            "observed": "not run",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Removed from the task acceptance by the coordinator as a group-level check; the coordinator runs and records it on the integrated candidate. This worker has no browser-capture tool.",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T907-AC5-screens",
+            "scenario": "Video template directory, reading and 영상 지침 header render the new layout at phone and desktop widths in both themes without horizontal overflow",
+            "steps": [
+              "On the integrated candidate, sign in with an account holding saved video templates and an unsaved video-template conversation",
+              "Open /video-templates at 390x844 and 1280x900 in day and night themes and capture screenshots",
+              "Open a saved template's reading (/video-templates/<id>) at both sizes and themes and capture screenshots",
+              "Open /video-templates with no templates (empty placeholder) and /video-guidelines, and capture screenshots",
+              "Check document scrollWidth equals viewport width on every screen"
+            ],
+            "expected": "Header with the 영상 템플릿 picture and + 새 템플릿; resume rows above the tiles; tiles leading with the 9:16 miniature, name, stage line, 영상 N개 and no delete; the reading's single action row with AI와 고치기 filled; the dashed empty placeholder; 영상 지침's own picture; no horizontal overflow",
+            "observed": "not run: this worker has no computer-use or browser tool",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "Computer-use acceptance is integration-stage and owned by the coordinator; this worker has no browser or computer-use tool",
+            "replaces": [],
+            "stage": "integration",
+            "required": true,
+            "owner": "coordinator",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-AC1",
+            "scenario": "/account shows 아이디, 이메일 (with 인증됨/미인증 badge) and 비밀번호 as rows; 인증 메일 보내기 and 비밀번호 변경 are reachable after the row's pencil and behave as before; 취소 closes the form back to the row; a password-less account shows its reset route line",
+            "steps": [
+              "vitest src/pages/account/ui/AccountPage.test.tsx (rows with no form open; emailless account → 이메일 수정 → RegisterEmail; unverified badge 미인증 → 취소 back to row with focus on the pencil; verified 인증됨 with no pencil; 비밀번호 수정 → wrong-current alert inline; 비밀번호 수정 → change → /login with the one-time notice; password-less line)"
+            ],
+            "expected": "three rows in order; RegisterEmail and ChangePassword are each called once; the path changes to /login with the notice that is then cleared; 취소 removes the form and focuses the pencil; the password-less row has no pencil and names 비밀번호 찾기",
+            "observed": "7/7 tests pass",
+            "evidence": [
+              "frontend/src/pages/account/ui/AccountPage.test.tsx"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-AC2",
+            "scenario": "Task gate: changed-file ESLint and Prettier, tsc -b, steiger, lint-style-escapes and the full FE vitest suite; every test that encoded a changed literal or structure is updated",
+            "steps": [
+              "vibe check --tier task --diff-base HEAD --task T909 -- bash gate.sh",
+              "update app/routes/navigation.test.tsx to the TitleRow structure and rerun it alone with eslint/prettier",
+              "grep every *.test.ts(x) for 인증 대기, 계정 아이디, 이메일 등록, Verification pending, Account ID, Register email, Change password"
+            ],
+            "expected": "all static checks pass and every FE test passes",
+            "observed": "tsc, eslint, prettier, lint-style and steiger passed; full vitest 5208/5209 with the one navigation.test.tsx failure caused by the old PageFrame title-row DOM; after updating it, that file passes 45/45 and its eslint/prettier are clean; the grep found no other test with the changed literals. The full suite was not rerun after the one-file fix",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-e3b6e554-10c8-4b43-b114-b4cbe83d1e13.log",
+              "frontend/src/app/routes/navigation.test.tsx"
+            ],
+            "status": "pass",
+            "reason": "",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-unit-unnamed-entry",
+            "scenario": "Real route tree at /tests and /tests?sourcePost=<slug> keeps the factor choice after the router rewrites the address; the 새 비교 address still opens on the candidates; a recovered draft resumes its own step",
+            "steps": [
+              "renderAppAt('/tests') and renderAppAt('/tests?sourcePost=owned-source') over the writing-test studio fixture transport",
+              "wait until router.state.location.href contains stage=write, then assert there is no factor= and the source is kept",
+              "assert the 무엇을 비교할까요 heading and no model checkboxes",
+              "renderAppAt('/tests?factor=model&stage=write&count=2'): Model 1 checked, then 이전 단계 shows the factor choice",
+              "existing test 'resumes a recovered setup on its own step' rerun",
+              "rerun the new tests against the a19cbb83e source files"
+            ],
+            "expected": "Factor choice for unnamed entries after address normalization; candidates for the named entry; tests fail on the a19cbb83e source",
+            "observed": "New tests pass on the fix; both /tests cases fail (2/2) when the a19cbb83e search.ts and WritingTestsPage.tsx are restored; recovery test passes",
+            "evidence": [
+              "frontend/src/pages/writing-tests/ui/WritingTestsPage.test.tsx",
+              "frontend/src/pages/writing-tests/model/search.test.ts",
+              "vitest run src/pages/writing-tests: 4 files, 41 tests passed"
+            ],
+            "status": "pass",
+            "reason": "Deterministic jsdom tests over the real route tree",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-task-gate",
+            "scenario": "Task gate from frontend/",
+            "steps": [
+              "vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T911 -- bash gate.sh"
+            ],
+            "expected": "tsc -b, changed-file ESLint/Prettier, lint-style-escapes, steiger and full vitest all pass",
+            "observed": "ok:true, exit 0; 647 test files and 5,210 tests passed; REDESIGN-GATE-PASS",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-22815e74-11a9-47e5-aefe-4c53a399de9f.log"
+            ],
+            "status": "pass",
+            "reason": "Ran once before handoff (557 s, over the 5-minute task hint because the acceptance asks for the full suite)",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-browser-dev-server",
+            "scenario": "Open /tests and the editor's /tests?sourcePost=… on the dev server and confirm the factor choice stays after the address rewrite",
+            "steps": [
+              "open /tests in Chrome on the integration candidate",
+              "confirm the address becomes /tests?stage=write&count=2 with no factor and the heading stays 무엇을 비교할까요"
+            ],
+            "expected": "Factor choice stays; no factor in the address",
+            "observed": "Not observed in this unit: no browser or computer-use tool available",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "No computer-use in this worker session; the real-route-tree jsdom test covers the same normalization path",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "host",
+            "candidate": null,
+            "duplicationReason": ""
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 972,
+      "at": "2026-11-18T17:14:38.428Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "agentChecks": [
+          {
+            "id": "T911-unit-unnamed-entry",
+            "scenario": "Real route tree at /tests and /tests?sourcePost=<slug> keeps the factor choice after the router rewrites the address; the 새 비교 address still opens on the candidates; a recovered draft resumes its own step",
+            "steps": [
+              "renderAppAt('/tests') and renderAppAt('/tests?sourcePost=owned-source') over the writing-test studio fixture transport",
+              "wait until router.state.location.href contains stage=write, then assert there is no factor= and the source is kept",
+              "assert the 무엇을 비교할까요 heading and no model checkboxes",
+              "renderAppAt('/tests?factor=model&stage=write&count=2'): Model 1 checked, then 이전 단계 shows the factor choice",
+              "existing test 'resumes a recovered setup on its own step' rerun",
+              "rerun the new tests against the a19cbb83e source files"
+            ],
+            "expected": "Factor choice for unnamed entries after address normalization; candidates for the named entry; tests fail on the a19cbb83e source",
+            "observed": "New tests pass on the fix; both /tests cases fail (2/2) when the a19cbb83e search.ts and WritingTestsPage.tsx are restored; recovery test passes",
+            "evidence": [
+              "frontend/src/pages/writing-tests/ui/WritingTestsPage.test.tsx",
+              "frontend/src/pages/writing-tests/model/search.test.ts",
+              "vitest run src/pages/writing-tests: 4 files, 41 tests passed"
+            ],
+            "status": "pass",
+            "reason": "Deterministic jsdom tests over the real route tree",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-task-gate",
+            "scenario": "Task gate from frontend/",
+            "steps": [
+              "vibe check --tier task --diff-base 1ef5a5ac2541902fb90dae60c55205ec16bef479 --task T911 -- bash gate.sh"
+            ],
+            "expected": "tsc -b, changed-file ESLint/Prettier, lint-style-escapes, steiger and full vitest all pass",
+            "observed": "ok:true, exit 0; 647 test files and 5,210 tests passed; REDESIGN-GATE-PASS",
+            "evidence": [
+              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-22815e74-11a9-47e5-aefe-4c53a399de9f.log"
+            ],
+            "status": "pass",
+            "reason": "Ran once before handoff (557 s, over the 5-minute task hint because the acceptance asks for the full suite)",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T911-browser-dev-server",
+            "scenario": "Open /tests and the editor's /tests?sourcePost=… on the dev server and confirm the factor choice stays after the address rewrite",
+            "steps": [
+              "open /tests in Chrome on the integration candidate",
+              "confirm the address becomes /tests?stage=write&count=2 with no factor and the heading stays 무엇을 비교할까요"
+            ],
+            "expected": "Factor choice stays; no factor in the address",
+            "observed": "Not observed in this unit: no browser or computer-use tool available",
+            "evidence": [],
+            "status": "not-run",
+            "reason": "No computer-use in this worker session; the real-route-tree jsdom test covers the same normalization path",
+            "replaces": [],
+            "stage": "integration",
+            "required": false,
+            "owner": "host",
+            "candidate": null,
+            "duplicationReason": ""
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 973,
+      "at": "2026-11-18T17:14:38.490Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "doing",
+      "status": "committing",
+      "changes": {
+        "status": "committing"
+      }
+    },
+    {
+      "sequence": 974,
+      "at": "2026-11-18T17:14:39.094Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "committing",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 975,
+      "at": "2026-11-18T17:14:39.147Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 976,
+      "at": "2026-11-18T17:18:27.389Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "verifiedCommit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+        "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+        "submissionId": "bf6292ed-2602-47c2-a67f-87fd34f563c4",
+        "submittedAt": "2026-11-18T17:18:27.389Z",
+        "risk": null,
+        "steps": [
+          {
+            "taskId": "T911",
+            "commit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+            "at": "2026-11-18T17:18:27.375Z",
+            "verification": [
+              {
+                "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+                "startedAt": "2026-11-18T17:14:39.441Z",
+                "finishedAt": "2026-11-18T17:18:27.156Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+            "startedAt": "2026-11-18T17:14:39.441Z",
+            "finishedAt": "2026-11-18T17:18:27.156Z"
+          }
+        ]
+      }
+    },
+    {
+      "sequence": 977,
+      "at": "2026-11-18T17:18:27.405Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "ready",
+      "status": "ready",
+      "changes": {
+        "dispatch": {
+          "id": "05022006-a6c6-4513-b661-ebc75672c112",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 3,
+          "provider": "claude",
+          "model": "opus",
+          "status": "finished",
+          "startedAt": "2026-11-18T16:57:41.220Z",
+          "finishedAt": "2026-11-18T17:18:27.405Z",
+          "error": null,
+          "summary": "T911 is fixed. Opening `/tests` or `/tests?sourcePost=…` now stays on the factor choice (무엇을 비교할까요) after the router rewrites the address. The address 새 비교 links to still opens on the candidates step.\n\nCause: the route's search validator (`writingTestSearchSchema`) always added `factor: 'model'`. Right after the first render the router writes the validated search back into the address, so every entry looked as if it named a factor.\n\nFix:\n- The validator now keeps `factor` only when the address actually names one. `stage` and `count` still get their defaults.\n- `writingTestFactor()` gives the factor a setup starts on, and `writingTestFactorNamed()` now reads the validated search, so the page no longer uses `useLocation`. Normalising the address no longer changes the page's remount key.\n- Nothing changed in what starts work, recovery precedence or the 새 비교 addresses. The legacy `/ai-models` comparison redirect still names its factor explicitly.\n\nTests:\n- New tests in `WritingTestsPage.test.tsx` render the real route tree with `renderAppAt` over the studio fixture. For `/tests` and `/tests?sourcePost=owned-source` they wait for `stage=write` to appear in the address, check that no `factor=` was added, and check that the factor choice shows. Another test checks that the 새 비교 address opens on the candidates and that 이전 reaches the factor choice.\n- Both `/tests` cases fail against the a19cbb83e source and pass now. The existing recovered-draft test still passes. `search.test.ts` was updated for the missing default and a normalisation check was added.\n\nTask gate (`vibe check --tier task` with `gate.sh`): `tsc -b`, ESLint and Prettier on changed files, `lint-style-escapes`, `steiger` and the full FE suite (647 files, 5,210 tests) all passed. The run took 557 s, over the gate's 5-minute guidance, because the acceptance asks for the full suite. Nobody watched the real dev server in a browser in this session; that is handed to the integration host."
+        }
+      }
+    },
+    {
+      "sequence": 978,
+      "at": "2026-11-18T17:18:27.617Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "doing",
+      "status": "blocked",
+      "changes": {
+        "status": "blocked",
+        "reason": "decision: T909's goal says an account with no password keeps a reset link on /account, but /forgot-password sends signed-in users away and logout may only live in the avatar menu (AUTH-29). How should a signed-in owner whose account has no password set one from /account?"
+      }
+    },
+    {
+      "sequence": 979,
+      "at": "2026-11-18T17:18:27.628Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "blocked",
+      "status": "blocked",
+      "changes": {
+        "dispatch": {
+          "id": "05970fbd-99da-46a8-8321-83d9b47d72ec",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 1,
+          "provider": "claude",
+          "model": "opus",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:00:52.671Z",
+          "finishedAt": "2026-11-18T17:18:27.628Z",
+          "error": null,
+          "summary": "I fixed the T908 finding. The T909 finding (reset link for an account with no password) needs a planner decision, so the lane is blocked.\n\n**T908 (fixed):** `/billing#billing-charge` now opens the pack sheet for every tier. A free account arriving at that address sees the packs disabled with the existing reason (크레딧 구매는 활성 유료 구독에서만 가능해요), and no quote or purchase call is made. The card's 충전 button still links a free account to `/plans`. The change is in `CreditsCard.tsx`, and a new test in `BillingPage.test.tsx` covers the free-account arrival.\n\n**T909 (blocked):** an account with no password still only shows the existing sentence telling the owner to log out and use 비밀번호 찾기. There is no reset link because nothing valid exists to link to:\n- the old screen never had one;\n- `/forgot-password` sends a signed-in user away, so a plain link would just bounce;\n- logging the owner out from this page would put a second logout outside the avatar menu, which AUTH-29 rules out.\n\nI unchecked T909's first acceptance item and recorded the gap in its result. All other T909 behaviour stays as implemented and tested in `AccountPage.test.tsx`.\n\n**Checks:** the task gate (submit-gate) passed on the full delta since 1ef5a5ac: tsc, ESLint and Prettier on changed files, style lint, steiger, and 144 related test files (1526 tests). This gate ran only the tests related to the change; the full suite last ran before the correction. The day/night screenshots at 390×844 and 1280×900 are still the coordinator's check.\n\nNothing is committed or submitted; the host runner owns that."
+        }
+      }
+    },
+    {
+      "sequence": 980,
+      "at": "2026-11-18T17:18:27.675Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "doing",
+      "status": "committing",
+      "changes": {
+        "status": "committing"
+      }
+    },
+    {
+      "sequence": 981,
+      "at": "2026-11-18T17:18:28.074Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "committing",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 982,
+      "at": "2026-11-18T17:18:28.097Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 983,
+      "at": "2026-11-18T17:19:04.101Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "blocked",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 984,
+      "at": "2026-11-18T17:20:24.751Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+        "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+        "submittedAt": "2026-11-18T17:20:24.751Z",
+        "steps": [
+          {
+            "taskId": "T903",
+            "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+            "at": "2026-11-18T17:20:24.737Z",
+            "verification": [
+              {
+                "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+                "startedAt": "2026-11-18T17:18:28.242Z",
+                "finishedAt": "2026-11-18T17:20:24.553Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+            "startedAt": "2026-11-18T17:18:28.242Z",
+            "finishedAt": "2026-11-18T17:20:24.553Z"
+          }
+        ],
+        "verifiedCommit": "b691a205f122bf21bf23b6d32c9e59c4082debd8"
+      }
+    },
+    {
+      "sequence": 985,
+      "at": "2026-11-18T17:20:24.764Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "ready",
+      "status": "ready",
+      "changes": {
+        "dispatch": {
+          "id": "33924440-5c56-4f86-930e-8bc42b90dc09",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 4,
+          "provider": "claude",
+          "model": "opus",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:00:53.496Z",
+          "finishedAt": "2026-11-18T17:20:24.764Z",
+          "error": null,
+          "summary": "I fixed review correction 593e21c7 (POST-65): when a search matched only a post's tag, a running or failed post no longer showed that tag.\n\n**What was wrong:** in `frontend/src/pages/posts/ui/PostsPage.tsx`, a running job's progress or a failure replaced the whole group of 말투, template, matched tags and time. So a row kept by a tag match did not show which tag matched.\n\n**The fix:** the matched tags now sit right after the status badge (and after 내보내기 가능 when shown) on every row. They still appear only while a search matched them. Only the 말투, template and time give way to progress or a failure, as THEME-83 describes.\n\n**New test:** `names the matched tag on a running and on a failed row` in `PostsPage.test.tsx` opens `/posts?q=카페` with one running post and one failed post. Both rows show `#카페` next to `AI 생성 중` and `AI 결과 오류`.\n\n**Checks, all passing** (run from `frontend/`):\n- `npx tsc -b`\n- ESLint and Prettier on the changed files, untracked ones included\n- `node ../scripts/lint-style-escapes.mjs`\n- `npx steiger ./src`\n- The full `npx vitest run`: 648 files, 5204 tests\n\nThe fix and this evidence are recorded in the result section of `spec/tasks/T903.work-row-lists.md`.\n\n**Still open:** the narrow-width screenshots are the coordinator's job on the integrated candidate."
+        }
+      }
+    },
+    {
+      "sequence": 986,
+      "at": "2026-11-18T17:20:24.811Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "doing",
+      "status": "committing",
+      "changes": {
+        "status": "committing"
+      }
+    },
+    {
+      "sequence": 987,
+      "at": "2026-11-18T17:20:25.218Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "committing",
+      "status": "doing",
+      "changes": {
+        "status": "doing",
+        "reason": null
+      }
+    },
+    {
+      "sequence": 988,
+      "at": "2026-11-18T17:20:25.241Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "doing",
+      "status": "verifying",
+      "changes": {
+        "status": "verifying"
+      }
+    },
+    {
+      "sequence": 989,
+      "at": "2026-11-18T17:22:17.574Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "verifying",
+      "status": "ready",
+      "changes": {
+        "status": "ready",
+        "submittedBase": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+        "submissionId": "18d4cc0d-c61f-4936-b2d6-104ef3ed2b44",
+        "submittedAt": "2026-11-18T17:22:17.574Z",
+        "steps": [
+          {
+            "taskId": "T907",
+            "commit": "8e88096dab2eab242ea249b732a8059211b9bbbd",
+            "at": "2026-11-18T17:22:17.559Z",
+            "verification": [
+              {
+                "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+                "startedAt": "2026-11-18T17:20:25.394Z",
+                "finishedAt": "2026-11-18T17:22:17.372Z"
+              }
+            ]
+          }
+        ],
+        "verification": [
+          {
+            "command": "bash /private/tmp/claude-501/-Users-ihaelam-project-postpilot/56b3938b-e596-49c5-870e-5f8a6b41452a/scratchpad/submit-gate.sh",
+            "startedAt": "2026-11-18T17:20:25.394Z",
+            "finishedAt": "2026-11-18T17:22:17.372Z"
+          }
+        ],
+        "verifiedCommit": "8e88096dab2eab242ea249b732a8059211b9bbbd"
+      }
+    },
+    {
+      "sequence": 990,
+      "at": "2026-11-18T17:22:17.586Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "8a4de937-27e7-4fc4-98e6-b3336704ec64",
+      "taskId": "T907",
+      "previousStatus": "ready",
+      "status": "ready",
+      "changes": {
+        "dispatch": {
+          "id": "da3513b5-015c-44f8-9d3d-93a25b724a8b",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 2,
+          "provider": "claude",
+          "model": "opus",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:08:40.011Z",
+          "finishedAt": "2026-11-18T17:22:17.586Z",
+          "error": null,
+          "summary": "I fixed the review finding (b936669a, P2). An unsaved video-template conversation's \"이어서 만들던 대화\" row showed only its name, so a busy conversation lost the work state the old list displayed. The shared `ResumeConversations` widget now takes an optional `workState` for each row. It renders as one meta line marked as a status, under the name and inside the row's single link. The video directory (`VideoTemplatesPage.tsx`) passes the conversation's state in TMPL-24's priority order: AI working, then a save to confirm, then a conflict. It leaves out \"unpublished changes\" because every row in that region is unsaved by definition. The post template directory passes nothing, so it is unchanged. I added a test in `VideoTemplatesPage.test.tsx`: a busy conversation and a saving one each show their state and still link to `/video-templates/new?session=…`, and a quiet conversation shows no state. The correction is recorded in the result section of `spec/tasks/T907.video-template-directory.md`. The task gate (`submit-gate.sh`, base 1ef5a5ac2) passed: `tsc -b`, ESLint and Prettier on the changed files, lint-style-escapes, steiger, and `vitest --changed` (242 files, 2090 tests). I did not rerun the full FE suite for this correction; that stays with the shared final gate. The browser screenshot check remains not run and is handed to the coordinator for the integrated candidate."
+        }
+      }
+    },
+    {
+      "sequence": 991,
+      "at": "2026-11-18T17:22:17.685Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "dispatch": {
+          "id": "6f375eba-fa87-4e3c-9d1d-bedc0da24cc1",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 1,
+          "provider": "claude",
+          "model": "opus",
+          "status": "starting",
+          "startedAt": "2026-11-18T17:22:17.685Z"
+        }
+      }
+    },
+    {
+      "sequence": 992,
+      "at": "2026-11-18T17:22:18.051Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "c71393e7-fc1d-450c-afd0-958e73a30ced",
+      "taskId": "T909",
+      "tasks": [
+        "T908",
+        "T909"
+      ],
+      "previousStatus": "doing",
+      "status": "doing",
+      "changes": {
+        "dispatch": {
+          "id": "6f375eba-fa87-4e3c-9d1d-bedc0da24cc1",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "worker",
+          "slot": 1,
+          "provider": "claude",
+          "model": "opus",
+          "status": "running",
+          "startedAt": "2026-11-18T17:22:17.685Z"
+        }
+      }
+    },
+    {
+      "sequence": 993,
+      "at": "2026-11-18T17:22:18.353Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "65c1ced3-c2c6-4db7-bc87-246811f4e615",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-1",
+          "status": "reviewing",
+          "commit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+          "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+          "submissionId": "bf6292ed-2602-47c2-a67f-87fd34f563c4",
+          "createdAt": "2026-11-18T17:22:18.353Z"
+        }
+      }
+    },
+    {
+      "sequence": 994,
+      "at": "2026-11-18T17:22:20.003Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "889dfc28-779e-4ee2-b08f-6040cf31f62c",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 1,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "starting",
+          "startedAt": "2026-11-18T17:22:20.003Z"
+        }
+      }
+    },
+    {
+      "sequence": 995,
+      "at": "2026-11-18T17:22:20.017Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "889dfc28-779e-4ee2-b08f-6040cf31f62c",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 1,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "running",
+          "startedAt": "2026-11-18T17:22:20.003Z"
+        }
+      }
+    },
+    {
+      "sequence": 996,
+      "at": "2026-11-18T17:22:20.059Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "ready",
+      "status": "reviewing",
+      "changes": {
+        "status": "reviewing",
+        "review": {
+          "id": "5452ef83-3fcf-4e21-b424-8b2f4c2c2bcc",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-2",
+          "status": "reviewing",
+          "commit": "b691a205f122bf21bf23b6d32c9e59c4082debd8",
+          "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+          "submissionId": "23420faf-692b-48d8-b5ff-6434569f1a69",
+          "createdAt": "2026-11-18T17:22:20.059Z"
+        }
+      }
+    },
+    {
+      "sequence": 997,
+      "at": "2026-11-18T17:22:21.343Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "d2d2942b-cf5b-487d-acfd-ada90caabf0d",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 2,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "starting",
+          "startedAt": "2026-11-18T17:22:21.343Z"
+        }
+      }
+    },
+    {
+      "sequence": 998,
+      "at": "2026-11-18T17:22:21.358Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "416ddab7-0372-4ccf-ae69-5baa1700bf52",
+      "taskId": "T903",
+      "previousStatus": "reviewing",
+      "status": "reviewing",
+      "changes": {
+        "dispatch": {
+          "id": "d2d2942b-cf5b-487d-acfd-ada90caabf0d",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 2,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "running",
+          "startedAt": "2026-11-18T17:22:21.343Z"
+        }
+      }
+    },
+    {
+      "sequence": 999,
+      "at": "2026-11-18T17:22:45.204Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "reviewing",
+      "status": "approved",
+      "changes": {
+        "status": "approved",
+        "review": {
+          "id": "65c1ced3-c2c6-4db7-bc87-246811f4e615",
+          "owner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d/reviewer-1",
+          "status": "approved",
+          "verdict": "approved",
+          "summary": "T911 satisfies the reviewed acceptance criteria and MODEL-44. Worker evidence covers the route normalization regression and task checks; browser observation and the final integration gate remain with the coordinator host.",
+          "findings": [],
+          "commit": "674289d93ec4215a6592f4d23a3313af9f8f1f17",
+          "baseCommit": "b5cfb1d11a50b0c6a9dc7d1a2d4ac91fac2222f5",
+          "submissionId": "bf6292ed-2602-47c2-a67f-87fd34f563c4",
+          "createdAt": "2026-11-18T17:22:18.353Z",
+          "finishedAt": "2026-11-18T17:22:45.204Z"
+        }
+      }
+    },
+    {
+      "sequence": 1000,
+      "at": "2026-11-18T17:22:45.262Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
+      "previousStatus": "approved",
+      "status": "approved",
+      "changes": {
+        "dispatch": {
+          "id": "889dfc28-779e-4ee2-b08f-6040cf31f62c",
+          "runner": "2f9d9ab3-8733-47b1-bbf1-09604cb9552d",
+          "role": "reviewer",
+          "slot": 1,
+          "provider": "codex",
+          "model": "gpt-6.1-terra",
+          "status": "finished",
+          "startedAt": "2026-11-18T17:22:20.003Z",
+          "finishedAt": "2026-11-18T17:22:45.262Z",
+          "error": null,
+          "summary": "T911 satisfies the reviewed acceptance criteria and MODEL-44. Worker evidence covers the route normalization regression and task checks; browser observation and the final integration gate remain with the coordinator host."
+        }
+      }
+    },
+    {
+      "sequence": 1001,
+      "at": "2026-11-18T17:22:45.415Z",
+      "type": "attempt",
+      "group": "redesign-261119",
+      "attemptId": "fbcadd8e-c4cd-4640-b257-7fd7333bae66",
+      "taskId": "T911",
       "previousStatus": "approved",
       "status": "integrating",
       "changes": {

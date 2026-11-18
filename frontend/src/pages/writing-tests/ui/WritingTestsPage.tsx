@@ -1,6 +1,6 @@
 import { useWritingTestTranslation } from '@/features/writing-test'
 import { useMemo } from 'react'
-import { useLocation, useSearch, useParams } from '@tanstack/react-router'
+import { useSearch, useParams } from '@tanstack/react-router'
 import { useSession } from '@/entities/session'
 import { eligibleTestPair, useModels, useModelSetup } from '@/entities/model-catalog'
 import {
@@ -15,6 +15,7 @@ import { activeLocale } from '@/shared/lib'
 import { Button, LoadingState, Typography, PageFrame, TitleRow } from '@/shared/ui'
 import {
   writingTestSearchSchema,
+  writingTestFactor,
   writingTestFactorNamed,
   writingTestHistorySearchSchema,
   type WritingTestSearch,
@@ -29,7 +30,8 @@ function initialContext(seed: WritingTestSearch): WritingTestContext {
     voiceId: seed.voiceId ?? '',
     templateId: seed.templateId ?? '',
     guidelineSlotId:
-      seed.guidelineId ?? (seed.factor === 'guideline' ? WRITING_TEST_NEW_GUIDELINE_SLOT : ''),
+      seed.guidelineId ??
+      (writingTestFactor(seed) === 'guideline' ? WRITING_TEST_NEW_GUIDELINE_SLOT : ''),
     targetLanguage: activeLocale(),
     targetLength: POST_TARGET_LENGTH_DEFAULT,
     tagCount: POST_TAG_COUNT_DEFAULT,
@@ -41,7 +43,9 @@ export function WritingTestsPage() {
   const { user } = useSession(),
     raw = useSearch({ strict: false })
   const seed = writingTestSearchSchema(raw as Record<string, unknown>)
-  const factorNamed = writingTestFactorNamed(useLocation().search as Record<string, unknown>)
+  // Named only by the address the owner opened: the router's normalization of the validated
+  // search writes no factor an entry left out, so this never flips after the first render.
+  const factorNamed = writingTestFactorNamed(seed)
   return (
     <OwnedNewPage
       key={JSON.stringify([user?.id ?? '', seed, factorNamed])}
@@ -62,7 +66,8 @@ function OwnedNewPage({
 }) {
   const { t } = useWritingTestTranslation()
   const source = useWritingTestSource(ownerId, seed.source ?? '')
-  const binaryModel = seed.factor === 'model' && seed.count === 2
+  const factor = writingTestFactor(seed)
+  const binaryModel = factor === 'model' && seed.count === 2
   const pairs = useModelSetup(binaryModel && !!ownerId)
   const models = useModels()
   const context = useMemo(() => source.data?.context ?? initialContext(seed), [source.data, seed])
@@ -71,7 +76,7 @@ function OwnedNewPage({
       ? eligibleTestPair(pairs.pairs, models.models, seed.stage)
       : undefined
   const initialPlan: WritingTestPlan = {
-    factor: seed.factor,
+    factor,
     modelStage: seed.stage,
     count: seed.count,
     entrants: pair?.map((model) => ({ type: 'model' as const, model })) ?? [],
