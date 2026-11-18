@@ -91,6 +91,7 @@
 | T908 | One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet | QUOTA BILL THEME | - | todo |
 | T909 | Show 계정 as rows that open their form in place | AUTH THEME | - | todo |
 | T910 | Draw the new post / new clip offer with 홈's next-step row | POST CLIP THEME | - | todo |
+| T911 | Keep an entry that names no factor on the factor choice in the browser | MODEL | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
