@@ -530,6 +530,44 @@ describe('PostsPage', () => {
     expect(row).not.toHaveTextContent('#제주')
   })
 
+  // POST-65 with THEME-83: a running or failed row still says which tag kept it, beside its
+  // progress or failure.
+  it('names the matched tag on a running and on a failed row', async () => {
+    renderAppAt('/posts?q=카페', {
+      user: USER,
+      posts: {
+        posts: [
+          {
+            slug: 'running',
+            title: '쓰는 중인 글',
+            status: 'draft',
+            tags: ['카페'],
+            activeJob: { id: 'job-1', status: 'running', stage: 'write' },
+          },
+          {
+            slug: 'failed',
+            title: '실패한 글',
+            status: 'draft',
+            tags: ['카페'],
+            latestOrdinaryFailure: {
+              id: 'failed-write',
+              kind: 'generate_post',
+              status: 'failed',
+              stage: 'write',
+              failureReason: 'NETWORK_UNAVAILABLE',
+            },
+          },
+        ],
+      },
+    })
+    const running = await screen.findByRole('link', { name: /쓰는 중인 글/ })
+    expect(running).toHaveTextContent('#카페')
+    expect(running).toHaveTextContent('AI 생성 중')
+    const failed = screen.getByRole('link', { name: /실패한 글/ })
+    expect(failed).toHaveTextContent('#카페')
+    expect(failed).toHaveTextContent('AI 결과 오류')
+  })
+
   it('leaves the row alone when the title is what matched', async () => {
     const user = userEvent.setup()
     renderList(NARROWABLE)

@@ -219,6 +219,13 @@ export function PostsPage() {
                 {post.exportReady && (
                   <span className="shrink-0">{t('list.history.exportReady', { ns: 'posts' })}</span>
                 )}
+                {/* Only the tags the search matched, and only while it did (POST-65) — on every
+                    row, running and failed ones included, so a row kept by a tag says why. */}
+                {matchedTags.length > 0 && (
+                  <span className="max-w-full min-w-0 truncate">
+                    {matchedTags.map((tag) => `#${tag}`).join(' ')}
+                  </span>
+                )}
                 {/* A running job's progress or a failure takes the made-with and time's place. */}
                 {runningJob || failure ? (
                   <span className="min-w-0 break-words">
@@ -235,12 +242,6 @@ export function PostsPage() {
                       template={post.template}
                       className="max-w-full min-w-0 truncate"
                     />
-                    {/* Only the tags the search matched, and only while it did (POST-65). */}
-                    {matchedTags.length > 0 && (
-                      <span className="max-w-full min-w-0 truncate">
-                        {matchedTags.map((tag) => `#${tag}`).join(' ')}
-                      </span>
-                    )}
                     <time dateTime={post.updatedAt} className="shrink-0">
                       {formatRelativeTime(post.updatedAt)}
                     </time>
