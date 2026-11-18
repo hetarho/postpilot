@@ -1,5 +1,5 @@
 # MEM memories
-> r8 | Explicitly approved owner memories, opted-in frozen evidence and separately identified AI-derived meaning.
+> r9 | Explicitly approved owner memories, opted-in frozen evidence and separately identified AI-derived meaning.
 
 ## decisions
 - MEM-1 [o] a memory (the user-facing noun 기억) is ONE atomic fact about the author's world, authored by the user approving an extracted candidate or by writing it by hand; an account owns zero or more, and an account with none produces prompts byte-identical to the ones it would produce without this domain
@@ -32,9 +32,13 @@
 - MEM-21 [o] the section closes with its own line naming the memories as legitimate material for this post, appended only when the section exists (→GEN-16 →GUIDE-16), so a post with the option off carries no memory bytes and no mention of a source it has none of (→TMPL-46's conditional legend)
 - MEM-22 [o] opted-in frozen memories reach post writing and storyline creation/rewrite; the prose revision pass receives no memory texts (→GEN-68/69/73) ← revision must not widen its supplied evidence or rewrite unrelated meaning.
 - MEM-23 [o] nothing is learned without the user: no model creates, approves, edits, ranks, retires or deletes a memory, no threshold promotes a candidate, and no memory reaches any prompt except through `use_memory` ← recording what the user checked is not learning about them
-- MEM-24 [o] `기억` is a section of 내 스타일 after 지침 (→=THEME-38), listing the account's memories (→!MEM-30); the page carries no standing form — one docked `새 기억` opens the shared `Sheet` (→=THEME-67 →~THEME-24)
+- MEM-24 [o] `기억` (`/memories`) is a screen of 홈's writing kit (→=THEME-38 →!THEME-81) listing the account's memories (→!MEM-30) in the two halves retrieval treats them in (→!MEM-6):
+  - 늘 떠올리는 기억 (취향 · 설정) and 단어가 나오면 꺼내는 기억 (장소 · 인물 · 이력), side by side from `lg`, each with its count and one line saying when it reaches a post; within a half memories keep the server's order
+  - each half carries its own add — `늘 떠올릴 기억` / `단어로 꺼낼 기억` — opening the shared new-memory `Sheet` on that half's first kind (취향 / 장소); the page carries no standing form and nothing is docked (→~THEME-24)
+  - an empty half shows `아직 없어요` with an example of what belongs in it
 - MEM-25 [o] a memory may be written by hand on that screen with the same field rules ← a fact the author knows on day one should not require generating a post first
-- MEM-30 [o] a memory's row is its text over one line of its kind and tag badges, with `수정` and `삭제` as its only controls, two icon controls at the end of the text line ← the list is read to see what the account knows, so one fact keeps to one short row and its editing waits behind one control
+- MEM-30 [o] a memory's row is its text, with `수정` and `삭제` as its only controls, two icon controls at the end of the text line, over one line of its kind and where it came from (`글 N편에서 저장` or `직접 적음`) ← the list is read to see what the account knows, so one fact keeps to one short row and its editing waits behind one control
+  - in the word half the row opens on `이 단어가 나오면` with its tags as badges, or, with no tag, a warning that it is never recalled (`단어가 없어 이 기억은 꺼내지 않아요`); in the always half its tags follow the kind as `#tag`
   - `수정` turns the row into one form holding the text with its live remaining count, the kind and the tags, saved together by one 저장 or left by 취소
   - a refused save keeps the form open with what was typed
   - `삭제` confirms that there is no undo
@@ -60,4 +64,5 @@
 - a post with `use_memory` off produces a prompt byte-identical to the one it produces without this domain
 
 ## chg
+- r9 261118 MEM-24✎ a section of 내 스타일 after 지침 with one docked 새 기억→홈's 기억 kit screen split into 늘 떠올리는 기억 / 단어가 나오면 꺼내는 기억 halves, each with its count, when-line, own add on its first kind and an empty example, nothing docked; MEM-30✎ text over kind and tag badges→text over kind and origin (글 N편에서 저장 | 직접 적음), word-half rows led by their recall tags or a never-recalled warning, always-half tags as #tag
 - r8 261111 MEM-24✎ writing settings destination following 지침→a section of 내 스타일 after 지침, its 새 기억 the section's creation button

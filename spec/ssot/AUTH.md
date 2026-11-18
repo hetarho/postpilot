@@ -1,5 +1,5 @@
 # AUTH accounts, passwords, sessions
-> r15 | Self-signed-up and operator-provisioned accounts, email/password or Google login, HttpOnly sessions, and an acting plan that grants free-model access without signup credits.
+> r16 | Self-signed-up and operator-provisioned accounts, email/password or Google login, HttpOnly sessions, and an acting plan that grants free-model access without signup credits.
 
 ## decisions
 - AUTH-1 [o] anyone may sign themselves up: AuthService carries Login · Logout · GetMe plus Signup, ResendVerification, VerifyEmail, RequestPasswordReset, ResetPassword and the Google sign-in exchange, and every one of the added procedures is public (→AUTH-17) ← paid subscriptions need an account a stranger can open without the operator
@@ -51,8 +51,9 @@
 - AUTH-47 [o] automatic login is unchecked on a fresh login screen and applies to both password and Google login; the choice travels with the single Google authorization attempt, defaults to false when absent, and is never a stored password or token in JavaScript storage; Google entry from signup defaults to ordinary login
 - AUTH-48 [o] save login id is independent of automatic login and off until an id has been saved: only a successful password login stores the submitted id on that browser, later visits prefill it, unchecking immediately removes it, and logout retains it; failed login never overwrites it, and unavailable storage never prevents login
 - AUTH-49 [o] local seed accounts cover free/light/basic/pro/max/master, retaining the `base` login for basic and adding `light`; they have no email and use the local-only `seed-only` password. Fixtures retain their post-count coverage and use the current plan denominations and entitlement windows, with free accounts receiving no credit grants.
-- AUTH-50 [o] the default signed-in destination is `/`; on home, a successful read of account-owned voices and post/video templates offers first-use setup only when no active made writing voice or a template directory is empty and setup has not been completed or explicitly deferred on this browser for this account.
-  - existing usable values omit their steps; a read failure is unknown, never an empty directory, and offers retry or an explicit way to continue creating
+- AUTH-50 [o] the default signed-in destination is `/` (홈, →THEME-47), which every account, a new one included, reaches with no first-use setup offer or redirect ← 홈's writing kit and its next step are the onboarding (→THEME-79)
+  - first-use setup is entered at `/setup` from 설정's 시작 설정 다시 or a link; a new post or clip offers what it is missing (→POST-121)
+  - inside setup, existing usable values omit their steps, and a read failure is unknown, never an empty directory
   - protected deep links, gifts, billing callbacks and existing projects keep their requested destination; setup does not intercept them
 - AUTH-51 [o] setup steps are welcome → writing voice → post template → clip template → ready, omitting satisfied or explicitly skipped steps; eligible recommended models initialize under MODEL-87 without asking novices to choose them.
   - voice setup offers a first ten-question personal questionnaire, pasted owner writing or explicitly generated styles under VOICE-66 through VOICE-69; no voice is created merely by opening setup
@@ -87,4 +88,5 @@
 - tests that pin it: dummy-path timing test (AUTH-9) · 401 on every non-public procedure · exact cookie attributes · replayed cookie after Logout is 401 · redirect validation · guard and reverse-guard behaviour
 
 ## chg
+- r16 261118 AUTH-50✎ home offers first-use setup when a voice or template directory is missing→홈 for every account with no setup offer, setup entered from 설정 or a link
 -

@@ -1,5 +1,5 @@
 # MODEL providers, model catalog, experiments
-> r43 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
+> r44 | Explicit eligible models, private single-factor writing and photo observation tests and safe versioned request composition/inspection.
 
 ## decisions
 - MODEL-1 [o] `backend/internal/llm` is the only way a model is called: no adapter package or provider SDK is imported anywhere except under `internal/llm/…` and in `cmd/api`, enforced by `internal/llm/boundary_test.go` over `go list -deps`; every completion, voice-design, voice-confirmation and speech operation carries an explicit admitted model/profile reference through a provider-neutral port with no default (→ARCH-9 →MODEL-77)
@@ -117,8 +117,9 @@
   - source-post deletion purges associated private test payload before detaching history metadata; account deletion cascades tests and their private data
   - deletion/expiry marks a durable payload-purge fence; queued/in-flight/late callbacks cannot restore purged private data or publish a result from it
   - payload expiry is not a new generation or a reason to recreate an adopted setting
-- MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId, placed under the AI 고르기 tab at /ai-models (→=THEME-38), which also holds the stage model choices (→=MODEL-96)
-  - AI 고르기 shows 지금 쓰는 AI with 추천으로 적용 beside its heading (→MODEL-71), then 비교해 보기 as two equal cards — 글 쓰는 AI 비교 and 사진 보는 AI 비교 — with 지난 비교 a link beside that heading, then the default two-model candidates (→MODEL-65) in a card of their own
+- MODEL-44 [o] unified writing tests are a first-class destination at /tests with history at /tests/history and owner detail at /tests/$testId, placed under the AI 토너먼트 tab at /ai-models (→=THEME-38), which also holds the stage model choices (→=MODEL-96)
+  - AI 토너먼트 opens on its title and one line saying two AIs take the same job and the winner is used, then 비교해 보기 as two equal cards — 글 쓰는 AI 비교 and 사진 보는 AI 비교 — with 지난 비교 a link beside that heading, then 지금 쓰는 AI (`#ai-in-use`) with 추천으로 적용 beside its heading (→MODEL-71), then the default two-model candidates (→MODEL-65) in a card of their own
+  - every link elsewhere that sends the owner to change a stage model lands on 지금 쓰는 AI (`/ai-models#ai-in-use`)
   - a factor choice only selects, stating in one line what that comparison changes, and the step bar's 다음 moves on; 사진 보는 AI 비교 opens the photo observation test (→=MODEL-97)
   - voice/template/guideline/model entry points all seed the same factor/format/material flow; changing routes or choosing candidates starts no work
   - model contestants are chosen under MODEL-98; setting slots show eligibility/classification and readable unavailability reasons; incomplete formats refuse start before admission
@@ -186,6 +187,7 @@
   - 품질 먼저 (highest grade first) and 균형 (밸런스 first, nearest grades next, the lower of two equally near grades first) apply only when the owner picks them and keep each grade under its heading; 가격 먼저 puts free first, then the fewest credits per post, with no headings and each row naming its grade
   - locked or unaffordable models stay visible as disabled rows stating their reason, including the required plan (→!MODEL-14)
   - rows and orderings read credits per post only, never a supplier price or pricing date (→!QUOTA-66)
+  - 홈's 글 쓰는 AI dropdown (→THEME-80) holds the same write-stage picker with the same rows, reasons and save, and closes once the save is confirmed; a refused save keeps it open, saying so, with the previous choice kept
 - MODEL-60 [o] tests retain the originating creation/settings/history location under THEME-58, including filters and safe return through reload or new-tab deep links. A direct test link defaults to test history; a missing source does not imply an unconditional post-list return.
 - MODEL-66 [o] test admission, generation and match decisions never mutate source content, observations, voice, template, guideline or active model. Only MODEL-36/90 explicit result actions publish; the test origin controls contextual return, not hidden source mutation.
 - MODEL-65 [o] saved eligible model A/B pairs may prefill the two-contestant model test; choosing a complete distinct pair saves it atomically, while count4/8/16 candidates belong to the test draft. Existing seven-slot operator recommendation documents remain compatible and do not silently populate/replace larger test entrants.
@@ -338,6 +340,7 @@
 - known gap: `MODEL_PURPOSE_NOT_REGISTERED` and `MODEL_PURPOSE_INELIGIBLE` have no entry in the frontend's normalized reason catalog and render as the generic failure (LANG owns that catalog)
 
 ## chg
+- r44 261118 MODEL-44✎ AI 고르기 tab opening on 지금 쓰는 AI, then 비교해 보기→AI 토너먼트 tab opening on its one-line purpose and 비교해 보기, then 지금 쓰는 AI (#ai-in-use, where every change-model link lands), then the default pair; MODEL-96✎ the write-stage picker on /ai-models only→also in 홈's 글 쓰는 AI dropdown, closing once the save is confirmed
 - r43 261118 MODEL-101✎ a photo observation test's done contestants one row each, opening to a one-contestant viewer→the review's viewer over every contestant, the switcher's dropdown naming each with its status and a card stating a contestant's status in place of observations; MODEL-97✎ done contestants read without the contestant switcher→the progress list is the viewer over every contestant
 - r42 261117 MODEL-97✎ review two observation columns under every photo→one held photo beside one contestant's card (후보 A · 사진 3) with photo and contestant switchers, dropdowns and a swipe; MODEL-98✎ a card per model with a grade badge→compact rows under grade headings, the same list as MODEL-96; MODEL-96✎ radio cards→compact radio rows under grade headings, 균형 tie to the lower grade, 가격 먼저 without headings
 - r41 261117 MODEL-97✎ photos step a picker with a count→the writing editor's photo slot (tiles, large view, delete, move); MODEL-101✎ done contestants a status only→open to their output with the review's renderer; a running test's poll passed through loading→refreshes in place
