@@ -1,6 +1,6 @@
 import { Code, ConnectError, type Transport } from '@connectrpc/connect'
 import { describe, expect, it } from 'vitest'
-import { act, screen, waitFor, within } from '@testing-library/react'
+import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 import { createFakeAuthTransport } from '@/test/session'
@@ -9,14 +9,11 @@ const ROWS = ['First', 'Middle', 'Last'].map((name) => ({
   id: name.toLowerCase(),
   name,
   compositionBody: '<clip version="1"/>',
+  projectCount: name === 'Middle' ? 2 : 0,
 }))
 
-function mount({ rows = ROWS, holdReread = false, refuseDelete = false } = {}) {
-  let deleting = false
-  let releaseReread = () => {}
-  const reread = new Promise<void>((resolve) => {
-    releaseReread = resolve
-  })
+function mount(path: string, { refuseDelete = false, rows = ROWS } = {}) {
+  const calls: string[] = []
   const base = createFakeAuthTransport({
     user: { id: 'alice' },
     existingSetup: true,
@@ -26,16 +23,13 @@ function mount({ rows = ROWS, holdReread = false, refuseDelete = false } = {}) {
     ...base,
     unary: async (...args) => {
       const method = args[0].name
-      if (method === 'DeleteVideoTemplate') {
-        if (refuseDelete) throw new ConnectError('refused', Code.PermissionDenied)
-        deleting = true
-      }
-      const response = await base.unary(...args)
-      if (method === 'ListVideoTemplates' && deleting && holdReread) await reread
-      return response
+      calls.push(method)
+      if (method === 'DeleteVideoTemplate' && refuseDelete)
+        throw new ConnectError('refused', Code.PermissionDenied)
+      return base.unary(...args)
     },
   }
-  return { ...renderAppAt('/video-templates', { transport }), releaseReread }
+  return { ...renderAppAt(path, { transport }), calls }
 }
 
 async function openDelete(user: ReturnType<typeof userEvent.setup>, name: string) {
@@ -45,79 +39,69 @@ async function openDelete(user: ReturnType<typeof userEvent.setup>, name: string
   return within(await screen.findByRole('dialog'))
 }
 
-async function confirmDelete(user: ReturnType<typeof userEvent.setup>, name: string) {
-  const dialog = await openDelete(user, name)
-  dialog.getByRole('button', { name: '삭제' }).focus()
-  await user.keyboard('{Enter}')
-}
-
-describe('video template keyboard focus after deletion', () => {
-  it.each([
-    { name: 'Middle', rows: ROWS, next: 'Last' },
-    { name: 'Last', rows: ROWS, next: 'Middle' },
-    { name: 'First', rows: [ROWS[0]], next: null },
-  ])('keeps the keyboard position after deleting $name', async ({ name, rows, next }) => {
+// Deleting lives on the template's own reading, never on a directory tile (CLIP-42): the reading
+// warns how many clips lose it, deletes on confirmation and returns to the list in place of itself.
+describe('deleting a video template from its reading', () => {
+  it('confirms with the clip count, then returns to the directory without the template', async () => {
     const user = userEvent.setup()
-    mount({ rows })
-    await confirmDelete(user, name)
-    await waitFor(() => expect(screen.queryByRole('button', { name: `${name} 삭제` })).toBeNull())
-    const target = next
-      ? screen.getByRole('button', { name: `${next} 삭제` })
-      : screen.getByRole('link', { name: '새 템플릿' })
-    expect(target).toHaveFocus()
+    const { router, calls } = mount('/video-templates/middle')
+    const dialog = await openDelete(user, 'Middle')
+    expect(dialog.getByText(/클립 2개/)).toBeInTheDocument()
+    dialog.getByRole('button', { name: '삭제' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
+    // `replace`: Back does not return to the reading of a template that no longer exists.
+    expect(router.history.length).toBe(1)
+    // Focus does not fall to the body: it lands on the first remaining tile (THEME-76).
+    await waitFor(() => expect(screen.getByRole('link', { name: /^First/ })).toHaveFocus())
+    expect(screen.queryByRole('link', { name: /^Middle/ })).toBeNull()
+    // No render, AI or authoring work starts on the way (CLIP-208).
+    expect(calls.filter((call) => /Start|Generate|Render|Request/.test(call))).toEqual([])
   })
 
-  it('leaves focus at the opener after cancellation and an unrelated reread', async () => {
+  it('hands focus to the creation entry when the last template is deleted', async () => {
     const user = userEvent.setup()
-    const { queryClient } = mount()
+    const { router } = mount('/video-templates/first', { rows: [ROWS[0]] })
+    const dialog = await openDelete(user, 'First')
+    dialog.getByRole('button', { name: '삭제' }).focus()
+    await user.keyboard('{Enter}')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates'))
+    await waitFor(() => expect(screen.getByRole('link', { name: '새 템플릿' })).toHaveFocus())
+    expect(screen.getByRole('heading', { name: '어떤 영상을 자주 만드세요?' })).toBeInTheDocument()
+  })
+
+  it('takes no focus on an ordinary visit to the directory', async () => {
+    mount('/video-templates')
+    await screen.findByRole('link', { name: /^First/ })
+    expect(document.body).toHaveFocus()
+  })
+
+  it('stays on the reading with focus at the opener after cancellation', async () => {
+    const user = userEvent.setup()
+    const { router } = mount('/video-templates/middle')
     const dialog = await openDelete(user, 'Middle')
     dialog.getByRole('button', { name: '취소' }).focus()
     await user.keyboard('{Enter}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(screen.getByRole('button', { name: 'Middle 삭제' })).toHaveFocus()
-    await act(() => queryClient.invalidateQueries())
-    expect(screen.getByRole('button', { name: 'Middle 삭제' })).toHaveFocus()
+    expect(router.state.location.pathname).toBe('/video-templates/middle')
   })
 
-  it('leaves a refused delete focused at its opener, without a later stale request', async () => {
+  it('keeps the reading after a refused delete', async () => {
     const user = userEvent.setup()
-    const { queryClient } = mount({ refuseDelete: true })
-    await confirmDelete(user, 'Middle')
+    const { router } = mount('/video-templates/middle', { refuseDelete: true })
+    const dialog = await openDelete(user, 'Middle')
+    dialog.getByRole('button', { name: '삭제' }).focus()
+    await user.keyboard('{Enter}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(screen.getByRole('button', { name: 'Middle 삭제' })).toHaveFocus()
-    const elsewhere = screen.getByRole('button', { name: 'First 삭제' })
-    elsewhere.focus()
-    await act(() => queryClient.invalidateQueries())
-    expect(elsewhere).toHaveFocus()
-  })
-
-  it('waits for the delayed reread before recovering the removed row focus', async () => {
-    const user = userEvent.setup()
-    const { releaseReread } = mount({ holdReread: true })
-    await confirmDelete(user, 'Middle')
-    // The existing video mutation awaits invalidation, so the confirmation stays pending
-    // until the delayed directory response arrives (the post mutation does not await it).
-    const dialog = within(await screen.findByRole('dialog'))
-    await waitFor(() => expect(dialog.getByRole('button', { name: '삭제' })).toBeDisabled())
+    expect(router.state.location.pathname).toBe('/video-templates/middle')
     expect(screen.getByRole('button', { name: 'Middle 삭제' })).toBeInTheDocument()
-    await act(async () => releaseReread())
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Middle 삭제' })).toBeNull())
-    expect(screen.getByRole('button', { name: 'Last 삭제' })).toHaveFocus()
   })
 
-  it('preserves focus moved elsewhere during a delayed reread and settles once', async () => {
-    const user = userEvent.setup()
-    const { queryClient, releaseReread } = mount({ holdReread: true })
-    await confirmDelete(user, 'Middle')
-    const dialog = within(await screen.findByRole('dialog'))
-    await waitFor(() => expect(dialog.getByRole('button', { name: '삭제' })).toBeDisabled())
-    const elsewhere = screen.getByRole('button', { name: 'First 삭제' })
-    elsewhere.focus()
-    await act(async () => releaseReread())
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Middle 삭제' })).toBeNull())
-    expect(elsewhere).toHaveFocus()
-    elsewhere.blur()
-    await act(() => queryClient.invalidateQueries())
-    expect(document.body).toHaveFocus()
+  it('offers no delete on any directory tile', async () => {
+    mount('/video-templates')
+    const directory = within(await screen.findByRole('region', { name: '저장된 영상 템플릿' }))
+    expect(directory.getAllByRole('listitem')).toHaveLength(3)
+    expect(directory.queryByRole('button')).toBeNull()
   })
 })

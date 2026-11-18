@@ -2,7 +2,7 @@ import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { GuidelineDirectory } from '@/widgets/guideline-directory'
 import { KitScreenHeader } from '@/widgets/writing-kit'
-import { guidelineIllustration } from '@/shared/assets'
+import { videoGuidelineIllustration } from '@/shared/assets'
 
 /** /video-guidelines: a clip's 영상 지침, the same directory and the same stack as /guidelines
  *  (GUIDE-44), under 영상's own title. `?new=1` opens an empty new one at once; closing it drops
@@ -21,7 +21,7 @@ export function VideoGuidelinesPage() {
           size="section"
           title={t('clipPage.title')}
           statement={t('clipStatement')}
-          illustration={guidelineIllustration}
+          illustration={videoGuidelineIllustration}
           actions={actions}
           className="pt-2"
         />

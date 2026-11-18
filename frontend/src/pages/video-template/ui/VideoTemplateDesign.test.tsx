@@ -22,14 +22,20 @@ function mount(writes: ClipRecipe[] = []) {
   })
 }
 describe('separate retained video template design', () => {
-  it('leads the saved detail with an example of its stored design before editing actions', async () => {
+  it('opens the saved reading on its one action row, then the example of its stored design', async () => {
     mount()
     const example = await screen.findByText('구성 예시')
     expect(
       screen.getByText('인트로 매거진 커버 · 자막 네온 사인 · 아웃트로 점수 강조'),
     ).toBeInTheDocument()
     const edit = screen.getByRole('button', { name: /시작 디자인 편집$/ })
-    expect(example.compareDocumentPosition(edit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(edit).toHaveTextContent('시작 디자인')
+    // The actions come first, the composition example and design after them (CLIP-42).
+    expect(edit.compareDocumentPosition(example) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // No 확인하기 step title and no saved-and-usable or design-help lines.
+    expect(screen.queryByRole('heading', { name: /확인하기$/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/사용할 수 있어요/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/인트로·아웃트로와 자막 스타일을 바꿔요/)).not.toBeInTheDocument()
     expect(screen.queryByRole('combobox', { name: /^인트로 디자인/ })).not.toBeInTheDocument()
   })
   it('shows saved design editing beside named text methods and exposes no competing name/body draft', async () => {
