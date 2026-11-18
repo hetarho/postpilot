@@ -1,11 +1,12 @@
 import type { I18nFragment } from '@/shared/lib'
 
-/** Guide: 내 글's shared pieces — compact work cards, the status groups, the 찾기 sheet. */
+/** Guide: 내 글's shared pieces — work rows, the status groups, the 찾기 sheet. */
 export const i18n = {
   namespace: 'channel',
   ko: {
     work: {
       continueAction: '계속하기',
+      resume: '이어서',
       newestFirst: '최근 수정 순',
       empty: '아직 만든 글이나 영상이 없어요. 만들기에서 시작해 보세요.',
       inProgress: '작성 중',
@@ -28,6 +29,7 @@ export const i18n = {
   en: {
     work: {
       continueAction: 'Continue',
+      resume: 'Continue',
       newestFirst: 'Latest changes first',
       empty: 'No posts or videos yet. Start from Create.',
       inProgress: 'In progress',

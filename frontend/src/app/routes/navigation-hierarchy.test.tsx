@@ -78,7 +78,7 @@ function legacyEntry(target: string, path: string, ownerKey = 'alice') {
 it('traverses the four tabs as sibling destinations without paid work', async () => {
   const user = userEvent.setup()
   const view = renderLegacyModelRoute('/posts', { user: { id: 'alice' } })
-  await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
+  await screen.findByRole('heading', { name: '글', level: 1 })
   expectRoot()
   // Guide: four places; 설정 is reached through the avatar and lights no tab.
   for (const [label, pathname, navLabel, viaAccount] of [
@@ -86,7 +86,7 @@ it('traverses the four tabs as sibling destinations without paid work', async ()
     ['AI 토너먼트', '/ai-models', 'AI 토너먼트', false],
     ['설정', '/settings', '', true],
     ['영상', '/clips', '영상', false],
-    ['네이버 블로그', '/posts', '글', false],
+    ['글', '/posts', '글', false],
   ] as const) {
     const primary = within(screen.getByRole('navigation', { name: '주요' }))
     if (viaAccount) {
@@ -114,7 +114,7 @@ it('traverses the four tabs as sibling destinations without paid work', async ()
 it.each([
   ['/clips', '영상'],
   ['/ai-models', 'AI 토너먼트'],
-  ['/posts', '네이버 블로그'],
+  ['/posts', '글'],
 ])(
   'ignores an old cross-destination origin on direct load and reload of %s',
   async (path, label) => {
@@ -234,7 +234,7 @@ it('does not offer a source-post return after the source is missing or inaccessi
 
 it('does not propagate a sibling visit into a kit screen origin', async () => {
   const view = renderLegacyModelRoute('/posts', { user: { id: 'alice' } })
-  await screen.findByRole('heading', { name: '네이버 블로그', level: 1 })
+  await screen.findByRole('heading', { name: '글', level: 1 })
   await act(() => view.router.navigate({ to: '/templates' }))
   await screen.findByRole('heading', { name: '템플릿', level: 1 })
   // A kit screen's way back is 홈, the picture that holds it, not the list visited before.
@@ -280,10 +280,10 @@ it.each([
 
 // The old Instagram list is one 영상 list now: its address lands there, still a root.
 it.each([
-  ['/posts/', '네이버 블로그', undefined],
+  ['/posts/', '글', undefined],
   ['/ai-models/', 'AI 토너먼트', undefined],
   ['/clips/', '영상', '/clips'],
-  ['/naver-blog/', '네이버 블로그', '/posts'],
+  ['/naver-blog/', '글', '/posts'],
   ['/naver-clip/', '영상', '/clips'],
   ['/insta-clip/', '영상', '/clips'],
 ])('keeps trailing-slash root %s independent of explicit entry', async (path, label, landing) => {

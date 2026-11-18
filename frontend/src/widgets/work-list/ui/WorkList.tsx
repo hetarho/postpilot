@@ -1,43 +1,10 @@
-import { useId, useState, type ComponentType, type ReactNode } from 'react'
+import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { clsx } from 'clsx'
 import { Search, X } from 'lucide-react'
-import { Button, Sheet, Typography, typographyStyles, type BadgeTone } from '@/shared/ui'
+import { Button, Sheet, Typography, WorkRowList, typographyStyles } from '@/shared/ui'
 
-const TILE_TONE: Record<BadgeTone, string> = {
-  neutral: 'bg-badge-neutral-bg text-badge-neutral-fg',
-  accent: 'bg-badge-accent-bg text-badge-accent-fg',
-  success: 'bg-notice-success-bg text-notice-success-fg',
-  done: 'bg-badge-done-bg text-badge-done-fg',
-  warning: 'bg-notice-warning-bg text-notice-warning-fg',
-  info: 'bg-notice-info-bg text-notice-info-fg',
-  danger: 'bg-notice-danger-bg text-notice-danger-fg',
-}
-
-/** Guide: a work card's leading tile — a soft square in the status chip's own tone with a glyph
- *  for what the work is, so 내 글 is scanned by shape and colour before a word is read. */
-export function StatusTile({
-  tone,
-  icon: Icon,
-}: {
-  tone: BadgeTone
-  icon: ComponentType<{ className?: string }>
-}) {
-  return (
-    <span
-      aria-hidden="true"
-      className={clsx(
-        'flex size-12 shrink-0 items-center justify-center rounded-lg sm:size-14',
-        TILE_TONE[tone],
-      )}
-    >
-      <Icon className="size-6" />
-    </span>
-  )
-}
-
-/** Guide: one status group of a work list — 작성 중 or 완성 — a heading with its count over a
- *  column of cards (two on the desk). */
+/** Guide: one status group of a work list — 작성 중 or 완성 — a heading with its count over its
+ *  work rows on one card (THEME-83). */
 export function WorkGroup({
   heading,
   count,
@@ -63,9 +30,7 @@ export function WorkGroup({
           {count}
         </span>
       </h2>
-      <ul aria-label={listLabel} className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-        {children}
-      </ul>
+      <WorkRowList label={listLabel}>{children}</WorkRowList>
       {footer}
     </section>
   )

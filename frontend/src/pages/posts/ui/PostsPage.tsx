@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
-import { clsx } from 'clsx'
-import { CircleCheck, PenLine, Scale, Send, Sparkles, TriangleAlert } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import {
   displayTitle,
   postRowState,
@@ -22,16 +21,11 @@ import {
   WorkListToolbar,
   WorkListLoading,
   FindSheet,
-  StatusTile,
   WorkGroup,
-  workCardActionClass,
-  workCardLinkClass,
-  workCardStyles,
-  workCardFooterClass,
 } from '@/widgets/work-list'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
-import { penIllustration } from '@/shared/assets'
+import { postsIllustration } from '@/shared/assets'
 import {
   Badge,
   Button,
@@ -39,31 +33,13 @@ import {
   Notice,
   Spinner,
   Typography,
+  WorkRow,
   buttonStyles,
-  typographyStyles,
-  type BadgeTone,
   pageStyles,
   useNearViewport,
 } from '@/shared/ui'
 import { useSettledValue } from '../model/useSettledValue'
 import { useHistoryScrollReturn } from '../model/useHistoryScrollReturn'
-
-/** The post keeps its state-specific glyph; the tile's geometry and semantic tones are shared. */
-function postStatusIcon(tone: BadgeTone, status: string) {
-  return tone === 'info'
-    ? Sparkles
-    : tone === 'danger'
-      ? TriangleAlert
-      : tone === 'warning'
-        ? Scale
-        : status === 'published'
-          ? Send
-          : status === 'finalized'
-            ? CircleCheck
-            : status === 'review'
-              ? Sparkles
-              : PenLine
-}
 
 /** The way back to unfinished work (PRD F-8). The server returns only the acting user's posts,
  *  newest first, a page at a time as the list's end nears the screen (POST-90), and it applies the
@@ -153,8 +129,8 @@ export function PostsPage() {
         className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
-      {/* The channel opens straight onto this list: the marked channel link names the place, so
-          the heading is for assistive technology only (THEME-38, POST-43). */}
+      {/* The shell draws the 글 tab's large title over this list, so the page's own h1 names the
+          same tab for the outline only (THEME-38, POST-43). */}
       <h1 className="sr-only">{t('list.mine', { ns: 'posts' })}</h1>
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
@@ -188,7 +164,7 @@ export function PostsPage() {
 
       {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
       {!isError && isEmpty && !isNarrowed && (
-        <ListEmptyState illustration={penIllustration} className="mt-6">
+        <ListEmptyState illustration={postsIllustration} className="mt-6">
           {t('list.empty', { ns: 'posts' })}
         </ListEmptyState>
       )}
@@ -215,73 +191,16 @@ export function PostsPage() {
       >
         <WorkListLoading pending={isPending} />
         {(() => {
-          // One post's card: the status tile, the title in a heading's size, its state as a chip,
-          // and the recovery links under it. Continuation stays a compact link on every card.
+          // One post's work row (POST-64): the whole row opens the post — or the pending
+          // comparison's record while it waits — and its one trailing action opens somewhere else.
           const renderPost = (
             { post, matchedTags }: (typeof narrowed)[number],
-            latestCard = false,
+            latestRow = false,
           ) => {
             // The one chip a row carries, chosen the way aggregate 내 글 chooses it (POST-127).
             const status = postRowState(
               post,
               post.pendingExperimentId ? byId.get(post.pendingExperimentId)?.status : undefined,
-            )
-            // The title gets a whole line in a heading's size, and the metadata wraps under it: the
-            // voice sits between the status and the time, because which voice a post is in is the
-            // one thing this list has to say and a tombstone must say so on the card itself
-            // (POST-25). A post with 말투 없음 shows none: an absence is not metadata.
-            const content = (
-              <>
-                <StatusTile tone={status.tone} icon={postStatusIcon(status.tone, post.status)} />
-                <span className="flex min-w-0 flex-1 flex-col gap-2">
-                  <Typography
-                    variant="fieldTitle"
-                    as="span"
-                    className="text-content-primary line-clamp-2"
-                  >
-                    {displayTitle(post)}
-                  </Typography>
-                  <span className="flex w-full min-w-0 flex-wrap items-center gap-2">
-                    <Badge tone={status.tone}>{status.label}</Badge>
-                    {post.exportReady && (
-                      <span
-                        className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
-                      >
-                        {t('list.history.exportReady', { ns: 'posts' })}
-                      </span>
-                    )}
-                    {post.voice && (
-                      <VoiceRefLabel
-                        voice={post.voice}
-                        className={typographyStyles({ variant: 'meta' })}
-                      />
-                    )}
-                    {/* Only for an assigned post, and after the voice: most rows carry a voice and
-                    fewer a 템플릿, so it reads as an addition rather than a second column. */}
-                    <TemplateRefLabel
-                      template={post.template}
-                      className={typographyStyles({ variant: 'meta' })}
-                    />
-                    {/* Only the tags the search actually matched, and only while it did (POST-65).
-                    A row kept by a word its title never shows looks arbitrary otherwise; as
-                    metadata rather than the chips ② uses, because a fourth object in a 360px
-                    row is what pushed the title down to ten Hangul in the first place. */}
-                    {matchedTags.length > 0 && (
-                      <span
-                        className={typographyStyles({ variant: 'meta', className: 'truncate' })}
-                      >
-                        {matchedTags.map((tag) => `#${tag}`).join(' ')}
-                      </span>
-                    )}
-                    <time
-                      dateTime={post.updatedAt}
-                      className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
-                    >
-                      {formatRelativeTime(post.updatedAt)}
-                    </time>
-                  </span>
-                </span>
-              </>
             )
             const runningJob =
               post.activeJob && !isTerminal(post.activeJob) ? post.activeJob : undefined
@@ -289,89 +208,100 @@ export function PostsPage() {
               post.latestOrdinaryFailure ??
               (post.activeJob?.status === 'failed' ? post.activeJob : undefined)
             const failure = failedJob?.failure
+            // A comparison waiting on a settled post is where its row goes, as it always has.
+            const recordId = !runningJob && !failedJob ? post.pendingExperimentId : undefined
+            const meta = (
+              <>
+                <Badge tone={status.tone} className="shrink-0">
+                  {status.label}
+                </Badge>
+                {/* Exportable is the post's state, said beside its badge whatever else runs. */}
+                {post.exportReady && (
+                  <span className="shrink-0">{t('list.history.exportReady', { ns: 'posts' })}</span>
+                )}
+                {/* A running job's progress or a failure takes the made-with and time's place. */}
+                {runningJob || failure ? (
+                  <span className="min-w-0 truncate">
+                    {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
+                  </span>
+                ) : (
+                  <>
+                    {/* Which voice a post is in is what this list has to say, and a tombstone says
+                        so on the row itself (POST-25); 말투 없음 shows none. */}
+                    {post.voice && (
+                      <VoiceRefLabel voice={post.voice} className="min-w-0 truncate" />
+                    )}
+                    <TemplateRefLabel template={post.template} className="min-w-0 truncate" />
+                    {/* Only the tags the search matched, and only while it did (POST-65). */}
+                    {matchedTags.length > 0 && (
+                      <span className="min-w-0 truncate">
+                        {matchedTags.map((tag) => `#${tag}`).join(' ')}
+                      </span>
+                    )}
+                    <time dateTime={post.updatedAt} className="shrink-0">
+                      {formatRelativeTime(post.updatedAt)}
+                    </time>
+                  </>
+                )}
+              </>
+            )
+            // At most one action, never a second link to the row's own address: the comparison
+            // result while one waits behind a running or failed row, else the published post.
+            // Export has no link of its own: it lives in the opened post's 글 완성 step (POST-64).
+            const action =
+              post.pendingExperimentId && !recordId ? (
+                <Link
+                  to="/tests/records/$id"
+                  params={{ id: post.pendingExperimentId }}
+                  search={{ entry: historyEntry }}
+                  onClick={() => remember(post)}
+                  className={buttonStyles({ variant: 'ghost', className: 'px-3' })}
+                >
+                  {t('list.history.result', { ns: 'posts' })}
+                </Link>
+              ) : post.publishedUrl ? (
+                <a
+                  href={post.publishedUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonStyles({ variant: 'ghost', className: 'gap-1 px-3' })}
+                >
+                  {t('list.history.published', { ns: 'posts' })}
+                  <ExternalLink aria-hidden="true" className="size-4" />
+                </a>
+              ) : undefined
             return (
-              <li
+              <WorkRow
                 key={post.slug}
                 data-post-slug={post.slug}
-                className={workCardStyles({ latest: latestCard })}
-              >
-                {post.pendingExperimentId && !runningJob && !failedJob ? (
-                  <Link
-                    to="/tests/records/$id"
-                    params={{ id: post.pendingExperimentId }}
-                    search={{ entry: historyEntry }}
-                    className={workCardLinkClass}
-                    onClick={() => remember(post)}
-                  >
-                    {content}
-                  </Link>
-                ) : (
-                  <Link
-                    to="/posts/$slug"
-                    params={{ slug: post.slug }}
-                    className={workCardLinkClass}
-                    onClick={() => remember(post)}
-                  >
-                    {content}
-                  </Link>
-                )}
-                {/* Each recovery target is a sibling of the work link. Export has no link of its
-                  own: it lives in the opened post's 글 완성 step, one step press from wherever the
-                  post opens (POST-64). */}
-                <div className={workCardFooterClass}>
-                  {(runningJob || failure) && (
-                    <Typography
-                      variant={runningJob ? 'meta' : 'body'}
-                      className="text-content-secondary w-full"
-                    >
-                      {runningJob
-                        ? progressLabel(runningJob)
-                        : failure && formatAppFailure(failure)}
-                    </Typography>
-                  )}
-                  <Link
-                    to="/posts/$slug"
-                    params={{ slug: post.slug }}
-                    onClick={() => remember(post)}
-                    className={buttonStyles({
-                      variant: 'ghost',
-                      className: clsx(
-                        '-ml-3',
-                        workCardActionClass,
-                        latestCard && 'text-link-fg-current',
-                      ),
-                    })}
-                  >
-                    {t(
-                      post.status === 'published' || post.status === 'finalized' || runningJob
-                        ? 'list.history.open'
-                        : 'list.history.continue',
-                      { ns: 'posts' },
-                    )}
-                  </Link>
-                  {post.pendingExperimentId && (runningJob || failedJob) && (
+                tint={latestRow}
+                cue={latestRow ? t('work.resume', { ns: 'channel' }) : undefined}
+                title={displayTitle(post)}
+                meta={meta}
+                action={action}
+                link={({ className, children }) =>
+                  recordId ? (
                     <Link
                       to="/tests/records/$id"
-                      params={{ id: post.pendingExperimentId }}
+                      params={{ id: recordId }}
                       search={{ entry: historyEntry }}
+                      className={className}
                       onClick={() => remember(post)}
-                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
                     >
-                      {t('list.history.result', { ns: 'posts' })}
+                      {children}
                     </Link>
-                  )}
-                  {post.publishedUrl && (
-                    <a
-                      href={post.publishedUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
+                  ) : (
+                    <Link
+                      to="/posts/$slug"
+                      params={{ slug: post.slug }}
+                      className={className}
+                      onClick={() => remember(post)}
                     >
-                      {t('list.history.published', { ns: 'posts' })}
-                    </a>
-                  )}
-                </div>
-              </li>
+                      {children}
+                    </Link>
+                  )
+                }
+              />
             )
           }
           return (

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { LoadingStatus, Skeleton, Typography, cardStyles, typographyStyles } from '@/shared/ui'
+import { LoadingStatus, Skeleton, Typography, WorkRowList, typographyStyles } from '@/shared/ui'
 
 /** Every My work section reserves the same toolbar, including the aggregate without filters. */
 export function WorkListToolbar({
@@ -52,7 +52,7 @@ export function WorkListBody({
   )
 }
 
-/** Keep the group heading and representative card geometry while either history is loading. */
+/** Keep the group heading and representative row geometry while either history is loading. */
 export function WorkListLoading({ pending }: { pending: boolean }) {
   const { t } = useTranslation(['channel', 'common'])
   return (
@@ -71,20 +71,16 @@ export function WorkListLoading({ pending }: { pending: boolean }) {
               <Skeleton className="bg-surface-recessed absolute inset-0" />
             </span>
           </h2>
-          <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-            {[0, 1].map((key) => (
-              <div
-                key={key}
-                className={cardStyles({ padding: 'sm', className: 'flex min-h-32 gap-4 sm:p-5' })}
-              >
-                <Skeleton className="bg-surface-recessed size-12 shrink-0 rounded-lg sm:size-14" />
-                <span className="flex min-w-0 flex-1 flex-col gap-3 py-1">
+          <WorkRowList>
+            {[0, 1, 2].map((key) => (
+              <li key={key} className="flex min-h-16 items-center gap-2 px-4 py-2">
+                <span className="flex min-w-0 flex-1 flex-col gap-2 py-1">
                   <Skeleton className="bg-surface-recessed h-5 w-3/4" />
                   <Skeleton className="bg-surface-recessed h-4 w-1/2" />
                 </span>
-              </div>
+              </li>
             ))}
-          </div>
+          </WorkRowList>
         </div>
       )}
     </div>

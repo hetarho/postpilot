@@ -446,7 +446,7 @@ describe('lazily loaded routes', () => {
   it('renders the editor after navigating to it from another page', async () => {
     const posts = { posts: [{ slug: 'jeju-trip', title: '제주 3일' }] }
     const { router } = renderAppAt('/posts', { user: { id: 'alice' }, posts })
-    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '글' })).toBeInTheDocument()
 
     await act(() => router.navigate({ to: '/posts/$slug', params: { slug: 'jeju-trip' } }))
     expect(await screen.findByDisplayValue('제주 3일')).toBeInTheDocument()
@@ -535,7 +535,7 @@ describe('theme preferences in the real route tree', () => {
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '글' })).toBeInTheDocument()
     // Signed in, the theme lives inside the avatar, at every width.
     await user.click(screen.getByRole('button', { name: '내 계정' }))
     const themes = within(await screen.findByRole('tablist', { name: '테마' }))
@@ -574,7 +574,7 @@ describe('theme preferences in the real route tree', () => {
       user: { id: 'alice' },
       theme: theme.ports,
     })
-    expect(await screen.findByRole('heading', { name: '네이버 블로그' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: '글' })).toBeInTheDocument()
     expect(document.documentElement).toHaveAttribute('data-theme', 'night')
     await user.click(screen.getByRole('button', { name: '내 계정' }))
     const reloadedThemes = within(await screen.findByRole('tablist', { name: '테마' }))
@@ -623,7 +623,7 @@ describe('theme preferences in the real route tree', () => {
       theme: theme.ports,
     })
 
-    expect(await screen.findByRole('heading', { name: 'Naver Blog' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Posts' })).toBeInTheDocument()
     await waitFor(() => expect(calls).toContain('ListPosts'))
     // Opening the avatar reads the plan for its own panel; the selection inside it adds nothing.
     await user.click(screen.getByRole('button', { name: 'My account' }))
@@ -733,7 +733,7 @@ describe('localized registered-route smoke', () => {
   const copy = {
     ko: {
       login: '로그인',
-      posts: '네이버 블로그',
+      posts: '글',
       voices: '말투',
       templates: '템플릿',
       guidelines: '지침',
@@ -750,7 +750,7 @@ describe('localized registered-route smoke', () => {
     },
     en: {
       login: 'Log in',
-      posts: 'Naver Blog',
+      posts: 'Posts',
       voices: 'Writing style',
       templates: 'Templates',
       guidelines: 'Guidelines',
@@ -955,9 +955,7 @@ describe('retired publishing route', () => {
     const calls: string[] = []
     const { router } = renderAppAt('/publishing-agents', { user: account, calls })
 
-    expect(
-      await screen.findByRole('heading', { level: 1, name: '네이버 블로그' }),
-    ).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/posts')
     expect(hrefs()).not.toContain('/publishing-agents')
     expect(calls.filter((call) => /publish/i.test(call))).toEqual([])

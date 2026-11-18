@@ -18,20 +18,13 @@ import { useClipTemplates } from '@/entities/clip-template'
 import { isTerminal, progressLabel } from '@/entities/generation-job'
 import { useSession } from '@/entities/session'
 import { ClipListControls, narrowClips, type ClipNarrowing } from '@/features/filter-clips'
-import { Clapperboard } from 'lucide-react'
 import { ChannelActions } from '@/widgets/channel-actions'
-import { clsx } from 'clsx'
 import {
   WorkListBody,
   WorkListToolbar,
   WorkListLoading,
   FindSheet,
-  StatusTile,
   WorkGroup,
-  workCardActionClass,
-  workCardLinkClass,
-  workCardStyles,
-  workCardFooterClass,
 } from '@/widgets/work-list'
 import { appFailureFromConnect } from '@/shared/api'
 import { activeLocale, formatAppFailure, formatRelativeTime } from '@/shared/lib'
@@ -43,8 +36,8 @@ import {
   ListEmptyState,
   Notice,
   Typography,
+  WorkRow,
   buttonStyles,
-  typographyStyles,
 } from '@/shared/ui'
 import { pageStyles } from '@/shared/ui'
 import { i18n } from '../config/i18n'
@@ -135,8 +128,8 @@ export function ClipHistoryPage() {
         className: 'flex flex-1 flex-col pt-2 sm:pt-4',
       })}
     >
-      {/* The channel opens straight onto this list: the marked channel link names the place, so
-          the heading is for assistive technology only (THEME-38, CLIP-41). */}
+      {/* The shell draws the 영상 tab's large title over this list, so the page's own h1 names the
+          same tab for the outline only (THEME-38, CLIP-41). */}
       <h1 className="sr-only">{historyText('videos')}</h1>
 
       {/* Guide: the search and the status filter wait behind ONE 찾기 button (a bottom sheet), so
@@ -209,112 +202,83 @@ export function ClipHistoryPage() {
       >
         <WorkListLoading pending={projects.isPending} />
         {(() => {
-          // One clip's card: a status tile, the title, its state, template, ratio and time, and
-          // the recovery links under it. Continuation stays a compact link on every card.
-          const renderClip = (project: ClipProject, latestCard = false) => {
+          // One clip's work row (CLIP-41): the whole row opens the clip, and its one trailing
+          // action is the finished file's download, never a second link back to the clip.
+          const renderClip = (project: ClipProject, latestRow = false) => {
             const status = clipHistoryStatus(project)
             const template = templates.templates.find((v) => v.id === project.videoTemplateId)
             const runningJob =
               project.latestJob && !isTerminal(project.latestJob) ? project.latestJob : undefined
             const failure =
               project.latestJob?.status === 'failed' ? project.latestJob.failure : undefined
-            // Guide: a large, friendly card — the status tile, the title in a heading's size, then
-            // its state and metadata wrapping under it.
-            return (
-              <li key={project.id} className={workCardStyles({ latest: latestCard })}>
-                <Link
-                  to="/clips/$clipId"
-                  params={{ clipId: project.id }}
-                  onClick={() => remember(project.id)}
-                  className={workCardLinkClass}
-                >
-                  <StatusTile tone={status.tone} icon={Clapperboard} />
-                  <span className="flex min-w-0 flex-1 flex-col gap-2">
-                    <Typography
-                      variant="fieldTitle"
-                      as="span"
-                      className="text-content-primary line-clamp-2"
-                    >
-                      {clipDisplayTitle(project)}
-                    </Typography>
-                    <span className="flex w-full min-w-0 flex-wrap items-center gap-2">
-                      <Badge tone={status.tone}>{status.label}</Badge>
-                      <span
-                        className={typographyStyles({ variant: 'meta', className: 'truncate' })}
-                      >
-                        {template?.name ??
-                          t(
-                            // No template is a normal state and asks for nothing;
-                            // only a NAMED template that is gone does (CLIP-146).
-                            !project.videoTemplateId
-                              ? 'project.noTemplate'
-                              : templates.isPending
-                                ? 'project.templateLoading'
-                                : templates.isError
-                                  ? 'project.templateUnavailable'
-                                  : 'project.detachedTemplate',
-                            { ns: 'clips' },
-                          )}
-                      </span>
-                      <span
-                        className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
-                      >
+            const meta = (
+              <>
+                <Badge tone={status.tone} className="shrink-0">
+                  {status.label}
+                </Badge>
+                {/* A running job's progress or a failure takes the made-with and time's place. */}
+                {runningJob || failure ? (
+                  <span className="min-w-0 truncate">
+                    {runningJob ? progressLabel(runningJob) : failure && formatAppFailure(failure)}
+                  </span>
+                ) : (
+                  <>
+                    <span className="min-w-0 truncate">
+                      {template?.name ??
+                        t(
+                          // No template is a normal state and asks for nothing;
+                          // only a NAMED template that is gone does (CLIP-146).
+                          !project.videoTemplateId
+                            ? 'project.noTemplate'
+                            : templates.isPending
+                              ? 'project.templateLoading'
+                              : templates.isError
+                                ? 'project.templateUnavailable'
+                                : 'project.detachedTemplate',
+                          { ns: 'clips' },
+                        )}
+                    </span>
+                    {/* Every new clip is 9:16, so only a 16:9 or 1:1 project names its ratio. */}
+                    {project.ratio !== 'vertical' && (
+                      <span className="shrink-0">
                         {t(`ratio.${project.ratio}`, { ns: 'clips' })}
                       </span>
-                      <time
-                        dateTime={project.updatedAt}
-                        className={typographyStyles({ variant: 'meta', className: 'shrink-0' })}
-                      >
-                        {formatRelativeTime(project.updatedAt)}
-                      </time>
-                    </span>
-                  </span>
-                </Link>
-                <div className={workCardFooterClass}>
-                  {(runningJob || failure) && (
-                    <Typography
-                      variant={runningJob ? 'meta' : 'body'}
-                      className="text-content-secondary w-full"
+                    )}
+                    <time dateTime={project.updatedAt} className="shrink-0">
+                      {formatRelativeTime(project.updatedAt)}
+                    </time>
+                  </>
+                )}
+              </>
+            )
+            return (
+              <WorkRow
+                key={project.id}
+                tint={latestRow}
+                cue={latestRow ? t('work.resume', { ns: 'channel' }) : undefined}
+                title={clipDisplayTitle(project)}
+                meta={meta}
+                action={
+                  project.result?.downloadUrl ? (
+                    <a
+                      href={project.result.downloadUrl}
+                      className={buttonStyles({ variant: 'ghost', className: 'px-3' })}
                     >
-                      {runningJob
-                        ? progressLabel(runningJob)
-                        : failure && formatAppFailure(failure)}
-                    </Typography>
-                  )}
+                      {historyText('download')}
+                    </a>
+                  ) : undefined
+                }
+                link={({ className, children }) => (
                   <Link
                     to="/clips/$clipId"
                     params={{ clipId: project.id }}
                     onClick={() => remember(project.id)}
-                    className={buttonStyles({
-                      variant: 'ghost',
-                      className: clsx(
-                        '-ml-3',
-                        workCardActionClass,
-                        latestCard && 'text-link-fg-current',
-                      ),
-                    })}
+                    className={className}
                   >
-                    {historyText(project.finalized || runningJob ? 'open' : 'continue')}
+                    {children}
                   </Link>
-                  {project.result?.downloadUrl ? (
-                    <a
-                      href={project.result.downloadUrl}
-                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
-                    >
-                      {historyText('download')}
-                    </a>
-                  ) : project.result ? (
-                    <Link
-                      to="/clips/$clipId"
-                      params={{ clipId: project.id }}
-                      onClick={() => remember(project.id)}
-                      className={buttonStyles({ variant: 'ghost', className: workCardActionClass })}
-                    >
-                      {historyText('export')}
-                    </Link>
-                  ) : null}
-                </div>
-              </li>
+                )}
+              />
             )
           }
           return (
