@@ -70,11 +70,12 @@ var blocked = []netip.Prefix{
 }
 
 // Allowed reports whether a page may be fetched from addr: a public unicast address only.
+// An IPv4-mapped IPv6 address is refused as written, whatever IPv4 address it carries; a
+// resolver's answers are unmapped before they are checked (see Fetcher.dial).
 func Allowed(addr netip.Addr) bool {
-	if !addr.IsValid() {
+	if !addr.IsValid() || addr.Is4In6() {
 		return false
 	}
-	addr = addr.Unmap()
 	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() || addr.IsLinkLocalMulticast() ||
 		addr.IsInterfaceLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() || !addr.IsGlobalUnicast() {
 		return false

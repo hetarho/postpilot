@@ -126,10 +126,9 @@ func TestTargetSummaryPrioritizesCurrentPrivateWorkAndLeavesUnsavedCreationsInde
 			if row := summaryForTarget(t, h, "owned"); row.SessionID != fresh.ID {
 				t.Fatalf("latest meaningful work was hidden: %+v", row)
 			}
+			// Each holds its owner's edit: an unsaved creation opened and left is not listed.
 			for _, key := range []string{"new-one", "new-two"} {
-				if _, err := h.svc.Create(ctx, "alice", authoring.PostGuideline, "", key); err != nil {
-					t.Fatal(err)
-				}
+				createWithWork(t, h, authoring.PostGuideline, key)
 			}
 			unsaved, _, err := h.svc.ListSummaries(ctx, authoring.SummaryQuery{UserID: "alice", Kind: authoring.PostGuideline, UnsavedOnly: true})
 			if err != nil || len(unsaved) != 2 || unsaved[0].SessionID == unsaved[1].SessionID {
@@ -186,10 +185,9 @@ func TestSavedHistoricalRecommendationBatchDoesNotHideAFreshBaseline(t *testing.
 func TestPaginatedDirectorySummaryRetainsItsTerminalRowAndOriginalNextCursor(t *testing.T) {
 	h := fixture(t)
 	ctx := context.Background()
+	// The unsaved creations hold their owner's edits: one opened and left is not listed.
 	for _, key := range []string{"tail-one", "tail-two"} {
-		if _, err := h.svc.Create(ctx, "alice", authoring.PostGuideline, "", key); err != nil {
-			t.Fatal(err)
-		}
+		createWithWork(t, h, authoring.PostGuideline, key)
 	}
 	state, err := h.svc.Create(ctx, "alice", authoring.PostGuideline, "owned", "original")
 	if err != nil {
@@ -200,9 +198,7 @@ func TestPaginatedDirectorySummaryRetainsItsTerminalRowAndOriginalNextCursor(t *
 		t.Fatal(err)
 	}
 	for _, key := range []string{"front-one", "front-two"} {
-		if _, err := h.svc.Create(ctx, "alice", authoring.PostGuideline, "", key); err != nil {
-			t.Fatal(err)
-		}
+		createWithWork(t, h, authoring.PostGuideline, key)
 	}
 	h.models.text = `{"artifact":{"name":"Directory completed rule","description":"","body":"The terminal result","title_area":""},"reply":"지침을 수정했어요."}`
 	job, _ := h.jobs.Get(ctx, "alice", jobID)

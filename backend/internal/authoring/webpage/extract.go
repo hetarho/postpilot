@@ -1,9 +1,11 @@
 package webpage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 
 	"golang.org/x/net/html"
@@ -20,26 +22,57 @@ const ParagraphExcerptChars = 120
 // footers, scripts, forms and frames are skipped. The structure is cut at maxChars Unicode
 // characters, at a line boundary.
 func Extract(r io.Reader, maxChars int) (title, structure string, err error) {
+	return extract(context.Background(), r, maxChars)
+}
+
+// extract is Extract bounded by ctx: a page built to make the walk slow stops at the read's
+// deadline with ctx's error.
+func extract(ctx context.Context, r io.Reader, maxChars int) (title, structure string, err error) {
 	doc, err := html.Parse(r)
 	if err != nil {
 		return "", "", err
 	}
-	title = pageTitle(doc)
+	w := &walker{ctx: ctx, max: maxChars}
+	title = pageTitle(doc, w.tick)
 	root := contentRoot(doc)
-	w := &walker{max: maxChars}
 	if root != nil {
+		// Whether an element holds an image or a block is read once for the whole tree,
+		// not again at every ancestor of a deeply nested element.
+		w.images = holders(root, func(n *html.Node) bool { return n.DataAtom == atom.Img })
+		w.blocks = holders(root, func(n *html.Node) bool { return blocks[n.DataAtom] })
 		w.walk(root)
 	}
 	w.flushPhotos()
+	if w.err != nil {
+		return "", "", w.err
+	}
 	return title, strings.Join(w.lines, "\n"), nil
 }
 
 type walker struct {
+	ctx    context.Context
 	lines  []string
 	chars  int
 	photos int
 	max    int
 	full   bool
+	visits int
+	err    error
+	images map[*html.Node]bool
+	blocks map[*html.Node]bool
+}
+
+// tick counts one visited node and reports whether the walk must stop: its output budget
+// is spent or its deadline has passed.
+func (w *walker) tick() bool {
+	if w.full {
+		return true
+	}
+	w.visits++
+	if w.visits%1024 == 0 && w.ctx.Err() != nil {
+		w.err, w.full = w.ctx.Err(), true
+	}
+	return w.full
 }
 
 func (w *walker) add(line string) {
@@ -81,7 +114,7 @@ var skipped = map[atom.Atom]bool{
 }
 
 func (w *walker) walk(n *html.Node) {
-	if w.full {
+	if w.tick() {
 		return
 	}
 	if n.Type == html.ElementNode {
@@ -113,7 +146,7 @@ func (w *walker) walk(n *html.Node) {
 		case n.DataAtom == atom.Blockquote:
 			w.text("> ", n)
 			return
-		case (n.DataAtom == atom.Div || n.DataAtom == atom.Td || n.DataAtom == atom.Dd || n.DataAtom == atom.Section) && !hasBlockChild(n):
+		case (n.DataAtom == atom.Div || n.DataAtom == atom.Td || n.DataAtom == atom.Dd || n.DataAtom == atom.Section) && !w.blocks[n]:
 			// Text set straight into a box, with <br> for its lines, is a paragraph too.
 			w.text("", n)
 			return
@@ -125,7 +158,7 @@ func (w *walker) walk(n *html.Node) {
 }
 
 func (w *walker) heading(marker string, n *html.Node) {
-	if text := excerpt(textOf(n), 80); text != "" {
+	if text := excerptOf(n, 80, w.tick); text != "" {
 		w.add(marker + text)
 	}
 }
@@ -133,16 +166,15 @@ func (w *walker) heading(marker string, n *html.Node) {
 // text adds a paragraph-like element as an excerpt, and counts the photos inside it in
 // their place, since an editor may wrap a photo in a paragraph.
 func (w *walker) text(marker string, n *html.Node) {
-	if images := countImages(n); images > 0 {
+	if w.images[n] {
 		for child := n.FirstChild; child != nil; child = child.NextSibling {
 			w.walk(child)
 		}
-		if text := excerpt(textOf(n), ParagraphExcerptChars); text != "" {
-			w.add(marker + text)
-		}
+	}
+	if w.full {
 		return
 	}
-	if text := excerpt(textOf(n), ParagraphExcerptChars); text != "" {
+	if text := excerptOf(n, ParagraphExcerptChars, w.tick); text != "" {
 		w.add(marker + text)
 	}
 }
@@ -154,46 +186,75 @@ var blocks = map[atom.Atom]bool{
 	atom.Dl: true, atom.Pre: true, atom.Hr: true,
 }
 
-func hasBlockChild(n *html.Node) bool {
-	for child := n.FirstChild; child != nil; child = child.NextSibling {
-		if child.Type == html.ElementNode && (blocks[child.DataAtom] || hasBlockChild(child)) {
+// holders marks every node with an element below it that is one of what: one pass over
+// the tree, where asking each element in turn would walk its subtree again at every level.
+func holders(root *html.Node, is func(*html.Node) bool) map[*html.Node]bool {
+	held := map[*html.Node]bool{}
+	var visit func(*html.Node) bool
+	visit = func(n *html.Node) bool {
+		holds := false
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			if visit(child) {
+				holds = true
+			}
+		}
+		if holds {
+			held[n] = true
+		}
+		return holds || (n.Type == html.ElementNode && is(n))
+	}
+	visit(root)
+	return held
+}
+
+// excerptOf is n's visible text, its whitespace collapsed, cut by excerpt — gathered
+// without reading more of n than the excerpt needs: at most max+1 characters, so an
+// element's cost does not grow with the text below it. stop, when it reports true, ends the
+// gathering early.
+func excerptOf(n *html.Node, max int, stop func() bool) string {
+	var b strings.Builder
+	count, gap := 0, false
+	var visit func(*html.Node) bool
+	visit = func(node *html.Node) bool {
+		if stop != nil && stop() {
+			return false
+		}
+		if node.Type == html.ElementNode && (skipped[node.DataAtom] || hidden(node)) {
 			return true
 		}
-	}
-	return false
-}
-
-func countImages(n *html.Node) int {
-	count := 0
-	for child := n.FirstChild; child != nil; child = child.NextSibling {
-		if child.Type == html.ElementNode && child.DataAtom == atom.Img {
-			count++
-		}
-		count += countImages(child)
-	}
-	return count
-}
-
-func textOf(n *html.Node) string {
-	var b strings.Builder
-	var visit func(*html.Node)
-	visit = func(node *html.Node) {
-		if node.Type == html.ElementNode && (skipped[node.DataAtom] || hidden(node)) {
-			return
-		}
-		if node.Type == html.TextNode {
-			b.WriteString(node.Data)
-			b.WriteByte(' ')
-		}
-		if node.Type == html.ElementNode && node.DataAtom == atom.Br {
-			b.WriteByte(' ')
+		switch {
+		case node.Type == html.TextNode:
+			for _, r := range node.Data {
+				if r == '\u200b' {
+					continue
+				}
+				if unicode.IsSpace(r) {
+					gap = true
+					continue
+				}
+				if gap && count > 0 {
+					b.WriteByte(' ')
+					count++
+				}
+				gap = false
+				b.WriteRune(r)
+				if count++; count > max {
+					return false
+				}
+			}
+			gap = true
+		case node.Type == html.ElementNode && node.DataAtom == atom.Br:
+			gap = true
 		}
 		for child := node.FirstChild; child != nil; child = child.NextSibling {
-			visit(child)
+			if !visit(child) {
+				return false
+			}
 		}
+		return true
 	}
 	visit(n)
-	return strings.Join(strings.Fields(b.String()), " ")
+	return excerpt(b.String(), max)
 }
 
 func excerpt(text string, max int) string {
@@ -244,7 +305,7 @@ func attrOK(n *html.Node, key string) (string, bool) {
 }
 
 // pageTitle prefers the page's own og:title, then <title>, then its first h1.
-func pageTitle(doc *html.Node) string {
+func pageTitle(doc *html.Node, stop func() bool) string {
 	var og, title, h1 string
 	var visit func(*html.Node)
 	visit = func(n *html.Node) {
@@ -256,11 +317,11 @@ func pageTitle(doc *html.Node) string {
 				}
 			case atom.Title:
 				if title == "" {
-					title = textOf(n)
+					title = excerptOf(n, 200, stop)
 				}
 			case atom.H1:
 				if h1 == "" {
-					h1 = textOf(n)
+					h1 = excerptOf(n, 200, stop)
 				}
 			}
 		}

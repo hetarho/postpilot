@@ -453,10 +453,11 @@ var modelNotFound = regexp.MustCompile(`(?i)\bmodel\b[^.]{0,40}\b(not found|does
 // noEndpoint matches a gateway's answer that no endpoint will serve the model for this
 // account — OpenRouter's "No endpoints found matching your data policy", "No allowed
 // providers are available for the selected model" and its guardrail form "0 endpoints out
-// of 1 requested are available matching your guardrail restrictions and data policy". None
-// of them is a malformed request: whatever status carries it, the model cannot be used as
-// the account stands, and another model can.
-var noEndpoint = regexp.MustCompile(`(?i)\bno endpoints found\b|\b0 endpoints? out of \d+ requested (are|is) available\b|\bno (allowed |available )?(providers|endpoints) (are|is) available\b`)
+// of 1 requested are available matching your guardrail restrictions and data policy", and
+// its shorter "No endpoints available matching your data policy". None of them is a
+// malformed request: whatever status carries it, the model cannot be used as the account
+// stands, and another model can.
+var noEndpoint = regexp.MustCompile(`(?i)\bno endpoints found\b|\bno endpoints? available\b|\b0 endpoints? out of \d+ requested (are|is) available\b|\bno (allowed |available )?(providers|endpoints) (are|is) available\b`)
 
 // policyRefusal tells an endpoint the account's own settings exclude (guardrails, privacy,
 // data or training policy) apart from a model that is not offered at all.

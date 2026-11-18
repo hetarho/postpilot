@@ -43,17 +43,24 @@ type Fetcher struct {
 	limits   Limits
 	resolver Resolver
 	client   *http.Client
-	// dialAddr, when set, replaces where a checked address is dialed. Only tests set it,
-	// to reach a local server under a public-looking address the guard admits.
-	dialAddr func(netip.AddrPort) string
+	// dialTo, when set, replaces how a checked address is dialed. Only tests set it, to
+	// reach a local server under a public-looking address the guard admits, or to stand in
+	// for an address that never answers.
+	dialTo func(ctx context.Context, network string, target netip.AddrPort) (net.Conn, error)
 }
+
+// deadlineKey carries one Fetch's absolute deadline to the dials it starts. The transport
+// detaches a dial from its request's cancellation (a finished dial may serve a later
+// request) and keeps only the context's values, so without it a lookup and every address
+// attempt would run on after the read itself gave up.
+type deadlineKey struct{}
 
 // NewFetcher builds a fetcher with these limits and the system resolver.
 func NewFetcher(limits Limits) *Fetcher {
 	return newFetcher(limits, net.DefaultResolver, nil)
 }
 
-func newFetcher(limits Limits, resolver Resolver, dialAddr func(netip.AddrPort) string) *Fetcher {
+func newFetcher(limits Limits, resolver Resolver, dialTo func(context.Context, string, netip.AddrPort) (net.Conn, error)) *Fetcher {
 	if limits.Timeout <= 0 {
 		limits.Timeout = DefaultLimits.Timeout
 	}
@@ -66,7 +73,7 @@ func newFetcher(limits Limits, resolver Resolver, dialAddr func(netip.AddrPort) 
 	if limits.MaxChars <= 0 {
 		limits.MaxChars = DefaultLimits.MaxChars
 	}
-	f := &Fetcher{limits: limits, resolver: resolver, dialAddr: dialAddr}
+	f := &Fetcher{limits: limits, resolver: resolver, dialTo: dialTo}
 	dialer := &net.Dialer{Timeout: limits.Timeout}
 	transport := &http.Transport{
 		Proxy:                  nil,
@@ -106,6 +113,13 @@ func newFetcher(limits Limits, resolver Resolver, dialAddr func(netip.AddrPort) 
 // and one private address cannot be steered to the private one.
 func (f *Fetcher) dial(dialer *net.Dialer) func(ctx context.Context, network, address string) (net.Conn, error) {
 	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		// The lookup and every address attempt end with the read that asked for them.
+		deadline, ok := ctx.Value(deadlineKey{}).(time.Time)
+		if !ok {
+			deadline = time.Now().Add(f.limits.Timeout)
+		}
+		ctx, cancel := context.WithDeadline(ctx, deadline)
+		defer cancel()
 		host, portText, err := net.SplitHostPort(address)
 		if err != nil {
 			return nil, refuse(RefusalInvalid, err)
@@ -122,6 +136,12 @@ func (f *Fetcher) dial(dialer *net.Dialer) func(ctx context.Context, network, ad
 			if err != nil || len(addrs) == 0 {
 				return nil, refuse(RefusalUnreachable, err)
 			}
+			// The system resolver reports every IPv4 answer in its IPv4-mapped form; the
+			// IPv4 address is what is checked and dialed. (A typed mapped literal is
+			// refused by Allowed.)
+			for i := range addrs {
+				addrs[i] = addrs[i].Unmap()
+			}
 		}
 		for _, addr := range addrs {
 			if !Allowed(addr) {
@@ -130,12 +150,17 @@ func (f *Fetcher) dial(dialer *net.Dialer) func(ctx context.Context, network, ad
 		}
 		var last error
 		for _, addr := range addrs {
-			target := netip.AddrPortFrom(addr.Unmap(), uint16(port))
-			dialTo := target.String()
-			if f.dialAddr != nil {
-				dialTo = f.dialAddr(target)
+			if err := ctx.Err(); err != nil {
+				last = err
+				break
 			}
-			conn, err := dialer.DialContext(ctx, network, dialTo)
+			target := netip.AddrPortFrom(addr, uint16(port))
+			var conn net.Conn
+			if f.dialTo != nil {
+				conn, err = f.dialTo(ctx, network, target)
+			} else {
+				conn, err = dialer.DialContext(ctx, network, target.String())
+			}
 			if err == nil {
 				return conn, nil
 			}
@@ -160,6 +185,9 @@ func (f *Fetcher) Fetch(ctx context.Context, raw string) (Page, error) {
 	}
 	ctx, cancel := context.WithTimeout(ctx, f.limits.Timeout)
 	defer cancel()
+	if deadline, ok := ctx.Deadline(); ok {
+		ctx = context.WithValue(ctx, deadlineKey{}, deadline)
+	}
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, target.String(), nil)
 	if err != nil {
 		return Page{}, refuse(RefusalInvalid, err)
@@ -194,16 +222,19 @@ func (f *Fetcher) Fetch(ctx context.Context, raw string) (Page, error) {
 	if int64(len(body)) > f.limits.MaxBytes {
 		return Page{}, refuse(RefusalTooLarge, nil)
 	}
-	return readPage(response.Request.URL, body, contentType, f.limits.MaxChars)
+	return readPage(ctx, response.Request.URL, body, contentType, f.limits.MaxChars)
 }
 
 // readPage decodes the page to UTF-8 and extracts its structure.
-func readPage(at *url.URL, body []byte, contentType string, maxChars int) (Page, error) {
+func readPage(ctx context.Context, at *url.URL, body []byte, contentType string, maxChars int) (Page, error) {
 	reader, err := charset.NewReader(bytes.NewReader(body), contentType)
 	if err != nil {
 		return Page{}, refuse(RefusalNotHTML, err)
 	}
-	title, structure, err := Extract(reader, maxChars)
+	title, structure, err := extract(ctx, reader, maxChars)
+	if ctx.Err() != nil {
+		return Page{}, refuse(RefusalUnreachable, ctx.Err())
+	}
 	if err != nil {
 		return Page{}, refuse(RefusalNotHTML, err)
 	}
