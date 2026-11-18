@@ -230,7 +230,7 @@ function AccountCandidates({ ownerId, onAdopted, onBusyChange }: GeneratedWritin
                 {t('candidateFlow.retry')}
               </Button>
               <a
-                href="/ai-models"
+                href="/ai-models#ai-in-use"
                 className={typographyStyles({
                   variant: 'label',
                   className: 'text-link-fg underline',

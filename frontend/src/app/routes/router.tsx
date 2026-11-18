@@ -54,6 +54,10 @@ export const router = createRouter({
   routeTree,
   context: { queryClient, transport },
   defaultPendingComponent: RoutePending,
+  // A link pointed at — hovered, focused or touched — fetches its screen's code before the press
+  // lands, and the signed-in shell fetches the next screens' code while idle (`preloadWhenIdle`),
+  // so a first visit swaps in whole instead of after its chunks.
+  defaultPreload: 'intent',
   scrollRestoration: true,
   getScrollRestorationKey: scrollRestorationKey,
 })

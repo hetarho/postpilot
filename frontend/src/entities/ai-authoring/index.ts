@@ -9,6 +9,7 @@ export {
   authoringDraftStateFromProto,
 } from './api/mappers'
 export {
+  useCheckAuthoringReference,
   useAuthoringAPI,
   useAuthoringSummaries,
   useLatestAuthoringSession,

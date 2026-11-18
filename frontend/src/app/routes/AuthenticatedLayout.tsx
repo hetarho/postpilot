@@ -7,7 +7,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { Link, Outlet, useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { clsx } from 'clsx'
-import { Bot, CircleUserRound, Files, Palette, SquarePen } from 'lucide-react'
+import { Clapperboard, House, PenLine, Trophy } from 'lucide-react'
 import { takePendingGift } from '@/features/redeem-voucher'
 import {
   Button,
@@ -20,11 +20,9 @@ import {
   chipStyles,
   pageStyles,
   typographyStyles,
-  useMediaQuery,
   type NavigationLinkProps,
 } from '@/shared/ui'
 import { AccountMenu } from '@/widgets/account-menu'
-import { CreditBadge } from '@/widgets/credit-badge'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 import { endSession } from '../model/end-session'
 import {
@@ -39,22 +37,20 @@ import {
   isFocusedFlow,
   isStructuralNavigationEntry,
   isTopLevelDestination,
-  MINE_SECTIONS,
   navigationPathname,
   routeLocation,
-  STYLE_SECTIONS,
-  styleKinds,
   TAB_DESTINATIONS,
+  VIDEO_SECTIONS,
 } from './navigation'
-import { NAV_DESKTOP_MEDIA_QUERY, NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
+import { NAV_SCROLL_RESTORE_TIMEOUT_MS } from './navigation-config'
+import { preloadWhenIdle } from './idle-preload'
 
 /** Guide: one glyph per tab, so a destination is found by shape before it is read. */
 const TAB_ICONS = {
-  '/create': SquarePen,
-  '/my': Files,
-  '/style': Palette,
-  '/ai-models': Bot,
-  '/settings': CircleUserRound,
+  '/': House,
+  '/posts': PenLine,
+  '/clips': Clapperboard,
+  '/ai-models': Trophy,
 } as const
 
 function NavigationLink({ href, children, className, onClick, ...rest }: NavigationLinkProps) {
@@ -90,12 +86,29 @@ export function AuthenticatedLayout() {
   const ownerId = user?.id ?? ''
   const defaults = useInitializeDefaultSelections(ownerId)
   const navigate = useNavigate()
-  const location = useRouterState({ select: (state) => state.location })
+  // The chrome follows the screen the outlet is DRAWING. The router moves `location` the moment a
+  // navigation starts, while a first visit's code is still on its way; read there, the next
+  // screen's way back and its hub's title were drawn over the current screen, pushing it down,
+  // and jumped again when the screen arrived. Until the outlet holds the new route, the location
+  // it is drawing is the one last resolved.
+  const location = useRouterState({
+    select: (state) => {
+      const shown = state.matches.at(-1)
+      return shown &&
+        state.resolvedLocation &&
+        navigationPathname(shown.pathname) !== navigationPathname(state.location.pathname)
+        ? state.resolvedLocation
+        : state.location
+    },
+  })
   const pathname = navigationPathname(location.pathname)
+  // The tab bar alone answers a tap at once: lighting the tapped tab moves nothing on the page.
+  const tappedPath = useRouterState({
+    select: (state) => navigationPathname(state.location.pathname),
+  })
   const search = location.search as Record<string, unknown>
   const router = useRouter()
   const header = useRef<HTMLElement>(null)
-  const wide = useMediaQuery(NAV_DESKTOP_MEDIA_QUERY)
   const postSlug = /^\/posts\/([^/]+)$/.exec(pathname)?.[1]
   const clipId = /^\/clips\/([^/]+)$/.exec(pathname)?.[1]
   const postReturn = postSlug
@@ -168,7 +181,6 @@ export function AuthenticatedLayout() {
           ? t(`location.${routeLocation(returnHref).current}`)
           : undefined
   const immersive = pathname === '/plans'
-  const quiet = pathname === '/create' || pathname === '/setup'
   const setup = pathname === '/setup'
   // The editor, the clip workspace and the writing tests carry their own way back in their top
   // row; every other child route gets exactly one here (THEME-58).
@@ -182,6 +194,12 @@ export function AuthenticatedLayout() {
     pathname === '/tests' ||
     (pathname.startsWith('/tests/') && pathname !== '/tests/history')
 
+  useEffect(() => {
+    // The app's router preloads what is pointed at, and so the screens one tap away while idle;
+    // a router that asks for no preloading (a test's) gets none here either.
+    if (router.options.defaultPreload !== 'intent') return
+    return preloadWhenIdle(router, navigationPathname(router.state.location.pathname))
+  }, [router])
   useEffect(() => {
     const token = takePendingGift()
     if (token) void navigate({ to: '/gift/$token', params: { token }, replace: true })
@@ -328,31 +346,20 @@ export function AuthenticatedLayout() {
     href: to,
     label: t(labelKey),
     icon: TAB_ICONS[to],
-    current: current === to,
+    current: currentDestination(tappedPath) === to,
   }))
+  // Only 영상 has sibling pages: the videos, then what makes one. 글 is one list. Between
+  // siblings the row stays where it is, so the tapped chip lights at once, as a tab does (and as
+  // the router's own link state already marks it).
+  const tappedSection = currentSection(tappedPath)
+  const chipKey = tappedSection?.hub === section?.hub ? tappedSection?.key : section?.key
   const chips =
-    section?.hub === 'mine'
-      ? MINE_SECTIONS.map(({ key, href }) => ({
+    section?.hub === 'videos'
+      ? VIDEO_SECTIONS.map(({ key, href }) => ({
           key,
           href,
-          label: t(`mine.${key}`),
-          current: section.key === key,
-        }))
-      : section?.hub === 'style'
-        ? STYLE_SECTIONS.map(({ key, href }) => ({
-            key,
-            href,
-            label: t(`style.${key}`),
-            current: section.key === key,
-          }))
-        : []
-  const kinds =
-    section?.hub === 'style' && (section.key === 'templates' || section.key === 'guidelines')
-      ? styleKinds(section.key).map(({ key, href }) => ({
-          key,
-          href,
-          label: t(`kinds.${key}`),
-          current: section.kind === key,
+          label: t(`videos.${key}`),
+          current: chipKey === key,
         }))
       : []
   return (
@@ -382,19 +389,15 @@ export function AuthenticatedLayout() {
               in the bottom tab bar, where the thumb is. */}
           <div className="h-header mx-auto flex w-full max-w-5xl items-center gap-1 px-4 sm:gap-2 sm:px-6 lg:px-8">
             <Link
-              to="/create"
+              to="/"
               aria-label={t('home')}
               className="inline-flex min-h-11 min-w-11 shrink-0 items-center"
             >
               <Logo className="h-5 max-w-full sm:h-6" />
             </Link>
-            <div className="ml-auto flex shrink-0 items-center gap-0 lg:gap-2">
-              {!quiet && wide && <CreditBadge />}
-              {wide && (
-                <div className="flex">
-                  <InterfacePreferences />
-                </div>
-              )}
+            {/* Everything about the session — who is signed in, the plan and its credits, the
+                settings, the theme and the language — waits behind the one avatar. */}
+            <div className="ml-auto flex shrink-0 items-center">
               <AccountMenu
                 preferences={<InterfacePreferences layout="rows" />}
                 onLoggedOut={() => {
@@ -421,41 +424,28 @@ export function AuthenticatedLayout() {
             >
               {t(`hub.${section.hub}`)}
             </p>
-            <nav
-              aria-label={t('sections')}
-              className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
+            {/* Guide: what the tab holds, in one line, so 글 and 영상 never have to be guessed. */}
+            <p
+              className={typographyStyles({
+                variant: 'body',
+                className: 'text-content-secondary mt-1',
+              })}
             >
-              {chips.map((chip) => (
-                <Link
-                  key={chip.key}
-                  to={chip.href}
-                  aria-current={chip.current ? 'page' : undefined}
-                  className={chipStyles({ current: chip.current })}
-                >
-                  {chip.label}
-                </Link>
-              ))}
-            </nav>
-            {kinds.length > 0 && (
-              // 템플릿 and 지침 each have a 글 side and a 영상 side: a small two-way switch under
-              // the chips rather than a third row of tabs.
-              <nav aria-label={t('kinds.aria')} className="mt-1 flex gap-1">
-                {kinds.map((kind) => (
+              {t(`hubLead.${section.hub}`)}
+            </p>
+            {chips.length > 0 && (
+              <nav
+                aria-label={t('sections')}
+                className="-mx-4 mt-4 flex gap-2 overflow-x-auto overscroll-x-contain px-4 pb-2 sm:mx-0 sm:px-0"
+              >
+                {chips.map((chip) => (
                   <Link
-                    key={kind.key}
-                    to={kind.href}
-                    aria-current={kind.current ? 'page' : undefined}
-                    className={typographyStyles({
-                      variant: 'label',
-                      className: clsx(
-                        'inline-flex min-h-11 items-center rounded-full px-4',
-                        kind.current
-                          ? 'bg-badge-accent-bg text-badge-accent-fg'
-                          : 'text-content-secondary hover:text-content-primary',
-                      ),
-                    })}
+                    key={chip.key}
+                    to={chip.href}
+                    aria-current={chip.current ? 'page' : undefined}
+                    className={chipStyles({ current: chip.current })}
                   >
-                    {kind.label}
+                    {chip.label}
                   </Link>
                 ))}
               </nav>

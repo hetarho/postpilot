@@ -4,9 +4,20 @@ import {
   completedAuthoringExchanges,
   AUTHORING_MESSAGE_MAX_CHARS,
   AUTHORING_MAX_EXCHANGES,
+  type AuthoringArtifact,
   type AuthoringScope,
 } from '@/entities/ai-authoring'
 import { studioBusy, type AuthoringState } from './authoring-machine'
+
+/** Whether a draft holds anything at all — a name, a description, a body, a title area or the
+ *  builder's own state. A new session starts on an empty one. */
+export function authoringArtifactHasContent(artifact: AuthoringArtifact | undefined): boolean {
+  return (
+    !!artifact &&
+    ((artifact.name + artifact.description + artifact.body + artifact.titleArea).trim() !== '' ||
+      !!artifact.builderState)
+  )
+}
 
 export type StudioAIAvailability = 'preparing' | 'ready' | 'unavailable'
 export type StudioView =
@@ -166,8 +177,12 @@ export const studioFlowMachine = setup({
     recommended: ({ context }) =>
       context.operation.session?.phase === 'choosing' &&
       !!context.operation.session.candidates.length,
+    // Only what the owner typed sends them back to direct editing. A new session's empty
+    // working source, left by a request that failed before anything was drafted, is not an
+    // unfinished edit: the owner returns to saying what they want.
     incompleteSource: ({ context }) =>
-      !!context.operation.session?.workingSource && !context.operation.session.selected,
+      authoringArtifactHasContent(context.operation.session?.workingSource) &&
+      !context.operation.session?.selected,
     canRefinement: ({ context, event }) =>
       navigable(context, event) &&
       !!(context.operation.session?.workingSource ?? context.operation.session?.selected),

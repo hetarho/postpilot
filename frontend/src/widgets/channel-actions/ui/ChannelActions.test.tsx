@@ -16,7 +16,7 @@ afterEach(() => {
 // the channel it was started from (THEME-58), and pressing it starts no paid work. Videos are one
 // list: the old Instagram address lands on it, and a video started there returns to it.
 it.each([
-  ['/posts', '새 글', '/posts/new', '네이버 블로그로 돌아가기', '/posts'],
+  ['/posts', '새 글', '/posts/new', '내 글로 돌아가기', '/posts'],
   ['/clips', '새 영상', '/clips/new', '영상으로 돌아가기', '/clips'],
 ] as const)(
   'starts creation from %s at once and keeps the list as its origin',
@@ -34,13 +34,10 @@ it.each([
   },
 )
 
-// Each section's button opens that section's creation directly, carrying no channel (an old link's is ignored).
+// A section that docks its creation opens it directly, carrying no channel. 말투, 지침 and 영상 지침
+// make theirs from their heading row instead.
 it.each([
   ['/templates', '새 템플릿', '/templates/new'],
-  ['/voices', '새 말투', '/voices?new=1'],
-  ['/guidelines', '새 지침', '/guidelines?new=1'],
-  ['/voices', '새 말투', '/voices?new=1'],
-  ['/video-guidelines', '새 지침', '/video-guidelines?new=1'],
   ['/video-templates', '새 템플릿', '/video-templates/new'],
 ] as const)('offers %s its own creation only', async (path, label, href) => {
   renderAppAt(path, { user: { id: 'alice' } })

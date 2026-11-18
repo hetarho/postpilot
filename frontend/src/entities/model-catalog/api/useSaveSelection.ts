@@ -39,11 +39,15 @@ export function useSaveSelection() {
   return {
     ...mutation,
     failure: mutation.error ? appFailureFromConnect(mutation.error) : undefined,
-    save: (stage: StageName, ref: ModelRef) =>
-      mutation.mutate({
-        stage: stageToProto(stage),
-        ref: create(ModelRefSchema, ref),
-      }),
+    /** `onSaved` runs once the server has the choice, for a surface that closes on it. */
+    save: (stage: StageName, ref: ModelRef, onSaved?: () => void) =>
+      mutation.mutate(
+        {
+          stage: stageToProto(stage),
+          ref: create(ModelRefSchema, ref),
+        },
+        { onSuccess: () => onSaved?.() },
+      ),
   }
 }
 

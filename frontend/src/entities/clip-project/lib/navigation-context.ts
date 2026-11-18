@@ -89,13 +89,10 @@ export function clipReturnDestination(
   storage = browserStorage(),
 ): ClipReturnDestination {
   const entry = readClipReturnContext(ownerId, clipId, storage)
+  // `/my` now replaces itself with 글's list (THEME-47), so a clip opened from it before that
+  // returns to the video list it belongs to, not to the posts.
   if (entry && isMyWorkEntry(entry))
-    return {
-      path: '/my',
-      href: '/my',
-      section: entry.section,
-      scrollY: entry.scrollY,
-    }
+    return { path: CLIP_LIST_PATH, href: CLIP_LIST_PATH, section: entry.section, scrollY: 0 }
   // A history entry adds its own narrowing to the one list's address.
   const path = CLIP_LIST_PATH
   const history = entry ? isClipHistoryEntry(entry) : !!clipId

@@ -131,7 +131,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           </Typography>
           {state.step === 'ready' && (
             // The last answer as three big tiles: where to go now.
-            <div className="mt-8 grid gap-3">
+            <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-3">
               {(
                 [
                   ['/', 'setup.ready.home', House],
@@ -165,20 +165,23 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
               ))}
             </div>
           )}
-          {/* A template step's foot is the wizard's step bar, so its note stands up here. */}
+          {/* A template step's foot is taken by its conversation, so its note stands up here. */}
           {(introStep || templateStep) && (
             <Typography variant="meta" className="mt-6 block">
               {t('setup.optional')}
             </Typography>
           )}
         </section>
-        {/* A template wizard ends on its own step bar, which meets the screen's bottom edge only
-            down a chain of flex columns. */}
+        {/* A template conversation fills the step down to the step bar through a chain of flex
+            columns. */}
         <div className={clsx('min-w-0', templateStep && 'flex flex-1 flex-col')}>
           <div className={clsx(templateStep && 'flex flex-1 flex-col')}>
             {state.step === 'welcome' && state.plan.length > 0 && (
               // What the conversation will ask, as numbered cards.
-              <ol aria-label={t('setup.overview.label')} className="grid gap-3">
+              <ol
+                aria-label={t('setup.overview.label')}
+                className="grid grid-cols-[minmax(0,1fr)] gap-3"
+              >
                 {state.plan.map((form, position) => (
                   <li
                     key={form}
@@ -224,20 +227,6 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
                 ownerId={ownerId}
                 kind={state.step}
                 controller={controller}
-                host={{
-                  back: controller.back,
-                  backDisabled: busy,
-                  footer: (
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      disabled={busy}
-                      onClick={controller.skip}
-                    >
-                      {t('setup.skip')}
-                    </Button>
-                  ),
-                }}
               />
             )}
           </div>
@@ -249,8 +238,8 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
         </div>
       </div>
       {/* The thumb zone, on the step bar every stepped screen shares: the screen's one big
-          answer on the welcome, and the way back and the skip on the voice question. A template
-          question's bar is its wizard's, which carries setup's way back and skip. */}
+          answer on the welcome, and the way back and the skip on every question after it, the
+          template conversations included. */}
       {state.step === 'welcome' && (
         <StepBar>
           <StepBarActions>
@@ -261,7 +250,7 @@ function AccountSetup({ ownerId, restart }: { ownerId: string; restart: boolean 
           </Button>
         </StepBar>
       )}
-      {state.step !== 'welcome' && state.step !== 'ready' && !templateStep && (
+      {state.step !== 'welcome' && state.step !== 'ready' && (
         <StepBar>
           <StepBarActions
             back={

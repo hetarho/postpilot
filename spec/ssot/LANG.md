@@ -1,5 +1,5 @@
 # LANG languages, locale, stable failures
-> r11 | Independent UI/output languages with a Korean instruction baseline and controlled instruction-language evaluation.
+> r12 | Independent UI/output languages with a Korean instruction baseline and controlled instruction-language evaluation.
 
 ## decisions
 - LANG-1 [o] the product supports exactly `ko` and `en`; the proto enum is `UNSPECIFIED = 0`, `KOREAN = 1`, `ENGLISH = 2`; owning contexts persist only checked `ko|en` tags; `UNSPECIFIED` represents absence at a wire boundary and is never a business fallback — valid only for `content_language` and stage projections where language is inapplicable, invalid for post creation, generation and write snapshots; proto ↔ domain ↔ SQL mappers are the only conversion sites
@@ -8,8 +8,8 @@
 - LANG-4 [o] the locale is resolved synchronously before React renders: an exact valid `localStorage['postpilot.locale']` → the first supported primary subtag in `navigator.languages` (case-insensitive, everything after the first `-` ignored, so `en-US` matches and `ja-JP` does not) → `ko`; a malformed stored value is ignored, not repaired; storage failures fall back to the browser preference without blocking the mount; the resolved value initializes i18next and sets `<html lang>`, the localized `<title>` and description, and the locale the formatters read, all before the first frame ← the first accessible tree must not claim Korean while rendering English
 - LANG-5 [o] an explicit switch is one operation — change the i18next language, update document metadata and `lang`, persist the canonical tag, notify React — that changes no URL, session, query cache, post, voice or server preference; focus stays on the selector and a polite status announces the language
 - LANG-6 [o] the locale control is an app-drawn `Menu` with a 44 px icon trigger and `menuitemradio` options labelled with the autonyms `한국어` and `English`, marking the active option with a check; it lives in `features/change-locale` and is never forked per shell
-  - below `lg` the authenticated shell's account panel, and at every width 나's 화면 group, draw the locale as a `SegmentedControl` in the rows layout; the `Menu` stays everywhere else
-  - login, the authenticated shell (header, account panel and 나's 화면 group) and the public `/about` header compose it through the shared `widgets/interface-preferences` (→=THEME-6)
+  - the authenticated shell's account panel and 설정's 화면 group draw the locale as a `SegmentedControl` in the rows layout at every width; the `Menu` stays on login and `/about`
+  - login, the authenticated shell (account panel and 설정's 화면 group) and the public `/about` header compose it through the shared `widgets/interface-preferences` (→=THEME-6)
   - it is not a route, domain entity or navigation destination of its own
 - LANG-7 [o] resources are bundled TypeScript catalogs with no runtime fetch, detector plugin or HTTP backend — `i18next` and `react-i18next`, at the versions the lockfile resolves (→ARCH-33), are the only runtime packages ← a detector would duplicate the resolver and a backend would add a network failure mode
   - namespaces follow product surfaces (`common` `auth` `nav` `posts` `voices` `templates` `guidelines` `memories` `models` `errors` `plans` `marketing` `billing` `clips`)
@@ -70,5 +70,6 @@
 - tests that pin it: locale precedence including malformed and denied storage · primary-subtag matching and URL/session stability · pre-paint `lang` and metadata · catalog key and placeholder parity · enum ↔ tag ↔ SQL round trips rejecting unknown values · target changes preserving content byte-for-byte · observation request equality across targets · exact Korean and portable projection snapshots · every reason mapping to both catalogs · unknown or reason-less failures never rendering raw detail as the sole message · UI locale choosing defaults only for a new post
 
 ## chg
+- r12 261118 LANG-6✎ SegmentedControl in the account panel below lg + 나's 화면 group, Menu elsewhere incl. the shell header→account panel and 설정's 화면 group at every width, Menu on login and /about only
 - r11 261111 LANG-6✎ rows layout "account panel below lg only"→"also 나's 화면 group at every width"; composers "login, shell, /about"→"also 나's 화면 group"; "not a route, settings page, …"→"not a route or destination of its own"
 - r10 261015 LANG-25✎ Naver/Tistory markers, site `<html lang>` and Markdown `language`→Naver output markers only (other exports removed)

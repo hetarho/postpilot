@@ -233,8 +233,9 @@ func TestBatchSummariesSeparateOwnedTargetsNewCreationsAndUncertainSaves(t *test
 	ctx := context.Background()
 	a, _ := h.svc.Create(ctx, "alice", authoring.PostGuideline, "owned", "one")
 	h.svc.Create(ctx, "alice", authoring.PostGuideline, "owned", "two")
+	// The unsaved creations hold their owner's edits: one opened and left is not listed.
 	for i := 0; i < 3; i++ {
-		h.svc.Create(ctx, "alice", authoring.PostGuideline, "", fmt.Sprint(i))
+		createWithWork(t, h, authoring.PostGuideline, fmt.Sprint(i))
 	}
 	rows, next, err := h.svc.ListSummaries(ctx, authoring.SummaryQuery{UserID: "alice", Kind: authoring.PostGuideline, PageSize: 2})
 	if err != nil || len(rows) != 2 || next == "" {

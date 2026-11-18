@@ -25,52 +25,54 @@ function renderDirectory(voice: FakeVoiceOptions = {}, calls: string[] = []) {
   return renderAppAt('/voices', { user: USER, calls, voice: { voices: VOICES, ...voice } })
 }
 
-/** The active list is the first list on the page, rendered once the directory answered. */
-const activeRows = async () => (await within(screen.getByRole('main')).findAllByRole('list'))[0]!
+/** The voice posts are written in, drawn large, and every other active voice as one row. */
+const portrait = async () => within(await screen.findByRole('article'))
+const otherRows = async () => within(await screen.findByRole('region', { name: '다른 말투' }))
 const deletedGroup = async () =>
   within((await screen.findByText(/삭제된 말투 \d+개/)).closest('details')!)
 
 /** The sheet is mounted only while open, so every creation flow starts by opening it — from the
- *  section's 새 말투 button (THEME-67). */
+ *  ONE 새 말투 menu in the heading row, whose 내 글로 배우기 is this sheet. */
 async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('link', { name: '새 말투' }))
+  await user.click(await screen.findByRole('button', { name: '새 말투' }))
+  await user.click(await screen.findByRole('menuitem', { name: /내 글로 배우기/ }))
   return within(await screen.findByRole('dialog'))
 }
 
 describe('the voice directory', () => {
-  // VOICE-52: 내 글's rows — each voice one link with its name, the 기본 badge and a meta line —
-  // tombstones folded away, nothing interactive on a row.
-  it('lists the voices as whole-row links with a meta line and folds the tombstones away', async () => {
+  // The writing voice leads, drawn large; every other voice is one row whose made voice takes the
+  // writing voice's place in one tap; tombstones fold away.
+  it('leads with the writing voice and lists the others with a one-tap default', async () => {
     const calls: string[] = []
     renderDirectory({}, calls)
 
     expect(await screen.findByRole('heading', { level: 1, name: '말투' })).toBeInTheDocument()
-    const rows = within(await activeRows()).getAllByRole('link')
-    expect(rows).toHaveLength(3)
-    expect(rows[0]).toHaveAttribute('href', '/voices/voice-default')
-    expect(rows[0]).toHaveTextContent('기본 말투')
-    expect(rows[0]).toHaveTextContent('기본')
-    expect(rows[0]).toHaveTextContent('학습 글 1편 · 2026.08.29 분석')
-    expect(rows[1]).toHaveTextContent('리뷰')
-    expect(rows[1]).toHaveTextContent('학습 글 3편 · 2026.08.29 분석')
-    expect(rows[1]).not.toHaveTextContent('기본')
-    expect(rows[2]).toHaveTextContent('새 말투')
-    expect(rows[2]).toHaveTextContent('만드는 중 0%')
-    // Nothing interactive on a row: no 기본으로 설정, no 삭제, no language chip.
-    for (const row of rows) expect(within(row).queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '기본으로 설정' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /삭제$/ })).not.toBeInTheDocument()
-    expect(screen.queryByText('한국어')).not.toBeInTheDocument()
+    const current = await portrait()
+    expect(current.getByRole('heading', { name: '기본 말투' })).toBeInTheDocument()
+    expect(current.getByText('기본')).toBeInTheDocument()
+    expect(current.getByText('학습 글 1편 · 2026.08.29 분석')).toBeInTheDocument()
+    expect(current.getByRole('link', { name: /자세히 보기/ })).toHaveAttribute(
+      'href',
+      '/voices/voice-default',
+    )
 
-    // 새 말투 is the section's creation button; the AI method sits above the list, outside the saved
-    // voices.
+    const others = await otherRows()
+    expect(others.getByRole('link', { name: '리뷰' })).toHaveAttribute(
+      'href',
+      '/voices/voice-review',
+    )
+    expect(others.getByRole('link', { name: '새 말투' })).toHaveAttribute(
+      'href',
+      '/voices/voice-new',
+    )
+    expect(others.getByText('학습 0%')).toBeInTheDocument()
+    // Only a made voice can become the default (VOICE-12): one button, on 리뷰's row.
+    expect(others.getAllByRole('button', { name: '기본으로 설정' })).toHaveLength(1)
+
+    // The ways to make a voice wait behind the one 새 말투; none sits on the page by itself.
     expect(screen.queryByLabelText('말투 이름')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '새 말투' })).toHaveAttribute('href', '/voices?new=1')
-    expect(
-      screen
-        .getAllByRole('button', { name: 'AI 말투 추천받기' })
-        .find((button) => !button.closest('details')),
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'AI 말투 추천받기' })).not.toBeInTheDocument()
 
     const deleted = await deletedGroup()
     expect(deleted.getByRole('link', { name: '옛 말투' })).toBeInTheDocument()
@@ -88,9 +90,23 @@ describe('the voice directory', () => {
             'ListModels',
             'GetSelections',
             'InitializeDefaultSelections',
+            // The header draws the 말투 ring 홈 draws, from the same reads 홈 makes.
+            'ListTemplates',
+            'ListGuidelines',
+            'ListMemories',
           ].includes(call),
       ),
     ).toEqual([])
+  })
+
+  it('offers the three ways to make a voice from the one 새 말투', async () => {
+    const user = userEvent.setup()
+    renderDirectory()
+    await user.click(await screen.findByRole('button', { name: '새 말투' }))
+    expect(await screen.findAllByRole('menuitem')).toHaveLength(3)
+    expect(screen.getByRole('menuitem', { name: /내 글로 배우기/ })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /AI와 대화로 만들기/ })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /이전에 만든 말투 이어보기/ })).toBeInTheDocument()
   })
 
   // VOICE-69: a style an AI made was read from a fictional sample, and the card quoting that
@@ -109,7 +125,7 @@ describe('the voice directory', () => {
       },
     })
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    const card = within(await activeRows()).getByRole('link', { name: /AI 말투/ })
+    const card = (await portrait()).getByRole('heading', { name: 'AI 말투' }).closest('article')!
     await waitFor(() => expect(card).toHaveTextContent('바다가 보이는 창가에서 커피를 마셨어요.'))
     expect(card).toHaveTextContent('AI가 만든 가상의 예문')
   })
@@ -130,7 +146,7 @@ describe('the voice directory', () => {
       },
     })
     await screen.findByRole('heading', { level: 1, name: '말투' })
-    const card = within(await activeRows()).getByRole('link', { name: /내 말투/ })
+    const card = (await portrait()).getByRole('heading', { name: '내 말투' }).closest('article')!
     await waitFor(() => expect(card).toHaveTextContent('오늘도 손님이 많았다.'))
     expect(card).not.toHaveTextContent('가상의 예문')
   })
@@ -162,14 +178,12 @@ describe('the voice directory', () => {
         },
       })
       const { router } = renderAppAt('/voices', { user: USER, transport })
-      const disclosure = (await screen.findByText('이전에 만든 말투 이어보기')).closest('details')!
-      expect(disclosure).not.toHaveAttribute('open')
-      await user.click(within(disclosure).getByText('이전에 만든 말투 이어보기'))
-      const trigger = within(disclosure).getByRole('button', { name: 'AI 말투 추천받기' })
+      const trigger = await screen.findByRole('button', { name: '새 말투' })
       expect(procedures.filter((name) => /WritingVoiceCandidate/.test(name))).toEqual([])
       expect(screen.queryByRole('dialog')).toBeNull()
 
       await user.click(trigger)
+      await user.click(await screen.findByRole('menuitem', { name: /이전에 만든 말투 이어보기/ }))
       const dialog = await screen.findByRole('dialog')
       expect(
         await within(dialog).findByText(
@@ -202,10 +216,10 @@ describe('the voice directory', () => {
 
     expect(
       await screen.findByText(
-        '아직 말투가 없어요. 직접 쓴 글이나 문항 답으로 나만의 말투를 만들어 보세요.',
+        '아직 내 말투가 없어요. 글을 보여 주거나 AI와 이야기해서 하나 만들어 보세요.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '새 말투' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '새 말투' })).toBeInTheDocument()
   })
 
   // THEME-67: `?new=1` — the section's 새 말투 — opens the sheet at once, and closing it
@@ -273,10 +287,11 @@ describe('the voice directory', () => {
 
     await waitFor(() => expect(calls).toContain('RestoreVoice'))
     await waitFor(async () =>
-      expect(within(await activeRows()).getAllByRole('link')).toHaveLength(4),
+      expect((await otherRows()).getByRole('link', { name: '옛 말투' })).toBeInTheDocument(),
     )
     expect(screen.queryByText(/삭제된 말투/)).not.toBeInTheDocument()
-    expect(within(await activeRows()).getAllByText('기본')).toHaveLength(1)
+    // The default stays the writing voice: still the one drawn large, with its badge.
+    expect((await portrait()).getByRole('heading', { name: '기본 말투' })).toBeInTheDocument()
   })
 
   it('refuses a restore whose name is taken and says how to resolve it', async () => {

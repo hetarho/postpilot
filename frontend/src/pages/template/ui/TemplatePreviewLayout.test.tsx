@@ -3,8 +3,8 @@ import { fireEvent, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { renderAppAt } from '@/test/app'
 const preview = () => within(screen.getByRole('article', { name: '미리보기' }))
-// A new template is made through the guided wizard (TMPL-71), so the shared editor's preview is
-// exercised on a saved template's direct editing.
+// A new template is made by talking to the AI, so the shared editor's preview is exercised on a
+// saved template's direct editing — its source text, the only hand-editing path left.
 const PLAIN = {
   id: 'plain',
   name: '빈 구성',
@@ -18,18 +18,9 @@ async function mount(user: ReturnType<typeof userEvent.setup>) {
   await screen.findByLabelText('이름')
 }
 describe('live shared template preview', () => {
-  it('redraws builder/source edits and retains its last valid parse while source is incomplete', async () => {
+  it('redraws source edits and retains its last valid parse while source is incomplete', async () => {
     const user = userEvent.setup()
     await mount(user)
-    await user.click(
-      within(screen.getByRole('group', { name: '블록 추가' })).getByRole('button', {
-        name: /^AI가 쓰는 글/,
-      }),
-    )
-    await user.type(screen.getByLabelText('이 자리에 오는 것'), '메뉴 소개')
-    expect(preview().getByText('메뉴 소개')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: '고급' }))
-    await user.click(screen.getByRole('tab', { name: '원문' }))
     fireEvent.change(screen.getByLabelText('원문'), {
       target: { value: '<write>메뉴 소개</write>\n안녕하세요' },
     })

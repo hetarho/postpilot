@@ -1,5 +1,5 @@
 # QUOTA plans, credits, metering
-> r40 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
+> r41 | Paid plans grant daily AI credits and monthly bonuses with model access; Max alone includes commercial server exports, while browser exports spend no export count. AI work reserves and settles confirmed usage at a job-frozen KRW conversion; BILL owns payments and refunds.
 
 ## decisions
 - QUOTA-1 [o] every account carries exactly one plan `free | light | basic | pro | max | master`; free is the provisioning default, light/basic/pro/max are paid offers and master is operator-only. Stored plans and wire mappings reject unknown values without renumbering existing enum identities.
@@ -63,8 +63,8 @@
 - QUOTA-26 [o] GetMyPlan publishes the acting tier, owned credit lots and expiries, spendable credit, separate daily/bonus entitlements and next reset instants, monthly export used/reserved/remaining counts and renewal, the five offers with monthly/annual KRW prices and recommendation, and estimator rates.
   - a balance read materializes only the current eligible daily/monthly grants, once; it does not grant missed days
   - a free account can inspect retained balances but cannot spend them on a paid model or buy/redeem new credit without paid coverage
-- QUOTA-27 [o] the header credit control links to `/plans` and reads GetMyPlan; the account popover explains daily allowance, monthly bonus, purchased/voucher/compensation lots, expiries and next daily/monthly resets separately. Free accounts see free-model access without a fictitious credit reset or unlimited-use claim; master's balance reads as unlimited credits with no operator wording (→QUOTA-68).
-- QUOTA-75 [o] 나 (/settings) and the billing screen each open on a credits card: the spendable balance from GetMyPlan, the tier name and one 충전 action (→~QUOTA-27)
+- QUOTA-27 [o] the authenticated header shows no credit figure; the account popover reads GetMyPlan when it opens, shows the tier and the spendable balance, links to `/plans` (플랜 보기) for every tier, and explains daily allowance, monthly bonus, purchased/voucher/compensation lots, expiries and next daily/monthly resets separately. Free accounts see free-model access without a fictitious credit reset or unlimited-use claim; master's balance reads as unlimited credits with no operator wording (→QUOTA-68).
+- QUOTA-75 [o] 설정 (`/settings`, opened from the account menu, →THEME-38) and the billing screen each open on a credits card: the spendable balance from GetMyPlan, the tier name and one 충전 action (→~QUOTA-27)
   - a paid-tier account's 충전 leads to the billing screen's fixed packs (→!BILL-14 →!QUOTA-34)
   - a free account's 충전 leads to `/plans` instead (→!QUOTA-28) ← it cannot buy a pack (→!BILL-9), so subscribing is its way to more credit
   - master's balance reads as unlimited credits and its 충전 reaches the packs' own disabled state (→!QUOTA-68 →!BILL-20)
@@ -237,8 +237,9 @@
 - master remains exempt from AI lot debit and model-plan refusal, not from provider limits or bounded execution
 - customer-facing responses carry no supplier-cost or credit-conversion value for any caller (→QUOTA-65 →QUOTA-66 →QUOTA-68); only master-only procedures may
 - schema/placement: plan rules and RPCs in `backend/internal/plan`; product-agnostic metering, reservations and lot ledger in `backend/internal/usage`; auth owns account plans; clip owns export reservations; billing composes paid coverage through consumer-owned transaction ports
-- frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu, the header and the credits cards on 나 and the billing screen (→QUOTA-75) share the published offer and balance semantics
+- frontend reads contracts through `entities/plan`; `/plans`, admin plan management, the account menu and the credits cards on 설정 and the billing screen (→QUOTA-75) share the published offer and balance semantics
 
 ## chg
+- r41 261118 QUOTA-27✎ header credit control linking to /plans→no header credit figure; the account popover reads GetMyPlan on open, shows tier and balance and links to /plans; QUOTA-75✎ 나 (/settings)→설정 (/settings) opened from the account menu
 - r40 261113 QUOTA-13✎ admission list writing/revision, …→observation, writing/revision, …
 - r39 261111 QUOTA-28✎ phone layout "five cards stack, no horizontal scroll"→"one sideways snapping row opening on the recommended card, all five in a row on the widest desk"; QUOTA-75+ credits card on 나 and billing with one 충전 (paid tier: packs, free: /plans, master: the disabled packs)

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pencil } from 'lucide-react'
-import { useMemories, useUpdateMemoryCall, type Memory } from '@/entities/memory'
+import { Infinity as Always, Pencil, TextSearch } from 'lucide-react'
+import { useMemories, useUpdateMemoryCall, type Memory, type MemoryKind } from '@/entities/memory'
 import { useSession } from '@/entities/session'
 import { CreateMemorySheet } from '@/features/create-memory'
 import { DeleteMemoryButton } from '@/features/delete-memory'
 import { MemoryEditForm } from '@/features/edit-memory'
+import { KitScreenHeader } from '@/widgets/writing-kit'
 import {
-  ActionBar,
   Badge,
   Button,
   Notice,
@@ -18,58 +18,62 @@ import {
   typographyStyles,
 } from '@/shared/ui'
 
-/** The account's 기억 (MEM-24). Composition only — every action is its own feature.
+/** The two halves retrieval treats the store in (MEM-6): a standing fact about the author is a
+ *  candidate for every post; a place, a person or a piece of history only when the post shares
+ *  one of its tags. The screen is split the same way, because that IS what each memory does to
+ *  the writing. */
+type Zone = 'always' | 'keyword'
+const ZONE_KINDS: Record<Zone, readonly MemoryKind[]> = {
+  always: ['preference', 'persona'],
+  keyword: ['place', 'person', 'history'],
+}
+const zoneOf = (kind: MemoryKind): Zone => (ZONE_KINDS.always.includes(kind) ? 'always' : 'keyword')
+
+/** Guide: 기억 — what the AI knows about the owner, split by WHEN it reaches a post. The top half
+ *  is always in mind; the bottom half waits for a word, so each of its memories leads with the
+ *  words that recall it — and says so when it has none and will never be recalled. Each half has
+ *  its own add, which opens the shared sheet already on that half's kind. Every memory shows
+ *  where it came from: a post it was saved from, or the owner's own hand.
  *
  *  Nothing on this screen calls a model or enqueues a job: a memory is an authored fact, and
- *  reading, editing or deleting one is a plain CRUD round trip ([I5], MEM-23). The list is
- *  rendered in the server's order because that order is the one a post that opted in would be
- *  given: most recently used first, then most recently created. */
+ *  reading, editing or deleting one is a plain CRUD round trip ([I5], MEM-23). Within a half the
+ *  rows keep the server's order — most recently used first, the order a post is given them in. */
 export function MemoriesPage() {
   const { t } = useTranslation(['memories', 'common'])
   const { user } = useSession()
   const ownerId = user?.id ?? ''
   const { memories, isPending, isError, isFetching, refetch } = useMemories(ownerId)
   const page = useRef<HTMLElement>(null)
-  const list = useRef<HTMLUListElement>(null)
   // A confirmed delete hands focus back to the trash button, then the re-read list removes the row
-  // holding it, which drops focus to <body> and sends a keyboard user to the top of the page. The
-  // delete does not await that re-read, so the move waits until the row has left the list.
+  // holding it, which drops focus to <body>. The move waits until the row has left the list, then
+  // lands on the next row's delete in the same half, or that half's add.
   const [removed, setRemoved] = useState<Removal | null>(null)
   const settled = useRef<Removal | null>(null)
-
   useEffect(() => {
     if (!removed || settled.current === removed) return
     if (memories.some((memory) => memory.id === removed.id)) return
     settled.current = removed
-    // Only while focus is lost, the rule Editable follows: focus the user moved elsewhere in the
-    // meantime stays where they put it.
     const active = document.activeElement
     if (active && active !== document.body) return
+    const zone = page.current?.querySelector(`[data-zone="${removed.zone}"]`)
+    const rows = zone?.querySelectorAll('li') ?? []
     const target =
-      memories.length > 0
-        ? buttonNamed(
-            list.current?.children[Math.min(removed.index, memories.length - 1)],
-            t('delete.aria', { ns: 'memories' }),
-          )
-        : buttonNamed(page.current, t('create.open', { ns: 'memories' }))
+      rows.length > 0
+        ? buttonNamed(rows[Math.min(removed.index, rows.length - 1)], t('delete.aria'))
+        : zone?.querySelector<HTMLButtonElement>('header button')
     target?.focus()
   }, [removed, memories, t])
 
   return (
     <main
       ref={page}
-      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
+      className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-4 sm:pt-8' })}
     >
-      {/* Guide: the hub's title and the 기억 chip say where this is; the page leads with what the
-          list IS — what the AI remembers — and the facts themselves. */}
-      <h1 className="sr-only">{t('title', { ns: 'memories' })}</h1>
-      <Typography variant="display" as="p" aria-hidden="true">
-        {t('page.lead', { ns: 'memories' })}
-      </Typography>
+      <KitScreenHeader kit="memory" title={t('title')} statement={t('page.statement')} />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
-          <span>{t('loadFailed', { ns: 'memories' })}</span>
+          <span>{t('loadFailed')}</span>
           <Button
             variant="ghost"
             onClick={refetch}
@@ -87,107 +91,126 @@ export function MemoriesPage() {
           className="mt-8 [&>.loading-reveal]:gap-3 sm:[&>.loading-reveal]:grid-cols-1 lg:[&>.loading-reveal]:grid-cols-2"
         />
       )}
-
       {!isError && !isPending && (
-        <>
-          {memories.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <section aria-label={t('page.saved', { ns: 'memories' })} className="mt-6">
-              <h2 className="flex items-baseline gap-2">
-                <span className={typographyStyles({ variant: 'title' })}>
-                  {t('page.saved', { ns: 'memories' })}
-                </span>
-                <span className={typographyStyles({ variant: 'label' })}>{memories.length}</span>
-              </h2>
-              <Typography variant="meta" as="p" className="mt-1">
-                {t('page.order', { ns: 'memories' })}
-              </Typography>
-              {/* Guide: each fact on its own card, its kind and tags under it. */}
-              <ul ref={list} className="mt-3 grid gap-3 lg:grid-cols-2">
-                {memories.map((memory, index) => (
-                  <MemoryRow
-                    key={memory.id}
-                    ownerId={ownerId}
-                    memory={memory}
-                    onDeleted={() => setRemoved({ id: memory.id, index })}
-                  />
-                ))}
-              </ul>
-            </section>
-          )}
-        </>
+        <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-2 lg:gap-8">
+          {(['always', 'keyword'] as const).map((zone) => {
+            const items = memories.filter((memory) => zoneOf(memory.kind) === zone)
+            return (
+              <ZoneSection
+                key={zone}
+                zone={zone}
+                ownerId={ownerId}
+                items={items}
+                onDeleted={(id, index) => setRemoved({ id, index, zone })}
+              />
+            )
+          })}
+        </div>
       )}
-      {/* The page is the list; authoring happens behind this one trigger, the shape every
-              sibling directory uses (MEM-24, THEME-24). */}
-      {/* The full width on a phone and a right-aligned pill from `sm:`, like every section's
-              creation button (THEME-67). */}
-      <ActionBar
-        dock="list"
-        ariaLabel={t('create.dockAria', { ns: 'memories' })}
-        className="mt-auto w-full sm:w-fit"
-      >
-        <CreateMemorySheet ownerId={ownerId} className="w-full sm:w-auto" />
-      </ActionBar>
     </main>
   )
 }
 
-/** A deleted memory and the position its row held. */
-type Removal = { id: string; index: number }
+/** A deleted memory, the half it was in and the position its row held. */
+type Removal = { id: string; index: number; zone: Zone }
 
-/** The button named `name` inside `root`. The rows repeat the same names and carry no ids, so a
- *  name means something only within the one row (or the page) that should hold it. */
 function buttonNamed(root: Element | null | undefined, name: string) {
   return Array.from(root?.querySelectorAll('button') ?? []).find(
     (button) => (button.getAttribute('aria-label') ?? button.textContent?.trim()) === name,
   )
 }
 
-/** Copy, not a row: nothing here creates a memory the user did not author — there is no seeded
- *  library and nothing is inferred (MEM-23). */
-function EmptyState() {
+function ZoneSection({
+  zone,
+  ownerId,
+  items,
+  onDeleted,
+}: {
+  zone: Zone
+  ownerId: string
+  items: readonly Memory[]
+  onDeleted: (id: string, index: number) => void
+}) {
   const { t } = useTranslation('memories')
+  const Icon = zone === 'always' ? Always : TextSearch
+  const headingId = `memories-${zone}`
   return (
-    <section aria-labelledby="memories-empty-heading" className="mt-8">
-      <Typography variant="title" id="memories-empty-heading">
-        {t('page.empty')}
-      </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('page.emptyHelp')}
-      </Typography>
-      <Typography variant="body" className="text-content-primary mt-3">
-        {t('page.example')}
-      </Typography>
+    <section aria-labelledby={headingId} data-zone={zone} className="flex min-w-0 flex-col gap-3">
+      <header className="flex flex-wrap items-start gap-3">
+        <span
+          aria-hidden="true"
+          className="bg-badge-accent-bg text-badge-accent-fg flex size-11 shrink-0 items-center justify-center rounded-xl"
+        >
+          <Icon className="size-5" />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <Typography variant="title" as="h2" id={headingId} className="flex items-baseline gap-2">
+            {t(`page.${zone}.title`)}
+            <span className={typographyStyles({ variant: 'label' })}>{items.length}</span>
+          </Typography>
+          <Typography variant="meta" as="p">
+            {t(`page.${zone}.how`)}
+          </Typography>
+        </span>
+        <CreateMemorySheet
+          ownerId={ownerId}
+          initialKind={ZONE_KINDS[zone][0]}
+          label={t(`page.${zone}.add`)}
+          variant="secondary"
+          // Under its half's heading at every width: two halves side by side on the desk leave
+          // a heading no room to share its row.
+          className="w-full"
+        />
+      </header>
+      {items.length === 0 ? (
+        // An empty half shows the kind of thing that belongs in it, in the shape a saved one takes.
+        <p className="border-divider flex flex-col gap-1 rounded-xl border border-dashed px-4 py-5">
+          <Typography variant="label" as="span" className="text-content-tertiary">
+            {t('page.none')}
+          </Typography>
+          <Typography variant="body" as="span" className="text-content-secondary">
+            {t(`page.${zone}.example`)}
+          </Typography>
+        </p>
+      ) : (
+        <ul className="grid grid-cols-[minmax(0,1fr)] gap-3">
+          {items.map((memory, index) => (
+            <MemoryRow
+              key={memory.id}
+              ownerId={ownerId}
+              memory={memory}
+              zone={zone}
+              onDeleted={() => onDeleted(memory.id, index)}
+            />
+          ))}
+        </ul>
+      )}
     </section>
   )
 }
 
-/** One saved memory (MEM-30): its text with 수정 and 삭제 at the end of the text line, over one
- *  line of its kind and tags. The list is read to see what the account knows, so a fact keeps to
- *  one short row; 수정 turns the whole row into one form for the text, the kind and the tags. */
+/** One saved memory (MEM-30). In the word half its tags lead, as the words that recall it; in
+ *  the always half they are the quiet line under the text they are for. 수정 turns the row into
+ *  one form for the text, the kind and the tags; 삭제 confirms. */
 function MemoryRow({
   ownerId,
   memory,
+  zone,
   onDeleted,
 }: {
   ownerId: string
   memory: Memory
+  zone: Zone
   onDeleted: () => void
 }) {
   const { t } = useTranslation(['memories', 'common'])
   const update = useUpdateMemoryCall(ownerId, memory.id)
-  // Closing the form takes the focused 취소 or 저장 out of the document, which drops focus to
-  // <body>, so a close carries the move back to the pencil. State, not a ref: `onDone` is handed
-  // to the form during render.
   const [form, setForm] = useState({ editing: false, refocus: false })
   const pencil = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    // Only while focus is lost, as in Editable: focus the user moved elsewhere stays there.
     const active = document.activeElement
     if (!form.refocus || (active && active !== document.body)) return
-    // A collapsing form must not scroll the page to the pencil.
     pencil.current?.focus({ preventScroll: true })
   }, [form])
 
@@ -199,7 +222,6 @@ function MemoryRow({
           save={update.save}
           errorMessage={update.errorMessage}
           pending={update.isPending}
-          // Closing when already closed changes nothing, as before.
           onDone={() =>
             setForm((current) => (current.editing ? { editing: false, refocus: true } : current))
           }
@@ -207,9 +229,28 @@ function MemoryRow({
       </li>
     )
 
+  const origin =
+    memory.sourcePostSlugs.length > 0
+      ? t('page.fromPosts', { count: memory.sourcePostSlugs.length })
+      : t('page.byHand')
   return (
-    <li className={cardStyles({ padding: 'sm' })}>
-      <div className="flex flex-wrap items-start gap-1">
+    <li className={cardStyles({ padding: 'sm', className: 'flex flex-col gap-2' })}>
+      {zone === 'keyword' &&
+        (memory.tags.length > 0 ? (
+          <p className="flex flex-wrap items-center gap-1.5">
+            <span className={typographyStyles({ variant: 'meta' })}>{t('page.trigger')}</span>
+            {memory.tags.map((tag) => (
+              <Badge key={tag} tone="accent">
+                {tag}
+              </Badge>
+            ))}
+          </p>
+        ) : (
+          <Typography variant="meta" as="p" className="text-notice-warning-fg">
+            {t('page.noTrigger')}
+          </Typography>
+        ))}
+      <div className="flex items-start gap-1">
         <Typography
           variant="fieldTitle"
           as="p"
@@ -232,17 +273,18 @@ function MemoryRow({
         </Button>
         <DeleteMemoryButton ownerId={ownerId} memoryId={memory.id} onDeleted={onDeleted} />
       </div>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <Badge tone="accent">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
-        {memory.tags.map((tag) => (
-          <Badge key={tag}>{tag}</Badge>
-        ))}
-        {memory.tags.length === 0 && (
-          <Typography variant="meta" as="span">
-            {t('page.noTags', { ns: 'memories' })}
-          </Typography>
-        )}
-      </div>
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <Badge tone="neutral">{t(`kind.${memory.kind}`, { ns: 'memories' })}</Badge>
+        {zone === 'always' &&
+          memory.tags.map((tag) => (
+            <span key={tag} className={typographyStyles({ variant: 'meta' })}>
+              #{tag}
+            </span>
+          ))}
+        <span className={typographyStyles({ variant: 'meta', className: 'ml-auto' })}>
+          {origin}
+        </span>
+      </p>
     </li>
   )
 }

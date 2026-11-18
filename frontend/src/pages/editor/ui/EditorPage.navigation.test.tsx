@@ -22,10 +22,7 @@ it('keeps the creation parent after the first mint and after reload, then delete
     () => expect(first.router.state.location.pathname).toBe('/posts/20260828-새-여행'),
     { timeout: 4000 },
   )
-  expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveAttribute(
-    'href',
-    '/posts',
-  )
+  expect(screen.getByRole('link', { name: '내 글로 돌아가기' })).toHaveAttribute('href', '/posts')
   expect(readPostReturnContext(USER.id, '20260828-새-여행')?.path).toBe('/posts')
   first.unmount()
   const restored = renderAppAt('/posts/20260828-새-여행', { transport: first.transport })
@@ -55,7 +52,7 @@ it('opens on its status step and retains the actual filtered history parent', as
     'aria-selected',
     'true',
   )
-  const back = screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })
+  const back = screen.getByRole('link', { name: '내 글로 돌아가기' })
   expect(back).toHaveAttribute('href', '/posts?q=%EC%A0%9C%EC%A3%BC&status=review')
   await userEvent.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
@@ -72,7 +69,7 @@ it('flushes the newest memo before contextual return without starting AI', async
     posts: { posts: [{ slug: 'saved' }], draftMaterials },
   })
   await user.type(await screen.findByLabelText('메모'), '떠나기 직전 입력')
-  await user.click(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' }))
+  await user.click(screen.getByRole('link', { name: '내 글로 돌아가기' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts'))
   expect(draftMaterials.at(-1)?.memo).toBe('떠나기 직전 입력')
   expect(calls).not.toContain('StartGeneration')
@@ -87,7 +84,7 @@ it('keeps the latest memo and its status when the header return cannot flush', a
   })
   const memo = await screen.findByLabelText('메모')
   fireEvent.change(memo, { target: { value: '아직 저장하지 못한 마지막 메모' } })
-  await userEvent.click(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' }))
+  await userEvent.click(screen.getByRole('link', { name: '내 글로 돌아가기' }))
   await waitFor(() =>
     expect(screen.getByRole('status', { name: '글 상태' })).toHaveTextContent('저장하지 못했어요'),
   )
@@ -279,17 +276,25 @@ it('preserves the post return of a standalone guidelines URL', async () => {
   })
   const back = await screen.findByRole('link', { name: '글 작성' })
   expect(back).toHaveAttribute('href', '/posts/saved')
-  expect(screen.getAllByRole('navigation', { name: '돌아가기' })).toHaveLength(1)
+  // The one way back starts the page title's row; the shell draws none of its own (THEME-75).
+  expect(screen.getAllByRole('link', { name: '글 작성' })).toHaveLength(1)
+  expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
   await user.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/posts/saved'))
 })
 
 // The guidelines page reached from its own tab is a hub section with no way back (THEME-58).
-it('shows no back link on the guidelines page opened from its tab', async () => {
+// 지침 is a piece of 홈's writing kit: opened on its own, its one way back leads to 홈, never to
+// a post.
+it('returns from the guidelines page to 홈, not to a post', async () => {
   renderAppAt('/guidelines', { user: USER })
-  await screen.findByRole('main')
+  await screen.findByRole('heading', { level: 1, name: '지침' })
   expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
-  expect(screen.queryByRole('navigation', { name: '돌아가기' })).not.toBeInTheDocument()
+  // At the start of the title's row (the tab bar's 홈 shares its name, outside the page).
+  expect(within(screen.getByRole('main')).getByRole('link', { name: '홈' })).toHaveAttribute(
+    'href',
+    '/',
+  )
 })
 
 // 내용 opened on the title as bare display-size text with its name hidden: a second, larger

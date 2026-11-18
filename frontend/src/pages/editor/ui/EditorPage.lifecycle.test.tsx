@@ -47,10 +47,10 @@ describe('opening a post', () => {
       },
     })
     renderAppAt(path, { transport })
-    const back = await screen.findByRole('link', { name: '네이버 블로그로 돌아가기' })
+    const back = await screen.findByRole('link', { name: '내 글로 돌아가기' })
     expect(back).toHaveAttribute('href', '/posts')
-    expect(back).toHaveAttribute('title', '네이버 블로그로 돌아가기')
-    expect(screen.getAllByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveLength(1)
+    expect(back).toHaveAttribute('title', '내 글로 돌아가기')
+    expect(screen.getAllByRole('link', { name: '내 글로 돌아가기' })).toHaveLength(1)
   })
 
   it('restores the title and the memo', async () => {
@@ -123,9 +123,9 @@ describe('opening a post', () => {
     })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('다른 사람의 글이에요')
-    expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내 글로 돌아가기' })).toHaveAttribute(
       'title',
-      '네이버 블로그로 돌아가기',
+      '내 글로 돌아가기',
     )
   })
 
@@ -133,9 +133,9 @@ describe('opening a post', () => {
     renderAppAt('/posts/20260101-ghost', { user: USER })
 
     expect(await screen.findByRole('alert')).toHaveTextContent('없는 글이에요')
-    expect(screen.getByRole('link', { name: '네이버 블로그로 돌아가기' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내 글로 돌아가기' })).toHaveAttribute(
       'title',
-      '네이버 블로그로 돌아가기',
+      '내 글로 돌아가기',
     )
     // Only a failure that is not an answer is worth asking again.
     expect(screen.queryByRole('button', { name: '다시 시도' })).not.toBeInTheDocument()

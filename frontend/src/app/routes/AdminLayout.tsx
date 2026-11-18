@@ -1,7 +1,7 @@
 import { Link, Outlet, useRouterState } from '@tanstack/react-router'
 import { Calculator, Coins, Gift, KeyRound, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Typography, chipStyles, type TabLink, PageFrame } from '@/shared/ui'
+import { Typography, chipStyles, type TabLink, PageFrame, TitleRow } from '@/shared/ui'
 
 /** The operator surfaces, in one list so the row and the routes cannot drift — the same
  *  reason `VoiceLayout` keeps one `VOICE_TABS`. Each carries an icon and a short caption so the
@@ -36,7 +36,9 @@ export function AdminLayout() {
 
   return (
     <PageFrame width="wide">
-      <Typography variant="largeTitle">{t('admin.title')}</Typography>
+      <TitleRow>
+        <Typography variant="largeTitle">{t('admin.title')}</Typography>
+      </TitleRow>
       {/* Guide: the operator's screens as the same sideways chip row every hub uses, each chip
           led by its glyph. */}
       <nav

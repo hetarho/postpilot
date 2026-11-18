@@ -60,7 +60,7 @@ export const i18n = {
     },
     navigation: {
       returnCreation: '영상으로 돌아가기',
-      returnMine: '내 콘텐츠로 돌아가기',
+      returnMine: '영상으로 돌아가기',
     },
     observeStep: {
       back: '이전: 생성',
@@ -172,7 +172,7 @@ export const i18n = {
     },
     navigation: {
       returnCreation: 'Back to videos',
-      returnMine: 'Back to My work',
+      returnMine: 'Back to videos',
     },
     observeStep: {
       back: 'Back: Create',

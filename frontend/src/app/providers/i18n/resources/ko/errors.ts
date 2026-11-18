@@ -6,6 +6,8 @@ export const errors = {
   AUTHORING_CANDIDATE_COUNT_INVALID: '후보 수는 1개부터 16개까지 정수로 선택해 주세요.',
   AUTHORING_DRAFT_INVALID: '현재 수정한 내용을 확인한 뒤 저장해 주세요. 입력한 내용은 보존됐어요.',
   AUTHORING_FEATURE_UNAVAILABLE: '이 편집 기능은 아직 준비 중이에요.',
+  AUTHORING_REFERENCE_UNAVAILABLE:
+    '붙인 참고 자료를 읽지 못했어요. 참고 자료를 확인하거나 빼고 다시 보내 주세요.',
   VOICE_SAMPLE_REVISION_CONFLICT:
     '학습 글이 변경됐어요. 입력 내용은 보존됐으니 최신 글을 확인해 주세요.',
   VOICE_SAMPLE_UPDATE_INVALID: '학습 글의 내용과 사진을 확인한 뒤 저장해 주세요.',

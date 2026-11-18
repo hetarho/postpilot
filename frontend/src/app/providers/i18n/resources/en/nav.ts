@@ -4,7 +4,7 @@ export const nav = {
 
   launch: 'Create',
   library: 'Saved work',
-  settings: 'My settings',
+  settings: 'Settings',
   menu: 'Menu',
 
   spokenVoices: 'Spoken voices',

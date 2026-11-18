@@ -1,5 +1,5 @@
 # POST posts, drafts, photos
-> r54 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, safe first-save handoffs, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
+> r55 | Owner-controlled Naver Blog writing for sponsored products/services and self-paid experiences, with in-place review settings, safe first-save handoffs, an advertiser guide and pre-submission checklist, phrase-level semantic-origin review, explicit lifecycle and private effective-request inspection.
 
 ## decisions
 - POST-1 [o] a post is identified by a slug minted once on the first save and never changed ← it is the primary key and part of every photo object key, so renaming would orphan the photos
@@ -32,7 +32,8 @@
   - a deleted voice still names itself so the post stays readable, manually editable, copyable and exportable, while generation and AI revision are refused before any enqueue with one fixed reason (`삭제된 말투예요. 말투를 복원하거나 다른 말투로 바꿔 주세요.`); the list row, picker and editor warning render `삭제된 말투 · {name}` and the warning offers `복원`
   - a voice not yet made refuses them the same way (`아직 만들지 않은 말투예요. 말투를 만들거나 다른 말투로 바꿔 주세요.`) and the warning links to that voice
   - a post with 말투 없음 shows no voice on its list row
-- POST-26 [o] a post has zero or one template of the same account (`posts.template_id`, nullable composite FK); 없음 is the default and a real answer the server never overrides
+- POST-26 [o] a post has zero or one template of the same account (`posts.template_id`, nullable composite FK); 없음 is a real answer the server never overrides or substitutes
+  - a new post starts on the account's last specified template on this browser while it is still in the directory, else on 없음 (→!TMPL-77)
   - `template_id` on a save is presence-aware with three meanings (absent preserves, empty string clears, a value assigns), validated before anything else so a bad id changes no title, no memo and mints nothing
   - assignment is allowed in every status except published, including during a running ordinary job which retains its frozen template; queued/frozen tests and retained comparisons never gate assignment
   - it writes `template_id`, `updated_at` and, for an assigned value, the template's set generation numbers onto `target_length` and `tag_count` in that same transaction (→POST-70 →TMPL-48) ← nothing is ever learned from a template, so assigning one costs nothing and needs no confirmation
@@ -60,11 +61,11 @@
   - SDK request/response checksums are turned off ← R2 lacks the full-object CRC32 form
   - local development runs MinIO with the same four variables and path-style addressing
   - the server refuses to boot without `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET`, naming the missing one, checked before the listener but outside `config.Load` ← `api adduser` must work on a fresh box before a bucket exists
-- POST-43 [o] the 글 list is 내 콘텐츠's 글 section (`/posts`, →THEME-38): its compact operational history of unfinished work, failures, test-result follow-ups and export artifacts, never a blog archive; new writing starts from its section's creation button, 새 글 (→THEME-67), or from the 만들기 tab (→THEME-68)
+- POST-43 [o] the 글 list is the 글 tab (`/posts`, →THEME-38): its compact operational history of unfinished work, failures, test-result follow-ups and export artifacts, never a blog archive; new writing starts from its creation button, 새 글 (→THEME-67), or from 홈's 글쓰기 (→THEME-79)
   - it opens on 작성 중 and 완성 under the shared compact continuation policy (→!THEME-73); finished means 확정 or 발행됨 with no job running
   - /posts carries the history's search/status narrowing (→POST-68), incremental loading and existing not-found/outage handling; the earlier address /naver-blog replaces itself with /posts, keeping its filters; /posts/$slug stays the owner-scoped post address
   - /posts/new is an unminted creation whose context survives its address replacement; the editor has no unconditional post-list button
-  - its visible heading is 내 콘텐츠's large title over the hub's chip row (→THEME-38); with no posts it points to that 새 글 button, never an extra creation button of its own
+  - its visible heading is the 글 tab's large title with one line saying what it holds (`네이버 블로그에 올릴 내 글`, →THEME-38); with no posts it points to that 새 글 button (→POST-69), never an extra creation button of its own
 - POST-44 [o] the editor presents five lifecycle steps — ① 생성, ② 관찰, ③ 스토리라인, ④ 다듬기 and ⑤ 완성, labelled by those short names (→!THEME-39) — from the persisted post status, observations, storyline and content, alongside or below the visible location/contextual-return row. Reachable steps change no status and start no work; unreached panels explain their prerequisite. New unminted drafts have no lifecycle bar, and one mounted editor preserves title/memo/autosave/caret through step and address changes. ← the observations and the storyline are each read by the next AI call, so each stands as a step of its own where the owner reviews it first
 - POST-45 [o] the editor reports its own state in exactly one region at the page top (`pages/editor/ui/EditorStatus.tsx`):
   - a 2px `shared/ui/progress-bar` pinned along the top edge while a job runs — determinate where the stage reports a ratio, indeterminate otherwise, zero layout height, `sticky` below every sticky chrome row through the `top-chrome` token (→THEME-38)
@@ -97,7 +98,7 @@
   - a choice screen follows THEME-52: a tap only marks the choice and 다음 moves on
   - 다음 is never held for missing input: a required template answer is checked when a run starts, which brings back 내용 with that field focused (→POST-62)
   - the screens are panels of the one mounted editor and stay mounted while hidden, so an upload, an answer being typed and its caret survive moving between them
-  - a draft with a memo, a photo, a video, a running job or a pending test result opens on 확인, any other on 글 종류; the screen in use survives the first save's address change (→POST-11), and coming back from the template wizard opens 템플릿 (→TMPL-32)
+  - a draft with a memo, a photo, a video, a running job or a pending test result opens on 확인, any other on 글 종류; the screen in use survives the first save's address change (→POST-11), and coming back from the new-template conversation opens 템플릿 (→TMPL-32)
 - POST-123 [o] ①'s 확인 summarizes what the run will be given, each row with one way to change it, and holds no second copy of any field:
   - 글 종류 · 사진 (up to four thumbnails with the photo and video counts) · 제목 · 템플릿 · 덧붙임, each with a 바꾸기 named by its row that opens that row's screen
   - 말투 as its labelled picker in place (→POST-101) with the voice warning under it (→POST-25)
@@ -143,7 +144,7 @@
   - keyed on `post.status` alone and composing with the search as AND ← AI 생성 중, AI 결과 확인 and 스토리라인 작성 완료 are derived row states, not statuses, so filtering on what the badge happens to say would hide a mid-generation draft from 초안
 - POST-67 [o] the narrowing lives in `/posts`'s search params (`q`, `status`), each omitted at its default (empty, 전체), an unrecognized `status` falling back to 전체 with no error said; typing replaces the history entry rather than pushing one ← opening a post and coming back, a reload and a shared URL must all keep the narrowing, while a per-keystroke history entry would make 뒤로 mean "one character ago"
 - POST-68 [o] the search and the status filter wait in one 찾기 sheet behind a 찾기 button that is on the screen at every post count; while a narrowing is on, the button names how many are on and a clear control beside it removes them ← the list opens on its work, and a control that appears at some number of posts is a second layout for the same page
-- POST-69 [o] a narrowing that matches nothing says so as page text naming what is narrowing and offering 초기화, worded differently from an account holding no posts at all; neither state is a card or an illustration (→THEME-29)
+- POST-69 [o] a narrowing that matches nothing says so as page text naming what is narrowing and offering 초기화, worded differently from an account holding no posts at all; the empty account shows the list's illustration over one line saying the first post starts from 새 글 (→THEME-29), while the narrowing stays page text with no card or illustration
 - POST-71 [o] `기억 사용` is a labelled checkbox in the writing brief, default off, saved with the brief's run options (→POST-89) as an option save that changes no status, revision or baseline (→MEM-18)
 - POST-72 [o] ⑤ carries `기억으로 저장`, enabled whenever canonical content exists: it starts the extraction job (→MEM-13), and its candidates open in the shared `Sheet` as a checkbox list the user confirms, a bottom sheet below `sm:` ← the shape 지침 후보 and every other list-you-approve already use; a refusal or failure renders in place and the post is untouched
 - POST-103 [o] ⑤ carries `이 글 형식으로 템플릿 만들기` beside `기억으로 저장`, enabled whenever canonical content exists: it opens a new template with this post attached as its sample (→TMPL-64), starts no request and changes nothing on the post ← like 기억으로 저장, it takes something reusable out of a finished post
@@ -210,7 +211,7 @@
   - a reorder saves at once as a save that changes no status, content revision or baseline, and advances the input revision (→POST-111); the published lock covers it (→POST-74)
   - a reorder never rewrites an existing storyline or post content (→GEN-71); the next storyline or direct write reads the new order
 
-- POST-109 [o] the post editor uses THEME-58 location/return and THEME-59's workspace rule; drafts created from home, 만들기 or 글's 새 글 stay in that creation context after the first autosave, and records opened from a list (내 글 전체 or 블로그) retain that list as their origin.
+- POST-109 [o] the post editor uses THEME-58 location/return and THEME-59's workspace rule; drafts created from 홈's 글쓰기 or 글's 새 글 return to 글 and stay in that creation context after the first autosave, and records opened from 글 retain it, with its filters, as their origin.
 - POST-110 [o] completed history retains generated output, manual export and any owner-entered published URL, while active/failed work offers recovery. Reduced browsing emphasis changes neither ownership, lifecycle, retention nor canonical content.
 - POST-111 [o] source-post test application is an explicit owner-scoped idempotent publication that atomically checks expected input/content revisions, compatible frozen assignments, draft/review state and absence of a conflicting ordinary job before replacing content/storyline/baseline/provenance. Material or generation-setting changes advance input revision; failure preserves both the post and champion, and a committed publication receipt prevents retry from undoing later edits.
 
@@ -273,15 +274,15 @@
   - it opens only after both directory reads succeed and before the owner has typed or attached anything; a pending or failed read never opens it ← an unknown directory is never an empty one (→~AUTH-50)
   - its title names what is missing — 말투, 템플릿 or both — and it offers one action per missing kind:
     - no made voice: `새 말투 만들기` opens VOICE-53's sheet; while a voice is still being made, `말투 이어서 만들기` opens that voice's learning instead (the newest when there are several, →VOICE-54) ← a second voice would leave the first one half made
-    - no template: `새 템플릿 만들기` opens the wizard and returns to a new draft with that template selected (→!TMPL-32)
+    - no template: `새 템플릿 만들기` opens the new-template conversation (→TMPL-71) and returns to a new draft with that template selected (→!TMPL-32)
   - `이대로 쓰기`, Escape or the scrim close it for this creation; `다시 묻지 않기` stops the post offer for this account on this browser
   - it is offered again on every later new post while a kind is still missing, whatever first-use setup recorded (→AUTH-50) ← an account that deleted its last voice or template is as unready as a new one
-  - a new post reached from first-use setup's finish, or back from the offer's own wizard, does not offer it ← the owner has just answered it
+  - a new post reached from first-use setup's finish, or back from the offer's own conversation, does not offer it ← the owner has just answered it
   - an existing post never offers it
 
 ## flow
 - origin review: current canonical content + matching result evidence → phrase highlights/legend → select meaning → source detail | unconfirmed explanation → optional manual/AI refinement under existing action gates
-- new post: 만들기 | 블로그's 새 글 → `/posts/new` (voice picker seeded with the 기본, or 말투 없음; sponsored) → (no made voice or no template → offer: make it | 이대로 쓰기 | 다시 묻지 않기) → 글 종류 → 요청(sponsored: paste the guide · add suggested requirements) → 사진 → 템플릿 → 내용 → 덧붙임 → 확인 → the first input `mint()`s → slug → `/posts/<slug>` (replace, same screen) → autosave 1 s after each pause
+- new post: 홈's 글쓰기 | 글's 새 글 → `/posts/new` (voice picker seeded with the 기본, or 말투 없음; template seeded with the last specified, or 없음; sponsored) → (no made voice or no template → offer: make it | 이대로 쓰기 | 다시 묻지 않기) → 글 종류 → 요청(sponsored: paste the guide · add suggested requirements) → 사진 → 템플릿 → 내용 → 덧붙임 → 확인 → the first input `mint()`s → slug → `/posts/<slug>` (replace, same screen) → autosave 1 s after each pause
 - finish: ⑤ → checklist(counted marks + owner ticks) → copy Naver output (placeholder on top while sponsored) → optional 이 체험으로 영상 만들기(confirm → new clip seeded from the post)
 - photo · video: select(gate) → (photo: decode → resize/encode | video: read metadata) → CreateUpload → PUT to storage → ConfirmUpload → cache patch → next GetPost supplies the presigned view URL
 - lifecycle: draft →(observation job) draft holding observations, on ② →(storyline job) draft holding a storyline, on ③ →(machine result) review, on ④ →(FinalizePost) finalized, on ⑤ →(changed content save | machine result) review | →(paste Naver URL) published →(clear URL) finalized
@@ -300,6 +301,7 @@
 - ops: the production bucket needs a CORS rule allowing PUT/GET/HEAD from the FE origin (DEPLOY.md); MinIO in `docker-compose.yml` serves local development
 
 ## chg
+- r55 261118 POST-26✎ 없음 the default→last specified template, else 없음; POST-43✎ 내 콘텐츠 글 section + 만들기 tab→글 tab, 새 글 or 홈's 글쓰기; POST-69✎ empty account text→illustration + one line; POST-109✎ home/만들기, 내 글 전체/블로그→홈's 글쓰기, 글's 새 글, 글; POST-121✎ POST-122✎ wizard→conversation
 - r54 261116 POST-123✎ deferred first-save address replacement until Sheet close→ordinary queued-save/address handoff before Sheet open, preserving focus and saved-draft history
 - r53 261116 POST-123✎ 지침 바꾸기 flushes/mints and navigates to guidelines→opens the same account-owned management in a Sheet, keeping the draft route and step
 - r52 261116 POST-51✎ below-row anchored brief→portalled, viewport-bounded brief with an upward fallback above docks; POST-117✎ sponsored/self-paid visit labels→provided product/service and 내돈내산 labels

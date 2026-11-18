@@ -607,7 +607,7 @@ describe('conversational authoring', () => {
     mount(fake)
     const user = userEvent.setup()
     await recommend(user)
-    await user.click(await screen.findByRole('button', { name: '다시 확인하고 시도하기' }))
+    await user.click(await screen.findByRole('button', { name: '다시 시도' }))
     await screen.findAllByRole('button', { name: /^제안 [1-8]$/ })
     expect(fake.starts).toHaveLength(2)
     expect(fake.starts[0]!.requestId).toBe(fake.starts[1]!.requestId)
@@ -859,9 +859,9 @@ describe('conversational authoring', () => {
     const fake = server()
     mount(fake, { targetId: 'owned-guide' })
     const user = userEvent.setup()
-    await screen.findByRole('button', { name: /작문 지침 확인하기$/ })
+    await screen.findByRole('button', { name: /지침 확인하기$/ })
     expect(fake.calls).toEqual(['GetLatest'])
-    await user.click(screen.getByRole('button', { name: /작문 지침 확인하기$/ }))
+    await user.click(screen.getByRole('button', { name: /지침 확인하기$/ }))
     expect(await screen.findByText('현재 지침을 초안으로 불러왔어요.')).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
@@ -984,7 +984,7 @@ describe('one named AI and direct working draft', () => {
       await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
       expect(fake.current?.workingSource?.body).toBe('<invalid')
       expect(fake.current?.selected?.body).toBe(baseline.body)
-      expect(screen.getByText(/미완성 또는 올바르지 않은 입력을 보관했어요/)).toBeInTheDocument()
+      expect(screen.getByText(/직접 고친 내용 중 아직 비어 있거나/)).toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: /새 대화 시작하기/ }))
       await waitFor(() => expect(fake.calls).toContain('ResetChat'))
       expect(fake.current?.workingSource?.body).toBe('<invalid')
@@ -1058,9 +1058,7 @@ it('opens an untitled saved guideline with its readable content identity and con
   await publication(user)
   await user.click(screen.getByRole('button', { name: /변경사항 저장하기/ }))
   expect(
-    await screen.findByText(
-      '“짧고 읽기 쉬운 문장으로 써 주세요.” 작문 지침의 변경사항을 저장했어요.',
-    ),
+    await screen.findByText('“짧고 읽기 쉬운 문장으로 써 주세요.” 지침의 변경사항을 저장했어요.'),
   ).toBeInTheDocument()
   expect(fake.starts).toHaveLength(0)
 })

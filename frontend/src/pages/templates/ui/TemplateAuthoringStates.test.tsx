@@ -20,7 +20,7 @@ const summary = {
   updatedAt: '2026-10-07T00:00:00Z',
 }
 describe('batched named template states', () => {
-  it('shows availability independently from unpublished, active, uncertain publication and conflict facts', async () => {
+  it('marks a tile whose template has AI work running, from one summary batch', async () => {
     const calls: string[] = []
     renderAppAt('/templates', {
       user: { id: 'alice' },
@@ -28,19 +28,11 @@ describe('batched named template states', () => {
       templates: { templates: [template] },
       authoring: { summaries: [summary] },
     })
+    // A tile carries the one fact that matters most — here, AI is working on it — and the
+    // template's own screen carries the rest.
     const directory = within(await screen.findByRole('region', { name: '저장된 템플릿' }))
-    expect(directory.getByText('글에 사용할 수 있어요')).toBeInTheDocument()
     expect(
-      await directory.findByText('“저장된 구성”의 편집 내용은 아직 저장하지 않았어요.'),
-    ).toBeInTheDocument()
-    expect(
-      directory.getByText('템플릿 “저장된 구성”의 AI 작업이 진행 중이에요.'),
-    ).toBeInTheDocument()
-    expect(
-      directory.getByText('템플릿 “저장된 구성”의 저장 결과를 확인해야 해요.'),
-    ).toBeInTheDocument()
-    expect(
-      directory.getByText('템플릿 “저장된 구성”이 다른 곳에서 바뀌었어요. 편집 내용은 유지됩니다.'),
+      await directory.findByText('템플릿 “저장된 구성”의 AI 작업이 진행 중이에요.'),
     ).toBeInTheDocument()
     await waitFor(() =>
       expect(calls.filter((call) => call === 'ListAuthoringSummaries')).toHaveLength(1),
@@ -81,11 +73,9 @@ describe('batched named template states', () => {
     })
     const directory = within(await screen.findByRole('region', { name: '저장된 템플릿' }))
     expect(directory.getAllByRole('listitem')).toHaveLength(1)
-    const unsaved = within(
-      await screen.findByRole('region', { name: '아직 저장하지 않은 새 템플릿' }),
-    )
+    const unsaved = within(await screen.findByRole('region', { name: '이어서 만들던 대화' }))
     await user.click(unsaved.getByRole('link', { name: '템플릿 “아직 만드는 구성” 이어서 만들기' }))
-    await screen.findByRole('heading', { name: '어떤 점을 바꿔 볼까요?' })
+    await screen.findByRole('textbox', { name: '바꾸고 싶은 점을 말해 주세요' })
     expect(router.state.location.search).toMatchObject({ session: 'new-work' })
     expect(calls).toContain('GetAuthoringSession')
     expect(calls).not.toContain('CreateAuthoringSession')
@@ -102,11 +92,11 @@ describe('batched named template states', () => {
         '템플릿 편집 상태를 확인하지 못했어요. 저장된 템플릿은 계속 사용할 수 있어요.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: template.name })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: new RegExp('^' + template.name) })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument()
   })
-  it('shows the actual last confirmed publication outcome from an owner/kind/target scoped batch', async () => {
-    renderAppAt('/templates', {
+  it('shows the actual last confirmed publication outcome on the template’s own screen', async () => {
+    renderAppAt('/templates/saved', {
       user: { id: 'alice' },
       templates: { templates: [template] },
       authoring: {
@@ -123,9 +113,7 @@ describe('batched named template states', () => {
       },
     })
     expect(
-      await screen.findByText(
-        '마지막으로 확인한 저장: “저장된 구성” 글 구성의 변경사항을 저장했어요.',
-      ),
+      await screen.findByText('“저장된 구성” 템플릿의 변경사항을 저장했어요.'),
     ).toBeInTheDocument()
   })
 })

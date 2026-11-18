@@ -28,6 +28,9 @@ interface TemplatePreviewProps {
   className?: string
   lastValidTitleArea?: string
   lastValidBody?: string
+  /** `thumbnail` draws the same post with no heading, note or card of its own, for a surface that
+   *  frames and clips it — a directory showing each template's shape at a glance. */
+  variant?: 'full' | 'thumbnail'
 }
 
 /** The post a template makes, drawn the way a post's reading view draws one, from placeholder
@@ -43,6 +46,7 @@ export function TemplatePreview({
   className,
   lastValidTitleArea,
   lastValidBody,
+  variant = 'full',
 }: TemplatePreviewProps) {
   const { t } = useTranslation('templates')
   const title = useLastParsed(titleArea, true, lastValidTitleArea)
@@ -50,6 +54,21 @@ export function TemplatePreview({
   const whole = parseTemplate(titleArea, body, TEMPLATE_PARSE_OPTIONS)
   const failure = whole.ok ? null : whole.failure
   const empty = (title ?? []).length === 0 && !hasContent(nodes ?? [])
+  if (variant === 'thumbnail')
+    return (
+      <div aria-hidden="true" className={twMerge('min-w-0', className)}>
+        {title && title.length > 0 && (
+          <Typography variant="fieldTitle" as="p" className="mb-4 break-words">
+            <InlineNodes nodes={title} />
+          </Typography>
+        )}
+        {nodes && (
+          <div className="space-y-4">
+            <BlockNodes nodes={nodes} />
+          </div>
+        )}
+      </div>
+    )
 
   return (
     <article aria-label={t('preview.heading')} className={twMerge('min-w-0', className)}>

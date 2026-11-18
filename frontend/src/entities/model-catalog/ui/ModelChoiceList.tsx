@@ -1,8 +1,6 @@
-import { useId, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { clsx } from 'clsx'
-import { Check } from 'lucide-react'
-import { Checkbox, ListGroup, SurfaceButton, listRowStyles, typographyStyles } from '@/shared/ui'
+import { ChoiceRow, ListGroup } from '@/shared/ui'
 import { levelOf, levelPrefix, type LevelName } from '../model/level'
 import { postCreditLabel, stagePostFigure } from '../model/post-credits'
 import { refKey, type CatalogModel, type StageName } from '../model/types'
@@ -25,6 +23,8 @@ export interface ModelChoiceListProps {
   grouped?: boolean
   /** A mark beside a row's name, such as 사용 중. */
   mark?: (model: CatalogModel) => ReactNode
+  /** The row whose pick is being saved, which shows it in place of its mark. */
+  pending?: (model: CatalogModel) => boolean
   /** The grade headings' level under the caller's own section heading. */
   headingLevel?: 2 | 3 | 4
 }
@@ -65,10 +65,10 @@ export function ModelChoiceList({
   disabled = false,
   grouped = true,
   mark,
+  pending,
   headingLevel = 3,
 }: ModelChoiceListProps) {
   const { t } = useTranslation('models')
-  const baseId = useId()
   const runs = gradeRuns(models, stage, grouped)
   return (
     <div className="flex flex-col gap-4">
@@ -80,10 +80,8 @@ export function ModelChoiceList({
           }
           headingLevel={headingLevel}
         >
-          {run.models.map((model, rowIndex) => {
-            const key = refKey(model.ref)
+          {run.models.map((model) => {
             const reason = issue(model)
-            const isChecked = checked(model)
             const figure = stagePostFigure(model, stage)
             const cost =
               model.access?.[stage]?.grade === 'free'
@@ -91,73 +89,20 @@ export function ModelChoiceList({
                 : figure
                   ? postCreditLabel(figure)
                   : t('choice.priceUnknown')
-            const meta = reason || `${grouped ? '' : levelPrefix(model, stage)}${cost}`
-            // By position, not by model key: a key may hold a space, which would split an id list.
-            const nameId = `${baseId}-${runIndex}-${rowIndex}-name`
-            const metaId = `${baseId}-${runIndex}-${rowIndex}-meta`
-            const text = (
-              <span className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                <span className="flex min-w-0 items-center gap-2">
-                  <span id={nameId} className="min-w-0 break-words">
-                    {model.label}
-                  </span>
-                  {mark?.(model)}
-                </span>
-                <span id={metaId} className={typographyStyles({ variant: 'meta' })}>
-                  {meta}
-                </span>
-              </span>
-            )
-            if (mode === 'checkbox') {
-              const locked = !!reason || disabled
-              return (
-                <li key={key}>
-                  <label
-                    className={listRowStyles({
-                      interactive: !locked,
-                      className: clsx(
-                        'min-h-12 py-2',
-                        locked ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
-                      ),
-                    })}
-                  >
-                    <Checkbox
-                      checked={isChecked}
-                      disabled={locked && !isChecked}
-                      aria-labelledby={nameId}
-                      aria-describedby={metaId}
-                      onChange={() => !disabled && onPick(model)}
-                    />
-                    {text}
-                  </label>
-                </li>
-              )
-            }
             return (
-              <li key={key}>
-                <SurfaceButton
-                  presentation="row"
-                  role="radio"
-                  aria-checked={isChecked}
-                  aria-labelledby={`${nameId} ${metaId}`}
+              <li key={refKey(model.ref)}>
+                <ChoiceRow
+                  mode={mode}
+                  checked={checked(model)}
+                  name={model.label}
+                  mark={mark?.(model)}
+                  meta={reason || `${grouped ? '' : levelPrefix(model, stage)}${cost}`}
                   disabled={!!reason || disabled}
-                  onClick={() => onPick(model)}
-                  className={listRowStyles({
-                    interactive: !reason,
-                    className: 'min-h-12 rounded-none py-2 disabled:cursor-not-allowed',
-                  })}
-                >
-                  {text}
-                  <span
-                    aria-hidden="true"
-                    className={clsx(
-                      'flex size-6 shrink-0 items-center justify-center rounded-full',
-                      isChecked ? 'bg-button-cta-bg text-button-cta-fg' : 'bg-progress-step-todo',
-                    )}
-                  >
-                    {isChecked && <Check className="size-4" />}
-                  </span>
-                </SurfaceButton>
+                  pending={pending?.(model)}
+                  // The list's hold stops every pick, a checked checkbox row's too: that row stays
+                  // enabled only so it still reads as on.
+                  onPick={() => !disabled && onPick(model)}
+                />
               </li>
             )
           })}

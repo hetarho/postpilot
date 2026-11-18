@@ -173,8 +173,9 @@ export function StageModelRow({ stage }: { stage: StageName }) {
 
 /** The picker itself: a lens switch, none of whose lenses is on until the owner picks one, and
  *  the stage's models as radio rows under grade headings — none under 가격 먼저, whose order
- *  mixes the grades, so each row names its own. */
-export function ModelPicker({ stage }: { stage: StageName }) {
+ *  mixes the grades, so each row names its own. The row being saved shows it; `onSaved` is for a
+ *  surface that closes once the server has the choice (홈's 글 쓰는 AI dropdown). */
+export function ModelPicker({ stage, onSaved }: { stage: StageName; onSaved?: () => void }) {
   const { t } = useTranslation(['models', 'common'])
   const active = useStageSelection(stage)
   const read = useCatalogRead()
@@ -220,8 +221,9 @@ export function ModelPicker({ stage }: { stage: StageName }) {
           grouped={lens !== 'price'}
           checked={(model) => (pendingKey || selectedKey) === refKey(model.ref)}
           issue={(model) => modelChoiceIssue(model, stage)}
-          onPick={(model) => void save.save(stage, model.ref)}
+          onPick={(model) => save.save(stage, model.ref, onSaved)}
           disabled={save.isPending}
+          pending={(model) => pendingKey === refKey(model.ref)}
           mark={(model) =>
             (pendingKey || selectedKey) === refKey(model.ref) && (
               <Badge tone="success">{t('picker.inUse')}</Badge>

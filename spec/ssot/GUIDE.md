@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r28 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r29 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -62,9 +62,14 @@
 - GUIDE-18 [o] completed-revision candidates remain verbatim owner requests and are never inferred, ranked or auto-approved; ordinary generation uses only saved guidelines, 원칙 and enabled 기본 지침; isolated MODEL tests may use an explicitly validated owned unpublished contender under EDIT-23. Explicit AI authoring under EDIT creates separate private drafts and may generate or refine a guideline, published only after Save. Nothing validates generated post output against a guideline.
 - GUIDE-28 [o] a guideline outranks a memory exactly as it outranks a template instruction: a fact the memory bank carries is not written when a guideline forbids it, and the precedence sentence beside the `[기억]` section says so (→MEM-21) ← a prohibition the user added is the reason the fact must stay out of this post, and the memory bank has no per-post opt-out of its own
 - GUIDE-19 [o] ordinary post/clip generation has no per-item guideline opt-out, owner-rule toggles or implicit selection; 기본 지침 retain their explicit account on/off controls and 원칙 have none. Unified tests may vary one designated guideline slot in an isolated snapshot and disclose the compared rule without rescoping ordinary settings. Stock text editing, cross-voice scoping and automatic candidate approval remain outside guidelines.
-- GUIDE-20 [o] post guidelines are the 글 side of 내 스타일's 지침 section (→=THEME-38), listed in injection order — the 원칙 card (→!GUIDE-53), enabled 기본 지침, then owned rules — one card each.
-  - a 기본 지침 card shows its name and (추천) and retains recommendation and on/off behavior
-  - an owned rule's card shows its text with its optional title (→!GUIDE-46), application scope and owned EDIT saved/unpublished/job state
+- GUIDE-20 [o] post guidelines on `/guidelines`, the 지침 screen of 홈's writing kit (→=THEME-38 →!THEME-81), stand as the stack the writer is given, in injection order (→!GUIDE-14), each layer numbered on one rail with its name and one line saying when it applies:
+  - the 원칙 card (→!GUIDE-53), then 기본 지침 with its `기본 지침 고르기` (→GUIDE-48), reading `아직 없어요` when none is in use, then the owner's own layers 모든 글에, 이 템플릿으로 쓸 때 and 이 분야의 글에
+  - an owner layer with no rule is left out; when every owner layer is empty, one line under 기본 지침 says what belongs there with an example
+  - a layer's rules are rows of one card, a hairline apart, never one card each
+  - a 기본 지침 row shows its name and (추천) and retains recommendation and on/off behavior
+  - an owned rule's row shows its text with its optional title (→!GUIDE-46), its scope being its layer; only unfinished EDIT state — unpublished changes, active AI work, a publication to confirm, a conflict — adds a line, and a saved rule shows no saved line
+  - the heading row's one 새 지침 menu offers AI와 대화로 만들기, with one line on what it does, and 직접 쓰기, each opening its new-guideline Sheet; `?new=1` opens the AI-authored one at once; nothing is docked
+  - inside the editor's guideline Sheet (→~POST-123) the same rows stand in one list in injection order, with `기본 지침` and `새 지침 직접 쓰기` above it
 - GUIDE-21 [o] after a completed revision (`done`, not merely terminal ← a failed revision produced nothing worth saving), `지침으로 저장` — the one save a revision offers — opens a dialog seeded with the revision instruction, editable, offering 전역 (default) and the post's current template when it has one (read from the loaded post, no new query)
   - it calls the standard create
   - `AlreadyExists` renders as already-saved information
@@ -81,7 +86,7 @@
   - a create invalidates both lists, a dismissal only the candidate list
 - GUIDE-24 [o] server refusal messages are rendered through the shared failure catalogue; the client predicts none of them and mirrors neither the per-account cap nor the pending-candidate bound
 - GUIDE-25 [o] the scope control lives in `entities/guideline/ui` ← the create form and the whole-scope edit need the identical control and a feature may not import a sibling feature; it reads the template directory through `entities/template/@x/guideline.ts`; the write callers live in `entities/guideline/api` because the revision capture needs the create one
-- GUIDE-26 [o] 지침 is a section of 내 스타일 whose 글 / 영상 switch opens 지침 or 영상 지침, one list for every video (→=THEME-38), each control retaining the 44 px pointer floor at 320 px.
+- GUIDE-26 [o] 지침 (`/guidelines`) is a screen of 홈's writing kit and 영상 지침 (`/video-guidelines`), one list for every video, is a chip of the 영상 tab (→=THEME-38); no switch joins the two, and each control retains the 44 px pointer floor at 320 px.
 - GUIDE-27 [o] 전부 수락 runs the standard create once per listed pending candidate with 전역 scope and `from_candidate_id`, keeping every one that passes and leaving each refusal (over 300 characters, a duplicate, the account cap) in the queue with its catalogue reason for a single 승인 to fix ← one over-long candidate must not hold back the rest, and a rule that needs a scope other than 전역 is exactly the one worth opening
   - 전부 거절 dismisses every listed candidate behind one `Dialog` naming the count ← there is no undo and a single 무시 stays dialog-free (→GUIDE-12)
   - neither action is offered while the list is empty and both re-read the candidate list, a create additionally invalidating the saved list
@@ -112,11 +117,12 @@
   | 같은 홍보 문구 되풀이하지 않기 | no generic promotion said twice |
 - GUIDE-43 [o] whether a 기본 지침 is in use belongs to the account and its kind: `추가` in the 기본 지침 sheet (→GUIDE-48) puts one in use and `적용 안함` on its open row takes it out of use, each saving on press with no confirmation ← putting one back is one press in the sheet
   - out of use it leaves the list and stays offered in the sheet, and it leaves every run started afterwards, while work already enqueued keeps the texts it froze (→GUIDE-17)
+  - 홈's 지침 dropdown (→THEME-80) lists the post kind's 기본 지침, without the 원칙, as checkbox rows in the product's order; each press puts one in or out of use at once with no confirmation and the dropdown stays open; a refused press is said under its row and the row reads as before
   - a new account starts with every 기본 지침 in use, and no other surface changes one
   - a 원칙 has no in-use state and appears in no sheet
-- GUIDE-44 [o] `/video-guidelines` (the 영상 side of 내 스타일's 지침 section, location 영상 지침, lazily split, →=THEME-38) is `/guidelines` for the 영상 지침 kind:
-  - the same one list of closed rows (→GUIDE-20), open rows (→GUIDE-47) and 기본 지침 sheet (→GUIDE-48), an owner row's scope badge reading `전역`, `영상 템플릿` or `적용 대상 없음` and its open row carrying the video-template-name chips
-  - the section's 새 지침 button opens its new-guideline Sheet (`?new=1`), whose scope control offers 전역 / 특정 영상 템플릿; `기본 지침` and the direct-writing choice sit in the page above the list, not in a dock (→THEME-67)
+- GUIDE-44 [o] `/video-guidelines` (a chip of the 영상 tab, location 영상 지침, lazily split, →=THEME-38) is `/guidelines` for the 영상 지침 kind:
+  - the same stack (→GUIDE-20) with the layers 원칙 · 기본 지침 · 모든 영상에 · 이 템플릿으로 쓸 때 (video templates), the same open rows (→GUIDE-47) and 기본 지침 sheet (→GUIDE-48), an owner row's scope badge reading `전역`, `영상 템플릿` or `적용 대상 없음` and its open row carrying the video-template-name chips
+  - the same heading-row 새 지침 menu (AI와 대화로 만들기 · 직접 쓰기, `?new=1`) opens its new-guideline Sheet, whose scope control offers 전역 / 특정 영상 템플릿; `기본 지침 고르기` sits in the 기본 지침 layer; nothing is docked (→THEME-67)
   - above the list the `새 영상 지침 후보` banner and its one-at-a-time review (→!GUIDE-22/23/27), each candidate linking the clip it came from (plain text once that clip is gone)
   - its queries are keyed `(accountId, 'video-guidelines')` and `(accountId, 'video-guideline-candidates')` with `staleTime: 0` and `refetchOnMount: 'always'`, and a video template rename or delete marks the list stale
 - GUIDE-45 [o] after a completed clip revision request (→CLIP-131), ④'s composer offers `영상 지침으로 저장`, which opens the standard create seeded with that request, offering 전역 (default) and the project's video template when it has one, as `지침으로 저장` does for a post (→GUIDE-21)
@@ -129,7 +135,7 @@
   - 기본 지침 expose their target note and on/off action, not editing
   - owned rules offer named AI editing/direct editing of one shared draft and explicit deletion; Save changes title/text/scope atomically under domain bounds and preserves failed input
   - confirm deletion explains that already-admitted work keeps its frozen text
-- GUIDE-48 [o] the page's `기본 지침`, above the list (→~GUIDE-44), opens the shared `Sheet` listing every 기본 지침 of the page's kind in the product's order (→=GUIDE-41/42), each with its name, text and target note, and no 원칙 ← choosing one needs its text, which the closed list no longer shows
+- GUIDE-48 [o] the 기본 지침 layer's `기본 지침 고르기` (→GUIDE-20; in the editor's guideline Sheet, its `기본 지침` above the list) opens the shared `Sheet` listing every 기본 지침 of the page's kind in the product's order (→=GUIDE-41/42), each with its name, text and target note, and no 원칙 ← choosing one needs its text, which the closed list no longer shows
   - one out of use carries `추가`, which puts it in use at once (→GUIDE-43) and in the list at its product position, and the sheet stays open ← adding several is one visit
   - one in use reads `적용 중` and carries no control; taking one out of use happens on its row, never in the sheet
 
@@ -162,10 +168,11 @@
 - GUIDE-54 [o] a 원칙 outranks every owner guideline, template instruction, advertiser guide item and 기본 지침; the voice still outranks 자연스러운 한국어 문체 where they conflict (→GEN-17), and an authored template title form still outranks 제목 규칙 (→GEN-49 →TMPL-52) ← a rule nobody can switch off would mean nothing if a guideline could countermand it
 
 ## flow
-- author: 내 스타일 → 지침(글 `/guidelines` | 영상 `/video-guidelines`) → 새 지침 | 새 영상 지침 → title(optional) + text + scope(전역 | templates | 분야, posts only) → CreateGuideline(bound, cap, dedupe within the kind → row; approves a matching candidate)
+- author: 홈 → 지침 `/guidelines` | 영상 → 영상 지침 `/video-guidelines` → 새 지침(AI와 대화로 만들기 | 직접 쓰기) → title(optional) + text + scope(전역 | templates | 분야, posts only) → CreateGuideline(bound, cap, dedupe within the kind → row; approves a matching candidate)
 - 원칙: guideline screen → Postpilot 원칙 card(closed) → open(name + text, no control)
-- 기본 지침: page 기본 지침 above the list → sheet(every 기본 지침; in use | 추가) → 추가 → in use, in the list at its product position → open row → 적용 안함 → out of use, offered in the sheet only → the next run's frozen set
-- browse: list(closed cards: 기본 지침 name | owned title over whole text, scope) → press a card → open(text, scope or target note, 수정 · 삭제 | 적용 안함) → AI editing | direct editing → shared draft(title + text + scope) → explicit named Save | Cancel
+- 기본 지침: 기본 지침 layer's 기본 지침 고르기 → sheet(every 기본 지침; in use | 추가) → 추가 → in use, in its layer at its product position → open row → 적용 안함 → out of use, offered in the sheet only → the next run's frozen set
+- 기본 지침 from 홈: 지침 dropdown(post kind's 기본 지침 as checkbox rows) → press → in use | out of use at once → the next run's frozen set
+- browse: stack(원칙 → 기본 지침 → own layers by scope; closed rows: 기본 지침 name | owned title over whole text) → press a card → open(text, scope or target note, 수정 · 삭제 | 적용 안함) → AI editing | direct editing → shared draft(title + text + scope) → explicit named Save | Cancel
 - inject: StartGeneration / StartRevision / storyline job(resolve template id and 분야 once → ForPrompt(원칙 + enabled 기본 지침 + global + template-linked + field-linked) → freeze texts) → `[작문 지침]` after the template section → model; clip attempt(영상 지침 원칙 + enabled 기본 지침 + global + video-template-linked → freeze) → storyline, flow, narration and revision calls
 - accrue: post revise done | clip revision request done → record instruction(kind; dedupe → pending +1 | nothing | queue full) → 새 지침 후보 | 새 영상 지침 후보 banner(count, above the list) → 하나씩 보기 → review sheet(one candidate at a time: 저장(create with from_candidate_id) | 넘기기 | 무시; 전부 수락(전역, refusals kept) | 전부 거절)
 
@@ -173,10 +180,11 @@
 - config: `GUIDELINE_TEXT_MAX_CHARS` 300 and `GUIDELINE_TITLE_MAX_CHARS` 40 (BE `platform/config` env · FE `shared/config` `VITE_GUIDELINE_TEXT_MAX_CHARS` and `VITE_GUIDELINE_TITLE_MAX_CHARS`, falling back to the defaults) · `GUIDELINE_MAX_PER_ACCOUNT` 100 · `GUIDELINE_CANDIDATE_MAX_PENDING` 50, each per kind (BE only; malformed values are boot-fatal); the heading, precedence sentence, every 원칙's and 기본 지침's name, text and order, injection ordering, candidate statuses and review order, the candidate storage bound (the revision instruction bound) and the proto/SQL schema are code
 - schema: `guidelines(id, user_id, kind, title, text, scope, created_at, updated_at, UNIQUE(user_id, kind, text), UNIQUE(id, user_id))` · `guideline_templates` (composite FKs to guideline and a template of its kind) · `guideline_fields` (guideline ↔ 분야) · `guideline_candidates(id, user_id, kind, text, status, occurrences, post_slug NULL, clip_id NULL, first/last_seen_at, UNIQUE(user_id, kind, text))` · the account's switched-off 기본 지침 by kind and name; migrations 0014, 0023, 0078
 - placement BE: `backend/internal/guideline` (`ForPrompt` resolving by template and 분야, candidates, store, rpc; consumed by generation and post through consumer-declared ports; template names through the directory port, never a SQL join)
-- placement FE: `entities/guideline` (model, api, ui scope control) · `features/create-guideline` `edit-guideline` `delete-guideline` `review-guideline-candidate` · `features/edit-with-ai` (the capture) · `pages/guidelines` · `pages/video-guidelines`
+- placement FE: `entities/guideline` (model, api, ui scope control) · `features/create-guideline` `edit-guideline` `delete-guideline` `review-guideline-candidate` `toggle-default-guideline` (the sheet and 홈's dropdown rows) · `widgets/guideline-directory` (the stack) · `features/edit-with-ai` (the capture) · `pages/guidelines` · `pages/video-guidelines`
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r29 261118 GUIDE-20✎ 내 스타일's 지침 section, one card per rule with a saved/unpublished/job state→홈's 지침 kit screen as the numbered layer stack (원칙 · 기본 지침 · 모든 글에 · 이 템플릿으로 쓸 때 · 이 분야의 글에), empty owner layers omitted, rules as rows of one card, no saved line, one 새 지침 menu (AI와 대화로 만들기 · 직접 쓰기); GUIDE-26✎ 지침 section with a 글/영상 switch→지침 a kit screen, 영상 지침 a chip of the 영상 tab, no switch; GUIDE-43✎ no surface besides the sheet and the row→also 홈's 지침 dropdown, one press per 기본 지침; GUIDE-44✎ 영상 side of 내 스타일's 지침, 기본 지침 and direct writing above the list→영상 tab chip, the same stack and 새 지침 menu; GUIDE-48✎ the page's 기본 지침 above the list→the 기본 지침 layer's 기본 지침 고르기
 - r28 261116 GUIDE-26✎ GUIDE-44✎ clip channel in the 영상 지침 link→no channel
 - r27 261116 GUIDE-47✎ closed row with 추천/scope badge→sentence only, badges when open
 - r26 261111 GUIDE-20✎ GUIDE-26✎ GUIDE-44✎ Naver Blog channel / clip-channel destinations, rows→내 스타일's 지침 section with a 글/영상 switch, cards; GUIDE-22✎ closed counted disclosure below the list→banner above it opening a one-at-a-time review sheet with 넘기기; GUIDE-23✎ 승인→저장, bulk actions at the disclosure head→in the review sheet below the candidate; GUIDE-46✎ untitled row text cut to one line→whole text with the title as a label above; GUIDE-48✎ dock's 기본 지침→the page's, above the list

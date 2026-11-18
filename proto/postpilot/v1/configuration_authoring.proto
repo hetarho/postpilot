@@ -16,6 +16,9 @@ service ConfigurationAuthoringService {
   rpc ResetAuthoringChat(ResetAuthoringChatRequest) returns (AuthoringSessionResponse) {}
   rpc ResetAuthoringBaseline(ResetAuthoringBaselineRequest) returns (AuthoringSessionResponse) {}
   rpc SaveAuthoringSession(SaveAuthoringSessionRequest) returns (AuthoringSessionResponse) {}
+  // Reads one form reference the way a request would, so the screen can name it or say in
+  // place why it cannot be used. Starts no AI work and stores nothing.
+  rpc CheckAuthoringReference(CheckAuthoringReferenceRequest) returns (CheckAuthoringReferenceResponse) {}
 }
 enum ConfigurationKind {
   CONFIGURATION_KIND_UNSPECIFIED = 0;
@@ -115,6 +118,30 @@ message StartAuthoringOperationRequest {
   string prompt = 5;
   ModelRef write_model = 6;
   int32 candidate_count = 7;
+  // Form references for this one request of a post template conversation, at most 3. Each
+  // is read on the server (an owned post or template, owner-scoped; a URL under the
+  // reference guard) and frozen into the job alone: never stored on the session, the
+  // template or the account.
+  repeated AuthoringReference references = 8;
+}
+// One owner-chosen form reference. Exactly one source is set.
+message AuthoringReference {
+  oneof source {
+    // One of the owner's posts.
+    string post_slug = 1;
+    // One of the owner's post templates.
+    string template_id = 2;
+    // An http(s) web page address.
+    string url = 3;
+  }
+}
+message CheckAuthoringReferenceRequest { AuthoringReference reference = 1; }
+message CheckAuthoringReferenceResponse {
+  // A readable name for the attachment: the post, template or page title.
+  string title = 1;
+  // Empty when the reference can be read; otherwise one code-owned word: invalid,
+  // not_allowed, unreachable, not_html, too_large, empty or missing.
+  string refusal = 2;
 }
 message StartAuthoringOperationResponse {
   string job_id = 1;

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { createRouterTransport } from '@connectrpc/connect'
 import { withProviders, createTestQueryClient } from '@/test/session'
 import { registerTemplateService } from '@/test/templates'
@@ -9,7 +8,9 @@ import { TemplateDirectEditor } from './TemplateDirectEditor'
 
 afterEach(cleanup)
 
-it('keeps 원문 behind 고급 and round-trips edited source without a mode-switch write', async () => {
+// The shape of a template is made by talking to the AI; by hand, the owner edits its source text.
+// There is no block builder — nothing to drag, move or reorder — and no 고급 to open first.
+it('shows the source at once with no builder, and round-trips an edit', async () => {
   const onChange = vi.fn()
   function Editor() {
     const [source, setSource] = useState({
@@ -33,20 +34,13 @@ it('keeps 원문 behind 고급 and round-trips edited source without a mode-swit
   }
   const transport = createRouterTransport((router) => registerTemplateService(router))
   render(<Editor />, { wrapper: withProviders(transport, createTestQueryClient()) })
-  const user = userEvent.setup()
-  expect(screen.queryByRole('tab', { name: '원문' })).not.toBeInTheDocument()
-  expect(screen.queryByLabelText('원문')).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: '고급' }))
-  await user.click(screen.getByRole('tab', { name: '원문' }))
+  expect(screen.queryByRole('button', { name: '고급' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('group', { name: '블록 추가' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /옮기기|위로|아래로/ })).not.toBeInTheDocument()
   expect(screen.getByLabelText('원문')).toHaveValue('  고정 문구\n<write>Visit</write>  ')
-  expect(screen.getByText('형식 안내 보기')).toBeInTheDocument()
   expect(onChange).not.toHaveBeenCalled()
   const edited = '  고정 문구\n<write>Changed</write>  '
   fireEvent.change(screen.getByLabelText('원문'), { target: { value: edited } })
-  await user.click(screen.getByRole('button', { name: '고급' }))
-  expect(screen.queryByLabelText('원문')).not.toBeInTheDocument()
-  await user.click(screen.getByRole('button', { name: '고급' }))
-  await user.click(screen.getByRole('tab', { name: '원문' }))
   expect(screen.getByLabelText('원문')).toHaveValue(edited)
   expect(onChange).toHaveBeenCalledTimes(1)
 })
@@ -55,6 +49,7 @@ it.each(['null', '[]', 'true', '42', '"text"', '{'])(
   'opens canonical source without a write when builder metadata is %s',
   (builderState) => {
     const onChange = vi.fn()
+    const transport = createRouterTransport((router) => registerTemplateService(router))
     render(
       <TemplateDirectEditor
         source={{
@@ -68,6 +63,7 @@ it.each(['null', '[]', 'true', '42', '"text"', '{'])(
         onChange={onChange}
         disabled={false}
       />,
+      { wrapper: withProviders(transport, createTestQueryClient()) },
     )
     expect(screen.getByDisplayValue('Review')).toBeInTheDocument()
     expect(onChange).not.toHaveBeenCalled()

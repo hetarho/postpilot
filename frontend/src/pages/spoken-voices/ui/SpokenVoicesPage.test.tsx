@@ -30,15 +30,12 @@ afterEach(() => {
   vi.unstubAllGlobals()
   audio = undefined
 })
-// THEME-67: 목소리's creation button is its siblings' — 새 목소리, a hero pill with its plus glyph,
-// the full width on a phone and a right-aligned pill from `sm:`.
-it('draws 새 목소리 as the section creation button every sibling has', async () => {
+// 새 목소리 is the one action in the screen's heading row.
+it('heads the screen with 새 목소리', async () => {
   renderAppAt('/spoken-voices', { user: { id: 'alice' } })
   const create = await screen.findByRole('link', { name: '새 목소리' })
   expect(create).toHaveAttribute('href', '/spoken-voices/new')
-  expect(create).toHaveClass('ui-button-cta', 'min-h-14', 'w-full', 'sm:w-auto')
-  expect(create.querySelector('svg')).not.toBeNull()
-  expect(create.closest('[data-action-bar]')).toHaveClass('w-full', 'sm:w-fit')
+  expect(create.closest('header')).not.toBeNull()
 })
 
 describe('spoken voice creation and reuse', () => {
@@ -166,7 +163,9 @@ describe('spoken voice creation and reuse', () => {
     const dialog = await screen.findByRole('dialog')
     expect(dialog).toHaveTextContent('이미 만들어진 음성과 영상은 그대로 남아요.')
     await user.click(within(dialog).getByRole('button', { name: '목록에서 제거' }))
-    await screen.findByText('아직 확정한 목소리가 없어요.')
+    // With none left, the screen shows how a voice is made rather than an empty list.
+    await screen.findByRole('heading', { name: '목소리를 만드는 순서' })
+    expect(screen.getByText('AI가 만든 후보를 들어 봐요')).toBeInTheDocument()
     expect(f.calls.filter((c) => c.startsWith('start'))).toHaveLength(0)
   })
   it.each(['unresolved', 'received', 'cancelled'] as const)(

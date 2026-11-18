@@ -92,35 +92,35 @@
     }
   },
   "/": {
-    "heading": "무엇을 만들까요?",
-    "expectedPath": "/create",
-    "expectedLeaf": "/authenticated/create",
+    "heading": "고품질의 글을, 내 언어로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/create/ui/CreatePage.tsx",
+      "source": "frontend/src/pages/home/ui/HomePage.tsx",
       "status": "changed",
-      "finding": "The authenticated root is an alias for the canonical creation canvas; opening a choice starts no record or AI work.",
-      "inspectedStates": ["populated", "loading", "failure"]
+      "finding": "The signed-in home draws the writing kit's readiness as one picture around the 글쓰기 pen; opening it writes nothing.",
+      "inspectedStates": ["populated", "loading", "empty"]
     }
   },
   "/library": {
-    "heading": "내 글",
-    "expectedPath": "/my",
-    "expectedLeaf": "/authenticated/my",
+    "heading": "네이버 블로그",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
       "source": "frontend/src/app/routes/creation.ts",
       "status": "changed",
-      "finding": "The authenticated library alias opens the aggregate My work hub.",
+      "finding": "The old library alias lands on the 글 tab.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
   "/settings": {
-    "heading": "나",
+    "heading": "설정",
     "expectedPath": "/settings",
     "expectedLeaf": "/authenticated/settings",
     "sourceReview": {
       "source": "frontend/src/pages/settings/ui/SettingsPage.tsx",
       "status": "changed",
-      "finding": "Voice/memories, speaking voices, AI/account and advanced tests; templates and guidelines live in channels.",
+      "finding": "Settings live behind the avatar; no tab holds them.",
       "inspectedStates": ["populated", "loading", "failure"]
     }
   },
@@ -234,7 +234,7 @@
     },
     "return": {
       "href": "/posts",
-      "name": "네이버 블로그로 돌아가기"
+      "name": "내 글로 돌아가기"
     }
   },
   "/posts/experiments/record": {
@@ -265,7 +265,7 @@
     },
     "return": {
       "href": "/posts",
-      "name": "네이버 블로그로 돌아가기"
+      "name": "내 글로 돌아가기"
     }
   },
   "/voices": {
@@ -996,36 +996,39 @@
     }
   },
   "/create": {
-    "heading": "무엇을 만들까요?",
-    "expectedPath": "/create",
-    "expectedLeaf": "/authenticated/create",
+    "heading": "고품질의 글을, 내 언어로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/create/ui/CreatePage.tsx",
-      "status": "checked",
-      "finding": "Canonical destination inspected for THEME-78 audit.",
-      "inspectedStates": ["populated"]
+      "source": "frontend/src/pages/home/ui/HomePage.tsx",
+      "status": "changed",
+      "finding": "Retired tab address; it replaces itself with the place that now holds what it showed.",
+      "inspectedStates": ["populated"],
+      "redirect": "/"
     }
   },
   "/my": {
-    "heading": "내 글",
-    "expectedPath": "/my",
-    "expectedLeaf": "/authenticated/my",
+    "heading": "네이버 블로그",
+    "expectedPath": "/posts",
+    "expectedLeaf": "/authenticated/posts",
     "sourceReview": {
-      "source": "frontend/src/pages/my-work/ui/MyWorkPage.tsx",
-      "status": "checked",
-      "finding": "Canonical destination inspected for THEME-78 audit.",
-      "inspectedStates": ["populated"]
+      "source": "frontend/src/pages/posts/ui/PostsPage.tsx",
+      "status": "changed",
+      "finding": "Retired tab address; it replaces itself with the place that now holds what it showed.",
+      "inspectedStates": ["populated"],
+      "redirect": "/posts"
     }
   },
   "/style": {
-    "heading": "내 스타일",
-    "expectedPath": "/style",
-    "expectedLeaf": "/authenticated/style",
+    "heading": "고품질의 글을, 내 언어로.",
+    "expectedPath": "/",
+    "expectedLeaf": "/authenticated/",
     "sourceReview": {
-      "source": "frontend/src/pages/style/ui/StylePage.tsx",
-      "status": "checked",
-      "finding": "Canonical destination inspected for THEME-78 audit.",
-      "inspectedStates": ["populated"]
+      "source": "frontend/src/pages/home/ui/HomePage.tsx",
+      "status": "changed",
+      "finding": "Retired tab address; it replaces itself with the place that now holds what it showed.",
+      "inspectedStates": ["populated"],
+      "redirect": "/"
     }
   }
 }

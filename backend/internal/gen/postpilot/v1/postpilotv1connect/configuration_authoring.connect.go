@@ -70,6 +70,9 @@ const (
 	// ConfigurationAuthoringServiceSaveAuthoringSessionProcedure is the fully-qualified name of the
 	// ConfigurationAuthoringService's SaveAuthoringSession RPC.
 	ConfigurationAuthoringServiceSaveAuthoringSessionProcedure = "/postpilot.v1.ConfigurationAuthoringService/SaveAuthoringSession"
+	// ConfigurationAuthoringServiceCheckAuthoringReferenceProcedure is the fully-qualified name of the
+	// ConfigurationAuthoringService's CheckAuthoringReference RPC.
+	ConfigurationAuthoringServiceCheckAuthoringReferenceProcedure = "/postpilot.v1.ConfigurationAuthoringService/CheckAuthoringReference"
 )
 
 // ConfigurationAuthoringServiceClient is a client for the
@@ -87,6 +90,9 @@ type ConfigurationAuthoringServiceClient interface {
 	ResetAuthoringChat(context.Context, *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	ResetAuthoringBaseline(context.Context, *connect.Request[v1.ResetAuthoringBaselineRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	SaveAuthoringSession(context.Context, *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	// Reads one form reference the way a request would, so the screen can name it or say in
+	// place why it cannot be used. Starts no AI work and stores nothing.
+	CheckAuthoringReference(context.Context, *connect.Request[v1.CheckAuthoringReferenceRequest]) (*connect.Response[v1.CheckAuthoringReferenceResponse], error)
 }
 
 // NewConfigurationAuthoringServiceClient constructs a client for the
@@ -172,6 +178,12 @@ func NewConfigurationAuthoringServiceClient(httpClient connect.HTTPClient, baseU
 			connect.WithSchema(configurationAuthoringServiceMethods.ByName("SaveAuthoringSession")),
 			connect.WithClientOptions(opts...),
 		),
+		checkAuthoringReference: connect.NewClient[v1.CheckAuthoringReferenceRequest, v1.CheckAuthoringReferenceResponse](
+			httpClient,
+			baseURL+ConfigurationAuthoringServiceCheckAuthoringReferenceProcedure,
+			connect.WithSchema(configurationAuthoringServiceMethods.ByName("CheckAuthoringReference")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -189,6 +201,7 @@ type configurationAuthoringServiceClient struct {
 	resetAuthoringChat         *connect.Client[v1.ResetAuthoringChatRequest, v1.AuthoringSessionResponse]
 	resetAuthoringBaseline     *connect.Client[v1.ResetAuthoringBaselineRequest, v1.AuthoringSessionResponse]
 	saveAuthoringSession       *connect.Client[v1.SaveAuthoringSessionRequest, v1.AuthoringSessionResponse]
+	checkAuthoringReference    *connect.Client[v1.CheckAuthoringReferenceRequest, v1.CheckAuthoringReferenceResponse]
 }
 
 // CreateAuthoringSession calls postpilot.v1.ConfigurationAuthoringService.CreateAuthoringSession.
@@ -255,6 +268,11 @@ func (c *configurationAuthoringServiceClient) SaveAuthoringSession(ctx context.C
 	return c.saveAuthoringSession.CallUnary(ctx, req)
 }
 
+// CheckAuthoringReference calls postpilot.v1.ConfigurationAuthoringService.CheckAuthoringReference.
+func (c *configurationAuthoringServiceClient) CheckAuthoringReference(ctx context.Context, req *connect.Request[v1.CheckAuthoringReferenceRequest]) (*connect.Response[v1.CheckAuthoringReferenceResponse], error) {
+	return c.checkAuthoringReference.CallUnary(ctx, req)
+}
+
 // ConfigurationAuthoringServiceHandler is an implementation of the
 // postpilot.v1.ConfigurationAuthoringService service.
 type ConfigurationAuthoringServiceHandler interface {
@@ -270,6 +288,9 @@ type ConfigurationAuthoringServiceHandler interface {
 	ResetAuthoringChat(context.Context, *connect.Request[v1.ResetAuthoringChatRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	ResetAuthoringBaseline(context.Context, *connect.Request[v1.ResetAuthoringBaselineRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
 	SaveAuthoringSession(context.Context, *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error)
+	// Reads one form reference the way a request would, so the screen can name it or say in
+	// place why it cannot be used. Starts no AI work and stores nothing.
+	CheckAuthoringReference(context.Context, *connect.Request[v1.CheckAuthoringReferenceRequest]) (*connect.Response[v1.CheckAuthoringReferenceResponse], error)
 }
 
 // NewConfigurationAuthoringServiceHandler builds an HTTP handler from the service implementation.
@@ -351,6 +372,12 @@ func NewConfigurationAuthoringServiceHandler(svc ConfigurationAuthoringServiceHa
 		connect.WithSchema(configurationAuthoringServiceMethods.ByName("SaveAuthoringSession")),
 		connect.WithHandlerOptions(opts...),
 	)
+	configurationAuthoringServiceCheckAuthoringReferenceHandler := connect.NewUnaryHandler(
+		ConfigurationAuthoringServiceCheckAuthoringReferenceProcedure,
+		svc.CheckAuthoringReference,
+		connect.WithSchema(configurationAuthoringServiceMethods.ByName("CheckAuthoringReference")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/postpilot.v1.ConfigurationAuthoringService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ConfigurationAuthoringServiceCreateAuthoringSessionProcedure:
@@ -377,6 +404,8 @@ func NewConfigurationAuthoringServiceHandler(svc ConfigurationAuthoringServiceHa
 			configurationAuthoringServiceResetAuthoringBaselineHandler.ServeHTTP(w, r)
 		case ConfigurationAuthoringServiceSaveAuthoringSessionProcedure:
 			configurationAuthoringServiceSaveAuthoringSessionHandler.ServeHTTP(w, r)
+		case ConfigurationAuthoringServiceCheckAuthoringReferenceProcedure:
+			configurationAuthoringServiceCheckAuthoringReferenceHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -432,4 +461,8 @@ func (UnimplementedConfigurationAuthoringServiceHandler) ResetAuthoringBaseline(
 
 func (UnimplementedConfigurationAuthoringServiceHandler) SaveAuthoringSession(context.Context, *connect.Request[v1.SaveAuthoringSessionRequest]) (*connect.Response[v1.AuthoringSessionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.SaveAuthoringSession is not implemented"))
+}
+
+func (UnimplementedConfigurationAuthoringServiceHandler) CheckAuthoringReference(context.Context, *connect.Request[v1.CheckAuthoringReferenceRequest]) (*connect.Response[v1.CheckAuthoringReferenceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("postpilot.v1.ConfigurationAuthoringService.CheckAuthoringReference is not implemented"))
 }

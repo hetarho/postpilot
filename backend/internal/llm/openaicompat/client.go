@@ -404,7 +404,8 @@ func (c *Client) apply(chunk chatChunk, text *strings.Builder, out *llm.Response
 	// A provider can fail mid-stream (a quota reached after the headers went out) and
 	// says so inside the body rather than with a status code.
 	if chunk.Error != nil {
-		return &llm.ProviderError{Provider: c.name, Status: http.StatusOK, Code: numericErrorCode(chunk.Error.Code), Message: chunk.Error.Message, Kind: kindOfMessage(chunk.Error)}
+		kind, cause := kindOfMessage(chunk.Error)
+		return &llm.ProviderError{Provider: c.name, Status: http.StatusOK, Code: numericErrorCode(chunk.Error.Code), Message: chunk.Error.Message, Kind: kind, Cause: cause}
 	}
 	for _, choice := range chunk.Choices {
 		text.WriteString(choice.Message.Content)
@@ -449,6 +450,36 @@ func decimalUSDTomicrousd(raw []byte) (int64, error) {
 // must stay a generic error, or the user is told to re-pick a model that is fine.
 var modelNotFound = regexp.MustCompile(`(?i)\bmodel\b[^.]{0,40}\b(not found|does not exist|not exist)\b|\b(no such|unknown) model\b|\binvalid model (id|name)\b|\bmodel not found\b|\bno endpoints found\b`)
 
+// noEndpoint matches a gateway's answer that no endpoint will serve the model for this
+// account — OpenRouter's "No endpoints found matching your data policy", "No allowed
+// providers are available for the selected model" and its guardrail form "0 endpoints out
+// of 1 requested are available matching your guardrail restrictions and data policy", and
+// its shorter "No endpoints available matching your data policy". None of them is a
+// malformed request: whatever status carries it, the model cannot be used as the account
+// stands, and another model can.
+var noEndpoint = regexp.MustCompile(`(?i)\bno endpoints found\b|\bno endpoints? available\b|\b0 endpoints? out of \d+ requested (are|is) available\b|\bno (allowed |available )?(providers|endpoints) (are|is) available\b`)
+
+// policyRefusal tells an endpoint the account's own settings exclude (guardrails, privacy,
+// data or training policy) apart from a model that is not offered at all.
+var policyRefusal = regexp.MustCompile(`(?i)\bguardrail|\bdata policy\b|\bprivacy\b|\btraining\b`)
+
+// modelUnavailable classifies a provider message as ErrModelUnavailable with its cause, or
+// returns a nil kind when the message is not about the model's availability.
+func modelUnavailable(message string, status int) (error, string) {
+	if noEndpoint.MatchString(message) {
+		if policyRefusal.MatchString(message) {
+			return llm.ErrModelUnavailable, llm.ModelUnavailableCausePolicy
+		}
+		return llm.ErrModelUnavailable, llm.ModelUnavailableCauseGone
+	}
+	// A 404 alone is not "the model is gone": a wrong base_url or a gateway page is a 404
+	// too. Only a body that says so means the model.
+	if (status == http.StatusNotFound || status == http.StatusBadRequest || status == http.StatusOK) && modelNotFound.MatchString(message) {
+		return llm.ErrModelUnavailable, llm.ModelUnavailableCauseGone
+	}
+	return nil, ""
+}
+
 func (c *Client) httpError(resp *http.Response) error {
 	raw, _ := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
 	message := strings.TrimSpace(string(raw))
@@ -463,37 +494,35 @@ func (c *Client) httpError(resp *http.Response) error {
 	}
 
 	var kind error
-	switch {
-	case resp.StatusCode == http.StatusTooManyRequests:
+	cause := ""
+	if resp.StatusCode == http.StatusTooManyRequests {
 		kind = llm.ErrRateLimited
-	// A 404 alone is not "the model is gone": a wrong base_url or a gateway page is a 404
-	// too. Only a body that says so means the model.
-	case (resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest) && modelNotFound.MatchString(message):
-		kind = llm.ErrModelUnavailable
+	} else if resp.StatusCode != http.StatusOK {
+		kind, cause = modelUnavailable(message, resp.StatusCode)
 	}
 	var code int
 	if envelope.Error != nil {
 		code = numericErrorCode(envelope.Error.Code)
 	}
-	return &llm.ProviderError{Provider: c.name, Status: resp.StatusCode, Code: code, Message: message, Kind: kind}
+	return &llm.ProviderError{Provider: c.name, Status: resp.StatusCode, Code: code, Message: message, Kind: kind, Cause: cause}
 }
 
 // kindOfMessage classifies an error delivered inside a 200 body, where there is no
-// status to go by. OpenRouter puts the upstream status in `code`.
-func kindOfMessage(e *apiError) error {
-	if code, ok := e.Code.(float64); ok {
-		switch int(code) {
-		case http.StatusTooManyRequests:
-			return llm.ErrRateLimited
-		case http.StatusNotFound:
-			return llm.ErrModelUnavailable
-		}
+// status to go by. OpenRouter puts the upstream status in `code`. The second value is
+// ErrModelUnavailable's cause (llm.ModelUnavailableCause*), empty for any other kind.
+func kindOfMessage(e *apiError) (error, string) {
+	code, numeric := e.Code.(float64)
+	if numeric && int(code) == http.StatusTooManyRequests {
+		return llm.ErrRateLimited, ""
 	}
-	if modelNotFound.MatchString(e.Message) {
-		return llm.ErrModelUnavailable
+	if kind, cause := modelUnavailable(e.Message, http.StatusOK); kind != nil {
+		return kind, cause
+	}
+	if numeric && int(code) == http.StatusNotFound {
+		return llm.ErrModelUnavailable, llm.ModelUnavailableCauseGone
 	}
 	if strings.Contains(strings.ToLower(e.Message), "rate limit") {
-		return llm.ErrRateLimited
+		return llm.ErrRateLimited, ""
 	}
-	return nil
+	return nil, ""
 }

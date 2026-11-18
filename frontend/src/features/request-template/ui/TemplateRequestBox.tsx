@@ -151,7 +151,7 @@ export function TemplateRequestBox({
       {!write.isPending && !write.selected ? (
         <Typography variant="body" as="p" role="status" className="text-content-secondary mt-2">
           {t('request.noModel')}{' '}
-          <Link to="/ai-models" className="underline">
+          <Link to="/ai-models" hash="ai-in-use" className="underline">
             {t('request.chooseModel')}
           </Link>
         </Typography>

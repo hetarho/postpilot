@@ -16,6 +16,7 @@ import { BILLING_PACKS_ID } from '@/entities/subscription'
 import {
   ListGroup,
   ListRowIcon,
+  TitleRow,
   Typography,
   buttonStyles,
   cardStyles,
@@ -65,7 +66,9 @@ export function SettingsPage() {
   )
   return (
     <main className={pageStyles({ width: 'prose', className: 'pt-4 sm:pt-10' })}>
-      <Typography variant="largeTitle">{t('settings.title')}</Typography>
+      <TitleRow>
+        <Typography variant="largeTitle">{t('settings.title')}</Typography>
+      </TitleRow>
 
       {/* The hero: what is left to spend, the plan it comes from, and the one way to get more. */}
       <section

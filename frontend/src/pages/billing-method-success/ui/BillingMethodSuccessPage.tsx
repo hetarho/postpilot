@@ -6,6 +6,7 @@ import { isInAppPath } from '@/shared/lib'
 import {
   Notice,
   ReturnIcon,
+  TitleRow,
   Spinner,
   Typography,
   pageStyles,
@@ -49,15 +50,21 @@ export function BillingMethodSuccessPage() {
 
   return (
     <main className={pageStyles()}>
-      <Link
-        to="/billing"
-        aria-label={t('registration.back')}
-        title={t('registration.back')}
-        className={returnControlStyles('mb-4')}
+      <TitleRow
+        variant="display"
+        back={
+          <Link
+            to="/billing"
+            aria-label={t('registration.back')}
+            title={t('registration.back')}
+            className={returnControlStyles()}
+          >
+            <ReturnIcon />
+          </Link>
+        }
       >
-        <ReturnIcon />
-      </Link>
-      <Typography variant="display">{t('registration.title')}</Typography>
+        <Typography variant="display">{t('registration.title')}</Typography>
+      </TitleRow>
       {valid && !registration.isError ? (
         <div role="status" className="mt-8 flex items-center gap-3">
           <Spinner />

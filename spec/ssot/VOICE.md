@@ -1,5 +1,5 @@
 # VOICE voices
-> r22 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
+> r23 | Private accepted personal/synthetic expression profiles learned from the owner's writing or a casual learning chat, with source-preserving style-only projections.
 
 ## decisions
 - VOICE-1 [o] account-owned writing voices are isolated and labelled personal or synthetic; each owns its materials and current/previous analysis. Personal voices learn only owner prose; generated styles and test winners follow VOICE-68/69 and are never personal-habit evidence.
@@ -56,9 +56,11 @@
 - VOICE-47 [o] the projection tells the model to write in these habits without copying an excerpt's phrases or facts, and to follow the measured ending mix; zero excerpts is valid; no run of identical endings is voice text — it is a 원칙 (→GEN-75)
 - VOICE-50 [o] provider work freezes the explicit owned voice/accepted profile before enqueue; analysis freezes owned material revisions, writing/revision freeze the assigned voice or absence, and tests freeze every selected entrant profile under MODEL-30. Retries use the admitted snapshot and never follow a later post assignment. Existing queue ownership guards still apply.
 - VOICE-51 [o] no third-party sentence, Korean morphology, vector, embedding, SDK, Python, CGO, sidecar or model dependency: segmentation, counting, ending buckets, the readiness meter and excerpt retrieval use the Go standard library ← keeps the static SPA + distroless Go deployment and makes unit tests deterministic
-- VOICE-52 [o] /voices, 내 스타일's 말투 section (→=THEME-38), lists named owned styles as cards rather than operational post-history rows ← a style is chosen by how it sounds
-  - each card carries the name, default marker, personal/synthetic provenance and pending-material/EDIT state, then how the style sounds — one quoted sentence (an accepted analysis example, or the synthetic sample labelled fictional →!VOICE-69), the AI impression and up to three signature phrases — then the learning/usable state or last analysis
-  - personal learning, explicit AI creation and unified actual-writing test entry are named distinct actions; tombstones remain in a closed restore disclosure
+- VOICE-52 [o] /voices, the 말투 screen of 홈's writing kit (→=THEME-38 →!THEME-81), opens on one featured voice drawn as how it sounds and lists every other active voice as one row, never as operational post-history rows ← a style is chosen by how it sounds
+  - the featured voice is the 기본; with no 기본 it is the first made voice, else the most nearly made one, and only the 기본 is labelled as the voice new posts are written in (with no 기본 a new post starts on 말투 없음, →!POST-101)
+  - the featured card carries the name, 기본 marker, personal/synthetic provenance and pending-material/EDIT state; a made voice then shows how it sounds — one quoted sentence (an accepted analysis example, or the synthetic sample labelled fictional →!VOICE-69), the AI impression, up to five signature phrases (자주 쓰는 표현) and up to three habits with when they occur (말버릇) — then its 학습 글 count, analysis date and 자세히 보기; an unmade voice shows its readiness meter with 학습 이어가기, or 분석하러 가기 at 100%
+  - a 다른 말투 row shows the name, its personal/synthetic provenance (→!VOICE-69) and the AI impression or `학습 N%`, opens the voice, and a made one carries 기본으로 설정 (→VOICE-12); with no active voice the screen says so in one line
+  - the heading row's one 새 말투 menu holds personal learning (내 글로 배우기 →VOICE-53, also opened by `?new=1`), explicit AI creation (AI와 대화로 만들기) and 이전에 만든 말투 이어보기 (→VOICE-68) as named distinct actions; no creation path stands on the page as its own button and nothing is docked; unified actual-writing test entry stays a named distinct action; tombstones remain in a closed restore disclosure
 - VOICE-53 [o] `새 말투 만들기` — on the list, in a post's voice picker (→POST-101) and in a new post's offer (→POST-121) — opens the shared `Sheet` (a bottom sheet below `md:`) with the name field and its `n / 50자` count
   - the commit action sits in flow after the field rather than in the pinned footer ← the panel is anchored to the layout viewport the software keyboard does not resize
   - success closes the sheet and opens the new voice on `/materials` 말투 학습
@@ -174,6 +176,7 @@
 - contracts: `voice.proto`, plus `VoiceRef` in `post.proto` and `voice_id` in `model_experiment.proto`
 
 ## chg
+- r23 261118 VOICE-52✎ 내 스타일's 말투 section listing every style as a card (quoted sentence, impression, up to three phrases)→홈's 말투 kit screen: one featured voice (기본, else first made, else most nearly made; only the 기본 labelled as what new posts use) with up to five phrases and three habits, every other voice a row with 기본으로 설정, creation paths items of one heading-row 새 말투 menu
 - r22 261116 VOICE-78+ the learning chat asks first about one owner experience by kind; VOICE-79+ three-register example replies under every chat question; VOICE-60✎ starter/unanswered situations first→the imagined path behind 생각나는 게 없어요, review moments before other scenes; VOICE-65✎ first chat starter situations→an experience, later chats unanswered situations→another experience first
 - r21 261116 VOICE-24✎ ⑤ top three first/last lines→only lines recurring in two or more 학습 글; VOICE-62✎ values beside each other, largest-relative-gap headline→prose-only post counting, dominant-value lead, 비슷함/다름 verdict and n-of-m summary, shown in the post's 말투 view; VOICE-77+ habit phrases found in a text
 - r20 261111 VOICE-52✎ the 말투 section every channel shares, settings rows→내 스타일's 말투 section, cards showing how a style sounds (quoted sentence, AI impression, up to three signature phrases); VOICE-66✎ a method opens its flow on tap→a tap selects, 다음 opens it

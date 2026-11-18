@@ -305,7 +305,7 @@ function OwnedPhotoStudio({
           {!models.isPending && !filterForStage(models.models, 'observe').length && (
             <Typography variant="body">
               {t('noModels')}{' '}
-              <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+              <a href="/ai-models#ai-in-use" className={buttonStyles({ variant: 'ghost' })}>
                 {t('settings')}
               </a>
             </Typography>

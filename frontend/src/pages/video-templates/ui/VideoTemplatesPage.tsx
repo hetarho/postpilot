@@ -1,4 +1,4 @@
-import { Clapperboard } from 'lucide-react'
+import { Clapperboard, Plus } from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useRef, type Ref } from 'react'
@@ -10,7 +10,8 @@ import {
 import { useSession } from '@/entities/session'
 import { useAuthoringSummaries, type AuthoringSummary } from '@/entities/ai-authoring'
 import { DeleteClipTemplateButton } from '@/features/delete-clip-template'
-import { ChannelActions } from '@/widgets/channel-actions'
+import { KitScreenHeader } from '@/widgets/writing-kit'
+import { templateIllustration } from '@/shared/assets'
 import {
   Badge,
   DirectoryItem,
@@ -18,6 +19,7 @@ import {
   Notice,
   LoadingState,
   Typography,
+  buttonStyles,
   pageStyles,
   typographyStyles,
   useListRemovalFocus,
@@ -44,10 +46,23 @@ export function VideoTemplatesPage() {
       ref={page}
       className={pageStyles({ width: 'wide', className: 'flex flex-1 flex-col pt-2 sm:pt-4' })}
     >
-      <Typography variant="display">{t('directory.title', { ns: 'clips' })}</Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
-        {t('directory.description', { ns: 'clips' })}
-      </Typography>
+      {/* The same opening as its siblings under 영상 — 영상 지침 and 목소리 — with the one way to
+          make a template in the heading row. */}
+      <KitScreenHeader
+        size="section"
+        title={t('directory.title', { ns: 'clips' })}
+        statement={t('directory.statement', { ns: 'clips' })}
+        illustration={templateIllustration}
+        actions={
+          <Link
+            to="/video-templates/new"
+            className={buttonStyles({ variant: 'cta', className: 'gap-2' })}
+          >
+            <Plus aria-hidden="true" className="size-5 shrink-0" />
+            {t('directory.new', { ns: 'clips' })}
+          </Link>
+        }
+      />
 
       {isError && (
         <Notice tone="danger" role="alert" className="mt-8">
@@ -97,7 +112,7 @@ export function VideoTemplatesPage() {
                 {t('directory.saved', { ns: 'clips' })}
               </Typography>
               {/* Saved resources share one card composition with the writing catalog. */}
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2 lg:gap-4">
                 {templates.map((template, index) => (
                   <TemplateRow
                     key={template.id}
@@ -122,7 +137,7 @@ export function VideoTemplatesPage() {
               <Typography variant="title" as="h2" id="video-templates-unsaved-heading">
                 {t('directory.unsavedWork', { ns: 'clips' })}
               </Typography>
-              <ul className="mt-3 grid gap-3 lg:grid-cols-2 lg:gap-4">
+              <ul className="mt-3 grid grid-cols-[minmax(0,1fr)] gap-3 lg:grid-cols-2 lg:gap-4">
                 {summaries.data
                   .filter((row) => !row.targetId && !row.lastPublication)
                   .map((row) => (
@@ -159,8 +174,6 @@ export function VideoTemplatesPage() {
           )}
         </>
       )}
-      {/* The section's creation button is the page's one dock (THEME-67). */}
-      <ChannelActions video section="templates" />
     </main>
   )
 }
@@ -170,11 +183,15 @@ export function VideoTemplatesPage() {
 function EmptyState() {
   const { t } = useTranslation('clips')
   return (
-    <section aria-labelledby="video-templates-empty-heading" className="mt-8">
-      <Typography variant="title" id="video-templates-empty-heading">
+    // The same dashed sheet 템플릿 shows when it has none, so the two directories read alike.
+    <section
+      aria-labelledby="video-templates-empty-heading"
+      className="border-divider mt-8 flex flex-col items-start gap-3 rounded-3xl border border-dashed px-6 py-8"
+    >
+      <Typography variant="title" as="h2" id="video-templates-empty-heading">
         {t('directory.empty')}
       </Typography>
-      <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
+      <Typography variant="body" as="p" className="text-content-secondary max-w-measure">
         {t('directory.emptyHelp')}
       </Typography>
     </section>
@@ -216,15 +233,11 @@ function TemplateRow({
       }
       description={<ClipTemplateDescription template={template} className="line-clamp-2" />}
       status={summary && <EditingStatus summary={summary} />}
+      // A saved template is simply usable; only how many videos use it is worth a badge.
       metadata={
-        <>
-          <Badge tone="neutral">
-            {t('directory.projectCount', { count: template.projectCount })}
-          </Badge>
-          <Typography variant="meta" as="span">
-            {t('directory.savedAvailable')}
-          </Typography>
-        </>
+        <Badge tone="neutral">
+          {t('directory.projectCount', { count: template.projectCount })}
+        </Badge>
       }
       actions={
         <DeleteClipTemplateButton

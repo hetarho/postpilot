@@ -25,12 +25,8 @@ export const i18n = {
     linkedPost: {
       title: '글 연결',
       none: '없음',
-      search: '글 검색',
       unlink: '연결 해제',
       close: '닫기',
-      loadFailed: '글 목록을 불러오지 못했어요.',
-      retry: '다시 시도',
-      loading: '불러오는 중…',
     },
     project: {
       kindSponsored: '제품이나 서비스를 제공받았어요',
@@ -166,12 +162,8 @@ export const i18n = {
     linkedPost: {
       title: 'Linked post',
       none: 'None',
-      search: 'Search posts',
       unlink: 'Unlink',
       close: 'Close',
-      loadFailed: 'Could not load posts.',
-      retry: 'Retry',
-      loading: 'Loading…',
     },
     project: {
       kindSponsored: 'I received a product or service',

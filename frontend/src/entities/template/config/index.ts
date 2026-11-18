@@ -69,3 +69,6 @@ export const TEMPLATE_REQUEST_MAX_CHARS = positiveIntEnv(
   ENV_LIMIT_OVERRIDES.templateRequestMaxChars,
   12_000,
 )
+
+/** Where this browser keeps each account's last specified template (`lastTemplate`). */
+export const LAST_TEMPLATE_STORAGE_PREFIX = 'postpilot.last-template.v1.'

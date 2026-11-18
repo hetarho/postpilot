@@ -138,6 +138,11 @@ type Start struct {
 	Mode                    Mode
 	Prompt                  string
 	WriteModel              llm.ModelRef
+	// References are this request's form references (post templates only, at most
+	// MaxReferences). They are read when the request starts and frozen into its job alone.
+	References []Reference
+	// read is References as Start read them, for the job's frozen input.
+	read []referenceWire
 }
 type Estimate struct {
 	Credits         int
@@ -231,3 +236,62 @@ func (e *DraftRefusal) Reason() string            { return e.reason }
 func (e *DraftRefusal) Params() map[string]string { return nil }
 
 var ErrDraftInvalid = &DraftRefusal{reason: FailureReasonDraftInvalid, message: "current working source is invalid"}
+
+// Reference is one owner-chosen form reference: exactly one of an owned post's slug, an
+// owned post template's id, or a web page address.
+type Reference struct {
+	PostSlug, TemplateID, URL string
+}
+
+// Kind names which source a reference reads.
+func (r Reference) Kind() string {
+	switch {
+	case r.PostSlug != "" && r.TemplateID == "" && r.URL == "":
+		return "post"
+	case r.TemplateID != "" && r.PostSlug == "" && r.URL == "":
+		return "template"
+	case r.URL != "" && r.PostSlug == "" && r.TemplateID == "":
+		return "url"
+	}
+	return ""
+}
+
+// ReferenceDocument is what a reference contributes to a request: a title and the body's
+// form as lines (headings, photo positions, text positions, fixed lines, questions) —
+// never a photo file, a caption or other account material.
+type ReferenceDocument struct {
+	Kind, Title, Structure string
+}
+
+// MaxReferences bounds one request's references; MaxReferenceChars bounds their combined
+// structure, split evenly between them, each never above MaxReferencePostChars.
+const (
+	MaxReferences     = 3
+	MaxReferenceChars = 12000
+)
+
+// FailureReasonReferenceUnavailable is a reference that could not be read; its `refusal`
+// param says why (ReferenceRefusal*).
+const FailureReasonReferenceUnavailable = "AUTHORING_REFERENCE_UNAVAILABLE"
+
+// Why a reference cannot be read. Display-safe words; the screen owns the sentences.
+const (
+	ReferenceRefusalInvalid     = "invalid"
+	ReferenceRefusalNotAllowed  = "not_allowed"
+	ReferenceRefusalUnreachable = "unreachable"
+	ReferenceRefusalNotHTML     = "not_html"
+	ReferenceRefusalTooLarge    = "too_large"
+	ReferenceRefusalEmpty       = "empty"
+	ReferenceRefusalMissing     = "missing"
+	ReferenceRefusalTooMany     = "too_many"
+)
+
+// ReferenceRefusal is a reference refused with its code. It describes itself to the RPC
+// edge as AUTHORING_REFERENCE_UNAVAILABLE.
+type ReferenceRefusal struct{ Code string }
+
+func (e *ReferenceRefusal) Error() string  { return "authoring reference refused: " + e.Code }
+func (e *ReferenceRefusal) Reason() string { return FailureReasonReferenceUnavailable }
+func (e *ReferenceRefusal) Params() map[string]string {
+	return map[string]string{"refusal": e.Code}
+}
