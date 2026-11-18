@@ -119,10 +119,11 @@ describe('clip directory and setup', () => {
     // Guide: the directory is one region holding 이어서 쓰기 and the status groups.
     const list = within(await screen.findByRole('region', { name: '저장된 클립' }))
     const link = await list.findByRole('link', { name: /제주 여행/ })
-    // The row carries the badge, the template and the ratio as metadata, and a relative time
-    // (CLIP-41). The target duration lives on the project's own screen.
+    // The row carries the badge, the template and a relative time; a 9:16 project names no
+    // ratio, since every new clip is vertical (CLIP-41). The target duration lives on the
+    // project's own screen.
     expect(link).toHaveTextContent('초안')
-    expect(link).toHaveTextContent('세로 9:16')
+    expect(link).not.toHaveTextContent('9:16')
     await waitFor(() => expect(link).toHaveTextContent('여행'))
     expect(screen.queryByRole('link', { name: '새 클립' })).not.toBeInTheDocument()
     await user.click(link)

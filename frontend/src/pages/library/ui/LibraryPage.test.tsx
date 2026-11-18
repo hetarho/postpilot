@@ -9,8 +9,6 @@ it('redirects the authenticated library address to 글 without creating work', a
   await waitFor(() => expect(view.router.state.location.pathname).toBe('/posts'))
   expect(view.router.state.location.href).toBe('/posts')
   const main = await screen.findByRole('main')
-  expect(
-    await within(main).findByRole('heading', { level: 1, name: '네이버 블로그' }),
-  ).toBeInTheDocument()
+  expect(await within(main).findByRole('heading', { level: 1, name: '글' })).toBeInTheDocument()
   expect(calls.filter((call) => /^(Create|Generate|Start|Save)/.test(call))).toEqual([])
 })
