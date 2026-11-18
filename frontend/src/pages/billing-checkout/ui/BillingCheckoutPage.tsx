@@ -17,6 +17,7 @@ import {
   LoadingState,
   Notice,
   ReturnIcon,
+  TitleRow,
   SegmentedControl,
   Typography,
   pageStyles,
@@ -96,15 +97,21 @@ export function BillingCheckoutPage() {
 
   return (
     <main className={pageStyles()}>
-      <Link
-        to="/plans"
-        aria-label={t('checkout.back', { ns: 'billing' })}
-        title={t('checkout.back', { ns: 'billing' })}
-        className={returnControlStyles('mb-4')}
+      <TitleRow
+        variant="display"
+        back={
+          <Link
+            to="/plans"
+            aria-label={t('checkout.back', { ns: 'billing' })}
+            title={t('checkout.back', { ns: 'billing' })}
+            className={returnControlStyles()}
+          >
+            <ReturnIcon />
+          </Link>
+        }
       >
-        <ReturnIcon />
-      </Link>
-      <Typography variant="display">{t('checkout.title', { ns: 'billing' })}</Typography>
+        <Typography variant="display">{t('checkout.title', { ns: 'billing' })}</Typography>
+      </TitleRow>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t('checkout.description', { ns: 'billing' })}
       </Typography>

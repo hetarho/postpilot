@@ -230,7 +230,7 @@ func sanitizedStrictError(err error) error {
 	}
 	var provider *llm.ProviderError
 	if errors.As(err, &provider) {
-		return &llm.ProviderError{Status: provider.Status, Code: provider.Code, Message: "provider rejected the bounded request", Kind: provider.Kind}
+		return &llm.ProviderError{Status: provider.Status, Code: provider.Code, Message: "provider rejected the bounded request", Kind: provider.Kind, Cause: provider.Cause}
 	}
 	for _, kind := range []error{context.Canceled, context.DeadlineExceeded, llm.ErrUnsupported, llm.ErrBadOutput, llm.ErrRateLimited, llm.ErrModelUnavailable} {
 		if errors.Is(err, kind) {

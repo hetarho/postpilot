@@ -8,6 +8,12 @@ export const i18n = {
       description:
         '템플릿은 글의 구성과 순서를 정해요. 글마다 하나를 고르면 AI가 그 구성대로 씁니다. 문체와 종결어미는 그대로 말투 프로필을 따라요.',
       lead: '글이 이 순서로 짜여요',
+      statement:
+        '글이 흘러가는 순서예요. 어떤 글을 올리는지 AI에게 말하면 처음부터 짜 주고, 대화로 다듬어요.',
+      emptyTitle: '어떤 글을 자주 올리세요?',
+      emptyBody:
+        '맛집 후기, 조립이 필요한 제품, 보여 주기만 하면 되는 신상품 — 말해 주면 AI가 그 글의 순서를 짜 드려요.',
+      resumeHeading: '이어서 만들던 대화',
       saved: '저장된 템플릿',
       new: '새 템플릿',
       empty: '아직 저장된 템플릿이 없어요',
@@ -22,6 +28,12 @@ export const i18n = {
       description:
         'A template decides the structure and order of a post. Choose one per post and AI follows that structure, while the voice still controls style and endings.',
       lead: 'Your posts follow this order',
+      statement:
+        'The order a post flows in. Tell the AI what you post and it drafts one from scratch; refine it by talking.',
+      emptyTitle: 'What do you post most?',
+      emptyBody:
+        'A restaurant review, a product that needs assembling, a new item that only needs showing — say it and the AI drafts that post’s order.',
+      resumeHeading: 'Conversations in progress',
       saved: 'Saved templates',
       new: 'New template',
       empty: 'There are no saved templates yet',

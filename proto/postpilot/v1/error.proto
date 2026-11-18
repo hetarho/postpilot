@@ -167,6 +167,8 @@ enum FailureReason {
   MODEL_SET_UNAVAILABLE = 112;
   MODEL_STAGE_INVALID = 113;
   MODEL_STAGE_REQUIRED = 114;
+  // params: model (the catalog label, where known) and cause (gone or provider_policy,
+  // where the provider said), both optional.
   MODEL_UNAVAILABLE = 115;
   MODEL_UNSUITABLE = 116;
   MODEL_UNSUPPORTED = 117;
@@ -426,6 +428,9 @@ enum FailureReason {
   CLIP_UPLOAD_TEXT_CONFIRMATION_REQUIRED = 341;
   // A clip's posted URL is not an https URL on its channel's platform host (CLIP-232).
   CLIP_PUBLISHED_URL_INVALID = 342;
+  // A template request's form reference could not be read. params: refusal (invalid,
+  // not_allowed, unreachable, not_html, too_large, empty, missing or too_many).
+  AUTHORING_REFERENCE_UNAVAILABLE = 343;
 
 }
 

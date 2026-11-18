@@ -23,7 +23,7 @@ import {
   POST_LIST_PATH,
 } from '@/entities/post'
 import { useSession } from '@/entities/session'
-import { noTemplateLabel, useTemplates } from '@/entities/template'
+import { noTemplateLabel, rememberLastTemplate, useTemplates } from '@/entities/template'
 import type { Voice } from '@/entities/voice'
 import {
   discardContentQueue,
@@ -93,6 +93,10 @@ interface DraftEditorProps {
   /** A template the wizard opened from ①'s 템플릿 picker just saved (TMPL-32): assigned once
    *  through the ordinary assignment, then dropped from the address. */
   handedTemplate?: string
+  /** The template the owner last specified (`lastTemplate`, already checked against the
+   *  directory, '' for 없음), which a draft with no post yet starts on unless the wizard handed
+   *  one. Still only a starting point: the 템플릿 step changes it like any other. */
+  lastTemplate?: string
 }
 
 /** Title + memo, autosaved, plus the post's lifecycle presented as three steps. The screen the
@@ -101,7 +105,12 @@ interface DraftEditorProps {
  *  The steps are PANELS, not routes: one mounted editor per slug, so a step change cannot remount
  *  the component and strand a queued save (tech/draft-autosave). Title, memo, photos and the mint
  *  plumbing therefore stay outside the panels — they are the post's identity, not one step's work. */
-export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorProps) {
+export function DraftEditor({
+  post,
+  defaultVoice,
+  handedTemplate,
+  lastTemplate = '',
+}: DraftEditorProps) {
   const { t, i18n } = useTranslation('posts')
   const navigate = useNavigate()
   const { user } = useSession()
@@ -129,7 +138,11 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   const caretFields = useMemo(() => ({ title: titleRef, memo: memoRef }), [])
   const caret = useCaretHandoff(post?.slug, caretFields)
 
-  const assignments = useDraftAssignments(post, defaultVoice, post ? '' : handedTemplate)
+  const assignments = useDraftAssignments(
+    post,
+    defaultVoice,
+    post ? '' : handedTemplate || lastTemplate,
+  )
   const { voiceId, templateId, targetLanguage } = assignments
 
   // Which writing screen is up. It crosses the mint's remount through a stash,
@@ -209,6 +222,8 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
   useEffect(() => {
     if (!handedTemplate || handled.current) return
     handled.current = true
+    // Made from the 템플릿 question and put on this post, it is the one last specified.
+    rememberLastTemplate(ownerId, handedTemplate)
     if (postSlug) {
       if (postTemplateId !== handedTemplate)
         void assignTemplate(handedTemplate).catch(() => undefined)
@@ -220,7 +235,7 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
         resetScroll: false,
       })
     } else void navigate({ to: '/posts/new', search: {}, replace: true, resetScroll: false })
-  }, [handedTemplate, postSlug, postTemplateId, assignTemplate, navigate])
+  }, [handedTemplate, postSlug, postTemplateId, assignTemplate, navigate, ownerId])
   // The patch carries every field the template declares, so reading it back gives the same fields.
   const fields = useMemo(
     () => answerFields(selectedTemplate, autosave.answers),
@@ -362,7 +377,18 @@ export function DraftEditor({ post, defaultVoice, handedTemplate }: DraftEditorP
           /* The draft/content save status retains and explains a refusal. */
         })
     },
-    onTemplateSelect: post ? autosave.assignTemplate : assignments.setTemplateId,
+    // The template specified here is the one the next new post starts on, 없음 included; a
+    // refused assignment specified nothing.
+    onTemplateSelect: (templateId: string) => {
+      if (!post) {
+        assignments.setTemplateId(templateId)
+        rememberLastTemplate(ownerId, templateId)
+        return
+      }
+      return autosave
+        .assignTemplate(templateId)
+        .then(() => rememberLastTemplate(ownerId, templateId))
+    },
     onTemplateCreate: () => {
       void autosave
         .flush()

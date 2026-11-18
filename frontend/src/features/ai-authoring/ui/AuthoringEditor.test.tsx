@@ -859,9 +859,9 @@ describe('conversational authoring', () => {
     const fake = server()
     mount(fake, { targetId: 'owned-guide' })
     const user = userEvent.setup()
-    await screen.findByRole('button', { name: /작문 지침 확인하기$/ })
+    await screen.findByRole('button', { name: /지침 확인하기$/ })
     expect(fake.calls).toEqual(['GetLatest'])
-    await user.click(screen.getByRole('button', { name: /작문 지침 확인하기$/ }))
+    await user.click(screen.getByRole('button', { name: /지침 확인하기$/ }))
     expect(await screen.findByText('현재 지침을 초안으로 불러왔어요.')).toBeInTheDocument()
     expect(screen.queryByRole('textbox')).toBeNull()
     await user.click(screen.getByRole('button', { name: /AI로 편집하기$/ }))
@@ -1058,9 +1058,7 @@ it('opens an untitled saved guideline with its readable content identity and con
   await publication(user)
   await user.click(screen.getByRole('button', { name: /변경사항 저장하기/ }))
   expect(
-    await screen.findByText(
-      '“짧고 읽기 쉬운 문장으로 써 주세요.” 작문 지침의 변경사항을 저장했어요.',
-    ),
+    await screen.findByText('“짧고 읽기 쉬운 문장으로 써 주세요.” 지침의 변경사항을 저장했어요.'),
   ).toBeInTheDocument()
   expect(fake.starts).toHaveLength(0)
 })

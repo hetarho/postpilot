@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, screen, within } from '@testing-library/react'
+import { act, cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { myPlanQueryKey } from '@/entities/plan'
 import { ProtoPlan } from '@/shared/api'
@@ -41,9 +41,10 @@ describe('AccountMenu', () => {
     const panel = await openAccountPopover(user)
     expect(within(panel).getByText('로그인한 계정')).toBeInTheDocument()
     expect(within(panel).getByText('alice')).toBeInTheDocument()
+    // Each destination returns to the screen the avatar was opened over.
     expect(within(panel).getByRole('link', { name: '계정 설정' })).toHaveAttribute(
       'href',
-      '/account',
+      '/account?entry=%2Fposts',
     )
     expect(within(panel).getByRole('button', { name: '로그아웃' })).toBeInTheDocument()
   })
@@ -61,7 +62,7 @@ describe('AccountMenu', () => {
     const menu = within(panel).getByRole('navigation', { name: '계정 메뉴' })
     const rows = within(menu).getAllByRole('link')
     expect(rows.map((row) => row.textContent)).toEqual([
-      '내 설정',
+      '설정',
       '계정 설정',
       '플랜 보기',
       '결제 관리',
@@ -79,7 +80,7 @@ describe('AccountMenu', () => {
 
   // QUOTA-8, QUOTA-27: the shell shows the tier, and every number behind it comes from
   // GetMyPlan — nothing about a grant is known to the client until the server says it.
-  it('renders the lots behind the balance the shell already read', async () => {
+  it('renders the lots behind the balance inside the avatar panel', async () => {
     mockDesktopMedia()
     const user = userEvent.setup()
     const calls: string[] = []
@@ -103,13 +104,10 @@ describe('AccountMenu', () => {
     })
 
     await screen.findByRole('button', { name: '내 계정' })
-    // The shell's credit control reads the balance now (QUOTA-27), so the figure is already
-    // on screen and opening the panel adds no request of its own.
-    await screen.findByRole('link', { name: /플랜 Free/ })
-    expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
-
+    // The plan and its credits live behind the avatar alone: the panel reads them once, as it
+    // opens (QUOTA-27).
     const panel = await openAccountPopover(user)
-    expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1)
+    await waitFor(() => expect(calls.filter((call) => call === 'GetMyPlan')).toHaveLength(1))
     // The tier chip sits in the identity block's corner, beside the id rather than under the
     // links, so the panel opens on who this is and what they are on.
     const tier = within(panel).getByText('Free')
@@ -134,7 +132,7 @@ describe('AccountMenu', () => {
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()
     expect(within(panel).getByRole('link', { name: '결제 관리' })).toHaveAttribute(
       'href',
-      '/billing',
+      '/billing?entry=%2Fposts',
     )
 
     // The meter is never the only signal: it carries its own figure as text.
@@ -188,7 +186,9 @@ describe('AccountMenu', () => {
       user: { ...USER, plan: ProtoPlan.PRO },
       plans,
     })
-    expect(await screen.findByRole('link', { name: '플랜 Pro, 남은 크레딧 8' })).toBeInTheDocument()
+    const user = userEvent.setup()
+    const panel = await openAccountPopover(user)
+    expect(await within(panel).findByText('8 크레딧')).toBeInTheDocument()
     // The server has atomically settled the admitted job across the boundary. A refetch
     // replaces the displayed position; the browser does not mint the next daily grant.
     plans.balance.credits = 3
@@ -196,7 +196,7 @@ describe('AccountMenu', () => {
       { kind: 'daily', granted: 85, remaining: 3, expiresAt: '2026-10-02T00:00:00Z' },
     ]
     await act(() => queryClient.invalidateQueries({ queryKey: myPlanQueryKey(transport) }))
-    expect(await screen.findByRole('link', { name: '플랜 Pro, 남은 크레딧 3' })).toBeInTheDocument()
+    expect(await within(panel).findByText('3 크레딧')).toBeInTheDocument()
   })
 
   // An unlimited account is stated, not drawn as an empty bar that reads as "none left".
@@ -224,7 +224,7 @@ describe('AccountMenu', () => {
       within(menu)
         .getAllByRole('link')
         .map((row) => row.textContent),
-    ).toEqual(['내 설정', '계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
+    ).toEqual(['설정', '계정 설정', '플랜 보기', '결제 관리', '운영 관리'])
     // The ladder is reachable from every tier: this link used to live inside the "has a
     // meter" branch, which left the operator account with no way to `/plans` (QUOTA-27).
     expect(within(panel).getByRole('link', { name: '플랜 보기' })).toBeInTheDocument()

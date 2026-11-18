@@ -12,7 +12,7 @@ import { POST_TARGET_LENGTH_DEFAULT, POST_TAG_COUNT_DEFAULT } from '@/entities/p
 import { WritingTestStudio, WritingTestHistory } from '@/widgets/writing-test'
 import { WRITING_TEST_NEW_GUIDELINE_SLOT } from '@/features/writing-test'
 import { activeLocale } from '@/shared/lib'
-import { Button, LoadingState, Typography, PageFrame } from '@/shared/ui'
+import { Button, LoadingState, Typography, PageFrame, TitleRow } from '@/shared/ui'
 import {
   writingTestSearchSchema,
   writingTestHistorySearchSchema,
@@ -144,7 +144,9 @@ export function WritingTestHistoryPage() {
   const search = writingTestHistorySearchSchema(raw as Record<string, unknown>)
   return (
     <PageFrame width="wide" className="flex flex-1 flex-col">
-      <Typography variant="display">{t('history')}</Typography>
+      <TitleRow variant="display">
+        <Typography variant="display">{t('history')}</Typography>
+      </TitleRow>
       <Typography variant="body" className="max-w-measure mt-3">
         {t('historyHelp')}
       </Typography>

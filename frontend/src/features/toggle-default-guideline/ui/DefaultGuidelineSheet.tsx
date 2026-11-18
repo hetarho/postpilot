@@ -14,13 +14,22 @@ import { Button, FieldMessage, Sheet, Typography } from '@/shared/ui'
  *  product's order, each with its text, so choosing one is informed — the closed list shows names
  *  only. One out of use carries `추가`; one in use reads `적용 중`. Adding keeps the sheet open,
  *  because adding several is one visit, and taking one out of use happens on its row, never here. */
-export function DefaultGuidelineSheet({ ownerId, kind }: { ownerId: string; kind: GuidelineKind }) {
+export function DefaultGuidelineSheet({
+  ownerId,
+  kind,
+  label,
+}: {
+  ownerId: string
+  kind: GuidelineKind
+  /** The trigger's name where its surface already says it is about 기본 지침 (`고르기`). */
+  label?: string
+}) {
   const { t } = useTranslation('guidelines')
   const [open, setOpen] = useState(false)
   return (
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>
-        {t('defaults.open')}
+        {label ?? t('defaults.open')}
       </Button>
       {open && (
         <DefaultGuidelinePanel ownerId={ownerId} kind={kind} onClose={() => setOpen(false)} />

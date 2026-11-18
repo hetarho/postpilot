@@ -91,6 +91,35 @@ export interface AuthoringStart {
   mode: AuthoringMode
   prompt: string
   writeModel: AuthoringModelRef
+  /** This request's form references, read on the server and frozen into its job alone. */
+  references?: readonly AuthoringReference[]
+}
+/** At most this many form references travel with one template request. */
+export const AUTHORING_MAX_REFERENCES = 3
+/** One form reference the owner attached to a template request: one of their posts, one of
+ *  their templates, or a web page. `title` names it on its chip. */
+export type AuthoringReference =
+  | { kind: 'post'; slug: string; title: string }
+  | { kind: 'template'; id: string; title: string }
+  | { kind: 'url'; url: string; title: string }
+/** Why a reference cannot be read, as the server words it. */
+export const AUTHORING_REFERENCE_REFUSALS = [
+  'invalid',
+  'not_allowed',
+  'unreachable',
+  'not_html',
+  'too_large',
+  'empty',
+  'missing',
+  'too_many',
+] as const
+export type AuthoringReferenceRefusal = (typeof AUTHORING_REFERENCE_REFUSALS)[number]
+export function authoringReferenceKey(reference: AuthoringReference): string {
+  return reference.kind === 'post'
+    ? 'post:' + reference.slug
+    : reference.kind === 'template'
+      ? 'template:' + reference.id
+      : 'url:' + reference.url
 }
 export const AUTHORING_REFERENCE_POST_MAX_CHARS = 12000
 export const AUTHORING_BUILDER_STATE_MAX_CHARS = 40000

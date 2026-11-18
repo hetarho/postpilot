@@ -33,8 +33,10 @@ const VARIANT_STYLES: Record<TypographyVariant, string> = {
   hero: 'text-xl font-bold tracking-tight sm:text-4xl',
   /* Guide: the large page title a channel or library opens on (the iOS large title), and the one
      question a guided step asks. The heaviest weight in the app, so the screen's one question is
-     the first thing read. */
-  largeTitle: 'text-large-title font-extrabold tracking-tight sm:text-large-title-wide',
+     the first thing read. Inside a container narrower than 16rem — enlarged text on a phone — it
+     steps down to the title size, so one long word ('Guidelines') stays whole. */
+  largeTitle:
+    'text-large-title font-extrabold tracking-tight sm:text-large-title-wide @max-3xs:text-title',
   display: 'text-3xl font-bold tracking-tight leading-tight sm:text-4xl',
   stepTitle: 'text-step-title font-bold tracking-tight leading-tight sm:text-step-title-wide',
   title: 'text-title font-bold tracking-tight leading-snug sm:text-2xl',

@@ -7,6 +7,7 @@ import {
   LoadingState,
   LoadingStatus,
   ReturnIcon,
+  TitleRow,
   Typography,
   typographyStyles,
   pageStyles,
@@ -32,16 +33,19 @@ export function NewSpokenVoicePage() {
         qualificationSessionId: qualification ?? '',
       }
     : undefined
+  // The wizard's way back stands at the start of its title's row (THEME-75).
+  const back = (
+    <Link
+      to="/spoken-voices"
+      aria-label={t('back')}
+      title={t('back')}
+      className={returnControlStyles()}
+    >
+      <ReturnIcon />
+    </Link>
+  )
   return (
     <main className={pageStyles({ width: 'prose', className: 'min-w-0' })}>
-      <Link
-        to="/spoken-voices"
-        aria-label={t('back')}
-        title={t('back')}
-        className={returnControlStyles('mb-4')}
-      >
-        <ReturnIcon />
-      </Link>
       {qualification && (
         <Typography variant="meta" className="mb-4">
           {t('qualification')}
@@ -49,7 +53,9 @@ export function NewSpokenVoicePage() {
       )}
       {search.copy && !copied ? (
         <>
-          <Typography variant="display">{t('title')}</Typography>
+          <TitleRow variant="display" back={back}>
+            <Typography variant="display">{t('title')}</Typography>
+          </TitleRow>
           <LoadingStatus
             label={library.voicesQuery.isPending ? t('loading') : t('copyFailed')}
             className={
@@ -70,6 +76,7 @@ export function NewSpokenVoicePage() {
           ownerId={ownerId}
           address={address}
           initialInput={initial}
+          back={back}
           onAddress={(next) =>
             void navigate({ to: '/spoken-voices/new', search: next, replace: true })
           }

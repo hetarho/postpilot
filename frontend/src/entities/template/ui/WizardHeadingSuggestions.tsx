@@ -50,7 +50,7 @@ export function WizardHeadingSuggestions({
       {!modelPending && !writeModel && (
         <Typography variant="body">
           {t('headings.noModel')}{' '}
-          <Link to="/ai-models" className="underline">
+          <Link to="/ai-models" hash="ai-in-use" className="underline">
             {t('headings.chooseModel')}
           </Link>
         </Typography>

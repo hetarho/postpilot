@@ -953,7 +953,7 @@ function OwnedStudio({
               {plan.factor === 'model' && !modelOptions(MODEL_STAGE).length && (
                 <Typography variant="body">
                   {t('noModels')}{' '}
-                  <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+                  <a href="/ai-models#ai-in-use" className={buttonStyles({ variant: 'ghost' })}>
                     {t('settings')}
                   </a>
                 </Typography>
@@ -1001,7 +1001,7 @@ function OwnedStudio({
                 {!writer.selected && (
                   <Typography variant="body">
                     {t('requiredWriter')}{' '}
-                    <a href="/ai-models" className={buttonStyles({ variant: 'ghost' })}>
+                    <a href="/ai-models#ai-in-use" className={buttonStyles({ variant: 'ghost' })}>
                       {t('settings')}
                     </a>
                   </Typography>

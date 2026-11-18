@@ -21,31 +21,18 @@ const source = finalizedPostRow({
     ],
   }),
 })
-async function target(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: /^맛집/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await user.click(await screen.findByRole('button', { name: /^식사/ }))
-  await user.click(screen.getByRole('button', { name: '다음' }))
-  await screen.findByRole('heading', { name: '이런 글은 보통 이렇게 구성돼요' })
-}
-describe('template creation from post headings', () => {
-  it('seeds the wizard with the post’s headings', async () => {
+describe('template creation from a post (TMPL-64)', () => {
+  it('opens the AI conversation without showing or sending anything from the post yet', async () => {
     const calls: string[] = []
-    const user = userEvent.setup()
     renderAppAt('/templates/new?from=owned', {
       user: { id: 'alice' },
       calls,
       posts: { posts: [source] },
     })
-    await target(user)
-    const boxes = screen.getAllByRole('checkbox')
-    expect(boxes.slice(-2).map((box) => box.closest('label')?.textContent)).toEqual([
-      '첫인상과 공간',
-      '아쉬움과 추천',
-    ])
-    expect(boxes.slice(-2).every((box) => (box as HTMLInputElement).checked)).toBe(true)
+    expect(
+      await screen.findByRole('textbox', { name: '어떤 글인지 말해 주세요' }),
+    ).toBeInTheDocument()
     for (const text of [
-      'private title',
       'private memo',
       'private body',
       'private caption',
@@ -53,42 +40,18 @@ describe('template creation from post headings', () => {
       'private tag',
     ])
       expect(screen.queryByText(new RegExp(text))).not.toBeInTheDocument()
-    await user.click(screen.getAllByRole('button', { name: '이전' })[0]!)
-    await user.click(await screen.findByRole('button', { name: /^식사/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    expect(screen.getAllByRole('checkbox', { name: '첫인상과 공간' })).toHaveLength(1)
+    // Opening the conversation creates no session and starts no AI work: that waits for 초안 만들기
+    // and its estimate.
     expect(calls.filter((name) => /Create|Start/.test(name))).toEqual([])
   })
-  it('offers the target roles alone when the post has no headings', async () => {
-    const user = userEvent.setup()
-    renderAppAt('/templates/new?from=owned', {
-      user: { id: 'alice' },
-      posts: {
-        posts: [
-          {
-            ...source,
-            content: create(PostContentSchema, {
-              title: 'private title',
-              blocks: [{ type: BlockType.TEXT, content: 'private body' }],
-            }),
-          },
-        ],
-      },
-    })
-    await target(user)
-    // 식사's eleven roles and 별점 (TMPL-72).
-    expect(screen.getAllByRole('checkbox')).toHaveLength(12)
-    expect(screen.queryByRole('button', { name: /부분 빼기/ })).not.toBeInTheDocument()
-  })
-  it('keeps an unavailable post out and offers a fresh wizard', async () => {
+  it('keeps an unavailable post out and offers the conversation without it', async () => {
     const user = userEvent.setup()
     renderAppAt('/templates/new?from=missing', { user: { id: 'alice' } })
     expect(await screen.findByText(/참고 글을 읽지 못했어요/)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: '참고 글 빼기' }))
     expect(
-      await screen.findByRole('heading', { name: '어떤 체험을 글로 남기나요?' }),
+      await screen.findByRole('textbox', { name: '어떤 글인지 말해 주세요' }),
     ).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'AI와 템플릿 만들기' })).not.toBeInTheDocument()
   })
   it('never exposes the retired request/correction/undo form in saved direct editing', async () => {
     const user = userEvent.setup()

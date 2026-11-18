@@ -31,9 +31,11 @@ import {
 } from '@/widgets/work-list'
 import { POSTS_SEARCH_DEBOUNCE_MS } from '@/shared/config'
 import { formatAppFailure, formatRelativeTime } from '@/shared/lib'
+import { penIllustration } from '@/shared/assets'
 import {
   Badge,
   Button,
+  ListEmptyState,
   Notice,
   Spinner,
   Typography,
@@ -186,13 +188,9 @@ export function PostsPage() {
 
       {/* Empty-account feedback; the shared list body owns loading geometry and its live region. */}
       {!isError && isEmpty && !isNarrowed && (
-        <Typography
-          variant="body"
-          role="status"
-          className="text-content-tertiary mt-8 px-4 sm:px-6 lg:px-8"
-        >
+        <ListEmptyState illustration={penIllustration} className="mt-6">
           {t('list.empty', { ns: 'posts' })}
-        </Typography>
+        </ListEmptyState>
       )}
 
       {/* A narrowing that matches nothing is NOT the same screen as an account with no posts

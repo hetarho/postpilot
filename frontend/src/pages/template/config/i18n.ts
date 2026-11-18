@@ -25,7 +25,7 @@ export const i18n = {
       range: '{{min}}에서 {{max}} 사이로 적어 주세요.',
     },
     screen: {
-      reviewKind: '글 구성 확인',
+      reviewKind: '템플릿 확인',
       advanced: '고급',
       editAI: 'AI로 편집',
       editDirect: '직접 편집',
@@ -45,6 +45,8 @@ export const i18n = {
       referenceTooLong:
         '참고 글은 {{max}}자까지 사용할 수 있어요. 참고 글을 빼고 새로 만들 수 있어요.',
       removeReference: '참고 글 빼기',
+      referencePhoto: '(사진)',
+      referenceText: '(본문)',
       unsavedWork: '아직 저장하지 않은 새 템플릿',
       resumeNew: '템플릿 “{{name}}” 이어서 만들기',
       savedAvailable: '글에 사용할 수 있어요',
@@ -99,7 +101,7 @@ export const i18n = {
       range: 'Enter a number between {{min}} and {{max}}.',
     },
     screen: {
-      reviewKind: 'Review post template',
+      reviewKind: 'Review template',
       advanced: 'Advanced',
       editAI: 'Edit with AI',
       editDirect: 'Edit directly',
@@ -119,6 +121,8 @@ export const i18n = {
       referenceTooLong:
         'A reference post may contain up to {{max}} characters. Remove it to create without a reference.',
       removeReference: 'Remove reference post',
+      referencePhoto: '(photo)',
+      referenceText: '(text)',
       unsavedWork: 'New templates not yet saved',
       resumeNew: 'Continue creating template “{{name}}”',
       savedAvailable: 'Available for posts',

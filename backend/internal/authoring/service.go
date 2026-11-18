@@ -25,6 +25,87 @@ type Service struct {
 	now        func() time.Time
 	ownerLocks sync.Map
 	inspection *RequestInspectionDependencies
+	references References
+}
+
+// WithReferences lets post template requests carry form references. Without it a request
+// with references is refused as unavailable.
+func (s *Service) WithReferences(references References) *Service {
+	s.references = references
+	return s
+}
+
+// CheckReference reads one reference the way a request would, for the screen to name it
+// or say why it cannot be used. It starts no work and stores nothing.
+func (s *Service) CheckReference(ctx context.Context, owner string, ref Reference) (ReferenceDocument, error) {
+	if owner == "" {
+		return ReferenceDocument{}, ErrNotFound
+	}
+	if ref.Kind() == "" {
+		return ReferenceDocument{}, &ReferenceRefusal{Code: ReferenceRefusalInvalid}
+	}
+	if s.references == nil {
+		return ReferenceDocument{}, ErrFeatureUnavailable
+	}
+	return s.references.Read(ctx, owner, ref)
+}
+
+// readReferences reads a request's references in order and bounds each to its even share
+// of MaxReferenceChars.
+func (s *Service) readReferences(ctx context.Context, owner string, kind Kind, refs []Reference) ([]referenceWire, error) {
+	if len(refs) == 0 {
+		return nil, nil
+	}
+	if kind != PostTemplate {
+		return nil, ErrInvalid
+	}
+	if len(refs) > MaxReferences {
+		return nil, &ReferenceRefusal{Code: ReferenceRefusalTooMany}
+	}
+	if s.references == nil {
+		return nil, ErrFeatureUnavailable
+	}
+	share := MaxReferenceChars / len(refs)
+	out := make([]referenceWire, 0, len(refs))
+	for _, ref := range refs {
+		if ref.Kind() == "" {
+			return nil, &ReferenceRefusal{Code: ReferenceRefusalInvalid}
+		}
+		doc, e := s.references.Read(ctx, owner, ref)
+		if e != nil {
+			return nil, e
+		}
+		out = append(out, referenceWire{Kind: ref.Kind(), Title: boundRunes(doc.Title, 200), Structure: boundLines(doc.Structure, share)})
+	}
+	return out, nil
+}
+
+// boundRunes cuts text at max Unicode characters.
+func boundRunes(text string, max int) string {
+	text = strings.TrimSpace(text)
+	if utf8.RuneCountInString(text) <= max {
+		return text
+	}
+	return string([]rune(text)[:max])
+}
+
+// boundLines keeps whole lines up to max Unicode characters.
+func boundLines(text string, max int) string {
+	if utf8.RuneCountInString(text) <= max {
+		return text
+	}
+	var b strings.Builder
+	used := 0
+	for _, line := range strings.Split(text, "\n") {
+		n := utf8.RuneCountInString(line) + 1
+		if used+n > max {
+			break
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+		used += n
+	}
+	return strings.TrimRight(b.String(), "\n")
 }
 
 func NewService(store Store, models Models, jobs Jobs, targets Targets, budget Budget, estimates Estimator) *Service {
@@ -268,7 +349,15 @@ func (s *Service) Start(ctx context.Context, owner string, in Start) (string, Se
 		return "", Session{}, e
 	}
 	in.RequestedCandidateCount = count
-	hash := sha256.Sum256([]byte(fmt.Sprintf("%d\x00%s\x00%s\x00%s\x00%d", in.ExpectedRevision, in.Mode, in.Prompt, in.WriteModel.String(), count)))
+	identity := fmt.Sprintf("%d\x00%s\x00%s\x00%s\x00%d", in.ExpectedRevision, in.Mode, in.Prompt, in.WriteModel.String(), count)
+	if len(in.References) > MaxReferences {
+		return "", Session{}, &ReferenceRefusal{Code: ReferenceRefusalTooMany}
+	}
+	// A request without references keeps the fingerprint it always had.
+	for _, ref := range in.References {
+		identity += "\x00" + ref.Kind() + ":" + ref.PostSlug + ref.TemplateID + ref.URL
+	}
+	hash := sha256.Sum256([]byte(identity))
 	fingerprint := hex.EncodeToString(hash[:])
 	prior, e := s.store.Operation(ctx, owner, in.SessionID, in.RequestID)
 	if e == nil {
@@ -319,6 +408,9 @@ func (s *Service) Start(ctx context.Context, owner string, in Start) (string, Se
 	}
 	info, e := s.eligible(in.WriteModel)
 	if e != nil {
+		return "", state, e
+	}
+	if in.read, e = s.readReferences(ctx, owner, state.Kind, in.References); e != nil {
 		return "", state, e
 	}
 	op := Operation{ID: newID(), UserID: owner, SessionID: state.ID, RequestID: in.RequestID, Fingerprint: fingerprint, BaseRevision: in.ExpectedRevision, Mode: in.Mode, CreatedAt: s.now().UTC()}

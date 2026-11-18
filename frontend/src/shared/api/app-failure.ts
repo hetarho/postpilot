@@ -21,6 +21,7 @@ export const appFailureSpecs = {
   AUTHORING_CANDIDATE_COUNT_INVALID: {},
   AUTHORING_DRAFT_INVALID: {},
   AUTHORING_FEATURE_UNAVAILABLE: {},
+  AUTHORING_REFERENCE_UNAVAILABLE: { optional: ['refusal'] },
   VOICE_SAMPLE_REVISION_CONFLICT: {},
   VOICE_SAMPLE_UPDATE_INVALID: {},
   VOICE_ACCEPTED_SOURCE_WITHDRAWN: {},
@@ -350,7 +351,8 @@ export const appFailureSpecs = {
   JOB_PANICKED: {},
   JOB_HANDLER_MISSING: {},
   PROVIDER_DISABLED: {},
-  MODEL_UNAVAILABLE: {},
+  // The model's catalog label and why it cannot serve (gone | provider_policy), where known.
+  MODEL_UNAVAILABLE: { optional: ['model', 'cause'] },
   MODEL_RATE_LIMITED: {},
   MODEL_UNSUPPORTED: {},
   MODEL_OUTPUT_INVALID: {},

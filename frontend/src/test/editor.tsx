@@ -4,6 +4,7 @@ import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import type userEvent from '@testing-library/user-event'
 import { expect, vi } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
+import { forgetLastTemplates } from '@/entities/template'
 import { discardUploadBatches } from '@/features/upload-photos'
 import type { FakeQualityReading } from './quality'
 
@@ -17,6 +18,8 @@ export function resetEditorTest(): void {
   cleanup()
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: originalClipboard })
   discardUploadBatches()
+  // A template picked in one case is remembered for the account; the next case starts on none.
+  forgetLastTemplates()
   initializeI18n('ko')
   vi.unstubAllGlobals()
 }

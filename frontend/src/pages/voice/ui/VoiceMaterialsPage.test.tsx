@@ -181,9 +181,10 @@ describe('the 학습 데이터 screen', () => {
     expect(
       await screen.findByText('AI를 준비하지 못했어요. 다시 확인해 주세요.'),
     ).toBeInTheDocument()
+    // It lands on 지금 쓰는 AI, below AI 토너먼트's comparisons.
     expect(screen.getByRole('link', { name: 'AI 설정 확인하기' })).toHaveAttribute(
       'href',
-      '/ai-models',
+      '/ai-models#ai-in-use',
     )
     expect(screen.queryByRole('button', { name: '이 자료로 내 말투 만들기' })).toBeNull()
     expect(screen.getByRole('button', { name: 'AI 다시 준비하기' })).toBeEnabled()

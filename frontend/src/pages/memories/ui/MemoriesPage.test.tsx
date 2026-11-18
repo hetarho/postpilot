@@ -28,17 +28,21 @@ function renderMemories(memories: FakeMemoriesOptions = {}, calls: string[] = []
   })
 }
 
-/** The sheet is mounted only while open, so every creation flow starts by opening it (MEM-24). */
-async function openCreateSheet(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(await screen.findByRole('button', { name: '새 기억' }))
+const ALWAYS = /^늘 떠올리는 기억/
+const KEYWORD = /^단어가 나오면 꺼내는 기억/
+
+/** The sheet is mounted only while open, so every creation flow starts by opening it — from the
+ *  half the new fact belongs to (MEM-6). */
+async function openCreateSheet(user: ReturnType<typeof userEvent.setup>, add = '늘 떠올릴 기억') {
+  await user.click(await screen.findByRole('button', { name: add }))
   return within(await screen.findByRole('dialog'))
 }
 
-/** One row of the list, by its text. Every row carries the same pencils, so a query has to be
- *  scoped to a row to mean anything. */
+/** One row, by its text, in whichever half holds it. Every row carries the same pencils, so a
+ *  query has to be scoped to a row to mean anything. */
 async function row(text: string) {
-  const list = within(await screen.findByRole('region', { name: '저장된 기억' }))
-  const found = list
+  await screen.findByText(text)
+  const found = within(screen.getByRole('main'))
     .getAllByRole('listitem')
     .find((item) => within(item).queryByText(text) !== null)
   if (!found) throw new Error(`no row with text ${text}`)
@@ -47,51 +51,59 @@ async function row(text: string) {
 
 describe('the memory directory', () => {
   // MEM-23/MEM-24: the screen reads and edits authored facts and nothing else.
-  it('lists the memories in the server order with their kind and tags, and asks no model anything', async () => {
+  it('splits the memories by when they reach a post, and asks no model anything', async () => {
     const calls: string[] = []
     renderMemories({}, calls)
 
-    const list = within(await screen.findByRole('region', { name: '저장된 기억' }))
-    const items = list.getAllByRole('listitem')
-    expect(items.map((item) => item.textContent?.includes('연남동에 자주 간다'))).toEqual([
-      true,
-      false,
-    ])
+    // MEM-6: 취향 · 설정 are candidates for every post; 장소 · 인물 · 이력 only on a shared word.
+    const always = within(await screen.findByRole('region', { name: ALWAYS }))
+    const keyword = within(await screen.findByRole('region', { name: KEYWORD }))
+    expect(always.getByText('매운 음식을 못 먹는다')).toBeInTheDocument()
+    expect(always.queryByText('연남동에 자주 간다')).not.toBeInTheDocument()
+    expect(keyword.getByText('연남동에 자주 간다')).toBeInTheDocument()
+
+    // A word-recalled memory leads with the words that recall it, and says where it came from.
     const place = await row('연남동에 자주 간다')
-    expect(place.getByText('장소')).toBeInTheDocument()
+    expect(place.getByText('이 단어가 나오면')).toBeInTheDocument()
     expect(place.getByText('연남동')).toBeInTheDocument()
     expect(place.getByText('산책')).toBeInTheDocument()
-    // A memory with no tags says so rather than rendering an empty row of chips.
-    expect((await row('매운 음식을 못 먹는다')).getByText('태그 없음')).toBeInTheDocument()
+    expect(place.getByText('장소')).toBeInTheDocument()
+    expect(place.getByText('글 1편에서 저장')).toBeInTheDocument()
+    expect((await row('매운 음식을 못 먹는다')).getByText('직접 적음')).toBeInTheDocument()
 
     // Reading the directory starts no job and calls no model: a memory is authored text.
     await waitFor(() => expect(calls).toContain('ListMemories'))
     expect(calls.filter((call) => call.startsWith('Start'))).toEqual([])
   })
 
-  it('says so, and offers no rows, when the account has no memories', async () => {
-    renderMemories({ memories: [] })
-    expect(await screen.findByRole('heading', { name: '아직 기억이 없어요' })).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: '저장된 기억' })).not.toBeInTheDocument()
-    // The one committing action is still there: a fact the author knows on day one does not
-    // require generating a post first (MEM-25).
-    expect(await screen.findByRole('button', { name: '새 기억' })).toBeInTheDocument()
+  it('says a word-recalled memory with no words is never recalled', async () => {
+    renderMemories({
+      memories: [{ id: 'memory-lonely', text: '단골 빵집이 있다', kind: ProtoMemoryKind.PLACE }],
+    })
+    expect(
+      (await row('단골 빵집이 있다')).getByText('단어가 없어 이 기억은 꺼내지 않아요'),
+    ).toBeInTheDocument()
   })
 
-  // THEME-67: the section's creation button is the siblings' — a hero pill with its plus glyph,
-  // the full width on a phone and a right-aligned pill from `sm:`.
-  it('draws 새 기억 as the section creation button every sibling has', async () => {
+  it('shows both halves, each with its own add, when the account has no memories', async () => {
     renderMemories({ memories: [] })
-    const create = await screen.findByRole('button', { name: '새 기억' })
-    expect(create).toHaveClass('ui-button-cta', 'min-h-14', 'w-full', 'sm:w-auto')
-    expect(create.querySelector('svg')).not.toBeNull()
-    expect(create.closest('[data-action-bar]')).toHaveClass('w-full', 'sm:w-fit')
+    expect(await screen.findAllByText('아직 없어요')).toHaveLength(2)
+    // A fact the author knows on day one does not require generating a post first (MEM-25).
+    expect(screen.getByRole('button', { name: '늘 떠올릴 기억' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '단어로 꺼낼 기억' })).toBeInTheDocument()
+  })
+
+  it('opens the shared sheet on the kind of the half it was added from', async () => {
+    const user = userEvent.setup()
+    renderMemories({ memories: [] })
+    const sheet = await openCreateSheet(user, '단어로 꺼낼 기억')
+    expect(sheet.getByRole('combobox', { name: /^종류/ })).toHaveTextContent('장소')
   })
 
   it('renders the failure with a retry rather than an empty directory', async () => {
     renderMemories({ listFails: true })
     expect(await screen.findByRole('alert')).toHaveTextContent('기억을 불러오지 못했어요.')
-    expect(screen.queryByRole('region', { name: '저장된 기억' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: ALWAYS })).not.toBeInTheDocument()
   })
 
   // MEM-30: one short row — the text with one pencil and one trash, over one badge line.
@@ -188,7 +200,7 @@ describe('the memory directory', () => {
     const user = userEvent.setup()
     const creates: FakeMemoriesOptions['creates'] = []
     renderMemories({ creates })
-    await screen.findByRole('region', { name: '저장된 기억' })
+    await screen.findByRole('region', { name: ALWAYS })
 
     const sheet = await openCreateSheet(user)
     await user.type(sheet.getByLabelText('기억할 사실'), '성산 일출봉을 좋아한다')
@@ -212,7 +224,7 @@ describe('the memory directory', () => {
   it('renders the account cap refusal inside the still-open sheet', async () => {
     const user = userEvent.setup()
     renderMemories({ createAtCap: true })
-    await screen.findByRole('region', { name: '저장된 기억' })
+    await screen.findByRole('region', { name: ALWAYS })
 
     const sheet = await openCreateSheet(user)
     await user.type(sheet.getByLabelText('기억할 사실'), '또 하나의 사실')
@@ -270,9 +282,9 @@ describe('the memory directory', () => {
   }
 
   // The confirmation hands focus back to the trash button, and the re-read list then removes the
-  // row that holds it. Focus goes to the row that took the deleted one's place, or to the one
-  // above it when the last row went.
-  it('keeps keyboard focus in the list after a memory is deleted', async () => {
+  // row that holds it. Focus goes to the row that took the deleted one's place in the same half,
+  // or to that half's add when its last row went.
+  it('keeps keyboard focus in the half a memory was deleted from', async () => {
     const user = userEvent.setup()
     const deletions: string[] = []
     renderMemories({
@@ -283,24 +295,27 @@ describe('the memory directory', () => {
       ],
     })
 
-    await deleteByKeyboard(user, '매운 음식을 못 먹는다')
+    await deleteByKeyboard(user, '연남동에 자주 간다')
     const next = (await row('동생과 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
     await waitFor(() => expect(next).toHaveFocus())
 
     await deleteByKeyboard(user, '동생과 자주 간다')
-    expect(deletions).toEqual(['memory-preference', 'memory-person'])
-    const above = (await row('연남동에 자주 간다')).getByRole('button', { name: '이 기억 삭제' })
-    await waitFor(() => expect(above).toHaveFocus())
+    expect(deletions).toEqual(['memory-place', 'memory-person'])
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '단어로 꺼낼 기억' })).toHaveFocus(),
+    )
   })
 
-  it('moves focus to 새 기억 when the last memory is deleted', async () => {
+  it("moves focus to the half's add when the last memory is deleted", async () => {
     const user = userEvent.setup()
     const deletions: string[] = []
-    renderMemories({ deletions, memories: [MEMORIES[0]] })
+    renderMemories({ deletions, memories: [MEMORIES[1]] })
 
-    await deleteByKeyboard(user, '연남동에 자주 간다')
-    expect(deletions).toEqual(['memory-place'])
-    expect(await screen.findByRole('heading', { name: '아직 기억이 없어요' })).toBeInTheDocument()
-    await waitFor(() => expect(screen.getByRole('button', { name: '새 기억' })).toHaveFocus())
+    await deleteByKeyboard(user, '매운 음식을 못 먹는다')
+    expect(deletions).toEqual(['memory-preference'])
+    expect(await screen.findAllByText('아직 없어요')).toHaveLength(2)
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '늘 떠올릴 기억' })).toHaveFocus(),
+    )
   })
 })

@@ -169,7 +169,11 @@ func (h *Handler) StartAuthoringOperation(ctx context.Context, r *connect.Reques
 	if !mode(r.Msg.GetMode()).Valid() || strings.TrimSpace(r.Msg.GetSessionId()) == "" || strings.TrimSpace(r.Msg.GetRequestId()) == "" {
 		return nil, toError(authoring.ErrInvalid)
 	}
-	id, s, e := h.service.Start(ctx, u, authoring.Start{RequestedCandidateCount: count, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), RequestID: r.Msg.GetRequestId(), Mode: mode(r.Msg.GetMode()), Prompt: r.Msg.GetPrompt(), WriteModel: ref(r.Msg.GetWriteModel())})
+	references := make([]authoring.Reference, 0, len(r.Msg.GetReferences()))
+	for _, reference := range r.Msg.GetReferences() {
+		references = append(references, referenceOf(reference))
+	}
+	id, s, e := h.service.Start(ctx, u, authoring.Start{RequestedCandidateCount: count, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), RequestID: r.Msg.GetRequestId(), Mode: mode(r.Msg.GetMode()), Prompt: r.Msg.GetPrompt(), WriteModel: ref(r.Msg.GetWriteModel()), References: references})
 	if e != nil {
 		return nil, toError(e)
 	}
@@ -199,6 +203,28 @@ func (h *Handler) SaveAuthoringSession(ctx context.Context, r *connect.Request[v
 	s, e := h.service.SaveWithKey(ctx, authoring.ResetMutation{UserID: u, SessionID: r.Msg.GetSessionId(), ExpectedRevision: r.Msg.GetExpectedRevision(), OperationKey: r.Msg.GetOperationKey()}, r.Msg.GetMakeDefault())
 	return respond(s, e)
 }
+func referenceOf(v *v1.AuthoringReference) authoring.Reference {
+	return authoring.Reference{PostSlug: strings.TrimSpace(v.GetPostSlug()), TemplateID: strings.TrimSpace(v.GetTemplateId()), URL: strings.TrimSpace(v.GetUrl())}
+}
+
+// CheckAuthoringReference answers a reference that cannot be read with its refusal in the
+// body rather than as an error: the screen shows it in place, beside the attachment.
+func (h *Handler) CheckAuthoringReference(ctx context.Context, r *connect.Request[v1.CheckAuthoringReferenceRequest]) (*connect.Response[v1.CheckAuthoringReferenceResponse], error) {
+	u, e := owner(ctx)
+	if e != nil {
+		return nil, e
+	}
+	doc, e := h.service.CheckReference(ctx, u, referenceOf(r.Msg.GetReference()))
+	var refusal *authoring.ReferenceRefusal
+	if errors.As(e, &refusal) {
+		return connect.NewResponse(&v1.CheckAuthoringReferenceResponse{Refusal: refusal.Code}), nil
+	}
+	if e != nil {
+		return nil, toError(e)
+	}
+	return connect.NewResponse(&v1.CheckAuthoringReferenceResponse{Title: doc.Title}), nil
+}
+
 func toError(e error) error {
 	var insufficient *plan.InsufficientCreditsError
 	if errors.As(e, &insufficient) {

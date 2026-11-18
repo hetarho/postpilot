@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Typography } from '@/shared/ui'
+import { TitleRow, Typography } from '@/shared/ui'
 
 export function ModelPageHeader({
   title,
@@ -15,7 +15,9 @@ export function ModelPageHeader({
   const { t } = useTranslation('models')
   return (
     <header>
-      <Typography variant="display">{t(`page.${title}`)}</Typography>
+      <TitleRow variant="display">
+        <Typography variant="display">{t(`page.${title}`)}</Typography>
+      </TitleRow>
       <Typography variant="body" className="text-content-secondary max-w-measure mt-2">
         {t(`page.${description}`)}
       </Typography>

@@ -153,9 +153,51 @@ func (s *Service) ListSummaries(ctx context.Context, in SummaryQuery) ([]Summary
 		active = true
 	}
 	if active && in.PageToken == "" {
-		return store.ListSummaries(ctx, in)
+		if rows, next, err = store.ListSummaries(ctx, in); err != nil {
+			return nil, "", err
+		}
 	}
-	return rows, next, nil
+	return s.worthReturning(ctx, in.UserID, rows), next, nil
+}
+
+// worthReturning drops the unsaved creations that hold nothing to come back to: a session
+// opened and left, or one whose only request failed before anything was drafted. Such a
+// session stays stored, and is still read by its id; it is only not offered as work in
+// progress. A page may therefore hold fewer rows than asked, and its cursor stays valid.
+func (s *Service) worthReturning(ctx context.Context, owner string, rows []Summary) []Summary {
+	kept := rows[:0:0]
+	for _, row := range rows {
+		if row.TargetID != "" || row.LastPublication != nil || row.HasUnpublishedChanges || row.ActiveJobID != "" || row.PublicationPending || row.TargetConflict {
+			kept = append(kept, row)
+			continue
+		}
+		state, err := s.store.Get(ctx, owner, row.SessionID)
+		if err != nil || holdsOwnerWork(state) {
+			// An unreadable row is listed as before rather than silently lost.
+			kept = append(kept, row)
+		}
+	}
+	return kept
+}
+
+// holdsOwnerWork reports whether a session holds the owner's input or a draft: a
+// recommendation or a selected draft, a direct edit with content, a completed exchange, an
+// attached reference, or a request still running.
+func holdsOwnerWork(state Session) bool {
+	if len(state.Candidates) > 0 || state.ActiveRequestID != "" || state.ReferencePost != "" {
+		return true
+	}
+	for _, a := range []*Artifact{state.Selected, state.WorkingSource} {
+		if a != nil && (strings.TrimSpace(a.Name+a.Description+a.Body+a.TitleArea) != "" || a.BuilderState != "") {
+			return true
+		}
+	}
+	for _, t := range state.Turns {
+		if t.Status == "done" {
+			return true
+		}
+	}
+	return false
 }
 func (s *Service) SelectWithKey(ctx context.Context, in ResetMutation, candidateID string) (Session, error) {
 	if in.OperationKey == "" {

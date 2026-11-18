@@ -98,6 +98,8 @@ func authoringComposition(in operationInput) *llm.RequestComposition {
 			material = "style-source-context-unconfirmed"
 		case "reference_post":
 			material = "structure-reference-not-event-evidence"
+		case "form_references":
+			material = "attached-form-references-not-event-evidence"
 		case "draft":
 			material = "unpublished-setting"
 		case "recent_conversation":

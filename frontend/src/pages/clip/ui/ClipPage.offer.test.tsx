@@ -1,6 +1,6 @@
 import { clipGuideTo } from '@/test/clip-preparation'
-// A new clip on an account with no video template opens on the offer to make one, whose wizard
-// returns to a new clip with it selected (CLIP-223).
+// A new clip on an account with no video template opens on the offer to make one, which opens
+// the AI conversation that drafts it (CLIP-223).
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { cleanup, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -56,13 +56,14 @@ describe('the new-clip offer', () => {
     expect(within(dialog).queryByRole('button', { name: /말투/ })).not.toBeInTheDocument()
   })
 
-  it('opens the wizard and comes back to a new clip with the template', async () => {
+  // A new video template is made by talking to the AI from scratch: the offer opens that
+  // conversation, carrying the new clip to come back to, and nothing runs until the owner sends.
+  it('opens the AI conversation for a new template, keeping the clip to return to', async () => {
     const user = userEvent.setup()
-    const writes: ClipProjectDraft[] = []
     const { router } = renderAppAt('/clips/new', {
       user: ALICE,
       creationOffers: true,
-      clips: { templates: [], projectWrites: writes },
+      clips: { templates: [] },
     })
     await user.click(
       within(await offerDialog()).getByRole('button', { name: '새 영상 템플릿 만들기' }),
@@ -70,39 +71,12 @@ describe('the new-clip offer', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/video-templates/new'))
     expect(router.state.location.search).toMatchObject({ clip: 'new' })
 
-    await user.click(await screen.findByRole('button', { name: /^카페/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.click(await screen.findByRole('button', { name: /^디저트/ }))
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    await screen.findByRole('heading', { name: '이런 영상은 보통 이렇게 이어져요' })
-    for (const box of screen.getAllByRole('checkbox')) {
-      if (!box.closest('label')?.textContent?.startsWith('훅')) await user.click(box)
-    }
-    for (let step = 0; step < 4; step++)
-      await user.click(screen.getByRole('button', { name: '다음' }))
-    await screen.findByRole('heading', { name: '영상의 디자인을 골라요' })
-    await user.click(screen.getByRole('button', { name: '다음' }))
-    await user.type(await screen.findByLabelText('영상 템플릿 이름'), '내 카페 클립')
-    await user.dblClick(screen.getByRole('button', { name: '저장' }))
-
-    await waitFor(() => expect(router.state.location.pathname).toBe('/clips/new'))
-    expect(router.state.location.search).not.toHaveProperty('channel')
-    const templateId = (router.state.location.search as { template?: string }).template
-    expect(templateId).toBeTruthy()
-    // The unminted guide opens on 템플릿 with the new template selected (CLIP-223, CLIP-225).
-    expect(await currentScreen('템플릿')).toBeInTheDocument()
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^내 카페 클립/ })).toHaveAttribute(
-        'aria-pressed',
-        'true',
-      ),
-    )
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-
-    await clipGuideTo('content')
-    await user.type(screen.getByLabelText('클립 제목'), '디저트 투어')
-    await waitFor(() => expect(writes).toHaveLength(1), { timeout: 4000 })
-    expect(writes[0]).toMatchObject({ videoTemplateId: templateId })
+    expect(
+      await screen.findByText(/어떤 영상을 자주 만드세요\?/, undefined, { timeout: 4000 }),
+    ).toBeInTheDocument()
+    // No guided wizard and its stage picker: the conversation drafts the whole template.
+    expect(screen.queryByRole('button', { name: /^카페/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '다음' })).not.toBeInTheDocument()
   })
 
   it('starts from a handed template with its design, and leaves 없음 for an unknown one', async () => {
