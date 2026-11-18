@@ -48,7 +48,9 @@ export type KitFact =
   | { kind: 'loading' }
   | { kind: 'failed' }
   | { kind: 'none' }
-  | { kind: 'voice'; name: string; percent: number; made: boolean }
+  /** `isDefault`: whether new posts are written in it (POST-101); with no 기본 a post starts on
+   *  말투 없음, so a made voice that is not the 기본 is never named as the one posts use. */
+  | { kind: 'voice'; name: string; percent: number; made: boolean; isDefault: boolean }
   | { kind: 'count'; count: number; lead?: string }
   /** The template the next new post starts on, once one has been specified: null is 없음. */
   | { kind: 'template'; count: number; name: string | null }
@@ -105,7 +107,13 @@ export function voiceElement(active: readonly VoiceLike[], pending: boolean): Ki
     href: KIT_HREF.voice,
     state: voice.made ? 'ready' : 'partial',
     fill: percent / 100,
-    fact: { kind: 'voice', name: voice.name, percent, made: voice.made },
+    fact: {
+      kind: 'voice',
+      name: voice.name,
+      percent,
+      made: voice.made,
+      isDefault: voice.isDefault,
+    },
   }
 }
 

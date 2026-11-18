@@ -427,11 +427,15 @@ function ScopedEditor({
       }
       bodyClassName="px-5 pb-5 sm:px-6"
     >
-      {modelChoiceOpen &&
-        renderModelChoice(() => {
-          setModelChoiceOpen(false)
-          resend()
-        })}
+      {modelChoiceOpen && (
+        <ModelChoiceSlot
+          render={renderModelChoice}
+          onSaved={() => {
+            setModelChoiceOpen(false)
+            resend()
+          }}
+        />
+      )}
     </Sheet>
   )
   const requestFailureNotice = (className: string) =>
@@ -1643,4 +1647,16 @@ function ScopedEditor({
       {dialogs}
     </section>
   )
+}
+
+/** The host's model choice, drawn as a component so the save callback reaches it as a prop
+ *  rather than through a call made while this editor renders. */
+function ModelChoiceSlot({
+  render,
+  onSaved,
+}: {
+  render: (onSaved: () => void) => ReactNode
+  onSaved: () => void
+}) {
+  return render(onSaved)
 }

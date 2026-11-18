@@ -68,8 +68,13 @@ export function DefaultVoiceChoices({
                 mode="radio"
                 checked={voice.isDefault}
                 name={voice.name}
+                // An AI-made style says so wherever a style is chosen (VOICE-69).
                 meta={
-                  voice.made ? undefined : t('row.learning', { percent: voice.readinessPercent })
+                  voice.made
+                    ? voice.origin === 'synthetic'
+                      ? t('origin.synthetic')
+                      : undefined
+                    : t('row.learning', { percent: voice.readinessPercent })
                 }
                 disabled={!voice.made || (saving !== undefined && saving !== voice.id)}
                 pending={saving === voice.id}

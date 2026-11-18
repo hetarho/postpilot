@@ -486,8 +486,8 @@ function GuidelineLayers({
     },
     {
       key: 'templates',
-      title: t('layers.templates.title'),
-      how: t('layers.templates.how'),
+      title: t(kind === 'clip' ? 'layers.clipTemplates.title' : 'layers.templates.title'),
+      how: t(kind === 'clip' ? 'layers.clipTemplates.how' : 'layers.templates.how'),
       rows: scoped('templates'),
     },
     ...(kind === 'clip'

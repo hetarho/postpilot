@@ -8,6 +8,8 @@ export const i18n = {
       title: '말투',
       statement: '내 글이 이 말투로 써져요. 어미와 말버릇, 자주 쓰는 표현까지 배워 둬요.',
       current: '지금 글에 쓰는 말투',
+      featured: '가장 많이 만든 말투',
+      noDefault: '기본 말투가 없어서 새 글은 말투 없이 시작해요.',
       others: '다른 말투',
       newMenu: '새 말투',
       method: {
@@ -43,6 +45,8 @@ export const i18n = {
       statement:
         'Your posts are written in this style — its endings, its habits, the phrases you reach for.',
       current: 'The style your posts use',
+      featured: 'Your most complete style',
+      noDefault: 'No style is set as default, so new posts start without one.',
       others: 'Other styles',
       newMenu: 'New style',
       method: {

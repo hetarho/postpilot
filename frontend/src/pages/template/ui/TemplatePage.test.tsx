@@ -90,7 +90,7 @@ describe('named template shared editing', () => {
       target: { value: '<slot kind="photo"/>' },
     })
     await user.click(screen.getByRole('button', { name: '편집 내용 보관하고 확인하기' }))
-    expect(await screen.findByText(/마지막 유효한 미리보기/)).toBeInTheDocument()
+    expect(await screen.findByText(/마지막으로 올바르던 모습/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: '저장할 내용 확인하기' })).not.toBeInTheDocument()
     expect(patches[0]).toMatchObject({
       body: '<write>unfinished',

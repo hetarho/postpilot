@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { AUTHORING_REFERENCE_REFUSALS } from '@/entities/ai-authoring'
+import { useSession } from '@/entities/session'
 import type { AppFailure } from '@/shared/api'
 import { formatAppFailure } from '@/shared/lib'
 import { Button, Notice, TechnicalDetail, Typography } from '@/shared/ui'
@@ -9,7 +10,8 @@ import { Button, Notice, TechnicalDetail, Typography } from '@/shared/ui'
  *  product already words); what is still here (the draft, or the message in the field); and
  *  what to do next, with the two ways to do it: send the same request again, or pick another
  *  model and send it with that one. Both go through the usual estimate before anything runs.
- *  The provider's own words stay behind the technical-detail disclosure. */
+ *  The provider's own words stay behind the technical-detail disclosure, for a master account
+ *  only: an owner reads the product's copy, never provider prose (QUOTA-66). */
 export function AuthoringRequestFailure({
   failure,
   modelLabel,
@@ -28,6 +30,7 @@ export function AuthoringRequestFailure({
   className?: string
 }) {
   const { t } = useTranslation(['authoring', 'common'])
+  const { user } = useSession()
   const modelFailure = failure.reason === 'MODEL_UNAVAILABLE'
   const model = failure.params.model || modelLabel
   const cause = failure.params.cause
@@ -44,7 +47,7 @@ export function AuthoringRequestFailure({
   return (
     <Notice tone="danger" role="alert" className={className}>
       <div className="flex min-w-0 flex-col gap-1 break-words">
-        <Typography variant="body" as="p" className="font-semibold">
+        <Typography variant="label" as="p">
           {happened}
         </Typography>
         {modelFailure && (cause === 'provider_policy' || cause === 'gone') && (
@@ -60,10 +63,12 @@ export function AuthoringRequestFailure({
         <Typography variant="body" as="p">
           {t(modelFailure ? 'failure.nextModel' : 'failure.next')}
         </Typography>
-        <TechnicalDetail
-          label={t('failure.technicalDetail', { ns: 'common' })}
-          detail={failure.technicalDetail}
-        />
+        {user?.plan === 'master' && (
+          <TechnicalDetail
+            label={t('failure.technicalDetail', { ns: 'common' })}
+            detail={failure.technicalDetail}
+          />
+        )}
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <Button variant={modelFailure && onOtherModel ? 'secondary' : 'cta'} onClick={onRetry}>
             {t('failure.retry')}

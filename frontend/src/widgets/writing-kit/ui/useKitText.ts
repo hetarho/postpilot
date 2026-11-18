@@ -15,7 +15,9 @@ export function useKitText() {
         return t('kit.facts.none')
       case 'voice':
         return value.made
-          ? t('kit.facts.voice', { name: value.name })
+          ? value.isDefault
+            ? t('kit.facts.voice', { name: value.name })
+            : t('kit.facts.voiceNotDefault', { name: value.name })
           : value.percent >= 100
             ? t('kit.facts.voiceAnalyse', { name: value.name })
             : t('kit.facts.voiceMaking', { name: value.name, percent: value.percent })

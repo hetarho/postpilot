@@ -1,2 +1,3 @@
-export { AIAuthoringStudio, AIAuthoringSheet, authoringModelChoice } from './ui/AIAuthoringStudio'
+export { AIAuthoringStudio, AIAuthoringSheet } from './ui/AIAuthoringStudio'
+export { authoringModelChoice } from './ui/authoringModelChoice'
 export type { AIAuthoringStudioProps, AIAuthoringSheetProps } from './ui/AIAuthoringStudio'

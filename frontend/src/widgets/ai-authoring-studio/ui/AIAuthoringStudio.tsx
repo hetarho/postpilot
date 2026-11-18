@@ -6,8 +6,8 @@ import {
   type AuthoringSheetProps,
   type AuthoringInspectionContext,
 } from '@/features/ai-authoring'
-import { ModelPicker } from '@/features/configure-model-pair'
 import { InspectWritingRequestAction } from '@/features/inspect-writing-request'
+import { authoringModelChoice } from './authoringModelChoice'
 import { useTranslation } from 'react-i18next'
 export type AIAuthoringStudioProps = Omit<
   AuthoringEditorProps,
@@ -17,11 +17,6 @@ export type AIAuthoringSheetProps = Omit<
   AuthoringSheetProps,
   'renderPreview' | 'renderInspection' | 'renderModelChoice'
 >
-/** A failed request's other model is chosen with the picker 홈's ▾ and AI 토너먼트's 지금 쓰는
- *  AI use: configuration authoring runs on the write stage's model. */
-export function authoringModelChoice(onSaved: () => void) {
-  return <ModelPicker stage="write" onSaved={onSaved} />
-}
 function AuthoringInspection(context: AuthoringInspectionContext) {
   const { t } = useTranslation('requestInspection')
   return (

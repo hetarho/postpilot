@@ -14,6 +14,10 @@ export const i18n = {
       global: { title: '모든 글에', how: '내가 쓴 규칙 — 어떤 글이든 지켜요' },
       clipGlobal: { title: '모든 영상에', how: '내가 쓴 규칙 — 어떤 영상이든 지켜요' },
       templates: { title: '이 템플릿으로 쓸 때', how: '그 템플릿으로 쓰는 글에서만 지켜요' },
+      clipTemplates: {
+        title: '이 템플릿으로 만들 때',
+        how: '그 템플릿으로 만드는 영상에서만 지켜요',
+      },
       fields: { title: '이 분야의 글에', how: '그 분야의 글에서만 지켜요' },
       none: '아직 없어요',
       ownEmpty:
@@ -80,6 +84,10 @@ export const i18n = {
       global: { title: 'Every post', how: 'Your own rules — kept in every post' },
       clipGlobal: { title: 'Every video', how: 'Your own rules — kept in every video' },
       templates: { title: 'With a template', how: 'Kept only in posts written with that template' },
+      clipTemplates: {
+        title: 'With a template',
+        how: 'Kept only in videos made with that template',
+      },
       fields: { title: 'In a field', how: 'Kept only in posts of that field' },
       none: 'Nothing yet',
       ownEmpty:

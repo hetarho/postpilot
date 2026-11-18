@@ -42,6 +42,12 @@ export function VoiceRow({
               {t('state.default', { ns: 'common' })}
             </Badge>
           )}
+          {/* An AI-made style says so wherever a style is chosen or inspected (VOICE-69). */}
+          {voice.origin === 'synthetic' && (
+            <Badge tone="neutral" className="shrink-0">
+              {t('origin.synthetic')}
+            </Badge>
+          )}
         </span>
         <span className={typographyStyles({ variant: 'meta', className: 'truncate' })}>
           {voice.made ? (impression ?? '') : t('row.learning', { percent: voice.readinessPercent })}

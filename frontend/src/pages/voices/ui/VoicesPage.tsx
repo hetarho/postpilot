@@ -60,8 +60,9 @@ export function VoicesPage() {
     if (requested) void navigate({ to: '/voices', search: {}, replace: true })
   }, [requested, navigate])
 
-  // The voice a new post is written in: the default, else the most nearly made one — the same
-  // choice 홈's ring reads.
+  // The featured voice: the default, else the most nearly made one — the same choice 홈's ring
+  // reads. Only the default is the one new posts are written in (POST-101); without one a post
+  // starts on 말투 없음, so the featured voice is then not named as the posts' voice.
   const writing =
     active.find((voice) => voice.isDefault) ??
     active.find((voice) => voice.made) ??
@@ -159,8 +160,13 @@ export function VoicesPage() {
         <div className="mt-8 grid grid-cols-[minmax(0,1fr)] gap-10 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start lg:gap-8">
           <section aria-labelledby="voice-current">
             <Typography variant="eyebrow" as="h2" id="voice-current">
-              {t('page.current')}
+              {writing.isDefault ? t('page.current') : t('page.featured')}
             </Typography>
+            {!writing.isDefault && (
+              <Typography variant="meta" as="p" className="text-content-secondary mt-1">
+                {t('page.noDefault')}
+              </Typography>
+            )}
             <VoicePortrait ownerId={ownerId} voice={writing} />
           </section>
           {others.length > 0 && (
