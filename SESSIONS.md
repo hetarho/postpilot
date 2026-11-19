@@ -204,6 +204,7 @@
 | T914 | advg1119 | gusta-session-start-advg1119-4e8e8dca | 9e47333861ab | 2026-11-19T13:31Z |
 
 ## log
+- 261119 fix advertiser-guide: post guide help copy matches supplied-fact requests (clip keeps its copy)
 - 261119 T914 done
 - 261119 T913 done
 - 261119 T912 done
@@ -223,4 +224,3 @@
 - 261118 ab ready-home: adopt c — Writing-kit home with KitRing and four tabs; kit pieces navigate by icon and change defaults from a…
 - 261117 gusta-update-ssot ARCH r27 done: ARCH-31 prepare (frozen offline pnpm install) and live-session batch gate; process-only, tasked=rev, no task
 - 261117 gusta-update-ssot ARCH start (gusta 0.17.5 prepare and live-session gate)
-- 261117 T899 done
