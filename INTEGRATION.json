@@ -493,7 +493,7 @@
       "host": "DESKTOP-VKPLS8P",
       "pid": 1668063
     },
-    "phase": "preparing",
+    "phase": "checking",
     "land": "main",
     "base": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
     "cohort": [
@@ -578,10 +578,17 @@
     ],
     "at": "2026-11-19T02:07:18.859Z",
     "deadline": "2026-11-19T03:07:04.290Z",
-    "candidate": null,
+    "candidate": "3e23724740d3b7c2511a29daeed291502ceb7d9a",
     "checks": [],
     "agentChecks": [],
-    "rounds": []
+    "rounds": [],
+    "path": "/home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/integration-f994e400-7ab0-44c5-9815-e87256c4963e",
+    "branch": "integration/f994e400-7ab0-44c5-9815-e87256c4963e",
+    "version": {
+      "level": "patch",
+      "from": "0.7.0",
+      "to": "0.7.1"
+    }
   },
   "history": [
     {
