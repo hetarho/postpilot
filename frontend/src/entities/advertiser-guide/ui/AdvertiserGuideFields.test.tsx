@@ -154,3 +154,17 @@ it('keeps post requirements visible and reflects confirmed minimum suggestions',
   expect(screen.getByLabelText('최소 사진 수')).toHaveValue('8')
   expect(change).not.toHaveBeenCalled()
 })
+
+it('tells a post its requests count as supplied facts and a clip they stay the advertiser’s', () => {
+  const noop = () => {}
+  const { unmount } = render(<AdvertiserGuideFields value={EMPTY_GUIDE} onChange={noop} />)
+  expect(screen.getByLabelText('광고주 가이드')).toHaveAccessibleDescription(
+    '광고주 요청은 내가 알려 준 사실처럼 글에 담기고, 안내 속 #해시태그는 태그에 들어가요.',
+  )
+  unmount()
+
+  render(<AdvertiserGuideFields value={EMPTY_GUIDE} onChange={noop} requirementsTitle="clip" />)
+  expect(screen.getByLabelText('광고주 가이드')).toHaveAccessibleDescription(
+    /광고주의 자료로 글에 자연스럽게 담겨요/,
+  )
+})
