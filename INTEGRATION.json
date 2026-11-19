@@ -496,8 +496,8 @@
       "branch": "gusta-session-start-advg1119-4e8e8dca",
       "head": "dfc137d55b45efdb33d53f04cd23b87e2b4ea383",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-19T14:45:47.375Z",
+      "status": "ready",
+      "at": "2026-11-19T14:45:52.403Z",
       "agentChecks": [
         {
           "id": "T913-AC6",
