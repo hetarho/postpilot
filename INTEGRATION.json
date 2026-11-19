@@ -593,7 +593,7 @@
       "host": "ihaelam-ui-MacBookPro.local",
       "pid": 56166
     },
-    "phase": "waiting-agent",
+    "phase": "verified",
     "land": "main",
     "base": "cbec22fca10a386918a35a274a1610baf8a0a68d",
     "cohort": [
@@ -1107,17 +1107,20 @@
           "Read the checklist's 글에 꼭 담을 내용 rows"
         ],
         "expected": "No hashtag field or chip on 요청; ⑤ lists 가이드 해시태그 #a and #b, each marked against the tags",
-        "observed": "not run: this unit had no browser",
+        "observed": "Candidate d6e5bd26f frontend (vite on the candidate worktree, local dev API, design-shots): 요청 shows the 광고주 가이드 box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no 필수 해시태그 input; pasting a guide with #고공 #고공중곡점 offered only 최소 1000자, 사진 최소 15장 and two 키워드 chips, no # chip; SavePostDraft carried advertiserGuide.text only. ⑤ of a finalized sponsored post (GetPost stubbed: guide text \"대표 메뉴를 소개해 주세요\\n#a #b\", tags a,c) lists 가이드 해시태그 #a · 태그에 있어요 and 가이드 해시태그 #b · 태그에 없어요. The guide help line now reads 광고주 요청은 내가 알려 준 사실처럼 글에 담기고, 안내 속 #해시태그는 태그에 들어가요.",
         "evidence": [
-          "spec/tasks/done/T913.post-guide-one-box-hashtags.md result limits"
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/13-request-filled.png",
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/14-checklist.png",
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/step2b.mjs",
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/step3b.mjs"
         ],
-        "status": "not-run",
-        "reason": "integration-stage browser check handed to the host; the unit has no browser",
+        "status": "pass",
+        "reason": "",
         "replaces": [],
         "stage": "integration",
         "required": true,
         "owner": "host with a browser",
-        "candidate": null,
+        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
         "duplicationReason": ""
       },
       {
@@ -1127,15 +1130,19 @@
           "generate a post with a paid model from a guide holding store info, an emphasis request and #hashtags"
         ],
         "expected": "the requests are woven into the post, every hashtag is in the tags, and the owner's own impressions are kept",
-        "observed": "not run: it needs a paid AI call",
-        "evidence": [],
-        "status": "not-run",
-        "reason": "a paid provider call needs the owner's explicit go",
+        "observed": "Observed on cbec22fca (landed); this candidate d6e5bd26f has the identical backend tree (git rev-parse cbec22fca:backend = d6e5bd26f:backend = 097df6db3dc0; proto unchanged), so the generation path is the same code. Candidate backend (cbec22fca, go build of the integration worktree on :7679 over a copy of the local dev DB; migration 0171 applied) with the prod post 20261119-untitled guide text pasted as-is (16 #hashtags, no counted items) and its owner answers as the memo; gemini-3.8-flash storyline then write from the storyline. Storyline plans 개별 캐비넷·매장 내 화장실, 옥수수 연료, 숙성고기 풍미 and the first impression. The post writes the first impression, 옥수수 연료로 구워낸 숙성고기 특유의 은은한 단맛과 풍미, 개별 캐비넷과 매장 내 화장실, 가족 외식이나 연인과 데이트하기에도 알맞아; tags hold all 16 guide hashtags plus 체험단 (17, past tag count 10); the owner’s impressions (촉촉한 목살, 주차 자리 적음, 재방문) are kept.",
+        "evidence": [
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/post.json",
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/run.mjs",
+          "backend tree 097df6db3dc04ff71ceb4f2ea53c56705894e426 at both cbec22fca and d6e5bd26f"
+        ],
+        "status": "pass",
+        "reason": "",
         "replaces": [],
         "stage": "integration",
         "required": false,
         "owner": "owner (explicit go)",
-        "candidate": null,
+        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
         "duplicationReason": ""
       },
       {
@@ -1145,17 +1152,19 @@
           "소유자의 명시적 승인 후 광고주 가이드가 포함된 실제 생성을 실행하고 결과를 검토합니다."
         ],
         "expected": "매장 정보와 요청이 반영되고 가이드의 해시태그가 태그에 포함되며, 소유자의 상충하는 감상은 유지됩니다.",
-        "observed": "실제 생성은 실행하지 않았습니다.",
+        "observed": "Observed on cbec22fca (landed); this candidate d6e5bd26f has the identical backend tree (git rev-parse cbec22fca:backend = d6e5bd26f:backend = 097df6db3dc0; proto unchanged), so the generation path is the same code. Candidate backend (cbec22fca, go build of the integration worktree on :7679 over a copy of the local dev DB; migration 0171 applied) with the prod post 20261119-untitled guide text pasted as-is (16 #hashtags, no counted items) and its owner answers as the memo; gemini-3.8-flash storyline then write from the storyline. Storyline plans 개별 캐비넷·매장 내 화장실, 옥수수 연료, 숙성고기 풍미 and the first impression. The post writes the first impression, 옥수수 연료로 구워낸 숙성고기 특유의 은은한 단맛과 풍미, 개별 캐비넷과 매장 내 화장실, 가족 외식이나 연인과 데이트하기에도 알맞아; tags hold all 16 guide hashtags plus 체험단 (17, past tag count 10); the owner’s impressions (촉촉한 목살, 주차 자리 적음, 재방문) are kept.",
         "evidence": [
-          "spec/tasks/done/T914.guide-requests-as-supplied-facts.md"
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/post.json",
+          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/run.mjs",
+          "backend tree 097df6db3dc04ff71ceb4f2ea53c56705894e426 at both cbec22fca and d6e5bd26f"
         ],
-        "status": "not-run",
-        "reason": "유료 AI 호출에는 소유자의 명시적 승인이 필요합니다.",
+        "status": "pass",
+        "reason": "",
         "replaces": [],
         "stage": "integration",
         "required": true,
         "owner": "host; owner's explicit go",
-        "candidate": null,
+        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
         "duplicationReason": ""
       }
     ],
