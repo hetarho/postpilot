@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| cx1119 | DESKTOP-VKPLS8P | autopilot | 2026-11-19T01:17Z | 2026-11-19T01:34Z | T909 | gusta-session-start-cx1119-7a331011 | b086ead298c7 | cc4c22ea189dc973ea6dab6a |
+| cx1119 | DESKTOP-VKPLS8P | autopilot | 2026-11-19T01:17Z | 2026-11-19T01:44Z | - | gusta-session-start-cx1119-7a331011 | 843cdef32fe2 | cc4c22ea189dc973ea6dab6a |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -202,8 +202,10 @@
 | T904 | cx1119 | gusta-session-start-cx1119-7a331011 | a8c65c6ec03a | 2026-11-19T00:51Z |
 | T905 | cx1119 | gusta-session-start-cx1119-7a331011 | 4c306a4fa61a | 2026-11-19T01:06Z |
 | T908 | cx1119 | gusta-session-start-cx1119-7a331011 | 28dcb1976edb | 2026-11-19T01:34Z |
+| T909 | cx1119 | gusta-session-start-cx1119-7a331011 | 843cdef32fe2 | 2026-11-19T01:44Z |
 
 ## log
+- 261119 T909 done
 - 261119 T908 done
 - 261119 fix writing-test: derive the open legacy voice record from refreshed owned data; withdrawal regression fails before the fix and passes after it; 14 history/voice checks, ESLint and Prettier pass under Node 24.18.0 (check-381a4504)
 - 261119 T905 done
@@ -223,4 +225,3 @@
 - 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
 - 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 reworded without a markdown heading token (it truncated report sections)
-- 261117 T897 done
