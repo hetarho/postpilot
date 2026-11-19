@@ -196,14 +196,6 @@
 - 261119 decided T904: T904 how does a comparison read as a work row and what is the page called? -> title "글 쓰는 AI · 2개" (kind glyph + kind + entrant count), meta = short state badge (진행 중 / 일부 실패 / 고를 차례 / 우승 / 끝냄 / 실패) then champion name, progress while running or the time; the page and every back link to it are named 지난 비교 per MODEL-44; rows keep 테스트 이어보기 / 계속 보기 as aria-label with the row content as aria-describedby (alt: champion name as the title | content-only accessible names, rewriting ~20 tests | keep 테스트 기록 as the page name).
 - 261119 decided T905: T905 THEME-81 THEME-57: the impl notes say KitScreenHeader size="section", which also demotes the h1 to the title role, but AI 토너먼트 is a tab page that opens on its large title (THEME-38/57)? → keep the largeTitle h1 and take only the section-size picture through a new optional KitScreenHeader prop illustrationSize (alt: size="section" as written, shrinking the tab title below 글 and 영상 | size="page" with the larger kit-screen picture).
 
-## unlanded
-| id | tag | branch | commit | at |
-|---|---|---|---|---|
-| T904 | cx1119 | gusta-session-start-cx1119-7a331011 | a8c65c6ec03a | 2026-11-19T00:51Z |
-| T905 | cx1119 | gusta-session-start-cx1119-7a331011 | 4c306a4fa61a | 2026-11-19T01:06Z |
-| T908 | cx1119 | gusta-session-start-cx1119-7a331011 | 28dcb1976edb | 2026-11-19T01:34Z |
-| T909 | cx1119 | gusta-session-start-cx1119-7a331011 | 843cdef32fe2 | 2026-11-19T01:44Z |
-
 ## log
 - 261119 T909 done
 - 261119 T908 done
