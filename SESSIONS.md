@@ -203,6 +203,7 @@
 | T905 | cx1119 | gusta-session-start-cx1119-7a331011 | 4c306a4fa61a | 2026-11-19T01:06Z |
 
 ## log
+- 261119 fix writing-test: derive the open legacy voice record from refreshed owned data; withdrawal regression fails before the fix and passes after it; 14 history/voice checks, ESLint and Prettier pass under Node 24.18.0 (check-381a4504)
 - 261119 T905 done
 - 261119 T904 done
 - 261118 T903 integrated
@@ -222,4 +223,3 @@
 - 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 T897 done
 - 261117 T896 done
-- 261117 T895 done
