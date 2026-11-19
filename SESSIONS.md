@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| advg1119 | ihaelam-ui-MacBookPro | autopilot | 2026-11-19T13:04Z | 2026-11-19T13:19Z | T913 | gusta-session-start-advg1119-4e8e8dca | 56eb0a792b06 | 90a25a49854205d5eaba8491 |
+| advg1119 | ihaelam-ui-MacBookPro | autopilot | 2026-11-19T13:04Z | 2026-11-19T13:25Z | - | gusta-session-start-advg1119-4e8e8dca | deee6c733f1e | 90a25a49854205d5eaba8491 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -204,8 +204,10 @@
 | id | tag | branch | commit | at |
 |---|---|---|---|---|
 | T912 | advg1119 | gusta-session-start-advg1119-4e8e8dca | 0910497ee8d7 | 2026-11-19T13:19Z |
+| T913 | advg1119 | gusta-session-start-advg1119-4e8e8dca | deee6c733f1e | 2026-11-19T13:25Z |
 
 ## log
+- 261119 T913 done
 - 261119 T912 done
 - 261119 gusta-update-ssot GEN r35 GUIDE r30 POST r57 CLIP r84 (wording) + gusta-create-task T912 T913 T914 for the advertiser-guide request
 - 261119 T909 done
@@ -225,4 +227,3 @@
 - 261117 gusta-update-ssot ARCH start (gusta 0.17.5 prepare and live-session gate)
 - 261117 T899 done
 - 261117 T898 done
-- 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
