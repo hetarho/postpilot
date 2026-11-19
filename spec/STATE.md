@@ -26,18 +26,18 @@
 | ARCH | 29 | 29 | - | 0 |
 | AUTH | 16 | 16 | - | 0 |
 | QUOTA | 42 | 42 | - | 0 |
-| POST | 56 | 56 | - | 0 |
+| POST | 57 | 57 | - | 0 |
 | VOICE | 23 | 23 | - | 0 |
-| GEN | 34 | 34 | - | 0 |
+| GEN | 35 | 35 | - | 0 |
 | MODEL | 46 | 46 | - | 0 |
 | TMPL | 37 | 37 | - | 0 |
-| GUIDE | 29 | 29 | - | 0 |
+| GUIDE | 30 | 30 | - | 0 |
 | EXPORT | 12 | 12 | - | 0 |
 | LANG | 12 | 12 | - | 0 |
 | THEME | 49 | 49 | - | 2 |
 | MKT | 13 | 13 | - | 0 |
 | VIDEO | 9 | 9 | - | 0 |
-| CLIP | 83 | 83 | - | 2 |
+| CLIP | 84 | 84 | - | 2 |
 | CDS | 38 | 38 | - | 1 |
 | BILL | 11 | 11 | - | 0 |
 | MEM | 9 | 9 | - | 2 |
@@ -84,6 +84,9 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T912 | Fold post guide hashtags into the guide text and drop their storage | POST GEN | - | todo |
+| T913 | One guide box for a post's hashtags and a checklist that reads them from the text | POST CLIP | T912 | todo |
+| T914 | Write the advertiser guide's requests into posts and storylines as supplied facts | GEN GUIDE | T912 | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -93,5 +96,4 @@
 | redesign-261119 | 4 | 9 | 5 | 4 | 0 | 0 | 4 | 2026-11-18T18:57:10.294Z | [history](work/redesign-261119.json) |
 
 ## next
-- no runnable task: resolve blocked, parked or deps
-- inspect work board for remaining tasks
+- gusta-implement-task T912 (then T913 and T914, both dep T912)
