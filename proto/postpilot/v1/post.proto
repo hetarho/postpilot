@@ -252,6 +252,8 @@ message AdvertiserGuide {
   repeated string keywords = 2;
   optional int32 min_chars = 3;
   optional int32 min_photos = 4;
+  // Only a clip's guide carries hashtags (CLIP-210). A post never does: its hashtags stay in the
+  // text (POST-118), a post save naming any is refused and a post read leaves this empty.
   repeated string hashtags = 5;
 }
 

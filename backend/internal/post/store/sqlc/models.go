@@ -59,7 +59,6 @@ type Post struct {
 	AdvertiserKeywords      string
 	AdvertiserMinChars      sql.NullInt64
 	AdvertiserMinPhotos     sql.NullInt64
-	AdvertiserHashtags      string
 	ChecklistTicks          string
 }
 

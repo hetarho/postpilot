@@ -241,7 +241,7 @@ func TestCreationLineageUpgradesBothPublishedAndDivergentDatabases(t *testing.T)
 			// POST-117: every post from before the campaign columns reads as a 내돈내산 post with an
 			// empty guide and no ticks.
 			var campaignPosts int
-			if err := h.Reader.QueryRow("SELECT count(*) FROM posts WHERE campaign <> 0 OR advertiser_guide <> '' OR advertiser_keywords <> '[]' OR advertiser_min_chars IS NOT NULL OR advertiser_min_photos IS NOT NULL OR advertiser_hashtags <> '[]' OR checklist_ticks <> '[]'").Scan(&campaignPosts); err != nil || campaignPosts != 0 {
+			if err := h.Reader.QueryRow("SELECT count(*) FROM posts WHERE campaign <> 0 OR advertiser_guide <> '' OR advertiser_keywords <> '[]' OR advertiser_min_chars IS NOT NULL OR advertiser_min_photos IS NOT NULL OR checklist_ticks <> '[]'").Scan(&campaignPosts); err != nil || campaignPosts != 0 {
 				t.Fatal("migration gave historical posts a campaign state", campaignPosts, err)
 			}
 			var inferredOrigins int

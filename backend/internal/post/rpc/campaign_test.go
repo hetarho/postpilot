@@ -24,21 +24,32 @@ func TestSavePostDraftCampaignPresence(t *testing.T) {
 		t.Fatalf("create = %v, %v", created, err)
 	}
 	slug := created.Msg.GetPost().GetSlug()
+	// POST-118: a post guide carries no hashtag list — they stay in the text — so a save naming
+	// any is refused with the guide's item refusal and changes nothing.
+	withHashtags := draftRequest(slug, "해시태그 제목", nil)
+	withHashtags.Msg.AdvertiserGuide = &postpilotv1.AdvertiserGuide{Text: "주차 정보 넣기", Hashtags: []string{"#협찬"}}
+	_, err = h.SavePostDraft(ctx, withHashtags)
+	if connect.CodeOf(err) != connect.CodeInvalidArgument || postAppErrorDetail(t, err).GetReason() != "ADVERTISER_GUIDE_ITEM_INVALID" || postAppErrorDetail(t, err).GetParams()["field"] != "hashtags" {
+		t.Fatalf("a post guide with hashtags = %v", err)
+	}
+	if got, err := h.GetPost(ctx, connect.NewRequest(&postpilotv1.GetPostRequest{Slug: slug})); err != nil || got.Msg.GetPost().GetTitle() != "체험단 방문" || got.Msg.GetPost().GetAdvertiserGuide().GetText() != "" {
+		t.Fatalf("a refused hashtag guide applied: %v, %v", got, err)
+	}
 	withGuide := draftRequest(slug, "체험단 방문", nil)
-	withGuide.Msg.AdvertiserGuide = &postpilotv1.AdvertiserGuide{Text: "주차 정보 넣기", Keywords: []string{"답십리맛집"}, MinChars: proto.Int32(1500), Hashtags: []string{"#협찬"}}
+	withGuide.Msg.AdvertiserGuide = &postpilotv1.AdvertiserGuide{Text: "주차 정보 넣기\n#협찬", Keywords: []string{"답십리맛집"}, MinChars: proto.Int32(1500)}
 	withGuide.Msg.ChecklistTicks = &postpilotv1.ChecklistTicks{Lines: []string{"주차 정보 넣기"}}
 	saved, err := h.SavePostDraft(ctx, withGuide)
 	if err != nil {
 		t.Fatal(err)
 	}
 	guide := saved.Msg.GetPost().GetAdvertiserGuide()
-	if guide.GetText() != "주차 정보 넣기" || guide.GetMinChars() != 1500 || guide.MinPhotos != nil || guide.GetHashtags()[0] != "협찬" || saved.Msg.GetPost().GetChecklistTicks()[0] != "주차 정보 넣기" {
+	if guide.GetText() != "주차 정보 넣기\n#협찬" || guide.GetMinChars() != 1500 || guide.MinPhotos != nil || len(guide.GetHashtags()) != 0 || saved.Msg.GetPost().GetChecklistTicks()[0] != "주차 정보 넣기" {
 		t.Fatalf("saved = %v", saved.Msg.GetPost())
 	}
 	off := draftRequest(slug, "체험단 방문", nil)
 	off.Msg.Campaign = proto.Bool(false)
 	switched, err := h.SavePostDraft(ctx, off)
-	if err != nil || switched.Msg.GetPost().GetCampaign() || switched.Msg.GetPost().GetAdvertiserGuide().GetText() != "주차 정보 넣기" {
+	if err != nil || switched.Msg.GetPost().GetCampaign() || switched.Msg.GetPost().GetAdvertiserGuide().GetText() != "주차 정보 넣기\n#협찬" {
 		t.Fatalf("switch off = %v, %v", switched, err)
 	}
 	kept, err := h.SavePostDraft(ctx, draftRequest(slug, "체험단 방문 2", nil))

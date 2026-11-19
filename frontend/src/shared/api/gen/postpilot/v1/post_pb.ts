@@ -494,6 +494,9 @@ export type AdvertiserGuide = Message<"postpilot.v1.AdvertiserGuide"> & {
   minPhotos?: number | undefined;
 
   /**
+   * Only a clip's guide carries hashtags (CLIP-210). A post never does: its hashtags stay in the
+   * text (POST-118), a post save naming any is refused and a post read leaves this empty.
+   *
    * @generated from field: repeated string hashtags = 5;
    */
   hashtags: string[];

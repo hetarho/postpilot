@@ -97,7 +97,7 @@ SELECT slug, user_id, voice_id, title, memo, observations, content, status, crea
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
        tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins,
-       campaign, advertiser_guide, advertiser_keywords, advertiser_min_chars, advertiser_min_photos, advertiser_hashtags, checklist_ticks
+       campaign, advertiser_guide, advertiser_keywords, advertiser_min_chars, advertiser_min_photos, checklist_ticks
 FROM posts WHERE slug = ?;
 
 -- name: PublishPost :execrows
@@ -200,11 +200,10 @@ WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'publi
 UPDATE posts SET input_revision = input_revision + 1,
     advertiser_guide = sqlc.arg(advertiser_guide), advertiser_keywords = sqlc.arg(advertiser_keywords),
     advertiser_min_chars = sqlc.narg(advertiser_min_chars), advertiser_min_photos = sqlc.narg(advertiser_min_photos),
-    advertiser_hashtags = sqlc.arg(advertiser_hashtags), updated_at = sqlc.arg(updated_at)
+    updated_at = sqlc.arg(updated_at)
 WHERE slug = sqlc.arg(slug) AND user_id = sqlc.arg(user_id) AND status <> 'published'
   AND (advertiser_guide IS NOT sqlc.arg(advertiser_guide) OR advertiser_keywords IS NOT sqlc.arg(advertiser_keywords)
-    OR advertiser_min_chars IS NOT sqlc.narg(advertiser_min_chars) OR advertiser_min_photos IS NOT sqlc.narg(advertiser_min_photos)
-    OR advertiser_hashtags IS NOT sqlc.arg(advertiser_hashtags));
+    OR advertiser_min_chars IS NOT sqlc.narg(advertiser_min_chars) OR advertiser_min_photos IS NOT sqlc.narg(advertiser_min_photos));
 
 -- name: SetPostChecklistTicks :execrows
 -- The owner's checklist ticks (POST-119): the owner's own record, not generation input, so the

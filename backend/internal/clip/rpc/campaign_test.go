@@ -33,6 +33,10 @@ func TestClipCampaignPresence(t *testing.T) {
 		if req.AdvertiserGuide != nil && strings.TrimSpace(req.AdvertiserGuide.Text) != store.patch.AdvertiserGuide.Text {
 			t.Fatal("guide not normalized")
 		}
+		// CLIP-210: a clip's guide keeps its hashtag list, unlike a post's (POST-118).
+		if len(req.GetAdvertiserGuide().GetHashtags()) > 0 && (len(store.patch.AdvertiserGuide.Hashtags) != 1 || store.patch.AdvertiserGuide.Hashtags[0] != "제주") {
+			t.Fatal("clip hashtags lost", store.patch.AdvertiserGuide)
+		}
 	}
 	for _, tc := range []struct {
 		guide  *v1.AdvertiserGuide
@@ -62,8 +66,8 @@ func TestClipCampaignPresence(t *testing.T) {
 			t.Fatal("stable guide refusal missing", e)
 		}
 	}
-	p := projectFields(clip.Project{Campaign: true, AdvertiserGuide: clip.AdvertiserGuide{Text: "request"}})
-	if !p.Campaign || p.AdvertiserGuide.GetText() != "request" {
+	p := projectFields(clip.Project{Campaign: true, AdvertiserGuide: clip.AdvertiserGuide{Text: "request", Hashtags: []string{"제주"}}})
+	if !p.Campaign || p.AdvertiserGuide.GetText() != "request" || len(p.AdvertiserGuide.GetHashtags()) != 1 || p.AdvertiserGuide.GetHashtags()[0] != "제주" {
 		t.Fatal(p)
 	}
 }

@@ -229,7 +229,7 @@ SELECT slug, user_id, voice_id, title, memo, observations, content, status, crea
        content_revision, machine_baseline, machine_baseline_revision,
        target_length, finalized_revision, finalized_at, template_id, target_language, content_language,
        tag_count, use_memory, published_url, published_at, field, content_nouns, quality_rules, storyline, input_revision, content_origins, storyline_origins,
-       campaign, advertiser_guide, advertiser_keywords, advertiser_min_chars, advertiser_min_photos, advertiser_hashtags, checklist_ticks
+       campaign, advertiser_guide, advertiser_keywords, advertiser_min_chars, advertiser_min_photos, checklist_ticks
 FROM posts WHERE slug = ?
 `
 
@@ -272,7 +272,6 @@ func (q *Queries) GetPost(ctx context.Context, slug string) (Post, error) {
 		&i.AdvertiserKeywords,
 		&i.AdvertiserMinChars,
 		&i.AdvertiserMinPhotos,
-		&i.AdvertiserHashtags,
 		&i.ChecklistTicks,
 	)
 	return i, err
@@ -584,11 +583,10 @@ const setPostAdvertiserGuide = `-- name: SetPostAdvertiserGuide :execrows
 UPDATE posts SET input_revision = input_revision + 1,
     advertiser_guide = ?1, advertiser_keywords = ?2,
     advertiser_min_chars = ?3, advertiser_min_photos = ?4,
-    advertiser_hashtags = ?5, updated_at = ?6
-WHERE slug = ?7 AND user_id = ?8 AND status <> 'published'
+    updated_at = ?5
+WHERE slug = ?6 AND user_id = ?7 AND status <> 'published'
   AND (advertiser_guide IS NOT ?1 OR advertiser_keywords IS NOT ?2
-    OR advertiser_min_chars IS NOT ?3 OR advertiser_min_photos IS NOT ?4
-    OR advertiser_hashtags IS NOT ?5)
+    OR advertiser_min_chars IS NOT ?3 OR advertiser_min_photos IS NOT ?4)
 `
 
 type SetPostAdvertiserGuideParams struct {
@@ -596,7 +594,6 @@ type SetPostAdvertiserGuideParams struct {
 	AdvertiserKeywords  string
 	AdvertiserMinChars  sql.NullInt64
 	AdvertiserMinPhotos sql.NullInt64
-	AdvertiserHashtags  string
 	UpdatedAt           string
 	Slug                string
 	UserID              string
@@ -610,7 +607,6 @@ func (q *Queries) SetPostAdvertiserGuide(ctx context.Context, arg SetPostAdverti
 		arg.AdvertiserKeywords,
 		arg.AdvertiserMinChars,
 		arg.AdvertiserMinPhotos,
-		arg.AdvertiserHashtags,
 		arg.UpdatedAt,
 		arg.Slug,
 		arg.UserID,

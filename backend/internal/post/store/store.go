@@ -157,21 +157,17 @@ func (s *Store) SetCampaign(ctx context.Context, slug, userID string, on bool, u
 	return n == 1, nil
 }
 
-// SetAdvertiserGuide writes the whole advertiser guide (POST-118); its lists are JSON arrays and
-// an absent minimum is NULL.
+// SetAdvertiserGuide writes the whole advertiser guide (POST-118); its keywords are a JSON array
+// and an absent minimum is NULL. A post stores no hashtag list: its hashtags stay in the text.
 func (s *Store) SetAdvertiserGuide(ctx context.Context, slug, userID string, guide campaign.Guide, updatedAt time.Time) (bool, error) {
 	keywords, err := marshalStrings(guide.Keywords)
-	if err != nil {
-		return false, err
-	}
-	hashtags, err := marshalStrings(guide.Hashtags)
 	if err != nil {
 		return false, err
 	}
 	n, err := s.write.SetPostAdvertiserGuide(ctx, sqlc.SetPostAdvertiserGuideParams{
 		AdvertiserGuide: guide.Text, AdvertiserKeywords: keywords,
 		AdvertiserMinChars: optionalInt64(guide.MinChars), AdvertiserMinPhotos: optionalInt64(guide.MinPhotos),
-		AdvertiserHashtags: hashtags, UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
+		UpdatedAt: dbtime.Format(updatedAt), Slug: slug, UserID: userID,
 	})
 	if err != nil {
 		return false, fmt.Errorf("set post advertiser guide: %w", err)
@@ -1411,9 +1407,6 @@ func toPost(row sqlc.Post) (post.Post, error) {
 	guide := campaign.Guide{Text: row.AdvertiserGuide, MinChars: optionalInt(row.AdvertiserMinChars), MinPhotos: optionalInt(row.AdvertiserMinPhotos)}
 	if guide.Keywords, err = unmarshalStrings(row.AdvertiserKeywords); err != nil {
 		return post.Post{}, fmt.Errorf("post %s advertiser keywords: %w", row.Slug, err)
-	}
-	if guide.Hashtags, err = unmarshalStrings(row.AdvertiserHashtags); err != nil {
-		return post.Post{}, fmt.Errorf("post %s advertiser hashtags: %w", row.Slug, err)
 	}
 	ticks, err := unmarshalStrings(row.ChecklistTicks)
 	if err != nil {

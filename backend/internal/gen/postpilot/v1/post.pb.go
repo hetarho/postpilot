@@ -1002,12 +1002,14 @@ func (x *Post) GetChecklistTicks() []string {
 // An advertiser guide (POST-118): the pasted text plus the items the product can count. An
 // absent minimum is "not asked".
 type AdvertiserGuide struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
-	Keywords      []string               `protobuf:"bytes,2,rep,name=keywords,proto3" json:"keywords,omitempty"`
-	MinChars      *int32                 `protobuf:"varint,3,opt,name=min_chars,json=minChars,proto3,oneof" json:"min_chars,omitempty"`
-	MinPhotos     *int32                 `protobuf:"varint,4,opt,name=min_photos,json=minPhotos,proto3,oneof" json:"min_photos,omitempty"`
-	Hashtags      []string               `protobuf:"bytes,5,rep,name=hashtags,proto3" json:"hashtags,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	Text      string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+	Keywords  []string               `protobuf:"bytes,2,rep,name=keywords,proto3" json:"keywords,omitempty"`
+	MinChars  *int32                 `protobuf:"varint,3,opt,name=min_chars,json=minChars,proto3,oneof" json:"min_chars,omitempty"`
+	MinPhotos *int32                 `protobuf:"varint,4,opt,name=min_photos,json=minPhotos,proto3,oneof" json:"min_photos,omitempty"`
+	// Only a clip's guide carries hashtags (CLIP-210). A post never does: its hashtags stay in the
+	// text (POST-118), a post save naming any is refused and a post read leaves this empty.
+	Hashtags      []string `protobuf:"bytes,5,rep,name=hashtags,proto3" json:"hashtags,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

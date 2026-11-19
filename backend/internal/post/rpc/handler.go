@@ -57,12 +57,16 @@ func (h *Handler) SavePostDraft(ctx context.Context, req *connect.Request[postpi
 		}
 		field = &id
 	}
+	guide, err := fromProtoAdvertiserGuide(req.Msg.GetAdvertiserGuide())
+	if err != nil {
+		return nil, toConnectError("save draft", err)
+	}
 	saved, err := h.svc.SaveDraft(ctx, userID, post.DraftSave{
 		Slug: req.Msg.GetSlug(), Title: req.Msg.GetTitle(), Memo: req.Msg.GetMemo(),
 		VoiceID: req.Msg.VoiceId, TemplateID: req.Msg.TemplateId, Field: field,
 		TargetLanguage: targetLanguage, Answers: fromProtoTemplateAnswers(req.Msg.GetTemplateAnswers()),
 		Storyline: fromProtoStorylineEdit(req.Msg.GetStoryline()),
-		Campaign:  req.Msg.Campaign, AdvertiserGuide: fromProtoAdvertiserGuide(req.Msg.GetAdvertiserGuide()),
+		Campaign:  req.Msg.Campaign, AdvertiserGuide: guide,
 		ChecklistTicks: fromProtoChecklistTicks(req.Msg.GetChecklistTicks()),
 		Observations:   fromProtoObservationEdits(req.Msg.GetObservationEdits()),
 	})
@@ -861,12 +865,17 @@ func protoQualityRules(ids []string) []postpilotv1.QualityMetric {
 	return out
 }
 
-// fromProtoAdvertiserGuide is the draft save's guide, nil when the request leaves it out.
-func fromProtoAdvertiserGuide(value *postpilotv1.AdvertiserGuide) *campaign.Guide {
+// fromProtoAdvertiserGuide is the draft save's guide, nil when the request leaves it out. A post
+// guide carries no hashtag list — its hashtags stay in the free text (POST-118) — so a request
+// naming any is refused as an invalid hashtags item before anything is saved.
+func fromProtoAdvertiserGuide(value *postpilotv1.AdvertiserGuide) (*campaign.Guide, error) {
 	if value == nil {
-		return nil
+		return nil, nil
 	}
-	guide := campaign.Guide{Text: value.GetText(), Keywords: value.GetKeywords(), Hashtags: value.GetHashtags()}
+	if len(value.GetHashtags()) > 0 {
+		return nil, &campaign.ItemInvalidError{Field: campaign.FieldHashtags}
+	}
+	guide := campaign.Guide{Text: value.GetText(), Keywords: value.GetKeywords()}
 	if value.MinChars != nil {
 		n := int(value.GetMinChars())
 		guide.MinChars = &n
@@ -875,7 +884,7 @@ func fromProtoAdvertiserGuide(value *postpilotv1.AdvertiserGuide) *campaign.Guid
 		n := int(value.GetMinPhotos())
 		guide.MinPhotos = &n
 	}
-	return &guide
+	return &guide, nil
 }
 
 // fromProtoChecklistTicks is the draft save's ticked lines, nil when the request leaves them out.
@@ -887,8 +896,9 @@ func fromProtoChecklistTicks(value *postpilotv1.ChecklistTicks) *[]string {
 	return &lines
 }
 
+// toProtoAdvertiserGuide never sets Hashtags: only a clip's guide carries them (CLIP-210).
 func toProtoAdvertiserGuide(guide campaign.Guide) *postpilotv1.AdvertiserGuide {
-	out := &postpilotv1.AdvertiserGuide{Text: guide.Text, Keywords: guide.Keywords, Hashtags: guide.Hashtags}
+	out := &postpilotv1.AdvertiserGuide{Text: guide.Text, Keywords: guide.Keywords}
 	if guide.MinChars != nil {
 		n := int32(*guide.MinChars)
 		out.MinChars = &n
