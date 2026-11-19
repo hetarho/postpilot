@@ -484,6 +484,22 @@
       ],
       "reason": "session-ended",
       "landed": "3e23724740d3b7c2511a29daeed291502ceb7d9a"
+    },
+    "90a25a49854205d5eaba8491": {
+      "id": "90a25a49854205d5eaba8491",
+      "owner": "8c70deee-92c2-4495-b840-efefeff83787",
+      "tag": "advg1119",
+      "kind": "start",
+      "publication": "merge",
+      "host": "ihaelam-ui-MacBookPro",
+      "device": "ihaelam-ui-MacBookPro",
+      "branch": "gusta-session-start-advg1119-4e8e8dca",
+      "head": "3e23724740d3b7c2511a29daeed291502ceb7d9a",
+      "land": "main",
+      "status": "working",
+      "at": "2026-11-19T13:03:25.452Z",
+      "agentChecks": [],
+      "verificationCommands": []
     }
   },
   "gate": null,
