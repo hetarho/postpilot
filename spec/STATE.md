@@ -84,7 +84,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T909 | Show 계정 as rows that open their form in place | AUTH THEME | - | doing@261119.cx1119 |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -94,5 +93,5 @@
 | redesign-261119 | 4 | 9 | 5 | 4 | 0 | 0 | 4 | 2026-11-18T18:57:10.294Z | [history](work/redesign-261119.json) |
 
 ## next
-- gusta-implement-task T909
+- no runnable task: resolve blocked, parked or deps
 - inspect work board for remaining tasks
