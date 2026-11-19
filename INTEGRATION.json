@@ -465,7 +465,84 @@
       "reason": "session-ended"
     }
   },
-  "gate": null,
+  "gate": {
+    "token": "954598e4-8a41-4970-af7d-440ad13d5b44",
+    "owner": "cx1119",
+    "via": "merge",
+    "executor": {
+      "host": "DESKTOP-VKPLS8P",
+      "pid": 1640648
+    },
+    "phase": "preparing",
+    "land": "main",
+    "base": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+    "cohort": [
+      {
+        "id": "cc4c22ea189dc973ea6dab6a",
+        "tag": "cx1119",
+        "host": "DESKTOP-VKPLS8P",
+        "device": "DESKTOP-VKPLS8P",
+        "branch": "gusta-session-start-cx1119-7a331011",
+        "head": "cc9a7503eb6971ece8543a7f1626563b4198ccf5",
+        "agentChecks": [
+          {
+            "id": "T909-unit-rows",
+            "scenario": "계정 page shows 아이디/이메일/비밀번호 rows; pencils open the existing forms in place; cancel closes; verified email has no pencil; no-password account has no pencil or link",
+            "steps": [
+              "npx vitest run src/pages/account from frontend/ on Node 24.22.1"
+            ],
+            "expected": "all AccountPage tests pass",
+            "observed": "Test Files 1 passed, Tests 6 passed",
+            "evidence": [
+              "frontend/src/pages/account/ui/AccountPage.test.tsx",
+              "commit 461d35d579f27b88bb026b5048811609547ea7d6"
+            ],
+            "status": "pass",
+            "reason": "observed unit run",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          },
+          {
+            "id": "T909-task-gate",
+            "scenario": "changed-file ESLint/Prettier, tsc -b, steiger, lint-style-escapes and full FE vitest",
+            "steps": [
+              "vibe check --tier task --diff-base b086ead2 --task T909 -- sh /tmp/cx1119-t909/task-check.sh",
+              "fix navigation.test.tsx return assertion to TitleRow structure",
+              "npx vitest run src/app/routes/navigation.test.tsx; eslint and prettier on it"
+            ],
+            "expected": "all pass",
+            "observed": "static checks passed; full suite 5222/5223 with one navigation test encoding PageFrame DOM; after the fix navigation.test.tsx 45/45 and lint clean",
+            "evidence": [
+              "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-2e432e4d-5d10-4394-b5a1-49b6d8b20c97.log",
+              "commit 843cdef32fe2cf3034d0b80cdd92090198a4267a"
+            ],
+            "status": "pass",
+            "reason": "full suite not rerun after the one-test fix; recorded in result limits for the batch gate",
+            "replaces": [],
+            "stage": "unit",
+            "required": true,
+            "owner": "worker",
+            "candidate": null,
+            "duplicationReason": ""
+          }
+        ],
+        "verificationCommands": [
+          "python3 -m venv .venv-deploy-checks && .venv-deploy-checks/bin/pip install -r deploy/requirements-test.txt && .venv-deploy-checks/bin/python -m unittest discover -s deploy -p \"*_test.py\" -v"
+        ],
+        "publication": "merge"
+      }
+    ],
+    "at": "2026-11-19T01:45:39.484Z",
+    "deadline": "2026-11-19T08:32:58.917Z",
+    "candidate": null,
+    "checks": [],
+    "agentChecks": [],
+    "rounds": []
+  },
   "history": [
     {
       "token": "a968b01d-ac02-4067-af6e-c8ee21b48b39",
