@@ -193,6 +193,7 @@
 - 261118 decided T908 QUOTA-75 BILL-9: does a free account's arrival at /billing#billing-charge open the packs sheet? → the arrival sheet belongs to accounts that can buy packs (paid; master disabled); a free account is never offered a purchasable pack (alt: open the sheet for every tier | send a free arrival to /plans)
 - 261118 decided T911 T906 MODEL-44: T906 integrated but the browser normalizes /tests to /tests?factor=model…, so every entry skipped the factor choice → a follow-up task T911 inside this run (alt: revert T906 | park it)
 - 261118 decided review/redesign-261119: the runner blocks dispatch on each synchronous 5-min submit gate → submit tier switched to static checks + vitest --changed (workers already run the full suite; integrate keeps the full gate) and the runner restarted (alt: keep the full gate at both tiers)
+- 261119 decided T904: T904 how does a comparison read as a work row and what is the page called? -> title "글 쓰는 AI · 2개" (kind glyph + kind + entrant count), meta = short state badge (진행 중 / 일부 실패 / 고를 차례 / 우승 / 끝냄 / 실패) then champion name, progress while running or the time; the page and every back link to it are named 지난 비교 per MODEL-44; rows keep 테스트 이어보기 / 계속 보기 as aria-label with the row content as aria-describedby (alt: champion name as the title | content-only accessible names, rewriting ~20 tests | keep 테스트 기록 as the page name).
 
 ## log
 - 261118 T903 integrated
