@@ -1,11 +1,6 @@
 # SESSIONS
 > Running sessions, their claims, the inbox and the log. Written by the gusta CLI on its own branch; never merged into a code branch.
 
-## active
-| tag | host | mode | since | at | doing | branch | commit | session |
-|---|---|---|---|---|---|---|---|---|
-| cx1119 | DESKTOP-VKPLS8P | autopilot | 2026-11-19T00:33Z | 2026-11-19T01:06Z | - | gusta-session-start-cx1119-7a331011 | 4c306a4fa61a | cc4c22ea189dc973ea6dab6a |
-
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
 - 261113 decided T786 GEN-8 GEN-9: the impl notes say runs send no `reobserve`, but GEN-9 reads an absent selection as "observe every attachment"? → 바로 글 쓰기, 스토리라인 먼저 and 다시 만들기 send the EMPTY selection, which GEN-9 reads as reuse-everything and the current server decides for a run on its own anyway (alt: send nothing as the notes say | keep the picker on runs). An absent selection on a server that still honours it would re-observe every photo and replace the owner's corrections, while the empty one means the same as GEN-8 on every server.
