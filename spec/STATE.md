@@ -84,7 +84,6 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
-| T905 | Open AI 토너먼트 on its picture header, a 새 비교 menu and the latest comparisons | MODEL THEME | T904 | doing@261119.cx1119 |
 | T908 | One credits card for 설정 and 결제 whose 충전 opens the packs in a sheet | QUOTA BILL THEME | - | todo |
 | T909 | Show 계정 as rows that open their form in place | AUTH THEME | - | todo |
 
@@ -96,5 +95,5 @@
 | redesign-261119 | 4 | 9 | 5 | 4 | 0 | 0 | 4 | 2026-11-18T18:57:10.294Z | [history](work/redesign-261119.json) |
 
 ## next
-- gusta-implement-task T905 T908 T909
+- gusta-implement-task T908 T909
 - inspect work board for remaining tasks
