@@ -1,58 +1,50 @@
 ---
 name: gusta-showcase
 description: >-
-  "/gusta-showcase, A/B로 비교해줘, 두 가지(여러) 방식으로 만들어서 보여줘, 변형 여러 개 띄워줘, 어느
-  쪽이 빠른지 비교해줘"일 때 사용한다. 문제 하나를 서로 다른 접근의 변형 2~6개로 코드까지 병렬 구현하고(변형마다
-  브랜치·worktree·하위 세션) 변형마다 포트 하나씩 띄우거나 같은 측정을 나란히 돌려 보여 준다. 사용자가 메인으로 고른
-  변형을 디자인 모드로 다듬으며 다른 변형의 장점을 합치고, 끝났다고 하면 디자인 마감대로 검사·커밋·SSOT·land 반영까지
-  한다. 디자인·UX·UI·기능·성능 비교. 사람이 고르는 스킬이라 맡김에서는 쓰지
-  않는다. 코드 없이 시안 한 페이지로 보고 문서·태스크만 정하려면 gusta-sketch, 말로 정하려면 gusta-plan.
+  "/gusta-showcase, A/B로 비교해줘, 여러 방식으로 만들어 보여줘"에 사용. 변형 2~6개를 코드까지 병렬 구현해 포트마다 띄우고, 사용자가 고른 메인을 디자인 모드로 다듬어 반영한다. 코드 없이 시안만 보려면 gusta-sketch.
 ---
 
 # gusta-showcase — 변형 비교 진행자
 
-**역할: 비교 진행자.** 서로 다른 안을 코드까지 실제로 만들어 변형마다 포트 하나씩 띄우고, 사용자는 보고 메인을 고른다. 사용자가 직접 부를 때만 쓴다. 변형 구현은 하위 세션이, 브랜치·worktree·커밋·서버·측정·정리는 `vibe ab`가 맡는다. 이 세션은 변형 설계·비교표를 맡고, 메인이 정해지면 디자인 진행자(gusta-design-mode)로 메인만 직접 고친다.
+**역할: 비교 진행자.** 서로 다른 안을 코드까지 만든 변형을 포트마다 띄우고, 메인은 사용자가 고른다. 사용자가 직접 부를 때만 쓴다 — 맡김에서는 실행하지 않고 inbox parked에 비교 요청을 남긴다. 변형 구현은 하위 세션이 한다.
 
 ## 공통 규칙 (모든 spec 스킬)
-1. 먼저 `vibe status --json` 또는 실행기 brief로 필요한 STATE 요약만 본다. 없으면 gusta-create-architecture 실행을 안내한다. `settings.unset`이 있으면 gusta-init으로 먼저 정한다(맡김·실행기 배정은 묻지 않는다 — land 미정이면 현재 브랜치에 커밋만 하고, agents 미정이면 맡김을 시작하지 않는다).
-2. **문서 먼저**: 쓰기 전 실행기 배정 또는 `work status --json`으로 확인한다(CLI가 없으면 checkout·사용자 배정 확인). 단독/기획은 문서 상태를 STATE에, 세션 기록(시작·상태 변화·활동)을 `vibe` 명령으로만(`beat`·`claim`·`inbox`·`log`) 남기고 SESSIONS.md를 직접 고치지 않는다. 워커는 STATE·SSOT·세션 기록 대신 runtime과 자기 acceptance 체크·result만 쓴다. 리뷰는 읽기 전용이며 리뷰 runtime만 쓴다. 브랜치명은 소유권이 아니다. Git 구현은 land·deploy·plan·저장소 기본 브랜치가 아닌 하위 브랜치에서만 하며, 배정된 격리 작업 공간을 쓴다. `vibe status`에 `design`이 있으면(이 checkout이 디자인 중) 커밋·push 전에 사용자에게 디자인이 끝났는지 묻고, 끝났으면 gusta-design-mode 마감부터 한다 — 맡김은 디자인 변경을 건드리지 않고 주차한다.
-3. 산출 문서는 spec/FORMAT.md 표기를 따른다. `vibe format --section task|state|ssot|report` 중 필요한 발췌만 보고 FORMAT 전체를 읽지 않는다. 규칙에 없는 표기는 만들지 않는다.
-4. 질문·확인·보고는 cfg.lang 언어로, 상세도는 cfg.level대로. 산출 문서는 영어로 쓴다(FORMAT 언어 규칙). 선택지형 질문 도구(AskUserQuestion 등)가 있으면 사용. gusta-start가 맡긴 실행(실행기·loop 단위 포함)에서는 묻지 않는다 — 추천안으로 진행하고 inbox(`vibe inbox add`)와 보고서에 남긴다(되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일은 주차). 권한 확인 창도 질문이다 — 창이 뜰 만한 명령은 실행하지 않고 주차한다(gusta-start 3절). 사용자가 직접 부른 스킬(gusta-sketch 등)은 묻는다.
-5. **읽기**: status 요약·`vibe brief <T###|ID-n|ID@rev> --summary`로 필요한 범위를 찾는다. 큰 brief는 `--section decisions|tasks --offset <n> --limit <n>`으로 원문 블록째 읽고 모든 필요 블록의 coverage를 확인한다. 전체 brief의 `end` 줄이 없거나 complete:no면 빠진 부분부터 다시 읽고, unfollowed·related는 필요한 것만 연다. 직접 읽은 결정은 다음 결정 줄·제목까지 본 블록만 근거로 쓴다. STATE·FORMAT·ARCH·큰 코드 전체를 반복 읽지 않는다. tasks/done/은 특정 회귀·검증 근거만 선택 조회한다. 보고서도 필요한 절만 읽고, 출력은 요약·tail, 전체 로그는 파일로 남긴다.
+1. 먼저 `vibe status --json`(실행기 안에서는 brief)으로 필요한 요약만 본다. spec/이 없으면 /gusta-plan을 안내하고 멈춘다. `settings.unset`이 있으면 gusta-init으로 정한다(맡김에서는 묻지 않고 미정인 채 진행한다).
+2. **문서 먼저**: 쓰기·구현 전에 문서 상태는 STATE에, 세션 기록은 `vibe beat|claim|inbox|log`로만 남긴다(SESSIONS.md를 직접 고치지 않는다). 구현은 land·deploy·plan 브랜치가 아닌 하위 브랜치의 배정된 작업 공간에서 한다. `vibe status`에 `design`이 있으면 커밋·push 전에 디자인이 끝났는지 묻고, 끝났으면 gusta-design-mode 마감부터 한다.
+3. 산출 문서는 FORMAT 표기만 쓴다 — `vibe format --section <절>`로 필요한 절만 본다.
+4. 질문·보고는 cfg.lang·cfg.level대로, 산출 문서 언어는 FORMAT 언어 규칙대로. 선택지형 질문 도구가 있으면 쓴다. 맡김(gusta-start·loop 단위)에서는 묻지 않는다 — 추천안으로 진행해 `vibe inbox add`로 남기고, 되돌리기 어렵거나 프로젝트 밖에 영향을 주는 일과 권한 창이 뜰 만한 명령은 주차한다. 사용자가 직접 부른 스킬은 묻는다.
+5. **읽기**: `vibe brief <ID> --summary`로 범위를 찾고 필요한 블록만 원문째 읽는다 — 출력의 complete·`next`가 덜 읽은 곳을 알려 준다. STATE·FORMAT·ARCH·큰 코드·tasks/done/을 통째로 읽지 않는다. 긴 출력은 요약·tail만 보고 전체는 파일로 남긴다.
 
 ## 1. 변형 설계
 SETTINGS `usage-measurement`가 true인 시작 대화는 [사용량 절차](../gusta-start/references/usage.md)로 작업 전 기준선을 시작하고 마감 응답(실패·주차 포함)에 summary·로컬 artifact를 붙인다(false면 실행하지 않음).
-- 요청을 한 문장 목표와 비교 축(디자인·UX·UI·기능·성능)으로 정리한다. 변형 수는 사용자가 말한 대로, 없으면 2개(최대 6 — 변형마다 세션 하나만큼 토큰·시간이 든다).
-- 변형마다 접근 하나: 목표·제약은 같고 방식은 확실히 다르게(사소한 차이 여럿보다 의미 있는 차이 하나). 사용자가 안을 말했으면 그대로 쓴다. 문제 자체가 모호할 때만 한 번 묻는다.
-- 변형은 실험이다 — spec/을 고치지 않고 기존 SSOT 결정·계약을 모두 지킨다. 결정을 바꿔야 성립하는 안이면 변형 설명에 그 결정 ID를 적는다.
-- UI 비교인데 화면에 백엔드·인증·시드 데이터가 필요하면 있는 것(Storybook 등 샌드박스, ARCH의 mock 스위치)을 변형마다 $PORT로 띄우고, 없으면 2절 scaffold.
-- 맡김에서는 실행하지 않는다(고를 사람이 없다). inbox parked에 비교 요청을 남긴다.
+- 요청을 한 문장 목표와 비교 축(디자인·UX·UI·기능·성능)으로 정리한다. 변형 수는 사용자가 말한 대로, 없으면 2개(최대 6).
+- 변형마다 접근 하나: 목표·제약은 같고 방식은 확실히 다르게(사소한 차이 여럿보다 의미 있는 차이 하나). 사용자가 말한 안은 그대로 쓴다. 문제 자체가 모호할 때만 한 번 묻는다.
+- 변형은 spec/을 고치지 않고 기존 SSOT 결정·계약을 지킨다. 결정을 바꿔야 성립하는 안이면 변형 설명에 그 결정 ID를 적는다.
+- UI 비교에 백엔드·인증·시드 데이터가 필요하면 있는 샌드박스(Storybook, ARCH의 mock 스위치)를 $PORT로 띄우고, 없으면 [scaffold](references/scaffold.md)를 읽고 쓴다.
 
 ## 2. 준비
 `vibe ab start <slug> --variants <n> --shared-file <공통> [--scaffold-prompt <file> | --scaffold <ref>] [--setup '<의존성 설치>'] [--reuse <의존성 폴더> ...] [--copy <미추적 파일> ...] --json`
-- 미커밋 변경이 있으면 거절된다 — 사용자 변경은 임의로 커밋하지 않고 묻는다.
-- shared에는 변형 공통 글을 한 번만: 목표·제약·지킬 결정(`vibe brief` 블록)·볼 화면·완료 기준.
-- scaffold: 세션 하나가 `ab/<slug>/base`에 화면을 결정적 mock 데이터·인증 stub(가능하면 `?mock=empty|error` 상태도)으로 띄우는 커밋을 만들고 변형은 그 위에서 시작한다. 프롬프트에는 볼 화면·필요한 데이터만, 있는 커밋은 `--scaffold <ref>`. ok:false면 보고하고 `stop --remove`. scaffoldWarnings(고친 UI 파일)가 대상 화면 자체면 scaffold부터 다시.
-- setup은 lockfile에 맞는 설치(`npm ci` 등)로 worktree마다 병렬 실행된다. `--copy`는 `.env.local`처럼 git에 없지만 실행에 필요한 파일만.
-- `--reuse node_modules`(모노레포는 폴더마다): lockfile대로 설치된 ignored 의존성 폴더를 lockfile이 기준과 같을 때 설치 대신 복사한다(다르면 setup). 오래된 설치·절대 symlink·postinstall 결과는 그대로 복사되거나 빠진다.
+- 미커밋 변경으로 거절되면(start·main 모두) 사용자 변경을 임의로 커밋하지 않고 묻는다.
+- shared: 변형 공통 글 — 목표·제약·지킬 결정(`vibe brief` 블록)·볼 화면·완료 기준.
+- setup은 lockfile대로 설치(`npm ci` 등). `--copy`는 `.env.local`처럼 git에 없지만 실행에 필요한 파일만. `--reuse node_modules`(모노레포는 폴더마다)는 설치 대신 복사한다 — 오래된 설치·절대 symlink·postinstall 결과에 기대면 쓰지 않는다.
 
 ## 3. 병렬 구현 — 하위 세션
-변형마다 이 변형의 접근만 `<dir>/<v>.md`에 쓰고 동시에 띄운다:
-- 기본(헤드리스): `vibe ab run <slug> --all --prompt-dir <dir> [--allow-tool '<태스크 검사 명령 규칙>'] --json` 하나를 백그라운드로 실행한다(병렬, 끝나면 한 번 알림, 도구·모델은 CLI가 SETTINGS `agents`에서 배정 — `--provider`는 사용자가 고를 때만). 한 변형만은 `--variant <v> --prompt-file <file>`. 세션은 자기 worktree만 고치고, CLI가 shared를 앞에 붙이고 끝나면 변형 브랜치에 커밋한다. 돌아오는 것은 summary·view·path(볼 곳·URL 경로)뿐이다.
-- run이 scaffoldTouched(scaffold 줄·파일 수정)를 주면 보여 주기 전에 되돌리는 follow-up을 보낸다(데이터 변경은 summary로). scaffoldResidue는 줄이 실제 scaffold를 가리킬 때만 follow-up, 아니면 사용자에게 보이고 확인받아 `pick --accept-residue`.
-- 네이티브 하위 세션 도구를 써도 된다(worktree 경로·shared+접근을 주고 커밋·서버·scaffold 수정은 하지 않게). 같은 대화에서 역할만 바꿔 변형을 직접 만들지 않는다.
-- 변형은 영향 단위 테스트와 빠른 검사만 돌린다(전체 스위트는 합친 뒤 마감 관문에서 한 번).
+변형마다 그 변형의 접근만 `<dir>/<v>.md`에 쓰고 동시에 띄운다:
+- 기본: `vibe ab run <slug> --all --prompt-dir <dir> [--allow-tool '<태스크 검사 명령 규칙>'] --json`을 백그라운드로 한 번(도구·모델은 CLI가 SETTINGS `agents`로 배정 — `--provider`는 사용자가 고를 때만). 한 변형만은 `--variant <v> --prompt-file <file>`.
+- 결과에 scaffoldTouched·scaffoldResidue가 있으면 [scaffold](references/scaffold.md)대로 처리한다.
+- 네이티브 하위 세션 도구도 된다(worktree 경로·shared+접근을 주고 커밋·서버·scaffold 수정은 금지). 같은 대화에서 역할만 바꿔 변형을 직접 만들지 않는다.
+- 변형은 영향 단위 테스트와 빠른 검사만 돌린다.
 
 ## 4. 보여 주기
-- 화면이 있으면 `vibe ab serve <slug> --command '<개발 서버, 포트는 $PORT>' --json`: 변형마다 자기 포트에 띄우고 path가 응답하면 비교 페이지(hub)를 띄운다. 명령은 ARCH·package.json의 dev 스크립트로 고르고 포트 인자가 필요하면 `$PORT`를 넘긴다(예 `npm run dev -- --port $PORT`). 준비 실패(5xx·무응답)는 로그 tail로 원인을 보고하고 URL이 있다고 말하지 않는다. 3xx·4xx면 그 status를 함께 말한다.
-- 사용자에게는 hub URL 하나만 준다 — 변형이 나란히 보이고 거기서 메모·choose를 남길 수 있다고 한 줄로. hub가 null이면 serve를 다시 돌린다(서버는 두고 hub만 다시 뜬다). 빈 프레임은 앱이 frame을 막는 것 — 새 탭 링크로.
-- 성능·동작 비교는 `vibe ab exec <slug> --command '<측정 명령>' --repeat 3 --json`: 변형을 번갈아 실행해 중앙값·최소·종료 코드·마지막 줄을 모은다(hub에도 표시). 실행 사이의 흔들림보다 작은 차이는 차이라고 하지 않는다.
-- 비교표 하나로 보여 준다: 변형 | 접근 | 측정값 | 볼 곳(view) | 장단점·위험. 판정은 사용자 몫이고 추천은 근거와 함께 한 줄만.
-- 사용자가 다 봤다고 하면 `vibe ab status <slug> --json`의 feedback(메모·chosen)을 읽는다. chosen은 의사 표시일 뿐 — 확인받고 메인으로 정한다(5절).
-- 메인을 정하기 전에 특정 변형을 고쳐 달라고 하면(말 또는 메모) `vibe ab run <slug> --variant <v> --follow-up-file <요청만>`(접근·지난 요약·메모는 CLI가 붙인다). 이어 `vibe ab serve <slug> --variant <v> --command …`는 살아 있는 서버를 두고 응답만 확인한다(hot reload가 없으면 `--restart`).
+- 화면이 있으면 `vibe ab serve <slug> --command '<개발 서버, 포트는 $PORT>' --json`(ARCH·package.json의 dev 스크립트, 예 `npm run dev -- --port $PORT`). 준비 실패(5xx·무응답)는 로그 tail로 원인을 보고하고 URL이 있다고 말하지 않는다. 3xx·4xx면 그 status도 말한다.
+- 사용자에게는 hub URL 하나만 준다 — 변형이 나란히 보이고 메모·choose를 남길 수 있다고 한 줄로. hub가 null이면 serve를 다시 돌린다. 빈 프레임은 앱이 frame을 막는 것 — 새 탭 링크로.
+- 성능·동작 비교는 `vibe ab exec <slug> --command '<측정 명령>' --repeat 3 --json`. 실행 사이의 흔들림보다 작은 차이는 차이라고 하지 않는다.
+- 비교표 하나: 변형 | 접근 | 측정값 | 볼 곳(view) | 장단점·위험. 판정은 사용자 몫, 추천은 근거와 함께 한 줄만.
+- 사용자가 다 봤다고 하면 `vibe ab status <slug> --json`의 feedback(메모·chosen)을 읽는다. chosen은 의사 표시일 뿐 — 확인받고 메인으로 정한다.
+- 메인 전에 특정 변형 수정을 원하면(말 또는 메모) `vibe ab run <slug> --variant <v> --follow-up-file <요청만>` 뒤 `vibe ab serve <slug> --variant <v> --command …`(hot reload가 없으면 `--restart`).
 
 ## 5. 메인 다듬기와 마감
-- 사용자가 메인을 정하면 세션 tag(영숫자 2-4자)를 정해 `vibe ab main <slug> --variant <v> --tag <tag> --json`: 이 checkout에 디자인 모드를 연다(보호 브랜치면 `design/<tag>`로 전환, 미커밋 변경이 있으면 거절 — 사용자 변경은 임의로 커밋하지 않고 묻는다). 서버·hub는 그대로라 메인은 hub에서 실시간으로 바뀌고 다른 변형은 참고로 남는다. 메인을 바꾸면 다시 `vibe ab main`(이전 메인의 편집은 그 브랜치에 커밋된다).
-- 그다음은 gusta-design-mode 2절 루프다: 사용자가 말하는 대로 메인 worktree(`main.path`)만 바로 고친다. 다른 변형의 장점("b의 헤더")은 `others`의 path에서 읽거나 `git diff <base> ab/<slug>/<x>`로 보고 옮긴다. scaffold의 줄·파일은 고치지 않는다(pick이 그대로 뺀다). 메인 worktree는 프로젝트 밖이다 — 편집 권한 창이 뜨면 그 경로를 작업 폴더로 한 번 추가하게 안내한다(Claude Code는 `/add-dir <path>`).
-- 사용자가 끝났다고 하면 gusta-design-mode 4절 마감을 0번(`vibe ab pick`: 메인을 이 checkout에 미커밋으로 옮기고 정리)부터 한다 — 영향 검사·커밋·SSOT 반영(대안=고르지 않은 변형, 이유=사용자 선택 근거)·공동 통합으로 SETTINGS land에 반영.
-- 고르지 않고 끝내면 `vibe ab stop <slug> --remove`(열린 showcase 디자인도 끝난다. 메인에 미커밋 편집이 있으면 거절되니 버릴지 묻는다). 나중에 보겠다면 서버·hub를 두고 `vibe ab status <slug>`의 hub URL을 다시 준다.
+- 메인이 정해지면 세션 tag(영숫자 2-8자)로 `vibe ab main <slug> --variant <v> --tag <tag> --json`(디자인 모드가 열린다). 메인을 바꾸면 다시 `vibe ab main`.
+- 그다음은 gusta-design-mode 2절 루프로 메인 worktree(`main.path`)만 고친다. 다른 변형의 장점("b의 헤더")은 `others`의 path나 `git diff <base> ab/<slug>/<x>`로 보고 옮긴다. scaffold의 줄·파일은 고치지 않는다. 메인 worktree는 프로젝트 밖이라 편집 권한 창이 뜨면 그 경로를 작업 폴더로 추가하게 안내한다(Claude Code는 `/add-dir <path>`).
+- 사용자가 끝났다고 하면 gusta-design-mode 4절 마감을 0번(`vibe ab pick`)부터 한다.
+- 고르지 않고 끝내면 `vibe ab stop <slug> --remove`(메인의 미커밋 편집으로 거절되면 버릴지 묻는다). 나중에 보겠다면 서버·hub를 두고 `vibe ab status <slug>`의 hub URL을 다시 준다.
