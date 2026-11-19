@@ -494,11 +494,93 @@
       "host": "ihaelam-ui-MacBookPro",
       "device": "ihaelam-ui-MacBookPro",
       "branch": "gusta-session-start-advg1119-4e8e8dca",
-      "head": "5681c6f3625a1d02e00ec48072c8bba620195b42",
+      "head": "55f22f0fdf74d6ab86336216149ef31f1a0bf91a",
       "land": "main",
       "status": "working",
-      "at": "2026-11-19T13:30:48.732Z",
-      "agentChecks": [],
+      "at": "2026-11-19T13:31:33.104Z",
+      "agentChecks": [
+        {
+          "id": "T913-AC6",
+          "scenario": "A sponsored post's 요청 shows one guide text box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no hashtag field; a guide pasted with '#a #b' shows those two hashtags in ⑤'s checklist against the post's tags",
+          "steps": [
+            "Open a sponsored post on the fixed candidate and go to ①'s 요청 screen",
+            "Confirm there is no 필수 해시태그 input and no # chip",
+            "Paste a guide containing '#a #b', finish the post, open ⑤ 완성",
+            "Read the checklist's 글에 꼭 담을 내용 rows"
+          ],
+          "expected": "No hashtag field or chip on 요청; ⑤ lists 가이드 해시태그 #a and #b, each marked against the tags",
+          "observed": "not run: this unit had no browser",
+          "evidence": [
+            "spec/tasks/done/T913.post-guide-one-box-hashtags.md result limits"
+          ],
+          "status": "not-run",
+          "reason": "integration-stage browser check handed to the host; the unit has no browser",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host with a browser",
+          "candidate": null,
+          "duplicationReason": ""
+        },
+        {
+          "id": "T914-unit-prompts",
+          "scenario": "The write prompt's guide section uses the write framing and has no 필수 해시태그 line. The storyline prompt uses the storyline framing. The facts and impressions_kept 원칙 texts count the guide as supplied material. The precedence lines no longer name 광고주 가이드. The origin clause and material role no longer say not-owner-experience. Clip prompts are untouched.",
+          "steps": [
+            "run vibe check --tier task --diff-base 7e74e780e70e --task T914 -- bash gate.sh (gofmt, go vet, go test -count=1 ./internal/generation/... ./internal/guideline/... ./internal/clip/..., gusta lint)"
+          ],
+          "expected": "all affected unit tests pass and lint reports no errors",
+          "observed": "exit 0 in 26990 ms with no failed tests; spec lint has no errors (57 warnings and 41 review hints already in other SSOT files)",
+          "evidence": [
+            "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-f447f8b3-29aa-4a30-9c19-d10366070398.log"
+          ],
+          "status": "pass",
+          "reason": "",
+          "replaces": [],
+          "stage": "unit",
+          "required": true,
+          "owner": "implementer",
+          "candidate": null,
+          "duplicationReason": ""
+        },
+        {
+          "id": "T914-integration-real-generation",
+          "scenario": "A real generation of a 체험단 post writes in the guide's requests as supplied facts and carries every guide hashtag into the tags",
+          "steps": [
+            "generate a post with a paid model from a guide holding store info, an emphasis request and #hashtags"
+          ],
+          "expected": "the requests are woven into the post, every hashtag is in the tags, and the owner's own impressions are kept",
+          "observed": "not run: it needs a paid AI call",
+          "evidence": [],
+          "status": "not-run",
+          "reason": "a paid provider call needs the owner's explicit go",
+          "replaces": [],
+          "stage": "integration",
+          "required": false,
+          "owner": "owner (explicit go)",
+          "candidate": null,
+          "duplicationReason": ""
+        },
+        {
+          "id": "T914-real-generation",
+          "scenario": "광고주 가이드 요청을 실제 글과 스토리라인 생성에 반영하는지 확인",
+          "steps": [
+            "소유자의 명시적 승인 후 광고주 가이드가 포함된 실제 생성을 실행하고 결과를 검토합니다."
+          ],
+          "expected": "매장 정보와 요청이 반영되고 가이드의 해시태그가 태그에 포함되며, 소유자의 상충하는 감상은 유지됩니다.",
+          "observed": "실제 생성은 실행하지 않았습니다.",
+          "evidence": [
+            "spec/tasks/done/T914.guide-requests-as-supplied-facts.md"
+          ],
+          "status": "not-run",
+          "reason": "유료 AI 호출에는 소유자의 명시적 승인이 필요합니다.",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host; owner's explicit go",
+          "candidate": null,
+          "duplicationReason": ""
+        }
+      ],
       "verificationCommands": []
     }
   },
