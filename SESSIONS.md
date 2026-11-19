@@ -196,13 +196,6 @@
 - 261119 decided GEN-87 GEN-80 T914: a guide request contradicts the owner's own impression or drawback — which wins? → the owner's own word stands and the request is woven in only where it does not contradict (GEN-87); keywords, min chars/photos counted items unchanged; advertiser_request origin label kept, only its not-the-owner's-experience consequence removed (alt: guide overrides | drop the conflicting request silently) ← the owner's experience is the post's direct evidence
 - 261119 decided T914: T914 runs on codex/gpt-6.1-terra@ultra instead of claude/opus@high: the last unit there ended it unfinished with no commit or newly checked acceptance (alt: the same route again)
 
-## unlanded
-| id | tag | branch | commit | at |
-|---|---|---|---|---|
-| T912 | advg1119 | gusta-session-start-advg1119-4e8e8dca | 0910497ee8d7 | 2026-11-19T13:19Z |
-| T913 | advg1119 | gusta-session-start-advg1119-4e8e8dca | deee6c733f1e | 2026-11-19T13:25Z |
-| T914 | advg1119 | gusta-session-start-advg1119-4e8e8dca | 9e47333861ab | 2026-11-19T13:31Z |
-
 ## log
 - 261119 fix advertiser-guide: post guide help copy matches supplied-fact requests (clip keeps its copy)
 - 261119 T914 done
