@@ -49,7 +49,7 @@ export const i18n = {
         remaining: '아직 입력하지 않은 키워드: {{keywords}}',
         none: '없어요',
         charsLater: '완성 글에서 {{minimum}}자 이상인지 확인해요.',
-        tagsLater: '글에 넣을 해시태그: {{tags}}',
+        tagsLater: '가이드의 해시태그는 완성 글의 태그에서 확인해요: {{tags}}',
         advisory:
           '지금은 입력한 내용만 확인해요. 글을 만든 뒤 완성 단계에서 다시 확인하며, 부족해도 생성할 수 있어요.',
       },
@@ -125,7 +125,7 @@ export const i18n = {
         remaining: 'Keywords still to add: {{keywords}}',
         none: 'None',
         charsLater: 'Check for at least {{minimum}} characters in the finished post.',
-        tagsLater: 'Hashtags for the post: {{tags}}',
+        tagsLater: 'The guide’s hashtags are checked in the finished post’s tags: {{tags}}',
         advisory:
           'This checks your input so far. Check the finished post again at Finish. Nothing here prevents generation.',
       },

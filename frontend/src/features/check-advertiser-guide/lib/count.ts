@@ -1,4 +1,4 @@
-import { guideLines, type AdvertiserGuide } from '@/entities/advertiser-guide'
+import { guideHashtags, guideLines, type AdvertiserGuide } from '@/entities/advertiser-guide'
 import { BlockType, type PostContent } from '@/shared/api'
 import { blockPhotos, walkBlocks } from '@/shared/lib'
 
@@ -77,7 +77,8 @@ export type CountedItem =
   | { kind: 'photos'; minimum: number; count: number; met: boolean }
   | { kind: 'hashtag'; hashtag: string; met: boolean }
 
-/** The items the guide asks for that the product can count, in the guide form's order. The
+/** The items a post's guide asks for that the product can count, in the guide form's order, each
+ *  `#`hashtag of the free text last. The
  *  character minimum is met by the count without spaces — the stricter of the two the checklist
  *  shows, so a met mark holds whichever way the campaign counts. */
 export function countedItems(content: CountedContent, guide: AdvertiserGuide): CountedItem[] {
@@ -99,7 +100,8 @@ export function countedItems(content: CountedContent, guide: AdvertiserGuide): C
     const count = countPhotos(content)
     items.push({ kind: 'photos', minimum: guide.minPhotos, count, met: count >= guide.minPhotos })
   }
-  for (const hashtag of guide.hashtags)
+  // A post's hashtags are the ones its free text holds, found by the chips' scan (POST-119).
+  for (const hashtag of guideHashtags(guide.text))
     items.push({ kind: 'hashtag', hashtag, met: hashtagPresent(content.tags, hashtag) })
   return items
 }

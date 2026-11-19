@@ -348,7 +348,8 @@ it('writes a post from the same visit with no video and opens it', async () => {
     slug: '',
     targetLanguage: 'ko',
     campaign: true,
-    advertiserGuide: { text: '주차 안내', keywords: ['크림라떼'], hashtags: ['성수카페'] },
+    // POST-118: the clip's 필수 해시태그 ride into the post inside its guide text.
+    advertiserGuide: { text: '주차 안내\n#성수카페', keywords: ['크림라떼'], hashtags: [] },
   })
   // The clip itself is not written and no video moves.
   expect(calls.filter((call) => /^(Update|Create|Start|Confirm|Finalize)/u.test(call))).toEqual([])

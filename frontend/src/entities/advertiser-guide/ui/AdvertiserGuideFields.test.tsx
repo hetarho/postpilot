@@ -2,7 +2,12 @@ import { useState } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
-import { EMPTY_GUIDE, type AdvertiserGuide, type AdvertiserGuideItem } from '../model/types'
+import {
+  EMPTY_GUIDE,
+  POST_GUIDE_ITEMS,
+  type AdvertiserGuide,
+  type AdvertiserGuideItem,
+} from '../model/types'
 import { ADVERTISER_GUIDE_MAX_CHARS, ADVERTISER_KEYWORD_MAX } from '../config'
 import { AdvertiserGuideFields } from './AdvertiserGuideFields'
 
@@ -117,6 +122,22 @@ it('offers only the items its host names', async () => {
   expect(screen.getByLabelText('필수 해시태그')).toBeInTheDocument()
   expect(screen.queryByLabelText('최소 글자 수')).not.toBeInTheDocument()
   expect(screen.queryByLabelText('최소 사진 수')).not.toBeInTheDocument()
+})
+
+// POST-118: a post passes its own list, which holds no hashtag item.
+it('offers a post no hashtag item', () => {
+  render(
+    <AdvertiserGuideFields
+      value={EMPTY_GUIDE}
+      items={POST_GUIDE_ITEMS}
+      expanded
+      onChange={vi.fn()}
+    />,
+  )
+  expect(screen.getByLabelText('필수 키워드')).toBeVisible()
+  expect(screen.getByLabelText('최소 글자 수')).toBeVisible()
+  expect(screen.getByLabelText('최소 사진 수')).toBeVisible()
+  expect(screen.queryByLabelText('필수 해시태그')).not.toBeInTheDocument()
 })
 
 it('keeps post requirements visible and reflects confirmed minimum suggestions', () => {

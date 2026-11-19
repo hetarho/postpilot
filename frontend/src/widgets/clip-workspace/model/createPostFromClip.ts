@@ -1,4 +1,4 @@
-import { copyGuide, EMPTY_GUIDE } from '@/entities/advertiser-guide'
+import { appendHashtags, copyGuide, EMPTY_GUIDE } from '@/entities/advertiser-guide'
 import type { ClipProject } from '@/entities/clip-project'
 import type { PostDraftSave } from '@/entities/post'
 import type { ContentLanguage } from '@/shared/api'
@@ -6,7 +6,8 @@ import type { ContentLanguage } from '@/shared/api'
 /** ③'s `이 체험으로 글 쓰기` (CLIP-233), the reverse of a post's `이 체험으로 클립 만들기`: one
  *  create seeded with the clip's title as the 가제, its instruction as the memo and its 체험단 글
  *  switch and advertiser guide, in the clip's language, on the account's made 기본 voice as any new
- *  post starts (POST-101). No source or result video is copied and nothing on the clip changes;
+ *  post starts (POST-101). The clip's 필수 해시태그 go into the post's guide text as `#tag` tokens,
+ *  since a post keeps its hashtags there (POST-118). No source or result video is copied and nothing on the clip changes;
  *  the post's slug is what opens it. */
 export function createPostFromClip({
   project,
@@ -33,9 +34,9 @@ export function createPostFromClip({
     campaign: project.campaign ?? false,
     advertiserGuide: copyGuide({
       ...EMPTY_GUIDE,
-      text: guide.text,
+      text: appendHashtags(guide.text, guide.hashtags),
       keywords: guide.keywords,
-      hashtags: guide.hashtags,
+      hashtags: [],
     }),
   })
 }

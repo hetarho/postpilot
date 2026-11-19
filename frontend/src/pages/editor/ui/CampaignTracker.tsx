@@ -1,5 +1,9 @@
 import { useTranslation } from 'react-i18next'
-import { RequirementsTracker, type AdvertiserGuide } from '@/entities/advertiser-guide'
+import {
+  RequirementsTracker,
+  guideHashtags,
+  type AdvertiserGuide,
+} from '@/entities/advertiser-guide'
 import { Typography } from '@/shared/ui'
 import type { GuideStep } from '../model/guide'
 import { draftKeywordCoverage } from '../model/requirements'
@@ -25,6 +29,7 @@ export function CampaignTracker({
   const { t } = useTranslation('posts')
   const coverage = draftKeywordCoverage(guide.keywords, { title, memo, answers })
   const details = step === 'details' || step === 'story'
+  const hashtags = guideHashtags(guide.text)
   return (
     <RequirementsTracker
       coverage={{
@@ -55,10 +60,10 @@ export function CampaignTracker({
                 {t('guide.tracker.charsLater', { minimum: guide.minChars })}
               </Typography>
             )}
-            {guide.hashtags.length > 0 && (
+            {hashtags.length > 0 && (
               <Typography variant="meta" as="p" className="break-words">
                 {t('guide.tracker.tagsLater', {
-                  tags: guide.hashtags.map((tag) => `#${tag}`).join(' '),
+                  tags: hashtags.map((tag) => `#${tag}`).join(' '),
                 })}
               </Typography>
             )}

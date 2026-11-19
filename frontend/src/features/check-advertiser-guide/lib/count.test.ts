@@ -101,12 +101,13 @@ describe('hashtags', () => {
 
 describe('the counted items', () => {
   it('follow the guide form order and mark the character minimum by the count without spaces', () => {
+    // POST-119: a post's hashtags are the ones its free text holds; its stored list is not read.
     const items = countedItems(content, {
-      text: '',
+      text: '해시태그 #성수맛집 #없는태그, #성수맛집',
       keywords: ['성수 카페', '주차'],
       minChars: 32,
       minPhotos: 4,
-      hashtags: ['성수맛집'],
+      hashtags: ['무시됨'],
     })
     expect(items).toEqual([
       { kind: 'keyword', keyword: '성수 카페', met: true },
@@ -119,8 +120,10 @@ describe('the counted items', () => {
       },
       { kind: 'photos', minimum: 4, count: 4, met: true },
       { kind: 'hashtag', hashtag: '성수맛집', met: true },
+      { kind: 'hashtag', hashtag: '없는태그', met: false },
     ])
     expect(countedItems(content, EMPTY_GUIDE)).toEqual([])
+    expect(countedItems(content, { ...EMPTY_GUIDE, text: '해시태그 없이 써 주세요' })).toEqual([])
   })
 })
 

@@ -1,4 +1,5 @@
 import {
+  ADVERTISER_GUIDE_MAX_CHARS,
   ADVERTISER_HASHTAG_MAX,
   ADVERTISER_ITEM_MAX_CHARS,
   ADVERTISER_KEYWORD_MAX,
@@ -15,6 +16,40 @@ export type RequirementSuggestion =
 
 export const folded = (text: string) => text.replace(/^#/, '').replace(/\s+/gu, '').toLowerCase()
 
+/** Every `#`hashtag the free text holds, without its `#`, in text order and once each (ignoring
+ *  case and spaces). The chips and a post's checklist read this one scan (POST-118, POST-119). */
+export function guideHashtags(text: string): string[] {
+  const found: string[] = []
+  for (const match of text.matchAll(/#([\p{L}\p{N}_]+)/gu)) {
+    if (!found.some((tag) => folded(tag) === folded(match[1]))) found.push(match[1])
+  }
+  return found
+}
+
+/** A guide's text with each hashtag it does not already hold appended as a `#tag` token on one last
+ *  line (POST-118, CLIP-233). A token that would push the text past `ADVERTISER_GUIDE_MAX_CHARS`
+ *  stops the line there. */
+export function appendHashtags(text: string, hashtags: readonly string[]): string {
+  const held = guideHashtags(text).map(folded)
+  const tokens: string[] = []
+  for (const raw of hashtags) {
+    const tag = raw.trim().replace(/^#/, '').trim()
+    if (!tag || held.includes(folded(tag))) continue
+    held.push(folded(tag))
+    tokens.push(`#${tag}`)
+  }
+  const base = text.replace(/\s+$/u, '')
+  const separator = base === '' ? '' : '\n'
+  let line = ''
+  for (const token of tokens) {
+    const next = line === '' ? token : `${line} ${token}`
+    if ([...base].length + [...separator].length + [...next].length > ADVERTISER_GUIDE_MAX_CHARS)
+      break
+    line = next
+  }
+  return line === '' ? text : `${base}${separator}${line}`
+}
+
 /** A conservative local scan: candidates only, never a guide mutation or a model call (POST-118).
  *  `items` limits it to the counted items the host offers; a clip asks for no minimums. */
 export function suggestRequirements(
@@ -27,7 +62,7 @@ export function suggestRequirements(
     if (!items.includes(kind)) return
     if (suggestion && !found.some((item) => item.id === suggestion.id)) found.push(suggestion)
   }
-  for (const match of text.matchAll(/#([\p{L}\p{N}_]+)/gu)) add('hashtags', match[1])
+  for (const hashtag of guideHashtags(text)) add('hashtags', hashtag)
   const number = '[0-9]+(?:,[0-9]{3})*'
   const scans: Array<[RequirementSuggestion['kind'], RegExp]> = [
     [

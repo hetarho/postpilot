@@ -107,9 +107,9 @@ describe('making a clip from a finished post', () => {
     const view = mount({
       campaign: false,
       advertiserGuide: {
-        text: '성수 카페를 소개해 주세요',
+        text: '성수 카페를 소개해 주세요\n#성수카페',
         keywords: ['성수 카페'],
-        hashtags: ['성수카페'],
+        hashtags: [],
         minChars: 1500,
         minPhotos: 10,
       },
@@ -126,10 +126,11 @@ describe('making a clip from a finished post', () => {
       instruction: '친구와 나눈 이야기',
       ratio: 'vertical',
       campaign: false,
+      // POST-118: a post's hashtags ride in its text, so the clip starts with none counted.
       advertiserGuide: {
-        text: '성수 카페를 소개해 주세요',
+        text: '성수 카페를 소개해 주세요\n#성수카페',
         keywords: ['성수 카페'],
-        hashtags: ['성수카페'],
+        hashtags: [],
       },
     })
     expect(view.writes[0].advertiserGuide?.minChars).toBeUndefined()

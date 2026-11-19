@@ -18,11 +18,12 @@ describe('the pre-submission checklist', () => {
   const SLUG = '20260820-jeju'
   // POST_CONTENT_FIXTURE: 제주 in the title, two photos, tags 제주 · 산책 · 여행.
   const GUIDE = {
-    text: '대표 메뉴를 소개해 주세요\n주차 정보 안내',
+    // POST-118: the hashtags are pasted with the rest of the guide.
+    text: '대표 메뉴를 소개해 주세요\n주차 정보 안내\n#제주 #바다',
     keywords: ['제주', '주차'],
     minChars: 1000,
     minPhotos: 2,
-    hashtags: ['제주', '바다'],
+    hashtags: [],
   }
   const following = (first: Node, second: Node) =>
     Boolean(first.compareDocumentPosition(second) & Node.DOCUMENT_POSITION_FOLLOWING)
@@ -65,8 +66,8 @@ describe('the pre-submission checklist', () => {
         /^글자 수 \d+자 \(공백 제외 \d+자\), 최소 1000자 · 공백 제외 \d+자 더 필요해요$/,
       ),
       '사진 2장, 최소 2장 · 충분해요',
-      '필수 해시태그 #제주 · 태그에 있어요',
-      '필수 해시태그 #바다 · 태그에 없어요',
+      '가이드 해시태그 #제주 · 태그에 있어요',
+      '가이드 해시태그 #바다 · 태그에 없어요',
     ])
 
     const menu = within(checklist).getByRole('checkbox', { name: '대표 메뉴를 소개해 주세요' })

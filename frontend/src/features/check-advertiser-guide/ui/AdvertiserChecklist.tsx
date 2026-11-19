@@ -131,7 +131,7 @@ function CountedRow({ item, subject }: { item: CountedItem; subject: Subject }) 
         className={`mt-1 size-4 shrink-0 ${item.met ? 'text-content-primary' : 'text-content-secondary'}`}
       />
       <span className="min-w-0">
-        <span className="break-words">{label(item, t)}</span>
+        <span className="break-words">{label(item, subject, t)}</span>
         <span className="text-content-secondary">{` · ${status(item, subject, t)}`}</span>
       </span>
     </Typography>
@@ -140,12 +140,14 @@ function CountedRow({ item, subject }: { item: CountedItem; subject: Subject }) 
 
 type Translate = ReturnType<typeof useTranslation<'posts'>>['t']
 
-function label(item: CountedItem, t: Translate): string {
+function label(item: CountedItem, subject: Subject, t: Translate): string {
   switch (item.kind) {
     case 'keyword':
       return t('checklist.keyword', { keyword: item.keyword })
     case 'hashtag':
-      return t('checklist.hashtag', { hashtag: item.hashtag })
+      return t(subject === 'clip' ? 'checklist.clip.hashtag' : 'checklist.hashtag', {
+        hashtag: item.hashtag,
+      })
     case 'characters':
       return t('checklist.characters', {
         withSpaces: item.count.withSpaces,

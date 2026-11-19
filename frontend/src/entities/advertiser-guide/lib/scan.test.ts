@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { EMPTY_GUIDE } from '../model/types'
-import { ADVERTISER_KEYWORD_MAX } from '../config'
-import { acceptRequirement, editSuggestion, keywordCoverage, suggestRequirements } from './scan'
+import { ADVERTISER_GUIDE_MAX_CHARS, ADVERTISER_KEYWORD_MAX } from '../config'
+import { POST_GUIDE_ITEMS } from '../model/types'
+import {
+  acceptRequirement,
+  appendHashtags,
+  editSuggestion,
+  guideHashtags,
+  keywordCoverage,
+  suggestRequirements,
+} from './scan'
 
 describe('local guide suggestions', () => {
   it('spots Korean and English requirements without changing the guide', () => {
@@ -71,5 +79,40 @@ describe('local guide suggestions', () => {
         (item) => item.held,
       ),
     ).toEqual([true, true, false])
+  })
+  // POST-118: a post's list offers no hashtag chip, while its other chips still appear.
+  it('offers a post no hashtag chip', () => {
+    expect(
+      suggestRequirements('사진 8장 이상, 1,500자 이상\n#성수 키워드: 카페', POST_GUIDE_ITEMS)
+        .map((item) => item.kind)
+        .sort(),
+    ).toEqual(['keywords', 'minChars', 'minPhotos'])
+  })
+})
+
+describe('hashtags kept in the guide text', () => {
+  it('finds each #hashtag once, in text order, ignoring case', () => {
+    expect(guideHashtags('#성수맛집 꼭\n#Brunch, #brunch #카페_투어')).toEqual([
+      '성수맛집',
+      'Brunch',
+      '카페_투어',
+    ])
+    expect(guideHashtags('해시태그 없음 # 띄어씀')).toEqual([])
+  })
+  it('appends the hashtags the text lacks as one last line', () => {
+    expect(appendHashtags('주차 안내\n#성수 ', ['성수', '#카페', 'Latte', 'latte'])).toBe(
+      '주차 안내\n#성수\n#카페 #Latte',
+    )
+    expect(appendHashtags('', ['성수'])).toBe('#성수')
+    expect(appendHashtags('#성수', ['#성수'])).toBe('#성수')
+  })
+  it('stops before a token that would pass the guide limit', () => {
+    const text = 'x'.repeat(ADVERTISER_GUIDE_MAX_CHARS - 6)
+    const appended = appendHashtags(text, ['ab', 'cd'])
+    expect(appended).toBe(`${text}\n#ab`)
+    expect([...appended].length).toBeLessThanOrEqual(ADVERTISER_GUIDE_MAX_CHARS)
+    expect(appendHashtags('x'.repeat(ADVERTISER_GUIDE_MAX_CHARS), ['ab'])).toBe(
+      'x'.repeat(ADVERTISER_GUIDE_MAX_CHARS),
+    )
   })
 })

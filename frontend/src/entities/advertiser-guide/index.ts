@@ -1,5 +1,12 @@
 export type { AdvertiserGuide, AdvertiserGuideItem } from './model/types'
-export { EMPTY_GUIDE, copyGuide, guideLines, isEmptyGuide, sameGuide } from './model/types'
+export {
+  EMPTY_GUIDE,
+  POST_GUIDE_ITEMS,
+  copyGuide,
+  guideLines,
+  isEmptyGuide,
+  sameGuide,
+} from './model/types'
 export {
   ADVERTISER_GUIDE_MAX_CHARS,
   ADVERTISER_MIN_CHARS_RANGE,
@@ -12,7 +19,9 @@ export { advertiserGuideFromProto, advertiserGuideToProto } from './api/mappers'
 export { AdvertiserGuideFields } from './ui/AdvertiserGuideFields'
 export {
   acceptRequirement,
+  appendHashtags,
   editSuggestion,
+  guideHashtags,
   keywordCoverage,
   suggestRequirements,
   suggestionAlreadyAdded,

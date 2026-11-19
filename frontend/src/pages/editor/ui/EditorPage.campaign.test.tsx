@@ -35,8 +35,10 @@ describe('campaign-led writing', () => {
     ).toHaveFocus()
     expect(screen.queryByText('셀 수 있는 항목')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: '글에 꼭 담을 내용' })).toBeVisible()
-    for (const name of ['필수 키워드', '최소 글자 수', '최소 사진 수', '필수 해시태그'])
+    for (const name of ['필수 키워드', '최소 글자 수', '최소 사진 수'])
       expect(screen.getByRole('textbox', { name })).toBeVisible()
+    // POST-118: a post's hashtags stay in the free text, with no item of their own.
+    expect(screen.queryByRole('textbox', { name: '필수 해시태그' })).not.toBeInTheDocument()
     fireEvent.change(guideText()!, {
       target: { value: '사진 8장 이상, 1,500자 이상\n키워드: 성수 카페\n#성수맛집' },
     })
@@ -44,7 +46,7 @@ describe('campaign-led writing', () => {
     await user.click(screen.getByRole('button', { name: '사진 최소 8장 추가' }))
     expect(screen.getByLabelText('최소 사진 수')).toHaveValue('8')
     await user.click(screen.getByRole('button', { name: '키워드 · 성수 카페 추가' }))
-    await user.click(screen.getByRole('button', { name: '#성수맛집 제안 지우기' }))
+    expect(screen.queryByRole('button', { name: '#성수맛집 추가' })).not.toBeInTheDocument()
     await waitFor(
       () =>
         expect(draftSaves.at(-1)?.advertiserGuide).toMatchObject({

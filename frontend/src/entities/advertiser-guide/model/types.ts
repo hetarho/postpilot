@@ -11,6 +11,13 @@ export interface AdvertiserGuide {
 /** Which counted items a host offers: a clip takes keywords and hashtags only (CLIP-210). */
 export type AdvertiserGuideItem = 'keywords' | 'minChars' | 'minPhotos' | 'hashtags'
 
+/** A post's counted items: its hashtags stay in the free text, with no item or chip (POST-118). */
+export const POST_GUIDE_ITEMS = [
+  'keywords',
+  'minChars',
+  'minPhotos',
+] as const satisfies readonly AdvertiserGuideItem[]
+
 export const EMPTY_GUIDE: AdvertiserGuide = Object.freeze({
   text: '',
   keywords: [],
