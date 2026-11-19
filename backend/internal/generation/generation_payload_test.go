@@ -78,6 +78,10 @@ func requireNoZero(t *testing.T, path string, v reflect.Value) {
 			if v.Type().Field(i).Name == "OriginCandidates" {
 				continue
 			}
+			// A post's guide keeps its hashtags in the text (POST-118); the member is a clip's alone.
+			if v.Type() == reflect.TypeOf(campaign.Guide{}) && v.Type().Field(i).Name == "Hashtags" {
+				continue
+			}
 			if v.Type() == reflect.TypeOf(post.OriginSource{}) && (v.Type().Field(i).Name == "AttachmentFilename" || v.Type().Field(i).Name == "AttachmentID") && v.Field(i).String() == "" {
 				continue
 			}

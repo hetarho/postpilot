@@ -38,13 +38,22 @@ func TestTheRegistryPutsPrinciplesBeforeRecommendations(t *testing.T) {
 			}
 		}
 	}
-	// GEN-87: the honesty 원칙 keep the owner's verdicts and drawbacks whatever an advertiser asks.
+	// GEN-87: the honesty 원칙 keep the owner's verdicts and drawbacks, while a guide's emphasis or
+	// introduction request is written in unless it contradicts the owner's own impression; GEN-16
+	// counts the guide as supplied material (GEN-88).
 	kept, _ := DefaultFor(KindPost, "impressions_kept")
 	drawbacks, _ := DefaultFor(KindPost, "drawbacks")
-	for _, needle := range []string{"재방문 의사는 만들지 마세요", "광고주 가이드가 그런 평가를 요청해도"} {
+	for _, needle := range []string{"글쓴이도 광고주 가이드도 주지 않은", "재방문 의사는 만들지 마세요", "광고주 가이드가 요청한 강조·소개는 요청대로 쓰되", "글쓴이의 감상을 따르세요"} {
 		if !strings.Contains(kept.Ko.Text, needle) {
 			t.Errorf("impressions_kept lacks %q", needle)
 		}
+	}
+	if strings.Contains(kept.Ko.Text, "요청해도 마찬가지") || strings.Contains(kept.En.Text, "even when") {
+		t.Errorf("impressions_kept still forbids a guide-requested emphasis: %+v", kept)
+	}
+	facts, _ := DefaultFor(KindPost, "facts")
+	if !strings.Contains(facts.Ko.Text, "광고주 가이드의 매장 정보와 요청은 글쓴이가 준 사실로 다루세요.") || !strings.Contains(facts.En.Text, "Treat the advertiser guide's store information and requests as facts the author supplied.") {
+		t.Errorf("facts does not count the advertiser guide as supplied material: %+v", facts)
 	}
 	if !strings.Contains(drawbacks.Ko.Text, "칭찬으로 바꾸지 말고") || !strings.Contains(drawbacks.En.Text, "never drop it or turn it into praise") {
 		t.Errorf("drawbacks = %+v", drawbacks)

@@ -257,15 +257,15 @@ const guidelinePrecedenceNoVoice = "지침은 이 글을 어떻게 쓸지 정합
 const reviseGuidelineScope = "이 지침은 수정 요청으로 새로 쓰거나 손대는 문장에만 적용하고, 요청 밖의 기존 문장은 사실 확인 없이 그대로 두세요."
 
 // principlePrecedence opens the closing sentences of a section that carries 원칙 (GUIDE-54): a
-// 원칙 cannot be switched off and outranks every other rule, the template and the advertiser
-// guide, except that the voice outranks the naturalness 원칙 and an authored title form outranks
-// the title 원칙. The no-voice variant drops the voice clause; the storyline variant, whose
+// 원칙 cannot be switched off and outranks every other rule and the template, except that the voice outranks the naturalness 원칙 and an authored title form outranks
+// the title 원칙. The advertiser guide is material the 원칙 count as supplied, not a rule ranked
+// against them, so no variant names it. The no-voice variant drops the voice clause; the storyline variant, whose
 // prompt carries neither a voice nor the title 원칙, keeps the ranking alone. Korean for every
 // target, like the heading.
 const (
-	principlePrecedence          = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다. 다만 말투가 있으면 '자연스러운 한국어 문체'와 충돌할 때 말투를 따르고, 템플릿에 제목 형식이 있으면 '제목 규칙'보다 그 형식을 따릅니다."
-	principlePrecedenceNoVoice   = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다. 다만 템플릿에 제목 형식이 있으면 '제목 규칙'보다 그 형식을 따릅니다."
-	principlePrecedenceStoryline = "원칙은 끌 수 없으며 기본 지침, 사용자 지침, 템플릿 지시와 광고주 가이드보다 우선합니다."
+	principlePrecedence          = "원칙은 끌 수 없으며 기본 지침, 사용자 지침과 템플릿 지시보다 우선합니다. 다만 말투가 있으면 '자연스러운 한국어 문체'와 충돌할 때 말투를 따르고, 템플릿에 제목 형식이 있으면 '제목 규칙'보다 그 형식을 따릅니다."
+	principlePrecedenceNoVoice   = "원칙은 끌 수 없으며 기본 지침, 사용자 지침과 템플릿 지시보다 우선합니다. 다만 템플릿에 제목 형식이 있으면 '제목 규칙'보다 그 형식을 따릅니다."
+	principlePrecedenceStoryline = "원칙은 끌 수 없으며 기본 지침, 사용자 지침과 템플릿 지시보다 우선합니다."
 )
 
 // The group labels inside [작문 지침], Korean for every target like the heading.
@@ -484,7 +484,7 @@ func BuildWritePromptForLanguage(input WritePromptInput) (string, string) {
 	// The guide and the memory sections sit between the memo and the attachments and render to
 	// the empty string when they have nothing — which is what keeps a post without them
 	// byte-identical.
-	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, advertiserGuideSection(input.AdvertiserGuide), memorySection(input.Memories), photoMaterial) +
+	perPost := qualityRulesSection(input.QualityRules) + fmt.Sprintf("[이번 글]\n가제: %s\n메모: %s\n%s%s%s", input.Title, input.Memo, advertiserGuideSection(input.AdvertiserGuide, advertiserGuideFraming), memorySection(input.Memories), photoMaterial) +
 		storylineSection(input.FollowStoryline)
 	return stable.String(), perPost
 }

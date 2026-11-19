@@ -23,7 +23,7 @@ func TestTheGuideIsAnAdvertiserRequestSource(t *testing.T) {
 	if guide == nil || guide.Kind != post.OriginSourceAdvertiserGuide || !guide.Available || guide.Text != advertiserGuideSourceText(input.AdvertiserGuide) {
 		t.Fatalf("guide source = %+v", guide)
 	}
-	if !strings.HasPrefix(guide.Text, input.AdvertiserGuide.Text) || !strings.Contains(guide.Text, "필수 해시태그: #성수맛집") {
+	if !strings.HasPrefix(guide.Text, input.AdvertiserGuide.Text) || !strings.Contains(guide.Text, "필수 키워드: 성수 카페, 크림 라떼") || strings.Contains(guide.Text, "필수 해시태그") {
 		t.Fatalf("guide source text = %q", guide.Text)
 	}
 
@@ -42,6 +42,11 @@ func TestTheGuideIsAnAdvertiserRequestSource(t *testing.T) {
 	without := appendOriginRequest(ComposeWriteRequest(plain), plainSources, nil)
 	if !strings.Contains(withGuide.System, advertiserOriginClause) || strings.Contains(without.System, "advertiser_request") {
 		t.Fatal("the advertiser clause does not follow the guide source")
+	}
+	// GEN-80: the guide's meaning keeps its advertiser-request origin, while its requests count
+	// as supplied facts (GEN-88), so the clause no longer calls it something other than experience.
+	if strings.Contains(advertiserOriginClause, "not the owner's experience") || !strings.Contains(advertiserOriginClause, "store information, emphasis or introduction") {
+		t.Fatalf("origin clause = %q", advertiserOriginClause)
 	}
 	for _, source := range plainSources {
 		if source.Kind == post.OriginSourceAdvertiserGuide {

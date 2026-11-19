@@ -113,13 +113,13 @@ const naturalKorean = "아래 기준은 새로 쓰거나 수정 요청으로 손
 
 var postDefaults = []DefaultGuideline{
 	principle(post("facts", "재료에 있는 사실만",
-		"메모, 사진·영상 관찰, 해당 템플릿 입력란의 명시적인 답변, 선택된 기억, 근거가 있는 스토리라인 재료에 없는 구체적 사실은 쓰지 마세요. AI가 만든 계획이나 그 배치를 승인한 것만으로 그 안의 주장을 글쓴이가 준 사실로 보지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰세요.",
+		"메모, 사진·영상 관찰, 해당 템플릿 입력란의 명시적인 답변, 광고주 가이드, 선택된 기억, 근거가 있는 스토리라인 재료에 없는 구체적 사실은 쓰지 마세요. 광고주 가이드의 매장 정보와 요청은 글쓴이가 준 사실로 다루세요. AI가 만든 계획이나 그 배치를 승인한 것만으로 그 안의 주장을 글쓴이가 준 사실로 보지 마세요. 사람과의 상호작용, 시설, 서비스, 대화, 가격처럼 확인되지 않은 내용을 지어내지 마세요. 확인할 수 없는 사실은 생략하거나 관찰된 범위 안에서만 쓰세요.",
 		"Facts from the material only",
-		"State no concrete fact the memo, photo or video observations, explicit answers in the relevant template field, selected memories or supported storyline material do not carry. An AI-generated plan or approval of its arrangement never makes its claims author-supplied facts. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions))),
+		"State no concrete fact the memo, photo or video observations, explicit answers in the relevant template field, the advertiser guide, selected memories or supported storyline material do not carry. Treat the advertiser guide's store information and requests as facts the author supplied. An AI-generated plan or approval of its arrangement never makes its claims author-supplied facts. Do not invent interactions with people, facilities, services, conversations, or prices. Omit what you cannot confirm, or keep it within what was observed.", postMaterial(OutputTitle, OutputTags, OutputProse, OutputCaptions))),
 	principle(post("impressions_kept", "내 감상은 그대로",
-		"글쓴이가 메모·템플릿 답변·스토리라인에 준 감상·맛·평가를 글의 중심에 두고 그 뜻을 바꾸지 마세요. 글쓴이가 주지 않은 평가·별점·칭찬·추천·재방문 의사는 만들지 마세요. 템플릿, 지침, 광고주 가이드가 그런 평가를 요청해도 마찬가지입니다.",
+		"글쓴이가 메모·템플릿 답변·스토리라인에 준 감상·맛·평가를 글의 중심에 두고 그 뜻을 바꾸지 마세요. 글쓴이도 광고주 가이드도 주지 않은 평가·별점·칭찬·추천·재방문 의사는 만들지 마세요. 광고주 가이드가 요청한 강조·소개는 요청대로 쓰되, 글쓴이가 쓴 감상과 어긋나면 글쓴이의 감상을 따르세요.",
 		"Keep my impressions",
-		"Keep the impressions, tastes and verdicts the author supplied in the memo, template answers or storyline at the center, with their meaning unchanged. Create no verdict, rating, praise, recommendation or will to return the author did not give, even when a template, guideline or advertiser guide asks for one.", postMaterial(OutputProse, OutputCaptions))),
+		"Keep the impressions, tastes and verdicts the author supplied in the memo, template answers or storyline at the center, with their meaning unchanged. Create no verdict, rating, praise, recommendation or will to return that neither the author nor the advertiser guide gave. Write an emphasis or introduction the advertiser guide asks for as requested, but where it contradicts an impression the author gave, follow the author.", postMaterial(OutputProse, OutputCaptions))),
 	principle(post("drawbacks", "아쉬운 점은 정중하게",
 		"글쓴이가 준 아쉬운 점은 빼거나 칭찬으로 바꾸지 말고 글에 남기세요. 탓하는 말투가 아니라 '이런 분께는 이 점을 참고하세요'처럼 읽는 사람이 판단하는 데 도움이 되는 정보로 정중하게 쓰세요.",
 		"Drawbacks, politely",
