@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| advg1119 | ihaelam-ui-MacBookPro | autopilot | 2026-11-19T13:04Z | 2026-11-19T13:14Z | T912 | gusta-session-start-advg1119-4e8e8dca | 1aae186a87ec | 90a25a49854205d5eaba8491 |
+| advg1119 | ihaelam-ui-MacBookPro | autopilot | 2026-11-19T13:04Z | 2026-11-19T13:19Z | - | gusta-session-start-advg1119-4e8e8dca | 0910497ee8d7 | 90a25a49854205d5eaba8491 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -200,7 +200,13 @@
 - 261119 decided CLIP-210 T913: clips share the guide component and the 필수 해시태그 item — change them too? → no: clips keep 필수 키워드 + 필수 해시태그, their 원칙 (감상은 내가 쓴 것만) and precedence; AdvertiserGuideFields stays one component, the post passes POST_GUIDE_ITEMS without hashtags; CLIP-210 now cites GEN-88's fence only; 이 체험으로 글 쓰기 folds clip hashtags into the post text (alt: same one-box change for clips) ← the request is about posts
 - 261119 decided GEN-87 GEN-80 T914: a guide request contradicts the owner's own impression or drawback — which wins? → the owner's own word stands and the request is woven in only where it does not contradict (GEN-87); keywords, min chars/photos counted items unchanged; advertiser_request origin label kept, only its not-the-owner's-experience consequence removed (alt: guide overrides | drop the conflicting request silently) ← the owner's experience is the post's direct evidence
 
+## unlanded
+| id | tag | branch | commit | at |
+|---|---|---|---|---|
+| T912 | advg1119 | gusta-session-start-advg1119-4e8e8dca | 0910497ee8d7 | 2026-11-19T13:19Z |
+
 ## log
+- 261119 T912 done
 - 261119 gusta-update-ssot GEN r35 GUIDE r30 POST r57 CLIP r84 (wording) + gusta-create-task T912 T913 T914 for the advertiser-guide request
 - 261119 T909 done
 - 261119 T908 done
@@ -220,4 +226,3 @@
 - 261117 T899 done
 - 261117 T898 done
 - 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
-- 261117 reworded without a markdown heading token (it truncated report sections)
