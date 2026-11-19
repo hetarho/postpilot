@@ -11,6 +11,8 @@ export const i18n = {
       text: '광고주 가이드',
       placeholder: '체험단 사이트에서 받은 가이드를 그대로 붙여넣으세요.',
       textHelp:
+        '광고주 요청은 내가 알려 준 사실처럼 글에 담기고, 안내 속 #해시태그는 태그에 들어가요.',
+      textHelpClip:
         '광고주가 요청한 내용은 내 경험이 아니라 광고주의 자료로 글에 자연스럽게 담겨요. 겪지 않은 칭찬은 쓰지 않아요.',
       count: '{{count}} / {{max}}자',
       count_one: '{{count}} / {{max}}자',
@@ -66,6 +68,8 @@ export const i18n = {
       text: 'Advertiser guide',
       placeholder: 'Paste the guide the campaign site gave you, as it is.',
       textHelp:
+        'The advertiser’s requests go into the post like facts you gave, and the guide’s #hashtags go into the tags.',
+      textHelpClip:
         'What the advertiser asks for is woven in as the advertiser’s material, not as your experience. Praise you did not give is never written.',
       count: '{{count}} / {{max}} characters',
       count_one: '{{count}} / {{max}} character',

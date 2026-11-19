@@ -33,7 +33,9 @@ export function AdvertiserGuideFields({
   requirementsTitle = 'post',
   afterText,
 }: {
-  /** Whose requirements the expanded list names: 글에 꼭 담을 내용 or 영상에 꼭 담을 내용. */
+  /** Whose guide this is: the expanded list names 글에 꼭 담을 내용 or 영상에 꼭 담을 내용, and the
+   *  text help says how that host writes the requests (a post as supplied facts, GEN-88; a clip
+   *  as the advertiser's material, CLIP-210). */
   requirementsTitle?: 'post' | 'clip'
   /** Posts keep every requirement visible; clips retain their compact presentation. */
   expanded?: boolean
@@ -63,7 +65,11 @@ export function AdvertiserGuideFields({
         className="mt-1"
       />
       <Typography variant="meta" as="p" id={`${id}-text-help`} className="mt-1">
-        {t('advertiserGuide.textHelp')}
+        {t(
+          requirementsTitle === 'clip'
+            ? 'advertiserGuide.textHelpClip'
+            : 'advertiserGuide.textHelp',
+        )}
       </Typography>
       <Typography variant="meta" as="p" className="mt-1">
         {t('advertiserGuide.count', {
