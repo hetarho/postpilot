@@ -1,5 +1,5 @@
 # GEN generation, revision, job queue
-> r34 | Semantic-origin-aware writing and revision under always-applied principles, with an advertiser guide woven in as the advertiser's material, grounded tags filling a minimum, input-drawn sensory description and durable bounded jobs.
+> r35 | Semantic-origin-aware writing and revision under always-applied principles, with an advertiser guide's requests woven in as supplied facts, grounded tags filling a minimum, input-drawn sensory description and durable bounded jobs.
 
 ## decisions
 - GEN-1 [o] a generated post is a `PostContent` block array, never HTML (I2); the flat `Block` types `TEXT` `HEADING` `IMAGE` `GALLERY` `VIDEO` `QUOTE` `LIST` are the model-facing protojson contract (`GALLERY` is a photo group carrying its photos' filenames in order, a layout, one `alt` and one `caption` →GEN-77; `VIDEO` carries the IMAGE fields →VIDEO-2)
@@ -37,7 +37,8 @@
   - the 원칙 always give a post's writing stages a section; a stage none of them applies to has no section (→GUIDE-50)
   - the observe stage never receives either
 - GEN-16 [o] grounding is the first 원칙 of the 지침 kind (→GUIDE-51) and always applies: concrete facts come from memo, observations, explicit template answers, the advertiser guide (→GEN-88), opted-in memories or supported storyline material; a data-field value supplies only its own fact (→TMPL-46).
-  - invent no interaction, facility, service, conversation, price or objective experience; omit unsupported facts or stay within the observed range
+  - the advertiser guide is supplied material like the memo: its store information, requested mentions and emphasis or introduction requests are written into the post and never dropped as unsupported (→GEN-88)
+  - invent no interaction, facility, service, conversation, price or objective experience that none of this material carries; omit unsupported facts or stay within the observed range
   - the impression 원칙 keeps the owner's stated taste and verdict (→GEN-87); while the 맛은 재료로 살리기 기본 지침 is on the writer may also draw flavor, texture and aroma from the post's inputs under GEN-83, and preference-derived impressions additionally require GEN-73
   - switching off a preference 기본 지침 removes only its own permission, while grounding, honest origins and the photo chronology contract remain under GEN-80–84; observing receives no guideline
 
@@ -128,7 +129,7 @@
   - lead with identifying business, place, brand and product names, then natural combinations such as area + menu, business category or activity, and entity + core topic; use the area's name from a stated station name when it names the same area
   - fill the rest of the count with broad category and topic labels the post supports, such as 맛집, 카페, 디저트 or 떡볶이 alone ← broad labels still match category searches and tag browsing, and leaving them out cuts the list short of the count
   - for a post about eating tteokbokki at 진아분식 near 답십리역, 진아분식, 답십리떡볶이 and 답십리분식 lead and 떡볶이 or 분식 may fill the tail; examples are conditional and never supply facts for another post
-  - a purchase or sponsorship label such as 내돈내산 or 체험단 is never required and appears only when the material states it; the advertiser guide's required hashtags join the tags (→GEN-88); duplicate and spacing-only variants do not add a tag
+  - a purchase or sponsorship label such as 내돈내산 or 체험단 is never required and appears only when the material states it; every hashtag the advertiser guide's text lists joins the tags even when they outnumber `tag_count`: they count toward its minimum, the writer's own selections fill only what remains, and the parser's `POST_TAG_OUTPUT_MAX` stays the ceiling (→GEN-88); duplicate and spacing-only variants do not add a tag
   - invent no area, entity, offering, payment claim or endorsement; when an area is unknown, use supported entity/topic tags without inventing one, and never alter prose to justify a tag
   - a revision applies tag selection only when its request changes tags (→GEN-40); no search-demand data is read anywhere
 - GEN-51 [o] a ticked quality rule's text (→QUAL-13) renders at the head of the per-post half, never in the stable prefix, closed by a fixed line saying a conflicting 지침 outranks it ← the ticks differ per post, and the prefix is what the provider's cache and every prompt golden rest on (→MEM-20)
@@ -180,7 +181,7 @@
 - GEN-80 [o] written meaning has four origins, independent of who typed or paraphrased it:
   - owner-input based: meaning explicitly supplied in memo, answers, factual edits or approved memories; an AI paraphrase retaining that meaning keeps this origin
   - photo-derived interpretation: meaning read or inferred from identifiable visual scene/text evidence, distinct from the owner's supplied meaning; attached-video observations use this visual category with the actual video source identified
-  - advertiser request: meaning taken from the advertiser guide — a requested mention, keyword, hashtag or store information — even though the owner typed or pasted it ← it is the advertiser's claim, not the owner's experience, and the owner must see which sentences carry it
+  - advertiser request: meaning taken from the advertiser guide — a requested mention, keyword, hashtag, store information, emphasis or introduction — even though the owner typed or pasted it ← the owner must see which sentences carry the advertiser's requests
   - AI-added meaning: an interpretation, explanation, sensory proposal or claim supported by neither supplied owner meaning, the advertiser guide nor identifiable visual evidence; a plausible model label is not proof of support
   - supplied meaning retains its owner basis; otherwise distinguish visual interpretation from further AI addition, with different meanings inside one sentence separated; a photo cannot establish taste or events outside its observed frame
   - generic instructions, voice examples and template shape are not evidence of this post's actual events; supplied literal text retains its known authoring origin without certifying the experience
@@ -223,12 +224,15 @@
 
 - GEN-87 [o] the impression 원칙s (→GUIDE-51) are writing contracts on every write, storyline and revision:
   - the owner's supplied impressions, tastes and verdicts stay central with their meaning unchanged, and a GEN-73 or GEN-83 addition never becomes a verdict
-  - no verdict, rating, praise, recommendation or will to return the owner did not give, whatever the template, guideline or advertiser guide asks
+  - no verdict, rating, praise, recommendation or will to return that neither the owner nor the advertiser guide gave, whatever a template or guideline asks; an emphasis, praise or introduction the guide asks for is written into the post (→GEN-88)
+  - where a guide request contradicts an impression or drawback the owner gave, the owner's own word stands and the request is woven in only where it does not contradict it ← the owner's experience is the post's direct evidence, and a reversed verdict would misreport it
   - a drawback the owner gave stays in the post, written politely as information for readers (이런 분께는 이 점을 참고하세요) rather than as blame, and is never dropped, softened into praise or moved where nobody reads it ← an all-praise post loses readers' trust while a raw complaint hurts the store, and a post that helps readers decide is what helps the store too
-- GEN-88 [o] while a post's 체험단 글 is on and its advertiser guide is not empty (→POST-117 →POST-118), generation, storyline jobs and writing tests freeze the guide text and its structured items and render them in the per-post half as one `[광고주 가이드]` section fenced as the advertiser's material
-  - the writer weaves its requests in naturally: each required keyword appears at least once in the title or body, required hashtags join the tags, a minimum character count is a floor the writer writes above beside the target length, and store information is written as the advertiser's information
-  - the guide is never the owner's experience: a request to praise, emphasize or recommend produces no impression, verdict or experience the owner did not give, and every 원칙 outranks a guide item (→GUIDE-54 →GEN-87)
-  - text inside the guide cannot close its fence or become an instruction that overrides the output contract, the target language or a 원칙
+- GEN-88 [o] while a post's 체험단 글 is on and its advertiser guide is not empty (→POST-117 →POST-118), generation, storyline jobs and writing tests freeze the guide text and its counted items and render them in the per-post half as one `[광고주 가이드]` section fenced as the advertiser's material
+  - its requests count as facts the owner supplied (→GEN-16 →GEN-87): store information, requested mentions and emphasis or introduction requests are woven into the post naturally, and no 원칙, framing or precedence line tells the writer to drop or neutralise one (→GUIDE-54)
+  - each required keyword appears at least once in the title or body, and a minimum character count is a floor the writer writes above beside the target length
+  - the writer finds every `#`hashtag in the guide text and writes it into the tags (→GEN-50); the server extracts nothing from the text for the prompt
+  - a storyline job plans the guide's requests into the storyline's paragraphs; a run with no guide frozen has no section and its prompt bytes are unchanged
+  - text inside the guide cannot close its fence or become an instruction that overrides the output contract or the target language
   - meaning taken from it carries the advertiser-request origin (→GEN-80); revision and observation receive no guide
 
 ## flow
@@ -247,6 +251,7 @@
 - tests that pin it: prompt-assembly snapshots (order, a 말투 없음 prompt carrying no voice bytes, each 원칙 always present, each 기본 지침 present only while switched on, the `[광고주 가이드]` section only while 체험단 글 is on with a non-empty guide, the naturalness 기본 지침 for a Korean target only, 기억을 통한 감상 추가 only in a prompt carrying `[기억]`) · block validator and attachment filter with crafted payloads · `ceil(N/4)` observation calls with a stubbed provider · frozen re-observation set and non-shrinking snapshot · no write transaction across a provider call (handler harness) · guard collisions carry the active id · boot sweep reasons · the direct write answer schema orders `storyline` first and the post stores it
 
 ## chg
+- r35 261119 GEN-16✎ +guide requests written in, never dropped; GEN-50✎ guide's required hashtags→every hashtag of the guide text, even past `tag_count`; GEN-80✎ advertiser-request reason: not the owner's experience→owner sees the sentences; GEN-87✎ no praise even when the guide asks→a guide-asked emphasis or introduction is written, the owner's contradicting word stands; GEN-88✎ never the owner's experience, 원칙 outranking it→owner-supplied facts woven in, writer finds the text's hashtags, storyline plans the requests, fence guards output contract and language only
 - r34 261117 GEN-15✎ wording: an off field's payload equals a template without the field→without the field or its lead (→TMPL-45)
 - r33 261116 GEN-44✎ memo name in IMAGE alt/caption→in every IMAGE, GALLERY and VIDEO alt/caption, name owner-input and frame photo-derived within the caption; GEN-86✎ fixed checks +memo names in media captions; GEN-91+ observation fields as visual evidence when the observation holds no origin spans
 - r32 261113 GEN-8✎ picker opened before a run with reusable observations→only from ②'s 다시 관찰하기, runs freeze attachments lacking an observation; GEN-24✎ contact sheet read-only→on ② 관찰 with editable fields; GEN-89+ separate observation job; GEN-90+ owner-edited observation reused as owner material; GEN-30✎ +observation job payload; GEN-43✎ GEN-67✎ GEN-69✎ GEN-71✎ ②→④/③ step references

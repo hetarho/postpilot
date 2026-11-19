@@ -1,5 +1,5 @@
 # GUIDE writing guidelines (작문 지침)
-> r29 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
+> r30 | Always-applied Postpilot principles beside switchable recommendations and owner guidelines, with stage-applicable rules and stable evidence contracts.
 
 ## decisions
 - GUIDE-1 [o] guidelines own writing direction beside VOICE expression, TMPL form and the stable request contracts (→GEN-14).
@@ -148,8 +148,8 @@
 - GUIDE-51 [o] the 지침 kind's 원칙, always applied, in this order:
   | 원칙 | rule |
   |---|---|
-  | 재료에 있는 사실만 | →GEN-16 |
-  | 내 감상은 그대로 | the owner's supplied impressions, tastes and verdicts stay central with their meaning unchanged; no verdict, rating, praise or will to return the owner did not give, even when the advertiser guide asks for one (→GEN-87 →GEN-88) |
+  | 재료에 있는 사실만 | →GEN-16, the advertiser guide counted as supplied material (→GEN-88) |
+  | 내 감상은 그대로 | the owner's supplied impressions, tastes and verdicts stay central with their meaning unchanged; no verdict, rating, praise or will to return that neither the owner nor the advertiser guide gave, and a guide's emphasis or introduction request is written into the post (→GEN-87 →GEN-88) |
   | 아쉬운 점은 정중하게 | a drawback the owner gave stays in the post, written politely as information for readers (이런 분께는 이 점을 참고하세요) rather than as blame, and is never dropped or turned into praise (→GEN-87) |
   | 메모의 이름으로 | →GEN-44 |
   | 사진 순서는 시간 순서가 아니다 | photo order, filenames and capture order never become time passage, venue or seat changes or an action sequence (→GEN-82) |
@@ -165,7 +165,9 @@
   | 감상은 내가 쓴 것만 | a taste, a mood or a satisfaction only as the owner gave it in the instruction, the storyline or the linked post, even when the advertiser guide asks for one |
   | 아쉬운 점은 정중하게 | a drawback the owner gave is said politely as information for viewers, never dropped or turned into praise |
 - GUIDE-53 [o] each guideline screen shows its kind's 원칙 read-only above the list as one closed `Postpilot 원칙` card whose summary says they always apply; opening it lists each 원칙's name and text with no control ← the owner sees what every run is told without being offered a switch that does not exist
-- GUIDE-54 [o] a 원칙 outranks every owner guideline, template instruction, advertiser guide item and 기본 지침; the voice still outranks 자연스러운 한국어 문체 where they conflict (→GEN-17), and an authored template title form still outranks 제목 규칙 (→GEN-49 →TMPL-52) ← a rule nobody can switch off would mean nothing if a guideline could countermand it
+- GUIDE-54 [o] a 원칙 outranks every owner guideline, template instruction and 기본 지침; the voice still outranks 자연스러운 한국어 문체 where they conflict (→GEN-17), and an authored template title form still outranks 제목 규칙 (→GEN-49 →TMPL-52) ← a rule nobody can switch off would mean nothing if a guideline could countermand it
+  - a post's advertiser guide is material, not a rule ranked against the 원칙: they count its requests as supplied (→GEN-16 →GEN-87 →GEN-88) and the precedence line does not name it ← a 원칙 placed above the guide reads as leave to drop its requests
+  - a clip's guide keeps its own precedence (→CLIP-210)
 
 ## flow
 - author: 홈 → 지침 `/guidelines` | 영상 → 영상 지침 `/video-guidelines` → 새 지침(AI와 대화로 만들기 | 직접 쓰기) → title(optional) + text + scope(전역 | templates | 분야, posts only) → CreateGuideline(bound, cap, dedupe within the kind → row; approves a matching candidate)
@@ -184,6 +186,7 @@
 - contract: `proto/postpilot/v1/guideline.proto`
 
 ## chg
+- r30 261119 GUIDE-51✎ 재료에 있는 사실만 →GEN-16→+the advertiser guide counted as supplied material; 내 감상은 그대로 no verdict or praise the owner did not give, even when the advertiser guide asks→none that neither the owner nor the guide gave, a guide's emphasis or introduction request written as requested; GUIDE-54✎ a 원칙 outranks … advertiser guide item…→a post's guide is material the 원칙 count as supplied, unnamed in the precedence line; a clip's guide keeps CLIP-210's precedence
 - r29 261118 GUIDE-20✎ 내 스타일's 지침 section, one card per rule with a saved/unpublished/job state→홈's 지침 kit screen as the numbered layer stack (원칙 · 기본 지침 · 모든 글에 · 이 템플릿으로 쓸 때 · 이 분야의 글에), empty owner layers omitted, rules as rows of one card, no saved line, one 새 지침 menu (AI와 대화로 만들기 · 직접 쓰기); GUIDE-26✎ 지침 section with a 글/영상 switch→지침 a kit screen, 영상 지침 a chip of the 영상 tab, no switch; GUIDE-43✎ no surface besides the sheet and the row→also 홈's 지침 dropdown, one press per 기본 지침; GUIDE-44✎ 영상 side of 내 스타일's 지침, 기본 지침 and direct writing above the list→영상 tab chip, the same stack and 새 지침 menu; GUIDE-48✎ the page's 기본 지침 above the list→the 기본 지침 layer's 기본 지침 고르기
 - r28 261116 GUIDE-26✎ GUIDE-44✎ clip channel in the 영상 지침 link→no channel
 - r27 261116 GUIDE-47✎ closed row with 추천/scope badge→sentence only, badges when open
