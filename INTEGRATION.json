@@ -411,10 +411,11 @@
       "branch": "gusta-session-start-cx1119-7a331011",
       "head": "df41fec0c85c2cfb3418a5b87bcbc447c2ae8033",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-19T01:16:52.464Z",
+      "status": "paused",
+      "at": "2026-11-19T01:16:56.138Z",
       "agentChecks": [],
-      "verificationCommands": []
+      "verificationCommands": [],
+      "reason": "session-ended"
     }
   },
   "gate": null,
