@@ -409,10 +409,10 @@
       "host": "DESKTOP-VKPLS8P",
       "device": "DESKTOP-VKPLS8P",
       "branch": "gusta-session-start-cx1119-7a331011",
-      "head": "1bea2b585dbe19e4ed3880266286a43435ea03a7",
+      "head": "8b1f845ebdeeaa28f5d3386f55e04f54621c02c2",
       "land": "main",
-      "status": "landed",
-      "at": "2026-11-19T02:07:13.232Z",
+      "status": "working",
+      "at": "2026-11-19T02:50:17.160Z",
       "agentChecks": [
         {
           "id": "T909-unit-rows",
