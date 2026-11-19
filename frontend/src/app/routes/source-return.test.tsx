@@ -72,7 +72,7 @@ it.each([Code.NotFound, Code.PermissionDenied])(
       expect(sourceQuery?.state.data).toBeDefined()
       expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
       expect(
-        within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
+        within(screen.getByRole('main')).getByRole('link', { name: '지난 비교' }),
       ).toHaveAttribute('href', '/tests/history')
     })
     expect(procedures.filter((name) => name === 'GetPost').length).toBeGreaterThan(

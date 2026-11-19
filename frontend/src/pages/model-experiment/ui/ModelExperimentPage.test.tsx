@@ -18,26 +18,26 @@ const entries = [
   {
     path: '/tests/records/review-1',
     back: '/tests/history',
-    ko: '테스트 기록',
-    en: 'Test history',
+    ko: '지난 비교',
+    en: 'Past comparisons',
   },
   {
     path: '/ai-models/experiments/review-1?stage=write&from=compare',
     back: '/tests/history',
-    ko: '테스트 기록',
-    en: 'Test history',
+    ko: '지난 비교',
+    en: 'Past comparisons',
   },
   {
     path: '/ai-models/experiments/review-1?stage=write',
     back: '/tests/history',
-    ko: '테스트 기록',
-    en: 'Test history',
+    ko: '지난 비교',
+    en: 'Past comparisons',
   },
   {
     path: '/posts/experiments/review-1',
     back: '/tests/history',
-    ko: '테스트 기록',
-    en: 'Test history',
+    ko: '지난 비교',
+    en: 'Past comparisons',
   },
   {
     path: '/posts/experiments/review-1?from=posts&q=Draft&status=draft',
@@ -92,7 +92,7 @@ it.each(['', '?from=https://example.com', '?from=posts&stage=invalid'])(
     })
     await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
     expect(
-      within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
+      within(screen.getByRole('main')).getByRole('link', { name: '지난 비교' }),
     ).toHaveAttribute('href', '/tests/history')
     expect(screen.queryByRole('link', { name: '글 작성' })).not.toBeInTheDocument()
   },
@@ -104,16 +104,17 @@ it('opens a retained paid record from canonical history and returns to the same 
     '/ai-models/experiments?stage=write&source=draft-1',
     { user: { id: 'alice' }, experiments: { history } },
   )
-  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
-  const record = await within(
-    screen.getByRole('region', { name: '이전 유료 비교 기록' }),
-  ).findByRole('link', { name: '계속 보기' })
+  await screen.findByRole('heading', { name: '지난 비교', level: 1 })
+  const record = await within(await screen.findByRole('list', { name: '이전 기록' })).findByRole(
+    'link',
+    { name: '계속 보기' },
+  )
   expect(new URL(record.getAttribute('href')!, 'https://fixture').pathname).toBe(
     '/tests/records/review-1',
   )
   await act(() => router.navigate({ href: record.getAttribute('href')! }))
   await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
-  const back = within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' })
+  const back = within(screen.getByRole('main')).getByRole('link', { name: '지난 비교' })
   expect(back).toHaveAttribute('href', '/tests/history?stage=write&source=draft-1')
   await user.click(back)
   await waitFor(() => expect(router.state.location.pathname).toBe('/tests/history'))
@@ -166,13 +167,13 @@ it.each(['', '?from=compare', '?from=https://example.com'])(
     })
     await screen.findByRole('heading', { name: '이전 유료 비교 기록' })
     expect(
-      within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
+      within(screen.getByRole('main')).getByRole('link', { name: '지난 비교' }),
     ).toHaveAttribute('href', '/tests/history')
   },
 )
 
 it.each([
-  ['/ai-models/experiments/review-1?from=compare&stage=write', '테스트 기록', '/tests/history'],
+  ['/ai-models/experiments/review-1?from=compare&stage=write', '지난 비교', '/tests/history'],
   ['/posts/experiments/review-1?from=posts&q=Draft', '글', '/posts?q=Draft'],
 ])('retains an exit through loading and failed reads at %s', async (path, name, href) => {
   let release!: () => void

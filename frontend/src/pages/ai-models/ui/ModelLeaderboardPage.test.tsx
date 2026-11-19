@@ -26,12 +26,12 @@ it('resolves master/global rank links to read-only paid history without Elo or s
       },
     },
   )
-  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  await screen.findByRole('heading', { name: '지난 비교', level: 1 })
   expect(router.state.location.pathname).toBe('/tests/history')
   expect(router.state.location.search.stage).toBe('write')
   expect(router.state.location.search).not.toHaveProperty('scope')
   expect(router.state.location.search).not.toHaveProperty('window')
-  const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
+  const legacy = within(await screen.findByRole('list', { name: '이전 기록' }))
   expect(await legacy.findByRole('link', { name: '계속 보기' })).toHaveAttribute(
     'href',
     expect.stringContaining('/paid?entry='),
@@ -50,7 +50,7 @@ it.each(['', '?window=all-time&scope=friends', '?stage=analyze&window=day'])(
       user: { id: 'alice' },
       experiments: { reads },
     })
-    await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+    await screen.findByRole('heading', { name: '지난 비교', level: 1 })
     expect(router.state.location.pathname).toBe('/tests/history')
     expect(router.state.location.search).not.toHaveProperty('window')
     expect(router.state.location.search).not.toHaveProperty('scope')
@@ -72,7 +72,7 @@ it('retains canonical stage/source through navigation and browser Back instead o
     '/ai-models/leaderboard?stage=observe&source=source-a',
     { user: { id: 'alice' } },
   )
-  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  await screen.findByRole('heading', { name: '지난 비교', level: 1 })
   expect(router.state.location.search).toMatchObject({ stage: 'observe', source: 'source-a' })
   await act(() =>
     router.navigate({ to: '/tests/history', search: { stage: 'write', source: 'source-b' } }),
@@ -102,9 +102,9 @@ it('does not expose Alice private test history to another signed-in owner', asyn
     { user: { id: 'bob' } },
     { readableTest: true },
   )
-  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  await screen.findByRole('heading', { name: '지난 비교', level: 1 })
   await waitFor(() => expect(bob.procedures).toContain('ListWritingTests'))
-  await waitFor(() => expect(screen.getAllByText('아직 테스트 기록이 없어요.')).toHaveLength(2))
+  await waitFor(() => expect(screen.getAllByText('아직 테스트 기록이 없어요.')).toHaveLength(1))
   expect(screen.queryByRole('link', { name: '테스트 이어보기' })).toBeNull()
   expect(bob.fixture.votes).toEqual([])
   expect(paidActions(bob.procedures)).toEqual([])

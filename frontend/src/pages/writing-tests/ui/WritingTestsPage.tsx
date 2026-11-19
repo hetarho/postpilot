@@ -9,7 +9,7 @@ import {
   type WritingTestContext,
 } from '@/entities/writing-test'
 import { POST_TARGET_LENGTH_DEFAULT, POST_TAG_COUNT_DEFAULT } from '@/entities/post'
-import { WritingTestStudio, WritingTestHistory } from '@/widgets/writing-test'
+import { NewComparisonMenu, WritingTestStudio, WritingTestHistory } from '@/widgets/writing-test'
 import { WRITING_TEST_NEW_GUIDELINE_SLOT } from '@/features/writing-test'
 import { activeLocale } from '@/shared/lib'
 import { Button, LoadingState, Typography, PageFrame, TitleRow } from '@/shared/ui'
@@ -159,25 +159,23 @@ export function WritingTestHistoryPage() {
     { t } = useWritingTestTranslation(),
     raw = useSearch({ strict: false })
   const search = writingTestHistorySearchSchema(raw as Record<string, unknown>)
+  // A comparison started here returns to this same filtered history (THEME-58).
+  const entrySearch = new URLSearchParams()
+  if (search.stage) entrySearch.set('stage', search.stage)
+  if (search.source) entrySearch.set('source', search.source)
+  if (search.voiceId) entrySearch.set('voiceId', search.voiceId)
+  const entry = entrySearch.size ? `/tests/history?${entrySearch}` : '/tests/history'
   return (
     <PageFrame width="wide" className="flex flex-1 flex-col">
-      <TitleRow variant="display">
-        <Typography variant="display">{t('history')}</Typography>
+      <TitleRow>
+        <Typography variant="largeTitle" as="h1">
+          {t('history')}
+        </Typography>
       </TitleRow>
-      <Typography variant="body" className="max-w-measure mt-3">
-        {t('historyHelp')}
-      </Typography>
-      <Button
-        variant="ghost"
-        className="mt-4 self-start"
-        onClick={() =>
-          window.location.assign(`/tests?draft=${encodeURIComponent(crypto.randomUUID())}`)
-        }
-      >
-        {t('newTest')}
-      </Button>
+      <div className="mt-4 mb-8">
+        <NewComparisonMenu entry={entry} />
+      </div>
       <WritingTestHistory
-        showHeading={false}
         ownerId={user?.id ?? ''}
         voiceId={search.voiceId}
         stage={search.stage}

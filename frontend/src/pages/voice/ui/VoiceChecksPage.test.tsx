@@ -31,7 +31,7 @@ function renderHistory(at: string, options: FakeAuthOptions = {}) {
 }
 it('aliases old check addresses into named common history without admitting or retrying checks', async () => {
   const view = renderHistory('/voices/voice-default/checks')
-  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  await screen.findByRole('heading', { name: '지난 비교', level: 1 })
   expect(view.router.state.location.pathname).toBe('/tests/history')
   expect(view.router.state.location.search).toMatchObject({
     stage: 'voice',
@@ -62,12 +62,17 @@ it('retains paid answers, generated writing, withdrawal and previous-analysis ma
       ],
     },
   })
+  // Each check is one row; having no address of its own, it opens its record in a sheet.
+  const rows = await screen.findAllByRole('button', { name: '계속 보기' })
+  expect(rows).toHaveLength(2)
+  expect(screen.getByText('이전 분석으로 만든 결과')).toBeVisible()
+  await userEvent.click(rows[0]!)
   expect(await screen.findByText('예전에 결제한 완성 글')).toBeVisible()
   expect(screen.getByText('이전의 내 답')).toBeVisible()
-  expect(screen.getByText('이전 분석으로 만든 결과')).toBeVisible()
-  expect(screen.getByText('이 답은 학습 데이터에서 삭제했어요.')).toBeVisible()
+  await userEvent.keyboard('{Escape}')
+  await userEvent.click(rows[1]!)
+  expect(await screen.findByText('이 답은 학습 데이터에서 삭제했어요.')).toBeVisible()
   expect(screen.getByText('답 삭제 후 남은 결제 결과')).toBeVisible()
-  await userEvent.click(screen.getAllByRole('button', { name: '현재 결과 확인' })[0]!)
   expect(
     view.calls.filter((name) => /^(Start|RetryVoiceCheck|Analyze|Update|Create)/.test(name)),
   ).toEqual([])
@@ -94,5 +99,5 @@ it('uses two local panels and explicit common writing test/history entries for a
       search: { stage: 'voice', voiceId: 'voice-default' },
     }),
   )
-  await screen.findByRole('heading', { name: '테스트 기록', level: 1 })
+  await screen.findByRole('heading', { name: '지난 비교', level: 1 })
 })

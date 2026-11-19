@@ -354,7 +354,7 @@ it('mounts common and one selected voice history as read-only and offers an expl
   const fixture = createWritingTestStudioFixture({ readableTest: true })
   mount('/tests/history?voiceId=voice-history', fixture)
   await waitFor(() => expect(fixture.calls).toContain('ListWritingTests'))
-  expect(screen.getByRole('button', { name: '새 테스트' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: '새 비교' })).toBeEnabled()
   await waitFor(() =>
     expect(fixture.calls.filter((name) => name === 'ListVoiceChecks')).toHaveLength(1),
   )
@@ -375,3 +375,26 @@ it('applies stage and source history URL filters to the actual displayed records
   expect(fixture.admissions).toHaveLength(0)
   expect(fixture.publications).toHaveLength(0)
 })
+it.each([
+  ['글 쓰는 AI', '/tests', { factor: 'model', stage: 'write', count: 2 }],
+  ['사진 보는 AI', '/tests/photos', { count: 2 }],
+])(
+  "opens 새 비교's %s item through the router, returning to the history it came from (MODEL-44)",
+  async (item, pathname, search) => {
+    const fixture = createWritingTestStudioFixture({ comparisonPairs: [savedPair(Stage.WRITE)] })
+    const user = userEvent.setup()
+    const router = mountApp('/tests/history?stage=write', fixture)
+    expect(await screen.findByRole('heading', { level: 1, name: '지난 비교' })).toBeVisible()
+    // No refresh button: the list reads itself again when the owner returns. The router moves
+    // in place, so the mounted app (and its memory history) is the one that navigated.
+    expect(screen.queryByRole('button', { name: '현재 결과 확인' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: '새 비교' }))
+    await user.click(screen.getByRole('menuitem', { name: new RegExp(`^${item}`) }))
+    await waitFor(() => expect(router.state.location.pathname).toBe(pathname))
+    expect(router.state.location.search).toMatchObject({
+      ...search,
+      entry: '/tests/history?stage=write',
+    })
+    expect(fixture.admissions).toHaveLength(0)
+  },
+)

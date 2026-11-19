@@ -175,7 +175,7 @@ it.each([
   view.unmount()
   const reopened = renderAppAt(href, { transport: view.transport })
   await screen.findByRole('button', { name: '후보 A를 승자로 선택' })
-  const back = within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' })
+  const back = within(screen.getByRole('main')).getByRole('link', { name: '지난 비교' })
   expect(back).toHaveAttribute('href', history)
   await userEvent.click(back)
   await waitFor(() => expect(reopened.router.state.location.href).toBe(history))
@@ -259,7 +259,7 @@ it.each(['/ai-models/experiments/retained', '/posts/experiments/retained'])(
     // steps aside and the record's own top row carries the way back.
     expect(screen.queryByRole('navigation', { name: '주요' })).toBeNull()
     expect(
-      within(screen.getByRole('main')).getByRole('link', { name: '테스트 기록' }),
+      within(screen.getByRole('main')).getByRole('link', { name: '지난 비교' }),
     ).toHaveAttribute('href', '/tests/history')
     expect(paidActions(calls)).toEqual([])
   },

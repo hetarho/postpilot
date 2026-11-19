@@ -4,6 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { afterEach, expect, it } from 'vitest'
+import { focusManager } from '@tanstack/react-query'
 import {
   ModelExperimentService,
   WritingTestService as Service,
@@ -161,7 +162,13 @@ it('shows durable champion and expired metadata beside paid legacy records witho
     'href',
     '/tests/records/old-three-way?entry=%2Ftests%2Fhistory',
   )
-  expect(screen.getAllByText('대결 1 / 1 완료')).toHaveLength(1)
+  // A finished comparison reads under 끝난 비교 with its winner; match progress is for a pick still due.
+  const ended = screen.getByRole('list', { name: '끝난 비교' })
+  expect(within(ended).getByText('우승')).toBeVisible()
+  expect(screen.queryByText(/대결 \d+ \/ \d+ 완료/)).not.toBeInTheDocument()
+  expect(
+    within(screen.getByRole('list', { name: '이전 기록' })).getByText('Old paid template'),
+  ).toBeVisible()
   expect(
     screen.queryByRole('button', { name: /승자|활성 모델|저장|다시 만들기/ }),
   ).not.toBeInTheDocument()
@@ -186,18 +193,19 @@ it('lists photo tests with a 사진 관찰 label beside writing tests and opens 
     wrapper: withProviders(transport, createTestQueryClient()),
   })
   await screen.findByText('Writing left')
-  const records = screen.getAllByRole('listitem')
+  const records = within(screen.getByRole('list', { name: '끝난 비교' })).getAllByRole('listitem')
   expect(records).toHaveLength(3)
   const [photos, expired, post] = records as [HTMLElement, HTMLElement, HTMLElement]
-  expect(within(photos).getByRole('heading', { name: /^사진 관찰 · A\/B 테스트$/ })).toBeVisible()
-  expect(within(photos).getByText('마음에 드는 사진 보는 AI를 찾았어요')).toBeVisible()
-  expect(within(photos).getByText('2 / 2개 관찰 완료')).toBeVisible()
+  expect(within(photos).getByText('사진 보는 AI · 2개')).toBeVisible()
+  expect(within(photos).getByText('우승')).toBeVisible()
   expect(within(photos).getByText('Candidate 1')).toBeVisible()
   // Observations count as retained payload: only the purged record carries the expired notice.
   expect(within(photos).queryByText(/보관 기간이 지났어요/)).not.toBeInTheDocument()
-  expect(within(expired).getByRole('heading', { name: /^사진 관찰/ })).toBeVisible()
+  expect(within(expired).getByText('사진 보는 AI · 2개')).toBeVisible()
   expect(within(expired).getByText(/사진과 관찰 결과의 보관 기간이 지났어요/)).toBeVisible()
-  expect(within(post).getByRole('heading', { name: /^AI 모델 · A\/B 테스트$/ })).toBeVisible()
+  expect(within(post).getByText('글 쓰는 AI · 2개')).toBeVisible()
+  // Each record is one target: the whole row is its link.
+  expect(within(post).getAllByRole('link')).toHaveLength(1)
   expect(
     screen
       .getAllByRole('link', { name: '테스트 이어보기' })
@@ -230,11 +238,18 @@ it('loads historical voice checks only for one explicit voice and keeps the resu
   render(<WritingTestHistory ownerId="alice" voiceId="one-voice" />, {
     wrapper: withProviders(transport, createTestQueryClient()),
   })
+  // A voice check has no address of its own: its row is one button opening the read-only record.
+  const row = await screen.findByRole('button', { name: '계속 보기' })
+  expect(
+    within(screen.getByRole('list', { name: '이전 기록' })).getAllByRole('listitem'),
+  ).toHaveLength(1)
+  expect(screen.queryByText('Paid historical writing')).not.toBeInTheDocument()
+  await userEvent.click(row)
   expect(await screen.findByText('Paid historical writing')).toBeVisible()
   expect(voiceIds).toEqual(['one-voice'])
   expect(screen.queryByRole('button', { name: /검증|재분석|다시 만들기/ })).not.toBeInTheDocument()
 })
-it('distinguishes read failures from empty history and refreshes while preserving the action label', async () => {
+it('distinguishes read failures from empty history and refreshes when the owner returns, with no refresh button', async () => {
   let fail = true
   const transport = createRouterTransport(({ rpc }) => {
     registerEmptyLegacy(rpc)
@@ -249,9 +264,63 @@ it('distinguishes read failures from empty history and refreshes while preservin
     wrapper: withProviders(transport, createTestQueryClient()),
   })
   expect(await screen.findByRole('alert')).toHaveTextContent('요청을 완료하지 못했어요')
+  expect(screen.queryByRole('button', { name: '현재 결과 확인' })).not.toBeInTheDocument()
   fail = false
-  await userEvent.click(screen.getAllByRole('button', { name: '현재 결과 확인' })[0])
+  act(() => {
+    focusManager.setFocused(false)
+    focusManager.setFocused(true)
+  })
+  focusManager.setFocused(undefined)
   expect(await screen.findByText('Recovered left')).toBeVisible()
+})
+it('groups queued, running, partial and awaiting-pick tests under 진행 중 and the rest under 끝난 비교', async () => {
+  const status = (id: string, value: WritingTestStatus) => {
+    const record = test(id, 1, id, '2026-10-07T00:00:00Z')
+    if (value === WritingTestStatus.COMPLETED) return record
+    return {
+      ...record,
+      status: value,
+      revealed: false,
+      winnerCandidateId: '',
+      // Blind until the champion is confirmed (MODEL-32).
+      candidates: record.candidates.map((candidate) => ({ ...candidate, identity: undefined })),
+      matches: record.matches.map((match) => ({ ...match, winnerCandidateId: '' })),
+    }
+  }
+  const transport = createRouterTransport(({ rpc }) => {
+    registerEmptyLegacy(rpc)
+    rpc(Service.method.listWritingTests, () =>
+      create(Service.method.listWritingTests.output, {
+        tests: [
+          status('queued', WritingTestStatus.QUEUED),
+          status('running', WritingTestStatus.RUNNING),
+          status('partial', WritingTestStatus.PARTIAL),
+          status('review', WritingTestStatus.REVIEW),
+          status('completed', WritingTestStatus.COMPLETED),
+          status('cancelled', WritingTestStatus.CANCELLED),
+          status('failed', WritingTestStatus.FAILED),
+        ],
+      }),
+    )
+  })
+  render(<WritingTestHistory ownerId="alice" />, {
+    wrapper: withProviders(transport, createTestQueryClient()),
+  })
+  const active = await screen.findByRole('list', { name: '진행 중' })
+  const ended = screen.getByRole('list', { name: '끝난 비교' })
+  const ids = (list: HTMLElement) =>
+    within(list)
+      .getAllByRole('link')
+      .map((link) => new URL(link.getAttribute('href')!, 'https://fixture').pathname)
+  expect(ids(active).toSorted()).toEqual(
+    ['/tests/partial', '/tests/queued', '/tests/review', '/tests/running'].toSorted(),
+  )
+  expect(ids(ended).toSorted()).toEqual(
+    ['/tests/cancelled', '/tests/completed', '/tests/failed'].toSorted(),
+  )
+  expect(within(active).getByText('고를 차례')).toBeVisible()
+  expect(within(active).getByText('대결 0 / 1 완료')).toBeVisible()
+  expect(screen.queryByRole('list', { name: '이전 기록' })).not.toBeInTheDocument()
 })
 it('clears prior-owner pages immediately and fences late reads on an account change', async () => {
   let activeOwner = 'alice'

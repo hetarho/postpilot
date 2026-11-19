@@ -30,8 +30,8 @@ async function openRecommendations(user: ReturnType<typeof userEvent.setup>) {
 const destinations = [
   ['/ai-models', '/ai-models', 'AI 토너먼트', 'AI Arena'],
   ['/ai-models/compare', '/tests', '글쓰기 테스트', 'Writing tests'],
-  ['/ai-models/experiments', '/tests/history', '테스트 기록', 'Test history'],
-  ['/ai-models/leaderboard', '/tests/history', '테스트 기록', 'Test history'],
+  ['/ai-models/experiments', '/tests/history', '지난 비교', 'Past comparisons'],
+  ['/ai-models/leaderboard', '/tests/history', '지난 비교', 'Past comparisons'],
 ] as const
 
 it.each(['ko', 'en'] as const)(
@@ -366,20 +366,20 @@ it('preserves stage/source in canonical history, browser Back and retained paid 
       },
     },
   )
-  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  await screen.findByRole('heading', { level: 1, name: '지난 비교' })
   expect(router.state.location.pathname).toBe('/tests/history')
   expect(router.state.location.search).toMatchObject({ stage: 'write', source: 'first-post' })
-  const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
+  const legacy = within(await screen.findByRole('list', { name: '이전 기록' }))
   const href = (await legacy.findByRole('link', { name: '계속 보기' })).getAttribute('href')!
   const url = new URL(href, 'http://localhost')
   expect(url.pathname).toBe('/tests/records/writing-1')
   expect(url.searchParams.get('entry')).toBe('/tests/history?stage=write&source=first-post')
   await act(() => router.navigate({ href }))
   expect(
-    await within(screen.getByRole('main')).findByRole('link', { name: '테스트 기록' }),
+    await within(screen.getByRole('main')).findByRole('link', { name: '지난 비교' }),
   ).toHaveAttribute('href', '/tests/history?stage=write&source=first-post')
   await act(() => router.history.back())
-  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  await screen.findByRole('heading', { level: 1, name: '지난 비교' })
   expect(router.state.location.search).toMatchObject({ stage: 'write', source: 'first-post' })
   expect(reads).toContainEqual(
     expect.objectContaining({ kind: 'history', stage: Stage.WRITE, source: ExperimentSource.POST }),
@@ -400,7 +400,7 @@ it.each([
       user: { id: 'alice' },
       experiments: { reads },
     })
-    await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+    await screen.findByRole('heading', { level: 1, name: '지난 비교' })
     expect(router.state.location.pathname).toBe('/tests/history')
     expect(router.state.location.search.stage).toBeUndefined()
     await waitFor(() =>
@@ -444,7 +444,7 @@ it.each(['/ai-models/experiments', '/ai-models/leaderboard'])(
       .getAllByRole('alert')
       .forEach((node) => expect(node).toHaveTextContent('요청을 완료하지 못했어요'))
     expect(screen.queryByText('아직 테스트 기록이 없어요.')).toBeNull()
-    expect(screen.getAllByRole('button', { name: '현재 결과 확인' })).toHaveLength(2)
+    expect(screen.queryByRole('button', { name: '현재 결과 확인' })).toBeNull()
     expect(paidActions(procedures)).toEqual([])
   },
 )
@@ -482,8 +482,8 @@ it('filters legacy voice and post sources in canonical history, keeping owner re
       },
     },
   )
-  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
-  const legacy = within(screen.getByRole('region', { name: '이전 유료 비교 기록' }))
+  await screen.findByRole('heading', { level: 1, name: '지난 비교' })
+  const legacy = within(await screen.findByRole('list', { name: '이전 기록' }))
   await waitFor(() => expect(legacy.getAllByRole('link', { name: '계속 보기' })).toHaveLength(1))
   expect(legacy.getByRole('link', { name: '계속 보기' })).toHaveAttribute(
     'href',
@@ -501,7 +501,7 @@ it('filters legacy voice and post sources in canonical history, keeping owner re
   )
   await waitFor(() =>
     expect(
-      within(screen.getByRole('region', { name: '이전 유료 비교 기록' })).getByRole('link', {
+      within(screen.getByRole('list', { name: '이전 기록' })).getByRole('link', {
         name: '계속 보기',
       }),
     ).toHaveAttribute('href', expect.stringContaining('/writing-1?entry=')),
@@ -518,7 +518,7 @@ it('filters legacy voice and post sources in canonical history, keeping owner re
   )
   await waitFor(() =>
     expect(
-      within(screen.getByRole('region', { name: '이전 유료 비교 기록' })).getByRole('link', {
+      within(screen.getByRole('list', { name: '이전 기록' })).getByRole('link', {
         name: '계속 보기',
       }),
     ).toHaveAttribute('href', expect.stringContaining('/reflection-1?entry=')),
@@ -532,7 +532,7 @@ it('keeps a voice-context leaderboard alias in voice-filtered paid history rathe
     user: { id: 'alice' },
     experiments: { reads },
   })
-  await screen.findByRole('heading', { level: 1, name: '테스트 기록' })
+  await screen.findByRole('heading', { level: 1, name: '지난 비교' })
   expect(router.state.location.search.stage).toBe('voice')
   await waitFor(() =>
     expect(reads).toContainEqual(
