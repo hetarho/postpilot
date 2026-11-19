@@ -493,7 +493,7 @@
       "host": "DESKTOP-VKPLS8P",
       "pid": 1668063
     },
-    "phase": "waiting-agent",
+    "phase": "verified",
     "land": "main",
     "base": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
     "cohort": [
@@ -918,15 +918,21 @@
           "Check preserved input at a 480 px keyboard viewport, a long account ID, a password-less account and 200% CSS zoom."
         ],
         "expected": "No horizontal overflow or unnamed controls; coherent phone and desktop composition; confirmation traps focus and closes independently; deep-link charge opens once; inputs survive viewport changes and cancel restores rows; no password control for a password-less account.",
-        "observed": "Pending observation of the exact final fixed candidate.",
-        "evidence": [],
-        "status": "not-run",
-        "reason": "The coordinator will observe this candidate after deterministic integration checks finish.",
+        "observed": "Chromium 153.0.8010.12 on Linux, Node 24.18.0: 60 responsive layouts and four interaction combinations passed using local RPC fixtures. Screenshots and ARIA snapshots reviewed; changed controls meet 44px phone/40px desktop floors; nested confirmation focus/Escape, one-time deep link, input preservation, edit/cancel, no-password state, long ID and 200% CSS zoom all pass. New comparison entry and return to settings also passed.",
+        "evidence": [
+          "/tmp/cx1119-ui-review/evidence-final/receipt.json",
+          "/tmp/cx1119-ui-review/evidence-final/purchase-confirm-320-dark.png",
+          "/tmp/cx1119-ui-review/evidence-final/account-email-keyboard-320-light.png",
+          "/tmp/cx1119-ui-review/evidence-final/account-320-dark.aria.txt",
+          "/tmp/cx1119-ui-review/review.mjs"
+        ],
+        "status": "pass",
+        "reason": "",
         "replaces": [],
         "stage": "integration",
         "required": true,
         "owner": "host",
-        "candidate": null,
+        "candidate": "3e23724740d3b7c2511a29daeed291502ceb7d9a",
         "duplicationReason": "Unit fixtures cover RPC and state semantics; this review checks actual CSS composition, viewport reach and browser focus stacking required by THEME-34."
       }
     ],
