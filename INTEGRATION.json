@@ -496,7 +496,7 @@
       "branch": "gusta-session-start-advg1119-4e8e8dca",
       "head": "dfc137d55b45efdb33d53f04cd23b87e2b4ea383",
       "land": "main",
-      "status": "ready",
+      "status": "landed",
       "at": "2026-11-19T14:46:09.079Z",
       "agentChecks": [
         {
@@ -582,999 +582,1000 @@
         }
       ],
       "verificationCommands": [],
-      "landed": "cbec22fca10a386918a35a274a1610baf8a0a68d"
+      "landed": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a"
     }
   },
-  "gate": {
-    "token": "9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-    "owner": "advg1119",
-    "via": "merge",
-    "executor": {
-      "host": "ihaelam-ui-MacBookPro.local",
-      "pid": 56166
-    },
-    "phase": "verified",
-    "land": "main",
-    "base": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-    "cohort": [
-      {
-        "id": "90a25a49854205d5eaba8491",
-        "tag": "advg1119",
-        "host": "ihaelam-ui-MacBookPro",
-        "device": "ihaelam-ui-MacBookPro",
-        "branch": "gusta-session-start-advg1119-4e8e8dca",
-        "head": "dfc137d55b45efdb33d53f04cd23b87e2b4ea383",
-        "agentChecks": [
-          {
-            "id": "T913-AC6",
-            "scenario": "A sponsored post's 요청 shows one guide text box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no hashtag field; a guide pasted with '#a #b' shows those two hashtags in ⑤'s checklist against the post's tags",
-            "steps": [
-              "Open a sponsored post on the fixed candidate and go to ①'s 요청 screen",
-              "Confirm there is no 필수 해시태그 input and no # chip",
-              "Paste a guide containing '#a #b', finish the post, open ⑤ 완성",
-              "Read the checklist's 글에 꼭 담을 내용 rows"
-            ],
-            "expected": "No hashtag field or chip on 요청; ⑤ lists 가이드 해시태그 #a and #b, each marked against the tags",
-            "observed": "not run: this unit had no browser",
-            "evidence": [
-              "spec/tasks/done/T913.post-guide-one-box-hashtags.md result limits"
-            ],
-            "status": "not-run",
-            "reason": "integration-stage browser check handed to the host; the unit has no browser",
-            "replaces": [],
-            "stage": "integration",
-            "required": true,
-            "owner": "host with a browser",
-            "candidate": null,
-            "duplicationReason": ""
-          },
-          {
-            "id": "T914-unit-prompts",
-            "scenario": "The write prompt's guide section uses the write framing and has no 필수 해시태그 line. The storyline prompt uses the storyline framing. The facts and impressions_kept 원칙 texts count the guide as supplied material. The precedence lines no longer name 광고주 가이드. The origin clause and material role no longer say not-owner-experience. Clip prompts are untouched.",
-            "steps": [
-              "run vibe check --tier task --diff-base 7e74e780e70e --task T914 -- bash gate.sh (gofmt, go vet, go test -count=1 ./internal/generation/... ./internal/guideline/... ./internal/clip/..., gusta lint)"
-            ],
-            "expected": "all affected unit tests pass and lint reports no errors",
-            "observed": "exit 0 in 26990 ms with no failed tests; spec lint has no errors (57 warnings and 41 review hints already in other SSOT files)",
-            "evidence": [
-              "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-f447f8b3-29aa-4a30-9c19-d10366070398.log"
-            ],
-            "status": "pass",
-            "reason": "",
-            "replaces": [],
-            "stage": "unit",
-            "required": true,
-            "owner": "implementer",
-            "candidate": null,
-            "duplicationReason": ""
-          },
-          {
-            "id": "T914-integration-real-generation",
-            "scenario": "A real generation of a 체험단 post writes in the guide's requests as supplied facts and carries every guide hashtag into the tags",
-            "steps": [
-              "generate a post with a paid model from a guide holding store info, an emphasis request and #hashtags"
-            ],
-            "expected": "the requests are woven into the post, every hashtag is in the tags, and the owner's own impressions are kept",
-            "observed": "not run: it needs a paid AI call",
-            "evidence": [],
-            "status": "not-run",
-            "reason": "a paid provider call needs the owner's explicit go",
-            "replaces": [],
-            "stage": "integration",
-            "required": false,
-            "owner": "owner (explicit go)",
-            "candidate": null,
-            "duplicationReason": ""
-          },
-          {
-            "id": "T914-real-generation",
-            "scenario": "광고주 가이드 요청을 실제 글과 스토리라인 생성에 반영하는지 확인",
-            "steps": [
-              "소유자의 명시적 승인 후 광고주 가이드가 포함된 실제 생성을 실행하고 결과를 검토합니다."
-            ],
-            "expected": "매장 정보와 요청이 반영되고 가이드의 해시태그가 태그에 포함되며, 소유자의 상충하는 감상은 유지됩니다.",
-            "observed": "실제 생성은 실행하지 않았습니다.",
-            "evidence": [
-              "spec/tasks/done/T914.guide-requests-as-supplied-facts.md"
-            ],
-            "status": "not-run",
-            "reason": "유료 AI 호출에는 소유자의 명시적 승인이 필요합니다.",
-            "replaces": [],
-            "stage": "integration",
-            "required": true,
-            "owner": "host; owner's explicit go",
-            "candidate": null,
-            "duplicationReason": ""
-          }
-        ],
-        "verificationCommands": [],
-        "publication": "merge"
-      }
-    ],
-    "deferred": [
-      {
-        "id": "cc4c22ea189dc973ea6dab6a",
-        "tag": "cx1119",
-        "host": "DESKTOP-VKPLS8P",
-        "branch": "gusta-session-start-cx1119-7a331011",
-        "status": "paused",
-        "at": "2026-11-19T02:50:21.065Z",
-        "reason": "session-ended"
-      }
-    ],
-    "at": "2026-11-19T14:46:14.452Z",
-    "deadline": "2026-11-19T15:46:01.744Z",
-    "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-    "checks": [
-      {
-        "command": "pnpm test:dev",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 6925,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-4f12defc-c42d-494a-9f4c-28f9bb91fd37.log",
-        "tail": [
-          "ℹ tests 26",
-          "ℹ suites 0",
-          "ℹ pass 26",
-          "ℹ fail 0",
-          "ℹ cancelled 0",
-          "ℹ skipped 0",
-          "ℹ todo 0",
-          "ℹ duration_ms 6160.747833"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 6417,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a5f697ca-42f6-44fa-88ea-2631f1f77768.log",
-        "tail": [
-          "",
-          "> postpilot@0.7.3 gen:proto /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-          "> node scripts/gen.mjs proto",
-          "",
-          "",
-          "▶ codegen",
-          "  · buf generate (proto → Go·TS)",
-          "  ✓ buf 완료"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm gen:sql && git diff --exit-code -- backend",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 52749,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-bc78e4a9-79bd-4136-8d62-460fc597e919.log",
-        "tail": [
-          "",
-          "> postpilot@0.7.3 gen:sql /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-          "> node scripts/gen.mjs sql",
-          "",
-          "",
-          "▶ codegen",
-          "  · sqlc generate (SQL → Go)",
-          "  ✓ sqlc 완료"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm lint",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 49742,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-09e547b7-34c6-4785-b078-dd6ec5787d1a.log",
-        "tail": [
-          "> pnpm --filter ./frontend format:check",
-          "",
-          "",
-          "> frontend@0.0.0 format:check /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
-          "> prettier --check .",
-          "",
-          "Checking formatting...",
-          "All matched files use Prettier code style!"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm lint:fsd",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 16097,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-dc606b28-1e36-4335-82f4-259a6341d7a8.log",
-        "tail": [
-          "> postpilot@0.7.3 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-          "> pnpm --filter ./frontend lint:fsd",
-          "",
-          "",
-          "> frontend@0.0.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
-          "> steiger ./src",
-          "",
-          "✔ No problems found!"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm lint:retirement",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 1421,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a3eb9b47-e6ff-4c97-b6ab-daec3a93977c.log",
-        "tail": [
-          "ℹ suites 0",
-          "ℹ pass 2",
-          "ℹ fail 0",
-          "ℹ cancelled 0",
-          "ℹ skipped 0",
-          "ℹ todo 0",
-          "ℹ duration_ms 201.045083",
-          "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm lint:style:probe && pnpm lint:style",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 3076,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-74c73bcc-4a3f-444a-9fcb-b6902b89387b.log",
-        "tail": [
-          "> node scripts/lint-style-escapes.mjs --probe",
-          "",
-          "lint:style:probe — ok (84 scanner cases)",
-          "",
-          "> postpilot@0.7.3 lint:style /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-          "> node scripts/lint-style-escapes.mjs",
-          "",
-          "lint:style — ok (no colour, type or native control escapes)"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 2725,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-d29e51d6-4c9c-4bde-9482-706e61fdcc8f.log",
-        "tail": [
-          "스킬 동기화 상태 정상: 21개 (claude, codex)"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm --filter ./frontend test",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 342879,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-9ab16a2e-0d07-4bcf-8f5b-004f1019f428.log",
-        "tail": [
-          "(node:72311) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.",
-          "(Use `node --trace-warnings ...` to show where the warning was created)",
-          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
-          "",
-          " Test Files  649 passed (649)",
-          "      Tests  5231 passed (5231)",
-          "   Start at  23:49:03",
-          "   Duration  337.39s (transform 97.00s, setup 602.35s, import 849.73s, tests 842.33s, environment 577.70s)"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "pnpm build:web",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 51871,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-c2b4b67b-7a05-42f4-b7ec-10cd1dc706a3.log",
-        "tail": [
-          "[plugin builtin:vite-reporter] ",
-          "(!) Some chunks are larger than 500 kB after minification. Consider:",
-          "- Using dynamic import() to code-split the application",
-          "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
-          "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
-          "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
-          "",
-          "✓ built in 2.29s"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      },
-      {
-        "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
-        "schemaVersion": 1,
-        "ok": true,
-        "exitCode": 0,
-        "cached": false,
-        "timedOut": false,
-        "cancelled": false,
-        "stale": false,
-        "ms": 179817,
-        "scope": {
-          "TIER": "batch",
-          "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-          "TASK": "",
-          "TASKS": ""
-        },
-        "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-2944bf3e-a33a-4186-a1f0-cfbd1b98f213.log",
-        "tail": [
-          "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t3.922s",
-          "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
-          "ok  \tgithub.com/postpilot/backend/internal/voice/store\t3.825s",
-          "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
-          "ok  \tgithub.com/postpilot/backend/internal/voucher\t2.032s",
-          "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t3.597s",
-          "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t2.063s",
-          "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
-        ],
-        "failedTests": [],
-        "cleanup": {
-          "scope": "process-group",
-          "signalled": false,
-          "escalated": false
-        }
-      }
-    ],
-    "agentChecks": [
-      {
-        "id": "T913-AC6",
-        "scenario": "A sponsored post's 요청 shows one guide text box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no hashtag field; a guide pasted with '#a #b' shows those two hashtags in ⑤'s checklist against the post's tags",
-        "steps": [
-          "Open a sponsored post on the fixed candidate and go to ①'s 요청 screen",
-          "Confirm there is no 필수 해시태그 input and no # chip",
-          "Paste a guide containing '#a #b', finish the post, open ⑤ 완성",
-          "Read the checklist's 글에 꼭 담을 내용 rows"
-        ],
-        "expected": "No hashtag field or chip on 요청; ⑤ lists 가이드 해시태그 #a and #b, each marked against the tags",
-        "observed": "Candidate d6e5bd26f frontend (vite on the candidate worktree, local dev API, design-shots): 요청 shows the 광고주 가이드 box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no 필수 해시태그 input; pasting a guide with #고공 #고공중곡점 offered only 최소 1000자, 사진 최소 15장 and two 키워드 chips, no # chip; SavePostDraft carried advertiserGuide.text only. ⑤ of a finalized sponsored post (GetPost stubbed: guide text \"대표 메뉴를 소개해 주세요\\n#a #b\", tags a,c) lists 가이드 해시태그 #a · 태그에 있어요 and 가이드 해시태그 #b · 태그에 없어요. The guide help line now reads 광고주 요청은 내가 알려 준 사실처럼 글에 담기고, 안내 속 #해시태그는 태그에 들어가요.",
-        "evidence": [
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/13-request-filled.png",
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/14-checklist.png",
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/step2b.mjs",
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/step3b.mjs"
-        ],
-        "status": "pass",
-        "reason": "",
-        "replaces": [],
-        "stage": "integration",
-        "required": true,
-        "owner": "host with a browser",
-        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "duplicationReason": ""
-      },
-      {
-        "id": "T914-integration-real-generation",
-        "scenario": "A real generation of a 체험단 post writes in the guide's requests as supplied facts and carries every guide hashtag into the tags",
-        "steps": [
-          "generate a post with a paid model from a guide holding store info, an emphasis request and #hashtags"
-        ],
-        "expected": "the requests are woven into the post, every hashtag is in the tags, and the owner's own impressions are kept",
-        "observed": "Observed on cbec22fca (landed); this candidate d6e5bd26f has the identical backend tree (git rev-parse cbec22fca:backend = d6e5bd26f:backend = 097df6db3dc0; proto unchanged), so the generation path is the same code. Candidate backend (cbec22fca, go build of the integration worktree on :7679 over a copy of the local dev DB; migration 0171 applied) with the prod post 20261119-untitled guide text pasted as-is (16 #hashtags, no counted items) and its owner answers as the memo; gemini-3.8-flash storyline then write from the storyline. Storyline plans 개별 캐비넷·매장 내 화장실, 옥수수 연료, 숙성고기 풍미 and the first impression. The post writes the first impression, 옥수수 연료로 구워낸 숙성고기 특유의 은은한 단맛과 풍미, 개별 캐비넷과 매장 내 화장실, 가족 외식이나 연인과 데이트하기에도 알맞아; tags hold all 16 guide hashtags plus 체험단 (17, past tag count 10); the owner’s impressions (촉촉한 목살, 주차 자리 적음, 재방문) are kept.",
-        "evidence": [
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/post.json",
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/run.mjs",
-          "backend tree 097df6db3dc04ff71ceb4f2ea53c56705894e426 at both cbec22fca and d6e5bd26f"
-        ],
-        "status": "pass",
-        "reason": "",
-        "replaces": [],
-        "stage": "integration",
-        "required": false,
-        "owner": "owner (explicit go)",
-        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "duplicationReason": ""
-      },
-      {
-        "id": "T914-real-generation",
-        "scenario": "광고주 가이드 요청을 실제 글과 스토리라인 생성에 반영하는지 확인",
-        "steps": [
-          "소유자의 명시적 승인 후 광고주 가이드가 포함된 실제 생성을 실행하고 결과를 검토합니다."
-        ],
-        "expected": "매장 정보와 요청이 반영되고 가이드의 해시태그가 태그에 포함되며, 소유자의 상충하는 감상은 유지됩니다.",
-        "observed": "Observed on cbec22fca (landed); this candidate d6e5bd26f has the identical backend tree (git rev-parse cbec22fca:backend = d6e5bd26f:backend = 097df6db3dc0; proto unchanged), so the generation path is the same code. Candidate backend (cbec22fca, go build of the integration worktree on :7679 over a copy of the local dev DB; migration 0171 applied) with the prod post 20261119-untitled guide text pasted as-is (16 #hashtags, no counted items) and its owner answers as the memo; gemini-3.8-flash storyline then write from the storyline. Storyline plans 개별 캐비넷·매장 내 화장실, 옥수수 연료, 숙성고기 풍미 and the first impression. The post writes the first impression, 옥수수 연료로 구워낸 숙성고기 특유의 은은한 단맛과 풍미, 개별 캐비넷과 매장 내 화장실, 가족 외식이나 연인과 데이트하기에도 알맞아; tags hold all 16 guide hashtags plus 체험단 (17, past tag count 10); the owner’s impressions (촉촉한 목살, 주차 자리 적음, 재방문) are kept.",
-        "evidence": [
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/post.json",
-          "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/run.mjs",
-          "backend tree 097df6db3dc04ff71ceb4f2ea53c56705894e426 at both cbec22fca and d6e5bd26f"
-        ],
-        "status": "pass",
-        "reason": "",
-        "replaces": [],
-        "stage": "integration",
-        "required": true,
-        "owner": "host; owner's explicit go",
-        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "duplicationReason": ""
-      }
-    ],
-    "rounds": [
-      {
-        "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-        "checks": [
-          {
-            "command": "pnpm test:dev",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 6925,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-4f12defc-c42d-494a-9f4c-28f9bb91fd37.log",
-            "tail": [
-              "ℹ tests 26",
-              "ℹ suites 0",
-              "ℹ pass 26",
-              "ℹ fail 0",
-              "ℹ cancelled 0",
-              "ℹ skipped 0",
-              "ℹ todo 0",
-              "ℹ duration_ms 6160.747833"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 6417,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a5f697ca-42f6-44fa-88ea-2631f1f77768.log",
-            "tail": [
-              "",
-              "> postpilot@0.7.3 gen:proto /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-              "> node scripts/gen.mjs proto",
-              "",
-              "",
-              "▶ codegen",
-              "  · buf generate (proto → Go·TS)",
-              "  ✓ buf 완료"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm gen:sql && git diff --exit-code -- backend",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 52749,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-bc78e4a9-79bd-4136-8d62-460fc597e919.log",
-            "tail": [
-              "",
-              "> postpilot@0.7.3 gen:sql /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-              "> node scripts/gen.mjs sql",
-              "",
-              "",
-              "▶ codegen",
-              "  · sqlc generate (SQL → Go)",
-              "  ✓ sqlc 완료"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm lint",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 49742,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-09e547b7-34c6-4785-b078-dd6ec5787d1a.log",
-            "tail": [
-              "> pnpm --filter ./frontend format:check",
-              "",
-              "",
-              "> frontend@0.0.0 format:check /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
-              "> prettier --check .",
-              "",
-              "Checking formatting...",
-              "All matched files use Prettier code style!"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm lint:fsd",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 16097,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-dc606b28-1e36-4335-82f4-259a6341d7a8.log",
-            "tail": [
-              "> postpilot@0.7.3 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-              "> pnpm --filter ./frontend lint:fsd",
-              "",
-              "",
-              "> frontend@0.0.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
-              "> steiger ./src",
-              "",
-              "✔ No problems found!"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm lint:retirement",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 1421,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a3eb9b47-e6ff-4c97-b6ab-daec3a93977c.log",
-            "tail": [
-              "ℹ suites 0",
-              "ℹ pass 2",
-              "ℹ fail 0",
-              "ℹ cancelled 0",
-              "ℹ skipped 0",
-              "ℹ todo 0",
-              "ℹ duration_ms 201.045083",
-              "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm lint:style:probe && pnpm lint:style",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 3076,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-74c73bcc-4a3f-444a-9fcb-b6902b89387b.log",
-            "tail": [
-              "> node scripts/lint-style-escapes.mjs --probe",
-              "",
-              "lint:style:probe — ok (84 scanner cases)",
-              "",
-              "> postpilot@0.7.3 lint:style /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-              "> node scripts/lint-style-escapes.mjs",
-              "",
-              "lint:style — ok (no colour, type or native control escapes)"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 2725,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-d29e51d6-4c9c-4bde-9482-706e61fdcc8f.log",
-            "tail": [
-              "스킬 동기화 상태 정상: 21개 (claude, codex)"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm --filter ./frontend test",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 342879,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-9ab16a2e-0d07-4bcf-8f5b-004f1019f428.log",
-            "tail": [
-              "(node:72311) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.",
-              "(Use `node --trace-warnings ...` to show where the warning was created)",
-              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
-              "",
-              " Test Files  649 passed (649)",
-              "      Tests  5231 passed (5231)",
-              "   Start at  23:49:03",
-              "   Duration  337.39s (transform 97.00s, setup 602.35s, import 849.73s, tests 842.33s, environment 577.70s)"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "pnpm build:web",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 51871,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-c2b4b67b-7a05-42f4-b7ec-10cd1dc706a3.log",
-            "tail": [
-              "[plugin builtin:vite-reporter] ",
-              "(!) Some chunks are larger than 500 kB after minification. Consider:",
-              "- Using dynamic import() to code-split the application",
-              "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
-              "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
-              "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
-              "",
-              "✓ built in 2.29s"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          },
-          {
-            "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
-            "schemaVersion": 1,
-            "ok": true,
-            "exitCode": 0,
-            "cached": false,
-            "timedOut": false,
-            "cancelled": false,
-            "stale": false,
-            "ms": 179817,
-            "scope": {
-              "TIER": "batch",
-              "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
-              "TASK": "",
-              "TASKS": ""
-            },
-            "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
-            "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
-            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-2944bf3e-a33a-4186-a1f0-cfbd1b98f213.log",
-            "tail": [
-              "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t3.922s",
-              "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
-              "ok  \tgithub.com/postpilot/backend/internal/voice/store\t3.825s",
-              "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
-              "ok  \tgithub.com/postpilot/backend/internal/voucher\t2.032s",
-              "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t3.597s",
-              "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t2.063s",
-              "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
-            ],
-            "failedTests": [],
-            "cleanup": {
-              "scope": "process-group",
-              "signalled": false,
-              "escalated": false
-            }
-          }
-        ],
-        "at": "2026-11-19T14:58:39.668Z"
-      }
-    ],
-    "path": "/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-    "branch": "integration/9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
-    "version": {
-      "level": "patch",
-      "from": "0.7.2",
-      "to": "0.7.3"
-    },
-    "ciCommands": []
-  },
+  "gate": null,
   "history": [
+    {
+      "token": "9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+      "owner": "advg1119",
+      "via": "merge",
+      "executor": {
+        "host": "ihaelam-ui-MacBookPro.local",
+        "pid": 56166
+      },
+      "phase": "landed",
+      "land": "main",
+      "base": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+      "cohort": [
+        {
+          "id": "90a25a49854205d5eaba8491",
+          "tag": "advg1119",
+          "host": "ihaelam-ui-MacBookPro",
+          "device": "ihaelam-ui-MacBookPro",
+          "branch": "gusta-session-start-advg1119-4e8e8dca",
+          "head": "dfc137d55b45efdb33d53f04cd23b87e2b4ea383",
+          "agentChecks": [
+            {
+              "id": "T913-AC6",
+              "scenario": "A sponsored post's 요청 shows one guide text box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no hashtag field; a guide pasted with '#a #b' shows those two hashtags in ⑤'s checklist against the post's tags",
+              "steps": [
+                "Open a sponsored post on the fixed candidate and go to ①'s 요청 screen",
+                "Confirm there is no 필수 해시태그 input and no # chip",
+                "Paste a guide containing '#a #b', finish the post, open ⑤ 완성",
+                "Read the checklist's 글에 꼭 담을 내용 rows"
+              ],
+              "expected": "No hashtag field or chip on 요청; ⑤ lists 가이드 해시태그 #a and #b, each marked against the tags",
+              "observed": "not run: this unit had no browser",
+              "evidence": [
+                "spec/tasks/done/T913.post-guide-one-box-hashtags.md result limits"
+              ],
+              "status": "not-run",
+              "reason": "integration-stage browser check handed to the host; the unit has no browser",
+              "replaces": [],
+              "stage": "integration",
+              "required": true,
+              "owner": "host with a browser",
+              "candidate": null,
+              "duplicationReason": ""
+            },
+            {
+              "id": "T914-unit-prompts",
+              "scenario": "The write prompt's guide section uses the write framing and has no 필수 해시태그 line. The storyline prompt uses the storyline framing. The facts and impressions_kept 원칙 texts count the guide as supplied material. The precedence lines no longer name 광고주 가이드. The origin clause and material role no longer say not-owner-experience. Clip prompts are untouched.",
+              "steps": [
+                "run vibe check --tier task --diff-base 7e74e780e70e --task T914 -- bash gate.sh (gofmt, go vet, go test -count=1 ./internal/generation/... ./internal/guideline/... ./internal/clip/..., gusta lint)"
+              ],
+              "expected": "all affected unit tests pass and lint reports no errors",
+              "observed": "exit 0 in 26990 ms with no failed tests; spec lint has no errors (57 warnings and 41 review hints already in other SSOT files)",
+              "evidence": [
+                "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-f447f8b3-29aa-4a30-9c19-d10366070398.log"
+              ],
+              "status": "pass",
+              "reason": "",
+              "replaces": [],
+              "stage": "unit",
+              "required": true,
+              "owner": "implementer",
+              "candidate": null,
+              "duplicationReason": ""
+            },
+            {
+              "id": "T914-integration-real-generation",
+              "scenario": "A real generation of a 체험단 post writes in the guide's requests as supplied facts and carries every guide hashtag into the tags",
+              "steps": [
+                "generate a post with a paid model from a guide holding store info, an emphasis request and #hashtags"
+              ],
+              "expected": "the requests are woven into the post, every hashtag is in the tags, and the owner's own impressions are kept",
+              "observed": "not run: it needs a paid AI call",
+              "evidence": [],
+              "status": "not-run",
+              "reason": "a paid provider call needs the owner's explicit go",
+              "replaces": [],
+              "stage": "integration",
+              "required": false,
+              "owner": "owner (explicit go)",
+              "candidate": null,
+              "duplicationReason": ""
+            },
+            {
+              "id": "T914-real-generation",
+              "scenario": "광고주 가이드 요청을 실제 글과 스토리라인 생성에 반영하는지 확인",
+              "steps": [
+                "소유자의 명시적 승인 후 광고주 가이드가 포함된 실제 생성을 실행하고 결과를 검토합니다."
+              ],
+              "expected": "매장 정보와 요청이 반영되고 가이드의 해시태그가 태그에 포함되며, 소유자의 상충하는 감상은 유지됩니다.",
+              "observed": "실제 생성은 실행하지 않았습니다.",
+              "evidence": [
+                "spec/tasks/done/T914.guide-requests-as-supplied-facts.md"
+              ],
+              "status": "not-run",
+              "reason": "유료 AI 호출에는 소유자의 명시적 승인이 필요합니다.",
+              "replaces": [],
+              "stage": "integration",
+              "required": true,
+              "owner": "host; owner's explicit go",
+              "candidate": null,
+              "duplicationReason": ""
+            }
+          ],
+          "verificationCommands": [],
+          "publication": "merge"
+        }
+      ],
+      "deferred": [
+        {
+          "id": "cc4c22ea189dc973ea6dab6a",
+          "tag": "cx1119",
+          "host": "DESKTOP-VKPLS8P",
+          "branch": "gusta-session-start-cx1119-7a331011",
+          "status": "paused",
+          "at": "2026-11-19T02:50:21.065Z",
+          "reason": "session-ended"
+        }
+      ],
+      "at": "2026-11-19T15:00:30.622Z",
+      "deadline": "2026-11-19T15:46:01.744Z",
+      "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+      "checks": [
+        {
+          "command": "pnpm test:dev",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 6925,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-4f12defc-c42d-494a-9f4c-28f9bb91fd37.log",
+          "tail": [
+            "ℹ tests 26",
+            "ℹ suites 0",
+            "ℹ pass 26",
+            "ℹ fail 0",
+            "ℹ cancelled 0",
+            "ℹ skipped 0",
+            "ℹ todo 0",
+            "ℹ duration_ms 6160.747833"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 6417,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a5f697ca-42f6-44fa-88ea-2631f1f77768.log",
+          "tail": [
+            "",
+            "> postpilot@0.7.3 gen:proto /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+            "> node scripts/gen.mjs proto",
+            "",
+            "",
+            "▶ codegen",
+            "  · buf generate (proto → Go·TS)",
+            "  ✓ buf 완료"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm gen:sql && git diff --exit-code -- backend",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 52749,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-bc78e4a9-79bd-4136-8d62-460fc597e919.log",
+          "tail": [
+            "",
+            "> postpilot@0.7.3 gen:sql /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+            "> node scripts/gen.mjs sql",
+            "",
+            "",
+            "▶ codegen",
+            "  · sqlc generate (SQL → Go)",
+            "  ✓ sqlc 완료"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm lint",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 49742,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-09e547b7-34c6-4785-b078-dd6ec5787d1a.log",
+          "tail": [
+            "> pnpm --filter ./frontend format:check",
+            "",
+            "",
+            "> frontend@0.0.0 format:check /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
+            "> prettier --check .",
+            "",
+            "Checking formatting...",
+            "All matched files use Prettier code style!"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm lint:fsd",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 16097,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-dc606b28-1e36-4335-82f4-259a6341d7a8.log",
+          "tail": [
+            "> postpilot@0.7.3 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+            "> pnpm --filter ./frontend lint:fsd",
+            "",
+            "",
+            "> frontend@0.0.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
+            "> steiger ./src",
+            "",
+            "✔ No problems found!"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm lint:retirement",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 1421,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a3eb9b47-e6ff-4c97-b6ab-daec3a93977c.log",
+          "tail": [
+            "ℹ suites 0",
+            "ℹ pass 2",
+            "ℹ fail 0",
+            "ℹ cancelled 0",
+            "ℹ skipped 0",
+            "ℹ todo 0",
+            "ℹ duration_ms 201.045083",
+            "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm lint:style:probe && pnpm lint:style",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 3076,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-74c73bcc-4a3f-444a-9fcb-b6902b89387b.log",
+          "tail": [
+            "> node scripts/lint-style-escapes.mjs --probe",
+            "",
+            "lint:style:probe — ok (84 scanner cases)",
+            "",
+            "> postpilot@0.7.3 lint:style /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+            "> node scripts/lint-style-escapes.mjs",
+            "",
+            "lint:style — ok (no colour, type or native control escapes)"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 2725,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-d29e51d6-4c9c-4bde-9482-706e61fdcc8f.log",
+          "tail": [
+            "스킬 동기화 상태 정상: 21개 (claude, codex)"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm --filter ./frontend test",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 342879,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-9ab16a2e-0d07-4bcf-8f5b-004f1019f428.log",
+          "tail": [
+            "(node:72311) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.",
+            "(Use `node --trace-warnings ...` to show where the warning was created)",
+            "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+            "",
+            " Test Files  649 passed (649)",
+            "      Tests  5231 passed (5231)",
+            "   Start at  23:49:03",
+            "   Duration  337.39s (transform 97.00s, setup 602.35s, import 849.73s, tests 842.33s, environment 577.70s)"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "pnpm build:web",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 51871,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-c2b4b67b-7a05-42f4-b7ec-10cd1dc706a3.log",
+          "tail": [
+            "[plugin builtin:vite-reporter] ",
+            "(!) Some chunks are larger than 500 kB after minification. Consider:",
+            "- Using dynamic import() to code-split the application",
+            "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
+            "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+            "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
+            "",
+            "✓ built in 2.29s"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        },
+        {
+          "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+          "schemaVersion": 1,
+          "ok": true,
+          "exitCode": 0,
+          "cached": false,
+          "timedOut": false,
+          "cancelled": false,
+          "stale": false,
+          "ms": 179817,
+          "scope": {
+            "TIER": "batch",
+            "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+            "TASK": "",
+            "TASKS": ""
+          },
+          "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+          "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-2944bf3e-a33a-4186-a1f0-cfbd1b98f213.log",
+          "tail": [
+            "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t3.922s",
+            "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+            "ok  \tgithub.com/postpilot/backend/internal/voice/store\t3.825s",
+            "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+            "ok  \tgithub.com/postpilot/backend/internal/voucher\t2.032s",
+            "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t3.597s",
+            "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t2.063s",
+            "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+          ],
+          "failedTests": [],
+          "cleanup": {
+            "scope": "process-group",
+            "signalled": false,
+            "escalated": false
+          }
+        }
+      ],
+      "agentChecks": [
+        {
+          "id": "T913-AC6",
+          "scenario": "A sponsored post's 요청 shows one guide text box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no hashtag field; a guide pasted with '#a #b' shows those two hashtags in ⑤'s checklist against the post's tags",
+          "steps": [
+            "Open a sponsored post on the fixed candidate and go to ①'s 요청 screen",
+            "Confirm there is no 필수 해시태그 input and no # chip",
+            "Paste a guide containing '#a #b', finish the post, open ⑤ 완성",
+            "Read the checklist's 글에 꼭 담을 내용 rows"
+          ],
+          "expected": "No hashtag field or chip on 요청; ⑤ lists 가이드 해시태그 #a and #b, each marked against the tags",
+          "observed": "Candidate d6e5bd26f frontend (vite on the candidate worktree, local dev API, design-shots): 요청 shows the 광고주 가이드 box plus 필수 키워드 / 최소 글자 수 / 최소 사진 수 and no 필수 해시태그 input; pasting a guide with #고공 #고공중곡점 offered only 최소 1000자, 사진 최소 15장 and two 키워드 chips, no # chip; SavePostDraft carried advertiserGuide.text only. ⑤ of a finalized sponsored post (GetPost stubbed: guide text \"대표 메뉴를 소개해 주세요\\n#a #b\", tags a,c) lists 가이드 해시태그 #a · 태그에 있어요 and 가이드 해시태그 #b · 태그에 없어요. The guide help line now reads 광고주 요청은 내가 알려 준 사실처럼 글에 담기고, 안내 속 #해시태그는 태그에 들어가요.",
+          "evidence": [
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/13-request-filled.png",
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/14-checklist.png",
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/step2b.mjs",
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/ac6/step3b.mjs"
+          ],
+          "status": "pass",
+          "reason": "",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host with a browser",
+          "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "duplicationReason": ""
+        },
+        {
+          "id": "T914-integration-real-generation",
+          "scenario": "A real generation of a 체험단 post writes in the guide's requests as supplied facts and carries every guide hashtag into the tags",
+          "steps": [
+            "generate a post with a paid model from a guide holding store info, an emphasis request and #hashtags"
+          ],
+          "expected": "the requests are woven into the post, every hashtag is in the tags, and the owner's own impressions are kept",
+          "observed": "Observed on cbec22fca (landed); this candidate d6e5bd26f has the identical backend tree (git rev-parse cbec22fca:backend = d6e5bd26f:backend = 097df6db3dc0; proto unchanged), so the generation path is the same code. Candidate backend (cbec22fca, go build of the integration worktree on :7679 over a copy of the local dev DB; migration 0171 applied) with the prod post 20261119-untitled guide text pasted as-is (16 #hashtags, no counted items) and its owner answers as the memo; gemini-3.8-flash storyline then write from the storyline. Storyline plans 개별 캐비넷·매장 내 화장실, 옥수수 연료, 숙성고기 풍미 and the first impression. The post writes the first impression, 옥수수 연료로 구워낸 숙성고기 특유의 은은한 단맛과 풍미, 개별 캐비넷과 매장 내 화장실, 가족 외식이나 연인과 데이트하기에도 알맞아; tags hold all 16 guide hashtags plus 체험단 (17, past tag count 10); the owner’s impressions (촉촉한 목살, 주차 자리 적음, 재방문) are kept.",
+          "evidence": [
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/post.json",
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/run.mjs",
+            "backend tree 097df6db3dc04ff71ceb4f2ea53c56705894e426 at both cbec22fca and d6e5bd26f"
+          ],
+          "status": "pass",
+          "reason": "",
+          "replaces": [],
+          "stage": "integration",
+          "required": false,
+          "owner": "owner (explicit go)",
+          "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "duplicationReason": ""
+        },
+        {
+          "id": "T914-real-generation",
+          "scenario": "광고주 가이드 요청을 실제 글과 스토리라인 생성에 반영하는지 확인",
+          "steps": [
+            "소유자의 명시적 승인 후 광고주 가이드가 포함된 실제 생성을 실행하고 결과를 검토합니다."
+          ],
+          "expected": "매장 정보와 요청이 반영되고 가이드의 해시태그가 태그에 포함되며, 소유자의 상충하는 감상은 유지됩니다.",
+          "observed": "Observed on cbec22fca (landed); this candidate d6e5bd26f has the identical backend tree (git rev-parse cbec22fca:backend = d6e5bd26f:backend = 097df6db3dc0; proto unchanged), so the generation path is the same code. Candidate backend (cbec22fca, go build of the integration worktree on :7679 over a copy of the local dev DB; migration 0171 applied) with the prod post 20261119-untitled guide text pasted as-is (16 #hashtags, no counted items) and its owner answers as the memo; gemini-3.8-flash storyline then write from the storyline. Storyline plans 개별 캐비넷·매장 내 화장실, 옥수수 연료, 숙성고기 풍미 and the first impression. The post writes the first impression, 옥수수 연료로 구워낸 숙성고기 특유의 은은한 단맛과 풍미, 개별 캐비넷과 매장 내 화장실, 가족 외식이나 연인과 데이트하기에도 알맞아; tags hold all 16 guide hashtags plus 체험단 (17, past tag count 10); the owner’s impressions (촉촉한 목살, 주차 자리 적음, 재방문) are kept.",
+          "evidence": [
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/post.json",
+            "/private/tmp/claude-501/-Users-ihaelam-project-postpilot/2394c2f0-e7b8-4329-b2d8-4e1356b2c51c/scratchpad/realgen/run.mjs",
+            "backend tree 097df6db3dc04ff71ceb4f2ea53c56705894e426 at both cbec22fca and d6e5bd26f"
+          ],
+          "status": "pass",
+          "reason": "",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host; owner's explicit go",
+          "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "duplicationReason": ""
+        }
+      ],
+      "rounds": [
+        {
+          "candidate": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+          "checks": [
+            {
+              "command": "pnpm test:dev",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 6925,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-4f12defc-c42d-494a-9f4c-28f9bb91fd37.log",
+              "tail": [
+                "ℹ tests 26",
+                "ℹ suites 0",
+                "ℹ pass 26",
+                "ℹ fail 0",
+                "ℹ cancelled 0",
+                "ℹ skipped 0",
+                "ℹ todo 0",
+                "ℹ duration_ms 6160.747833"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 6417,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a5f697ca-42f6-44fa-88ea-2631f1f77768.log",
+              "tail": [
+                "",
+                "> postpilot@0.7.3 gen:proto /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+                "> node scripts/gen.mjs proto",
+                "",
+                "",
+                "▶ codegen",
+                "  · buf generate (proto → Go·TS)",
+                "  ✓ buf 완료"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm gen:sql && git diff --exit-code -- backend",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 52749,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-bc78e4a9-79bd-4136-8d62-460fc597e919.log",
+              "tail": [
+                "",
+                "> postpilot@0.7.3 gen:sql /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+                "> node scripts/gen.mjs sql",
+                "",
+                "",
+                "▶ codegen",
+                "  · sqlc generate (SQL → Go)",
+                "  ✓ sqlc 완료"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm lint",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 49742,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-09e547b7-34c6-4785-b078-dd6ec5787d1a.log",
+              "tail": [
+                "> pnpm --filter ./frontend format:check",
+                "",
+                "",
+                "> frontend@0.0.0 format:check /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
+                "> prettier --check .",
+                "",
+                "Checking formatting...",
+                "All matched files use Prettier code style!"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm lint:fsd",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 16097,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-dc606b28-1e36-4335-82f4-259a6341d7a8.log",
+              "tail": [
+                "> postpilot@0.7.3 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+                "> pnpm --filter ./frontend lint:fsd",
+                "",
+                "",
+                "> frontend@0.0.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a/frontend",
+                "> steiger ./src",
+                "",
+                "✔ No problems found!"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm lint:retirement",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 1421,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-a3eb9b47-e6ff-4c97-b6ab-daec3a93977c.log",
+              "tail": [
+                "ℹ suites 0",
+                "ℹ pass 2",
+                "ℹ fail 0",
+                "ℹ cancelled 0",
+                "ℹ skipped 0",
+                "ℹ todo 0",
+                "ℹ duration_ms 201.045083",
+                "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm lint:style:probe && pnpm lint:style",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 3076,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-74c73bcc-4a3f-444a-9fcb-b6902b89387b.log",
+              "tail": [
+                "> node scripts/lint-style-escapes.mjs --probe",
+                "",
+                "lint:style:probe — ok (84 scanner cases)",
+                "",
+                "> postpilot@0.7.3 lint:style /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+                "> node scripts/lint-style-escapes.mjs",
+                "",
+                "lint:style — ok (no colour, type or native control escapes)"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 2725,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-d29e51d6-4c9c-4bde-9482-706e61fdcc8f.log",
+              "tail": [
+                "스킬 동기화 상태 정상: 21개 (claude, codex)"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm --filter ./frontend test",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 342879,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-9ab16a2e-0d07-4bcf-8f5b-004f1019f428.log",
+              "tail": [
+                "(node:72311) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.",
+                "(Use `node --trace-warnings ...` to show where the warning was created)",
+                "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+                "",
+                " Test Files  649 passed (649)",
+                "      Tests  5231 passed (5231)",
+                "   Start at  23:49:03",
+                "   Duration  337.39s (transform 97.00s, setup 602.35s, import 849.73s, tests 842.33s, environment 577.70s)"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "pnpm build:web",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 51871,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-c2b4b67b-7a05-42f4-b7ec-10cd1dc706a3.log",
+              "tail": [
+                "[plugin builtin:vite-reporter] ",
+                "(!) Some chunks are larger than 500 kB after minification. Consider:",
+                "- Using dynamic import() to code-split the application",
+                "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
+                "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+                "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
+                "",
+                "✓ built in 2.29s"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            },
+            {
+              "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+              "schemaVersion": 1,
+              "ok": true,
+              "exitCode": 0,
+              "cached": false,
+              "timedOut": false,
+              "cancelled": false,
+              "stale": false,
+              "ms": 179817,
+              "scope": {
+                "TIER": "batch",
+                "DIFF_BASE": "cbec22fca10a386918a35a274a1610baf8a0a68d",
+                "TASK": "",
+                "TASKS": ""
+              },
+              "commit": "d6e5bd26f75f18f42aa65efc3fcb8fab65753f9a",
+              "tree": "556916d0c1a3e901bea01d1a58ddf80cadb60bbf",
+              "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-2944bf3e-a33a-4186-a1f0-cfbd1b98f213.log",
+              "tail": [
+                "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t3.922s",
+                "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+                "ok  \tgithub.com/postpilot/backend/internal/voice/store\t3.825s",
+                "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+                "ok  \tgithub.com/postpilot/backend/internal/voucher\t2.032s",
+                "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t3.597s",
+                "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t2.063s",
+                "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+              ],
+              "failedTests": [],
+              "cleanup": {
+                "scope": "process-group",
+                "signalled": false,
+                "escalated": false
+              }
+            }
+          ],
+          "at": "2026-11-19T14:58:39.668Z"
+        }
+      ],
+      "path": "/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+      "branch": "integration/9dcadb6e-b0fe-4fd3-a28d-147e5e6c965a",
+      "version": {
+        "level": "patch",
+        "from": "0.7.2",
+        "to": "0.7.3"
+      },
+      "ciCommands": []
+    },
     {
       "token": "7c71f614-9022-426b-8cf0-a8ee9a62e040",
       "owner": "advg1119",
