@@ -473,7 +473,7 @@
       "host": "DESKTOP-VKPLS8P",
       "pid": 1640648
     },
-    "phase": "checking",
+    "phase": "failed",
     "land": "main",
     "base": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
     "cohort": [
@@ -539,16 +539,253 @@
     "at": "2026-11-19T01:45:39.484Z",
     "deadline": "2026-11-19T08:32:58.917Z",
     "candidate": "768eab1d2b2f649998da3dca747cbcd05b72848b",
-    "checks": [],
+    "checks": [
+      {
+        "command": "pnpm test:dev",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 1687,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+        "tree": "142a11f37e9051082a1e5b293d4de242bc3b789d",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-0e964216-e408-4cee-bf01-f805a6be5b64.log",
+        "tail": [
+          "ℹ tests 26",
+          "ℹ suites 0",
+          "ℹ pass 26",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 1182.311305"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 6280,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+        "tree": "142a11f37e9051082a1e5b293d4de242bc3b789d",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-d9383d66-fd33-460f-9779-2f5f9fbc6bb7.log",
+        "tail": [
+          "",
+          "> postpilot@0.7.1 gen:proto /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/integration-954598e4-8a41-4970-af7d-440ad13d5b44",
+          "> node scripts/gen.mjs proto",
+          "",
+          "",
+          "▶ codegen",
+          "  · buf generate (proto → Go·TS)",
+          "  ✓ buf 완료"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm gen:sql && git diff --exit-code -- backend",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": true,
+        "stale": false,
+        "ms": 17955,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+        "tree": "142a11f37e9051082a1e5b293d4de242bc3b789d",
+        "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-766406c9-0360-4e9f-8c9c-649f53a01c9b.log",
+        "tail": [
+          "",
+          "> postpilot@0.7.1 gen:sql /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/integration-954598e4-8a41-4970-af7d-440ad13d5b44",
+          "> node scripts/gen.mjs sql",
+          "",
+          "",
+          "▶ codegen",
+          "  · sqlc generate (SQL → Go)",
+          " ELIFECYCLE  Command failed."
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": true,
+          "escalated": false
+        }
+      },
+      {
+        "ok": false,
+        "cancelled": true,
+        "reason": "cancelled",
+        "command": "pnpm lint"
+      }
+    ],
     "agentChecks": [],
-    "rounds": [],
+    "rounds": [
+      {
+        "candidate": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+        "checks": [
+          {
+            "command": "pnpm test:dev",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 1687,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+            "tree": "142a11f37e9051082a1e5b293d4de242bc3b789d",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-0e964216-e408-4cee-bf01-f805a6be5b64.log",
+            "tail": [
+              "ℹ tests 26",
+              "ℹ suites 0",
+              "ℹ pass 26",
+              "ℹ fail 0",
+              "ℹ cancelled 0",
+              "ℹ skipped 0",
+              "ℹ todo 0",
+              "ℹ duration_ms 1182.311305"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 6280,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+            "tree": "142a11f37e9051082a1e5b293d4de242bc3b789d",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-d9383d66-fd33-460f-9779-2f5f9fbc6bb7.log",
+            "tail": [
+              "",
+              "> postpilot@0.7.1 gen:proto /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/integration-954598e4-8a41-4970-af7d-440ad13d5b44",
+              "> node scripts/gen.mjs proto",
+              "",
+              "",
+              "▶ codegen",
+              "  · buf generate (proto → Go·TS)",
+              "  ✓ buf 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:sql && git diff --exit-code -- backend",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": true,
+            "stale": false,
+            "ms": 17955,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d5ac20faa377bf24897f23af5e38d0385a752ef6",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "768eab1d2b2f649998da3dca747cbcd05b72848b",
+            "tree": "142a11f37e9051082a1e5b293d4de242bc3b789d",
+            "log": "/home/hrlee/project/postpilot/.git/gusta/v1/logs/check-766406c9-0360-4e9f-8c9c-649f53a01c9b.log",
+            "tail": [
+              "",
+              "> postpilot@0.7.1 gen:sql /home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/integration-954598e4-8a41-4970-af7d-440ad13d5b44",
+              "> node scripts/gen.mjs sql",
+              "",
+              "",
+              "▶ codegen",
+              "  · sqlc generate (SQL → Go)",
+              " ELIFECYCLE  Command failed."
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": true,
+              "escalated": false
+            }
+          },
+          {
+            "ok": false,
+            "cancelled": true,
+            "reason": "cancelled",
+            "command": "pnpm lint"
+          }
+        ],
+        "at": "2026-11-19T01:46:23.942Z"
+      }
+    ],
     "path": "/home/hrlee/project/.gusta-worktrees/postpilot-bffb2063/integration-954598e4-8a41-4970-af7d-440ad13d5b44",
     "branch": "integration/954598e4-8a41-4970-af7d-440ad13d5b44",
     "version": {
       "level": "patch",
       "from": "0.7.0",
       "to": "0.7.1"
-    }
+    },
+    "ciCommands": []
   },
   "history": [
     {
