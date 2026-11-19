@@ -411,8 +411,8 @@
       "branch": "gusta-session-start-cx1119-7a331011",
       "head": "1bea2b585dbe19e4ed3880266286a43435ea03a7",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-19T02:00:10.194Z",
+      "status": "ready",
+      "at": "2026-11-19T02:00:16.812Z",
       "agentChecks": [
         {
           "id": "T909-unit-rows",
