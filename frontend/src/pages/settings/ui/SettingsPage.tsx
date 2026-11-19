@@ -1,51 +1,31 @@
 import type { ComponentType } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import {
-  ChevronRight,
-  CreditCard,
-  RotateCcw,
-  ShieldCheck,
-  Ticket,
-  UserRound,
-  Zap,
-} from 'lucide-react'
+import { ChevronRight, CreditCard, RotateCcw, ShieldCheck, Ticket, UserRound } from 'lucide-react'
 import { useSession } from '@/entities/session'
 import { planLabel, useMyPlan } from '@/entities/plan'
-import { BILLING_PACKS_ID } from '@/entities/subscription'
 import {
   ListGroup,
   ListRowIcon,
   TitleRow,
   Typography,
-  buttonStyles,
   cardStyles,
   listRowStyles,
   pageStyles,
   typographyStyles,
 } from '@/shared/ui'
+import { CreditsCard } from '@/widgets/credits-card'
 import { InterfacePreferences } from '@/widgets/interface-preferences'
 
 type Icon = ComponentType<{ className?: string }>
 
-/** Guide: 나 — the owner's own tab. It opens on what they most often come here for, the credits
- *  left, as one big figure with ONE 충전 action; under it the rest are iOS-style grouped rows, each
- *  drilling into a one-topic screen. What the owner taught the AI lives in 내 스타일 and model
- *  choice in AI 고르기, so nothing here is about writing. */
+/** 설정, opened from the account menu (THEME-38): the shared credits card first (QUOTA-75), then
+ *  grouped rows, each drilling into a one-topic screen. */
 export function SettingsPage() {
-  const { t } = useTranslation(['creation', 'plans'])
+  const { t } = useTranslation('creation')
   const { user } = useSession()
-  const { myPlan, isPending } = useMyPlan()
+  const { myPlan } = useMyPlan()
   const tier = planLabel(myPlan?.plan)
-  const unlimited = myPlan?.balance.unlimited ?? false
-  // A free account cannot buy a pack (BILL-9), so its 충전 is subscribing (QUOTA-75 →QUOTA-28);
-  // every other tier, master included, goes to the billing screen's packs (BILL-14 →QUOTA-68).
-  const chargeToPlans = myPlan?.plan === 'free'
-  const figure = unlimited
-    ? t('balance.unlimited', { ns: 'plans' })
-    : myPlan && !isPending
-      ? t('balance.credits', { ns: 'plans', count: myPlan.balance.credits })
-      : '—'
   const row = (
     to: string,
     label: string,
@@ -70,32 +50,7 @@ export function SettingsPage() {
         <Typography variant="largeTitle">{t('settings.title')}</Typography>
       </TitleRow>
 
-      {/* The hero: what is left to spend, the plan it comes from, and the one way to get more. */}
-      <section
-        aria-labelledby="me-credits"
-        className={cardStyles({
-          padding: 'lg',
-          className: 'bg-badge-accent-bg animate-step-in mt-6 flex flex-col gap-5',
-        })}
-      >
-        <div className="flex flex-col gap-1">
-          <h2 id="me-credits" className={typographyStyles({ variant: 'label' })}>
-            {t('settings.credits')}
-          </h2>
-          <p className={typographyStyles({ variant: 'figure' })}>{figure}</p>
-          <p className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}>
-            {tier}
-          </p>
-        </div>
-        <Link
-          to={chargeToPlans ? '/plans' : '/billing'}
-          hash={chargeToPlans ? undefined : BILLING_PACKS_ID}
-          className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })}
-        >
-          <Zap aria-hidden="true" className="size-5" />
-          {t('settings.charge')}
-        </Link>
-      </section>
+      <CreditsCard className="mt-6" />
 
       <div className="mt-10 flex flex-col gap-8">
         <nav aria-labelledby="settings-plan">

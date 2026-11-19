@@ -6,17 +6,16 @@ import { BILLING_PACKS_ID, useMyBilling, type BillingEvent } from '@/entities/su
 import { RegisterPaymentMethodButton } from '@/features/register-payment-method'
 import { RemovePaymentMethodButton } from '@/features/remove-payment-method'
 import { BillingSubscriptionActions } from '@/features/manage-subscription'
-import { CreditPurchaseSection } from '@/features/purchase-credits'
 import { RefundRequestSection } from '@/features/request-refund'
+import { CreditsCard } from '@/widgets/credits-card'
 import { formatDate, formatDateTime, formatNumber } from '@/shared/lib'
-import { Zap } from 'lucide-react'
 import {
   LoadingState,
   Notice,
   Typography,
-  buttonStyles,
   cardStyles,
   PageFrame,
+  TitleRow,
   typographyStyles,
 } from '@/shared/ui'
 
@@ -35,10 +34,9 @@ export function BillingPage() {
   // (QUOTA-68): the controls the server refuses it are present and disabled, and a subscription
   // it still holds ends at its term without renewal.
   const master = myPlan?.plan === 'master'
+  // The account menu's and 설정's way to the packs is `/billing#billing-charge`; the sheet comes
+  // up once billing has loaded (QUOTA-75).
   const hash = useRouterState({ select: (state) => state.location.hash })
-  // A free account cannot buy a pack (BILL-9), so its 충전 is subscribing (QUOTA-75 →QUOTA-28);
-  // every other tier, master included, is taken to the packs (BILL-14 →QUOTA-68).
-  const chargeToPlans = myPlan?.plan === 'free'
   const [registration] = useState(initialRegistration)
   const [subscribed] = useState(initialSubscription)
   const noticeCleared = useRef(false)
@@ -57,71 +55,16 @@ export function BillingPage() {
     })
   }, [navigate, registration, subscribed])
 
-  // 나's 충전 arrives as `/billing#billing-charge`; the packs mount only once billing has loaded,
-  // so the page goes there itself, once.
-  const arrived = useRef(false)
-  useEffect(() => {
-    if (arrived.current || hash !== BILLING_PACKS_ID || !myBilling) return
-    arrived.current = true
-    showPacks()
-  }, [hash, myBilling])
-
   return (
-    <PageFrame
-      title={
-        <Typography variant="title" as="h1" className="truncate">
-          {t('title', { ns: 'billing' })}
-        </Typography>
-      }
-    >
-      {/* Guide: the hero — what is left to spend, as one big figure, and ONE 충전 that takes the
-          owner straight to the packs. Everything else on this page is a card below it. */}
-      {myPlan && (
-        <section
-          aria-labelledby="billing-credits"
-          className={cardStyles({
-            padding: 'lg',
-            className: 'bg-badge-accent-bg animate-step-in mt-6 flex flex-col gap-5',
-          })}
-        >
-          <div className="flex flex-col gap-1">
-            <h2 id="billing-credits" className={typographyStyles({ variant: 'label' })}>
-              {t('hero.credits', { ns: 'billing' })}
-            </h2>
-            <p className={typographyStyles({ variant: 'figure' })}>
-              {myPlan.balance.unlimited
-                ? t('balance.unlimited', { ns: 'plans' })
-                : t('balance.credits', { ns: 'plans', count: myPlan.balance.credits })}
-            </p>
-            <p
-              className={typographyStyles({ variant: 'body', className: 'text-content-secondary' })}
-            >
-              {planLabel(myPlan.plan)}
-            </p>
-          </div>
-          {chargeToPlans ? (
-            <Link
-              to="/plans"
-              className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })}
-            >
-              <Zap aria-hidden="true" className="size-5" />
-              {t('hero.charge', { ns: 'billing' })}
-            </Link>
-          ) : (
-            <a
-              href={`#${BILLING_PACKS_ID}`}
-              onClick={(event) => {
-                event.preventDefault()
-                showPacks()
-              }}
-              className={buttonStyles({ variant: 'cta', size: 'hero', className: 'w-full' })}
-            >
-              <Zap aria-hidden="true" className="size-5" />
-              {t('hero.charge', { ns: 'billing' })}
-            </a>
-          )}
-        </section>
-      )}
+    <PageFrame className="pt-4 sm:pt-10">
+      <TitleRow>
+        <Typography variant="largeTitle">{t('title', { ns: 'billing' })}</Typography>
+      </TitleRow>
+      {/* The shared credits card leads; its 충전 brings the packs up in a sheet (BILL-14). */}
+      <CreditsCard
+        className="mt-6"
+        openPacks={hash === BILLING_PACKS_ID && myBilling !== undefined}
+      />
 
       {registration && (
         <Notice tone="success" role="status" className="mt-6">
@@ -235,18 +178,6 @@ export function BillingPage() {
             )}
             {myBilling.history.length > 0 && <BillingHistory events={myBilling.history} />}
           </section>
-          {/* Packs are sold to active paid tiers only, so master meets the section's own disabled
-              state rather than a section that is missing (QUOTA-68). */}
-          <div
-            id={BILLING_PACKS_ID}
-            className={cardStyles({ className: 'scroll-mt-[var(--spacing-chrome)] shadow-sm' })}
-          >
-            <CreditPurchaseSection
-              hasPaymentMethod={myBilling.paymentMethod !== undefined}
-              activePaid={myBilling.subscription?.status === 'active'}
-              purchases={myBilling.purchases}
-            />
-          </div>
           <RefundRequestSection charges={myBilling.history} />
         </div>
       )}
@@ -446,11 +377,4 @@ function quietLink() {
     className:
       'text-link-fg hover:text-link-fg-hover inline-flex min-h-11 w-fit items-center underline',
   })
-}
-
-/** Brings the packs up and moves focus onto them, so 충전 lands where the buying happens. */
-function showPacks() {
-  const target = document.getElementById(BILLING_PACKS_ID)
-  target?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-  target?.querySelector<HTMLElement>('h2, h3, button')?.focus({ preventScroll: true })
 }

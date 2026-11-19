@@ -4,8 +4,6 @@ export const i18n = {
   ko: {
     settings: {
       title: '설정',
-      credits: '남은 크레딧',
-      charge: '충전하기',
       planGroup: '이용',
       accountGroup: '계정',
       screen: '화면',
@@ -18,8 +16,6 @@ export const i18n = {
   en: {
     settings: {
       title: 'Settings',
-      credits: 'Credits left',
-      charge: 'Top up',
       planGroup: 'Plan',
       accountGroup: 'Account',
       screen: 'Display',

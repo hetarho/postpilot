@@ -125,6 +125,7 @@ import { i18n as postI18n } from '@/entities/post/config/i18n'
 import { i18n as postsI18n } from '@/pages/posts/config/i18n'
 import { i18n as editorGuideI18n } from '@/pages/editor/config/guide-i18n'
 import { i18n as purchaseCreditsI18n } from '@/features/purchase-credits/config/i18n'
+import { i18n as creditsCardI18n } from '@/widgets/credits-card/config/i18n'
 import { i18n as renameVoiceI18n } from '@/features/rename-voice/config/i18n'
 import { i18n as reviewGuidelineCandidateI18n } from '@/features/review-guideline-candidate/config/i18n'
 import { i18n as reviewModelExperimentI18n } from '@/features/review-model-experiment/config/i18n'
@@ -219,6 +220,7 @@ export const FRAGMENTS: readonly I18nFragment[] = [
   billingI18n,
   manageSubscriptionI18n,
   purchaseCreditsI18n,
+  creditsCardI18n,
   subscriptionI18n,
   deleteGuidelineI18n,
   editGuidelineI18n,
@@ -416,6 +418,7 @@ export const resources = {
       ...billingI18n.ko,
       ...manageSubscriptionI18n.ko,
       ...purchaseCreditsI18n.ko,
+      ...creditsCardI18n.ko,
       ...subscriptionI18n.ko,
     },
     clips: {
@@ -568,6 +571,7 @@ export const resources = {
       ...billingI18n.en,
       ...manageSubscriptionI18n.en,
       ...purchaseCreditsI18n.en,
+      ...creditsCardI18n.en,
       ...subscriptionI18n.en,
     },
     clips: {
