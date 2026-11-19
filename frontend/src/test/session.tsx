@@ -1,4 +1,4 @@
-import { WritingVoiceCandidateService } from '@/shared/api'
+import { WritingTestService, WritingVoiceCandidateService } from '@/shared/api'
 import { registerAuthoringService, type FakeAuthoringOptions } from './authoring'
 import { seedCompletedSetup, seedDismissedCreationOffers } from './setup-progress'
 // Shared harness for tests that need a fake AuthService.
@@ -7,6 +7,7 @@ import { seedCompletedSetup, seedDismissedCreationOffers } from './setup-progres
 // singletons, and connect-query keys the cache by transport identity, so reusing them
 // would leak one test's session into the next.
 import type { ReactNode } from 'react'
+import type { MessageInitShape } from '@bufbuild/protobuf'
 import { Code, createRouterTransport } from '@connectrpc/connect'
 import { TransportProvider } from '@connectrpc/connect-query'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -115,6 +116,12 @@ export interface FakeAuthOptions {
    *  offered, so a routing test that lands on /admin/models reads an empty catalog rather
    *  than an "unimplemented" error. */
   modelCatalog?: FakeModelCatalogOptions
+  /** The comparisons ListWritingTests answers (none by default), and the page size of every
+   *  read. A test about one comparison's screens brings the studio fixture instead. */
+  writingTests?: {
+    tests?: MessageInitShape<typeof WritingTestService.method.listWritingTests.output>['tests']
+    pageSizes?: number[]
+  }
 }
 
 /** A fake backend plus the controls a test needs over it. */
@@ -151,6 +158,14 @@ export function createFakeAuthBackend(options: FakeAuthOptions = {}): FakeAuthBa
     rpc(WritingVoiceCandidateService.method.getLatestWritingVoiceCandidates, () =>
       create(WritingVoiceCandidateService.method.getLatestWritingVoiceCandidates.output, {}),
     )
+    // AI 토너먼트 lists the latest comparisons on every visit; with none, it reads an empty list
+    // rather than an "unimplemented" error.
+    rpc(WritingTestService.method.listWritingTests, (request) => {
+      options.writingTests?.pageSizes?.push(request.pageSize)
+      return create(WritingTestService.method.listWritingTests.output, {
+        tests: options.writingTests?.tests ?? [],
+      })
+    })
     rpc(AuthService.method.getMe, () => {
       calls?.push('GetMe')
       if (!session) throw connectAppError('AUTH_REQUIRED', Code.Unauthenticated)

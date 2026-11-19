@@ -23,6 +23,7 @@ export function KitScreenHeader({
   illustration,
   actions,
   size = 'page',
+  illustrationSize = size,
   className,
 }: {
   /** The kit piece this screen makes ready; none for a screen outside the writing kit. */
@@ -35,6 +36,9 @@ export function KitScreenHeader({
   /** `section` sits under a tab's own large title (영상's chips), so it takes the section's title
    *  role and a smaller illustration. */
   size?: 'page' | 'section'
+  /** The picture's size where it differs from the title's: a tab opening on its own large title
+   *  with a section's picture (AI 토너먼트, THEME-81). */
+  illustrationSize?: 'page' | 'section'
   className?: string
 }) {
   return (
@@ -66,7 +70,7 @@ export function KitScreenHeader({
               aria-hidden="true"
               className={clsx(
                 'shrink-0 object-contain drop-shadow-sm',
-                size === 'page' ? 'size-24 sm:size-32' : 'size-16 sm:size-20',
+                illustrationSize === 'page' ? 'size-24 sm:size-32' : 'size-16 sm:size-20',
               )}
             />
           )

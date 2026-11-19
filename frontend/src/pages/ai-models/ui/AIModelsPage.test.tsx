@@ -2,7 +2,18 @@ import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { initializeI18n } from '@/app/providers/i18n'
-import { ExperimentSource, PostCreditsBasis, ProtoPlan, Stage } from '@/shared/api'
+import {
+  BlockType,
+  ExperimentSource,
+  PostCreditsBasis,
+  ProtoPlan,
+  Stage,
+  WritingTestCandidateStatus,
+  WritingTestFactor,
+  WritingTestStage,
+  WritingTestStatus,
+  contentLanguageToProto,
+} from '@/shared/api'
 import { renderAppAt } from '@/test/app'
 import type { FakeExperimentsOptions } from '@/test/experiments'
 import { paidActions, renderLegacyModelRoute } from '@/test/legacy-model-routes'
@@ -55,7 +66,8 @@ it.each(['ko', 'en'] as const)(
     expect(
       main.queryByRole('heading', { name: locale === 'ko' ? '추천 조합' : 'Recommended sets' }),
     ).toBeNull()
-    expect(procedures).not.toContain('ListWritingTests')
+    // 비교 lists the latest comparisons: a read, never a start.
+    await waitFor(() => expect(procedures).toContain('ListWritingTests'))
     for (const [oldPath, canonical, ko, en] of destinations) {
       await act(() => router.navigate({ to: oldPath }))
       await waitFor(() => expect(router.state.location.pathname).toBe(canonical))
@@ -113,10 +125,12 @@ it('saves an active model only after a model change, separately from comparison 
   expect(main.queryByRole('button', { name: '비교 시작' })).not.toBeInTheDocument()
 })
 
-it('offers named common test entries and optional A/B settings without changing active models or retained legacy extras', async () => {
+// MODEL-44 →THEME-81: the tab opens on its large title, one line and the tournament picture with
+// one 새 비교 menu; 비교 holds 모두 보기 and, before the first comparison, the shared empty state.
+it('opens on its picture header with one 새 비교 menu and the empty comparisons, keeping the stage rows and default candidates', async () => {
   const user = userEvent.setup()
   const calls: string[] = []
-  renderAppAt('/ai-models', {
+  const { router } = renderAppAt('/ai-models', {
     user: { id: 'alice' },
     providers: {
       calls,
@@ -136,44 +150,142 @@ it('offers named common test entries and optional A/B settings without changing 
     },
   })
   const main = within(await screen.findByRole('main'))
-  const compare = within(main.getByRole('region', { name: '비교해 보기' }))
-  // Two equal comparison cards, each with its own way in.
-  for (const [name, stage] of [
-    ['글 쓰는 AI 비교', 'write'],
-    ['사진 보는 AI 비교', 'observe'],
-  ] as const) {
-    const link = within(compare.getByRole('region', { name })).getByRole('link', {
-      name: '비교하기',
-    })
-    const url = new URL(link.getAttribute('href')!, 'https://postpilot.test')
-    // Photo reading is its own test at /tests/photos (MODEL-97).
-    expect(url.pathname).toBe(stage === 'observe' ? '/tests/photos' : '/tests')
-    expect(Object.fromEntries(url.searchParams)).toMatchObject({
-      ...(stage === 'write' ? { factor: 'model', stage } : {}),
-      count: '2',
-      entry: '/ai-models',
-    })
-  }
-  expect(compare.getAllByRole('link', { name: '비교하기' })).toHaveLength(2)
-  // 지난 비교 sits beside the comparisons' heading.
-  expect(compare.getByRole('link', { name: '지난 비교' })).toHaveAttribute(
+  const header = within(main.getByRole('banner'))
+  expect(header.getByRole('heading', { level: 1, name: 'AI 토너먼트' })).toBeVisible()
+  expect(header.getByText('두 AI에게 같은 일을 맡겨 겨루게 하고, 이긴 AI로 써요')).toBeVisible()
+  // The tournament picture is decorative.
+  const picture = main.getByRole('banner').querySelector('img')!
+  expect(picture).toHaveAttribute('alt', '')
+  expect(picture).toHaveAttribute('aria-hidden', 'true')
+  expect(picture.getAttribute('src')).toMatch(/tournament/)
+  const compare = within(main.getByRole('region', { name: '비교' }))
+  expect(compare.getByRole('link', { name: '모두 보기' })).toHaveAttribute(
     'href',
     '/tests/history?entry=%2Fai-models',
   )
-  // The default candidates are a setting of their own, outside either comparison.
-  expect(
-    compare.queryByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }),
-  ).not.toBeInTheDocument()
-  expect(main.getAllByRole('button', { name: /^바꾸기 · / })).toHaveLength(3)
-  await user.click(main.getByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }))
-  const pair = within(await main.findByRole('region', { name: '글 작성 두 모델 후보' }))
+  expect(await compare.findByText(/아직 비교가 없어요/)).toBeVisible()
+  // The two cards and their help line are gone; the one menu is the way in.
+  expect(main.queryByRole('link', { name: '비교하기' })).toBeNull()
+  expect(main.queryByText(/비교를 열거나/)).toBeNull()
+  expect(main.getAllByRole('button', { name: '새 비교' })).toHaveLength(1)
+  await user.click(header.getByRole('button', { name: '새 비교' }))
+  const menu = within(await screen.findByRole('menu', { name: '새 비교' }))
+  await user.click(menu.getByRole('menuitem', { name: /사진 보는 AI/ }))
+  await waitFor(() => expect(router.state.location.pathname).toBe('/tests/photos'))
+  expect(router.state.location.search).toMatchObject({ count: 2, entry: '/ai-models' })
+  await act(() => router.history.back())
+  const back = within(await screen.findByRole('main'))
+  await user.click(within(back.getByRole('banner')).getByRole('button', { name: '새 비교' }))
+  await user.click(
+    within(await screen.findByRole('menu', { name: '새 비교' })).getByRole('menuitem', {
+      name: /글 쓰는 AI/,
+    }),
+  )
+  await waitFor(() => expect(router.state.location.pathname).toBe('/tests'))
+  expect(router.state.location.search).toMatchObject({
+    factor: 'model',
+    stage: 'write',
+    count: 2,
+    entry: '/ai-models',
+  })
+  await act(() => router.history.back())
+  const page = within(await screen.findByRole('main'))
+  // The default candidates are a setting of their own, outside the comparisons.
+  await page.findByRole('region', { name: '비교' })
+  expect(page.getAllByRole('button', { name: /^바꾸기 · / })).toHaveLength(3)
+  await user.click(page.getByRole('button', { name: '두 모델 테스트의 기본 후보 (선택)' }))
+  const pair = within(await page.findByRole('region', { name: '글 작성 두 모델 후보' }))
   await waitFor(() =>
     expect(pair.getByRole('combobox', { name: /^후보 A(?:\s|$)/ })).toHaveTextContent('Model A'),
   )
   expect(pair.getByRole('combobox', { name: /^후보 B(?:\s|$)/ })).toHaveTextContent('Model B')
-  expect(main.queryByRole('combobox', { name: '후보 C' })).toBeNull()
-  expect(main.queryByRole('link', { name: /리더보드/ })).toBeNull()
+  expect(page.queryByRole('combobox', { name: '후보 C' })).toBeNull()
+  expect(page.queryByRole('link', { name: /리더보드/ })).toBeNull()
   expect(calls.filter((name) => /^(Save|Start|Estimate|Adopt|Apply)/.test(name))).toEqual([])
+})
+
+/** A comparison as the list returns it: a finished one revealed with its champion, a waiting
+ *  one still blind with its match undecided. */
+function wireComparison(id: string, createdAt: string, status: WritingTestStatus) {
+  const done = status === WritingTestStatus.COMPLETED
+  return {
+    id,
+    revision: 1,
+    factor: WritingTestFactor.MODEL,
+    modelStage: WritingTestStage.WRITE,
+    count: 2,
+    status,
+    targetLanguage: contentLanguageToProto('ko'),
+    createdAt,
+    candidates: ['left', 'right'].map((side) => ({
+      id: `${id}-${side}`,
+      status: WritingTestCandidateStatus.SUCCEEDED,
+      output: { title: id, blocks: [{ type: BlockType.TEXT, content: 'Stored post' }] },
+      ...(done && {
+        identity: {
+          label: `${id} ${side}`,
+          source: {
+            source: {
+              case: 'model' as const,
+              value: { providerId: 'provider', modelId: `${id}-${side}` },
+            },
+          },
+        },
+      }),
+    })),
+    matches: [
+      {
+        id: `${id}-match`,
+        round: 1,
+        index: 0,
+        leftCandidateId: `${id}-left`,
+        rightCandidateId: `${id}-right`,
+        winnerCandidateId: done ? `${id}-left` : '',
+      },
+    ],
+    winnerCandidateId: done ? `${id}-left` : '',
+    revealed: done,
+  }
+}
+
+// MODEL-44 →THEME-83: 비교 is the latest five comparisons, newest first, each one work row that
+// opens its test with this tab as its return — a waiting comparison is one tap away.
+it('lists the latest five comparisons as one link each, opening the test with this tab as its return', async () => {
+  const calls: string[] = []
+  const pageSizes: number[] = []
+  const tests = [1, 2, 3, 4, 5, 6, 7].map((day) =>
+    wireComparison(
+      `test-${day}`,
+      `2026-11-0${day}T09:00:00Z`,
+      day === 7 ? WritingTestStatus.REVIEW : WritingTestStatus.COMPLETED,
+    ),
+  )
+  const { router } = renderAppAt('/ai-models', {
+    user: { id: 'alice' },
+    calls,
+    writingTests: { tests, pageSizes },
+  })
+  const main = within(await screen.findByRole('main'))
+  const list = within(await main.findByRole('list', { name: '비교' }))
+  const links = list.getAllByRole('link')
+  expect(links).toHaveLength(5)
+  expect(pageSizes).toContain(5)
+  // Newest first; the two oldest are in 지난 비교.
+  const ids = links.map((link) => new URL(link.getAttribute('href')!, 'http://localhost'))
+  expect(ids.map((url) => url.pathname)).toEqual([
+    '/tests/test-7',
+    '/tests/test-6',
+    '/tests/test-5',
+    '/tests/test-4',
+    '/tests/test-3',
+  ])
+  ids.forEach((url) => expect(url.searchParams.get('entry')).toBe('/ai-models'))
+  // The waiting comparison says so on its row.
+  expect(within(list.getAllByRole('listitem')[0]).getByText('고를 차례')).toBeVisible()
+  expect(main.queryByText(/아직 비교가 없어요/)).toBeNull()
+  // Opening the tab is a read only.
+  expect(calls.filter((name) => /^(Save|Start|Estimate|Adopt|Apply|Decide)/.test(name))).toEqual([])
+  expect(router.state.location.pathname).toBe('/ai-models')
 })
 
 // MODEL-96 →MODEL-57: the picker opens on the grade order — 무료, then 가성비 up to 최고, the
