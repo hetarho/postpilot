@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| cx1119 | DESKTOP-VKPLS8P | autopilot | 2026-11-19T00:33Z | 2026-11-19T00:33Z | T904 | gusta-session-start-cx1119-7a331011 | 0bb1870224c0 | cc4c22ea189dc973ea6dab6a |
+| cx1119 | DESKTOP-VKPLS8P | autopilot | 2026-11-19T00:33Z | 2026-11-19T00:51Z | - | gusta-session-start-cx1119-7a331011 | a8c65c6ec03a | cc4c22ea189dc973ea6dab6a |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -195,7 +195,13 @@
 - 261118 decided review/redesign-261119: the runner blocks dispatch on each synchronous 5-min submit gate → submit tier switched to static checks + vitest --changed (workers already run the full suite; integrate keeps the full gate) and the runner restarted (alt: keep the full gate at both tiers)
 - 261119 decided T904: T904 how does a comparison read as a work row and what is the page called? -> title "글 쓰는 AI · 2개" (kind glyph + kind + entrant count), meta = short state badge (진행 중 / 일부 실패 / 고를 차례 / 우승 / 끝냄 / 실패) then champion name, progress while running or the time; the page and every back link to it are named 지난 비교 per MODEL-44; rows keep 테스트 이어보기 / 계속 보기 as aria-label with the row content as aria-describedby (alt: champion name as the title | content-only accessible names, rewriting ~20 tests | keep 테스트 기록 as the page name).
 
+## unlanded
+| id | tag | branch | commit | at |
+|---|---|---|---|---|
+| T904 | cx1119 | gusta-session-start-cx1119-7a331011 | a8c65c6ec03a | 2026-11-19T00:51Z |
+
 ## log
+- 261119 T904 done
 - 261118 T903 integrated
 - 261118 T907 integrated
 - 261118 T911 integrated
@@ -215,4 +221,3 @@
 - 261117 T896 done
 - 261117 T895 done
 - 261117 T894 done
-- 261117 T893 done
