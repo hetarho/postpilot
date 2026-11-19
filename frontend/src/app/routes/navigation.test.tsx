@@ -170,12 +170,12 @@ it('gives a 설정 child one way back to 설정, and remembers where it was open
   await screen.findByRole('heading', { name: '설정', level: 1 })
   await act(() => router.navigate({ to: '/account' }))
   await waitFor(() => expect(router.state.location.pathname).toBe('/account'))
-  // The page's frame draws the way back in its own column, on the title's row, and the shell
-  // draws none of its own: one way back, not two.
+  // The page's title row draws the way back at the start of the title's row (THEME-75), and the
+  // shell draws none of its own: one way back, not two.
   const page = await screen.findByRole('main')
   const back = within(page).getByRole('link', { name: '설정' })
   expect(back).toHaveAttribute('href', '/settings')
-  expect(back.parentElement).toContainElement(
+  expect(back.parentElement?.parentElement).toContainElement(
     within(page).getByRole('heading', { level: 1, name: '계정 설정' }),
   )
   expect(screen.queryByRole('navigation', { name: '돌아가기' })).toBeNull()
