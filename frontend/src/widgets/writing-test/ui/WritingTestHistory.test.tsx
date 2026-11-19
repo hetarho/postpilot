@@ -249,6 +249,39 @@ it('loads historical voice checks only for one explicit voice and keeps the resu
   expect(voiceIds).toEqual(['one-voice'])
   expect(screen.queryByRole('button', { name: /검증|재분석|다시 만들기/ })).not.toBeInTheDocument()
 })
+it('withdraws a deleted answer from an already open legacy record after refetch', async () => {
+  let withdrawn = false
+  const transport = createRouterTransport(({ rpc }) => {
+    registerEmptyLegacy(rpc)
+    rpc(Service.method.listWritingTests, () => create(Service.method.listWritingTests.output, {}))
+    rpc(VoiceService.method.listVoiceChecks, () =>
+      create(VoiceService.method.listVoiceChecks.output, {
+        checks: [
+          {
+            id: 'withdrawn-check',
+            status: ProtoVoiceCheckStatus.DONE,
+            piece: 'Retained paid result',
+            answer: withdrawn ? '' : 'Private learning answer',
+            answerDeleted: withdrawn,
+          },
+        ],
+      }),
+    )
+  })
+  const client = createTestQueryClient()
+  render(<WritingTestHistory ownerId="alice" voiceId="one-voice" />, {
+    wrapper: withProviders(transport, client),
+  })
+  await userEvent.click(await screen.findByRole('button', { name: '계속 보기' }))
+  expect(await screen.findByText('Private learning answer')).toBeVisible()
+  withdrawn = true
+  await act(async () => {
+    await client.refetchQueries()
+  })
+  expect(await screen.findByText('이 답은 학습 데이터에서 삭제했어요.')).toBeVisible()
+  expect(screen.queryByText('Private learning answer')).not.toBeInTheDocument()
+  expect(screen.getByText('Retained paid result')).toBeVisible()
+})
 it('distinguishes read failures from empty history and refreshes when the owner returns, with no refresh button', async () => {
   let fail = true
   const transport = createRouterTransport(({ rpc }) => {

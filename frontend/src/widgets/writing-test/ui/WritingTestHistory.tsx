@@ -374,7 +374,7 @@ function LegacyRecords({
   const checksKey = useVoiceChecksQueryKey(ownerId, checkVoiceId)
   const refresh = useMemo(() => [checksKey], [checksKey])
   const job = useJob(checks.activeJobId, refresh)
-  const [openCheck, setOpenCheck] = useState<VoiceCheck>()
+  const [openCheckId, setOpenCheckId] = useState<string>()
   const { refetch: refetchExperiments } = query
   const { refetch: refetchChecks } = checks
   useOnReturn(() => {
@@ -484,7 +484,7 @@ function LegacyRecords({
             <SurfaceButton
               presentation="content"
               className={className}
-              onClick={() => setOpenCheck(check)}
+              onClick={() => setOpenCheckId(check.id)}
               {...aria}
             >
               {children}
@@ -492,7 +492,10 @@ function LegacyRecords({
           )}
         />
       ))}
-      <VoiceCheckSheet check={openCheck} onClose={() => setOpenCheck(undefined)} />
+      <VoiceCheckSheet
+        check={voiceChecks.find((check) => check.id === openCheckId)}
+        onClose={() => setOpenCheckId(undefined)}
+      />
     </HistoryGroup>
   )
 }
