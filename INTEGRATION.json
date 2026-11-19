@@ -412,7 +412,7 @@
       "head": "1bea2b585dbe19e4ed3880266286a43435ea03a7",
       "land": "main",
       "status": "working",
-      "at": "2026-11-19T01:59:47.289Z",
+      "at": "2026-11-19T02:00:10.194Z",
       "agentChecks": [
         {
           "id": "T909-unit-rows",
@@ -457,6 +457,26 @@
           "owner": "worker",
           "candidate": null,
           "duplicationReason": ""
+        },
+        {
+          "id": "cx1119-browser-review",
+          "scenario": "Review the changed comparison, credits and account screens in a real Chromium browser on the fixed integration candidate.",
+          "steps": [
+            "Render /tests/history, /ai-models, /settings, /billing and /account through the existing local RPC fixture at 320, 360, 390, 430, 1440 and 1920 px in both themes.",
+            "Inspect screenshots and operate the comparison menu, nested purchase confirmation, Escape and focus return, charge deep link and account edit/cancel controls at 320 and 1440 px in both themes.",
+            "Check preserved input at a 480 px keyboard viewport, a long account ID, a password-less account and 200% CSS zoom."
+          ],
+          "expected": "No horizontal overflow or unnamed controls; coherent phone and desktop composition; confirmation traps focus and closes independently; deep-link charge opens once; inputs survive viewport changes and cancel restores rows; no password control for a password-less account.",
+          "observed": "Pending observation of the exact final fixed candidate.",
+          "evidence": [],
+          "status": "not-run",
+          "reason": "The coordinator will observe this candidate after deterministic integration checks finish.",
+          "replaces": [],
+          "stage": "integration",
+          "required": true,
+          "owner": "host",
+          "candidate": null,
+          "duplicationReason": "Unit fixtures cover RPC and state semantics; this review checks actual CSS composition, viewport reach and browser focus stacking required by THEME-34."
         }
       ],
       "verificationCommands": [
