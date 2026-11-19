@@ -201,6 +201,7 @@
 - 261119 decided GEN-87 GEN-80 T914: a guide request contradicts the owner's own impression or drawback — which wins? → the owner's own word stands and the request is woven in only where it does not contradict (GEN-87); keywords, min chars/photos counted items unchanged; advertiser_request origin label kept, only its not-the-owner's-experience consequence removed (alt: guide overrides | drop the conflicting request silently) ← the owner's experience is the post's direct evidence
 
 ## log
+- 261119 gusta-update-ssot GEN r35 GUIDE r30 POST r57 CLIP r84 (wording) + gusta-create-task T912 T913 T914 for the advertiser-guide request
 - 261119 T909 done
 - 261119 T908 done
 - 261119 fix writing-test: derive the open legacy voice record from refreshed owned data; withdrawal regression fails before the fix and passes after it; 14 history/voice checks, ESLint and Prettier pass under Node 24.18.0 (check-381a4504)
@@ -219,5 +220,4 @@
 - 261117 T899 done
 - 261117 T898 done
 - 261117 gusta-update-ssot MODEL start (observation budget, test progress legibility)
-- 261117 reworded without a markdown heading token (it truncated report sections)
 - 261117 reworded without a markdown heading token (it truncated report sections)
