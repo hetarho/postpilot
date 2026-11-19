@@ -54,15 +54,15 @@ export const auth = {
   },
   accountSettings: {
     heading: '계정 설정',
-    identity: '계정 정보',
-    id: '계정 아이디',
+    id: '아이디',
+    password: '비밀번호',
+    passwordSet: '설정됨',
     noEmail: '등록된 이메일 없음',
     verified: '인증됨',
-    unverified: '인증 대기',
+    unverified: '미인증',
   },
   registerEmail: {
     heading: '이메일 등록',
-    intro: '인증 메일을 받을 주소를 등록해 주세요.',
     submit: '인증 메일 보내기',
     sent: '{{email}}로 인증 메일을 보냈어요.',
   },
@@ -85,7 +85,6 @@ export const auth = {
   },
   changePassword: {
     heading: '비밀번호 변경',
-    intro: '변경하면 이 기기를 포함한 모든 기기에서 로그아웃돼요.',
     currentPassword: '현재 비밀번호',
     newPassword: '새 비밀번호',
     submit: '비밀번호 변경',

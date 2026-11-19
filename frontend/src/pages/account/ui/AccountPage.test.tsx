@@ -4,28 +4,49 @@ import { describe, expect, it } from 'vitest'
 import { renderAppAt } from '@/test/app'
 
 describe('AccountPage', () => {
-  it('shows identity and lets an emailless account request verification', async () => {
+  it('shows the account as rows and opens email registration from the email pencil', async () => {
     const user = userEvent.setup()
     const calls: string[] = []
     renderAppAt('/account', { calls, user: { id: 'legacy' } })
 
     expect(await screen.findByRole('heading', { name: '계정 설정' })).toBeInTheDocument()
+    expect(screen.getByText('아이디')).toBeInTheDocument()
     expect(screen.getByText('legacy')).toBeInTheDocument()
     expect(screen.getByText('등록된 이메일 없음')).toBeInTheDocument()
+    // The form waits behind the row's pencil.
+    expect(screen.queryByRole('button', { name: '인증 메일 보내기' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '이메일 등록' }))
     await user.type(screen.getByLabelText('이메일'), 'legacy@example.com')
     await user.click(screen.getByRole('button', { name: '인증 메일 보내기' }))
     expect(await screen.findByRole('status')).toHaveTextContent('legacy@example.com')
     expect(calls.filter((call) => call === 'RegisterEmail')).toHaveLength(1)
   })
 
-  it('shows a verified email without the registration form', async () => {
+  it('closes an opened form back to its row on cancel', async () => {
+    const user = userEvent.setup()
+    renderAppAt('/account', {
+      user: { id: 'bob', email: 'bob@example.com', emailVerified: false },
+    })
+
+    expect(await screen.findByText('미인증')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: '이메일 등록' }))
+    expect(screen.getByLabelText('이메일')).toHaveValue('bob@example.com')
+
+    await user.click(screen.getByRole('button', { name: '취소' }))
+    expect(screen.queryByLabelText('이메일')).not.toBeInTheDocument()
+    expect(screen.getByText('bob@example.com')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '이메일 등록' })).toBeInTheDocument()
+  })
+
+  it('shows a verified email with no pencil', async () => {
     renderAppAt('/account', {
       user: { id: 'alice', email: 'alice@example.com', emailVerified: true },
     })
 
     expect(await screen.findByText('alice@example.com')).toBeInTheDocument()
     expect(screen.getByText('인증됨')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: '인증 메일 보내기' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '이메일 등록' })).not.toBeInTheDocument()
   })
 
   it('keeps a wrong current password inline', async () => {
@@ -35,7 +56,9 @@ describe('AccountPage', () => {
       changePasswordFails: 'wrong-current',
     })
 
-    await user.type(await screen.findByLabelText('현재 비밀번호'), 'wrong')
+    expect(screen.queryByLabelText('현재 비밀번호')).not.toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: '비밀번호 변경' }))
+    await user.type(screen.getByLabelText('현재 비밀번호'), 'wrong')
     await user.type(screen.getByLabelText('새 비밀번호'), 'new-password')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
@@ -51,7 +74,8 @@ describe('AccountPage', () => {
       user: { id: 'alice', hasPassword: true },
     })
 
-    await user.type(await screen.findByLabelText('현재 비밀번호'), 's3cret')
+    await user.click(await screen.findByRole('button', { name: '비밀번호 변경' }))
+    await user.type(screen.getByLabelText('현재 비밀번호'), 's3cret')
     await user.type(screen.getByLabelText('새 비밀번호'), 'new-password')
     await user.click(screen.getByRole('button', { name: '비밀번호 변경' }))
 
@@ -63,7 +87,7 @@ describe('AccountPage', () => {
     expect(calls.filter((call) => call === 'ChangePassword')).toHaveLength(1)
   })
 
-  it('sends an account with no password to the reset flow', async () => {
+  it('keeps the no-password line with no pencil and no link', async () => {
     renderAppAt('/account', {
       user: {
         id: 'google-user',
@@ -74,6 +98,8 @@ describe('AccountPage', () => {
     })
 
     expect(await screen.findByText(/로그아웃한 뒤 비밀번호 찾기/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '비밀번호 변경' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /비밀번호 찾기/ })).not.toBeInTheDocument()
     expect(screen.queryByLabelText('현재 비밀번호')).not.toBeInTheDocument()
   })
 })

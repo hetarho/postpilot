@@ -55,15 +55,15 @@ export const auth = {
   },
   accountSettings: {
     heading: 'Account settings',
-    identity: 'Account information',
-    id: 'Account ID',
+    id: 'ID',
+    password: 'Password',
+    passwordSet: 'Set',
     noEmail: 'No email registered',
     verified: 'Verified',
-    unverified: 'Verification pending',
+    unverified: 'Unverified',
   },
   registerEmail: {
     heading: 'Register email',
-    intro: 'Add the address that should receive your verification mail.',
     submit: 'Send verification mail',
     sent: 'We sent a verification email to {{email}}.',
   },
@@ -86,7 +86,6 @@ export const auth = {
   },
   changePassword: {
     heading: 'Change password',
-    intro: 'Changing it logs you out on this device and every other device.',
     currentPassword: 'Current password',
     newPassword: 'New password',
     submit: 'Change password',
