@@ -595,8 +595,8 @@
       "branch": "gusta-session-start-obsstat-f2c1e340",
       "head": "9ec937fda790cb883917d587bbf0b1caa6f66050",
       "land": "main",
-      "status": "working",
-      "at": "2026-11-23T14:14:21.808Z",
+      "status": "ready",
+      "at": "2026-11-23T14:14:27.086Z",
       "agentChecks": [
         {
           "id": "AC-POST-129",
