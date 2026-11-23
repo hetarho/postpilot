@@ -638,7 +638,7 @@
       "host": "ihaelam-ui-MacBookPro.local",
       "pid": 11819
     },
-    "phase": "checking",
+    "phase": "failed",
     "land": "main",
     "base": "d6efca8209b32eb026028490391ff23b70fa9dc2",
     "cohort": [
@@ -696,16 +696,1105 @@
     "at": "2026-11-23T14:21:38.073Z",
     "deadline": "2026-11-23T22:07:51.071Z",
     "candidate": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
-    "checks": [],
-    "agentChecks": [],
-    "rounds": [],
+    "checks": [
+      {
+        "command": "pnpm test:dev",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 5700,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-80b1f16a-eca4-40d5-84fd-c1df52b363f1.log",
+        "tail": [
+          "ℹ tests 26",
+          "ℹ suites 0",
+          "ℹ pass 26",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 5119.847166"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 2411,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-ce30bc2a-d481-40be-908c-4dc89788bea3.log",
+        "tail": [
+          "",
+          "> postpilot@0.8.0 gen:proto /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+          "> node scripts/gen.mjs proto",
+          "",
+          "",
+          "▶ codegen",
+          "  · buf generate (proto → Go·TS)",
+          "  ✓ buf 완료"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm gen:sql && git diff --exit-code -- backend",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 25291,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-10e3cf9f-a506-449c-b60a-7b3e9d412788.log",
+        "tail": [
+          "",
+          "> postpilot@0.8.0 gen:sql /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+          "> node scripts/gen.mjs sql",
+          "",
+          "",
+          "▶ codegen",
+          "  · sqlc generate (SQL → Go)",
+          "  ✓ sqlc 완료"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 51920,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6d1d8625-99dd-4378-bb8c-4d72d08bd4ab.log",
+        "tail": [
+          "> pnpm --filter ./frontend format:check",
+          "",
+          "",
+          "> frontend@0.0.0 format:check /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/frontend",
+          "> prettier --check .",
+          "",
+          "Checking formatting...",
+          "All matched files use Prettier code style!"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint:fsd",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 8428,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-97a1fbe5-5dbf-45ad-82a8-342bf9ff5d7d.log",
+        "tail": [
+          "> postpilot@0.8.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+          "> pnpm --filter ./frontend lint:fsd",
+          "",
+          "",
+          "> frontend@0.0.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/frontend",
+          "> steiger ./src",
+          "",
+          "✔ No problems found!"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint:retirement",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 1033,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-38134b3b-9355-47b6-8aae-a7b4c62ffb27.log",
+        "tail": [
+          "ℹ suites 0",
+          "ℹ pass 2",
+          "ℹ fail 0",
+          "ℹ cancelled 0",
+          "ℹ skipped 0",
+          "ℹ todo 0",
+          "ℹ duration_ms 129.88125",
+          "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm lint:style:probe && pnpm lint:style",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 2162,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-ca498532-36c9-4bab-899a-c6f062273f1b.log",
+        "tail": [
+          "> node scripts/lint-style-escapes.mjs --probe",
+          "",
+          "lint:style:probe — ok (84 scanner cases)",
+          "",
+          "> postpilot@0.8.0 lint:style /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+          "> node scripts/lint-style-escapes.mjs",
+          "",
+          "lint:style — ok (no colour, type or native control escapes)"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 1289,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-fa94672e-4832-412a-b9c4-d8a9b49f1dfb.log",
+        "tail": [
+          "스킬 동기화 상태 정상: 21개 (claude, codex)"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm --filter ./frontend test",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 173098,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3295a4e6-f6f1-4834-b677-9b57a3628616.log",
+        "tail": [
+          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+          "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+          "",
+          " Test Files  650 passed (650)",
+          "      Tests  5241 passed (5241)",
+          "   Start at  23:23:43",
+          "   Duration  171.41s (transform 37.23s, setup 279.82s, import 387.53s, tests 474.16s, environment 303.46s)"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "pnpm build:web",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 32207,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-0500b7d2-8054-40e5-8562-9a12cdc4ac34.log",
+        "tail": [
+          "[plugin builtin:vite-reporter] ",
+          "(!) Some chunks are larger than 500 kB after minification. Consider:",
+          "- Using dynamic import() to code-split the application",
+          "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
+          "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+          "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
+          "",
+          "✓ built in 1.41s"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "python3 -m venv .venv-deploy-checks && .venv-deploy-checks/bin/pip install -r deploy/requirements-test.txt && .venv-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 89004,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-330a037d-b7f4-4cc6-9dc8-f85af4cbaf92.log",
+        "tail": [
+          "test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure (media_release_test.ReleaseBudget) ... ok",
+          "test_storage_failure_precedes_application_builds_and_resources (media_release_test.ReleaseBudget) ... ok",
+          "test_storage_precedes_both_layouts_even_when_application_builds_are_skipped (media_release_test.ReleaseBudget) ... ok",
+          "",
+          "----------------------------------------------------------------------",
+          "Ran 69 tests in 85.715s",
+          "",
+          "OK"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 134340,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-833c0a7a-0b7a-4926-bdd0-c6754ee18868.log",
+        "tail": [
+          "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t3.887s",
+          "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+          "ok  \tgithub.com/postpilot/backend/internal/voice/store\t3.662s",
+          "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher\t2.771s",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t3.558s",
+          "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t2.783s",
+          "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\n  set -eu\n  verification_root=\"$PWD\"\n  verification_dir=\"$(mktemp -d)\"\n  trap 'rm -rf \"$verification_dir\"' EXIT\n  mkdir -p \"$verification_dir/deploy/media\"\n  cp \"$verification_root/docker-compose.prod.yml\" \\\n    \"$verification_root/docker-compose.media.colocated.yml\" \\\n    \"$verification_root/docker-compose.media.remote.yml\" \"$verification_dir/\"\n  cp \"$verification_root/.env.production.example\" \"$verification_dir/.env\"\n  cp \"$verification_root/deploy/media/worker.env.example\" \"$verification_dir/worker.env\"\n  cp \"$verification_root/deploy/media/docker-compose.yml\" \"$verification_dir/deploy/media/\"\n  cp \"$verification_root/deploy/media/worker.env.example\" \"$verification_dir/deploy/media/worker.env\"\n  cd \"$verification_dir\"\n  export IMAGE_TAG=validation MEDIA_WORKER_IMAGE_TAG=validation API_UPSTREAM=postpilot-api-validation\n  docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.colocated.yml config --quiet --no-env-resolution\n  docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.remote.yml config --quiet --no-env-resolution\n  docker compose --env-file worker.env -f deploy/media/docker-compose.yml config --quiet --no-env-resolution\n)\nfi",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 409,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6ba61e38-6ea0-4d28-aad9-b70fb314492f.log",
+        "tail": [
+          ""
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\nset -eu\nverification_sha=\"$(git rev-parse HEAD)\"\ndocker build --platform linux/amd64 --target deployable --build-arg SOURCE_REVISION=\"$verification_sha\" -t postpilot:verify-deploy-api -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-worker-deployable --build-arg SOURCE_REVISION=\"$verification_sha\" -t postpilot:verify-deploy-worker -f backend/Dockerfile .\n)\nfi",
+        "schemaVersion": 1,
+        "ok": true,
+        "exitCode": 0,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 124974,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-23466fea-4ae1-428f-b67a-8a2bcfb3277e.log",
+        "tail": [
+          "#41 exporting manifest sha256:2d35dc44011c4eeaac47bcc8bd15c9537b09c235c24ba1ea16ffd1580ae0271f done",
+          "#41 exporting config sha256:b5cdc8d4b467b2885df126ff66e28eefe3b3e1be43140d82f8d7c8c1a9f2a676 done",
+          "#41 exporting attestation manifest sha256:3734a8445cfe46d56ea01724e5fbb5edc49823d7016d4a16e98496513ddce1b0 done",
+          "#41 exporting manifest list sha256:0263e4915e79f263e9b2abc3d795379537a3e44a98c6fd12c4a1e6dffc8ae75c done",
+          "#41 naming to docker.io/library/postpilot:verify-deploy-worker done",
+          "#41 DONE 0.6s",
+          "",
+          "View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/4j4hy615rz06k9p1x5k2hnpz0"
+        ],
+        "failedTests": [],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      },
+      {
+        "command": "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\nset -eu\ndocker build --platform linux/amd64 --target production -t postpilot:gate -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-worker-smoke -t postpilot-worker-smoke:ci -f backend/Dockerfile .\ndocker run --rm --cpus=2 --memory=1g postpilot-worker-smoke:ci\ndocker build --platform linux/amd64 --target media-storage -t postpilot:gate-media-storage -f deploy/media/fixture.Dockerfile .\ndocker build --platform linux/amd64 --target media-release-api -t postpilot:gate-media-release -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-release-worker -t postpilot:gate-media-release-worker -f backend/Dockerfile .\npython3 scripts/media-release.py --skip-build --skip-storage-build\n)\nfi",
+        "schemaVersion": 1,
+        "ok": false,
+        "exitCode": 1,
+        "cached": false,
+        "timedOut": false,
+        "cancelled": false,
+        "stale": false,
+        "ms": 17936164,
+        "scope": {
+          "TIER": "batch",
+          "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+          "TASK": "",
+          "TASKS": ""
+        },
+        "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+        "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-5b4286db-87d3-4900-9d73-2bd80ab378c8.log",
+        "tail": [
+          "Traceback (most recent call last):",
+          "  File \"/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/scripts/media-release.py\", line 174, in <module>",
+          "    if __name__=='__main__':main()",
+          "  File \"/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/scripts/media-release.py\", line 172, in main",
+          "    for layout in ('colocated','remote') if args.layout=='both' else (args.layout,):fixture(layout,args)",
+          "  File \"/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/scripts/media-release.py\", line 110, in fixture",
+          "    if status['ExitCode']!=0: raise RuntimeError(('insufficient API memory (OOM)' if status['OOMKilled'] else 'release fixture failed')+': '+layout)",
+          "RuntimeError: release fixture failed: colocated"
+        ],
+        "failedTests": [
+          "FAIL"
+        ],
+        "cleanup": {
+          "scope": "process-group",
+          "signalled": false,
+          "escalated": false
+        }
+      }
+    ],
+    "agentChecks": [
+      {
+        "id": "AC-POST-129",
+        "scenario": "글 목록에서 관찰 진행, 관찰 완료, 첨부 변경, 스토리라인 완료를 구분한다.",
+        "steps": [
+          "사진을 첨부한 초안에서 관찰을 시작하고 작업 중에 글 목록을 연다.",
+          "관찰 결과가 저장되면 글 목록으로 돌아가 초안 필터를 선택한다.",
+          "관찰하지 않은 첨부를 추가하고 목록으로 돌아온 뒤, 그 첨부를 제거하고 목록을 다시 연다.",
+          "스토리라인을 생성하고 같은 글의 목록 배지를 확인한다."
+        ],
+        "expected": "같은 행의 배지가 AI 생성 중, AI 사진 관찰 완료, 초안, AI 사진 관찰 완료, 스토리라인 작성 완료 순서로 바뀐다. 관찰을 완료한 글은 초안 필터에 남는다.",
+        "observed": "",
+        "evidence": [],
+        "status": "not-run",
+        "reason": "기획 단위에는 브라우저 도구와 고정된 통합 후보가 없습니다.",
+        "replaces": [
+          "E2E-POST-129"
+        ],
+        "stage": "integration",
+        "required": true,
+        "owner": "host",
+        "candidate": null,
+        "duplicationReason": ""
+      }
+    ],
+    "rounds": [
+      {
+        "candidate": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+        "checks": [
+          {
+            "command": "pnpm test:dev",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 5700,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-80b1f16a-eca4-40d5-84fd-c1df52b363f1.log",
+            "tail": [
+              "ℹ tests 26",
+              "ℹ suites 0",
+              "ℹ pass 26",
+              "ℹ fail 0",
+              "ℹ cancelled 0",
+              "ℹ skipped 0",
+              "ℹ todo 0",
+              "ℹ duration_ms 5119.847166"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:proto && git diff --exit-code -- backend/internal/gen frontend/src/shared/api/gen",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 2411,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-ce30bc2a-d481-40be-908c-4dc89788bea3.log",
+            "tail": [
+              "",
+              "> postpilot@0.8.0 gen:proto /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+              "> node scripts/gen.mjs proto",
+              "",
+              "",
+              "▶ codegen",
+              "  · buf generate (proto → Go·TS)",
+              "  ✓ buf 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm gen:sql && git diff --exit-code -- backend",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 25291,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-10e3cf9f-a506-449c-b60a-7b3e9d412788.log",
+            "tail": [
+              "",
+              "> postpilot@0.8.0 gen:sql /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+              "> node scripts/gen.mjs sql",
+              "",
+              "",
+              "▶ codegen",
+              "  · sqlc generate (SQL → Go)",
+              "  ✓ sqlc 완료"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 51920,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6d1d8625-99dd-4378-bb8c-4d72d08bd4ab.log",
+            "tail": [
+              "> pnpm --filter ./frontend format:check",
+              "",
+              "",
+              "> frontend@0.0.0 format:check /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/frontend",
+              "> prettier --check .",
+              "",
+              "Checking formatting...",
+              "All matched files use Prettier code style!"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:fsd",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 8428,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-97a1fbe5-5dbf-45ad-82a8-342bf9ff5d7d.log",
+            "tail": [
+              "> postpilot@0.8.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+              "> pnpm --filter ./frontend lint:fsd",
+              "",
+              "",
+              "> frontend@0.0.0 lint:fsd /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/frontend",
+              "> steiger ./src",
+              "",
+              "✔ No problems found!"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:retirement",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 1033,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-38134b3b-9355-47b6-8aae-a7b4c62ffb27.log",
+            "tail": [
+              "ℹ suites 0",
+              "ℹ pass 2",
+              "ℹ fail 0",
+              "ℹ cancelled 0",
+              "ℹ skipped 0",
+              "ℹ todo 0",
+              "ℹ duration_ms 129.88125",
+              "Publishing retirement absence check passed. Reviewed exceptions: migrations 0010/0015/0037/0072/0076, DB regression assertions, reserved FailureReason identities, and the single authenticated legacy redirect."
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm lint:style:probe && pnpm lint:style",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 2162,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-ca498532-36c9-4bab-899a-c6f062273f1b.log",
+            "tail": [
+              "> node scripts/lint-style-escapes.mjs --probe",
+              "",
+              "lint:style:probe — ok (84 scanner cases)",
+              "",
+              "> postpilot@0.8.0 lint:style /Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
+              "> node scripts/lint-style-escapes.mjs",
+              "",
+              "lint:style — ok (no colour, type or native control escapes)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "npx -y @haeram/gusta@$(node -p 'require(\"./.gusta-lock.json\").packageVersion') check",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 1289,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-fa94672e-4832-412a-b9c4-d8a9b49f1dfb.log",
+            "tail": [
+              "스킬 동기화 상태 정상: 21개 (claude, codex)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm --filter ./frontend test",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 173098,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-3295a4e6-f6f1-4834-b677-9b57a3628616.log",
+            "tail": [
+              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+              "Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package",
+              "",
+              " Test Files  650 passed (650)",
+              "      Tests  5241 passed (5241)",
+              "   Start at  23:23:43",
+              "   Duration  171.41s (transform 37.23s, setup 279.82s, import 387.53s, tests 474.16s, environment 303.46s)"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "pnpm build:web",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 32207,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-0500b7d2-8054-40e5-8562-9a12cdc4ac34.log",
+            "tail": [
+              "[plugin builtin:vite-reporter] ",
+              "(!) Some chunks are larger than 500 kB after minification. Consider:",
+              "- Using dynamic import() to code-split the application",
+              "- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting",
+              "- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.",
+              "[INEFFECTIVE_DYNAMIC_IMPORT] src/shared/lib/media/stream-mp4.ts is dynamically imported by src/shared/lib/media/mux-mp4.ts but also statically imported by src/shared/lib/media/index.ts, dynamic import will not move module into another chunk.",
+              "",
+              "✓ built in 1.41s"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "python3 -m venv .venv-deploy-checks && .venv-deploy-checks/bin/pip install -r deploy/requirements-test.txt && .venv-deploy-checks/bin/python -m unittest discover -s deploy -p '*_test.py' -v",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 89004,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-330a037d-b7f4-4cc6-9dc8-f85af4cbaf92.log",
+            "tail": [
+              "test_stopped_oom_failed_or_running_container_does_not_hide_probe_failure (media_release_test.ReleaseBudget) ... ok",
+              "test_storage_failure_precedes_application_builds_and_resources (media_release_test.ReleaseBudget) ... ok",
+              "test_storage_precedes_both_layouts_even_when_application_builds_are_skipped (media_release_test.ReleaseBudget) ... ok",
+              "",
+              "----------------------------------------------------------------------",
+              "Ran 69 tests in 85.715s",
+              "",
+              "OK"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "cd backend && test -z \"$(gofmt -l .)\" && go vet ./... && go build ./... && go test -timeout 30m ./...",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 134340,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-833c0a7a-0b7a-4926-bdd0-c6754ee18868.log",
+            "tail": [
+              "ok  \tgithub.com/postpilot/backend/internal/voice/spoken/store\t3.887s",
+              "?   \tgithub.com/postpilot/backend/internal/voice/spoken/store/sqlc\t[no test files]",
+              "ok  \tgithub.com/postpilot/backend/internal/voice/store\t3.662s",
+              "?   \tgithub.com/postpilot/backend/internal/voice/store/sqlc\t[no test files]",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher\t2.771s",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher/rpc\t3.558s",
+              "ok  \tgithub.com/postpilot/backend/internal/voucher/store\t2.783s",
+              "?   \tgithub.com/postpilot/backend/internal/voucher/store/sqlc\t[no test files]"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\n  set -eu\n  verification_root=\"$PWD\"\n  verification_dir=\"$(mktemp -d)\"\n  trap 'rm -rf \"$verification_dir\"' EXIT\n  mkdir -p \"$verification_dir/deploy/media\"\n  cp \"$verification_root/docker-compose.prod.yml\" \\\n    \"$verification_root/docker-compose.media.colocated.yml\" \\\n    \"$verification_root/docker-compose.media.remote.yml\" \"$verification_dir/\"\n  cp \"$verification_root/.env.production.example\" \"$verification_dir/.env\"\n  cp \"$verification_root/deploy/media/worker.env.example\" \"$verification_dir/worker.env\"\n  cp \"$verification_root/deploy/media/docker-compose.yml\" \"$verification_dir/deploy/media/\"\n  cp \"$verification_root/deploy/media/worker.env.example\" \"$verification_dir/deploy/media/worker.env\"\n  cd \"$verification_dir\"\n  export IMAGE_TAG=validation MEDIA_WORKER_IMAGE_TAG=validation API_UPSTREAM=postpilot-api-validation\n  docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.colocated.yml config --quiet --no-env-resolution\n  docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.remote.yml config --quiet --no-env-resolution\n  docker compose --env-file worker.env -f deploy/media/docker-compose.yml config --quiet --no-env-resolution\n)\nfi",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 409,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-6ba61e38-6ea0-4d28-aad9-b70fb314492f.log",
+            "tail": [
+              ""
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\nset -eu\nverification_sha=\"$(git rev-parse HEAD)\"\ndocker build --platform linux/amd64 --target deployable --build-arg SOURCE_REVISION=\"$verification_sha\" -t postpilot:verify-deploy-api -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-worker-deployable --build-arg SOURCE_REVISION=\"$verification_sha\" -t postpilot:verify-deploy-worker -f backend/Dockerfile .\n)\nfi",
+            "schemaVersion": 1,
+            "ok": true,
+            "exitCode": 0,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 124974,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-23466fea-4ae1-428f-b67a-8a2bcfb3277e.log",
+            "tail": [
+              "#41 exporting manifest sha256:2d35dc44011c4eeaac47bcc8bd15c9537b09c235c24ba1ea16ffd1580ae0271f done",
+              "#41 exporting config sha256:b5cdc8d4b467b2885df126ff66e28eefe3b3e1be43140d82f8d7c8c1a9f2a676 done",
+              "#41 exporting attestation manifest sha256:3734a8445cfe46d56ea01724e5fbb5edc49823d7016d4a16e98496513ddce1b0 done",
+              "#41 exporting manifest list sha256:0263e4915e79f263e9b2abc3d795379537a3e44a98c6fd12c4a1e6dffc8ae75c done",
+              "#41 naming to docker.io/library/postpilot:verify-deploy-worker done",
+              "#41 DONE 0.6s",
+              "",
+              "View build details: docker-desktop://dashboard/build/desktop-linux/desktop-linux/4j4hy615rz06k9p1x5k2hnpz0"
+            ],
+            "failedTests": [],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          },
+          {
+            "command": "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\nset -eu\ndocker build --platform linux/amd64 --target production -t postpilot:gate -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-worker-smoke -t postpilot-worker-smoke:ci -f backend/Dockerfile .\ndocker run --rm --cpus=2 --memory=1g postpilot-worker-smoke:ci\ndocker build --platform linux/amd64 --target media-storage -t postpilot:gate-media-storage -f deploy/media/fixture.Dockerfile .\ndocker build --platform linux/amd64 --target media-release-api -t postpilot:gate-media-release -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-release-worker -t postpilot:gate-media-release-worker -f backend/Dockerfile .\npython3 scripts/media-release.py --skip-build --skip-storage-build\n)\nfi",
+            "schemaVersion": 1,
+            "ok": false,
+            "exitCode": 1,
+            "cached": false,
+            "timedOut": false,
+            "cancelled": false,
+            "stale": false,
+            "ms": 17936164,
+            "scope": {
+              "TIER": "batch",
+              "DIFF_BASE": "d6efca8209b32eb026028490391ff23b70fa9dc2",
+              "TASK": "",
+              "TASKS": ""
+            },
+            "commit": "6e09cabdc650d88a883f7a19b270b29c504e6a22",
+            "tree": "332ac62862bf2f7651ecf9466d014c565e48e590",
+            "log": "/Users/ihaelam/project/postpilot/.git/gusta/v1/logs/check-5b4286db-87d3-4900-9d73-2bd80ab378c8.log",
+            "tail": [
+              "Traceback (most recent call last):",
+              "  File \"/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/scripts/media-release.py\", line 174, in <module>",
+              "    if __name__=='__main__':main()",
+              "  File \"/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/scripts/media-release.py\", line 172, in main",
+              "    for layout in ('colocated','remote') if args.layout=='both' else (args.layout,):fixture(layout,args)",
+              "  File \"/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5/scripts/media-release.py\", line 110, in fixture",
+              "    if status['ExitCode']!=0: raise RuntimeError(('insufficient API memory (OOM)' if status['OOMKilled'] else 'release fixture failed')+': '+layout)",
+              "RuntimeError: release fixture failed: colocated"
+            ],
+            "failedTests": [
+              "FAIL"
+            ],
+            "cleanup": {
+              "scope": "process-group",
+              "signalled": false,
+              "escalated": false
+            }
+          }
+        ],
+        "at": "2026-11-23T19:32:00.228Z"
+      }
+    ],
     "path": "/Users/ihaelam/project/.gusta-worktrees/postpilot-f6c0250f/integration-f09fe9cc-edce-4359-adc5-e01f3eb439c5",
     "branch": "integration/f09fe9cc-edce-4359-adc5-e01f3eb439c5",
     "version": {
       "level": "minor",
       "from": "0.7.3",
       "to": "0.8.0"
-    }
+    },
+    "ciCommands": []
   },
   "history": [
     {
