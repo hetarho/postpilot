@@ -595,8 +595,8 @@
       "branch": "gusta-session-start-obsstat-f2c1e340",
       "head": "93eb96f9813a199a8bf51cd794e48c75909f6b93",
       "land": "main",
-      "status": "paused",
-      "at": "2026-11-23T14:20:39.764Z",
+      "status": "working",
+      "at": "2026-11-23T14:21:27.908Z",
       "agentChecks": [
         {
           "id": "AC-POST-129",
@@ -622,7 +622,11 @@
           "duplicationReason": ""
         }
       ],
-      "verificationCommands": [],
+      "verificationCommands": [
+        "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\n  set -eu\n  verification_root=\"$PWD\"\n  verification_dir=\"$(mktemp -d)\"\n  trap 'rm -rf \"$verification_dir\"' EXIT\n  mkdir -p \"$verification_dir/deploy/media\"\n  cp \"$verification_root/docker-compose.prod.yml\" \\\n    \"$verification_root/docker-compose.media.colocated.yml\" \\\n    \"$verification_root/docker-compose.media.remote.yml\" \"$verification_dir/\"\n  cp \"$verification_root/.env.production.example\" \"$verification_dir/.env\"\n  cp \"$verification_root/deploy/media/worker.env.example\" \"$verification_dir/worker.env\"\n  cp \"$verification_root/deploy/media/docker-compose.yml\" \"$verification_dir/deploy/media/\"\n  cp \"$verification_root/deploy/media/worker.env.example\" \"$verification_dir/deploy/media/worker.env\"\n  cd \"$verification_dir\"\n  export IMAGE_TAG=validation MEDIA_WORKER_IMAGE_TAG=validation API_UPSTREAM=postpilot-api-validation\n  docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.colocated.yml config --quiet --no-env-resolution\n  docker compose --env-file .env --env-file worker.env -f docker-compose.prod.yml -f docker-compose.media.remote.yml config --quiet --no-env-resolution\n  docker compose --env-file worker.env -f deploy/media/docker-compose.yml config --quiet --no-env-resolution\n)\nfi",
+        "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\nset -eu\nverification_sha=\"$(git rev-parse HEAD)\"\ndocker build --platform linux/amd64 --target deployable --build-arg SOURCE_REVISION=\"$verification_sha\" -t postpilot:verify-deploy-api -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-worker-deployable --build-arg SOURCE_REVISION=\"$verification_sha\" -t postpilot:verify-deploy-worker -f backend/Dockerfile .\n)\nfi",
+        "set -eu\nchanged=\"$(git diff --name-only \"$GUSTA_DIFF_BASE\" HEAD -- backend docker-compose.prod.yml 'docker-compose.media.*.yml' deploy/backend-rollout.sh deploy/latest-rollout.sh deploy/media_rollout.py deploy/media 'deploy/*_test.py' deploy/requirements-test.txt deploy/media_preflight.py scripts/media-release.py .github/workflows/deploy-backend.yml .github/workflows/media-verify.yml)\"\nif [ -n \"$changed\" ]; then\n(\nset -eu\ndocker build --platform linux/amd64 --target production -t postpilot:gate -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-worker-smoke -t postpilot-worker-smoke:ci -f backend/Dockerfile .\ndocker run --rm --cpus=2 --memory=1g postpilot-worker-smoke:ci\ndocker build --platform linux/amd64 --target media-storage -t postpilot:gate-media-storage -f deploy/media/fixture.Dockerfile .\ndocker build --platform linux/amd64 --target media-release-api -t postpilot:gate-media-release -f backend/Dockerfile .\ndocker build --platform linux/amd64 --target media-release-worker -t postpilot:gate-media-release-worker -f backend/Dockerfile .\npython3 scripts/media-release.py --skip-build --skip-storage-build\n)\nfi"
+      ],
       "reason": "session-ended"
     }
   },
