@@ -4,7 +4,7 @@
 ## active
 | tag | host | mode | since | at | doing | branch | commit | session |
 |---|---|---|---|---|---|---|---|---|
-| obsstat | ihaelam-ui-MacBookPro | autopilot | 2026-11-23T14:15Z | 2026-11-23T14:16Z | T915 | gusta-session-start-obsstat-f2c1e340 | 3c05829ba629 | 32f2b89659674d79078101a7 |
+| obsstat | ihaelam-ui-MacBookPro | autopilot | 2026-11-23T14:15Z | 2026-11-23T14:20Z | - | gusta-session-start-obsstat-f2c1e340 | 3c05829ba629 | 32f2b89659674d79078101a7 |
 
 ## inbox
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -204,7 +204,13 @@
 - 261123 decided POST-129 T915: 관찰 완료 배지의 색은? → 스토리라인 작성 완료에 쓰는 기존 accent를 재사용한다 (alt: 초안과 같은 neutral). 작성 중의 두 완료 지점이 같은 톤을 쓰고 단계명은 문구로 구분한다.
 - 261123 decided POST-129 T915: 글 목록에 빠진 관찰 정보를 어떻게 전달하나? → 기존 storyline_ready 경로를 따라 ListPosts에 읽을 때 계산한 불리언 하나를 추가하고 첨부 변경 성공 시 목록 키를 무효화한다 (alt: 각 행에서 GetPost 조회). 목록은 기존 호출과 캐시로 갱신되고 관찰 원문을 읽을 필요가 없다.
 
+## unlanded
+| id | tag | branch | commit | at |
+|---|---|---|---|---|
+| T915 | obsstat | gusta-session-start-obsstat-f2c1e340 | 3c05829ba629 | 2026-11-23T14:20Z |
+
 ## log
+- 261123 T915 done
 - 261123 gusta-create-task POST r58 -> T915
 - 261123 gusta-create-task POST start
 - 261123 gusta-update-ssot POST r58 POST-66 POST-129
@@ -224,4 +230,3 @@
 - 261118 T911 integrated
 - 261118 T910 integrated
 - 261118 T906 integrated
-- 261118 ab ready-home: adopt c, its code landing with the spec on feat/ready-home-c, so those deltas are consumed (tasked=rev) without tasks
