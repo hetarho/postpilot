@@ -26,7 +26,7 @@
 | ARCH | 30 | 30 | - | 0 |
 | AUTH | 16 | 16 | - | 0 |
 | QUOTA | 42 | 42 | - | 0 |
-| POST | 57 | 57 | - | 0 |
+| POST | 58 | 58 | - | 0 |
 | VOICE | 23 | 23 | - | 0 |
 | GEN | 35 | 35 | - | 0 |
 | MODEL | 46 | 46 | - | 0 |
@@ -84,6 +84,7 @@
 | T603 | Qualify browser analysis information preservation | ARCH CLIP CDS QUOTA | T588 T601 T602 | blocked@261007 |
 | T604 | Qualify browser rendering and static deployment | ARCH CLIP CDS INFRA | T588 T590 T599 T600 T601 T602 T748 T750 | blocked@261111 |
 | T697 | Expose Content-Range on private storage and gate the deploy on it | ARCH INFRA | - | blocked@261016 |
+| T915 | Show the photo observation completion badge in post history | POST ARCH | - | todo |
 
 ## work
 | id | workers | total | done | remaining | running | review | blocked | updated | history |
@@ -93,4 +94,4 @@
 | redesign-261119 | 4 | 9 | 5 | 4 | 0 | 0 | 4 | 2026-11-18T18:57:10.294Z | [history](work/redesign-261119.json) |
 
 ## next
-- no runnable task: resolve blocked, parked or deps
+- gusta-implement-task T915
