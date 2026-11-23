@@ -201,9 +201,10 @@ Agent acceptance — review missing or incorrect criteria.
 | --- | --- | --- | --- | --- | --- | --- |
 | AC-POST-129 / integration / host (required) | 글 목록에서 관찰 진행, 관찰 완료, 첨부 변경, 스토리라인 완료를 구분한다. | 사진을 첨부한 초안에서 관찰을 시작하고 작업 중에 글 목록을 연다.<br>관찰 결과가 저장되면 글 목록으로 돌아가 초안 필터를 선택한다.<br>관찰하지 않은 첨부를 추가하고 목록으로 돌아온 뒤, 그 첨부를 제거하고 목록을 다시 연다.<br>스토리라인을 생성하고 같은 글의 목록 배지를 확인한다. | 같은 행의 배지가 AI 생성 중, AI 사진 관찰 완료, 초안, AI 사진 관찰 완료, 스토리라인 작성 완료 순서로 바뀐다. 관찰을 완료한 글은 초안 필터에 남는다. | 기획 단위에는 브라우저 도구와 고정된 통합 후보가 없습니다. | replaces E2E-POST-129 | not-run |
 <!-- gusta:agent-acceptance:end -->
-- time: 6m — planning 6m/1 (model 6m, task checks 0m), gate 0m, CI 0m, host 0m; slowest T915 6m
+- shared integration: coordination-unknown (-); full verification is not repeated automatically.
+- time: 7m — planning 6m/1 (model 6m, task checks 0m), gate 0m, CI 0m, host 1m; slowest T915 6m
 - task checks: 1 runs, 0m
 
 ## next
-- loop stopped: stop-after-unit
+- loop stopped: integration-waiting
 - verification: 0 rounds, 0 failed; pending repair: -; code pushed: false
