@@ -200,6 +200,7 @@
 - 261119 decided CLIP-210 T913: clips share the guide component and the 필수 해시태그 item — change them too? → no: clips keep 필수 키워드 + 필수 해시태그, their 원칙 (감상은 내가 쓴 것만) and precedence; AdvertiserGuideFields stays one component, the post passes POST_GUIDE_ITEMS without hashtags; CLIP-210 now cites GEN-88's fence only; 이 체험으로 글 쓰기 folds clip hashtags into the post text (alt: same one-box change for clips) ← the request is about posts
 - 261119 decided GEN-87 GEN-80 T914: a guide request contradicts the owner's own impression or drawback — which wins? → the owner's own word stands and the request is woven in only where it does not contradict (GEN-87); keywords, min chars/photos counted items unchanged; advertiser_request origin label kept, only its not-the-owner's-experience consequence removed (alt: guide overrides | drop the conflicting request silently) ← the owner's experience is the post's direct evidence
 - 261119 decided T914: T914 runs on codex/gpt-6.1-terra@ultra instead of claude/opus@high: the last unit there ended it unfinished with no commit or newly checked acceptance (alt: the same route again)
+- 261123 decided POST-129 T915: 동영상만 있는 초안도 같은 배지를 쓰나? → 사진과 동영상을 함께 다루는 기존 ② 관찰 범위를 따라 현재 첨부 전체의 재사용 가능 결과가 있으면 표시한다 (alt: 사진이 있는 초안에만 표시). 동영상만 올린 글도 같은 관찰 단계를 거친다.
 
 ## log
 - 261123 gusta-create-task POST start
