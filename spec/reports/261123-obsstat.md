@@ -3,6 +3,7 @@
 
 ## done
 - planning T915: completed · codex (c25b7aec8c8c)
+- task T915: completed · codex/gpt-6.1-terra@medium (6ca62670d9d1)
 
 ## decided
 - 261113 decided T789 CLIP-235 CLIP-129: the impl notes put a string `subject` in ClipObservationEdit and only refuse emptying speech, but a clip scene records no subject text (its `Subject` is the measured principal-subject box CDS-38 reads) and speech added to a silent scene changes audibility too? → reserve field 6 (`subject`) and edit event/action/subjects/speech only; refuse any change of audibility, emptying or adding speech, with field `speech`/check `speech_audibility` (alt: carry a string `subject` the segment has no home for | let the owner add speech to silent footage). CLIP-235 keeps the classifications the rate rules read as observed and CLIP-127/129 read whether speech is audible either way.
@@ -194,16 +195,16 @@
 - 261117 parked T897: shared integration waits only on the perf6 participant from another device (status working since 2026-11-16T16:29Z, no live session); wtform, wtform2 and both lchat sessions are ready. Finish or close perf6 on that device (vibe integration close --tag perf6 in its worktree), then resume here with vibe loop --tag wtform2 to run the batch gate and land
 
 ## checks
+- shared integration: coordination-unknown (-); full verification is not repeated automatically.
+- time: 7m — planning 6m/1 (model 6m, task checks 0m), gate 0m, CI 0m, host 1m; slowest T915 6m
+- task checks: 1 runs, 0m
 <!-- gusta:agent-acceptance -->
 Agent acceptance — review missing or incorrect criteria.
 
 | id / stage / owner | scenario | steps | expected | observed | evidence | status |
 | --- | --- | --- | --- | --- | --- | --- |
-| AC-POST-129 / integration / host (required) | 글 목록에서 관찰 진행, 관찰 완료, 첨부 변경, 스토리라인 완료를 구분한다. | 사진을 첨부한 초안에서 관찰을 시작하고 작업 중에 글 목록을 연다.<br>관찰 결과가 저장되면 글 목록으로 돌아가 초안 필터를 선택한다.<br>관찰하지 않은 첨부를 추가하고 목록으로 돌아온 뒤, 그 첨부를 제거하고 목록을 다시 연다.<br>스토리라인을 생성하고 같은 글의 목록 배지를 확인한다. | 같은 행의 배지가 AI 생성 중, AI 사진 관찰 완료, 초안, AI 사진 관찰 완료, 스토리라인 작성 완료 순서로 바뀐다. 관찰을 완료한 글은 초안 필터에 남는다. | 기획 단위에는 브라우저 도구와 고정된 통합 후보가 없습니다. | replaces E2E-POST-129 | not-run |
+| AC-POST-129 / integration / host (required) | 관찰 완료와 첨부 변경, 스토리라인 저장에 따른 글 목록 배지 전환 | 고정 후보에서 소유자 초안의 사진 관찰을 시작하거나 재개하고 글 목록을 연다.<br>결과 저장 후 초안 필터를 선택하고, 관찰되지 않은 첨부를 추가한 뒤 목록으로 돌아온다.<br>첨부를 제거하고 다시 목록으로 돌아온 뒤 스토리라인을 저장하고 목록을 확인한다. | 같은 행이 순서대로 AI 생성 중, AI 사진 관찰 완료, 초안, AI 사진 관찰 완료, 스토리라인 작성 완료를 표시한다. | 실행하지 않음 | replaces E2E-POST-129 | not-run |
 <!-- gusta:agent-acceptance:end -->
-- shared integration: coordination-unknown (-); full verification is not repeated automatically.
-- time: 7m — planning 6m/1 (model 6m, task checks 0m), gate 0m, CI 0m, host 1m; slowest T915 6m
-- task checks: 1 runs, 0m
 
 ## next
 - loop stopped: integration-waiting
