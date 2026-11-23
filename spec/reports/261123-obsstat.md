@@ -1,5 +1,5 @@
 # REPORT 261123-obsstat
-> mode:autopilot | host:ihaelam-ui-MacBookPro.local | from:2026-11-23T14:07:50.394Z | to:- | push:main
+> mode:autopilot | host:ihaelam-ui-MacBookPro.local | from:2026-11-23T14:07:50.394Z | to:2026-11-23T14:20:26.976Z | push:main
 
 ## done
 - planning T915: completed · codex (c25b7aec8c8c)
@@ -196,8 +196,6 @@
 
 ## checks
 - shared integration: coordination-unknown (-); full verification is not repeated automatically.
-- time: 7m — planning 6m/1 (model 6m, task checks 0m), gate 0m, CI 0m, host 1m; slowest T915 6m
-- task checks: 1 runs, 0m
 <!-- gusta:agent-acceptance -->
 Agent acceptance — review missing or incorrect criteria.
 
@@ -205,7 +203,9 @@ Agent acceptance — review missing or incorrect criteria.
 | --- | --- | --- | --- | --- | --- | --- |
 | AC-POST-129 / integration / host (required) | 관찰 완료와 첨부 변경, 스토리라인 저장에 따른 글 목록 배지 전환 | 고정 후보에서 소유자 초안의 사진 관찰을 시작하거나 재개하고 글 목록을 연다.<br>결과 저장 후 초안 필터를 선택하고, 관찰되지 않은 첨부를 추가한 뒤 목록으로 돌아온다.<br>첨부를 제거하고 다시 목록으로 돌아온 뒤 스토리라인을 저장하고 목록을 확인한다. | 같은 행이 순서대로 AI 생성 중, AI 사진 관찰 완료, 초안, AI 사진 관찰 완료, 스토리라인 작성 완료를 표시한다. | 실행하지 않음 | replaces E2E-POST-129 | not-run |
 <!-- gusta:agent-acceptance:end -->
+- time: 5m — implementation 4m/1 (model 4m, task checks 1m), gate 0m, CI 0m, host 1m; slowest T915 4m
+- task checks: 3 runs, 1m
 
 ## next
-- loop stopped: integration-waiting
+- loop stopped: scope-done
 - verification: 0 rounds, 0 failed; pending repair: -; code pushed: false
