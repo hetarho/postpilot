@@ -202,6 +202,7 @@
 - 261119 decided T914: T914 runs on codex/gpt-6.1-terra@ultra instead of claude/opus@high: the last unit there ended it unfinished with no commit or newly checked acceptance (alt: the same route again)
 
 ## log
+- 261123 gusta-update-ssot POST start
 - 261119 fix advertiser-guide: post guide help copy matches supplied-fact requests (clip keeps its copy)
 - 261119 T914 done
 - 261119 T913 done
@@ -221,4 +222,3 @@
 - 261118 gusta-update-ssot ready-home variant c: THEME r48 TMPL r37 EDIT r8 CLIP r82 POST r55 VOICE r23 GUIDE r29 MEM r9 MODEL r45 QUOTA r41 LANG r12 AUTH r16 ARCH r28
 - 261118 ab ready-home: adopt c — Writing-kit home with KitRing and four tabs; kit pieces navigate by icon and change defaults from a…
 - 261117 gusta-update-ssot ARCH r27 done: ARCH-31 prepare (frozen offline pnpm install) and live-session batch gate; process-only, tasked=rev, no task
-- 261117 gusta-update-ssot ARCH start (gusta 0.17.5 prepare and live-session gate)
