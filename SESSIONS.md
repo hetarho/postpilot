@@ -205,6 +205,7 @@
 - 261123 decided POST-129 T915: 글 목록에 빠진 관찰 정보를 어떻게 전달하나? → 기존 storyline_ready 경로를 따라 ListPosts에 읽을 때 계산한 불리언 하나를 추가하고 첨부 변경 성공 시 목록 키를 무효화한다 (alt: 각 행에서 GetPost 조회). 목록은 기존 호출과 캐시로 갱신되고 관찰 원문을 읽을 필요가 없다.
 
 ## log
+- 261123 gusta-create-task POST r58 -> T915
 - 261123 gusta-create-task POST start
 - 261123 gusta-update-ssot POST r58 POST-66 POST-129
 - 261123 gusta-update-ssot POST start
@@ -224,4 +225,3 @@
 - 261118 T910 integrated
 - 261118 T906 integrated
 - 261118 ab ready-home: adopt c, its code landing with the spec on feat/ready-home-c, so those deltas are consumed (tasked=rev) without tasks
-- 261118 gusta-update-ssot ready-home variant c: THEME r48 TMPL r37 EDIT r8 CLIP r82 POST r55 VOICE r23 GUIDE r29 MEM r9 MODEL r45 QUOTA r41 LANG r12 AUTH r16 ARCH r28
