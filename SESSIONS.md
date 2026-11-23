@@ -201,6 +201,7 @@
 - 261119 decided GEN-87 GEN-80 T914: a guide request contradicts the owner's own impression or drawback — which wins? → the owner's own word stands and the request is woven in only where it does not contradict (GEN-87); keywords, min chars/photos counted items unchanged; advertiser_request origin label kept, only its not-the-owner's-experience consequence removed (alt: guide overrides | drop the conflicting request silently) ← the owner's experience is the post's direct evidence
 - 261119 decided T914: T914 runs on codex/gpt-6.1-terra@ultra instead of claude/opus@high: the last unit there ended it unfinished with no commit or newly checked acceptance (alt: the same route again)
 - 261123 decided POST-129 T915: 동영상만 있는 초안도 같은 배지를 쓰나? → 사진과 동영상을 함께 다루는 기존 ② 관찰 범위를 따라 현재 첨부 전체의 재사용 가능 결과가 있으면 표시한다 (alt: 사진이 있는 초안에만 표시). 동영상만 올린 글도 같은 관찰 단계를 거친다.
+- 261123 decided POST-129 T915: 관찰 완료 배지의 색은? → 스토리라인 작성 완료에 쓰는 기존 accent를 재사용한다 (alt: 초안과 같은 neutral). 작성 중의 두 완료 지점이 같은 톤을 쓰고 단계명은 문구로 구분한다.
 
 ## log
 - 261123 gusta-create-task POST start
