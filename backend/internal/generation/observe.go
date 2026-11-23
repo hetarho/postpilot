@@ -229,17 +229,6 @@ func mergeObservations(attached []Image, seed, fresh []Observation) []Observatio
 	return merged
 }
 
-// observationEmpty reports an entry that carries no eyesight — what a photo has after a model
-// looked and returned nothing for it. Provenance is deliberately not a field here: File names
-// the photo and Model names who looked, and neither is something the writer can write from.
-func observationEmpty(observation Observation) bool {
-	return observation.Scene == "" && observation.Mood == "" && observation.VisibleText == "" &&
-		len(observation.Objects) == 0 && !observation.PeoplePresent &&
-		// A video entry can be carried by what only a clip has: a model that saw motion and
-		// heard speech but named no objects still described it (VIDEO-9).
-		len(observation.Events) == 0 && observation.Speech == ""
-}
-
 // reusableObservations indexes the stored snapshot by filename, keeping only the entries a run
 // may actually carry over. An empty machine entry is deliberately excluded: reusing it would let
 // the write stage build from a photo nothing has ever described. An entry the owner edited is
@@ -248,7 +237,7 @@ func observationEmpty(observation Observation) bool {
 func reusableObservations(observations []Observation) map[string]Observation {
 	byFile := make(map[string]Observation, len(observations))
 	for _, observation := range observations {
-		if observation.File == "" || (!observation.OwnerEdited && observationEmpty(observation)) {
+		if !(postdomain.Observation{File: observation.File, OwnerEdited: observation.OwnerEdited, Scene: observation.Scene, Mood: observation.Mood, VisibleText: observation.VisibleText, Objects: observation.Objects, PeoplePresent: observation.PeoplePresent, Events: observation.Events, Speech: observation.Speech}).Reusable() {
 			continue
 		}
 		byFile[observation.File] = observation

@@ -1480,9 +1480,10 @@ type PostSummary struct {
 	ContentRevision       int64          `protobuf:"varint,17,opt,name=content_revision,json=contentRevision,proto3" json:"content_revision,omitempty"`
 	// The stored storyline holds at least one paragraph. With no content it is what the list's
 	// 스토리라인 작성 완료 badge is derived from (POST-127); the status filter never reads it.
-	StorylineReady bool `protobuf:"varint,18,opt,name=storyline_ready,json=storylineReady,proto3" json:"storyline_ready,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	StorylineReady   bool `protobuf:"varint,18,opt,name=storyline_ready,json=storylineReady,proto3" json:"storyline_ready,omitempty"`
+	ObservationReady bool `protobuf:"varint,19,opt,name=observation_ready,json=observationReady,proto3" json:"observation_ready,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *PostSummary) Reset() {
@@ -1637,6 +1638,13 @@ func (x *PostSummary) GetContentRevision() int64 {
 func (x *PostSummary) GetStorylineReady() bool {
 	if x != nil {
 		return x.StorylineReady
+	}
+	return false
+}
+
+func (x *PostSummary) GetObservationReady() bool {
+	if x != nil {
+		return x.ObservationReady
 	}
 	return false
 }
@@ -4475,7 +4483,7 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\bview_url\x18\x06 \x01(\tR\aviewUrl\x12\x1f\n" +
 	"\vduration_ms\x18\a \x01(\x03R\n" +
 	"durationMs\x12!\n" +
-	"\fcontent_type\x18\b \x01(\tR\vcontentType\"\xa6\x06\n" +
+	"\fcontent_type\x18\b \x01(\tR\vcontentType\"\xd3\x06\n" +
 	"\vPostSummary\x12\x12\n" +
 	"\x04slug\x18\x01 \x01(\tR\x04slug\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x16\n" +
@@ -4497,7 +4505,8 @@ const file_postpilot_v1_post_proto_rawDesc = "" +
 	"\x17latest_ordinary_failure\x18\x0f \x01(\v2\x1b.postpilot.v1.GenerationJobR\x15latestOrdinaryFailure\x12%\n" +
 	"\x0einput_revision\x18\x10 \x01(\x03R\rinputRevision\x12)\n" +
 	"\x10content_revision\x18\x11 \x01(\x03R\x0fcontentRevision\x12'\n" +
-	"\x0fstoryline_ready\x18\x12 \x01(\bR\x0estorylineReady\"\xf0\x05\n" +
+	"\x0fstoryline_ready\x18\x12 \x01(\bR\x0estorylineReady\x12+\n" +
+	"\x11observation_ready\x18\x13 \x01(\bR\x10observationReady\"\xf0\x05\n" +
 	"\rGenerationJob\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04kind\x18\x02 \x01(\tR\x04kind\x12\x16\n" +

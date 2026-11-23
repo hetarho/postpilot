@@ -178,6 +178,7 @@ export interface FakePostRow {
   latestOrdinaryFailure?: FakeGenerationJobRow
   content?: PostContent
   observations?: Observation[]
+  observationReady?: boolean
   pendingExperimentId?: string
   contentRevision?: bigint
   inputRevision?: bigint
@@ -342,6 +343,7 @@ type Row = {
   latestOrdinaryFailure?: ProtoGenerationJob
   content?: PostContent
   observations: Observation[]
+  observationReady?: boolean
   pendingExperimentId: string
   contentRevision: bigint
   inputRevision: bigint
@@ -528,6 +530,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           ? create(PostContentSchema, { title: row.title ?? '', tags: row.tags })
           : undefined),
       observations: row.observations ?? [],
+      observationReady: row.observationReady,
       pendingExperimentId: row.pendingExperimentId ?? '',
       contentRevision: row.contentRevision ?? 0n,
       inputRevision: row.inputRevision ?? 0n,
@@ -666,6 +669,7 @@ export function registerPostService(router: ConnectRouter, options: FakePostsOpt
           contentReady: Boolean(row.content?.blocks.length),
           // The server reads only whether the stored storyline holds a paragraph (POST-127).
           storylineReady: Boolean(row.storyline?.paragraphs.length),
+          observationReady: row.observationReady ?? false,
           exportReady: Boolean(row.content?.blocks.length),
         }),
       ),

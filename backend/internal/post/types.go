@@ -543,6 +543,11 @@ type Observation struct {
 	OwnerFields []string
 }
 
+// Reusable reports whether this observation can be carried into another run.
+func (o Observation) Reusable() bool {
+	return o.File != "" && (o.OwnerEdited || o.Scene != "" || o.Mood != "" || o.VisibleText != "" || len(o.Objects) > 0 || o.PeoplePresent || len(o.Events) > 0 || o.Speech != "")
+}
+
 // Summary is a row of the post list.
 type Summary struct {
 	Slug                string
@@ -564,6 +569,7 @@ type Summary struct {
 	// StorylineReady is a stored storyline holding at least one paragraph, the fact a draft's
 	// 스토리라인 작성 완료 badge is derived from while it has no content (POST-127).
 	StorylineReady                 bool
+	ObservationReady               bool
 	ExportReady                    bool
 	PublishedURL                   string
 	LatestOrdinaryFailure          *ActiveJob

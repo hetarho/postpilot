@@ -15,6 +15,7 @@ function post(overrides: Partial<PostListItem> & { slug: string }): PostListItem
     contentLanguage: undefined,
     tags: [],
     contentReady: false,
+    observationReady: false,
     storylineReady: false,
     exportReady: false,
     publishedUrl: '',

@@ -162,6 +162,8 @@ export interface PostListItem {
   activeJob: GenerationJob | undefined
   /** Canonical content presence, independent of the post's lifecycle status. */
   contentReady: boolean
+  /** Every current attachment has a reusable observation (POST-129). */
+  observationReady: boolean
   /** A stored storyline holding a paragraph; with no content it is 스토리라인 작성 완료 (POST-127). */
   storylineReady: boolean
   exportReady: boolean

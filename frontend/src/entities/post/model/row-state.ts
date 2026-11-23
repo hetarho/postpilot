@@ -25,6 +25,7 @@ type RowPost = Pick<
   | 'pendingExperimentId'
   | 'contentReady'
   | 'storylineReady'
+  | 'observationReady'
 >
 
 /** The one status chip a post's row carries, in the blog list and in aggregate 내 글 alike, so
@@ -46,12 +47,21 @@ export function postRowState(
   if (post.pendingExperimentId) return { label: rowStateLabel('review'), tone: 'warning' }
   if (post.status === 'draft' && post.storylineReady && !post.contentReady)
     return { label: rowStateLabel('storylineReady'), tone: 'accent' }
+  if (
+    post.status === 'draft' &&
+    post.observationReady &&
+    !post.storylineReady &&
+    !post.contentReady
+  )
+    return { label: rowStateLabel('observationReady'), tone: 'accent' }
   return {
     label: postStatusLabel(post.status),
     tone: isPostStatus(post.status) ? STATUS_TONE[post.status] : 'neutral',
   }
 }
 
-function rowStateLabel(state: 'generating' | 'failed' | 'review' | 'storylineReady'): string {
+function rowStateLabel(
+  state: 'generating' | 'failed' | 'review' | 'storylineReady' | 'observationReady',
+): string {
   return i18next.t(`rowState.${state}`, { ns: 'posts' })
 }

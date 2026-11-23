@@ -345,8 +345,11 @@ func TestToProtoSummaryCarriesTags(t *testing.T) {
 // The list's 스토리라인 작성 완료 badge reads a storyline flag the summary mapper carries across
 // the seam (POST-127); a post without one stays false.
 func TestToProtoSummaryCarriesStorylineReadiness(t *testing.T) {
-	if !toProtoSummary(post.Summary{Slug: "20260828-jeju", Status: "draft", StorylineReady: true}).GetStorylineReady() {
+	if !toProtoSummary(post.Summary{Slug: "20260828-jeju", Status: "draft", StorylineReady: true, ObservationReady: true}).GetStorylineReady() {
 		t.Error("a storyline-ready summary lost its flag")
+	}
+	if !toProtoSummary(post.Summary{ObservationReady: true}).GetObservationReady() || toProtoSummary(post.Summary{}).GetObservationReady() {
+		t.Error("observation readiness lost")
 	}
 	if toProtoSummary(post.Summary{Slug: "20260820-busan", Status: "draft"}).GetStorylineReady() {
 		t.Error("a summary with no storyline reads as storyline-ready")

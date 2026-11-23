@@ -12,6 +12,7 @@ export const i18n = {
       generating: 'AI 생성 중',
       failed: 'AI 결과 오류',
       review: 'AI 결과 확인',
+      observationReady: 'AI 사진 관찰 완료',
       storylineReady: '스토리라인 작성 완료',
     },
     published: {
@@ -223,6 +224,7 @@ export const i18n = {
       generating: 'AI generation',
       failed: 'AI result error',
       review: 'Review AI result',
+      observationReady: 'AI photo observation complete',
       storylineReady: 'Storyline ready',
     },
     published: {

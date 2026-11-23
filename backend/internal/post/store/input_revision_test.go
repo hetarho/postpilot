@@ -243,3 +243,45 @@ func TestTemplateSeedsAndObservedTurnsHaveRevisionNoops(t *testing.T) {
 	}
 	assertRevision(4)
 }
+
+func TestHistoryObservationReadinessTracksCurrentAttachments(t *testing.T) {
+	s, handle := newStoreWithHandle(t)
+	ctx := context.Background()
+	for _, slug := range []string{"zero", "partial", "empty", "ready", "video", "changed"} {
+		seedPost(t, s, slug, "alice", testNow)
+	}
+	for _, statement := range []string{
+		`INSERT INTO images(id,post_slug,filename,r2_key,width,height,bytes,created_at) VALUES ('p1','partial','a.jpg','p1',1,1,1,'2026-01-01'),('p2','partial','b.jpg','p2',1,1,1,'2026-01-01'),('e','empty','a.jpg','e',1,1,1,'2026-01-01'),('r1','ready','a.jpg','r1',1,1,1,'2026-01-01'),('r2','ready','b.jpg','r2',1,1,1,'2026-01-01'),('c','changed','a.jpg','c',1,1,1,'2026-01-01')`,
+		`INSERT INTO videos(id,post_slug,filename,r2_key,content_type,bytes,duration_ms,width,height,created_at) VALUES ('v','video','v.mp4','v','video/mp4',1,1,1,1,'2026-01-01')`,
+		`UPDATE posts SET observations='[{"file":"a.jpg","scene":"seen"}]' WHERE slug IN ('partial','changed')`,
+		`UPDATE posts SET observations='[{"file":"a.jpg"}]' WHERE slug='empty'`,
+		`UPDATE posts SET observations='[{"file":"a.jpg","scene":"seen"},{"file":"b.jpg","ownerEdited":true}]' WHERE slug='ready'`,
+		`UPDATE posts SET observations='[{"file":"v.mp4","speech":"heard"}]' WHERE slug='video'`,
+	} {
+		if _, err := handle.Writer.Exec(statement); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check := func(wantChanged bool) {
+		t.Helper()
+		rows, err := s.ListPosts(ctx, "alice", post.ListFilter{Limit: -1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			want := row.Slug == "ready" || row.Slug == "video" || (row.Slug == "changed" && wantChanged)
+			if row.ObservationReady != want {
+				t.Errorf("%s readiness = %v, want %v", row.Slug, row.ObservationReady, want)
+			}
+		}
+	}
+	check(true)
+	if _, err := handle.Writer.Exec(`INSERT INTO images(id,post_slug,filename,r2_key,width,height,bytes,created_at) VALUES ('new','changed','new.jpg','new',1,1,1,'2026-01-01')`); err != nil {
+		t.Fatal(err)
+	}
+	check(false)
+	if _, err := handle.Writer.Exec(`DELETE FROM images WHERE id='new'`); err != nil {
+		t.Fatal(err)
+	}
+	check(true)
+}

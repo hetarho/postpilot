@@ -32,6 +32,7 @@ function row(overrides: Partial<RowPost> = {}): RowPost {
     latestOrdinaryFailure: undefined,
     pendingExperimentId: '',
     contentReady: false,
+    observationReady: false,
     storylineReady: false,
     ...overrides,
   }
@@ -41,6 +42,30 @@ function row(overrides: Partial<RowPost> = {}): RowPost {
 // badge, below every job and test state and only while it is a draft without content.
 describe('postRowState', () => {
   it.each([
+    ['an observed draft', row({ observationReady: true }), 'AI 사진 관찰 완료', 'accent'],
+    [
+      'storyline wins',
+      row({ observationReady: true, storylineReady: true }),
+      '스토리라인 작성 완료',
+      'accent',
+    ],
+    ['content wins', row({ observationReady: true, contentReady: true }), '초안', 'neutral'],
+    ['active job wins', row({ observationReady: true, activeJob: RUNNING }), 'AI 생성 중', 'info'],
+    [
+      'failure wins',
+      row({ observationReady: true, latestOrdinaryFailure: FAILED }),
+      'AI 결과 오류',
+      'danger',
+    ],
+    [
+      'comparison wins',
+      row({ observationReady: true, pendingExperimentId: 'experiment' }),
+      'AI 결과 확인',
+      'warning',
+    ],
+    ['review wins', row({ observationReady: true, status: 'review' }), '검토', 'accent'],
+    ['finalized wins', row({ observationReady: true, status: 'finalized' }), '확정', 'success'],
+    ['published wins', row({ observationReady: true, status: 'published' }), '발행됨', 'done'],
     ['a storyline-only draft', row({ storylineReady: true }), '스토리라인 작성 완료', 'accent'],
     ['a draft with nothing yet', row(), '초안', 'neutral'],
     [
@@ -112,6 +137,9 @@ describe('postRowState', () => {
     await i18next.changeLanguage('en')
     try {
       expect(postRowState(row({ storylineReady: true })).label).toBe('Storyline ready')
+      expect(postRowState(row({ observationReady: true })).label).toBe(
+        'AI photo observation complete',
+      )
     } finally {
       await i18next.changeLanguage('ko')
     }

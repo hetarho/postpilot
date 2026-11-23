@@ -758,26 +758,66 @@ func (s *Store) ListPosts(ctx context.Context, userID string, filter post.ListFi
 		if err != nil {
 			return nil, fmt.Errorf("post %s tags: %w", row.Slug, err)
 		}
+		observationReady, err := summaryObservationReady(row.ObservationSnapshot, row.AttachmentFilenames)
+		if err != nil {
+			return nil, fmt.Errorf("post %s observation readiness: %w", row.Slug, err)
+		}
 		summaries = append(summaries, post.Summary{
-			Slug:            row.Slug,
-			VoiceID:         row.VoiceID.String,
-			Voice:           post.VoiceRef{ID: row.VoiceID.String},
-			TemplateID:      row.TemplateID.String,
-			Template:        post.TemplateRef{ID: row.TemplateID.String},
-			Title:           title,
-			Status:          row.Status,
-			UpdatedAt:       updatedAt,
-			TargetLanguage:  post.Language(row.TargetLanguage),
-			ContentLanguage: nullableLanguage(row.ContentLanguage),
-			Tags:            tags,
-			ContentReady:    row.ContentReady != 0,
-			StorylineReady:  row.StorylineReady != 0,
-			ExportReady:     row.ContentReady != 0 && row.ContentLanguage.Valid,
-			PublishedURL:    row.PublishedUrl.String, InputRevision: row.InputRevision, ContentRevision: row.ContentRevision,
+			Slug:             row.Slug,
+			VoiceID:          row.VoiceID.String,
+			Voice:            post.VoiceRef{ID: row.VoiceID.String},
+			TemplateID:       row.TemplateID.String,
+			Template:         post.TemplateRef{ID: row.TemplateID.String},
+			Title:            title,
+			Status:           row.Status,
+			UpdatedAt:        updatedAt,
+			TargetLanguage:   post.Language(row.TargetLanguage),
+			ContentLanguage:  nullableLanguage(row.ContentLanguage),
+			Tags:             tags,
+			ContentReady:     row.ContentReady != 0,
+			StorylineReady:   row.StorylineReady != 0,
+			ObservationReady: observationReady,
+			ExportReady:      row.ContentReady != 0 && row.ContentLanguage.Valid,
+			PublishedURL:     row.PublishedUrl.String, InputRevision: row.InputRevision, ContentRevision: row.ContentRevision,
 			Cursor: post.ListCursor{UpdatedAt: row.UpdatedAt, Slug: row.Slug},
 		})
 	}
 	return summaries, nil
+}
+
+// summaryObservationReady matches the current attachment set against reusable stored entries.
+func summaryObservationReady(snapshot, filenames any) (bool, error) {
+	rawNames, err := jsonText(filenames)
+	if err != nil || rawNames == "" {
+		return false, err
+	}
+	var names []string
+	if err := json.Unmarshal([]byte(rawNames), &names); err != nil {
+		return false, err
+	}
+	if len(names) == 0 {
+		return false, nil
+	}
+	raw, err := jsonText(snapshot)
+	if err != nil || raw == "" {
+		return false, err
+	}
+	observations, err := unmarshalObservations(raw)
+	if err != nil {
+		return false, err
+	}
+	reusable := make(map[string]bool, len(observations))
+	for _, observation := range observations {
+		if observation.Reusable() {
+			reusable[observation.File] = true
+		}
+	}
+	for _, name := range names {
+		if !reusable[name] {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 // jsonText reads a json_extract of a string path: NULL for a post with no content or no such

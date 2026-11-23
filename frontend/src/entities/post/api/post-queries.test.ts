@@ -23,6 +23,7 @@ describe('toPostListItem', () => {
         status: 'review',
         targetLanguage: contentLanguageToProto('ko'),
         contentReady: true,
+        observationReady: true,
         storylineReady: true,
         exportReady: true,
         publishedUrl: 'https://blog.naver.com/alice/1',
@@ -37,6 +38,7 @@ describe('toPostListItem', () => {
       }),
     )
     expect(row.contentReady).toBe(true)
+    expect(row.observationReady).toBe(true)
     expect(row.storylineReady).toBe(true)
     expect(row.exportReady).toBe(true)
     expect(row.publishedUrl).toBe('https://blog.naver.com/alice/1')
@@ -58,6 +60,13 @@ describe('toPostListItem', () => {
       }),
     )
     expect(row.contentReady).toBe(false)
+    expect(row.observationReady).toBe(false)
+    const legacy = create(PostSummarySchema, {
+      slug: 'legacy',
+      targetLanguage: contentLanguageToProto('ko'),
+    })
+    Reflect.deleteProperty(legacy, 'observationReady')
+    expect(toPostListItem(legacy).observationReady).toBe(false)
     expect(row.storylineReady).toBe(false)
     expect(row.exportReady).toBe(false)
     expect(row.latestOrdinaryFailure).toBeUndefined()

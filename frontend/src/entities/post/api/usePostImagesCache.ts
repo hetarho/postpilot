@@ -5,7 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { type PostImage, toProtoImage } from '@/entities/image/@x/post'
 import { type PostVideo, toProtoVideo } from '@/entities/video/@x/post'
 import { type GetPostResponse, GetPostResponseSchema, type Post } from '@/shared/api'
-import { getPostQueryKey } from './post-queries'
+import { getPostQueryKey, listPostsQueryKey } from './post-queries'
 
 /** Edits the photos of a cached `GetPost` answer, in place.
  *
@@ -42,15 +42,20 @@ export function usePostImagesCache(): {
       })
     }
 
+    const updateAttachments = (slug: string, edit: (post: Post) => void) => {
+      update(slug, edit)
+      void queryClient.invalidateQueries({ queryKey: listPostsQueryKey(transport) })
+    }
+
     return {
       append: (slug: string, image: PostImage) =>
-        update(slug, (post) => {
+        updateAttachments(slug, (post) => {
           // Idempotent: a confirm retried after a lost response returns the same photo.
           if (post.images.some((existing) => existing.id === image.id)) return
           post.images.push(toProtoImage(image))
         }),
       remove: (slug: string, imageId: string) =>
-        update(slug, (post) => {
+        updateAttachments(slug, (post) => {
           post.images = post.images.filter((existing) => existing.id !== imageId)
         }),
       replace: (slug: string, image: PostImage) =>
@@ -69,12 +74,12 @@ export function usePostImagesCache(): {
       // The clip half, patched for exactly the same reason: a refetch would re-mint a view
       // URL for every attachment and pull them all again, mid-upload, on cellular.
       appendVideo: (slug: string, video: PostVideo) =>
-        update(slug, (post) => {
+        updateAttachments(slug, (post) => {
           if (post.videos.some((existing) => existing.id === video.id)) return
           post.videos.push(toProtoVideo(video))
         }),
       removeVideo: (slug: string, videoId: string) =>
-        update(slug, (post) => {
+        updateAttachments(slug, (post) => {
           post.videos = post.videos.filter((existing) => existing.id !== videoId)
         }),
     }

@@ -199,3 +199,15 @@ func TestDeletingAnAttachmentDeletesItsEditedObservation(t *testing.T) {
 		t.Fatalf("observations after the delete = %+v", after.Observations)
 	}
 }
+
+func TestObservationReusableRequiresFilename(t *testing.T) {
+	if (Observation{OwnerEdited: true}).Reusable() {
+		t.Fatal("an unnamed owner edit cannot be paired")
+	}
+	if (Observation{File: "a.jpg"}).Reusable() {
+		t.Fatal("empty machine entry cannot be reused")
+	}
+	if !(Observation{File: "a.jpg", OwnerEdited: true}).Reusable() {
+		t.Fatal("owner-cleared entry must be reused")
+	}
+}

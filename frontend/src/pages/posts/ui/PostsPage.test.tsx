@@ -136,6 +136,7 @@ describe('PostsPage', () => {
     const { router } = renderList({
       posts: [
         { slug: 'story', title: '스토리만', storyline: { paragraphs: [{ text: '계획' }] } },
+        { slug: 'observed', title: '관찰한 글', observationReady: true },
         { slug: 'review', title: '검토할 글', status: 'review', content: POST_CONTENT_FIXTURE },
       ],
     })
@@ -153,6 +154,7 @@ describe('PostsPage', () => {
       expect(screen.queryByRole('link', { name: /검토할 글/ })).not.toBeInTheDocument(),
     )
     expect(screen.getByRole('link', { name: /스토리만/ })).toHaveTextContent('스토리라인 작성 완료')
+    expect(screen.getByRole('link', { name: /관찰한 글/ })).toHaveTextContent('AI 사진 관찰 완료')
   })
 
   // THEME-83: the whole row is ONE target opening the post — its link is stretched over the row

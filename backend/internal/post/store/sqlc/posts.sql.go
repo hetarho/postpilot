@@ -282,6 +282,8 @@ SELECT slug, title, status, updated_at, voice_id, template_id, target_language, 
     input_revision, content_revision, published_url,
     CAST(content IS NOT NULL AND content <> 'null' AND COALESCE(json_array_length(content, '$.blocks'), 0) > 0 AS INTEGER) AS content_ready,
     CAST(storyline IS NOT NULL AND storyline <> 'null' AND COALESCE(json_array_length(storyline, '$.paragraphs'), 0) > 0 AS INTEGER) AS storyline_ready,
+    CASE WHEN status = 'draft' AND (content IS NULL OR content = 'null' OR COALESCE(json_array_length(content, '$.blocks'), 0) = 0) AND (storyline IS NULL OR storyline = 'null' OR COALESCE(json_array_length(storyline, '$.paragraphs'), 0) = 0) THEN observations END AS observation_snapshot,
+    CASE WHEN status = 'draft' AND (content IS NULL OR content = 'null' OR COALESCE(json_array_length(content, '$.blocks'), 0) = 0) AND (storyline IS NULL OR storyline = 'null' OR COALESCE(json_array_length(storyline, '$.paragraphs'), 0) = 0) THEN (SELECT json_group_array(filename) FROM (SELECT filename FROM images WHERE post_slug = posts.slug UNION ALL SELECT filename FROM videos WHERE post_slug = posts.slug)) END AS attachment_filenames,
     json_extract(content, '$.title') AS content_title,
     json_extract(content, '$.tags') AS content_tags
 FROM posts
@@ -303,27 +305,31 @@ type ListPostSummariesByUserParams struct {
 }
 
 type ListPostSummariesByUserRow struct {
-	Slug            string
-	Title           string
-	Status          string
-	UpdatedAt       string
-	VoiceID         sql.NullString
-	TemplateID      sql.NullString
-	TargetLanguage  string
-	ContentLanguage sql.NullString
-	InputRevision   int64
-	ContentRevision int64
-	PublishedUrl    sql.NullString
-	ContentReady    int64
-	StorylineReady  int64
-	ContentTitle    interface{}
-	ContentTags     interface{}
+	Slug                string
+	Title               string
+	Status              string
+	UpdatedAt           string
+	VoiceID             sql.NullString
+	TemplateID          sql.NullString
+	TargetLanguage      string
+	ContentLanguage     sql.NullString
+	InputRevision       int64
+	ContentRevision     int64
+	PublishedUrl        sql.NullString
+	ContentReady        int64
+	StorylineReady      int64
+	ObservationSnapshot interface{}
+	AttachmentFilenames interface{}
+	ContentTitle        interface{}
+	ContentTags         interface{}
 }
 
 // One keyset page of the list (POST-90). The content is never read whole: the list shows its
 // title only as the blank-title fallback and its tags only for the search, so two JSON paths
 // are all it needs. The storyline is read only for whether it holds a paragraph, the fact the
-// storyline-ready badge is derived from (POST-127). The cursor is the stored updated_at string plus the slug, compared the same
+// storyline-ready badge is derived from (POST-127). Eligible drafts also read the stored
+// observations and current attachment names together to derive observation readiness.
+// The cursor is the stored updated_at string plus the slug, compared the same
 // way the ORDER BY compares them, so a walk never repeats or skips a row. A row_limit of -1 is
 // SQLite's "no limit", which the search asks for because its match runs in Go.
 func (q *Queries) ListPostSummariesByUser(ctx context.Context, arg ListPostSummariesByUserParams) ([]ListPostSummariesByUserRow, error) {
@@ -355,6 +361,8 @@ func (q *Queries) ListPostSummariesByUser(ctx context.Context, arg ListPostSumma
 			&i.PublishedUrl,
 			&i.ContentReady,
 			&i.StorylineReady,
+			&i.ObservationSnapshot,
+			&i.AttachmentFilenames,
 			&i.ContentTitle,
 			&i.ContentTags,
 		); err != nil {
