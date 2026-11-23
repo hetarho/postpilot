@@ -1,5 +1,5 @@
 # REPORT 261123-obsstat
-> mode:autopilot | host:ihaelam-ui-MacBookPro.local | from:2026-11-23T14:07:50.394Z | to:2026-11-23T14:14:18.546Z | push:main
+> mode:autopilot | host:ihaelam-ui-MacBookPro.local | from:2026-11-23T14:07:50.394Z | to:- | push:main
 
 ## done
 - planning T915: completed · codex (c25b7aec8c8c)
