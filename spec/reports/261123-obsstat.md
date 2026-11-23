@@ -207,5 +207,5 @@ Agent acceptance — review missing or incorrect criteria.
 - task checks: 3 runs, 1m
 
 ## next
-- loop stopped: scope-done
+- loop stopped: failed
 - verification: 0 rounds, 0 failed; pending repair: -; code pushed: false
