@@ -202,6 +202,7 @@
 - 261119 decided T914: T914 runs on codex/gpt-6.1-terra@ultra instead of claude/opus@high: the last unit there ended it unfinished with no commit or newly checked acceptance (alt: the same route again)
 - 261123 decided POST-129 T915: 동영상만 있는 초안도 같은 배지를 쓰나? → 사진과 동영상을 함께 다루는 기존 ② 관찰 범위를 따라 현재 첨부 전체의 재사용 가능 결과가 있으면 표시한다 (alt: 사진이 있는 초안에만 표시). 동영상만 올린 글도 같은 관찰 단계를 거친다.
 - 261123 decided POST-129 T915: 관찰 완료 배지의 색은? → 스토리라인 작성 완료에 쓰는 기존 accent를 재사용한다 (alt: 초안과 같은 neutral). 작성 중의 두 완료 지점이 같은 톤을 쓰고 단계명은 문구로 구분한다.
+- 261123 decided POST-129 T915: 글 목록에 빠진 관찰 정보를 어떻게 전달하나? → 기존 storyline_ready 경로를 따라 ListPosts에 읽을 때 계산한 불리언 하나를 추가하고 첨부 변경 성공 시 목록 키를 무효화한다 (alt: 각 행에서 GetPost 조회). 목록은 기존 호출과 캐시로 갱신되고 관찰 원문을 읽을 필요가 없다.
 
 ## log
 - 261123 gusta-create-task POST start
