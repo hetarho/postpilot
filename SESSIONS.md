@@ -205,6 +205,7 @@
 | T915 | obsstat | gusta-session-start-obsstat-f2c1e340 | 3c05829ba629 | 2026-11-23T14:20Z |
 
 ## log
+- 261124 fix authoring: AI template drafts repeated a body ask label in title_area (duplicate_ask_label -> AUTHORING_OUTPUT_INVALID); authoring guide now teaches title area ask rules (be2437cf1)
 - 261123 T915 done
 - 261123 gusta-create-task POST r58 -> T915
 - 261123 gusta-create-task POST start
@@ -224,4 +225,3 @@
 - 261118 T907 integrated
 - 261118 T911 integrated
 - 261118 T910 integrated
-- 261118 T906 integrated
